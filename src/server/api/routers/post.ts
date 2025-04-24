@@ -21,8 +21,8 @@ export const postRouter = createTRPCRouter({
     }),
 
   getLatest: publicProcedure.query(async ({ ctx }) => {
-    const post = await ctx.db.query.posts.findFirst({
-      orderBy: (posts, { desc }) => [desc(posts.createdAt)],
+    const post = await ctx.db.query.post.findFirst({
+      orderBy: (post, { desc }) => [desc(post.createdAt)],
     });
 
     return post ?? null;
