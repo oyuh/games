@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "../../../../../server/db/index";
 import { imposter } from "../../../../../server/db/schema";
 import { eq } from "drizzle-orm";
-import { imposterCategories } from "../../../../../imposter/imposterWords";
+import { imposterCategories } from "../../../../../data/categoryList";
 
 function getRandomElements<T>(arr: T[], n: number): T[] {
   const shuffled = arr.slice();

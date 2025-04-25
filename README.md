@@ -27,3 +27,14 @@ You can check out the [create-t3-app GitHub repository](https://github.com/t3-os
 ## How do I deploy this?
 
 Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+
+## Password Game API Endpoints
+
+The directory and route files for the password game API endpoints are scaffolded as follows:
+
+- `password-game/create/route.ts`
+- `password-game/join-by-code/[code]/route.ts`
+- `password-game/team-select/route.ts`
+- `password-game/clue/route.ts`
+- `password-game/guess/route.ts`
+- `password-game/next-round/route.ts`

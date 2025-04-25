@@ -9,6 +9,9 @@ export async function POST(req: NextRequest, { params }: { params: { code: strin
   if (!sessionId) return NextResponse.json({ error: "No session" }, { status: 401 });
   const game = await db.query.imposter.findFirst({ where: eq(imposter.code, params.code.toUpperCase()) });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
+  if (game.started_at) {
+    return NextResponse.json({ error: "Game is in progress" }, { status: 403 });
+  }
   if (!game.player_ids.includes(sessionId)) {
     await db.update(imposter)
       .set({ player_ids: [...game.player_ids, sessionId] })

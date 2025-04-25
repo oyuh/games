@@ -249,9 +249,10 @@ export default function HomePage() {
   const [joinCode, setJoinCode] = useState("");
   const [joiningGame, setJoiningGame] = useState(false);
   const [joinError, setJoinError] = useState("");
+  const [joinGameType, setJoinGameType] = useState("imposter");
 
   // Function to handle joining by code
-  async function handleJoinByCode() {
+  async function handleJoinByCode(gameType = "imposter") {
     if (!joinCode.trim()) return;
     if (!session?.entered_name || !session?.id) {
       alert("You must enter your name before joining a game.");
@@ -262,14 +263,22 @@ export default function HomePage() {
     setJoinError("");
 
     try {
-      // Only call the join-by-code endpoint
-      const joinRes = await fetch(`/api/imposter/join-by-code/${joinCode}`, { method: "POST" });
-      if (joinRes.ok) {
+      let joinRes;
+      if (gameType === "imposter") {
+        joinRes = await fetch(`/api/imposter/join-by-code/${joinCode}`, { method: "POST" });
+      } else if (gameType === "password") {
+        joinRes = await fetch(`/api/password/join-by-code/${joinCode}`, { method: "POST" });
+      }
+      if (joinRes?.ok) {
         const data = await joinRes.json();
-        router.push(`/imposter/${data.id}/begin`);
-      } else if (joinRes.status === 404) {
+        if (gameType === "imposter") {
+          router.push(`/imposter/${data.id}/begin`);
+        } else if (gameType === "password") {
+          router.push(`/password/${data.id}/begin`);
+        }
+      } else if (joinRes?.status === 404) {
         setJoinError("Game not found with that code.");
-      } else if (joinRes.status === 401) {
+      } else if (joinRes?.status === 401) {
         setJoinError("You must enter your name before joining a game.");
       } else {
         setJoinError("Failed to join game.");
@@ -312,6 +321,35 @@ export default function HomePage() {
     }
   }
 
+  async function handleCreatePasswordGame(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!session?.entered_name || !session?.id) {
+      alert("You must enter your name before creating a game.");
+      return;
+    }
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const maxPlayers = formData.get("maxPlayers");
+    const pointsToWin = formData.get("pointsToWin");
+    const res = await fetch("/api/password/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        hostId: session.id,
+        maxPlayers,
+        pointsToWin,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.game?.id) {
+        router.push(`/password/${data.game.id}/begin`);
+      }
+    } else {
+      alert("Failed to create game. Please try again.");
+    }
+  }
+
   async function handleJoinGame() {
     const link = window.prompt("Paste the join game link:");
     if (!link) return;
@@ -337,6 +375,14 @@ export default function HomePage() {
       <div className="w-full flex justify-center mb-8">
         <div className="flex flex-col items-center gap-3">
           <div className="flex gap-4 items-center">
+            <select
+              value={joinGameType}
+              onChange={e => setJoinGameType(e.target.value)}
+              className="input bg-main text-main border border-secondary rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary font-semibold uppercase tracking-wide min-w-[160px]"
+            >
+              <option value="imposter">Imposter</option>
+              <option value="password">Password</option>
+            </select>
             <input
               type="text"
               placeholder="Enter game code"
@@ -347,7 +393,7 @@ export default function HomePage() {
             <button
               type="button"
               className="btn-primary py-2 px-6 rounded-md text-lg font-semibold bg-primary text-main hover:bg-primary/90 transition shadow-lg"
-              onClick={handleJoinByCode}
+              onClick={() => handleJoinByCode(joinGameType)}
               disabled={joiningGame || !joinCode.trim()}
             >
               {joiningGame ? "Joining..." : "Join Game"}
@@ -367,7 +413,13 @@ export default function HomePage() {
           <form
             key={game.key}
             className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center relative"
-            onSubmit={game.key === "imposter" ? handleCreateImposterGame : (e) => e.preventDefault()}
+            onSubmit={
+              game.key === "imposter"
+                ? handleCreateImposterGame
+                : game.key === "password"
+                ? handleCreatePasswordGame
+                : (e) => e.preventDefault()
+            }
           >
             <div className="w-full flex flex-col items-center gap-1">
               <h2 className="text-2xl font-bold text-primary mb-1 text-center uppercase tracking-wide">{game.name}</h2>

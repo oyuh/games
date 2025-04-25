@@ -1,6 +1,6 @@
 // Example: imposterWords.ts
 export const imposterCategories = {
-  Animals: [  "Aardvark", "Aardwolf", "Albatross", "Alligator", "Alpaca", "Anaconda", "Angelfish", "Ant", "Anteater", "Antelope",
+  Animals: [ "Aardvark", "Aardwolf", "Albatross", "Alligator", "Alpaca", "Anaconda", "Angelfish", "Ant", "Anteater", "Antelope",
     "Armadillo", "Baboon", "Badger", "Barracuda", "Bat", "Bear", "Beaver", "Bee", "Bison", "Boar",
     "Bobcat", "Buffalo", "Butterfly", "Camel", "Capybara", "Caribou", "Cassowary", "Cat", "Caterpillar", "Cattle",
     "Chameleon", "Cheetah", "Chicken", "Chimpanzee", "Chinchilla", "Clam", "Cobra", "Cockroach", "Cod", "Condor",

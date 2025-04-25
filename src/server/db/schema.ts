@@ -43,11 +43,20 @@ export const imposter = createTable(
   })
 );
 
-export const posts = createTable(
-  "post",
+export const password_game = createTable(
+  "password_game",
   (d) => ({
     id: d.uuid().primaryKey().default(sql`gen_random_uuid()`),
-    name: d.varchar({ length: 128 }).notNull(),
-    createdAt: d.timestamp({ withTimezone: true }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+    host_id: d.uuid().notNull(),
+    category: d.varchar({ length: 128 }).notNull(),
+    max_players: d.integer().notNull(),
+    code: d.varchar({ length: 8 }).notNull().unique(),
+    game_data: d.jsonb(), // stores overall game state, settings, etc.
+    team_data: d.jsonb(), // stores teams, players, scores, etc.
+    round_data: d.jsonb(), // stores current round info, clue-givers, guesses, etc.
+    created_at: d.timestamp({ withTimezone: true }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+    started_at: d.timestamp({ withTimezone: true }),
+    finished_at: d.timestamp({ withTimezone: true }),
+    expires_at: d.timestamp({ withTimezone: true }),
   })
 );
