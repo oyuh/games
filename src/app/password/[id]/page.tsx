@@ -35,6 +35,20 @@ export default function PasswordGamePage({ params }: { params: Promise<{ id: str
     return () => { cancelled = true; clearInterval(interval); };
   }, [actualParams.id]);
 
+  useEffect(() => {
+    if (!game) return;
+    const phase = game?.game_data?.phase;
+    // If phase is 'ready', go to the ready screen
+    if (phase === "ready" && !window.location.pathname.endsWith(`/password/${actualParams.id}/next-round`)) {
+      router.replace(`/password/${actualParams.id}/next-round`);
+      return;
+    }
+    // If phase is not 'lobby' or 'ready', go to the main in-game page
+    if (phase && phase !== "lobby" && phase !== "ready" && !window.location.pathname.endsWith(`/password/${actualParams.id}`)) {
+      router.replace(`/password/${actualParams.id}`);
+    }
+  }, [game, actualParams.id, router]);
+
   if (!game || !session?.id) {
     return <main className="min-h-screen flex items-center justify-center text-main">Loading...</main>;
   }
@@ -55,6 +69,7 @@ export default function PasswordGamePage({ params }: { params: Promise<{ id: str
 
   // Show secret word to clue-giver only
   const secretWord = isClueGiver && phase === "round" ? game.round_data?.secretWord : null;
+  const roundCategory = game.round_data?.category;
   const guesses = game.round_data?.guesses?.[playerTeam?.id] || [];
   const roundPoints = playerTeam?.roundPoints || 0;
   const teamScore = playerTeam?.score || 0;
@@ -65,7 +80,7 @@ export default function PasswordGamePage({ params }: { params: Promise<{ id: str
     setCategorySubmitting(true);
     setError("");
     try {
-      // Save category to game_data and trigger round start
+      // Save category to round_data and trigger round start
       const res = await fetch("/api/password/category-pick", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -177,6 +192,7 @@ export default function PasswordGamePage({ params }: { params: Promise<{ id: str
         ) : phase === "round" ? (
           <>
             <div className="text-lg font-semibold text-primary">Round {game.round_data?.round}</div>
+            <div className="text-main text-base mb-2">Category: <span className="font-bold">{roundCategory}</span></div>
             {isClueGiver ? (
               <div className="bg-primary/90 text-black font-bold rounded px-4 py-2 text-center text-2xl shadow border border-primary/60">
                 Secret Word: {secretWord}

@@ -47,16 +47,24 @@ export default function PasswordBeginPage({ params }: { params: Promise<{ id: st
       }
     }
     void fetchGame();
-    const interval = setInterval(() => { void fetchGame(); }, 3000);
+    const interval = setInterval(() => { void fetchGame(); }, 1000); // 1 second polling
     return () => clearInterval(interval);
   }, [actualParams.id]);
 
-  // Redirect to in-game page if game has started or is in recap/category-pick/round phase
+  // Redirect to appropriate page based on game phase
   useEffect(() => {
-    if (game && ["started", "recap", "category-pick", "round"].includes(game.game_data?.state) || ["recap", "category-pick", "round"].includes(game.game_data?.phase)) {
+    if (!game) return;
+    const phase = game?.game_data?.phase;
+    // If phase is 'ready', go to the ready screen
+    if (phase === "ready" && !window.location.pathname.endsWith(`/password/${actualParams.id}/next-round`)) {
+      router.replace(`/password/${actualParams.id}/next-round`);
+      return;
+    }
+    // If phase is not 'lobby' or 'ready', go to the main in-game page
+    if (phase && phase !== "lobby" && phase !== "ready" && !window.location.pathname.endsWith(`/password/${actualParams.id}`)) {
       router.replace(`/password/${actualParams.id}`);
     }
-  }, [game?.game_data?.state, game?.game_data?.phase, actualParams.id, router]);
+  }, [game, actualParams.id, router]);
 
   const isHost = session?.id && game?.hostId === session.id;
   const isPlayer = session?.id && game?.players?.some((p: any) => p.id === session.id);
@@ -132,11 +140,7 @@ export default function PasswordBeginPage({ params }: { params: Promise<{ id: st
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gameId: actualParams.id }),
       });
-      if (res.ok) {
-        router.push(`/password/${actualParams.id}`);
-      } else {
-        setError("Failed to start game.");
-      }
+      if (!res.ok) setError("Failed to start game.");
     } finally {
       setStarting(false);
     }

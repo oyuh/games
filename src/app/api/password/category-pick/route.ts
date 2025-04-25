@@ -14,12 +14,13 @@ export async function POST(req: NextRequest) {
   const teams = teamData.teams ?? [];
   const team = teams.find((t: any) => t.id === teamId);
   if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
-  // Save the chosen category for this round in the team object
-  team.category = category;
-  // Also update game_data to indicate category has been picked
-  const gameData = { ...game.game_data, phase: "round", category };
+
+  // Save the chosen category for this round in round_data only
+  const roundData = { ...(game.round_data ?? {}), category };
+  // Set phase to 'round' in game_data
+  const gameData = { ...game.game_data, phase: "round" };
   await db.update(password_game)
-    .set({ team_data: teamData, game_data: gameData })
+    .set({ team_data: teamData, game_data: gameData, round_data: roundData })
     .where(eq(password_game.id, gameId));
   return NextResponse.json({ success: true });
 }
