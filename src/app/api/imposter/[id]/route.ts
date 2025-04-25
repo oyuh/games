@@ -24,6 +24,7 @@ export async function GET(
   return NextResponse.json({
     game: {
       id: game.id,
+      code: game.code, // <-- Add this line to include the join code
       host_id: game.host_id,
       category: game.category,
       max_players: game.max_players,

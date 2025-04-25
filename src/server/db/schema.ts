@@ -35,6 +35,7 @@ export const imposter = createTable(
     imposter_ids: d.uuid().array(),
     chosen_word: d.varchar({ length: 128 }),
     game_data: d.jsonb(),
+    code: d.varchar({ length: 8 }).notNull().unique(),
     created_at: d.timestamp({ withTimezone: true }).default(sql`CURRENT_TIMESTAMP`).notNull(),
     started_at: d.timestamp({ withTimezone: true }),
     finished_at: d.timestamp({ withTimezone: true }),

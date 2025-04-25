@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { useSessionInfo } from "./session-modal";
+import { FaUser } from "react-icons/fa"; // Import FaUser icon
 
 export function SessionProfileEditor() {
   const { session, loading } = useSessionInfo();
@@ -33,14 +34,14 @@ export function SessionProfileEditor() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button with FaUser icon */}
       <button
         className="fixed top-4 left-4 z-50 bg-card text-primary border border-secondary rounded-full shadow-lg p-3 flex items-center justify-center hover:bg-secondary/20 transition"
         onClick={handleOpen}
         aria-label="Edit Profile/Session"
         style={{ minWidth: 48, minHeight: 48 }}
       >
-        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-user-edit"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M18.5 2.5l3 3-7.5 7.5H11v-3.5l7.5-7.5z"/></svg>
+        <FaUser size={20} />
       </button>
       {/* Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>

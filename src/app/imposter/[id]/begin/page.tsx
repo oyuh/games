@@ -4,6 +4,21 @@ import { useSessionInfo } from "../../../_components/session-modal";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import React from "react";
+import { Button } from "~/components/ui/button"; // Import the Button component
+
+// Define a type for the game object for type safety
+interface ImposterGame {
+  id: string;
+  code: string;
+  host_id: string;
+  category: string;
+  max_players: number;
+  num_imposters: number;
+  player_ids: string[];
+  imposter_ids?: string[];
+  playerNames?: Record<string, string>;
+  [key: string]: any;
+}
 
 export default function ImposterBeginPage({ params }: { params: Promise<{ id: string }> }) {
   const actualParams = React.use(params);
@@ -13,7 +28,7 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
   const [deleting, setDeleting] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
-  const [game, setGame] = useState<any>(null);
+  const [game, setGame] = useState<ImposterGame | null>(null);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -26,21 +41,19 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
         const res = await fetch(`/api/imposter/${actualParams.id}`);
         if (res.ok) {
           const data = await res.json();
-          setGame(data.game);
-          // playerNames now comes from data.game.playerNames (object mapping)
-          setPlayerNames(Object.values(data.game.playerNames || {}));
+          setGame(data.game as ImposterGame);
+          setPlayerNames(Object.values((data.game.playerNames ?? {})));
         } else {
           setError("Game not found");
         }
-      } catch (e) {
+      } catch {
         setError("Failed to load game");
       } finally {
         setRefreshing(false);
       }
     }
-    fetchGame();
-    // Optionally, poll for updates every few seconds
-    const interval = setInterval(fetchGame, 3000);
+    void fetchGame();
+    const interval = setInterval(() => { void fetchGame(); }, 3000);
     return () => clearInterval(interval);
   }, [actualParams.id]);
 
@@ -108,8 +121,8 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
       const res = await fetch(`/api/imposter/${actualParams.id}`);
       if (res.ok) {
         const data = await res.json();
-        setGame(data.game);
-        setPlayerNames(Object.values(data.game.playerNames || {}));
+        setGame(data.game as ImposterGame);
+        setPlayerNames(Object.values((data.game.playerNames ?? {})));
       }
     } finally {
       setRefreshing(false);
@@ -136,6 +149,15 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
     <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4">
       <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-lg flex flex-col items-center gap-4">
         <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide">Imposter Game Lobby</h1>
+        {/* --- JOIN CODE PROMINENT --- */}
+        <div className="flex flex-col items-center my-4 w-full">
+          <div className="text-lg font-semibold text-primary text-center mb-1">Join Code</div>
+          <div className="bg-white text-primary font-mono text-4xl tracking-widest rounded-lg px-10 py-5 mb-2 select-all shadow-lg border-4 border-primary text-center w-full font-extrabold" style={{letterSpacing: '0.25em'}}>
+            {game.code || <span className="text-secondary">(not available)</span>}
+          </div>
+          <div className="text-xs text-secondary text-center mb-2">Share this code with friends to join!</div>
+        </div>
+        {/* --- END JOIN CODE --- */}
         <div className="text-secondary text-center text-lg">Category: <span className="font-bold text-main">{game.category}</span></div>
         <div className="text-secondary text-center">Max Players: <span className="font-bold text-main">{game.max_players}</span></div>
         <div className="text-secondary text-center">Imposters: <span className="font-bold text-main">{game.num_imposters}</span></div>
@@ -151,34 +173,52 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
             )}
           </ul>
         </div>
-        <div className="w-full flex flex-col items-center gap-2 mt-6">
-          <div className="text-center text-main text-base">Share this link to invite others:</div>
-          <div className="bg-secondary text-main rounded px-4 py-2 font-mono text-sm select-all break-all w-full text-center">
+        {/* --- INVITE LINK, LESS PROMINENT --- */}
+        <details className="w-full mt-2">
+          <summary className="cursor-pointer text-sm text-secondary hover:text-primary">Show invite link</summary>
+          <div className="bg-secondary text-main rounded px-4 py-2 font-mono text-sm select-all break-all w-full text-center mt-2">
             {`${baseUrl}/imposter/${game.id}/begin`}
           </div>
-          {isHost && (
-            <>
-              <button type="button" onClick={handleStart} disabled={!canStart} className="btn-primary w-full mt-2">
-                {starting ? "Starting..." : "Start Game"}
-              </button>
-              <button type="button" onClick={handleDelete} disabled={!canDelete} className="btn-destructive w-full mt-2">
-                {deleting ? "Deleting..." : "Delete Game"}
-              </button>
-            </>
-          )}
-          {canJoin && (
-            <button type="button" onClick={handleJoin} disabled={!canJoin} className="btn-primary w-full mt-2">
-              {joining ? "Joining..." : "Join Game"}
-            </button>
-          )}
-          {/* Fallback: If user is not recognized, show join button */}
-          {!isHost && !isPlayer && !canJoin && !loading && (
-            <button type="button" onClick={handleJoin} disabled={joining} className="btn-primary w-full mt-2">
-              {joining ? "Joining..." : "Join Game"}
-            </button>
-          )}
-          {error && <div className="text-destructive text-center mt-2">{error}</div>}
-        </div>
+        </details>
+        {isHost && (
+          <>
+            <Button
+              onClick={handleStart}
+              disabled={!canStart}
+              className="w-full mt-2"
+            >
+              {starting ? "Starting..." : "Start Game"}
+            </Button>
+            <Button
+              onClick={handleDelete}
+              disabled={!canDelete}
+              variant="destructive"
+              className="w-full mt-2"
+            >
+              {deleting ? "Deleting..." : "Delete Game"}
+            </Button>
+          </>
+        )}
+        {canJoin && (
+          <Button
+            onClick={handleJoin}
+            disabled={!canJoin}
+            className="w-full mt-2"
+          >
+            {joining ? "Joining..." : "Join Game"}
+          </Button>
+        )}
+        {/* Fallback: If user is not recognized, show join button */}
+        {!isHost && !isPlayer && !canJoin && !loading && (
+          <Button
+            onClick={handleJoin}
+            disabled={joining}
+            className="w-full mt-2"
+          >
+            {joining ? "Joining..." : "Join Game"}
+          </Button>
+        )}
+        {error && <div className="text-destructive text-center mt-2">{error}</div>}
       </div>
     </main>
   );

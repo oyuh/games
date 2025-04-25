@@ -1,8 +1,11 @@
 "use client";
 
-import { FaTwitter, FaInstagram, FaDiscord, FaGlobe } from "react-icons/fa";
+import { FaTwitter, FaInstagram, FaDiscord, FaGlobe, FaInfoCircle } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useSessionInfo } from "./_components/session-modal";
+import { useState } from "react";
+import { Button } from "~/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
 
 const categoryOptions = [
   "Animals",
@@ -27,12 +30,21 @@ interface GameField {
   placeholder?: string;
 }
 
+interface GameInfo {
+  howToPlay: string[];
+  minPlayers: number;
+  maxPlayers: number;
+  estimatedTime: string;
+  difficulty: string;
+}
+
 interface Game {
   key: string;
   name: string;
   description: string;
   available: boolean;
   fields: GameField[];
+  info?: GameInfo;
 }
 
 const games: Game[] = [
@@ -46,6 +58,19 @@ const games: Game[] = [
       { label: "Max Players", name: "maxPlayers", type: "number", min: 3, max: 20, required: true, defaultValue: 8 },
       { label: "Number of Imposters", name: "numImposters", type: "number", min: 1, max: 5, required: true, defaultValue: 1 },
     ],
+    info: {
+      howToPlay: [
+        "All players except the imposter receive the same word from the chosen category.",
+        "The imposter receives a similar but different word.",
+        "Players take turns describing their word without saying it directly.",
+        "After everyone has spoken, players vote on who they think is the imposter.",
+        "The imposter wins if they aren't identified or if they can guess the real word."
+      ],
+      minPlayers: 3,
+      maxPlayers: 20,
+      estimatedTime: "15-30 minutes",
+      difficulty: "Easy to learn"
+    }
   },
   {
     key: "password",
@@ -56,6 +81,18 @@ const games: Game[] = [
       { label: "Max Players", name: "maxPlayers", type: "number", min: 4, max: 20, required: true },
       { label: "Points to Win", name: "pointsToWin", type: "number", min: 1, max: 20, required: true, defaultValue: 5 },
     ],
+    info: {
+      howToPlay: [
+        "Players split into two teams.",
+        "One player gives one-word clues to help their team guess a set of words.",
+        "Teams take turns, trying to guess all their words first.",
+        "Be careful not to give clues for the opposing team's words!"
+      ],
+      minPlayers: 4,
+      maxPlayers: 20,
+      estimatedTime: "20-40 minutes",
+      difficulty: "Medium"
+    }
   },
   {
     key: "hangman",
@@ -66,6 +103,19 @@ const games: Game[] = [
       { label: "Category or Word List", name: "category", type: "select", options: categoryOptions, required: true },
       { label: "Max Incorrect Guesses", name: "maxIncorrect", type: "number", min: 3, max: 10, required: true, defaultValue: 6 },
     ],
+    info: {
+      howToPlay: [
+        "A random word is selected from the chosen category.",
+        "Players guess one letter at a time.",
+        "Correct guesses reveal where that letter appears in the word.",
+        "Incorrect guesses count against the maximum allowed.",
+        "Players win by guessing the word before reaching the maximum incorrect guesses."
+      ],
+      minPlayers: 1,
+      maxPlayers: 10,
+      estimatedTime: "5-15 minutes",
+      difficulty: "Easy"
+    }
   },
   {
     key: "wavelength",
@@ -76,6 +126,19 @@ const games: Game[] = [
       { label: "Max Players", name: "maxPlayers", type: "number", min: 4, max: 20, required: true },
       { label: "Points to Win", name: "pointsToWin", type: "number", min: 1, max: 20, required: true, defaultValue: 10 },
     ],
+    info: {
+      howToPlay: [
+        "Players split into teams.",
+        "A secret target is placed on a spectrum between two opposites (e.g., Hot—Cold).",
+        "The clue-giver sees the target and gives a clue to help their team guess its position.",
+        "Teams score points based on how close their guess is to the target.",
+        "First team to reach the target points wins."
+      ],
+      minPlayers: 4,
+      maxPlayers: 20,
+      estimatedTime: "30-45 minutes",
+      difficulty: "Medium"
+    }
   },
   {
     key: "hues-and-cues",
@@ -86,8 +149,62 @@ const games: Game[] = [
       { label: "Max Players", name: "maxPlayers", type: "number", min: 3, max: 20, required: true },
       { label: "Rounds", name: "rounds", type: "number", min: 1, max: 20, required: true, defaultValue: 5 },
     ],
+    info: {
+      howToPlay: [
+        "One player selects a color from the grid and gives a one-word clue.",
+        "Other players place their markers where they think the color is located.",
+        "The clue-giver gives a second clue, and players can adjust their guesses.",
+        "Points are awarded based on proximity to the target color.",
+        "Players take turns being the clue-giver."
+      ],
+      minPlayers: 3,
+      maxPlayers: 20,
+      estimatedTime: "30 minutes",
+      difficulty: "Easy to Medium"
+    }
   },
 ];
+
+// Add the GameInfoDialog component
+function GameInfoDialog({ game, open, onClose }: { game: Game; open: boolean; onClose: () => void }) {
+  if (!game.info) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-card text-main border border-secondary max-w-md mx-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-primary">{game.name}</DialogTitle>
+          <DialogDescription className="text-secondary">{game.description}</DialogDescription>
+        </DialogHeader>
+        <div className="mt-4 space-y-4">
+          <div>
+            <h3 className="font-bold text-primary mb-2">How to Play:</h3>
+            <ul className="list-disc pl-5 space-y-1 text-main">
+              {game.info.howToPlay.map((step, index) => (
+                <li key={index}>{step}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-main">
+            <div>
+              <h3 className="font-bold text-primary">Players:</h3>
+              <p>{game.info.minPlayers}-{game.info.maxPlayers} players</p>
+            </div>
+            <div>
+              <h3 className="font-bold text-primary">Time:</h3>
+              <p>{game.info.estimatedTime}</p>
+            </div>
+            <div>
+              <h3 className="font-bold text-primary">Difficulty:</h3>
+              <p>{game.info.difficulty}</p>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 interface NumberInputProps {
   id: string;
@@ -128,6 +245,41 @@ function NumberInput({ id, name, min, max, defaultValue, disabled }: NumberInput
 export default function HomePage() {
   const router = useRouter();
   const { session } = useSessionInfo();
+  const [currentGameInfo, setCurrentGameInfo] = useState<Game | null>(null);
+  const [joinCode, setJoinCode] = useState("");
+  const [joiningGame, setJoiningGame] = useState(false);
+  const [joinError, setJoinError] = useState("");
+
+  // Function to handle joining by code
+  async function handleJoinByCode() {
+    if (!joinCode.trim()) return;
+    if (!session?.entered_name || !session?.id) {
+      alert("You must enter your name before joining a game.");
+      return;
+    }
+
+    setJoiningGame(true);
+    setJoinError("");
+
+    try {
+      // Only call the join-by-code endpoint
+      const joinRes = await fetch(`/api/imposter/join-by-code/${joinCode}`, { method: "POST" });
+      if (joinRes.ok) {
+        const data = await joinRes.json();
+        router.push(`/imposter/${data.id}/begin`);
+      } else if (joinRes.status === 404) {
+        setJoinError("Game not found with that code.");
+      } else if (joinRes.status === 401) {
+        setJoinError("You must enter your name before joining a game.");
+      } else {
+        setJoinError("Failed to join game.");
+      }
+    } catch (error) {
+      setJoinError("Error joining game. Please try again.");
+    } finally {
+      setJoiningGame(false);
+    }
+  }
 
   async function handleCreateImposterGame(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -144,7 +296,7 @@ export default function HomePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        host_id: session.id, // Use the UUID from session
+        host_id: session.id,
         category,
         maxPlayers,
         numImposters,
@@ -183,24 +335,57 @@ export default function HomePage() {
     <main className="min-h-screen bg-main text-main font-sans flex flex-col items-center justify-center px-4 py-8">
       <h1 className="text-4xl font-bold mb-6 text-primary text-center">Start a Game</h1>
       <div className="w-full flex justify-center mb-8">
-        <button
-          type="button"
-          className="btn-primary py-2 px-6 rounded-md text-lg font-semibold bg-primary text-main hover:bg-primary/90 transition shadow-lg"
-          onClick={handleJoinGame}
-        >
-          Join Game
-        </button>
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex gap-4 items-center">
+            <input
+              type="text"
+              placeholder="Enter game code"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              className="input bg-main text-main border border-secondary rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              type="button"
+              className="btn-primary py-2 px-6 rounded-md text-lg font-semibold bg-primary text-main hover:bg-primary/90 transition shadow-lg"
+              onClick={handleJoinByCode}
+              disabled={joiningGame || !joinCode.trim()}
+            >
+              {joiningGame ? "Joining..." : "Join Game"}
+            </button>
+          </div>
+          {joinError && <div className="text-destructive text-center">{joinError}</div>}
+          <span
+            className="text-secondary hover:text-primary text-sm underline mt-2 cursor-pointer"
+            onClick={handleJoinGame}
+          >
+            Or join by link
+          </span>
+        </div>
       </div>
       <div className="w-full max-w-5xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {games.map((game) => (
           <form
             key={game.key}
-            className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center"
+            className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center relative"
             onSubmit={game.key === "imposter" ? handleCreateImposterGame : (e) => e.preventDefault()}
           >
             <div className="w-full flex flex-col items-center gap-1">
               <h2 className="text-2xl font-bold text-primary mb-1 text-center uppercase tracking-wide">{game.name}</h2>
               <p className="text-secondary text-center text-base mb-2">{game.description}</p>
+              {game.info && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="font-semibold text-main bg-secondary hover:bg-secondary/90 mt-1 mb-2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentGameInfo(game);
+                  }}
+                >
+                  Learn More
+                </Button>
+              )}
             </div>
             <div className="w-full flex flex-col gap-3">
               {game.fields.map((field) => (
@@ -265,6 +450,8 @@ export default function HomePage() {
             )}
           </form>
         ))}
+
+        {/* Links/Social Card - No changes needed here */}
         <div className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center">
           <h2 className="text-2xl font-bold text-primary mb-1 text-center">And More...</h2>
           <p className="text-secondary text-center text-base mb-4">More games coming soon!</p>
@@ -293,6 +480,15 @@ export default function HomePage() {
           <p className="text-secondary text-center text-base mt-4">Stay tuned for updates!</p>
         </div>
       </div>
+
+      {/* Game Info Dialog */}
+      {currentGameInfo && (
+        <GameInfoDialog
+          game={currentGameInfo}
+          open={!!currentGameInfo}
+          onClose={() => setCurrentGameInfo(null)}
+        />
+      )}
     </main>
   );
 }
