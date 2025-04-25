@@ -513,12 +513,12 @@ export default function HomePage() {
               <FaTwitter className="text-main w-5 h-5" />
               Twitter: @sumboutlaw
             </a>
-            <a href="https://instagram.com/lawsonwth" target="_blank" rel="noopener noreferrer"
+            <a href="https://instagram.com/lawsonwtf" target="_blank" rel="noopener noreferrer"
               className="btn-primary w-full flex items-center justify-center gap-2 py-2 rounded-md text-lg font-semibold bg-secondary text-main hover:bg-secondary/90 transition">
               <FaInstagram className="text-main w-5 h-5" />
               Instagram: @lawsonwth
             </a>
-            <a href="https://discord.gg/yourdiscordlink" target="_blank" rel="noopener noreferrer"
+            <a href="https://discordapp.com/users/527167786200465418" target="_blank" rel="noopener noreferrer"
               className="btn-primary w-full flex items-center justify-center gap-2 py-2 rounded-md text-lg font-semibold bg-[#5865F2] text-main hover:bg-[#4752c4] transition">
               <FaDiscord className="text-main w-5 h-5" />
               Discord: wthlaw
