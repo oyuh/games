@@ -96,6 +96,13 @@
 body {
   background: var(--bg);
   color: var(--text);
+  padding-right: 0 !important;
+  overflow-y: scroll !important;
+}
+
+body[data-dialog-open="true"] {
+  overflow: hidden;
+  padding-right: 0 !important;
 }
 
 /* Utility classes for theme colors */

@@ -4,6 +4,9 @@ import { Geist } from "next/font/google";
 import { TRPCReactProvider } from "~/trpc/react";
 import { ClientRoot } from "./client-root";
 import { SessionProfileEditor } from "./_components/session-profile-editor";
+import { Footer } from "~/components/Footer";
+import { JoinGameModal } from "./_components/join-game-modal";
+import { Analytics } from "@vercel/analytics/react"
 
 export const metadata: Metadata = {
   title: "Games!",
@@ -20,10 +23,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={`${geist.variable}`}>
       <body>
-        <SessionProfileEditor />
         <ClientRoot>
           <TRPCReactProvider>{children}</TRPCReactProvider>
         </ClientRoot>
+        <Footer />
+
+        {/* Fixed floating button container on right side */}
+        <div className="fixed right-8 top-1/2 transform -translate-y-1/2 flex flex-col gap-6 z-50">
+          <SessionProfileEditor />
+          <JoinGameModal />
+        </div>
       </body>
     </html>
   );

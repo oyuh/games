@@ -19,6 +19,7 @@ interface ImposterGameData {
     voteVoters: string[];
     shouldVoteVotes: Record<string, 'yay' | 'nay'>;
     shouldVoteVoters: string[];
+    phase: string;
   }>;
 }
 
@@ -43,27 +44,48 @@ export async function POST(
   // Check if all players have voted
   const allVoted = Object.keys(shouldVoteVotes).length === game.player_ids.length;
   let newPhase = gameData.phase;
+
   if (allVoted) {
+    // Create a record of the current round state for history
+    const currentRoundData = {
+      round: gameData.round ?? 1,
+      clues: { ...(gameData.clues ?? {}) },
+      clueSenders: Object.keys(gameData.clues ?? {}),
+      votes: { ...(gameData.votes ?? {}) },
+      voteVoters: Object.keys(gameData.votes ?? {}),
+      shouldVoteVotes: { ...(shouldVoteVotes) }, // Use the updated shouldVoteVotes
+      shouldVoteVoters: Object.keys(shouldVoteVotes),
+      phase: "shouldVote"
+    };
+
     const yayCount = Object.values(shouldVoteVotes).filter(v => v === "yay").length;
     const nayCount = Object.values(shouldVoteVotes).filter(v => v === "nay").length;
+
+    // The history needs to be updated for both cases
+    const history = Array.isArray(gameData.history) ? [...gameData.history, currentRoundData] : [currentRoundData];
+
     if (yayCount > nayCount) {
+      // Move to vote phase, keeping the same round number
       newPhase = "vote";
-    } else {
-      // Reset clues, votes, shouldVoteVotes, and increment round
-      newPhase = "clue";
-      // Log the completed round to history before resetting
-      const prevRound = {
-        round: gameData.round ?? 1,
-        clues: { ...(gameData.clues ?? {}) },
-        clueSenders: Object.keys(gameData.clues ?? {}),
-        votes: { ...(gameData.votes ?? {}) },
-        voteVoters: Object.keys(gameData.votes ?? {}),
-        shouldVoteVotes: { ...(gameData.shouldVoteVotes ?? {}) },
-        shouldVoteVoters: Object.keys(gameData.shouldVoteVotes ?? {})
-      };
-      const history = Array.isArray(gameData.history) ? [...gameData.history, prevRound] : [prevRound];
       return await db.update(imposter)
-        .set({ game_data: { ...gameData, clues: {}, votes: {}, shouldVoteVotes: {}, phase: newPhase, round: (gameData.round ?? 1) + 1, history } })
+        .set({ game_data: { ...gameData, shouldVoteVotes, phase: newPhase, history } })
+        .where(eq(imposter.id, params.id))
+        .then(() => NextResponse.json({ success: true, nextPhase: newPhase }));
+    } else {
+      // Reset for a new round, the current round history is already saved
+      newPhase = "clue";
+      return await db.update(imposter)
+        .set({
+          game_data: {
+            ...gameData,
+            clues: {},
+            votes: {},
+            shouldVoteVotes: {},
+            phase: newPhase,
+            round: (gameData.round ?? 1) + 1,
+            history
+          }
+        })
         .where(eq(imposter.id, params.id))
         .then(() => NextResponse.json({ success: true, nextPhase: newPhase }));
     }

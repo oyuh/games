@@ -246,49 +246,6 @@ export default function HomePage() {
   const router = useRouter();
   const { session } = useSessionInfo();
   const [currentGameInfo, setCurrentGameInfo] = useState<Game | null>(null);
-  const [joinCode, setJoinCode] = useState("");
-  const [joiningGame, setJoiningGame] = useState(false);
-  const [joinError, setJoinError] = useState("");
-  const [joinGameType, setJoinGameType] = useState("imposter");
-
-  // Function to handle joining by code
-  async function handleJoinByCode(gameType = "imposter") {
-    if (!joinCode.trim()) return;
-    if (!session?.entered_name || !session?.id) {
-      alert("You must enter your name before joining a game.");
-      return;
-    }
-
-    setJoiningGame(true);
-    setJoinError("");
-
-    try {
-      let joinRes;
-      if (gameType === "imposter") {
-        joinRes = await fetch(`/api/imposter/join-by-code/${joinCode}`, { method: "POST" });
-      } else if (gameType === "password") {
-        joinRes = await fetch(`/api/password/join-by-code/${joinCode}`, { method: "POST" });
-      }
-      if (joinRes?.ok) {
-        const data = await joinRes.json();
-        if (gameType === "imposter") {
-          router.push(`/imposter/${data.id}/begin`);
-        } else if (gameType === "password") {
-          router.push(`/password/${data.id}/begin`);
-        }
-      } else if (joinRes?.status === 404) {
-        setJoinError("Game not found with that code.");
-      } else if (joinRes?.status === 401) {
-        setJoinError("You must enter your name before joining a game.");
-      } else {
-        setJoinError("Failed to join game.");
-      }
-    } catch (error) {
-      setJoinError("Error joining game. Please try again.");
-    } finally {
-      setJoiningGame(false);
-    }
-  }
 
   async function handleCreateImposterGame(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -350,64 +307,10 @@ export default function HomePage() {
     }
   }
 
-  async function handleJoinGame() {
-    const link = window.prompt("Paste the join game link:");
-    if (!link) return;
-    try {
-      // Only allow links that start with the current origin or a valid relative path
-      const url = new URL(link, window.location.origin);
-      if (!url.pathname.startsWith("/")) {
-        alert("Invalid link. Please paste a valid join link.");
-        return;
-      }
-      const confirmJoin = window.confirm(`Join game at: ${url.pathname}?`);
-      if (confirmJoin) {
-        router.push(url.pathname + url.search + url.hash);
-      }
-    } catch {
-      alert("Invalid link. Please paste a valid join link.");
-    }
-  }
-
   return (
     <main className="min-h-screen bg-main text-main font-sans flex flex-col items-center justify-center px-4 py-8">
-      <h1 className="text-4xl font-bold mb-6 text-primary text-center">Start a Game</h1>
-      <div className="w-full flex justify-center mb-8">
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex gap-4 items-center">
-            <select
-              value={joinGameType}
-              onChange={e => setJoinGameType(e.target.value)}
-              className="input bg-main text-main border border-secondary rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary font-semibold uppercase tracking-wide min-w-[160px]"
-            >
-              <option value="imposter">Imposter</option>
-              <option value="password">Password</option>
-            </select>
-            <input
-              type="text"
-              placeholder="Enter game code"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value)}
-              className="input bg-main text-main border border-secondary rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <button
-              type="button"
-              className="btn-primary py-2 px-6 rounded-md text-lg font-semibold bg-primary text-main hover:bg-primary/90 transition shadow-lg"
-              onClick={() => handleJoinByCode(joinGameType)}
-              disabled={joiningGame || !joinCode.trim()}
-            >
-              {joiningGame ? "Joining..." : "Join Game"}
-            </button>
-          </div>
-          {joinError && <div className="text-destructive text-center">{joinError}</div>}
-          <span
-            className="text-secondary hover:text-primary text-sm underline mt-2 cursor-pointer"
-            onClick={handleJoinGame}
-          >
-            Or join by link
-          </span>
-        </div>
-      </div>
+      <h1 className="text-4xl font-bold mb-12 text-primary text-center">Start a Game</h1>
+
       <div className="w-full max-w-5xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {games.map((game) => (
           <form
@@ -450,10 +353,11 @@ export default function HomePage() {
                       id={`${game.key}-${field.name}`}
                       name={field.name}
                       required={field.required}
+                      defaultValue=""
                       className="input bg-main text-main border border-secondary rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary font-semibold uppercase tracking-wide"
                       disabled={!game.available}
                     >
-                      <option value="" disabled selected className="text-secondary">Select a category</option>
+                      <option value="" disabled className="text-secondary">Select a category</option>
                       {field.options?.map((opt: string) => (
                         <option key={opt} value={opt} className="text-main bg-card font-semibold uppercase tracking-wide">{opt}</option>
                       ))}
@@ -503,7 +407,7 @@ export default function HomePage() {
           </form>
         ))}
 
-        {/* Links/Social Card - No changes needed here */}
+        {/* Links/Social Card */}
         <div className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center">
           <h2 className="text-2xl font-bold text-primary mb-1 text-center">And More...</h2>
           <p className="text-secondary text-center text-base mb-4">More games coming soon!</p>
@@ -516,7 +420,7 @@ export default function HomePage() {
             <a href="https://instagram.com/lawsonwtf" target="_blank" rel="noopener noreferrer"
               className="btn-primary w-full flex items-center justify-center gap-2 py-2 rounded-md text-lg font-semibold bg-secondary text-main hover:bg-secondary/90 transition">
               <FaInstagram className="text-main w-5 h-5" />
-              Instagram: @lawsonwth
+              Instagram: @lawsonwtf
             </a>
             <a href="https://discordapp.com/users/527167786200465418" target="_blank" rel="noopener noreferrer"
               className="btn-primary w-full flex items-center justify-center gap-2 py-2 rounded-md text-lg font-semibold bg-[#5865F2] text-main hover:bg-[#4752c4] transition">

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { useSessionInfo } from "./session-modal";
-import { FaUser } from "react-icons/fa"; // Import FaUser icon
+import { FaUser } from "react-icons/fa";
 
 export function SessionProfileEditor() {
   const { session, loading } = useSessionInfo();
@@ -11,6 +11,7 @@ export function SessionProfileEditor() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Open menu
   const handleOpen = () => {
@@ -33,21 +34,28 @@ export function SessionProfileEditor() {
   };
 
   return (
-    <>
-      {/* Floating button with FaUser icon */}
+    <div className="relative">
       <button
-        className="fixed top-4 left-4 z-50 bg-card text-primary border border-secondary rounded-full shadow-lg p-3 flex items-center justify-center hover:bg-secondary/20 transition"
+        className="bg-card text-primary border border-secondary rounded-full shadow-lg p-5 flex items-center justify-center hover:bg-secondary/20 transition"
         onClick={handleOpen}
         aria-label="Edit Profile/Session"
-        style={{ minWidth: 48, minHeight: 48 }}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        style={{ width: 76, height: 76 }}
       >
-        <FaUser size={20} />
+        <FaUser size={32} />
       </button>
-      {/* Dialog */}
+
+      {showTooltip && (
+        <div className="absolute left-[-140px] top-1/2 transform -translate-y-1/2 bg-card px-4 py-2 rounded-md text-sm whitespace-nowrap border border-secondary shadow-lg z-50 w-[120px] text-center">
+          Profile
+        </div>
+      )}
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm w-full bg-card text-main border border-secondary shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-primary text-center">Session/Profile</DialogTitle>
+            <DialogTitle className="text-primary text-center">Profile Settings</DialogTitle>
           </DialogHeader>
           {loading ? (
             <div className="text-center text-secondary">Loading...</div>
@@ -82,6 +90,6 @@ export function SessionProfileEditor() {
           <DialogFooter />
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

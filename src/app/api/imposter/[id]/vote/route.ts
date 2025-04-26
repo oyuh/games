@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "../../../../../server/db/index";
 import { imposter } from "../../../../../server/db/schema";
 import { eq } from "drizzle-orm";
+import { updatePlayerGameStats, setGameExpiration } from "../../../../../lib/game-statistics";
 
 // Add a type for game_data to ensure type safety
 interface ImposterGameData {
@@ -90,6 +91,8 @@ export async function POST(
         revealResult: "imposter_win",
         results,
       };
+
+      // Update the game with results
       await db.update(imposter)
         .set({
           player_ids: remainingPlayers,
@@ -97,6 +100,17 @@ export async function POST(
           game_data: updatedGameData,
         })
         .where(eq(imposter.id, params.id));
+
+      // Update game expiration time - game is finished
+      await setGameExpiration(params.id, imposter);
+
+      // Update player statistics for all players
+      await Promise.all(game.player_ids.map(async (pid) => {
+        const isImposter = (game.imposter_ids ?? []).includes(pid);
+        // Imposters win, others lose
+        await updatePlayerGameStats(pid, 'imposter', isImposter);
+      }));
+
       return NextResponse.json({ success: true, nextPhase: newPhase });
     }
 
@@ -118,6 +132,8 @@ export async function POST(
         revealResult: "player_win",
         results,
       };
+
+      // Update the game with results
       await db.update(imposter)
         .set({
           player_ids: remainingPlayers,
@@ -125,6 +141,17 @@ export async function POST(
           game_data: updatedGameData,
         })
         .where(eq(imposter.id, params.id));
+
+      // Update game expiration time - game is finished
+      await setGameExpiration(params.id, imposter);
+
+      // Update player statistics for all players
+      await Promise.all(game.player_ids.map(async (pid) => {
+        const isImposter = (game.imposter_ids ?? []).includes(pid);
+        // Non-imposters win, imposters lose
+        await updatePlayerGameStats(pid, 'imposter', !isImposter);
+      }));
+
       return NextResponse.json({ success: true, nextPhase: newPhase });
     }
 

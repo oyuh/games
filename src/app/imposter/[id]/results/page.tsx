@@ -33,9 +33,11 @@ interface GameResult {
     votes?: Record<string, string>;
     votedOut?: string[];
     revealResult?: string;
+    playerLeft?: { id: string; disconnected?: boolean };
   };
 }
 
+// Improve styling and layout for better readability on desktop
 export default function ImposterResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const actualParams = React.use(params);
   const [game, setGame] = useState<GameResult | null>(null);
@@ -60,7 +62,8 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
       }
     }
     void fetchGame();
-    const interval = setInterval(() => { void fetchGame(); }, 3000);
+    // Poll more frequently for better real-time experience (every 2 seconds)
+    const interval = setInterval(() => { void fetchGame(); }, 2000);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -119,6 +122,47 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
     const imposters = Array.from(allIds).filter(pid => !(game.player_ids || []).includes(pid));
     if (imposters.length > 0) return imposters;
     return [];
+  }
+
+  // Function to collect all player IDs from the entire game
+  function getAllPlayerIds(): string[] {
+    const allPlayerIdsSet = new Set<string>([
+      ...(game.player_ids || []),
+      ...(game.imposter_ids || [])
+    ]);
+
+    // Add players from history
+    if (Array.isArray(game?.game_data?.history)) {
+      for (const round of game.game_data.history) {
+        // Add from clues
+        if (round.clues) {
+          Object.keys(round.clues).forEach(pid => allPlayerIdsSet.add(pid));
+        }
+        // Add from votes
+        if (round.votes) {
+          Object.keys(round.votes).forEach(pid => allPlayerIdsSet.add(pid));
+        }
+        // Add from shouldVoteVotes
+        if (round.shouldVoteVotes) {
+          Object.keys(round.shouldVoteVotes).forEach(pid => allPlayerIdsSet.add(pid));
+        }
+        // Add from votedOut
+        if (Array.isArray(round.votedOut)) {
+          round.votedOut.forEach(pid => allPlayerIdsSet.add(pid));
+        }
+      }
+    }
+
+    // Add players from current round
+    if (game.game_data) {
+      const gd = game.game_data;
+      if (gd.clues) Object.keys(gd.clues).forEach(pid => allPlayerIdsSet.add(pid));
+      if (gd.votes) Object.keys(gd.votes).forEach(pid => allPlayerIdsSet.add(pid));
+      if (gd.shouldVoteVotes) Object.keys(gd.shouldVoteVotes).forEach(pid => allPlayerIdsSet.add(pid));
+      if (Array.isArray(gd.votedOut)) gd.votedOut.forEach(pid => allPlayerIdsSet.add(pid));
+    }
+
+    return Array.from(allPlayerIdsSet);
   }
 
   // Update the renderRound function to prevent unwanted shuffling
@@ -212,6 +256,8 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
                 <span className="text-destructive">Imposters win!</span>
               ) : round.revealResult === "player_win" ? (
                 <span className="text-green-600">Players win!</span>
+              ) : round.revealResult === "player_left" ? (
+                <span className="text-amber-500">Game ended - a player left</span>
               ) : (
                 <span className="text-secondary">{round.revealResult}</span>
               )}
@@ -232,86 +278,110 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
   );
   if (error) return <main className="min-h-screen flex items-center justify-center text-destructive">{error}</main>;
 
+  // Render a much cleaner and more appealing layout
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4">
-      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-lg flex flex-col items-center gap-6">
+    <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4 py-8">
+      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-3xl flex flex-col items-center gap-6">
         <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide">Game Results</h1>
-        {expired ? (
-          <div className="text-xl text-center text-destructive font-bold">This game has expired.</div>
+
+        {game?.game_data?.playerLeft ? (
+          <div className="text-xl text-center text-amber-500 font-bold mb-2 p-3 border border-amber-500 rounded-lg">
+            {game.game_data.playerLeft.disconnected ? (
+              <>
+                {game.playerNames?.[game.game_data.playerLeft.id] || "A player"} disconnected from the game
+                <div className="text-sm text-secondary mt-1">
+                  (Their browser was closed or they navigated away)
+                </div>
+              </>
+            ) : (
+              <>
+                {game.playerNames?.[game.game_data.playerLeft.id] || "A player"} left the game
+              </>
+            )}
+          </div>
+        ) : expired ? (
+          <div className="text-xl text-center text-destructive font-bold p-3 border border-destructive rounded-lg">This game has expired.</div>
         ) : (
           <div className="text-lg text-center text-secondary">This results page will update live until the game expires.</div>
         )}
-        {game.expires_at && !expired && (
-          <div className="text-center text-sm text-secondary">
+
+        {game?.expires_at && !expired && (
+          <div className="text-center text-sm text-secondary bg-secondary/10 px-4 py-2 rounded-lg">
             Expires at: {new Date(game.expires_at).toLocaleString()}<br />
-            (Time left: {Math.max(0, Math.floor((new Date(game.expires_at).getTime() - Date.now()) / 1000))}s)
+            (Time left: {Math.max(0, Math.floor((new Date(game.expires_at).getTime() - Date.now()) / (60*1000)))} minutes)
           </div>
-        )}
-        {/* Show summary of the game */}
-        <div className="w-full flex flex-col gap-2 mt-4">
-          <div className="text-lg font-semibold text-primary">Players:</div>
-          <ul className="list-disc pl-6">
-            {game.player_ids?.map((pid: string) => (
-              <li key={pid}>{getPlayerName(pid)}</li>
-            ))}
-          </ul>
+        )
+        }
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+          {/* Game summary section - left column on desktop */}
+          <div className="flex flex-col gap-4">
+            <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+              <h2 className="text-xl font-bold text-primary border-b border-primary/30 pb-2 mb-3">Game Info</h2>
+
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-primary mb-2">The Word</h3>
+                <div className="text-2xl font-bold text-main bg-primary/80 rounded-lg px-4 py-2 text-center">
+                  {game?.chosen_word}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-primary mb-2">Players</h3>
+                <ul className="space-y-1">
+                  {getAllPlayerIds().map((pid: string) => (
+                    <li key={pid} className={`rounded-md px-3 py-1 ${isImposter(pid) ? "bg-destructive/20 text-destructive" : "bg-primary/10"}`}>
+                      {getPlayerName(pid)}{isImposter(pid) ? " (Imposter)" : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-primary mb-2">Game Result</h3>
+                {game?.game_data?.revealResult ? (
+                  <div className="text-xl font-bold text-center p-2 rounded-md">
+                    {game.game_data.revealResult === "imposter_win" ? (
+                      <span className="text-destructive">Imposters Win!</span>
+                    ) : game.game_data.revealResult === "player_win" ? (
+                      <span className="text-green-600">Players Win!</span>
+                    ) : game.game_data.revealResult === "player_left" ? (
+                      <span className="text-amber-500">Game Ended - Player Left</span>
+                    ) : (
+                      <span className="text-secondary">{game.game_data.revealResult}</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-secondary text-center italic">Game in progress...</p>
+                )}
+              </div>
+            </div>
+
+            <Button className="mt-2" onClick={() => router.push("/imposter")}>
+              Back to Lobby
+            </Button>
+          </div>
+
+          {/* Game history section - right column on desktop */}
+          <div className="flex flex-col gap-3">
+            <h2 className="text-xl font-bold text-primary">Game History</h2>
+            <div className="overflow-y-auto max-h-[600px] pr-2 space-y-4">
+              {/* Render all rounds from history */}
+              {Array.isArray(game?.game_data?.history) && game?.game_data?.history.length > 0 ? (
+                game.game_data.history.map((round, idx) => renderRound(round, idx))
+              ) : (
+                <div className="text-secondary bg-secondary/10 p-4 rounded-lg text-center">
+                  No round history yet.
+                </div>
+              )}
+              {/* Render current round if not already in history */}
+              {game?.game_data && (!game.game_data.history || !game.game_data.history.some((r: any) => r.round === game.game_data?.round)) && (
+                renderRound(game.game_data, (game.game_data.history?.length || 0))
+              )}
+            </div>
+          </div>
         </div>
-        <div className="w-full flex flex-col gap-2 mt-4">
-          <div className="text-lg font-semibold text-primary">Imposters:</div>
-          <ul className="list-disc pl-6">
-            {getImposterIds().length > 0 ? (
-              getImposterIds().map((pid: string) => (
-                <li key={pid} className="text-red-600 font-bold">
-                  {getPlayerName(pid)}
-                </li>
-              ))
-            ) : (
-              <li className="text-secondary italic">No imposters found.</li>
-            )}
-          </ul>
-        </div>
-        <div className="w-full flex flex-col gap-2 mt-4">
-          <div className="text-lg font-semibold text-primary">Word:</div>
-          <div className="text-2xl font-bold text-main bg-primary/80 rounded px-4 py-2 my-2 text-center">{game.chosen_word}</div>
-        </div>
-        {/* Optionally show clues, votes, etc. */}
-        <div className="w-full flex flex-col gap-2 mt-4">
-          <div className="text-lg font-semibold text-primary">Game Phases & Rounds:</div>
-          {/* Render all rounds from history */}
-          {Array.isArray(game?.game_data?.history) && game.game_data.history.length > 0 ? (
-            game.game_data.history.map((round, idx) => renderRound(round, idx))
-          ) : (
-            <div className="text-secondary">No round history yet.</div>
-          )}
-          {/* Render current round if not already in history */}
-          {game.game_data && (!game.game_data.history || !game.game_data.history.some((r: any) => r.round === game.game_data.round)) && (
-            renderRound(game.game_data, (game.game_data.history?.length || 0) + 1)
-          )}
-        </div>
-        <Button className="mt-4" onClick={() => router.push("/imposter")}>Back to Lobby</Button>
       </div>
-      <style jsx global>{`
-        body, .bg-main, .bg-card {
-          background-color: #23292f !important;
-        }
-        .text-main, .text-primary, .text-secondary, .text-green-600 {
-          color: #fff !important;
-        }
-        .bg-primary, .bg-primary\/80 {
-          background-color: #2e7d32 !important;
-          color: #fff !important;
-        }
-        .bg-muted {
-          background-color: #333 !important;
-          color: #fff !important;
-        }
-        .text-destructive, .text-red-600 {
-          color: #ff5252 !important;
-        }
-        .font-bold {
-          font-weight: bold;
-        }
-      `}</style>
     </main>
   );
 }
