@@ -11,10 +11,15 @@ export const Footer = () => {
       <style jsx>{`
         footer {
           text-align: center;
-          padding: 1rem;
+          padding: 0.25rem;
           font-size: 0.9rem;
-          margin-top: 2rem;
+          margin-top: 0rem;
           font-weight: 500;
+          position: fixed;
+          left: 0;
+          bottom: 0;
+          width: 100vw;
+          z-index: 100;
         }
 
         .gradient-text {
