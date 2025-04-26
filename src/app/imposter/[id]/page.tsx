@@ -2,7 +2,7 @@
 import { useSessionInfo } from "../../_components/session-modal";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, XCircle } from "lucide-react";
+import { Loader2, XCircle, X } from "lucide-react";
 import React from "react";
 import { Button } from "~/components/ui/button";
 import shuffle from "lodash.shuffle";
@@ -34,11 +34,31 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
   } | null>(null);
   const [disconnectionDialogOpen, setDisconnectionDialogOpen] = useState(false);
 
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    type: 'warning' | 'info' | 'error';
+    message: string;
+    playerId?: string;
+    actions?: Array<{
+      label: string;
+      action: () => void;
+      variant?: 'default' | 'destructive' | 'outline' | 'secondary';
+    }>;
+  }>>([]);
+
   const phase = game?.game_data?.phase;
   const clues = game?.game_data?.clues || {};
   const votes = game?.game_data?.votes || {};
   const allCluesSubmitted = Object.keys(clues).length === game?.player_ids?.length;
   const allVotesSubmitted = Object.keys(votes).length === game?.player_ids?.length;
+
+  const addNotification = (notification: typeof notifications[0]) => {
+    setNotifications(prev => [...prev, notification]);
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   useEffect(() => {
     let firstLoad = true;
@@ -60,7 +80,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         if (isInitial && !cancelled) setLoading(false);
       }
     }
-    fetchGame(true); // initial load
+    fetchGame(true);
     const interval = setInterval(() => fetchGame(false), 3000);
     return () => {
       cancelled = true;
@@ -72,31 +92,85 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
     if (!game || !session?.id) return;
 
     let cancelled = false;
+    let wasInactive = false;
+    let lastActiveHeartbeat = Date.now();
 
-    // Start the heartbeat
+    const isGameActive = () => {
+      // Only send heartbeats if the game is not ended or in results
+      const phase = game?.game_data?.phase;
+      const revealResult = game?.game_data?.revealResult;
+      return phase !== 'ended' && revealResult !== 'player_left' && phase !== 'reveal';
+    };
+
     const sendHeartbeat = async () => {
+      if (!isGameActive()) return;
       try {
+        // Check if document is visible
+        const isVisible = document.visibilityState === 'visible';
+
+        // Only send active heartbeats when the window is actually visible
+        // Otherwise, send an inactive heartbeat to let the server know the user is still connected
+        // but just not actively viewing the tab
         const res = await fetch(`/api/imposter/${actualParams.id}/heartbeat`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" }
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            activeState: isVisible ? 'active' : 'inactive',
+            lastActiveTimestamp: isVisible ? Date.now() : lastActiveHeartbeat
+          })
         });
+
+        // Update lastActiveHeartbeat if this is an active heartbeat
+        if (isVisible) {
+          lastActiveHeartbeat = Date.now();
+          wasInactive = false;
+        }
 
         if (res.ok) {
           const data = await res.json();
 
-          // Check if a player disconnection is in progress
           if (data.playerDisconnected && !cancelled) {
-            setDisconnectionDialogOpen(true);
             const playerName = game.playerNames?.[data.playerId] || "A player";
             setDisconnectedPlayerName(playerName);
+
+            const notificationId = `disconnect-${data.playerId}-${Date.now()}`;
+            setNotifications(prev => prev.filter(n => n.playerId !== data.playerId));
+            addNotification({
+              id: notificationId,
+              type: 'warning',
+              message: `${playerName} appears to be disconnected. Would you like to continue without them?`,
+              playerId: data.playerId,
+              actions: [
+                {
+                  label: 'Continue',
+                  action: () => submitDisconnectionVote('continue', notificationId),
+                  variant: 'default'
+                },
+                {
+                  label: 'End Game',
+                  action: () => submitDisconnectionVote('end', notificationId),
+                  variant: 'destructive'
+                }
+              ]
+            });
           }
 
-          // Update disconnection votes if they exist
           if (data.disconnectionInProgress && data.votesCounted !== undefined && data.totalPlayers !== undefined) {
             setDisconnectionVotesStatus({
               votesCounted: data.votesCounted,
               totalPlayers: data.totalPlayers
             });
+
+            setNotifications(prev => prev.map(n => {
+              if (n.playerId === data.playerId) {
+                return {
+                  ...n,
+                  message: `${n.message} (${data.votesCounted}/${data.totalPlayers} votes)`,
+                  actions: disconnectionVote ? [] : n.actions
+                };
+              }
+              return n;
+            }));
           }
         }
       } catch (error) {
@@ -104,18 +178,32 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
       }
     };
 
-    // Send initial heartbeat
+    // Initial heartbeat
     sendHeartbeat();
 
-    // Set up interval for regular heartbeats (every 10 seconds)
-    const heartbeatInterval = setInterval(sendHeartbeat, 10000);
+    // Set up regular heartbeats (every 30 seconds)
+    const heartbeatInterval = setInterval(sendHeartbeat, 30000);
 
-    // Add beforeunload event listener to notify when the user is about to leave
+    // Track visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // When tab becomes visible again, immediately send a heartbeat
+        if (wasInactive) {
+          sendHeartbeat();
+        }
+        lastActiveHeartbeat = Date.now();
+      } else {
+        // Mark that we went inactive
+        wasInactive = true;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const handleBeforeUnload = () => {
       fetch(`/api/imposter/${actualParams.id}/leave`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Using keepalive to ensure the request completes even as the page unloads
         keepalive: true
       }).catch(() => {});
     };
@@ -125,36 +213,56 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
     return () => {
       cancelled = true;
       clearInterval(heartbeatInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [actualParams.id, game, session?.id]);
 
   useEffect(() => {
-    // Open disconnection dialog if playerDetectedDisconnected is set
     if (game?.game_data?.playerDetectedDisconnected) {
-      setDisconnectionDialogOpen(true);
-      const playerName = game.playerNames?.[game.game_data.playerDetectedDisconnected] || "A player";
+      const playerId = game.game_data.playerDetectedDisconnected;
+      const playerName = game.playerNames?.[playerId] || "A player";
       setDisconnectedPlayerName(playerName);
+
+      const existingNotification = notifications.find(n => n.playerId === playerId);
+      if (!existingNotification) {
+        const notificationId = `disconnect-${playerId}-${Date.now()}`;
+        addNotification({
+          id: notificationId,
+          type: 'warning',
+          message: `${playerName} appears to be disconnected. Would you like to continue without them?`,
+          playerId: playerId,
+          actions: disconnectionVote ? [] : [
+            {
+              label: 'Continue',
+              action: () => submitDisconnectionVote('continue', notificationId),
+              variant: 'default'
+            },
+            {
+              label: 'End Game',
+              action: () => submitDisconnectionVote('end', notificationId),
+              variant: 'destructive'
+            }
+          ]
+        });
+      }
     } else {
-      // Close dialog if the disconnected player is no longer detected (resolved)
-      setDisconnectionDialogOpen(false);
+      setNotifications(prev =>
+        prev.filter(n => n.type !== 'warning' || !n.playerId || n.playerId !== game?.game_data?.playerDetectedDisconnected)
+      );
       setDisconnectionVote(null);
       setDisconnectionVotesStatus(null);
     }
 
-    // Only redirect to results for normal game end conditions
-    // For player_left, we'll show the banner instead
     if (phase === 'reveal' && ["imposter_win", "player_win"].includes(game?.game_data?.revealResult)) {
       router.replace(`/imposter/${actualParams.id}/results`);
     }
 
-    // Check for player left in game data
     if (game?.game_data?.playerLeft && !playerDisconnected) {
       const playerName = game.playerNames?.[game.game_data.playerLeft.id] || "A player";
       setPlayerDisconnected(true);
       setDisconnectedPlayerName(playerName);
 
-      // Redirect to results page after a delay
       setTimeout(() => {
         router.replace(`/imposter/${actualParams.id}/results`);
       }, 3000);
@@ -263,7 +371,21 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         body: JSON.stringify({ vote }),
       });
       if (!res.ok) {
-        setActionError("Failed to submit vote");
+        // If the backend says voting is closed, force a refresh
+        const data = await res.json().catch(() => ({}));
+        if (data?.error === "Not accepting votes") {
+          // Refetch game state immediately
+          const refetch = await fetch(`/api/imposter/${actualParams.id}`);
+          if (refetch.ok) {
+            const newData = await refetch.json();
+            setGame(newData.game);
+            setActionError("");
+          } else {
+            setActionError("Voting closed. Please wait for the next phase.");
+          }
+        } else {
+          setActionError("Failed to submit vote");
+        }
       } else {
         setVote("");
       }
@@ -288,6 +410,20 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
   async function submitDisconnectionVote(vote: 'continue' | 'end') {
     try {
       setDisconnectionVote(vote);
+
+      if (notificationId) {
+        setNotifications(prev => prev.map(n => {
+          if (n.id === notificationId) {
+            return {
+              ...n,
+              message: `${disconnectedPlayerName} appears to be disconnected. You voted to ${vote === 'continue' ? 'continue' : 'end the game'}.`,
+              actions: []
+            };
+          }
+          return n;
+        }));
+      }
+
       const res = await fetch(`/api/imposter/${actualParams.id}/heartbeat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -304,21 +440,41 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
             votesCounted: data.votesCounted,
             totalPlayers: data.totalPlayers
           });
+
+          if (notificationId) {
+            setNotifications(prev => prev.map(n => {
+              if (n.id === notificationId) {
+                return {
+                  ...n,
+                  message: `${disconnectedPlayerName} appears to be disconnected. You voted to ${vote === 'continue' ? 'continue' : 'end the game'}. (${data.votesCounted}/${data.totalPlayers} votes)`
+                };
+              }
+              return n;
+            }));
+          }
         }
 
         if (data.disconnectionResolved) {
-          // Dialog will automatically close on next game update
+          setNotifications(prev =>
+            prev.filter(n => !n.playerId || n.playerId !== game?.game_data?.playerDetectedDisconnected)
+          );
+
           if (!data.continueGame) {
-            // Game ended - will redirect eventually
             setPlayerDisconnected(true);
-            const playerName = game.playerNames?.[game?.game_data?.playerDetectedDisconnected] || "A player";
-            setDisconnectedPlayerName(playerName);
+            addNotification({
+              id: `game-end-${Date.now()}`,
+              type: 'error',
+              message: `Game ended because ${disconnectedPlayerName} disconnected. Redirecting to results...`
+            });
           } else {
-            // Game continues without the disconnected player
-            setDisconnectionDialogOpen(false);
-            setDisconnectionVote(null);
-            setDisconnectionVotesStatus(null);
+            addNotification({
+              id: `continue-${Date.now()}`,
+              type: 'info',
+              message: `Game continues without ${disconnectedPlayerName}.`
+            });
           }
+          setDisconnectionVote(null);
+          setDisconnectionVotesStatus(null);
         }
       }
     } catch (error) {
@@ -346,6 +502,62 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
       setIsLeaving(false);
       setIsLeaveDialogOpen(false);
     }
+  }
+
+  function getHistoryContent() {
+    const history = game?.game_data?.history || [];
+    if (!history.length) return null;
+    const showImposters = game?.game_data?.phase === "reveal" || game?.game_data?.phase === "ended";
+    // Show only entries at index 1, 3, 5, ... (i.e., 2nd, 4th, 6th, ...)
+    const filteredHistory = history.filter((_, idx) => (idx + 1) % 2 === 0);
+    return (
+      <div className="w-full flex flex-col items-center gap-6 mt-6">
+        <h2 className="text-xl font-bold text-primary text-center">Round History</h2>
+        {filteredHistory.map((round, idx) => (
+          <div key={idx} className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-4 mb-2">
+            <div className="text-base font-semibold text-primary mb-2">Round {round.round}</div>
+            <div className="text-sm font-semibold text-secondary/80 mb-1">Clues:</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {Object.entries(round.clues || {}).map(([pid, clue]) => (
+                <div key={pid} className="rounded px-3 py-1 text-sm bg-secondary/20 border border-secondary/30">
+                  {getPlayerName(pid)}: <span className="font-semibold">{clue}</span>
+                </div>
+              ))}
+            </div>
+            <div className="text-sm font-semibold text-secondary/80 mb-1">Votes:</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {Object.entries(round.votes || {}).map(([pid, votedFor]) => (
+                <div key={pid} className="rounded px-3 py-1 text-sm bg-secondary/20 border border-secondary/30">
+                  {getPlayerName(pid)} voted for {getPlayerName(votedFor)}
+                </div>
+              ))}
+              {Object.keys(round.votes || {}).length === 0 && <div className="text-xs text-secondary">No votes</div>}
+            </div>
+            <div className="text-sm font-semibold text-secondary/80 mb-1">Voted Out:</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {(round.votedOut || []).length > 0 ? (
+                round.votedOut.map(pid => (
+                  <div key={pid} className="rounded px-3 py-1 text-sm bg-destructive/20 border border-destructive/30">
+                    {getPlayerName(pid)}
+                  </div>
+                ))
+              ) : <div className="text-xs text-secondary">No one voted out</div>}
+            </div>
+            {round.revealResult && (
+              <div className="text-center mt-2 text-base font-bold">
+                {round.revealResult === "imposter_win" ? (
+                  <span className="text-destructive/80">Imposter(s) win</span>
+                ) : round.revealResult === "player_win" ? (
+                  <span className="text-green-600/80">Players win</span>
+                ) : round.revealResult === "tie" ? (
+                  <span className="text-amber-500">Tie</span>
+                ) : null}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
   }
 
   if (loading || !game || !game.game_data) return (
@@ -419,7 +631,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         ) : null}
         <div className="w-full flex flex-col gap-1 mt-2 items-center">
           <div className="text-sm font-semibold text-secondary/80 mt-3 mb-1 text-center">Clues submitted:</div>
-          {(allCluesSubmitted ? shuffledClues : shuffle(Object.entries(clues))).map(([pid, clue], idx) => (
+          {(allCluesSubmitted ? shuffledClues : Object.entries(clues)).map(([pid, clue], idx) => (
             <div
               key={pid}
               className={`rounded px-3 py-2 text-sm text-main bg-secondary/20 border border-secondary/30 mb-1 w-full text-center
@@ -440,61 +652,55 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
           <div className="text-secondary text-xs mt-2 text-center">Waiting for all players to submit clues...</div>
         )}
         {phase === "clue" && actionError && <div className="text-destructive text-sm mt-2 text-center">{actionError}</div>}
-        {phase === "clue" && session?.id && !clues[session?.id] && (
-          <form
-            onSubmit={e => {
-              e.preventDefault();
-              submitClue();
-            }}
-            className="flex flex-col items-center gap-2 w-full max-w-xs bg-secondary/10 border border-secondary/20 rounded p-3"
-          >
-            <input
-              type="text"
-              value={clue}
-              onChange={e => setClue(e.target.value)}
-              className="w-full px-3 py-2 rounded border border-secondary bg-main text-main text-center"
-              placeholder="Enter your clue"
-              disabled={clueSubmitting}
-              maxLength={64}
-              required
-            />
-            {(() => {
-              const currentTurnId = getCurrentTurnPlayerId();
-
-              if (currentTurnId && currentTurnId !== session.id) {
-                return <div className="text-amber-500 text-xs mt-1">
-                  It's another players turn to submit. Please wait.
-                </div>;
-              }
-
-              if (currentTurnId && currentTurnId === session.id) {
-                return <div className="text-green-500 text-xs mt-1">It's your turn to submit!</div>;
-              }
-
-              const order = getClueSubmissionOrder();
-              const myIndex = order.indexOf(session.id);
-              const submittedCount = Object.keys(clues).length;
-
-              if (myIndex === -1) {
-                return <div className="text-destructive text-xs mt-1">You're not in this game.</div>;
-              }
-
-              if (submittedCount < myIndex) {
-                return <div className="text-amber-500 text-xs mt-1">Please wait for your turn. You'll be able to submit soon.</div>;
-              }
-
-              if (submittedCount > myIndex) {
-                return <div className="text-amber-500 text-xs mt-1">You missed your turn, but try submitting anyway.</div>;
-              }
-
-              return <div className="text-green-500 text-xs mt-1">It's your turn to submit!</div>;
-            })()}
-
-            <Button type="submit" className="w-full mt-2" disabled={clueSubmitting || !clue.trim()}>
-              {clueSubmitting ? "Submitting..." : "Submit Clue"}
-            </Button>
-          </form>
-        )}
+        {phase === "clue" && session?.id && !clues[session?.id] && (() => {
+          const clueOrder = game.game_data.clueOrder || [];
+          const nextPlayerId = clueOrder.find((pid: string) => !clues[pid]);
+          return (
+            <form
+              onSubmit={async e => {
+                e.preventDefault();
+                setActionError("");
+                const res = await fetch(`/api/imposter/${actualParams.id}/clue`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ clue }),
+                });
+                if (!res.ok) {
+                  const data = await res.json().catch(() => ({}));
+                  if (data?.error === "Not your turn to submit a clue") {
+                    setActionError("Wait your turn, please.");
+                  } else if (data?.error) {
+                    setActionError(data.error);
+                  } else {
+                    setActionError("Failed to submit clue");
+                  }
+                } else {
+                  setClue("");
+                }
+              }}
+              className="flex flex-col items-center gap-2 w-full max-w-xs bg-secondary/10 border border-secondary/20 rounded p-3"
+            >
+              <input
+                type="text"
+                value={clue}
+                onChange={e => setClue(e.target.value)}
+                className="w-full px-3 py-2 rounded border border-secondary bg-main text-main text-center"
+                placeholder="Enter your clue"
+                disabled={clueSubmitting}
+                maxLength={64}
+                required
+              />
+              {session.id === nextPlayerId ? (
+                <div className="text-green-500 text-xs mt-1">It's your turn to submit!</div>
+              ) : (
+                <div className="text-amber-500 text-xs mt-1">You can type, but only the highlighted player can submit first.</div>
+              )}
+              <Button type="submit" className="w-full mt-2" disabled={clueSubmitting || !clue.trim()}>
+                {clueSubmitting ? "Submitting..." : "Submit Clue"}
+              </Button>
+            </form>
+          );
+        })()}
         {phase === "shouldVote" && (
           <>
             <div className="text-base font-medium text-primary/90 text-center mb-1">Should we vote now?</div>
@@ -761,6 +967,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
           </>
         )}
         {phaseContent}
+        {getHistoryContent()}
       </div>
     </main>
   );

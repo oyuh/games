@@ -6,17 +6,11 @@ import { useSessionInfo } from "./_components/session-modal";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
+import { imposterCategories } from "~/data/categoryList";
 
-const categoryOptions = [
-  "Animals",
-  "Movies",
-  "Food",
-  "Sports",
-  "Places",
-  "Celebrities",
-  "Brands",
-  "Custom..."
-];
+// Use display names from the imposterCategories object
+const categoryOptions = Object.values(imposterCategories).map(category => category.displayName);
+// Add "Custom..." option
 
 interface GameField {
   label: string;

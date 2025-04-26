@@ -10,6 +10,16 @@ export async function GET(
   const game = await db.query.imposter.findFirst({ where: eq(imposter.id, params.id) });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
+  // DEBUG LOG: Returning game state
+  console.log('[DEBUG] Returning game state', {
+    gameId: params.id,
+    phase: game.game_data?.phase,
+    round: game.game_data?.round,
+    started_at: game.started_at,
+    player_ids: game.player_ids,
+    imposter_ids: game.imposter_ids
+  });
+
   // Collect all unique IDs from player_ids, imposter_ids, and all clues/votes/history
   const allIdsSet = new Set<string>([...(game.player_ids || []), ...(game.imposter_ids || [])]);
   const addIdsFromObj = (obj?: Record<string, any>) => {

@@ -32,6 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <div className="fixed right-8 top-1/2 transform -translate-y-1/2 flex flex-col gap-6 z-50">
           <SessionProfileEditor />
           <JoinGameModal />
+          <Analytics/>
         </div>
       </body>
     </html>

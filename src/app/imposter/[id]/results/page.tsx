@@ -15,6 +15,7 @@ interface GameResult {
   chosen_word?: string;
   game_data?: {
     firstClueAt?: string;
+    gameFinished?: boolean; // Add this to track explicit game completion
     history?: Array<{
       clues?: Record<string, string>;
       clueOrder?: string[];
@@ -24,6 +25,7 @@ interface GameResult {
       votes?: Record<string, string>;
       votedOut?: string[];
       revealResult?: string;
+      activePlayers?: string[];
     }>;
     round?: number;
     phase?: string;
@@ -100,7 +102,17 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
   }
 
   function isImposter(pid: string) {
-    return (game.imposter_ids || []).includes(pid);
+    // Only reveal imposters if the game is finished or revealResult is set
+    if (
+      game?.game_data?.gameFinished ||
+      game?.game_data?.revealResult === "imposter_win" ||
+      game?.game_data?.revealResult === "player_win" ||
+      game?.game_data?.revealResult === "player_left"
+    ) {
+      return (game.imposter_ids || []).includes(pid);
+    }
+    // Otherwise, do not reveal
+    return false;
   }
 
   // Helper to get imposter ids if not present: find the id in imposter_ids or, if missing, infer as the id in imposter_ids or the one not in player_ids
@@ -191,7 +203,7 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
                 <li key={pid}>
                   <span className="font-mono bg-muted px-2 py-1 rounded mr-2">{clue}</span>
                   <span className={isImposter(pid) ? "text-destructive font-bold" : "text-secondary"}>
-                    {getPlayerName(pid)}{isImposter(pid) ? " (IMPOSTER)" : ""}
+                    {getPlayerName(pid)}{/* Hide imposter label in history */}
                   </span>
                 </li>
               ))}
@@ -210,7 +222,7 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
                   <li key={pid}>
                     <span className="font-mono bg-muted px-2 py-1 rounded mr-2">{v}</span>
                     <span className={isImposter(pid) ? "text-destructive font-bold" : "text-secondary"}>
-                      {getPlayerName(pid)}{isImposter(pid) ? " (IMPOSTER)" : ""}
+                      {getPlayerName(pid)}{/* Hide imposter label in history */}
                     </span>
                   </li>
               ))}
@@ -228,7 +240,7 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
                   <li key={pid}>
                     <span className="font-mono bg-muted px-2 py-1 rounded mr-2">{getPlayerName(votedFor)}</span>
                     <span className={isImposter(pid) ? "text-destructive font-bold" : "text-secondary"}>
-                      {getPlayerName(pid)}{isImposter(pid) ? " (IMPOSTER)" : ""} voted
+                      {getPlayerName(pid)} voted{/* Hide imposter label in history */}
                     </span>
                   </li>
               ))}
@@ -242,7 +254,7 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
             <ul className="list-disc pl-6">
               {Array.isArray(round.votedOut) ? round.votedOut.map((pid: string) => (
                 <li key={pid} className={isImposter(pid) ? "text-destructive font-bold" : "text-secondary"}>
-                  {getPlayerName(pid)}{isImposter(pid) ? " (IMPOSTER)" : ""}
+                  {getPlayerName(pid)}{/* Hide imposter label in history */}
                 </li>
               )) : null}
             </ul>
@@ -286,32 +298,29 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
 
         {game?.game_data?.playerLeft ? (
           <div className="text-xl text-center text-amber-500 font-bold mb-2 p-3 border border-amber-500 rounded-lg">
-            {game.game_data.playerLeft.disconnected ? (
-              <>
-                {game.playerNames?.[game.game_data.playerLeft.id] || "A player"} disconnected from the game
-                <div className="text-sm text-secondary mt-1">
-                  (Their browser was closed or they navigated away)
-                </div>
-              </>
-            ) : (
-              <>
-                {game.playerNames?.[game.game_data.playerLeft.id] || "A player"} left the game
-              </>
-            )}
+            {game.playerNames?.[game.game_data.playerLeft.id] || "A player"} disconnected from the game
+            <div className="text-sm text-secondary mt-1">
+              (Their browser was closed or they navigated away)
+            </div>
           </div>
         ) : expired ? (
           <div className="text-xl text-center text-destructive font-bold p-3 border border-destructive rounded-lg">This game has expired.</div>
+        ) : game.game_data?.gameFinished ||
+           game.game_data?.revealResult === "imposter_win" ||
+           game.game_data?.revealResult === "player_win" ? (
+          <div className="text-xl text-center text-primary font-bold p-3 border border-primary rounded-lg">
+            Game completed!
+          </div>
         ) : (
           <div className="text-lg text-center text-secondary">This results page will update live until the game expires.</div>
         )}
 
-        {game?.expires_at && !expired && (
+        {game?.expires_at && !expired && !game.game_data?.gameFinished && (
           <div className="text-center text-sm text-secondary bg-secondary/10 px-4 py-2 rounded-lg">
             Expires at: {new Date(game.expires_at).toLocaleString()}<br />
             (Time left: {Math.max(0, Math.floor((new Date(game.expires_at).getTime() - Date.now()) / (60*1000)))} minutes)
           </div>
-        )
-        }
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
           {/* Game summary section - left column on desktop */}
@@ -336,6 +345,23 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
                   ))}
                 </ul>
               </div>
+
+              {/* Imposter reveal section - only show if game is finished */}
+              {(game?.game_data?.gameFinished ||
+                game?.game_data?.revealResult === "imposter_win" ||
+                game?.game_data?.revealResult === "player_win" ||
+                game?.game_data?.revealResult === "player_left") && (
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-destructive mb-2">Imposter{(getImposterIds().length > 1) ? 's' : ''} Revealed</h3>
+                  <ul className="space-y-1">
+                    {getImposterIds().map(pid => (
+                      <li key={pid} className="rounded-md px-3 py-1 bg-destructive/20 text-destructive font-bold">
+                        {getPlayerName(pid)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <div>
                 <h3 className="text-lg font-semibold text-primary mb-2">Game Result</h3>
@@ -368,7 +394,9 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
             <div className="overflow-y-auto max-h-[600px] pr-2 space-y-4">
               {/* Render all rounds from history */}
               {Array.isArray(game?.game_data?.history) && game?.game_data?.history.length > 0 ? (
-                game.game_data.history.map((round, idx) => renderRound(round, idx))
+                game.game_data.history
+                  .filter((_, idx) => (idx + 1) % 2 === 0)
+                  .map((round, idx) => renderRound(round, idx))
               ) : (
                 <div className="text-secondary bg-secondary/10 p-4 rounded-lg text-center">
                   No round history yet.
