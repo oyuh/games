@@ -1,7 +1,6 @@
 import "~/styles/globals.css";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
-import { TRPCReactProvider } from "~/trpc/react";
 import { ClientRoot } from "./client-root";
 import { SessionProfileEditor } from "./_components/session-profile-editor";
 import { Footer } from "~/components/Footer";
@@ -24,7 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${geist.variable}`}>
       <body>
         <ClientRoot>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+            {children}
         </ClientRoot>
         <Footer />
 

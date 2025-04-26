@@ -1,40 +1,32 @@
-# Create T3 App
+# Games App
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+A web app for playing party games with friends! Users must enter a name to join or create games. Include (for now):
 
-## What's next? How do I make an app with this?
+- **Imposter**: Blend in or find the imposter! Players receive similar words, take turns giving clues, and vote to find the imposter.
+- **Password**: Team-based word guessing. Give clues, guess the word, and beat the other team.
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+## Features
+- Join or create games with a code
+- Real-time game state and player management
+- Session modal ensures every player enters a name before playing
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+## Getting Started
+1. Install dependencies:
+   ```sh
+   pnpm install
+   ```
+2. Start the database (see `start-database.sh`).
+3. Run the development server:
+   ```sh
+   pnpm dev
+   ```
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+## Tech Stack
+- Next.js (App Router)
+- React
+- Drizzle ORM & PostgreSQL
+- Tailwind CSS
 
-## Learn More
-
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
-
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
-
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
-
-## How do I deploy this?
-
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
-
-## Password Game API Endpoints
-
-The directory and route files for the password game API endpoints are scaffolded as follows:
-
-- `password-game/create/route.ts`
-- `password-game/join-by-code/[code]/route.ts`
-- `password-game/team-select/route.ts`
-- `password-game/clue/route.ts`
-- `password-game/guess/route.ts`
-- `password-game/next-round/route.ts`
+## License
+MIT
