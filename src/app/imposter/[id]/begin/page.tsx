@@ -177,7 +177,7 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
         <details className="w-full mt-2">
           <summary className="cursor-pointer text-sm text-secondary hover:text-primary">Show invite link</summary>
           <div className="bg-secondary text-main rounded px-4 py-2 font-mono text-sm select-all break-all w-full text-center mt-2">
-            {`${baseUrl}/imposter/${game.id}/begin`}
+            {`${baseUrl}/api/imposter/join-by-code/${game.code}`}
           </div>
         </details>
         {isHost && (
