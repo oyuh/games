@@ -41,7 +41,7 @@ export function SessionNameModal({ onNameSet }: { onNameSet: () => void }) {
     if (res.ok) {
       const check = await fetch("/api/session/entered-name", { method: "GET" });
       if (check.ok) {
-        const data = await check.json();
+        const data = (await check.json()) as { entered_name?: string };
         if (data && data.entered_name === name) {
           onNameSet();
           window.location.reload(); // Refresh page so name sticks
@@ -71,11 +71,11 @@ export function SessionNameModal({ onNameSet }: { onNameSet: () => void }) {
             required
             autoFocus
             placeholder="Your name"
-            className="text-lg text-center bg-main text-main border border-secondary placeholder:text-secondary"
+            className="text-lg text-center bg-main text-main border border-secondary placeholder:text-main"
             disabled={submitting}
           />
           {session?.created_at && session?.expires_at && (
-            <div className="w-full text-center text-xs text-secondary bg-main/80 rounded-lg p-2 mb-2 border border-secondary">
+            <div className="w-full text-center text-xs text-main bg-main/80 rounded-lg p-2 mb-2 border border-secondary">
               <div>Session created: <span className="font-semibold">{new Date(session.created_at).toLocaleString()}</span></div>
               <div>Session expires: <span className="font-semibold">{new Date(session.expires_at).toLocaleString()}</span></div>
             </div>

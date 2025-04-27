@@ -41,14 +41,6 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/*
-  Theme variables for dark and light mode
-  --bg: main background
-  --primary: main accent (lime green)
-  --secondary: secondary accent (turquoise/blue)
-  --text: main text color
-  --card: card/modal background
-*/
 :root {
   --radius: 0.625rem;
   --background: #181a1b;
@@ -82,15 +74,41 @@
   --card: #232323;
 }
 
-[data-theme="light"] {
-  --bg: #ffffff;
-  --primary: #0074d9;
-  --primary-foreground: #ffffff;
-  --secondary: #444;
-  --secondary-foreground: #ffffff;
-  --text: #181a1b;
-  --card: #f5f5f5;
-  --card-foreground: #181a1b;
+/* Add light mode variables that actually look light but with consistent styling */
+:root[data-theme="light"] {
+  --bg: #f8f9fa;
+  --text: #121212;
+  --card: #ffffff;
+  --card-foreground: #121212;
+  --popover: #ffffff;
+  --popover-foreground: #121212;
+  --primary: #7ecbff; /* Match dark mode blue */
+  --primary-foreground: #121212;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #334155;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #334155;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #d1d5db; /* Light but visible border */
+  --input: #f8fafc;
+  --ring: #7ecbff; /* Match primary */
+  --background: #f8f9fa;
+  --foreground: #121212;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #121212;
+  --sidebar-primary: #e2e8f0;
+  --sidebar-primary-foreground: #334155;
+  --sidebar-accent: #7ecbff;
+  --sidebar-accent-foreground: #121212;
+  --sidebar-border: #d1d5db;
+  --sidebar-ring: #7ecbff;
+
+  /* Fix for custom utilities */
+  --radius: 0.5rem;
 }
 
 body {

@@ -58,12 +58,12 @@ export function SessionProfileEditor() {
             <DialogTitle className="text-primary text-center">Profile Settings</DialogTitle>
           </DialogHeader>
           {loading ? (
-            <div className="text-center text-secondary">Loading...</div>
+            <div className="text-center text-main">Loading...</div>
           ) : session ? (
             <div className="w-full flex flex-col gap-2 items-center">
-              <div className="text-sm text-secondary">Current name:</div>
+              <div className="text-sm text-main">Current name:</div>
               <div className="font-bold text-lg text-primary mb-2">{session.entered_name}</div>
-              <div className="text-xs text-secondary bg-main/80 rounded-lg p-2 mb-2 border border-secondary w-full text-center">
+              <div className="text-xs text-main bg-main/80 rounded-lg p-2 mb-2 border border-secondary w-full text-center">
                 <div>Created: <span className="font-semibold">{session.created_at ? new Date(session.created_at).toLocaleString() : "-"}</span></div>
                 <div>Expires: <span className="font-semibold">{session.expires_at ? new Date(session.expires_at).toLocaleString() : "-"}</span></div>
               </div>
@@ -85,7 +85,7 @@ export function SessionProfileEditor() {
               {error && <div className="text-destructive text-sm font-medium text-center w-full mt-2">{error}</div>}
             </div>
           ) : (
-            <div className="text-center text-secondary">No session found.</div>
+            <div className="text-center text-main">No session found.</div>
           )}
           <DialogFooter />
         </DialogContent>

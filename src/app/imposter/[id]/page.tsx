@@ -81,7 +81,8 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
       }
     }
     fetchGame(true);
-    const interval = setInterval(() => fetchGame(false), 3000);
+    // Reduce polling interval from 3s to 1s for faster updates
+    const interval = setInterval(() => fetchGame(false), 1000);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -355,6 +356,18 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         setActionError("Failed to submit clue");
       } else {
         setClue("");
+        // Optimistically update local game state for this client
+        setGame((prevGame: any) => {
+          if (!prevGame) return prevGame;
+          const newClues = { ...prevGame.game_data.clues, [session.id]: clue };
+          return {
+            ...prevGame,
+            game_data: {
+              ...prevGame.game_data,
+              clues: newClues
+            }
+          };
+        });
       }
     } finally {
       setClueSubmitting(false);
@@ -653,6 +666,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         )}
         {phase === "clue" && actionError && <div className="text-destructive text-sm mt-2 text-center">{actionError}</div>}
         {phase === "clue" && session?.id && !clues[session?.id] && (() => {
+          // Always use the latest clueOrder from game.game_data for turn logic
           const clueOrder = game.game_data.clueOrder || [];
           const nextPlayerId = clueOrder.find((pid: string) => !clues[pid]);
           return (

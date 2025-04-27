@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "../../../../../server/db/index";
 import { imposter } from "../../../../../server/db/schema";
 import { eq } from "drizzle-orm";
@@ -22,15 +23,19 @@ export async function POST(req: NextRequest, context: object) {
   if (!sessionId) return NextResponse.json({ error: "No session" }, { status: 401 });
 
   // Safely parse the request body with error handling
-  let clue;
+  let clue: string;
   try {
-    const body = await req.json();
-    clue = body.clue;
-  } catch (error) {
+    const body: unknown = await req.json();
+    if (typeof body === "object" && body !== null && "clue" in body && typeof (body as any).clue === "string") {
+      clue = (body as any).clue;
+    } else {
+      return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
+    }
+  } catch {
     return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
   }
 
-  if (!clue || typeof clue !== "string") {
+  if (!clue) {
     return NextResponse.json({ error: "Invalid clue" }, { status: 400 });
   }
 
@@ -51,8 +56,8 @@ export async function POST(req: NextRequest, context: object) {
   }
 
   // --- Clue submission logic ---
-  let clues = gameData.clues || {};
-  const round = gameData.round || 1;
+  let clues = gameData.clues ?? {};
+  const round = gameData.round ?? 1;
 
   if (!game.player_ids || !Array.isArray(game.player_ids) || game.player_ids.length === 0) {
     return NextResponse.json({ error: "No players in game" }, { status: 400 });
@@ -69,34 +74,31 @@ export async function POST(req: NextRequest, context: object) {
   }
 
   // If this is the first clue submitted this round, initialize/enforce the clue order
+  // Always generate a new clue order at the start of each round (when clues are empty)
   let clueOrder = Array.isArray(gameData.clueOrder) && gameData.clueOrder.length > 0
     ? [...gameData.clueOrder]
     : [];
 
-  // Generate clue order if needed (beginning of round)
-  if (clueOrder.length === 0) {
+  if (Object.keys(clues).length === 0) {
+    // New round: always reshuffle clue order
     const imposters = Array.isArray(game.imposter_ids) ? game.imposter_ids : [];
     const players = [...game.player_ids];
-
-    // Keep shuffling until a non-imposter is first, or force a non-imposter to the front
     let randomizedOrder = shuffle(players);
     let maxShuffle = 10;
-    while (imposters.includes(randomizedOrder[0]) && maxShuffle-- > 0) {
+    while (randomizedOrder[0] !== undefined && imposters.includes(randomizedOrder[0]) && maxShuffle-- > 0) {
       randomizedOrder = shuffle(players);
     }
-    if (imposters.includes(randomizedOrder[0])) {
-      // Force a non-imposter to the front if possible
-      const firstNonImposter = randomizedOrder.find(pid => !imposters.includes(pid));
+    if (randomizedOrder[0] !== undefined && imposters.includes(randomizedOrder[0])) {
+      const firstNonImposter = randomizedOrder.find(pid => pid !== undefined && !imposters.includes(pid));
       if (firstNonImposter) {
         randomizedOrder = [firstNonImposter, ...randomizedOrder.filter(pid => pid !== firstNonImposter)];
       }
     }
-    // Final check: if all are imposters (shouldn't happen), just use the order
     clueOrder = randomizedOrder;
   }
 
   // Start tracking active players for this round (players who submit clues)
-  let activePlayers = Array.isArray(gameData.activePlayers) ? [...gameData.activePlayers] : [];
+  const activePlayers = Array.isArray(gameData.activePlayers) ? [...gameData.activePlayers] : [];
 
   // Add this player to active players list since they're submitting a clue
   if (!activePlayers.includes(sessionId)) {
@@ -114,7 +116,6 @@ export async function POST(req: NextRequest, context: object) {
   // 3. It's the first round (more flexible on first round)
   const isFirstRound = round === 1;
   const isFirstSubmission = Object.keys(clues).length === 0;
-  const playerMissedTurn = clueOrder.indexOf(sessionId) < clueOrder.indexOf(currentTurnPlayerId);
 
   // Only enforce turn order for the first player in each round
   // After that, let anyone submit in any order to prevent deadlocks

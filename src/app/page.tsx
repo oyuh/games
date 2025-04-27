@@ -320,7 +320,7 @@ export default function HomePage() {
           >
             <div className="w-full flex flex-col items-center gap-1">
               <h2 className="text-2xl font-bold text-primary mb-1 text-center uppercase tracking-wide">{game.name}</h2>
-              <p className="text-secondary text-center text-base mb-2">{game.description}</p>
+              <p className="text-main font-medium text-center text-base mb-2">{game.description}</p>
               {game.info && (
                 <Button
                   type="button"
@@ -404,7 +404,7 @@ export default function HomePage() {
         {/* Links/Social Card */}
         <div className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center">
           <h2 className="text-2xl font-bold text-primary mb-1 text-center">And More...</h2>
-          <p className="text-secondary text-center text-base mb-4">More games coming soon!</p>
+          <p className="text-main text-center text-base mb-4">More games coming soon!</p>
           <div className="flex flex-col gap-3 w-full">
             <a href="https://twitter.com/sumboutlaw" target="_blank" rel="noopener noreferrer"
               className="btn-primary w-full flex items-center justify-center gap-2 py-2 rounded-md text-lg font-semibold bg-primary text-main hover:bg-primary/90 transition">
@@ -427,7 +427,7 @@ export default function HomePage() {
               Website: lawsonhart.me
             </a>
           </div>
-          <p className="text-secondary text-center text-base mt-4">Stay tuned for updates!</p>
+          <p className="text-main text-center text-base mt-4">Stay tuned for updates!</p>
         </div>
       </div>
 
