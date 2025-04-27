@@ -42,5 +42,20 @@ export async function POST(req: NextRequest, { params }: { params: { code: strin
         .where(eq(password_game.id, game.id));
     }
   }
+
+  // Add player to the game if not already in
+  if (!game.player_ids.includes(sessionId)) {
+    // Set expiration date one hour from now
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    await db.update(password_game)
+      .set({
+        player_ids: [...game.player_ids, sessionId],
+        expires_at: expiresAt
+      })
+      .where(eq(password_game.id, game.id));
+  }
+
   return NextResponse.json({ success: true, id: game.id });
 }

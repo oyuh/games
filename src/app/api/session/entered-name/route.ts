@@ -58,8 +58,15 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ success: true, created: true });
   }
+
+  // Always update the expiration date when updating a session
+  const expires = new Date(Date.now() + 60 * 60 * 1000);
+
   await db.update(sessions)
-    .set({ entered_name: name })
+    .set({
+      entered_name: name,
+      expires_at: expires
+    })
     .where(eq(sessions.id, sessionId));
   return NextResponse.json({ success: true, updated: true });
 }
