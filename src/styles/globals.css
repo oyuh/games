@@ -129,10 +129,12 @@ body[data-dialog-open="true"] {
 .text-main { color: var(--text) !important; }
 .text-primary { color: var(--primary) !important; }
 .text-secondary { color: var(--secondary) !important; }
+.text-destructive { color: var(--destructive) !important; }
 .border-primary { border-color: var(--primary) !important; }
 .border-secondary { border-color: var(--secondary) !important; }
 
-button, .btn-primary {
+/* Base button styling */
+button:not([class*="bg-"]):not([class*="hover:"]), .btn-primary {
   background: var(--primary) !important;
   color: var(--primary-foreground) !important;
   border-radius: 8px;
@@ -143,6 +145,13 @@ button:disabled, .btn-primary:disabled {
   background: #2d2d2d !important;
   color: #888 !important;
   cursor: not-allowed;
+}
+
+/* Only apply destructive styles to buttons with explicit destructive class */
+button.bg-destructive, button[class*="bg-destructive"], .btn-destructive {
+  background: var(--destructive) !important;
+  color: white !important;
+  border-color: var(--destructive) !important;
 }
 
 input, .input {

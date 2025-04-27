@@ -8,7 +8,7 @@ export const Footer = () => {
       <div className="footer-left">
       </div>
       <div className="footer-right gradient-text">
-      Made by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson Hart</a> with 💙 | © {new Date().getFullYear()} Lawson Hart. All rights reserved.<a href="https://lawsonhart.me/policies" className="privacy-link">View my Policies.</a>
+      Made by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson Hart</a> with 💙 | © {new Date().getFullYear()} Lawson Hart. All rights reserved.<a href="https://lawsonhart.me/policy" className="privacy-link">View my Policies.</a>
       </div>
       <style jsx>{`
         .footer-bar {

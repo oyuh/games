@@ -115,6 +115,7 @@ export function JoinGameModal() {
                 className="input bg-main text-main border border-secondary rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary font-semibold tracking-wide"
               >
                 <option value="imposter">Imposter</option>
+                <option value="password">Password</option>
               </select>
             </div>
 

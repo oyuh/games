@@ -30,6 +30,10 @@ interface GameInfo {
   maxPlayers: number;
   estimatedTime: string;
   difficulty: string;
+  useTeams?: boolean;
+  minTeams?: number;
+  maxTeams?: number;
+  playersPerTeam?: string;
 }
 
 interface Game {
@@ -39,6 +43,7 @@ interface Game {
   available: boolean;
   fields: GameField[];
   info?: GameInfo;
+  useTeams?: boolean;
 }
 
 const games: Game[] = [
@@ -70,20 +75,23 @@ const games: Game[] = [
     key: "password",
     name: "Password",
     description: "Give clues, guess the word, beat the other team!",
-    available: false,
+    available: true,
+    useTeams: true,
     fields: [
-      { label: "Max Players", name: "maxPlayers", type: "number", min: 4, max: 20, required: true },
+      { label: "Number of Teams", name: "numTeams", type: "number", min: 2, max: 10, required: true, defaultValue: 2 },
       { label: "Points to Win", name: "pointsToWin", type: "number", min: 1, max: 20, required: true, defaultValue: 5 },
     ],
     info: {
       howToPlay: [
-        "Players split into two teams.",
-        "One player gives one-word clues to help their team guess a set of words.",
-        "Teams take turns, trying to guess all their words first.",
-        "Be careful not to give clues for the opposing team's words!"
+        "Players split into teams of 2.",
+        "One player gives one-word clues to help their teamate guess a word.",
       ],
       minPlayers: 4,
       maxPlayers: 20,
+      useTeams: true,
+      minTeams: 2,
+      maxTeams: 10,
+      playersPerTeam: "2",
       estimatedTime: "20-40 minutes",
       difficulty: "Medium"
     }
@@ -116,8 +124,9 @@ const games: Game[] = [
     name: "Wavelength",
     description: "Guess the position on the scale!",
     available: false,
+    useTeams: true,
     fields: [
-      { label: "Max Players", name: "maxPlayers", type: "number", min: 4, max: 20, required: true },
+      { label: "Number of Teams", name: "numTeams", type: "number", min: 2, max: 8, required: true, defaultValue: 2 },
       { label: "Points to Win", name: "pointsToWin", type: "number", min: 1, max: 20, required: true, defaultValue: 10 },
     ],
     info: {
@@ -130,6 +139,10 @@ const games: Game[] = [
       ],
       minPlayers: 4,
       maxPlayers: 20,
+      useTeams: true,
+      minTeams: 2,
+      maxTeams: 8,
+      playersPerTeam: "2+",
       estimatedTime: "30-45 minutes",
       difficulty: "Medium"
     }
@@ -185,6 +198,13 @@ function GameInfoDialog({ game, open, onClose }: { game: Game; open: boolean; on
               <h3 className="font-bold text-primary">Players:</h3>
               <p>{game.info.minPlayers}-{game.info.maxPlayers} players</p>
             </div>
+            {game.info.useTeams && (
+              <div>
+                <h3 className="font-bold text-primary">Teams:</h3>
+                <p>{game.info.minTeams}-{game.info.maxTeams} teams</p>
+                <p>{game.info.playersPerTeam} players per team</p>
+              </div>
+            )}
             <div>
               <h3 className="font-bold text-primary">Time:</h3>
               <p>{game.info.estimatedTime}</p>
@@ -280,14 +300,14 @@ export default function HomePage() {
     }
     const form = e.currentTarget;
     const formData = new FormData(form);
-    const maxPlayers = formData.get("maxPlayers");
+    const teams = formData.get("numTeams");
     const pointsToWin = formData.get("pointsToWin");
     const res = await fetch("/api/password/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         hostId: session.id,
-        maxPlayers,
+        teams,
         pointsToWin,
       }),
     });
@@ -392,7 +412,7 @@ export default function HomePage() {
             ) : (
               <button
                 type="button"
-                className="w-full mt-2 py-2 rounded-md text-lg font-semibold bg-destructive text-main cursor-not-allowed opacity-80"
+                className="w-full mt-2 py-2 rounded-md text-lg font-semibold bg-secondary hover:bg-secondary text-main cursor-not-allowed opacity-80"
                 disabled
               >
                 Coming Soon

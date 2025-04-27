@@ -1,279 +1,339 @@
 "use client";
 
-import { useSessionInfo } from "../../../_components/session-modal";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import React from "react";
 import { Button } from "~/components/ui/button";
+import { useSessionInfo } from "~/app/_components/session-modal";
+import { X } from "lucide-react";
 
 interface PasswordGame {
   id: string;
   code: string;
   host_id: string;
-  max_players: number;
-  game_data: any;
-  team_data: any;
-  [key: string]: any;
+  teams: {
+    noTeam: string[];
+    [key: string]: string[];
+  };
+  playerNames?: Record<string, string>;
+  started_at: string | null;
+  finished_at: string | null;
 }
 
-export default function PasswordBeginPage({ params }: { params: Promise<{ id: string }> }) {
-  const actualParams = React.use(params);
-  const { session, loading } = useSessionInfo();
-  const router = useRouter();
+export default function PasswordBeginPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const [game, setGame] = useState<PasswordGame | null>(null);
-  const [error, setError] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
-  const [starting, setStarting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [joining, setJoining] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [namesLoaded, setNamesLoaded] = useState<boolean>(false);
+  const router = useRouter();
+  const { session } = useSessionInfo();
+  const sessionId = session?.id;
 
-  // Fetch game and player/team info
-  useEffect(() => {
-    async function fetchGame() {
-      setRefreshing(true);
-      setError("");
-      try {
-        const res = await fetch(`/api/password/team-select?gameId=${actualParams.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          setGame({ id: actualParams.id, ...data });
-        } else {
-          setError("Game not found");
+  // Create a cache for player names to avoid showing loading placeholders repeatedly
+  const [playerNamesCache, setPlayerNamesCache] = useState<Record<string, string>>({});
+
+  const fetchGame = async () => {
+    try {
+      const response = await fetch(`/api/password/${params.id}`, {
+        // Add cache control headers to improve performance
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
-      } catch {
-        setError("Failed to load game");
-      } finally {
-        setRefreshing(false);
-      }
-    }
-    void fetchGame();
-    const interval = setInterval(() => { void fetchGame(); }, 1000); // 1 second polling
-    return () => clearInterval(interval);
-  }, [actualParams.id]);
+      });
 
-  // Redirect to appropriate page based on game phase
+      if (!response.ok) {
+        throw new Error("Failed to load game");
+      }
+
+      const data = await response.json();
+
+      // Update player names cache with any new names
+      if (data.game.playerNames) {
+        setPlayerNamesCache(prevCache => ({
+          ...prevCache,
+          ...data.game.playerNames
+        }));
+        setNamesLoaded(true);
+      }
+
+      setGame(data.game);
+      setLoading(false);
+    } catch (err) {
+      setError("Error loading game");
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (!game) return;
-    const phase = game?.game_data?.phase;
-    // If phase is 'ready', go to the ready screen
-    if (phase === "ready" && !window.location.pathname.endsWith(`/password/${actualParams.id}/next-round`)) {
-      router.replace(`/password/${actualParams.id}/next-round`);
-      return;
-    }
-    // If phase is not 'lobby' or 'ready', go to the main in-game page
-    if (phase && phase !== "lobby" && phase !== "ready" && !window.location.pathname.endsWith(`/password/${actualParams.id}`)) {
-      router.replace(`/password/${actualParams.id}`);
-    }
-  }, [game, actualParams.id, router]);
+    // Initial fetch with immediate feedback
+    fetchGame();
 
-  const isHost = session?.id && game?.hostId === session.id;
-  const isPlayer = session?.id && game?.players?.some((p: any) => p.id === session.id);
+    // Set up polling to refresh game data
+    const interval = setInterval(() => {
+      fetchGame();
+    }, 5000);
 
-  async function handleJoin() {
-    setJoining(true);
-    setError("");
+    return () => clearInterval(interval);
+  }, [params.id]);
+
+  const joinTeam = async (teamNumber: string | number) => {
     try {
-      const res = await fetch(`/api/password/team-select`, {
+      const response = await fetch(`/api/password/${params.id}/team/team-join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId: actualParams.id, playerId: session?.id }),
+        body: JSON.stringify({ sessionId, teamNumber }),
       });
-      if (res.ok) {
-        await refreshGame();
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to join team");
+      }
+
+      const data = await response.json();
+      setGame(data.game);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
       } else {
-        setError("Failed to join game.");
+        setError("Failed to join team");
       }
-    } finally {
-      setJoining(false);
     }
-  }
+  };
 
-  async function handleJoinTeam(teamId: number) {
-    setJoining(true);
-    setError("");
+  const leaveTeam = async () => {
     try {
-      const res = await fetch(`/api/password/team-select`, {
+      const response = await fetch(`/api/password/${params.id}/team/team-leave`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId: actualParams.id, playerId: session?.id, playerName: session?.entered_name, teamId }),
+        body: JSON.stringify({ sessionId }),
       });
-      if (res.ok) {
-        await refreshGame();
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to leave team");
+      }
+
+      const data = await response.json();
+      setGame(data.game);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
       } else {
-        setError("Failed to join team.");
+        setError("Failed to leave team");
       }
-    } finally {
-      setJoining(false);
     }
-  }
+  };
 
-  async function handleLeaveTeam(teamId: number) {
-    setJoining(true);
-    setError("");
+  const leaveGame = async () => {
     try {
-      const res = await fetch(`/api/password/team-select`, {
+      const response = await fetch(`/api/password/${params.id}/leave`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId: actualParams.id, playerId: session?.id, leaveTeam: true }),
       });
-      if (res.ok) {
-        await refreshGame();
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to leave game");
+      }
+
+      // Redirect back to main page after successfully leaving
+      router.push("/");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
       } else {
-        setError("Failed to leave team.");
+        setError("Failed to leave game");
       }
-    } finally {
-      setJoining(false);
     }
-  }
+  };
 
-  async function handleDelete() {
-    // Not implemented yet
-    alert("Delete game not implemented");
-  }
-
-  async function handleStart() {
-    setStarting(true);
-    setError("");
+  const startGame = async () => {
     try {
-      const res = await fetch(`/api/password/next-round`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId: actualParams.id }),
-      });
-      if (!res.ok) setError("Failed to start game.");
-    } finally {
-      setStarting(false);
-    }
-  }
-
-  async function refreshGame() {
-    setRefreshing(true);
-    try {
-      const res = await fetch(`/api/password/team-select?gameId=${actualParams.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setGame({ id: actualParams.id, ...data });
+      // Logic to start the game will be implemented here
+      // For now, just navigate back to the game page
+      router.push(`/password/${params.id}`);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to start game");
       }
-    } finally {
-      setRefreshing(false);
     }
-  }
+  };
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  // Check which team the current player is in
+  const getCurrentTeam = () => {
+    if (!game || !sessionId) return null;
 
-  if (loading) {
-    return <main className="min-h-screen flex items-center justify-center text-main">Loading session...</main>;
-  }
+    for (const teamKey in game.teams) {
+      if (game.teams[teamKey].includes(sessionId)) {
+        return teamKey;
+      }
+    }
+    return null;
+  };
 
-  if (!game) {
-    return <main className="min-h-screen flex items-center justify-center text-main">{error || "Loading..."}</main>;
-  }
+  const currentTeam = getCurrentTeam();
+  const isHost = game?.host_id === sessionId;
 
-  const canJoin = !isHost && !isPlayer && !joining && !loading;
-  const canStart = isHost && !starting && !loading;
-  const canDelete = isHost && !deleting && !loading;
+  // Display function to prevent flashing IDs - prioritize cached names
+  const displayPlayerName = (playerId: string) => {
+    // Check cache first for instant name display
+    if (playerNamesCache[playerId]) {
+      return playerNamesCache[playerId];
+    }
 
-  const teams = game.teams || [];
-  const allPlayers = game.players || [];
+    // Then check current game data
+    if (game?.playerNames?.[playerId]) {
+      return game.playerNames[playerId];
+    }
+
+    // Show loading only if names are still being fetched initially
+    if (loading && !namesLoaded) {
+      return "Loading...";
+    }
+
+    // Fallback to truncated ID if names couldn't be loaded
+    return playerId.slice(0, 8);
+  };
+
+  if (loading) return (
+    <main className="min-h-screen flex items-center justify-center bg-main text-main">
+      <div className="flex flex-col items-center gap-4">
+        <div className="animate-spin w-12 h-12 text-primary border-4 border-current border-t-transparent rounded-full"></div>
+        <div className="text-lg text-secondary">Loading game...</div>
+      </div>
+    </main>
+  );
+
+  if (error) return (
+    <main className="min-h-screen flex items-center justify-center bg-main text-destructive">
+      <div className="text-lg">{error}</div>
+    </main>
+  );
+
+  if (!game) return (
+    <main className="min-h-screen flex items-center justify-center bg-main text-main">
+      <div className="text-lg">Game not found</div>
+    </main>
+  );
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4">
-      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-lg flex flex-col items-center gap-4">
-        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide">Password Game Lobby</h1>
-        {/* --- JOIN CODE PROMINENT --- */}
-        <div className="flex flex-col items-center my-4 w-full">
+      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-[1080px] flex flex-col items-center gap-4">
+        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide">Password Game Setup</h1>
+
+        {/* JOIN CODE PROMINENT */}
+        <div className="flex flex-col items-center my-4 w-full max-w-lg">
           <div className="text-lg font-semibold text-primary text-center mb-1">Join Code</div>
           <div className="bg-white text-primary font-mono text-4xl tracking-widest rounded-lg px-10 py-5 mb-2 select-all shadow-lg border-4 border-primary text-center w-full font-extrabold" style={{letterSpacing: '0.25em'}}>
             {game.code || <span className="text-secondary">(not available)</span>}
           </div>
           <div className="text-xs text-secondary text-center mb-2">Share this code with friends to join!</div>
         </div>
-        <div className="text-secondary text-center">Max Players: <span className="font-bold text-main">{game.max_players}</span></div>
+
+        {/* Players without teams section - using flex with justify-center */}
         <div className="w-full flex flex-col items-center gap-2 mt-4">
-          <div className="text-lg font-semibold text-primary">Players Joined:</div>
-          <ul className="w-full flex flex-col gap-1 items-center">
-            {allPlayers.length === 0 ? (
-              <li className="text-secondary">No players yet.</li>
-            ) : (
-              allPlayers.map((p: any, i: number) => (
-                <li key={i} className="bg-primary/90 text-black font-bold rounded px-3 py-1 w-full text-center shadow-md border border-primary/60 text-lg">{p.name}{p.id === session?.id && " (You)"}</li>
-              ))
-            )}
-          </ul>
-          <div className="text-xs text-secondary mt-1">{allPlayers.length} / {game.max_players} players</div>
-        </div>
-        {/* --- TEAM SELECTION UI --- */}
-        <div className="w-full flex flex-col items-center gap-2 mt-4">
-          <div className="text-lg font-semibold text-primary">Teams</div>
-          <div className="flex flex-wrap gap-6 justify-center w-full">
-            {teams.map((team: any) => (
-              <div key={team.id} className="bg-main border border-secondary rounded-lg p-6 min-w-[200px] min-h-[180px] flex flex-col items-center shadow-md transition-all duration-200">
-                <div className="font-bold text-primary mb-3 text-lg">{team.name}</div>
-                <ul className="mb-3">
-                  {team.players.map((p: any) => (
-                    <li key={p.id} className="bg-primary/80 text-black font-semibold rounded px-2 py-1 mb-1 text-base shadow border border-primary/40 text-center">{p.name}{p.id === session?.id && " (You)"}</li>
-                  ))}
-                </ul>
-                {team.players.length < 2 && !team.players.some((p: any) => p.id === session?.id) && (
-                  <Button size="sm" className="w-full" onClick={() => handleJoinTeam(team.id)}>
-                    Join
-                  </Button>
-                )}
-                {team.players.some((p: any) => p.id === session?.id) && (
-                  <Button size="sm" className="w-full mt-2" variant="secondary" onClick={() => handleLeaveTeam(team.id)}>
-                    Leave
-                  </Button>
-                )}
+          <div className="text-lg font-semibold text-primary">Players Without Teams:</div>
+          <div className="w-full max-w-lg bg-secondary/10 border border-secondary/30 rounded-lg p-4">
+            {game.teams.noTeam.length > 0 ? (
+              <div className="flex flex-wrap justify-center gap-2">
+                {game.teams.noTeam.map((playerId) => (
+                  <div key={playerId} className="bg-main/40 rounded-md border border-secondary/30 shadow-sm px-3 py-2 text-center">
+                    <span className="font-medium text-primary">{displayPlayerName(playerId)}</span>
+                    {playerId === sessionId && <span className="ml-2 text-xs text-secondary">(you)</span>}
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <p className="text-secondary text-center">No players waiting to join teams</p>
+            )}
           </div>
         </div>
-        {/* --- INVITE LINK, LESS PROMINENT --- */}
-        <details className="w-full mt-2">
-          <summary className="cursor-pointer text-sm text-secondary hover:text-primary">Show invite link</summary>
-          <div className="bg-secondary text-main rounded px-4 py-2 font-mono text-sm select-all break-all w-full text-center mt-2">
-            {`${baseUrl}/password/${game.id}/begin`}
+
+        {/* Teams section - using flex with justify-center */}
+        <div className="w-full mt-4">
+          <h2 className="text-xl font-bold text-primary text-center mb-4">Teams</h2>
+          <div className="flex flex-wrap justify-center gap-4 mb-6 max-w-[1000px] mx-auto">
+            {Object.keys(game.teams)
+              .filter((key) => key !== "noTeam")
+              .map((teamKey) => (
+                <div key={teamKey} className="bg-secondary/10 border border-secondary/30 rounded-lg p-4 w-[220px]">
+                  <h3 className="text-lg font-medium mb-2 text-primary text-center">Team {teamKey}</h3>
+                  <div className="mb-4">
+                    {game.teams[teamKey].length > 0 ? (
+                      <ul className="w-full flex flex-col gap-2 items-center">
+                        {game.teams[teamKey].map((playerId) => (
+                          <li key={playerId} className="w-full">
+                            <div className="flex items-center justify-between bg-primary/10 border border-primary/30 rounded-md shadow-sm px-3 py-2 w-full">
+                              <div className="flex items-center">
+                                <span className="font-medium text-primary">{displayPlayerName(playerId)}</span>
+                                {playerId === sessionId && <span className="ml-2 text-xs text-secondary">(you)</span>}
+                                {playerId === game.host_id &&
+                                  <span className="ml-2 text-xs px-1.5 py-0.5 bg-secondary/20 rounded text-secondary">Host</span>
+                                }
+                              </div>
+                              {playerId === sessionId && currentTeam !== "noTeam" && (
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    leaveTeam();
+                                  }}
+                                  className="text-destructive hover:text-destructive/80 transition-colors p-1 rounded-full hover:bg-secondary/10"
+                                  aria-label="Leave Team"
+                                >
+                                  <X size={16} />
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-secondary text-center">No players in this team</p>
+                    )}
+                  </div>
+                  {currentTeam !== teamKey && currentTeam === "noTeam" && game.teams[teamKey].length < 2 && (
+                    <Button
+                      onClick={() => joinTeam(teamKey)}
+                      className="w-full bg-primary text-main hover:bg-primary/90 transition"
+                    >
+                      Join Team {teamKey}
+                    </Button>
+                  )}
+                </div>
+              ))}
           </div>
-        </details>
+        </div>
+
         {isHost && (
-          <>
+          <div className="mt-4 w-full max-w-lg">
             <Button
-              onClick={handleStart}
-              disabled={!canStart}
-              className="w-full mt-2"
+              onClick={startGame}
+              className="w-full bg-primary text-main hover:bg-primary/90 transition"
+              disabled={Object.keys(game.teams)
+                .filter((key) => key !== "noTeam")
+                .some((team) => game.teams[team].length !== 2)}
             >
-              {starting ? "Starting..." : "Start Game"}
+              Start Game
             </Button>
-            <Button
-              onClick={handleDelete}
-              disabled={!canDelete}
-              variant="destructive"
-              className="w-full mt-2"
-            >
-              {deleting ? "Deleting..." : "Delete Game"}
-            </Button>
-          </>
+            {Object.keys(game.teams)
+              .filter((key) => key !== "noTeam")
+              .some((team) => game.teams[team].length !== 2) && (
+              <p className="text-destructive text-center mt-2">
+                All teams need exactly 2 players to start the game
+              </p>
+            )}
+          </div>
         )}
-        {canJoin && (
-          <Button
-            onClick={handleJoin}
-            disabled={!canJoin}
-            className="w-full mt-2"
-          >
-            {joining ? "Joining..." : "Join Game"}
-          </Button>
-        )}
-        {/* Fallback: If user is not recognized, show join button */}
-        {!isHost && !isPlayer && !canJoin && !loading && (
-          <Button
-            onClick={handleJoin}
-            disabled={joining}
-            className="w-full mt-2"
-          >
-            {joining ? "Joining..." : "Join Game"}
-          </Button>
-        )}
-        {error && <div className="text-destructive text-center mt-2">{error}</div>}
+
+        <Button onClick={leaveGame} className="mt-6 bg-destructive hover:bg-destructive/90">
+          Leave Game
+        </Button>
       </div>
     </main>
   );

@@ -1,61 +1,86 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { password_game } from "~/server/db/schema";
+import { password } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function POST(req: NextRequest, { params }: { params: { code: string } }) {
-  const sessionId = req.cookies.get("session_id")?.value;
-  let enteredName = req.cookies.get("entered_name")?.value;
-  if (!sessionId) {
-    return NextResponse.json({ error: "No session" }, { status: 401 });
-  }
-  // If enteredName is not in cookies, look it up from the sessions table
-  if (!enteredName) {
-    const session = await db.query.sessions.findFirst({ where: eq(password_game.id, sessionId) });
-    enteredName = session?.entered_name;
-  }
-  if (!enteredName) {
-    return NextResponse.json({ error: "No name" }, { status: 401 });
-  }
-  const code = params.code.toUpperCase();
-  const game = await db.query.password_game.findFirst({ where: eq(password_game.code, code) });
-  if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
-  // Optionally, auto-assign to a team with a slot if not already in a team
-  let teamData = game.team_data ?? { teams: [] };
-  let alreadyJoined = false;
-  for (const team of teamData.teams) {
-    if (team.players.some((p: any) => p.id === sessionId)) {
-      alreadyJoined = true;
-      break;
+interface TeamStructure {
+  noTeam: string[];
+  [key: string]: string[];
+}
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { code: string } }
+) {
+  try {
+    // Get code from URL parameter and session ID from cookies
+    const code = params.code;
+    const sessionId = req.cookies.get("session_id")?.value;
+
+    if (!sessionId) {
+      return NextResponse.json({ error: "No session" }, { status: 401 });
     }
-  }
-  if (!alreadyJoined) {
-    // Find a team with a slot
-    const targetTeam = teamData.teams.find((t: any) => (t.players?.length ?? 0) < 2);
-    if (targetTeam) {
-      targetTeam.players = [
-        ...(targetTeam.players ?? []),
-        { id: sessionId, name: enteredName },
-      ];
-      await db.update(password_game)
-        .set({ team_data: teamData })
-        .where(eq(password_game.id, game.id));
+
+    // Find game by code
+    const game = await db.query.password.findFirst({
+      where: eq(password.code, code.toUpperCase()),
+    });
+
+    if (!game) {
+      return NextResponse.json(
+        { error: "Game not found with this code" },
+        { status: 404 }
+      );
     }
+
+    // Check if game has already started
+    if (game.started_at) {
+      return NextResponse.json(
+        { error: "Cannot join game that has already started" },
+        { status: 403 }
+      );
+    }
+
+    // Check if player is already in the game
+    const teams = game.teams as TeamStructure;
+    let playerFound = false;
+
+    // Check all teams including noTeam
+    for (const teamKey in teams) {
+      if (teams[teamKey].includes(sessionId)) {
+        playerFound = true;
+        break;
+      }
+    }
+
+    if (!playerFound) {
+      // Add player to noTeam
+      const updatedTeams = {
+        ...teams,
+        noTeam: [...teams.noTeam, sessionId]
+      };
+
+      // Update the game with the new player
+      // Also reset expiration time similar to imposter route
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
+      await db
+        .update(password)
+        .set({
+          teams: updatedTeams,
+          expires_at: expiresAt
+        })
+        .where(eq(password.id, game.id));
+    }
+
+    // Return the game ID for consistency with the imposter route
+    return NextResponse.json({ success: true, id: game.id });
+  } catch (error) {
+    console.error("Error joining password game:", error);
+    return NextResponse.json(
+      { error: "Failed to join game", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
-
-  // Add player to the game if not already in
-  if (!game.player_ids.includes(sessionId)) {
-    // Set expiration date one hour from now
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1);
-
-    await db.update(password_game)
-      .set({
-        player_ids: [...game.player_ids, sessionId],
-        expires_at: expiresAt
-      })
-      .where(eq(password_game.id, game.id));
-  }
-
-  return NextResponse.json({ success: true, id: game.id });
 }

@@ -1,58 +1,87 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { password_game } from "~/server/db/schema";
-import { randomBytes } from "crypto";
+import { password } from "~/server/db/schema";
+import { eq } from "drizzle-orm";
 
-function generateGameCode(length = 6) {
-  return randomBytes(length)
-    .toString("base64")
-    .replace(/[^A-Z0-9]/gi, "")
-    .slice(0, length)
-    .toUpperCase();
+function generateGameCode() {
+  // Generate a random 6-character code (alphanumeric)
+  const characters = "ABCDEFGHIJKLMNPQRSTUVWXYZ123456789";
+  let result = "";
+  for (let i = 0; i < 6; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { hostId, maxPlayers, pointsToWin } = body;
-    if (!hostId || !maxPlayers || !pointsToWin) {
-      return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
+    // Parse the request body to get hostId, teams, and pointsToWin
+    const body = (await req.json()) as Partial<{ hostId: string; teams: number | string; pointsToWin: number | string }>;
+    const hostId = body.hostId;
+    const numTeams = Number(body.teams) || 2;
+    const pointsToWin = Number(body.pointsToWin) || 5;
+
+    if (!hostId) {
+      return NextResponse.json({ error: "Host ID is required" }, { status: 400 });
     }
-    const code = generateGameCode();
+
+    // Generate a unique game code
+    let gameCode = generateGameCode();
+    let codeExists = true;
+
+    // Ensure code is unique
+    while (codeExists) {
+      const existingGame = await db.query.password.findFirst({
+        where: eq(password.code, gameCode),
+      });
+
+      if (!existingGame) {
+        codeExists = false;
+      } else {
+        gameCode = generateGameCode();
+      }
+    }
+
+    // Calculate expiration (24 hours from now)
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
+    // Create initial game structure with dynamically generated teams
+    const initialTeams: Record<string, string[]> = {
+      noTeam: [hostId], // Initially, the host is in "no team"
+    };
+
+    // Add the requested number of teams (from 1 to numTeams)
+    for (let i = 1; i <= numTeams; i++) {
+      initialTeams[i.toString()] = [];
+    }
+
+    // Store the game settings in game_data
     const gameData = {
-      pointsToWin: Number(pointsToWin),
-      state: "lobby",
+      pointsToWin: pointsToWin,
+      numberOfTeams: numTeams,
     };
-    // Calculate number of teams (max 2 per team)
-    const numTeams = Math.ceil(Number(maxPlayers) / 2);
-    const teamData = {
-      teams: Array.from({ length: numTeams }).map((_, i) => ({
-        id: i + 1,
-        name: `Team ${i + 1}`,
-        players: [],
-        score: 0,
-      })),
-    };
-    const roundData = {
-      round: 0,
-      clueGivers: [],
-      secretWord: null,
-      guesses: [],
-    };
-    const [game] = await db
-      .insert(password_game)
+
+    // Let the database generate the UUID
+    const newGame = await db
+      .insert(password)
       .values({
         host_id: hostId,
-        category: "", // Will be set later if needed
-        max_players: Number(maxPlayers),
-        code,
+        code: gameCode,
+        teams: initialTeams,
         game_data: gameData,
-        team_data: teamData,
-        round_data: roundData,
+        round_data: {},
+        expires_at: expiresAt,
       })
       .returning();
-    return NextResponse.json({ game: { id: game.id, code: game.code } });
-  } catch (err) {
-    return NextResponse.json({ error: "Failed to create game." }, { status: 500 });
+
+    return NextResponse.json({ game: newGame[0] });
+  } catch (error) {
+    console.error("Error creating password game:", error);
+    return NextResponse.json(
+      { error: "Failed to create game", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }
