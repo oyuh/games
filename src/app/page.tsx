@@ -10,7 +10,6 @@ import { imposterCategories } from "~/data/categoryList";
 
 // Use display names from the imposterCategories object
 const categoryOptions = Object.values(imposterCategories).map(category => category.displayName);
-// Add "Custom..." option
 
 interface GameField {
   label: string;
@@ -178,40 +177,42 @@ function GameInfoDialog({ game, open, onClose }: { game: Game; open: boolean; on
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-card text-main border border-secondary max-w-md mx-auto">
+      <DialogContent className="bg-card text-main border border-secondary/30 rounded-xl shadow-lg max-w-lg mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-primary">{game.name}</DialogTitle>
-          <DialogDescription className="text-secondary">{game.description}</DialogDescription>
+          <DialogTitle className="text-2xl font-bold text-primary border-b border-primary/30 pb-2 mb-4">
+            {game.name}
+          </DialogTitle>
+          <DialogDescription className="text-main text-base">{game.description}</DialogDescription>
         </DialogHeader>
-        <div className="mt-4 space-y-4">
-          <div>
-            <h3 className="font-bold text-primary mb-2">How to Play:</h3>
-            <ul className="list-disc pl-5 space-y-1 text-main">
+        <div className="mt-4 space-y-6">
+          <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+            <h3 className="font-bold text-lg text-primary mb-3">How to Play:</h3>
+            <ul className="list-disc pl-5 space-y-2 text-main">
               {game.info.howToPlay.map((step, index) => (
                 <li key={index}>{step}</li>
               ))}
             </ul>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-main">
-            <div>
-              <h3 className="font-bold text-primary">Players:</h3>
-              <p>{game.info.minPlayers}-{game.info.maxPlayers} players</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+              <h3 className="font-bold text-primary mb-2">Players:</h3>
+              <p className="text-main">{game.info.minPlayers}-{game.info.maxPlayers} players</p>
             </div>
             {game.info.useTeams && (
-              <div>
-                <h3 className="font-bold text-primary">Teams:</h3>
-                <p>{game.info.minTeams}-{game.info.maxTeams} teams</p>
-                <p>{game.info.playersPerTeam} players per team</p>
+              <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+                <h3 className="font-bold text-primary mb-2">Teams:</h3>
+                <p className="text-main">{game.info.minTeams}-{game.info.maxTeams} teams</p>
+                <p className="text-main">{game.info.playersPerTeam} players per team</p>
               </div>
             )}
-            <div>
-              <h3 className="font-bold text-primary">Time:</h3>
-              <p>{game.info.estimatedTime}</p>
+            <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+              <h3 className="font-bold text-primary mb-2">Time:</h3>
+              <p className="text-main">{game.info.estimatedTime}</p>
             </div>
-            <div>
-              <h3 className="font-bold text-primary">Difficulty:</h3>
-              <p>{game.info.difficulty}</p>
+            <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+              <h3 className="font-bold text-primary mb-2">Difficulty:</h3>
+              <p className="text-main">{game.info.difficulty}</p>
             </div>
           </div>
         </div>
@@ -323,131 +324,153 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-main text-main font-sans flex flex-col items-center justify-center px-4 py-8">
-      <h1 className="text-4xl font-bold mb-12 text-primary text-center">Start a Game</h1>
+      <div className="w-full max-w-5xl">
+        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide mb-8">Start a Game</h1>
 
-      <div className="w-full max-w-5xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {games.map((game) => (
-          <form
-            key={game.key}
-            className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center relative"
-            onSubmit={
-              game.key === "imposter"
-                ? handleCreateImposterGame
-                : game.key === "password"
-                ? handleCreatePasswordGame
-                : (e) => e.preventDefault()
-            }
-          >
-            <div className="w-full flex flex-col items-center gap-1">
-              <h2 className="text-2xl font-bold text-primary mb-1 text-center uppercase tracking-wide">{game.name}</h2>
-              <p className="text-main font-medium text-center text-base mb-2">{game.description}</p>
-              {game.info && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {games.map((game) => (
+            <form
+              key={game.key}
+              className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center"
+              onSubmit={
+                game.key === "imposter"
+                  ? handleCreateImposterGame
+                  : game.key === "password"
+                  ? handleCreatePasswordGame
+                  : (e) => e.preventDefault()
+              }
+            >
+              <div className="w-full flex flex-col items-center">
+                <h2 className="text-2xl font-bold text-primary text-center uppercase tracking-wide mb-2">{game.name}</h2>
+                <p className="text-secondary font-medium text-center text-base mb-3">{game.description}</p>
+                {game.info && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border border-secondary/30 text-secondary hover:bg-secondary/10"
+                    onClick={() => setCurrentGameInfo(game)}
+                  >
+                    Learn More
+                  </Button>
+                )}
+              </div>
+
+              <div className="w-full bg-secondary/10 rounded-lg p-4 border border-secondary/30 mt-2">
+                <h3 className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">Game Options</h3>
+                <div className="space-y-4">
+                  {game.fields.map((field) => (
+                    <div key={field.name} className="flex flex-col gap-1">
+                      <label htmlFor={`${game.key}-${field.name}`} className="text-sm font-semibold text-primary">
+                        {field.label}
+                      </label>
+                      {field.type === "select" ? (
+                        <select
+                          id={`${game.key}-${field.name}`}
+                          name={field.name}
+                          required={field.required}
+                          defaultValue=""
+                          className="bg-main text-main border border-secondary/30 rounded-md px-3 py-2 w-full"
+                          disabled={!game.available}
+                        >
+                          <option value="" disabled className="text-secondary">Select a category</option>
+                          {field.options?.map((opt: string) => (
+                            <option key={opt} value={opt} className="text-main bg-card">{opt}</option>
+                          ))}
+                        </select>
+                      ) : field.type === "number" ? (
+                        <NumberInput
+                          id={`${game.key}-${field.name}`}
+                          name={field.name}
+                          min={field.min!}
+                          max={field.max!}
+                          defaultValue={field.defaultValue}
+                          disabled={!game.available}
+                        />
+                      ) : (
+                        <input
+                          id={`${game.key}-${field.name}`}
+                          name={field.name}
+                          type={field.type}
+                          min={field.min}
+                          max={field.max}
+                          required={field.required}
+                          placeholder={field.placeholder}
+                          defaultValue={field.defaultValue}
+                          className="bg-main text-main border border-secondary/30 rounded-md px-3 py-2 w-full"
+                          disabled={!game.available}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {game.available ? (
+                <Button
+                  type="submit"
+                  className="w-full mt-3"
+                >
+                  Create {game.name} Game
+                </Button>
+              ) : (
                 <Button
                   type="button"
+                  className="w-full mt-3 opacity-80"
                   variant="secondary"
-                  size="sm"
-                  className="font-semibold text-main bg-secondary hover:bg-secondary/90 mt-1 mb-2"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCurrentGameInfo(game);
-                  }}
+                  disabled
                 >
-                  Learn More
+                  Coming Soon
                 </Button>
               )}
-            </div>
-            <div className="w-full flex flex-col gap-3">
-              {game.fields.map((field) => (
-                <div key={field.name} className="flex flex-col gap-1">
-                  <label htmlFor={`${game.key}-${field.name}`} className="text-sm font-bold text-primary tracking-wide uppercase">
-                    {field.label}
-                  </label>
-                  {field.type === "select" ? (
-                    <select
-                      id={`${game.key}-${field.name}`}
-                      name={field.name}
-                      required={field.required}
-                      defaultValue=""
-                      className="input bg-main text-main border border-secondary rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary font-semibold uppercase tracking-wide"
-                      disabled={!game.available}
-                    >
-                      <option value="" disabled className="text-secondary">Select a category</option>
-                      {field.options?.map((opt: string) => (
-                        <option key={opt} value={opt} className="text-main bg-card font-semibold uppercase tracking-wide">{opt}</option>
-                      ))}
-                    </select>
-                  ) : field.type === "number" ? (
-                    <NumberInput
-                      id={`${game.key}-${field.name}`}
-                      name={field.name}
-                      min={field.min!}
-                      max={field.max!}
-                      defaultValue={field.defaultValue}
-                      disabled={!game.available}
-                    />
-                  ) : (
-                    <input
-                      id={`${game.key}-${field.name}`}
-                      name={field.name}
-                      type={field.type}
-                      min={field.min}
-                      max={field.max}
-                      required={field.required}
-                      placeholder={field.placeholder}
-                      defaultValue={field.defaultValue}
-                      className="input bg-main text-main border border-secondary rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary font-semibold uppercase tracking-wide"
-                      disabled={!game.available}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-            {game.available ? (
-              <button
-                type="submit"
-                className="btn-primary w-full mt-2 py-2 rounded-md text-lg font-semibold bg-primary text-main hover:bg-primary/90 transition"
-              >
-                Create {game.name} Game
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="w-full mt-2 py-2 rounded-md text-lg font-semibold bg-secondary hover:bg-secondary text-main cursor-not-allowed opacity-80"
-                disabled
-              >
-                Coming Soon
-              </button>
-            )}
-          </form>
-        ))}
+            </form>
+          ))}
 
-        {/* Links/Social Card */}
-        <div className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center">
-          <h2 className="text-2xl font-bold text-primary mb-1 text-center">And More...</h2>
-          <p className="text-main text-center text-base mb-4">More games coming soon!</p>
-          <div className="flex flex-col gap-3 w-full">
-            <a href="https://twitter.com/sumboutlaw" target="_blank" rel="noopener noreferrer"
-              className="btn-primary w-full flex items-center justify-center gap-2 py-2 rounded-md text-lg font-semibold bg-primary text-main hover:bg-primary/90 transition">
-              <FaTwitter className="text-main w-5 h-5" />
-              Twitter: @sumboutlaw
-            </a>
-            <a href="https://instagram.com/lawsonwtf" target="_blank" rel="noopener noreferrer"
-              className="btn-primary w-full flex items-center justify-center gap-2 py-2 rounded-md text-lg font-semibold bg-secondary text-main hover:bg-secondary/90 transition">
-              <FaInstagram className="text-main w-5 h-5" />
-              Instagram: @lawsonwtf
-            </a>
-            <a href="https://discordapp.com/users/527167786200465418" target="_blank" rel="noopener noreferrer"
-              className="btn-primary w-full flex items-center justify-center gap-2 py-2 rounded-md text-lg font-semibold bg-[#5865F2] text-main hover:bg-[#4752c4] transition">
-              <FaDiscord className="text-main w-5 h-5" />
-              Discord: wthlaw
-            </a>
-            <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer"
-              className="btn-primary w-full flex items-center justify-center gap-2 py-2 rounded-md text-lg font-semibold bg-secondary text-main hover:bg-secondary/90 transition">
-              <FaGlobe className="text-main w-5 h-5" />
-              Website: lawsonhart.me
-            </a>
+          {/* Links/Social Card */}
+          <div className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center">
+            <h2 className="text-2xl font-bold text-primary text-center uppercase tracking-wide mb-2">And More...</h2>
+            <p className="text-secondary font-medium text-center text-base mb-3">More games coming soon!</p>
+
+            <div className="w-full bg-secondary/10 rounded-lg p-4 border border-secondary/30 mt-2">
+              <h3 className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">Connect</h3>
+              <div className="flex flex-col gap-3 w-full">
+                <a href="https://twitter.com/sumboutlaw" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-2 py-2 px-3 rounded-md text-sm font-semibold bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition">
+                  <div className="flex items-center gap-2">
+                    <FaTwitter className="text-primary w-5 h-5" />
+                    <span>Twitter</span>
+                  </div>
+                  <span className="text-secondary">@sumboutlaw</span>
+                </a>
+                <a href="https://instagram.com/lawsonwtf" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-2 py-2 px-3 rounded-md text-sm font-semibold bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition">
+                  <div className="flex items-center gap-2">
+                    <FaInstagram className="text-primary w-5 h-5" />
+                    <span>Instagram</span>
+                  </div>
+                  <span className="text-secondary">@lawsonwtf</span>
+                </a>
+                <a href="https://discordapp.com/users/527167786200465418" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-2 py-2 px-3 rounded-md text-sm font-semibold bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition">
+                  <div className="flex items-center gap-2">
+                    <FaDiscord className="text-primary w-5 h-5" />
+                    <span>Discord</span>
+                  </div>
+                  <span className="text-secondary">wthlaw</span>
+                </a>
+                <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-2 py-2 px-3 rounded-md text-sm font-semibold bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition">
+                  <div className="flex items-center gap-2">
+                    <FaGlobe className="text-primary w-5 h-5" />
+                    <span>Website</span>
+                  </div>
+                  <span className="text-secondary">lawsonhart.me</span>
+                </a>
+              </div>
+            </div>
+
+            <p className="text-main text-center text-base mt-4">Stay tuned for updates!</p>
           </div>
-          <p className="text-main text-center text-base mt-4">Stay tuned for updates!</p>
         </div>
       </div>
 

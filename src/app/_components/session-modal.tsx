@@ -59,33 +59,67 @@ export function SessionNameModal({ onNameSet }: { onNameSet: () => void }) {
 
   return (
     <Dialog open>
-      <DialogContent className="max-w-sm w-full flex flex-col items-center justify-center gap-0 bg-card text-main border border-secondary shadow-xl">
-        <form onSubmit={handleSubmit} className="w-full flex flex-col items-center justify-center space-y-4">
-          <DialogHeader className="w-full flex flex-col items-center">
-            <DialogTitle className="text-center w-full text-primary drop-shadow-lg">Enter your name to start</DialogTitle>
-          </DialogHeader>
-          <Input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            required
-            autoFocus
-            placeholder="Your name"
-            className="text-lg text-center bg-main text-main border border-secondary placeholder:text-main"
-            disabled={submitting}
-          />
+      <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-md flex flex-col items-center gap-6">
+        <DialogHeader className="w-full">
+          <DialogTitle className="text-3xl font-bold text-primary text-center uppercase tracking-wide">
+            Enter Your Name
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="w-full space-y-6">
+          <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+            <div className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">Player Info</div>
+
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="player-name" className="text-sm font-semibold text-primary">
+                  Your name
+                </label>
+                <Input
+                  id="player-name"
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  required
+                  autoFocus
+                  placeholder="Enter your name to play"
+                  className="bg-main text-main border border-secondary/30 rounded-md px-3 py-2 text-center text-lg"
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+          </div>
+
           {session?.created_at && session?.expires_at && (
-            <div className="w-full text-center text-xs text-main bg-main/80 rounded-lg p-2 mb-2 border border-secondary">
-              <div>Session created: <span className="font-semibold">{new Date(session.created_at).toLocaleString()}</span></div>
-              <div>Session expires: <span className="font-semibold">{new Date(session.expires_at).toLocaleString()}</span></div>
+            <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+              <div className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">Session Info</div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-secondary">Created</span>
+                  <span className="text-main">{new Date(session.created_at).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-secondary">Expires</span>
+                  <span className="text-main">{new Date(session.expires_at).toLocaleString()}</span>
+                </div>
+              </div>
             </div>
           )}
-          {error && <div className="text-destructive text-sm font-medium text-center w-full">{error}</div>}
-          <DialogFooter className="w-full flex flex-col items-center">
-            <Button type="submit" disabled={submitting || !name} className="w-full bg-primary text-main hover:bg-primary/90">
-              {submitting ? "Saving..." : "Continue"}
-            </Button>
-          </DialogFooter>
+
+          {error && (
+            <div className="text-destructive bg-destructive/10 border border-destructive/30 px-3 py-2 rounded-md text-center">
+              {error}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={submitting || !name}
+            className="w-full"
+          >
+            {submitting ? "Saving..." : "Continue"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

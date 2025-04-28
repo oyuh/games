@@ -81,7 +81,6 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
       }
     }
     fetchGame(true);
-    // Reduce polling interval from 3s to 1s for faster updates
     const interval = setInterval(() => fetchGame(false), 1000);
     return () => {
       cancelled = true;
@@ -97,7 +96,6 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
     let lastActiveHeartbeat = Date.now();
 
     const isGameActive = () => {
-      // Only send heartbeats if the game is not ended or in results
       const phase = game?.game_data?.phase;
       const revealResult = game?.game_data?.revealResult;
       return phase !== 'ended' && revealResult !== 'player_left' && phase !== 'reveal';
@@ -106,12 +104,8 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
     const sendHeartbeat = async () => {
       if (!isGameActive()) return;
       try {
-        // Check if document is visible
         const isVisible = document.visibilityState === 'visible';
 
-        // Only send active heartbeats when the window is actually visible
-        // Otherwise, send an inactive heartbeat to let the server know the user is still connected
-        // but just not actively viewing the tab
         const res = await fetch(`/api/imposter/${actualParams.id}/heartbeat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -121,7 +115,6 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
           })
         });
 
-        // Update lastActiveHeartbeat if this is an active heartbeat
         if (isVisible) {
           lastActiveHeartbeat = Date.now();
           wasInactive = false;
@@ -179,22 +172,17 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
       }
     };
 
-    // Initial heartbeat
     sendHeartbeat();
 
-    // Set up regular heartbeats (every 30 seconds)
     const heartbeatInterval = setInterval(sendHeartbeat, 30000);
 
-    // Track visibility changes
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // When tab becomes visible again, immediately send a heartbeat
         if (wasInactive) {
           sendHeartbeat();
         }
         lastActiveHeartbeat = Date.now();
       } else {
-        // Mark that we went inactive
         wasInactive = true;
       }
     };
@@ -287,39 +275,30 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
   function getClueSubmissionOrder() {
     if (!game?.player_ids || !game.imposter_ids) return [];
 
-    // If a current turn player is explicitly set, honor that
     if (game.game_data?.currentTurnPlayerId) {
       const remainingPlayers = game.player_ids.filter((id: string) => !clues[id]);
       if (remainingPlayers.length > 0) {
-        // Put current turn player at front, then rest of remaining players
         const otherPlayers = remainingPlayers.filter(id => id !== game.game_data.currentTurnPlayerId);
         return [game.game_data.currentTurnPlayerId, ...otherPlayers];
       }
     }
 
-    // Get non-imposter players first, then imposters
     const nonImposters = game.player_ids.filter((id: string) => !game.imposter_ids.includes(id));
     const imposters = game.player_ids.filter((id: string) => game.imposter_ids.includes(id));
 
-    // Filter the players who haven't submitted clues yet
     const remainingNonImposters = nonImposters.filter(id => !clues[id]);
     const remainingImposters = imposters.filter(id => !clues[id]);
 
-    // Return the remaining players in the right order
     return [...remainingNonImposters, ...remainingImposters];
   }
 
-  // Function to determine whose turn it is
   function getCurrentTurnPlayerId() {
-    // If game explicitly tells us whose turn it is, use that
     if (game.game_data?.currentTurnPlayerId) {
-      // Verify this player hasn't already submitted
       if (!clues[game.game_data.currentTurnPlayerId]) {
         return game.game_data.currentTurnPlayerId;
       }
     }
 
-    // Otherwise determine based on submission order
     const orderOfPlay = getClueSubmissionOrder();
     return orderOfPlay.length > 0 ? orderOfPlay[0] : null;
   }
@@ -356,7 +335,6 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         setActionError("Failed to submit clue");
       } else {
         setClue("");
-        // Optimistically update local game state for this client
         setGame((prevGame: any) => {
           if (!prevGame) return prevGame;
           const newClues = { ...prevGame.game_data.clues, [session.id]: clue };
@@ -384,10 +362,8 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         body: JSON.stringify({ vote }),
       });
       if (!res.ok) {
-        // If the backend says voting is closed, force a refresh
         const data = await res.json().catch(() => ({}));
         if (data?.error === "Not accepting votes") {
-          // Refetch game state immediately
           const refetch = await fetch(`/api/imposter/${actualParams.id}`);
           if (refetch.ok) {
             const newData = await refetch.json();
@@ -424,19 +400,6 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
     try {
       setDisconnectionVote(vote);
 
-      if (notificationId) {
-        setNotifications(prev => prev.map(n => {
-          if (n.id === notificationId) {
-            return {
-              ...n,
-              message: `${disconnectedPlayerName} appears to be disconnected. You voted to ${vote === 'continue' ? 'continue' : 'end the game'}.`,
-              actions: []
-            };
-          }
-          return n;
-        }));
-      }
-
       const res = await fetch(`/api/imposter/${actualParams.id}/heartbeat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -453,18 +416,6 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
             votesCounted: data.votesCounted,
             totalPlayers: data.totalPlayers
           });
-
-          if (notificationId) {
-            setNotifications(prev => prev.map(n => {
-              if (n.id === notificationId) {
-                return {
-                  ...n,
-                  message: `${disconnectedPlayerName} appears to be disconnected. You voted to ${vote === 'continue' ? 'continue' : 'end the game'}. (${data.votesCounted}/${data.totalPlayers} votes)`
-                };
-              }
-              return n;
-            }));
-          }
         }
 
         if (data.disconnectionResolved) {
@@ -504,7 +455,6 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
       });
 
       if (res.ok) {
-        // Redirect to home page
         router.push("/imposter");
       } else {
         setActionError("Failed to leave the game");
@@ -521,7 +471,6 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
     const history = game?.game_data?.history || [];
     if (!history.length) return null;
     const showImposters = game?.game_data?.phase === "reveal" || game?.game_data?.phase === "ended";
-    // Show only entries at index 1, 3, 5, ... (i.e., 2nd, 4th, 6th, ...)
     const filteredHistory = history.filter((_, idx) => (idx + 1) % 2 === 0);
     return (
       <div className="w-full flex flex-col items-center gap-6 mt-6">
@@ -576,13 +525,13 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
   if (loading || !game || !game.game_data) return (
     <main className="min-h-screen flex items-center justify-center bg-main text-main">
       <div className="flex flex-col items-center gap-4">
-        <Loader2 className="animate-spin w-12 h-12 text-primary" />
+        <div className="animate-spin w-12 h-12 text-primary border-4 border-current border-t-transparent rounded-full"></div>
         <div className="text-lg text-secondary">Loading game...</div>
       </div>
     </main>
   );
 
-  if (error || !game) return <main className="min-h-screen flex items-center justify-center text-destructive">{error || "Game not found"}</main>;
+  if (error || !game) return <main className="min-h-screen flex items-center justify-center bg-main text-destructive">{error || "Game not found"}</main>;
   if (!session?.id) return <main className="min-h-screen flex items-center justify-center text-main">No session</main>;
 
   const isImposter = game.imposter_ids?.includes(session.id);
@@ -597,7 +546,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
     return (
       <main className="min-h-screen flex items-center justify-center bg-main text-main p-4">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin w-12 h-12 text-primary" />
+          <div className="animate-spin w-12 h-12 text-primary border-4 border-current border-t-transparent rounded-full"></div>
           <div className="text-xl text-center text-secondary">Waiting for host to start the game...</div>
         </div>
       </main>
@@ -606,10 +555,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
 
   let phaseContent = null;
   if (phase === "ended" && game?.game_data?.playerLeft) {
-    // For ended games due to player leaving, keep showing the last phase content
-    // We'll determine what to show based on available data
     if (game.game_data.clues && Object.keys(game.game_data.clues).length > 0) {
-      // Show clues if they exist
       phaseContent = (
         <div className="w-full flex flex-col items-center gap-4 mt-4">
           <div className="text-base font-medium text-amber-500 text-center mb-3 p-2 border border-amber-500 rounded">
@@ -666,7 +612,6 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         )}
         {phase === "clue" && actionError && <div className="text-destructive text-sm mt-2 text-center">{actionError}</div>}
         {phase === "clue" && session?.id && !clues[session?.id] && (() => {
-          // Always use the latest clueOrder from game.game_data for turn logic
           const clueOrder = game.game_data.clueOrder || [];
           const nextPlayerId = clueOrder.find((pid: string) => !clues[pid]);
           return (
@@ -864,8 +809,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4">
-      {/* Player disconnection banner */}
+    <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4 py-8">
       {playerDisconnected && (
         <div className="fixed top-0 left-0 right-0 bg-amber-600 text-white p-4 text-center z-50 shadow-md">
           <div className="max-w-lg mx-auto">
@@ -875,7 +819,42 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Disconnection vote dialog */}
+      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+        {notifications.map(notification => (
+          <div key={notification.id} className={`rounded-lg shadow-lg p-4 flex justify-between items-start gap-2
+            ${notification.type === 'warning' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+            notification.type === 'error' ? 'bg-red-100 text-red-800 border border-red-300' :
+            'bg-blue-100 text-blue-800 border border-blue-300'}`}>
+            <div className="flex-1">
+              <p className="text-sm font-medium">{notification.message}</p>
+              {notification.actions && notification.actions.length > 0 && (
+                <div className="flex gap-2 mt-2">
+                  {notification.actions.map((action, i) => (
+                    <button
+                      key={i}
+                      onClick={action.action}
+                      className={`px-2 py-1 rounded text-xs font-medium
+                        ${action.variant === 'destructive' ? 'bg-red-700 text-white' :
+                         action.variant === 'outline' ? 'border border-current' :
+                         action.variant === 'secondary' ? 'bg-gray-200 text-gray-800' :
+                         'bg-blue-700 text-white'}`}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => removeNotification(notification.id)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+
       <Dialog open={disconnectionDialogOpen && !playerDisconnected} onOpenChange={(open) => {
         if (!open) setDisconnectionDialogOpen(false);
       }}>
@@ -923,7 +902,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
         </DialogContent>
       </Dialog>
 
-      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-lg flex flex-col items-center gap-6">
+      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-5xl flex flex-col items-center gap-6">
         <div className="w-full flex justify-between items-center">
           <div className="flex-1"></div>
           <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide flex-2">Imposter Game</h1>
@@ -980,6 +959,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
             <div className="text-lg text-center text-secondary">Describe the word indirectly without making it obvious.</div>
           </>
         )}
+
         {phaseContent}
         {getHistoryContent()}
       </div>

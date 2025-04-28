@@ -5,8 +5,9 @@ import { ClientRoot } from "./client-root";
 import { SessionProfileEditor } from "./_components/session-profile-editor";
 import { Footer } from "~/components/Footer";
 import { JoinGameModal } from "./_components/join-game-modal";
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from "@vercel/analytics/react";
 import { SettingsModal } from "./_components/settings-modal";
+import { MobileMenuButton } from "./_components/mobile-menu-button";
 
 export const metadata: Metadata = {
   title: "Games!",
@@ -28,13 +29,19 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </ClientRoot>
         <Footer />
 
-        {/* Fixed floating button container on right side */}
-        <div className="fixed right-8 top-1/2 transform -translate-y-1/2 flex flex-col gap-6 z-50">
+        {/* Mobile menu button (visible only on smaller screens) - moved higher from bottom */}
+        <div className="fixed right-4 bottom-20 sm:hidden z-50">
+          <MobileMenuButton />
+        </div>
+
+        {/* Desktop floating buttons (hidden on mobile) */}
+        <div className="fixed right-8 top-1/2 transform -translate-y-1/2 hidden sm:flex flex-col gap-6 z-50">
           <SessionProfileEditor />
           <JoinGameModal />
           <SettingsModal />
-          <Analytics/>
         </div>
+
+        <Analytics/>
       </body>
     </html>
   );

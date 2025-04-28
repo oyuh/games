@@ -46,6 +46,7 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
   const [error, setError] = useState("");
   const [expired, setExpired] = useState(false);
   const router = useRouter();
+  const [expandedRounds, setExpandedRounds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +115,13 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
     // Otherwise, do not reveal
     return false;
   }
+
+  const toggleRoundExpansion = (round: string) => {
+    setExpandedRounds(prev => ({
+      ...prev,
+      [round]: !prev[round]
+    }));
+  };
 
   // Helper to get imposter ids if not present: find the id in imposter_ids or, if missing, infer as the id in imposter_ids or the one not in player_ids
   function getImposterIds(): string[] {
@@ -193,87 +201,101 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
     }
 
     return (
-      <div key={idx} className="mb-6 p-4 border border-secondary rounded-lg bg-main/10">
-        <div className="font-bold text-secondary mb-1">Round {round.round ?? (idx + 1)}{round.phase ? ` — Phase: ${round.phase}` : ''}</div>
-        {round.clues && (
-          <div className="mb-2">
-            <div className="font-semibold text-primary">Clues:</div>
-            <ul className="list-disc pl-6">
-              {clueEntries.map(([pid, clue]) => (
-                <li key={pid}>
-                  <span className="font-mono bg-muted px-2 py-1 rounded mr-2">{clue}</span>
-                  <span className={isImposter(pid) ? "text-destructive font-bold" : "text-secondary"}>
-                    {getPlayerName(pid)}{/* Hide imposter label in history */}
-                  </span>
-                </li>
-              ))}
-            </ul>
+      <div key={idx} className="bg-secondary/10 border border-secondary/30 rounded-lg p-4">
+        <div
+          className="flex justify-between items-center cursor-pointer"
+          onClick={() => toggleRoundExpansion(`round-${idx}`)}
+        >
+          <h3 className="text-lg font-semibold text-primary">Round {round.round ?? (idx + 1)}{round.phase ? ` — Phase: ${round.phase}` : ''}</h3>
+          <div className="text-sm bg-primary/20 px-3 py-1 rounded-full">
+            {expandedRounds[`round-${idx}`] ? "Hide Details" : "Show Details"}
           </div>
-        )}
+        </div>
 
-        {/* Apply the same consistent ordering to other data displays */}
-        {round.shouldVoteVotes && (
-          <div className="mb-2">
-            <div className="font-semibold text-primary">Should We Vote?</div>
-            <ul className="list-disc pl-6">
-              {Object.entries(round.shouldVoteVotes)
-                .sort((a, b) => a[0].localeCompare(b[0])) // Sort by player ID for consistency
-                .map(([pid, v]) => (
-                  <li key={pid}>
-                    <span className="font-mono bg-muted px-2 py-1 rounded mr-2">{v}</span>
-                    <span className={isImposter(pid) ? "text-destructive font-bold" : "text-secondary"}>
-                      {getPlayerName(pid)}{/* Hide imposter label in history */}
-                    </span>
-                  </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {expandedRounds[`round-${idx}`] && (
+          <div className="mt-4 space-y-4">
+            {round.clues && (
+              <div className="mb-2">
+                <div className="font-semibold text-primary">Clues:</div>
+                <ul className="space-y-1 mt-2">
+                  {clueEntries.map(([pid, clue]) => (
+                    <li key={pid} className="flex items-center">
+                      <span className="font-medium w-20 text-blue-500">{getPlayerName(pid)}:</span>
+                      <span className="bg-blue-500/10 px-2 py-1 rounded">{clue}</span>
+                      {isImposter(pid) && <span className="ml-2 text-xs px-1.5 py-0.5 bg-destructive/20 rounded text-destructive">Imposter</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-        {round.votes && (
-          <div className="mb-2">
-            <div className="font-semibold text-primary">Votes:</div>
-            <ul className="list-disc pl-6">
-              {Object.entries(round.votes)
-                .sort((a, b) => a[0].localeCompare(b[0])) // Sort by player ID for consistency
-                .map(([pid, votedFor]) => (
-                  <li key={pid}>
-                    <span className="font-mono bg-muted px-2 py-1 rounded mr-2">{getPlayerName(votedFor)}</span>
-                    <span className={isImposter(pid) ? "text-destructive font-bold" : "text-secondary"}>
-                      {getPlayerName(pid)} voted{/* Hide imposter label in history */}
-                    </span>
-                  </li>
-              ))}
-            </ul>
-          </div>
-        )}
+            {/* Apply the same consistent ordering to other data displays */}
+            {round.shouldVoteVotes && (
+              <div className="mb-2">
+                <div className="font-semibold text-primary">Should We Vote?</div>
+                <ul className="space-y-1 mt-2">
+                  {Object.entries(round.shouldVoteVotes)
+                    .sort((a, b) => a[0].localeCompare(b[0])) // Sort by player ID for consistency
+                    .map(([pid, v]) => (
+                      <li key={pid} className="flex items-center">
+                        <span className="font-medium w-20">{getPlayerName(pid)}:</span>
+                        <span className="bg-secondary/10 px-2 py-1 rounded">{v}</span>
+                        {isImposter(pid) && <span className="ml-2 text-xs px-1.5 py-0.5 bg-destructive/20 rounded text-destructive">Imposter</span>}
+                      </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-        {round.votedOut && (
-          <div className="mb-2">
-            <div className="font-semibold text-primary">Voted Out:</div>
-            <ul className="list-disc pl-6">
-              {Array.isArray(round.votedOut) ? round.votedOut.map((pid: string) => (
-                <li key={pid} className={isImposter(pid) ? "text-destructive font-bold" : "text-secondary"}>
-                  {getPlayerName(pid)}{/* Hide imposter label in history */}
-                </li>
-              )) : null}
-            </ul>
-          </div>
-        )}
-        {round.revealResult && (
-          <div className="mb-2">
-            <div className="font-semibold text-primary">Result:</div>
-            <div className="text-lg font-bold">
-              {round.revealResult === "imposter_win" ? (
-                <span className="text-destructive">Imposters win!</span>
-              ) : round.revealResult === "player_win" ? (
-                <span className="text-green-600">Players win!</span>
-              ) : round.revealResult === "player_left" ? (
-                <span className="text-amber-500">Game ended - a player left</span>
-              ) : (
-                <span className="text-secondary">{round.revealResult}</span>
-              )}
-            </div>
+            {round.votes && (
+              <div className="mb-2">
+                <div className="font-semibold text-primary">Votes:</div>
+                <ul className="space-y-1 mt-2">
+                  {Object.entries(round.votes)
+                    .sort((a, b) => a[0].localeCompare(b[0])) // Sort by player ID for consistency
+                    .map(([pid, votedFor]) => (
+                      <li key={pid} className="flex items-center">
+                        <span className="font-medium w-20">{getPlayerName(pid)}:</span>
+                        <span className="bg-purple-500/10 px-2 py-1 rounded">{getPlayerName(votedFor)}</span>
+                        {isImposter(pid) && <span className="ml-2 text-xs px-1.5 py-0.5 bg-destructive/20 rounded text-destructive">Imposter</span>}
+                      </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {round.votedOut && (
+              <div className="mb-2">
+                <div className="font-semibold text-primary">Voted Out:</div>
+                <ul className="space-y-1 mt-2">
+                  {Array.isArray(round.votedOut) ? round.votedOut.map((pid: string) => (
+                    <li key={pid} className="flex items-center">
+                      <span className={isImposter(pid) ? "text-destructive font-bold" : "text-secondary"}>
+                        {getPlayerName(pid)}
+                      </span>
+                      {isImposter(pid) && <span className="ml-2 text-xs px-1.5 py-0.5 bg-destructive/20 rounded text-destructive">Imposter</span>}
+                    </li>
+                  )) : null}
+                </ul>
+              </div>
+            )}
+
+            {round.revealResult && (
+              <div className="mt-4 border-t border-secondary/30 pt-3">
+                <div className="font-semibold text-primary">Result:</div>
+                <div className="text-lg font-bold mt-1">
+                  {round.revealResult === "imposter_win" ? (
+                    <span className="text-destructive">Imposters win!</span>
+                  ) : round.revealResult === "player_win" ? (
+                    <span className="text-green-600">Players win!</span>
+                  ) : round.revealResult === "player_left" ? (
+                    <span className="text-amber-500">Game ended - a player left</span>
+                  ) : (
+                    <span className="text-secondary">{round.revealResult}</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -293,8 +315,8 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
   // Render a much cleaner and more appealing layout
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4 py-8">
-      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-3xl flex flex-col items-center gap-6">
-        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide">Game Results</h1>
+      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-5xl flex flex-col items-center gap-6">
+        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide mb-6">Imposter Game Results</h1>
 
         {game?.game_data?.playerLeft ? (
           <div className="text-xl text-center text-amber-500 font-bold mb-2 p-3 border border-amber-500 rounded-lg">
@@ -322,92 +344,103 @@ export default function ImposterResultsPage({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-          {/* Game summary section - left column on desktop */}
-          <div className="flex flex-col gap-4">
+        <div className="mb-8 w-full">
+          <h2 className="text-2xl font-bold text-primary border-b border-primary/30 pb-2 mb-4">Game Summary</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Game info section */}
             <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
-              <h2 className="text-xl font-bold text-primary border-b border-primary/30 pb-2 mb-3">Game Info</h2>
+              <h3 className="text-lg font-semibold text-primary mb-3">Final Outcome</h3>
 
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-primary mb-2">The Word</h3>
+                <h4 className="text-base font-medium text-primary mb-2">The Word</h4>
                 <div className="text-2xl font-bold text-main bg-primary/80 rounded-lg px-4 py-2 text-center">
                   {game?.chosen_word}
                 </div>
               </div>
 
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-primary mb-2">Players</h3>
-                <ul className="space-y-1">
-                  {getAllPlayerIds().map((pid: string) => (
-                    <li key={pid} className={`rounded-md px-3 py-1 ${isImposter(pid) ? "bg-destructive/20 text-destructive" : "bg-primary/10"}`}>
-                      {getPlayerName(pid)}{isImposter(pid) ? " (Imposter)" : ""}
-                    </li>
-                  ))}
-                </ul>
+                <h4 className="text-base font-medium text-primary mb-2">Result</h4>
+                <div className="text-lg font-bold">
+                  {game.game_data?.revealResult === "imposter_win" ? (
+                    <span className="text-destructive">Imposters Win!</span>
+                  ) : game.game_data?.revealResult === "player_win" ? (
+                    <span className="text-green-600">Players Win!</span>
+                  ) : game.game_data?.revealResult === "player_left" ? (
+                    <span className="text-amber-500">Game Ended - Player Left</span>
+                  ) : (
+                    <span className="text-secondary">Game in progress...</span>
+                  )}
+                </div>
               </div>
+            </div>
 
-              {/* Imposter reveal section - only show if game is finished */}
-              {(game?.game_data?.gameFinished ||
-                game?.game_data?.revealResult === "imposter_win" ||
-                game?.game_data?.revealResult === "player_win" ||
-                game?.game_data?.revealResult === "player_left") && (
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-destructive mb-2">Imposter{(getImposterIds().length > 1) ? 's' : ''} Revealed</h3>
+            {/* Player & Imposter info */}
+            <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+              <h3 className="text-lg font-semibold text-primary mb-3">Players & Imposters</h3>
+              <div className="space-y-3">
+                <div>
+                  <div className="font-medium text-primary mb-2">All Players</div>
                   <ul className="space-y-1">
-                    {getImposterIds().map(pid => (
-                      <li key={pid} className="rounded-md px-3 py-1 bg-destructive/20 text-destructive font-bold">
-                        {getPlayerName(pid)}
+                    {getAllPlayerIds().map((pid: string) => (
+                      <li key={pid} className={`flex justify-between px-3 py-2 rounded ${isImposter(pid) ? 'bg-destructive/10 border border-destructive/30' : 'bg-primary/10 border border-primary/30'}`}>
+                        <span>{getPlayerName(pid)}</span>
+                        {isImposter(pid) && <span className="font-bold text-destructive">Imposter</span>}
                       </li>
                     ))}
                   </ul>
                 </div>
-              )}
 
-              <div>
-                <h3 className="text-lg font-semibold text-primary mb-2">Game Result</h3>
-                {game?.game_data?.revealResult ? (
-                  <div className="text-xl font-bold text-center p-2 rounded-md">
-                    {game.game_data.revealResult === "imposter_win" ? (
-                      <span className="text-destructive">Imposters Win!</span>
-                    ) : game.game_data.revealResult === "player_win" ? (
-                      <span className="text-green-600">Players Win!</span>
-                    ) : game.game_data.revealResult === "player_left" ? (
-                      <span className="text-amber-500">Game Ended - Player Left</span>
-                    ) : (
-                      <span className="text-secondary">{game.game_data.revealResult}</span>
-                    )}
+                {/* Imposter reveal section - only show if game is finished */}
+                {(game?.game_data?.gameFinished ||
+                  game?.game_data?.revealResult === "imposter_win" ||
+                  game?.game_data?.revealResult === "player_win" ||
+                  game?.game_data?.revealResult === "player_left") && (
+                  <div>
+                    <div className="font-medium text-destructive mb-2">Imposters Revealed</div>
+                    <ul className="space-y-1">
+                      {getImposterIds().map(pid => (
+                        <li key={pid} className="px-3 py-2 rounded bg-destructive/10 border border-destructive/30 font-bold text-destructive">
+                          {getPlayerName(pid)}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                ) : (
-                  <p className="text-secondary text-center italic">Game in progress...</p>
                 )}
               </div>
             </div>
-
-            <Button className="mt-2" onClick={() => router.push("/imposter")}>
-              Back to Lobby
-            </Button>
           </div>
+        </div>
 
-          {/* Game history section - right column on desktop */}
-          <div className="flex flex-col gap-3">
-            <h2 className="text-xl font-bold text-primary">Game History</h2>
-            <div className="overflow-y-auto max-h-[600px] pr-2 space-y-4">
-              {/* Render all rounds from history */}
-              {Array.isArray(game?.game_data?.history) && game?.game_data?.history.length > 0 ? (
-                game.game_data.history
-                  .filter((_, idx) => (idx + 1) % 2 === 0)
-                  .map((round, idx) => renderRound(round, idx))
-              ) : (
-                <div className="text-secondary bg-secondary/10 p-4 rounded-lg text-center">
-                  No round history yet.
-                </div>
-              )}
-              {/* Render current round if not already in history */}
-              {game?.game_data && (!game.game_data.history || !game.game_data.history.some((r: any) => r.round === game.game_data?.round)) && (
-                renderRound(game.game_data, (game.game_data.history?.length || 0))
-              )}
-            </div>
+        {/* Round-by-Round Details */}
+        <div className="w-full">
+          <h2 className="text-2xl font-bold text-primary border-b border-primary/30 pb-2 mb-4">Round-by-Round Details</h2>
+
+          <div className="space-y-6 mb-6">
+            {/* Render all rounds from history */}
+            {Array.isArray(game?.game_data?.history) && game?.game_data?.history.length > 0 ? (
+              game.game_data.history
+                .filter((_, idx) => (idx + 1) % 2 === 0)
+                .map((round, idx) => renderRound(round, idx))
+            ) : (
+              <div className="text-secondary bg-secondary/10 p-4 rounded-lg text-center">
+                No round history yet.
+              </div>
+            )}
+            {/* Render current round if not already in history */}
+            {game?.game_data && (!game.game_data.history || !game.game_data.history.some((r: any) => r.round === game.game_data?.round)) && (
+              renderRound(game.game_data, (game.game_data.history?.length || 0))
+            )}
           </div>
+        </div>
+
+        <div className="flex justify-center mt-6">
+          <Button
+            onClick={() => router.push("/")}
+            className="px-6 py-3 bg-primary text-main rounded-lg font-semibold shadow hover:bg-primary/90 transition"
+          >
+            Back to Home
+          </Button>
         </div>
       </div>
     </main>

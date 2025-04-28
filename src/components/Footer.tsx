@@ -8,14 +8,22 @@ export const Footer = () => {
       <div className="footer-left">
       </div>
       <div className="footer-right gradient-text">
-      Made by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson Hart</a> with 💙 | © {new Date().getFullYear()} Lawson Hart. All rights reserved.<a href="https://lawsonhart.me/policy" className="privacy-link">View my Policies.</a>
+        <div className="desktop-footer">
+          Made by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson Hart</a> with 💙 | © {new Date().getFullYear()} Lawson Hart. All rights reserved. <a href="https://lawsonhart.me/policy" className="privacy-link">View my Policies.</a>
+        </div>
+        <div className="mobile-footer">
+          Made by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson Hart</a> with 💙
+          <div className="mobile-footer-secondary">
+            © {new Date().getFullYear()} Lawson Hart. All rights reserved. <a href="https://lawsonhart.me/policy" className="privacy-link">View my Policies.</a>
+          </div>
+        </div>
       </div>
       <style jsx>{`
         .footer-bar {
           position: fixed;
           left: 0;
           bottom: 0;
-          width: 100%; /* Changed from 100vw to 100% */
+          width: 100%;
           z-index: 100;
           display: flex;
           flex-direction: row;
@@ -44,21 +52,19 @@ export const Footer = () => {
         .gradient-text {
           background: linear-gradient(90deg, #60a5fa, #93c5fd, #60a5fa);
           background-size: 300% 300%;
-          background-clip: text;
           -webkit-background-clip: text;
+          background-clip: text;
           color: transparent;
           animation: gradient 12s ease infinite;
           font-size: 0.9rem;
           font-weight: 500;
+          white-space: nowrap;
         }
         .gradient-text a {
-          background: inherit;
-          background-clip: text;
-          -webkit-background-clip: text;
-          color: transparent;
-          animation: gradient 12s ease infinite;
+          color: #3182ce;
           text-decoration: none;
           position: relative;
+          font-weight: 600;
         }
         .gradient-text a::after {
           content: '';
@@ -76,6 +82,13 @@ export const Footer = () => {
           transform: scaleX(1);
           transform-origin: left;
         }
+        /* Hide/show elements based on screen size */
+        .mobile-footer {
+          display: none;
+        }
+        .desktop-footer {
+          display: block;
+        }
         @keyframes gradient {
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
@@ -84,16 +97,42 @@ export const Footer = () => {
         @media (max-width: 600px) {
           .footer-bar {
             flex-direction: column;
-            align-items: stretch;
-            gap: 0.5rem;
+            align-items: center;
+            gap: 0.25rem;
             padding: 0.5rem 1rem;
+            background-color: rgba(0, 0, 0, 0.05);
+          }
+          .mobile-footer {
+            display: block;
+            text-align: center;
+            color: #3182ce;
+          }
+          .mobile-footer a {
+            color: #3182ce;
+            font-weight: 600;
+            text-decoration: underline;
+          }
+          .desktop-footer {
+            display: none;
+          }
+          .mobile-footer-secondary {
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
           }
           .footer-left, .footer-right {
-            text-align: left;
-            font-size: 0.95rem;
+            text-align: center;
+            font-size: 0.85rem;
+          }
+          /* Override gradient text for better visibility on mobile */
+          .gradient-text {
+            background: none;
+            -webkit-background-clip: initial;
+            background-clip: initial;
+            color: #3182ce;
+            animation: none;
           }
         }
       `}</style>
     </footer>
   );
-};
+}

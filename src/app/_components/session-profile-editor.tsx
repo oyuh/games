@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { useSessionInfo } from "./session-modal";
@@ -19,6 +19,16 @@ export function SessionProfileEditor() {
     setConfirmDelete(false);
     setOpen(true);
   };
+
+  // Listen for custom event from mobile menu
+  useEffect(() => {
+    const openModalListener = () => handleOpen();
+    document.addEventListener('open-profile-modal', openModalListener);
+
+    return () => {
+      document.removeEventListener('open-profile-modal', openModalListener);
+    };
+  }, []);
 
   // Delete session logic
   const handleDelete = async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
@@ -17,6 +17,16 @@ export function JoinGameModal() {
   const [joinError, setJoinError] = useState("");
   const [joinGameType, setJoinGameType] = useState("imposter");
   const [showTooltip, setShowTooltip] = useState(false);
+
+  // Listen for custom event from mobile menu
+  useEffect(() => {
+    const openModalListener = () => setOpen(true);
+    document.addEventListener('open-join-game-modal', openModalListener);
+
+    return () => {
+      document.removeEventListener('open-join-game-modal', openModalListener);
+    };
+  }, []);
 
   // Function to handle joining by code
   async function handleJoinByCode() {
@@ -98,61 +108,75 @@ export function JoinGameModal() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-sm w-full bg-card text-main border border-secondary shadow-xl">
-          <DialogHeader>
-            <DialogTitle className="text-primary text-center">Join a Game</DialogTitle>
+        <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-md flex flex-col items-center gap-6">
+          <DialogHeader className="w-full">
+            <DialogTitle className="text-3xl font-bold text-primary text-center uppercase tracking-wide">
+              Join a Game
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="w-full flex flex-col gap-4">
-            <div className="flex flex-col gap-2 w-full">
-              <label htmlFor="gameType" className="text-sm font-semibold text-primary">
-                Game Type
-              </label>
-              <select
-                id="gameType"
-                value={joinGameType}
-                onChange={e => setJoinGameType(e.target.value)}
-                className="input bg-main text-main border border-secondary rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary font-semibold tracking-wide"
-              >
-                <option value="imposter">Imposter</option>
-                <option value="password">Password</option>
-              </select>
-            </div>
+          <div className="w-full space-y-6">
+            <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+              <div className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">
+                Game Details
+              </div>
 
-            <div className="flex flex-col gap-2 w-full">
-              <label htmlFor="joinCode" className="text-sm font-semibold text-primary">
-                Game Code
-              </label>
-              <Input
-                id="joinCode"
-                type="text"
-                placeholder="Enter game code"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value)}
-                className="bg-main text-main border border-secondary rounded-md focus:ring-2 focus:ring-primary"
-              />
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="gameType" className="text-sm font-semibold text-primary">
+                    Game Type
+                  </label>
+                  <select
+                    id="gameType"
+                    value={joinGameType}
+                    onChange={e => setJoinGameType(e.target.value)}
+                    className="bg-main text-main border border-secondary/30 rounded-md px-3 py-2 w-full"
+                  >
+                    <option value="imposter">Imposter</option>
+                    <option value="password">Password</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="joinCode" className="text-sm font-semibold text-primary">
+                    Game Code
+                  </label>
+                  <Input
+                    id="joinCode"
+                    type="text"
+                    placeholder="Enter game code"
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value)}
+                    className="bg-main text-main border border-secondary/30 rounded-md px-3 py-2 text-center text-lg"
+                  />
+                </div>
+              </div>
             </div>
 
             {joinError && (
-              <div className="text-destructive text-center text-sm">{joinError}</div>
+              <div className="text-destructive bg-destructive/10 border border-destructive/30 px-3 py-2 rounded-md text-center">
+                {joinError}
+              </div>
             )}
 
-            <Button
-              type="button"
-              onClick={handleJoinByCode}
-              disabled={joiningGame || !joinCode.trim()}
-              className="w-full bg-primary text-main hover:bg-primary/90 font-semibold py-2"
-            >
-              {joiningGame ? "Joining..." : "Join Game"}
-            </Button>
-
-            <div className="text-center">
-              <span
-                className="text-secondary hover:text-primary text-sm underline cursor-pointer"
-                onClick={handleJoinGameByLink}
+            <div className="flex flex-col gap-3 w-full">
+              <Button
+                type="button"
+                onClick={handleJoinByCode}
+                disabled={joiningGame || !joinCode.trim()}
+                className="w-full"
               >
-                Or join by link
-              </span>
+                {joiningGame ? "Joining..." : "Join Game"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleJoinGameByLink}
+                className="w-full border border-secondary/30 text-secondary hover:bg-secondary/10"
+              >
+                Join by Link
+              </Button>
             </div>
           </div>
         </DialogContent>

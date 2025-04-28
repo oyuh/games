@@ -4,7 +4,7 @@ import { useSessionInfo } from "../../../_components/session-modal";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import React from "react";
-import { Button } from "~/components/ui/button"; // Import the Button component
+import { Button } from "~/components/ui/button";
 
 // Define a type for the game object for type safety
 interface ImposterGame {
@@ -133,11 +133,16 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
 
   // Wait for session to load before rendering lobby
   if (loading) {
-    return <main className="min-h-screen flex items-center justify-center text-main">Loading session...</main>;
+    return <main className="min-h-screen flex items-center justify-center bg-main text-main">
+      <div className="flex flex-col items-center gap-4">
+        <div className="animate-spin w-12 h-12 text-primary border-4 border-current border-t-transparent rounded-full"></div>
+        <div className="text-lg text-secondary">Loading session...</div>
+      </div>
+    </main>;
   }
 
   if (!game) {
-    return <main className="min-h-screen flex items-center justify-center text-main">{error || "Loading..."}</main>;
+    return <main className="min-h-screen flex items-center justify-center bg-main text-destructive">{error || "Loading..."}</main>;
   }
 
   // Determine eligibility
@@ -146,79 +151,119 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
   const canDelete = isHost && !deleting && !loading;
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4">
-      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-lg flex flex-col items-center gap-4">
-        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide">Imposter Game Lobby</h1>
-        {/* --- JOIN CODE PROMINENT --- */}
-        <div className="flex flex-col items-center my-4 w-full">
-          <div className="text-lg font-semibold text-primary text-center mb-1">Join Code</div>
-          <div className="bg-white text-primary font-mono text-4xl tracking-widest rounded-lg px-10 py-5 mb-2 select-all shadow-lg border-4 border-primary text-center w-full font-extrabold" style={{letterSpacing: '0.25em'}}>
-            {game.code || <span className="text-secondary">(not available)</span>}
+    <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4 py-8">
+      <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-5xl flex flex-col items-center gap-6">
+        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide mb-6">Imposter Game Lobby</h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+          {/* Join Code & Game Info */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30 w-full">
+              <h2 className="text-xl font-bold text-primary border-b border-primary/30 pb-2 mb-4">Game Info</h2>
+
+              <div className="flex flex-col items-center my-4 w-full">
+                <div className="text-lg font-semibold text-primary text-center mb-2">Join Code</div>
+                <div className="bg-main text-primary font-mono text-3xl tracking-widest rounded-lg px-8 py-3 mb-2 select-all border-2 border-primary/50 text-center w-full font-extrabold">
+                  {game.code || <span className="text-secondary">(not available)</span>}
+                </div>
+                <div className="text-xs text-secondary text-center mb-2">Share this code with friends to join!</div>
+              </div>
+
+              <div className="space-y-3 mt-4">
+                <div className="flex justify-between px-3 py-2 rounded bg-primary/10 border border-primary/30">
+                  <span className="font-medium">Category:</span>
+                  <span className="font-bold">{game.category}</span>
+                </div>
+                <div className="flex justify-between px-3 py-2 rounded bg-primary/10 border border-primary/30">
+                  <span className="font-medium">Max Players:</span>
+                  <span className="font-bold">{game.max_players}</span>
+                </div>
+                <div className="flex justify-between px-3 py-2 rounded bg-primary/10 border border-primary/30">
+                  <span className="font-medium">Imposters:</span>
+                  <span className="font-bold">{game.num_imposters}</span>
+                </div>
+              </div>
+
+              {/* Invite Link */}
+              <details className="w-full mt-6">
+                <summary className="cursor-pointer text-sm text-secondary hover:text-primary">Show invite link</summary>
+                <div className="bg-secondary/20 text-main rounded px-4 py-2 font-mono text-sm select-all break-all w-full text-center mt-2">
+                  {`${baseUrl}api/imposter/join-by-code/${game.code}`}
+                </div>
+              </details>
+            </div>
+
+            {/* Controls */}
+            <div className="flex flex-col w-full gap-2">
+              {isHost && (
+                <>
+                  <Button
+                    onClick={handleStart}
+                    disabled={!canStart || playerNames.length < 3}
+                    className="w-full"
+                  >
+                    {starting ? "Starting..." : (playerNames.length < 3 ? "Need at least 3 players" : "Start Game")}
+                  </Button>
+                  <Button
+                    onClick={handleDelete}
+                    disabled={!canDelete}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    {deleting ? "Deleting..." : "Delete Game"}
+                  </Button>
+                </>
+              )}
+              {canJoin && (
+                <Button
+                  onClick={handleJoin}
+                  disabled={!canJoin}
+                  className="w-full"
+                >
+                  {joining ? "Joining..." : "Join Game"}
+                </Button>
+              )}
+              {/* Fallback: If user is not recognized, show join button */}
+              {!isHost && !isPlayer && !canJoin && !loading && (
+                <Button
+                  onClick={handleJoin}
+                  disabled={joining}
+                  className="w-full"
+                >
+                  {joining ? "Joining..." : "Join Game"}
+                </Button>
+              )}
+              {error && <div className="text-destructive text-center mt-2">{error}</div>}
+            </div>
           </div>
-          <div className="text-xs text-secondary text-center mb-2">Share this code with friends to join!</div>
-        </div>
-        {/* --- END JOIN CODE --- */}
-        <div className="text-secondary text-center text-lg">Category: <span className="font-bold text-main">{game.category}</span></div>
-        <div className="text-secondary text-center">Max Players: <span className="font-bold text-main">{game.max_players}</span></div>
-        <div className="text-secondary text-center">Imposters: <span className="font-bold text-main">{game.num_imposters}</span></div>
-        <div className="w-full flex flex-col items-center gap-2 mt-4">
-          <div className="text-lg font-semibold text-primary">Players Joined:</div>
-          <ul className="w-full flex flex-col gap-1 items-center">
-            {playerNames.length === 0 ? (
-              <li className="text-secondary">No players yet.</li>
-            ) : (
-              playerNames.map((name, i) => (
-                <li key={i} className="text-main bg-main/40 rounded px-3 py-1 w-full text-center">{name}</li>
-              ))
+
+          {/* Players List */}
+          <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
+            <h2 className="text-xl font-bold text-primary border-b border-primary/30 pb-2 mb-4">Players</h2>
+            <div className="w-full flex flex-col gap-1">
+              {playerNames.length === 0 ? (
+                <div className="text-secondary bg-secondary/10 p-4 rounded-lg text-center">
+                  No players yet.
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {playerNames.map((name, i) => (
+                    <li key={i} className="px-3 py-2 rounded bg-primary/10 border border-primary/30 font-medium">
+                      {name} {game.host_id === Object.keys(game.playerNames || {})[i] &&
+                        <span className="ml-2 text-xs px-1.5 py-0.5 bg-secondary/20 rounded text-secondary">Host</span>
+                      }
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {playerNames.length > 0 && (
+              <div className="text-sm text-center mt-4 text-secondary">
+                {playerNames.length} {playerNames.length === 1 ? "player" : "players"} in lobby
+              </div>
             )}
-          </ul>
-        </div>
-        {/* --- INVITE LINK, LESS PROMINENT --- */}
-        <details className="w-full mt-2">
-          <summary className="cursor-pointer text-sm text-secondary hover:text-primary">Show invite link</summary>
-          <div className="bg-secondary text-main rounded px-4 py-2 font-mono text-sm select-all break-all w-full text-center mt-2">
-            {`${baseUrl}api/imposter/join-by-code/${game.code}`}
           </div>
-        </details>
-        {isHost && (
-          <>
-            <Button
-              onClick={handleStart}
-              disabled={!canStart}
-              className="w-full mt-2"
-            >
-              {starting ? "Starting..." : "Start Game"}
-            </Button>
-            <Button
-              onClick={handleDelete}
-              disabled={!canDelete}
-              variant="destructive"
-              className="w-full mt-2"
-            >
-              {deleting ? "Deleting..." : "Delete Game"}
-            </Button>
-          </>
-        )}
-        {canJoin && (
-          <Button
-            onClick={handleJoin}
-            disabled={!canJoin}
-            className="w-full mt-2"
-          >
-            {joining ? "Joining..." : "Join Game"}
-          </Button>
-        )}
-        {/* Fallback: If user is not recognized, show join button */}
-        {!isHost && !isPlayer && !canJoin && !loading && (
-          <Button
-            onClick={handleJoin}
-            disabled={joining}
-            className="w-full mt-2"
-          >
-            {joining ? "Joining..." : "Join Game"}
-          </Button>
-        )}
-        {error && <div className="text-destructive text-center mt-2">{error}</div>}
+        </div>
       </div>
     </main>
   );
