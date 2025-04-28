@@ -39,6 +39,7 @@
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
     "server-only": "^0.0.1",
+    "string-similarity": "^4.0.4",
     "superjson": "^2.2.1",
     "tailwind-merge": "^3.2.0",
     "zod": "^3.24.2"
@@ -50,6 +51,7 @@
     "@types/node": "^20.14.10",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/string-similarity": "^4.0.2",
     "drizzle-kit": "^0.30.5",
     "eslint": "^9.23.0",
     "eslint-config-next": "^15.2.3",

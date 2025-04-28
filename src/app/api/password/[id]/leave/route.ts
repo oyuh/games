@@ -54,12 +54,34 @@ export async function POST(
       }
     }
 
+    // End the game for everyone if a player leaves (after removing them)
+    let updatedGameData = game.game_data || {};
+    // Only end if not already finished
+    if (!updatedGameData.finished_at) {
+      // Find the team(s) with the highest score
+      const scores = updatedGameData.teamScores || {};
+      let maxScore = -Infinity;
+      let winningTeams: string[] = [];
+      for (const [team, score] of Object.entries(scores)) {
+        if (score > maxScore) {
+          maxScore = score;
+          winningTeams = [team];
+        } else if (score === maxScore) {
+          winningTeams.push(team);
+        }
+      }
+      updatedGameData.finished_at = new Date().toISOString();
+      updatedGameData.winningTeams = winningTeams;
+      updatedGameData.playerLeft = { id: sessionId };
+    }
+
     // Update the game state
     await db.update(password)
       .set({
         teams: updatedTeams,
         host_id: updatedHostId,
-        updated_at: new Date()
+        updated_at: new Date(),
+        game_data: updatedGameData
       })
       .where(eq(password.id, params.id));
 

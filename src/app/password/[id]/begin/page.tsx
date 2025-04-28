@@ -80,6 +80,13 @@ export default function PasswordBeginPage({
     return () => clearInterval(interval);
   }, [params.id]);
 
+  // Redirect effect - if game has started, automatically redirect all players to the main game page
+  useEffect(() => {
+    if (game?.started_at && !loading) {
+      router.push(`/password/${params.id}`);
+    }
+  }, [game?.started_at, loading, params.id, router]);
+
   const joinTeam = async (teamNumber: string | number) => {
     try {
       const response = await fetch(`/api/password/${params.id}/team/team-join`, {
@@ -153,8 +160,18 @@ export default function PasswordBeginPage({
 
   const startGame = async () => {
     try {
-      // Logic to start the game will be implemented here
-      // For now, just navigate back to the game page
+      // Call API to start the game
+      const response = await fetch(`/api/password/${params.id}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to start game");
+      }
+
+      // Redirect directly to the game page
       router.push(`/password/${params.id}`);
     } catch (err) {
       if (err instanceof Error) {

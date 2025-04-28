@@ -59,8 +59,9 @@ export async function POST(req: NextRequest) {
 
     // Store the game settings in game_data
     const gameData = {
-      pointsToWin: pointsToWin,
+      pointsToWin: Number(pointsToWin) || 5,
       numberOfTeams: numTeams,
+      teamPhases: {},  // Initialize empty teamPhases object
     };
 
     // Let the database generate the UUID
