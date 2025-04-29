@@ -16,10 +16,6 @@ import {
   DialogTrigger
 } from "~/components/ui/dialog";
 
-export const generateMetadata = () => ({
-  title: "Imposter | Games!",
-});
-
 export default function ImposterGamePage({ params }: { params: Promise<{ id: string }> }) {
   const actualParams = React.use(params);
   const { session } = useSessionInfo();
@@ -833,6 +829,10 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
               <p className="text-sm font-medium">{notification.message}</p>
               {notification.actions && notification.actions.length > 0 && (
                 <div className="flex gap-2 mt-2">
+                  {notification.actions.map(action => (
+                    <button
+                      key={action.label}
+                      onClick={action.action}
                       className={`px-2 py-1 rounded text-xs font-medium
                         ${action.variant === 'destructive' ? 'bg-red-700 text-white' :
                          action.variant === 'outline' ? 'border border-current' :

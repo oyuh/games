@@ -8,10 +8,6 @@ import { imposterCategories } from "~/data/categoryList";
 import { Input } from "~/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 
-export const generateMetadata = () => ({
-  title: "Password | Games!",
-});
-
 interface PasswordGame {
   id: string;
   code: string;
