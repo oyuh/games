@@ -24,8 +24,18 @@ export function MobileMenuButton() {
     // Close the menu
     setIsMenuOpen(false);
 
+    // Map action names to their corresponding event names
+    const eventMap: Record<string, string> = {
+      'profile': 'open-session-profile-editor-modal',
+      'join-game': 'open-join-game-modal',
+      'settings': 'open-settings-modal'
+    };
+
+    // Get the correct event name from the map, or fall back to the old pattern
+    const eventName = eventMap[action] || `open-${action}-modal`;
+
     // Dispatch custom events that the individual components can listen for
-    const event = new CustomEvent(`open-${action}-modal`);
+    const event = new CustomEvent(eventName);
     document.dispatchEvent(event);
   };
 

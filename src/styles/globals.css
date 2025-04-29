@@ -157,6 +157,17 @@ button.bg-destructive, button[class*="bg-destructive"], .btn-destructive {
   border-color: var(--destructive) !important;
 }
 
+/* Custom text selection highlight color */
+::selection {
+  background-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  color: var(--text);
+}
+
+::-moz-selection {
+  background-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  color: var(--text);
+}
+
 input, .input {
   background: var(--card) !important;
   color: #7ecbff !important; /* Light blue text */
