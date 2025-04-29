@@ -53,7 +53,7 @@ export function SessionProfileEditor() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-sm w-full bg-card text-main border border-secondary shadow-xl">
+      <DialogContent className="max-w-xs sm:max-w-md w-full bg-card text-main border border-secondary shadow-xl">
         <DialogHeader>
           <DialogTitle className="text-primary text-center">Profile Settings</DialogTitle>
         </DialogHeader>

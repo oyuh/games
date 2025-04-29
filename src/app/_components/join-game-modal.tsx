@@ -92,7 +92,7 @@ export function JoinGameModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-md flex flex-col items-center gap-6">
+      <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-4 w-full max-w-xs sm:max-w-md flex flex-col items-center gap-6">
         <DialogHeader className="w-full">
           <DialogTitle className="text-3xl font-bold text-primary text-center uppercase tracking-wide">
             Join a Game

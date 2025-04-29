@@ -13,6 +13,13 @@ export function SettingsModal() {
     return 'system';
   });
 
+  const [headerPosition, setHeaderPosition] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('floatingHeaderPosition') ?? 'top';
+    }
+    return 'top';
+  });
+
   // Listen for custom event from FloatingHeader
   useEffect(() => {
     const openModalListener = () => setOpen(true);
@@ -35,13 +42,26 @@ export function SettingsModal() {
     }
   }, [theme]);
 
+  // Set header position on mount and when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('floatingHeaderPosition', headerPosition);
+      // Optionally, dispatch an event to notify FloatingHeader
+      window.dispatchEvent(new Event('floating-header-position-change'));
+    }
+  }, [headerPosition]);
+
   const handleThemeChange = (newTheme: 'system' | 'light' | 'dark') => {
     setTheme(newTheme);
   };
 
+  const handleHeaderPositionChange = (pos: 'top' | 'left' | 'right' | 'bottom') => {
+    setHeaderPosition(pos);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-md flex flex-col items-center gap-6">
+      <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-4 w-full max-w-xs sm:max-w-md flex flex-col items-center gap-6">
         <DialogHeader className="w-full">
           <DialogTitle className="text-3xl font-bold text-primary text-center uppercase tracking-wide">
             Settings

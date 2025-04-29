@@ -59,10 +59,10 @@ export function SessionNameModal({ onNameSet }: { onNameSet: () => void }) {
 
   return (
     <Dialog open>
-      <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-md flex flex-col items-center gap-6">
+      <DialogContent className="max-w-xs sm:max-w-md w-full bg-card text-main border border-secondary shadow-xl">
         <DialogHeader className="w-full">
           <DialogTitle className="text-3xl font-bold text-primary text-center uppercase tracking-wide">
-            Enter Your Name
+            Enter A Name
           </DialogTitle>
         </DialogHeader>
 
@@ -73,7 +73,7 @@ export function SessionNameModal({ onNameSet }: { onNameSet: () => void }) {
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
                 <label htmlFor="player-name" className="text-sm font-semibold text-primary">
-                  Your name
+                  A name
                 </label>
                 <Input
                   id="player-name"

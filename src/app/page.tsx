@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
 import { imposterCategories } from "~/data/categoryList";
+import Image from "next/image";
 
 // Use display names from the imposterCategories object
 const categoryOptions = Object.values(imposterCategories).map(category => category.displayName);
@@ -40,6 +41,7 @@ interface Game {
   name: string;
   description: string;
   available: boolean;
+  color: string;
   fields: GameField[];
   info?: GameInfo;
   useTeams?: boolean;
@@ -51,6 +53,7 @@ const games: Game[] = [
     name: "Imposter",
     description: "Blend in or find the imposter!",
     available: true,
+    color: "blue",
     fields: [
       { label: "Category", name: "category", type: "select", options: categoryOptions, required: true },
       { label: "Max Players", name: "maxPlayers", type: "number", min: 3, max: 20, required: true, defaultValue: 8 },
@@ -75,6 +78,7 @@ const games: Game[] = [
     name: "Password",
     description: "Give clues, guess the word, beat the other teams!",
     available: true,
+    color: "blue",
     useTeams: true,
     fields: [
       { label: "Number of Teams", name: "numTeams", type: "number", min: 2, max: 10, required: true, defaultValue: 2 },
@@ -100,6 +104,7 @@ const games: Game[] = [
     name: "Hangman",
     description: "Classic word guessing game.",
     available: false,
+    color: "blue",
     fields: [
       { label: "Category or Word List", name: "category", type: "select", options: categoryOptions, required: true },
       { label: "Max Incorrect Guesses", name: "maxIncorrect", type: "number", min: 3, max: 10, required: true, defaultValue: 6 },
@@ -123,6 +128,7 @@ const games: Game[] = [
     name: "Wavelength",
     description: "Guess the position on the scale!",
     available: false,
+    color: "blue",
     useTeams: true,
     fields: [
       { label: "Number of Teams", name: "numTeams", type: "number", min: 2, max: 8, required: true, defaultValue: 2 },
@@ -151,6 +157,7 @@ const games: Game[] = [
     name: "Hues and Cues",
     description: "Guess the color from clues!",
     available: false,
+    color: "blue",
     fields: [
       { label: "Max Players", name: "maxPlayers", type: "number", min: 3, max: 20, required: true },
       { label: "Rounds", name: "rounds", type: "number", min: 1, max: 20, required: true, defaultValue: 5 },
@@ -232,28 +239,16 @@ interface NumberInputProps {
 
 function NumberInput({ id, name, min, max, defaultValue, disabled }: NumberInputProps) {
   return (
-    <div className="flex items-center gap-2 justify-center w-full">
-      <button type="button" className="px-2 py-1 rounded bg-secondary text-main" onClick={e => {
-        e.preventDefault();
-        const input = document.getElementById(id) as HTMLInputElement;
-        if (input && !disabled) input.stepDown();
-      }} disabled={disabled}>-</button>
-      <input
-        id={id}
-        name={name}
-        type="number"
-        min={min}
-        max={max}
-        defaultValue={defaultValue}
-        className="input w-16 text-center bg-main text-main border border-secondary rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
-        disabled={disabled}
-      />
-      <button type="button" className="px-2 py-1 rounded bg-secondary text-main" onClick={e => {
-        e.preventDefault();
-        const input = document.getElementById(id) as HTMLInputElement;
-        if (input && !disabled) input.stepUp();
-      }} disabled={disabled}>+</button>
-    </div>
+    <input
+      id={id}
+      name={name}
+      type="number"
+      min={min}
+      max={max}
+      defaultValue={defaultValue}
+      className="bg-main text-main border border-secondary/30 rounded-md px-3 py-2 w-full text-center text-lg"
+      disabled={disabled}
+    />
   );
 }
 
@@ -323,15 +318,41 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-main text-main font-sans flex flex-col items-center justify-center px-4 py-8">
-      <div className="w-full max-w-5xl">
-        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide mb-8">Start A Game</h1>
+    <main className="min-h-screen bg-main text-main font-sans flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden">
+      {/* Background logo - top left */}
+      <div className="absolute top-[20px] left-[20px] opacity-[0.05] transform scale-[2.5] rotate-[-15deg] z-0 pointer-events-none select-none">
+        <Image
+          src="/favicon.png"
+          alt=""
+          width={200}
+          height={200}
+          className="filter brightness-90 blur-[6px]"
+          priority
+        />
+      </div>
+
+      {/* Background logo - bottom right */}
+      <div className="absolute bottom-[20px] right-[20px] opacity-[0.05] transform scale-[2.2] rotate-[10deg] z-0 pointer-events-none select-none">
+        <Image
+          src="/favicon.png"
+          alt=""
+          width={160}
+          height={160}
+          className="filter brightness-90 blur-[6px]"
+          priority
+        />
+      </div>
+
+      <div className="w-full max-w-5xl relative z-10">
+        <h1 className="text-4xl sm:text-5xl font-extrabold animate-gradient bg-gradient-to-r from-[#7ecbff] via-[#3a6ea7] to-[#7ecbff] bg-[400%_auto] bg-clip-text text-transparent text-center uppercase tracking-widest mb-10 drop-shadow-lg">
+          Start A Game
+        </h1>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {games.map((game) => (
             <form
               key={game.key}
-              className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center"
+              className="bg-card bg-gradient-to-br from-[#232323] to-[#181a1b] border border-primary/20 rounded-2xl shadow-xl p-6 flex flex-col gap-4 items-center transition-transform duration-150 hover:scale-[1.025] hover:shadow-2xl focus-within:scale-[1.025] focus-within:shadow-2xl min-h-[420px]"
               onSubmit={
                 game.key === "imposter"
                   ? handleCreateImposterGame
@@ -340,15 +361,15 @@ export default function HomePage() {
                   : (e) => e.preventDefault()
               }
             >
-              <div className="w-full flex flex-col items-center">
-                <h2 className="text-2xl font-bold text-primary text-center uppercase tracking-wide mb-2">{game.name}</h2>
-                <p className="text-secondary font-medium text-center text-base mb-3">{game.description}</p>
+              <div className="w-full flex flex-col items-center gap-1">
+                <h2 className="text-2xl font-bold animate-gradient bg-gradient-to-r from-[#7ecbff] via-[#3a6ea7] to-[#7ecbff] bg-[400%_auto] bg-clip-text text-transparent text-center uppercase tracking-wide mb-1">{game.name}</h2>
+                <p className="text-secondary font-medium text-center text-base mb-2">{game.description}</p>
                 {game.info && (
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="border border-secondary/30 text-secondary hover:bg-secondary/10"
+                    className="border border-primary/30 text-primary hover:bg-primary/10 transition w-32 h-10 mb-1"
                     onClick={() => setCurrentGameInfo(game)}
                   >
                     Learn More
@@ -356,8 +377,8 @@ export default function HomePage() {
                 )}
               </div>
 
-              <div className="w-full bg-secondary/10 rounded-lg p-4 border border-secondary/30 mt-2">
-                <h3 className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">Game Options</h3>
+              <div className="w-full bg-secondary/10 rounded-xl p-4 border border-secondary/30 mt-1">
+                <h3 className="text-base font-bold text-primary border-b border-primary/20 pb-2 mb-3">Game Options</h3>
                 <div className="space-y-4">
                   {game.fields.map((field) => (
                     <div key={field.name} className="flex flex-col gap-1">
@@ -409,14 +430,14 @@ export default function HomePage() {
               {game.available ? (
                 <Button
                   type="submit"
-                  className="w-full mt-3"
+                  className="w-full mt-3 text-base font-semibold py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/80 transition"
                 >
                   Create {game.name} Game
                 </Button>
               ) : (
                 <Button
                   type="button"
-                  className="w-full mt-3 opacity-80"
+                  className="w-full mt-3 opacity-80 text-base font-semibold py-2 rounded-lg"
                   variant="secondary"
                   disabled
                 >
@@ -427,12 +448,12 @@ export default function HomePage() {
           ))}
 
           {/* Links/Social Card */}
-          <div className="bg-card border border-secondary rounded-xl shadow-lg p-6 flex flex-col gap-4 items-center">
-            <h2 className="text-2xl font-bold text-primary text-center uppercase tracking-wide mb-2">And More...</h2>
-            <p className="text-secondary font-medium text-center text-base mb-3">More games coming soon!</p>
+          <div className="bg-card bg-gradient-to-br from-[#232323] to-[#181a1b] border border-primary/20 rounded-2xl shadow-xl p-6 flex flex-col gap-4 items-center min-h-[420px]">
+            <h2 className="text-2xl font-bold animate-gradient bg-gradient-to-r from-[#7ecbff] via-[#3a6ea7] to-[#7ecbff] bg-[400%_auto] bg-clip-text text-transparent text-center uppercase tracking-wide mb-1">And More...</h2>
+            <p className="text-secondary font-medium text-center text-base mb-2">More games coming soon!</p>
 
-            <div className="w-full bg-secondary/10 rounded-lg p-4 border border-secondary/30 mt-2">
-              <h3 className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">Connect</h3>
+            <div className="w-full bg-secondary/10 rounded-xl p-4 border border-secondary/30 mt-1">
+              <h3 className="text-base font-bold text-primary border-b border-primary/20 pb-2 mb-3">Connect</h3>
               <div className="flex flex-col gap-3 w-full">
                 <a href="https://twitter.com/sumboutlaw" target="_blank" rel="noopener noreferrer"
                   className="flex items-center justify-between gap-2 py-2 px-3 rounded-md text-sm font-semibold bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition">

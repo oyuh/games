@@ -36,7 +36,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <Footer />
         </div>
         <MobileFooter />
-
         {/* Modals for mobile menu actions */}
         <SessionProfileEditor />
         <JoinGameModal />
