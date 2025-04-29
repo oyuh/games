@@ -9,13 +9,15 @@ export async function GET(req: NextRequest) {
   if (!sessionId) {
     return NextResponse.json({}, { status: 200 });
   }
+
   // Ensure session row exists for every session_id cookie
   let session = await db.query.sessions.findFirst({
     where: eq(sessions.id, sessionId),
     columns: { id: true, entered_name: true, created_at: true, expires_at: true },
   });
+
+  const now = new Date();
   if (!session) {
-    const now = new Date();
     const expires = new Date(now.getTime() + 60 * 60 * 1000);
     await db.insert(sessions).values({
       id: sessionId,
@@ -30,7 +32,15 @@ export async function GET(req: NextRequest) {
       created_at: now,
       expires_at: expires,
     };
+  } else {
+    // Update expiration date if the session is still active
+    const expires = new Date(now.getTime() + 60 * 60 * 1000);
+    await db.update(sessions)
+      .set({ expires_at: expires })
+      .where(eq(sessions.id, sessionId));
+    session.expires_at = expires;
   }
+
   return NextResponse.json(session);
 }
 

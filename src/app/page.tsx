@@ -73,7 +73,7 @@ const games: Game[] = [
   {
     key: "password",
     name: "Password",
-    description: "Give clues, guess the word, beat the other team!",
+    description: "Give clues, guess the word, beat the other teams!",
     available: true,
     useTeams: true,
     fields: [
@@ -83,7 +83,7 @@ const games: Game[] = [
     info: {
       howToPlay: [
         "Players split into teams of 2.",
-        "One player gives one-word clues to help their teamate guess a word.",
+        "One player gives one-word clues to help their teamate guess a phrase.",
       ],
       minPlayers: 4,
       maxPlayers: 20,
