@@ -68,7 +68,7 @@ export const Footer = () => {
       <style jsx>{`
         .footer-vercel-style {
           width: 100%;
-          background: #18181b;
+          background: #14191c;
           color: #a1a1aa;
           border-top: 1px solid #23232a;
           padding: 0 1rem 0.5rem 1rem;
@@ -104,7 +104,7 @@ export const Footer = () => {
           gap: 0.3em;
         }
         .footer-link:hover {
-          color: #60a5fa;
+          color: #7ecbff;
         }
         .footer-right {
           display: flex;

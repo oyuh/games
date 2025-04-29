@@ -325,7 +325,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-main text-main font-sans flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-5xl">
-        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide mb-8">Start a Game</h1>
+        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide mb-8">Start A Game</h1>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {games.map((game) => (

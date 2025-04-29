@@ -116,12 +116,15 @@ body {
   color: var(--text);
   padding-right: 0 !important;
   overflow-y: scroll !important;
+  position: relative;
+  z-index: 1;
 }
 
 body[data-dialog-open="true"] {
   overflow: hidden;
   padding-right: 0 !important;
 }
+
 
 /* Utility classes for theme colors */
 .bg-main { background: var(--bg) !important; }
@@ -170,6 +173,29 @@ input, .input {
 input:focus, button:focus {
   outline: 2px solid var(--primary) !important;
   outline-offset: 2px;
+}
+
+/* Minimal custom scrollbar for all scrollable elements */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #b3e3ff var(--bg);
+}
+
+/* For Webkit browsers */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: var(--bg);
+}
+*::-webkit-scrollbar-thumb {
+  background: #b3e3ff; /* lighter version of --primary */
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #d6f2ff; /* even lighter on hover */
+}
+*::-webkit-scrollbar-corner {
+  background: var(--bg);
 }
 
 @layer base {

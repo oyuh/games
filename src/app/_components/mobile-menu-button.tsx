@@ -30,15 +30,15 @@ export function MobileMenuButton() {
   };
 
   return (
-    <div className="relative">
+    <div className="fixed bottom-6 right-6 z-50">
       {/* Mobile menu button */}
       <button
-        className="bg-card text-primary border border-secondary rounded-full shadow-lg p-4 flex items-center justify-center hover:bg-secondary/20 transition"
+        className="bg-primary text-white border-4 border-secondary/60 rounded-full shadow-2xl p-5 flex items-center justify-center hover:bg-primary/80 transition duration-150 outline-none focus:ring-2 focus:ring-primary/60"
         onClick={toggleMenu}
         aria-label="Menu"
-        style={{ width: 60, height: 60 }}
+        style={{ width: 72, height: 72 }}
       >
-        <Menu size={28} />
+        <Menu size={32} />
       </button>
 
       {/* Dropdown menu */}
@@ -50,7 +50,7 @@ export function MobileMenuButton() {
             onClick={closeMenu}
           />
 
-          <div className="absolute right-0 bottom-16 z-50 bg-card border border-secondary rounded-xl shadow-lg p-2 w-44">
+          <div className="absolute right-0 bottom-20 z-50 bg-card border border-secondary rounded-xl shadow-lg p-2 w-44">
             <div className="flex flex-col space-y-1">
               <Button
                 variant="ghost"
