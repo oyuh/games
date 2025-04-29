@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(

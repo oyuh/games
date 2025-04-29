@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
   const now = new Date();
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Set expiration to 24 hours from creation
   const code = generateGameCode();
   const game = await db.insert(imposter).values({
     host_id, // host_id is now directly from the request body and must be a UUID
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
     num_imposters: Number(numImposters),
     player_ids: [host_id],
     created_at: now,
+    expires_at: expiresAt, // Add expiration date
     game_data: null,
     code,
   }).returning();
