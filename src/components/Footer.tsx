@@ -1,138 +1,148 @@
 "use client";
-
-import React from "react";
-
+import Image from "next/image";
+import { FaTwitter, FaGithub } from "react-icons/fa";
+import { SiDiscord } from "react-icons/si";
+import { useEffect, useState } from "react";
+import { IoIosPerson } from "react-icons/io";
+import { LuScrollText } from "react-icons/lu";
 export const Footer = () => {
+  const [commit, setCommit] = useState<{ date: string; url: string } | null>(null);
+
+  useEffect(() => {
+    async function fetchCommit() {
+      try {
+        const res = await fetch("https://api.github.com/repos/oyuh/games/commits?per_page=1");
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const commitDate = data[0].commit.committer.date;
+          const commitUrl = data[0].html_url;
+          setCommit({
+            date: new Date(commitDate).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+            url: commitUrl,
+          });
+        }
+      } catch {
+        setCommit(null);
+      }
+    }
+    fetchCommit();
+  }, []);
+
   return (
-    <footer className="footer-bar">
-      <div className="footer-left">
-      </div>
-      <div className="footer-right gradient-text">
-        <div className="desktop-footer">
-          Made by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson Hart</a> with 💙 | © {new Date().getFullYear()} Lawson Hart. All rights reserved. <a href="https://lawsonhart.me/policy" className="privacy-link">View my Policies.</a>
+    <footer className="footer-vercel-style">
+      <div className="footer-main-row">
+        <div className="footer-left">
+          <div className="footer-logo">
+            <Image src="/favicon.ico" alt="Logo" width={24} height={24} />
+          </div>
+          <nav className="footer-nav">
+            <a href="https://lawsonhart.me" className="footer-link"><IoIosPerson style={{ verticalAlign: 'middle' }} /> Lawson&#39;s Website</a>
+            <a href="https://lawsonhart.me/policy" className="footer-link"><LuScrollText style={{ verticalAlign: 'middle' }} /> Policies</a>
+            <a href="https://x.com/sumboutlaw" className="footer-link"><FaTwitter style={{ verticalAlign: 'middle' }} /> Twitter</a>
+            <a href="https://discordapp.com/users/527167786200465418" className="footer-link"><SiDiscord style={{ verticalAlign: 'middle' }} /> Discord</a>
+            <a href="https://github.com/oyuh" className="footer-link"><FaGithub style={{ verticalAlign: 'middle' }} /> GitHub</a>
+          </nav>
         </div>
-        <div className="mobile-footer">
-          Made by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson Hart</a> with 💙
-          <div className="mobile-footer-secondary">
-            © {new Date().getFullYear()} Lawson Hart. All rights reserved. <a href="https://lawsonhart.me/policy" className="privacy-link">View my Policies.</a>
+        <div className="footer-right">
+          <div className="footer-status">
+            <span className="footer-status-dot" />
+            {commit ? (
+              <a href={commit.url} target="_blank" rel="noopener noreferrer" className="footer-link">
+                Last updated: {commit.date}
+              </a>
+            ) : (
+              <span>Last updated: ...</span>
+            )}
           </div>
         </div>
       </div>
+      <div className="footer-bottom-row">
+        <span>© {new Date().getFullYear()} Lawson Hart. All rights reserved.</span>
+      </div>
       <style jsx>{`
-        .footer-bar {
-          position: fixed;
-          left: 0;
-          bottom: 0;
+        .footer-vercel-style {
           width: 100%;
-          z-index: 100;
+          background: #18181b;
+          color: #a1a1aa;
+          border-top: 1px solid #23232a;
+          padding: 0 1rem 0.5rem 1rem;
+        }
+        .footer-main-row {
           display: flex;
-          flex-direction: row;
+          align-items: center;
           justify-content: space-between;
-          align-items: flex-end;
-          padding: 0.25rem 2rem;
-          background: transparent;
-          font-size: 0.9rem;
-          font-weight: 500;
+          max-width: 1200px;
+          margin: 1.2rem auto 1.2rem auto;
+          padding: 0;
         }
         .footer-left {
           display: flex;
           align-items: center;
+          gap: 1.5rem;
+        }
+        .footer-logo {
+          display: flex;
+          align-items: center;
+        }
+        .footer-nav {
+          display: flex;
+          gap: 1.1rem;
+        }
+        .footer-link {
+          color: #a1a1aa;
+          text-decoration: none;
+          font-size: 1rem;
+          transition: color 0.2s;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3em;
+        }
+        .footer-link:hover {
+          color: #60a5fa;
         }
         .footer-right {
-          text-align: right;
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
         }
-        .privacy-link {
-          color: inherit;
-          text-decoration: underline;
-          margin-left: 0.5em;
+        .footer-status {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 1rem;
         }
-        .privacy-link:hover {
-          color: #2b6cb0;
+        .footer-status-dot {
+          width: 0.7em;
+          height: 0.7em;
+          background: #7ecbff;
+          border-radius: 50%;
+          display: inline-block;
         }
-        .gradient-text {
-          background: linear-gradient(90deg, #60a5fa, #93c5fd, #60a5fa);
-          background-size: 300% 300%;
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          animation: gradient 12s ease infinite;
-          font-size: 0.9rem;
-          font-weight: 500;
-          white-space: nowrap;
+        .footer-bottom-row {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding-top: 0.7rem;
+          border-top: 1px solid #23232a;
+          font-size: 0.95rem;
+          color: #71717a;
+          text-align: center;
         }
-        .gradient-text a {
-          color: #3182ce;
-          text-decoration: none;
-          position: relative;
-          font-weight: 600;
-        }
-        .gradient-text a::after {
-          content: '';
-          position: absolute;
-          width: 100%;
-          height: 1px;
-          bottom: -2px;
-          left: 0;
-          background: linear-gradient(90deg, #4299e1, #3182ce, #2b6cb0);
-          transform: scaleX(0);
-          transform-origin: right;
-          transition: transform 0.3s ease;
-        }
-        .gradient-text a:hover::after {
-          transform: scaleX(1);
-          transform-origin: left;
-        }
-        /* Hide/show elements based on screen size */
-        .mobile-footer {
-          display: none;
-        }
-        .desktop-footer {
-          display: block;
-        }
-        @keyframes gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        @media (max-width: 600px) {
-          .footer-bar {
+        @media (max-width: 800px) {
+          .footer-main-row {
             flex-direction: column;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.5rem 1rem;
-            background-color: rgba(0, 0, 0, 0.05);
+            align-items: flex-start;
+            gap: 1.2rem;
+            padding: 1.2rem 0 0.5rem 0;
           }
-          .mobile-footer {
-            display: block;
+          .footer-bottom-row {
             text-align: center;
-            color: #3182ce;
-          }
-          .mobile-footer a {
-            color: #3182ce;
-            font-weight: 600;
-            text-decoration: underline;
-          }
-          .desktop-footer {
-            display: none;
-          }
-          .mobile-footer-secondary {
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
-          }
-          .footer-left, .footer-right {
-            text-align: center;
-            font-size: 0.85rem;
-          }
-          /* Override gradient text for better visibility on mobile */
-          .gradient-text {
-            background: none;
-            -webkit-background-clip: initial;
-            background-clip: initial;
-            color: #3182ce;
-            animation: none;
           }
         }
       `}</style>
     </footer>
   );
-}
+};
