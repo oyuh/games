@@ -68,7 +68,7 @@ export const Footer = () => {
       <style jsx>{`
         .footer-vercel-style {
           width: 100%;
-          background: #14191c;
+          background: #121414;
           color: #a1a1aa;
           border-top: 1px solid #23232a;
           padding: 0 1rem 0.5rem 1rem;
