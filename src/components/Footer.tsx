@@ -37,14 +37,16 @@ export const Footer = () => {
       <div className="footer-main-row">
         <div className="footer-left">
           <div className="footer-logo">
-            <Image src="/favicon.ico" alt="Logo" width={24} height={24} />
+            <a href="/">
+              <Image src="/favicon.ico" alt="Logo" width={24} height={24} />
+            </a>
           </div>
           <nav className="footer-nav">
             <a href="https://lawsonhart.me" className="footer-link"><IoIosPerson style={{ verticalAlign: 'middle' }} /> Lawson&#39;s Website</a>
             <a href="https://lawsonhart.me/policy" className="footer-link"><LuScrollText style={{ verticalAlign: 'middle' }} /> Policies</a>
             <a href="https://x.com/sumboutlaw" className="footer-link"><FaTwitter style={{ verticalAlign: 'middle' }} /> Twitter</a>
             <a href="https://discordapp.com/users/527167786200465418" className="footer-link"><SiDiscord style={{ verticalAlign: 'middle' }} /> Discord</a>
-            <a href="https://github.com/oyuh" className="footer-link"><FaGithub style={{ verticalAlign: 'middle' }} /> GitHub</a>
+            <a href="https://github.com/oyuh/games" className="footer-link"><FaGithub style={{ verticalAlign: 'middle' }} /> GitHub</a>
           </nav>
         </div>
         <div className="footer-right">
