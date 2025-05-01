@@ -184,14 +184,14 @@ function GameInfoDialog({ game, open, onClose }: { game: Game; open: boolean; on
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-card text-main border border-secondary/30 rounded-xl shadow-lg max-w-lg mx-auto">
+      <DialogContent className="bg-card text-main border border-secondary/30 rounded-xl shadow-lg max-w-lg mx-auto max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-primary border-b border-primary/30 pb-2 mb-4">
             {game.name}
           </DialogTitle>
           <DialogDescription className="text-main text-base">{game.description}</DialogDescription>
         </DialogHeader>
-        <div className="mt-4 space-y-6">
+        <div className="mt-4 space-y-6 overflow-y-auto pr-2 pb-2">
           <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
             <h3 className="font-bold text-lg text-primary mb-3">How to Play:</h3>
             <ul className="list-disc pl-5 space-y-2 text-main">
