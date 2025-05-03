@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { useSessionInfo } from "~/app/_components/session-modal";
 import { X } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 
 interface PasswordGame {
   id: string;
@@ -28,6 +29,7 @@ export default function PasswordBeginPage({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [namesLoaded, setNamesLoaded] = useState<boolean>(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const router = useRouter();
   const { session } = useSessionInfo();
   const sessionId = session?.id;
@@ -69,15 +71,15 @@ export default function PasswordBeginPage({
   };
 
   useEffect(() => {
-    // Initial fetch with immediate feedback
+    let isMounted = true;
     fetchGame();
-
-    // Set up polling to refresh game data
     const interval = setInterval(() => {
-      fetchGame();
+      if (isMounted) fetchGame();
     }, 5000);
-
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [params.id]);
 
   // Redirect effect - if game has started, automatically redirect all players to the main game page
@@ -147,8 +149,8 @@ export default function PasswordBeginPage({
         throw new Error(data.error || "Failed to leave game");
       }
 
-      // Redirect back to main page after successfully leaving
-      router.push("/");
+      // Stop polling and redirect immediately
+      window.location.href = "/";
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -279,21 +281,48 @@ export default function PasswordBeginPage({
             {/* Controls */}
             <div className="flex flex-col w-full gap-2">
               {isHost && (
-                <Button
-                  onClick={startGame}
-                  className="w-full"
-                  disabled={!canStartGame}
-                >
-                  {canStartGame ? "Start Game" : "Need 2 players per team"}
-                </Button>
+                <>
+                  <Button
+                    onClick={startGame}
+                    className="w-full"
+                    disabled={!canStartGame}
+                  >
+                    {canStartGame ? "Start Game" : "Need 2 players per team"}
+                  </Button>
+                  <Button
+                    onClick={leaveGame}
+                    className="w-full"
+                    variant="destructive"
+                  >
+                    Leave Game
+                  </Button>
+                  <Button
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="w-full"
+                    variant="destructive"
+                  >
+                    Delete Game
+                  </Button>
+                  <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Delete Game</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to delete this game? This cannot be undone.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                          Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={() => { setShowDeleteDialog(false); leaveGame(); }}>
+                          Delete Game
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </>
               )}
-              <Button
-                onClick={leaveGame}
-                className="w-full"
-                variant="destructive"
-              >
-                Leave Game
-              </Button>
               {error && <div className="text-destructive text-center mt-2">{error}</div>}
             </div>
           </div>

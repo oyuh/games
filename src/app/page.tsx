@@ -256,6 +256,8 @@ export default function HomePage() {
   const router = useRouter();
   const { session } = useSessionInfo();
   const [currentGameInfo, setCurrentGameInfo] = useState<Game | null>(null);
+  const [creatingImposter, setCreatingImposter] = useState(false);
+  const [creatingPassword, setCreatingPassword] = useState(false);
 
   async function handleCreateImposterGame(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -263,6 +265,7 @@ export default function HomePage() {
       alert("You must enter your name before creating a game.");
       return;
     }
+    setCreatingImposter(true);
     const form = e.currentTarget;
     const formData = new FormData(form);
     const category = formData.get("category");
@@ -278,6 +281,7 @@ export default function HomePage() {
         numImposters,
       }),
     });
+    setCreatingImposter(false);
     if (res.ok) {
       const data = await res.json();
       if (data?.game?.id) {
@@ -294,6 +298,7 @@ export default function HomePage() {
       alert("You must enter your name before creating a game.");
       return;
     }
+    setCreatingPassword(true);
     const form = e.currentTarget;
     const formData = new FormData(form);
     const teams = formData.get("numTeams");
@@ -307,6 +312,7 @@ export default function HomePage() {
         pointsToWin,
       }),
     });
+    setCreatingPassword(false);
     if (res.ok) {
       const data = await res.json();
       if (data?.game?.id) {
@@ -431,8 +437,16 @@ export default function HomePage() {
                 <Button
                   type="submit"
                   className="w-full mt-3 text-base font-semibold py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/80 transition"
+                  disabled={
+                    (game.key === "imposter" && creatingImposter) ||
+                    (game.key === "password" && creatingPassword)
+                  }
                 >
-                  Create {game.name} Game
+                  {(game.key === "imposter" && creatingImposter)
+                    ? "Creating..."
+                    : (game.key === "password" && creatingPassword)
+                    ? "Creating..."
+                    : `Create ${game.name} Game`}
                 </Button>
               ) : (
                 <Button

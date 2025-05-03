@@ -42,11 +42,11 @@ export const Footer = () => {
             </a>
           </div>
           <nav className="footer-nav">
-            <a href="https://lawsonhart.me" className="footer-link"><IoIosPerson style={{ verticalAlign: 'middle' }} /> Lawson&#39;s Website</a>
-            <a href="https://lawsonhart.me/policy" className="footer-link"><LuScrollText style={{ verticalAlign: 'middle' }} /> Policies</a>
-            <a href="https://x.com/sumboutlaw" className="footer-link"><FaTwitter style={{ verticalAlign: 'middle' }} /> Twitter</a>
-            <a href="https://discordapp.com/users/527167786200465418" className="footer-link"><SiDiscord style={{ verticalAlign: 'middle' }} /> Discord</a>
-            <a href="https://github.com/oyuh/games" className="footer-link"><FaGithub style={{ verticalAlign: 'middle' }} /> GitHub</a>
+            <a href="https://lawsonhart.me" className="footer-link" target="_blank" rel="noopener noreferrer"><IoIosPerson style={{ verticalAlign: 'middle' }} /> Lawson&#39;s Website</a>
+            <a href="https://lawsonhart.me/policy" className="footer-link" target="_blank" rel="noopener noreferrer"><LuScrollText style={{ verticalAlign: 'middle' }} /> Policies</a>
+            <a href="https://x.com/sumboutlaw" className="footer-link" target="_blank" rel="noopener noreferrer"><FaTwitter style={{ verticalAlign: 'middle' }} /> Twitter</a>
+            <a href="https://discordapp.com/users/527167786200465418" className="footer-link" target="_blank" rel="noopener noreferrer"><SiDiscord style={{ verticalAlign: 'middle' }} /> Discord</a>
+            <a href="https://github.com/oyuh/games" className="footer-link" target="_blank" rel="noopener noreferrer"><FaGithub style={{ verticalAlign: 'middle' }} /> GitHub</a>
           </nav>
         </div>
         <div className="footer-right">

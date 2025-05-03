@@ -71,24 +71,6 @@ export function JoinGameModal() {
     }
   }
 
-  async function handleJoinGameByLink() {
-    const link = window.prompt("Paste the join game link:");
-    if (!link) return;
-    try {
-      // Only allow links that start with the current origin or a valid relative path
-      const url = new URL(link, window.location.origin);
-      if (!url.pathname.startsWith("/")) {
-        alert("Invalid link. Please paste a valid join link.");
-        return;
-      }
-      const confirmJoin = window.confirm(`Join game at: ${url.pathname}?`);
-      if (confirmJoin) {
-        router.push(url.pathname + url.search + url.hash);
-      }
-    } catch {
-      alert("Invalid link. Please paste a valid join link.");
-    }
-  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -151,15 +133,6 @@ export function JoinGameModal() {
               className="w-full"
             >
               {joiningGame ? "Joining..." : "Join Game"}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleJoinGameByLink}
-              className="w-full border border-secondary/30 text-secondary hover:bg-secondary/10"
-            >
-              Join by Link
             </Button>
           </div>
         </div>

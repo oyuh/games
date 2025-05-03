@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import React from "react";
 import { Button } from "~/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 
 // Define a type for the game object for type safety
 interface ImposterGame {
@@ -31,6 +32,7 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
   const [game, setGame] = useState<ImposterGame | null>(null);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Fetch game and player names from API
   useEffect(() => {
@@ -85,7 +87,6 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
   }
 
   async function handleDelete() {
-    if (!confirm("Are you sure you want to delete this game?")) return;
     setDeleting(true);
     setError("");
     try {
@@ -142,7 +143,16 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
   }
 
   if (!game) {
-    return <main className="min-h-screen flex items-center justify-center bg-main text-destructive">{error || "Loading..."}</main>;
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-main text-main">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin w-12 h-12 text-primary border-4 border-current border-t-transparent rounded-full"></div>
+          <div className={error ? "text-lg text-destructive" : "text-lg text-secondary"}>
+            {error || "Loading game..."}
+          </div>
+        </div>
+      </main>
+    );
   }
 
   // Determine eligibility
@@ -183,14 +193,6 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
                   <span className="font-bold">{game.num_imposters}</span>
                 </div>
               </div>
-
-              {/* Invite Link */}
-              <details className="w-full mt-6">
-                <summary className="cursor-pointer text-sm text-secondary hover:text-primary">Show invite link</summary>
-                <div className="bg-secondary/20 text-main rounded px-4 py-2 font-mono text-sm select-all break-all w-full text-center mt-2">
-                  {`${baseUrl}api/imposter/join-by-code/${game.code}`}
-                </div>
-              </details>
             </div>
 
             {/* Controls */}
@@ -205,13 +207,31 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
                     {starting ? "Starting..." : (playerNames.length < 3 ? "Need at least 3 players" : "Start Game")}
                   </Button>
                   <Button
-                    onClick={handleDelete}
+                    onClick={() => setShowDeleteDialog(true)}
                     disabled={!canDelete}
                     variant="destructive"
                     className="w-full"
                   >
                     {deleting ? "Deleting..." : "Delete Game"}
                   </Button>
+                  <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Delete Game</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to delete this game? This cannot be undone.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                          Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={() => { setShowDeleteDialog(false); handleDelete(); }}>
+                          Delete Game
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </>
               )}
               {canJoin && (

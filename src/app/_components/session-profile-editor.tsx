@@ -80,7 +80,7 @@ export function SessionProfileEditor() {
             ) : (
               <div className="w-full bg-destructive/10 border border-destructive/30 rounded-md p-3 mt-3">
                 <p className="text-center text-destructive text-sm mb-2">Are you sure you want to delete your session?</p>
-                <div className="flex gap-2 w-full">
+                <div className="flex flex-col gap-2 w-full">
                   <Button
                     variant="destructive"
                     type="button"
