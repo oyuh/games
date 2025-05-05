@@ -43,19 +43,33 @@ export const imposter = createTable(
   })
 );
 
-
 export const password = createTable(
-    "password",
-    (d) => ({
-      id: d.uuid().primaryKey().default(sql`gen_random_uuid()`),
-      host_id: d.uuid().notNull(),
-      teams: d.jsonb(),
-      code: d.varchar({ length: 8 }).notNull().unique(),
-      game_data: d.jsonb(),
-      round_data: d.jsonb(),
-      created_at: d.timestamp({ withTimezone: true }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-      started_at: d.timestamp({ withTimezone: true }),
-      finished_at: d.timestamp({ withTimezone: true }),
-      expires_at: d.timestamp({ withTimezone: true }),
-    })
-  );
+  "password",
+  (d) => ({
+    id: d.uuid().primaryKey().default(sql`gen_random_uuid()`),
+    host_id: d.uuid().notNull(),
+    teams: d.jsonb(),
+    code: d.varchar({ length: 8 }).notNull().unique(),
+    game_data: d.jsonb(),
+    round_data: d.jsonb(),
+    created_at: d.timestamp({ withTimezone: true }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+    started_at: d.timestamp({ withTimezone: true }),
+    finished_at: d.timestamp({ withTimezone: true }),
+    expires_at: d.timestamp({ withTimezone: true }),
+  })
+);
+
+export const shadesSignals = createTable(
+  "shades_signals",
+  (d) => ({
+    id: d.uuid().primaryKey().default(sql`gen_random_uuid()`),
+    host_id: d.uuid().notNull(),
+    player_ids: d.uuid().array().notNull().default(sql`ARRAY[]::uuid[]`),
+    game_data: d.jsonb(),
+    code: d.varchar({ length: 8 }).notNull().unique(),
+    created_at: d.timestamp({ withTimezone: true }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+    started_at: d.timestamp({ withTimezone: true }),
+    finished_at: d.timestamp({ withTimezone: true }),
+    expires_at: d.timestamp({ withTimezone: true }),
+  })
+);
