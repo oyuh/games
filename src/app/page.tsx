@@ -1,6 +1,6 @@
 "use client";
 
-import { FaTwitter, FaInstagram, FaDiscord, FaGlobe, FaInfoCircle } from "react-icons/fa";
+import { FaTwitter, FaInstagram, FaDiscord, FaGlobe } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useSessionInfo } from "./_components/session-modal";
 import { useState } from "react";
@@ -100,6 +100,30 @@ const games: Game[] = [
     }
   },
   {
+    key: "shades-and-signals",
+    name: "Shades and Signals",
+    description: "Guess the color from clues!",
+    available: true,
+    color: "blue",
+    fields: [
+      { label: "Max Players", name: "maxPlayers", type: "number", min: 2, max: 20, required: true },
+      { label: "Rounds", name: "rounds", type: "number", min: 1, max: 20, required: true, defaultValue: 5 },
+    ],
+    info: {
+      howToPlay: [
+        "One player selects a color from the grid and gives a one-word clue.",
+        "Other players place their markers where they think the color is located.",
+        "The clue-giver gives a second clue, and players can adjust their guesses.",
+        "Points are awarded based on proximity to the target color.",
+        "Players take turns being the clue-giver."
+      ],
+      minPlayers: 2,
+      maxPlayers: 20,
+      estimatedTime: "30 minutes",
+      difficulty: "Easy to Medium"
+    }
+  },
+  {
     key: "hangman",
     name: "Hangman",
     description: "Classic word guessing game.",
@@ -150,30 +174,6 @@ const games: Game[] = [
       playersPerTeam: "2+",
       estimatedTime: "30-45 minutes",
       difficulty: "Medium"
-    }
-  },
-  {
-    key: "hues-and-cues",
-    name: "Hues and Cues",
-    description: "Guess the color from clues!",
-    available: false,
-    color: "blue",
-    fields: [
-      { label: "Max Players", name: "maxPlayers", type: "number", min: 3, max: 20, required: true },
-      { label: "Rounds", name: "rounds", type: "number", min: 1, max: 20, required: true, defaultValue: 5 },
-    ],
-    info: {
-      howToPlay: [
-        "One player selects a color from the grid and gives a one-word clue.",
-        "Other players place their markers where they think the color is located.",
-        "The clue-giver gives a second clue, and players can adjust their guesses.",
-        "Points are awarded based on proximity to the target color.",
-        "Players take turns being the clue-giver."
-      ],
-      minPlayers: 3,
-      maxPlayers: 20,
-      estimatedTime: "30 minutes",
-      difficulty: "Easy to Medium"
     }
   },
 ];
@@ -258,6 +258,7 @@ export default function HomePage() {
   const [currentGameInfo, setCurrentGameInfo] = useState<Game | null>(null);
   const [creatingImposter, setCreatingImposter] = useState(false);
   const [creatingPassword, setCreatingPassword] = useState(false);
+  const [creatingShadesSignals, setCreatingShadesSignals] = useState(false);
 
   async function handleCreateImposterGame(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -323,6 +324,36 @@ export default function HomePage() {
     }
   }
 
+  async function handleCreateShadesSignalsGame(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!session?.entered_name || !session?.id) {
+      alert("You must enter your name before creating a game.");
+      return;
+    }
+    setCreatingShadesSignals(true);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const maxPlayers = formData.get("maxPlayers");
+    const rounds = formData.get("rounds");
+    const res = await fetch("/api/shades-signals/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        host_id: session.id,
+        settings: { maxPlayers, rounds },
+      }),
+    });
+    setCreatingShadesSignals(false);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.game?.id) {
+        router.push(`/shades-signals/${data.game.id}/begin`);
+      }
+    } else {
+      alert("Failed to create game. Please try again.");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-main text-main font-sans flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden">
       {/* Background logo - top left */}
@@ -364,6 +395,8 @@ export default function HomePage() {
                   ? handleCreateImposterGame
                   : game.key === "password"
                   ? handleCreatePasswordGame
+                  : game.key === "shades-and-signals"
+                  ? handleCreateShadesSignalsGame
                   : (e) => e.preventDefault()
               }
             >
@@ -439,12 +472,15 @@ export default function HomePage() {
                   className="w-full mt-3 text-base font-semibold py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/80 transition"
                   disabled={
                     (game.key === "imposter" && creatingImposter) ||
-                    (game.key === "password" && creatingPassword)
+                    (game.key === "password" && creatingPassword) ||
+                    (game.key === "shades-and-signals" && creatingShadesSignals)
                   }
                 >
                   {(game.key === "imposter" && creatingImposter)
                     ? "Creating..."
                     : (game.key === "password" && creatingPassword)
+                    ? "Creating..."
+                    : (game.key === "shades-and-signals" && creatingShadesSignals)
                     ? "Creating..."
                     : `Create ${game.name} Game`}
                 </Button>

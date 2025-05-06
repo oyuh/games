@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { sessions, imposter, password } from "~/server/db/schema";
+import { sessions, imposter, password, shadesSignals } from "~/server/db/schema";
 import { lte } from "drizzle-orm";
 
 const AUTH_TOKEN = process.env.CRON_API_KEY; // Replace with your actual token
@@ -41,6 +41,9 @@ export async function POST(req: NextRequest) {
 
     // Delete expired rows from password table
     await db.delete(password).where(lte(password.expires_at, now));
+
+    //Delete expired rows from shadesSignals table
+    await db.delete(shadesSignals).where(lte(shadesSignals.expires_at, now));
 
     return NextResponse.json({ success: true, message: "Expired rows deleted successfully." });
   } catch (error) {
