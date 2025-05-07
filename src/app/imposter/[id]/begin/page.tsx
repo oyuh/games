@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import React from "react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+import { XCircle } from "lucide-react";
 
 // Define a type for the game object for type safety
 interface ImposterGame {
@@ -18,7 +20,21 @@ interface ImposterGame {
   player_ids: string[];
   imposter_ids?: string[];
   playerNames?: Record<string, string>;
-  [key: string]: any;
+  chosen_word?: string;
+  game_data?: {
+    phase?: string;
+    round?: number;
+    clues?: Record<string, string>;
+    clueOrder?: string[];
+    currentTurnPlayerId?: string | null;
+    activePlayers?: string[];
+    firstClueAt?: string;
+    playerDetectedDisconnected?: string;
+  };
+}
+
+interface GameResponse {
+  game: ImposterGame;
 }
 
 export default function ImposterBeginPage({ params }: { params: Promise<{ id: string }> }) {
@@ -42,21 +58,19 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
       try {
         const res = await fetch(`/api/imposter/${actualParams.id}`);
         if (res.ok) {
-          const data = await res.json();
-          setGame(data.game as ImposterGame);
-          setPlayerNames(Object.values((data.game.playerNames ?? {})));
+          const data = await res.json() as GameResponse;
+          setGame(data.game);
+          setPlayerNames(Object.values(data.game.playerNames ?? {}));
         } else {
-          setError("Game not found");
+          setError("Failed to load game");
         }
-      } catch {
-        setError("Failed to load game");
+      } catch (error) {
+        setError("Error loading game");
       } finally {
         setRefreshing(false);
       }
     }
     void fetchGame();
-    const interval = setInterval(() => { void fetchGame(); }, 3000);
-    return () => clearInterval(interval);
   }, [actualParams.id]);
 
   // Redirect to in-game page if game has started (even if already on in-game page)
@@ -121,9 +135,9 @@ export default function ImposterBeginPage({ params }: { params: Promise<{ id: st
     try {
       const res = await fetch(`/api/imposter/${actualParams.id}`);
       if (res.ok) {
-        const data = await res.json();
-        setGame(data.game as ImposterGame);
-        setPlayerNames(Object.values((data.game.playerNames ?? {})));
+        const data = await res.json() as GameResponse;
+        setGame(data.game);
+        setPlayerNames(Object.values(data.game.playerNames ?? {}));
       }
     } finally {
       setRefreshing(false);

@@ -13,8 +13,15 @@ interface ShadesSignalsGame {
   code: string;
   host_id: string;
   player_ids: string[];
-  game_data?: any;
-  [key: string]: any;
+  game_data?: {
+    maxPlayers?: number;
+    rounds?: number;
+  };
+  playerNames?: Record<string, string>;
+}
+
+interface ApiResponse {
+  game: ShadesSignalsGame;
 }
 
 export default function ShadesSignalsBeginPage({ params }: { params: { id: string } }) {
@@ -70,9 +77,9 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
       try {
         const res = await fetch(`/api/shades-signals/${params.id}`);
         if (res.ok) {
-          const data = await res.json();
-          setGame(data.game as ShadesSignalsGame);
-          setPlayerNames(data.game.playerNames ? Object.values(data.game.playerNames) : []);
+          const data = await res.json() as ApiResponse;
+          setGame(data.game);
+          setPlayerNames(data.game?.playerNames ? Object.values(data.game.playerNames) : []);
         } else {
           setError("Game not found");
         }
@@ -82,8 +89,8 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
         setRefreshing(false);
       }
     }
-    fetchGame();
-    const interval = setInterval(fetchGame, 3000);
+    void fetchGame();
+    const interval = setInterval(() => { void fetchGame(); }, 3000);
     return () => clearInterval(interval);
   }, [params.id]);
 
@@ -94,6 +101,11 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
     setJoining(true);
     setError("");
     try {
+      if (!session?.id) {
+        setError("No active session");
+        return;
+      }
+
       const res = await fetch(`/api/shades-signals/${params.id}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -129,9 +141,9 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
     try {
       const res = await fetch(`/api/shades-signals/${params.id}`);
       if (res.ok) {
-        const data = await res.json();
-        setGame(data.game as ShadesSignalsGame);
-        setPlayerNames(data.game.playerNames ? Object.values(data.game.playerNames) : []);
+        const data = await res.json() as ApiResponse;
+        setGame(data.game);
+        setPlayerNames(data.game?.playerNames ? Object.values(data.game.playerNames) : []);
       }
     } finally {
       setRefreshing(false);
@@ -141,7 +153,7 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
   if (loading) {
     return <main className="min-h-screen flex items-center justify-center bg-main text-main">
       <div className="flex flex-col items-center gap-4">
-        <div className="animate-spin w-12 h-12 text-primary border-4 border-current border-t-transparent rounded-full"></div>
+        <div className="animate-spin w-12 h-12 text-primary border-4 border-current border-t-transparent rounded-full" />
         <div className="text-lg text-secondary">Loading session...</div>
       </div>
     </main>;
@@ -151,7 +163,7 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
     return (
       <main className="min-h-screen flex items-center justify-center bg-main text-main">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin w-12 h-12 text-primary border-4 border-current border-t-transparent rounded-full"></div>
+          <div className="animate-spin w-12 h-12 text-primary border-4 border-current border-t-transparent rounded-full" />
           <div className={error ? "text-lg text-destructive" : "text-lg text-secondary"}>
             {error || "Loading game..."}
           </div>
@@ -166,13 +178,19 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-main text-main p-4 py-8">
       <div className="bg-card border border-secondary rounded-xl shadow-lg p-8 w-full max-w-5xl flex flex-col items-center gap-6">
-        <h1 className="text-3xl font-bold text-primary text-center uppercase tracking-wide mb-6">Shades & Signals Lobby</h1>
-        {/* Add HexGrid Help button at the top right of the lobby card */}
-        <div className="w-full flex justify-end mb-2">
-          <Button variant="outline" size="sm" onClick={() => setShowHexGridHelp(true)}>
+        {/* Center title and place button below */}
+        <div className="w-full flex flex-col items-center gap-3 mb-6">
+          <h1 className="text-3xl font-bold text-primary uppercase tracking-wide text-center">Shades & Signals Lobby</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHexGridHelp(true)}
+            className="px-4 bg-secondary/20 hover:bg-secondary/30 text-primary"
+          >
             HexGrid Help
           </Button>
         </div>
+
         {/* Join Code & Game Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
           <div className="flex flex-col items-center gap-4">
@@ -190,11 +208,11 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
               <div className="space-y-3 mt-4">
                 <div className="flex justify-between px-3 py-2 rounded bg-primary/10 border border-primary/30">
                   <span className="font-medium">Max Players:</span>
-                  <span className="font-bold">{game.game_data?.maxPlayers || "?"}</span>
+                  <span className="font-bold">{game.game_data?.maxPlayers ?? "?"}</span>
                 </div>
                 <div className="flex justify-between px-3 py-2 rounded bg-primary/10 border border-primary/30">
                   <span className="font-medium">Rounds:</span>
-                  <span className="font-bold">{game.game_data?.rounds || "?"}</span>
+                  <span className="font-bold">{game.game_data?.rounds ?? "?"}</span>
                 </div>
               </div>
             </div>
@@ -220,7 +238,7 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
                   {joining ? "Joining..." : "Join Game"}
                 </Button>
               )}
-              {!isHost && !isPlayer && !canJoin && !loading && (
+              {!isHost && !isPlayer && !canJoin && !loading && session && (
                 <Button
                   onClick={handleJoin}
                   disabled={joining}
@@ -243,7 +261,7 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
                   <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
                     Cancel
                   </Button>
-                  <Button variant="destructive" onClick={() => { setShowDeleteDialog(false); handleDelete(); }}>
+                  <Button variant="destructive" onClick={() => { setShowDeleteDialog(false); void handleDelete(); }}>
                     Delete Game
                   </Button>
                 </DialogFooter>
@@ -276,40 +294,57 @@ export default function ShadesSignalsBeginPage({ params }: { params: { id: strin
             )}
           </div>
         </div>
-        {/* HexGrid Help Modal */}
+        {/* HexGrid Help Modal - Adjusted for better fit and scrolling */}
         <Dialog open={showHexGridHelp} onOpenChange={setShowHexGridHelp}>
-          <DialogContent className="max-w-md sm:max-w-lg w-full p-6 rounded-xl bg-[#171717] border-[#333]">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-2xl font-bold text-center text-white">What is the Hex Grid?</DialogTitle>
-              <DialogDescription className="text-sm text-center text-gray-300">
-                The Hex Grid is the centerpiece of <span className="text-primary">Shades & Signals</span>. Each cell is a unique color, identified by its coordinates.
+          <DialogContent className="max-w-2xl w-full p-6 mx-auto rounded-xl bg-card border border-primary/20 shadow-xl flex flex-col items-center max-h-[85vh] overflow-y-auto overflow-x-hidden">
+            <DialogHeader className="mb-4 w-full">
+              <DialogTitle className="text-2xl font-bold text-center text-primary">What is the Hex Grid?</DialogTitle>
+              <DialogDescription className="text-center text-secondary mt-2">
+                The Hex Grid is the centerpiece of <span className="text-primary font-medium">Shades & Signals</span>.
+                Each cell represents a unique color identified by its coordinates.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex flex-col items-center w-full">
-              {/* Larger grid that fills more of the modal width */}
-              <div className="w-full flex justify-center my-3">
-                <HexGrid
-                  width={380}
-                  height={240}
-                  selectedCell={demoSelected}
-                  onCellClick={handleDemoCellClick}
-                />
-              </div>
-
-              <div className="my-3 text-sm text-[#67b1e7] text-center">{demoTip}</div>
-
-              <div className="w-full text-sm text-gray-400 space-y-1">
-                <p>• The clue giver is assigned a secret color and gives one-word clues.</p>
-                <p>• Guessers click a cell to guess the color.</p>
-                <p>• First player to select the correct color wins the round!</p>
-              </div>
+            {/* Container for the HexGrid, now tightly wrapping it with shadow */}
+            <div className="my-4 shadow-lg rounded-lg">
+              <HexGrid
+                width={600}
+                height={240}
+                selectedCell={demoSelected}
+                onCellClick={handleDemoCellClick}
+              />
             </div>
 
-            <div className="flex w-full justify-center mt-4">
+            <div className="my-3 w-full max-w-[600px] px-5 py-3 bg-primary/10 rounded-lg text-primary text-center">
+              {demoTip || "Click any color cell to see its coordinates!"}
+            </div>
+
+            <div className="w-full max-w-[600px] bg-secondary/10 p-5 rounded-lg mt-3">
+              <h3 className="text-primary font-semibold text-lg mb-3 text-center">How to Play:</h3>
+              <ul className="space-y-3 text-secondary">
+                <li className="flex items-start gap-3">
+                  <span className="text-primary text-lg">•</span>
+                  <span>The clue giver is assigned a secret color and gives one-word clues.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-primary text-lg">•</span>
+                  <span>Guessers click a cell to guess the color.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-primary text-lg">•</span>
+                  <span>First player to select the correct color wins the round!</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-primary text-lg">•</span>
+                  <span>The game is played over multiple rounds with players taking turns as the clue giver.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex w-full justify-center mt-5">
               <Button
                 onClick={() => setShowHexGridHelp(false)}
-                className="px-8 py-2 text-sm font-medium rounded-lg bg-[#333] hover:bg-[#444] text-white border-none"
+                className="px-10 py-2 text-base font-medium rounded-lg bg-primary hover:bg-primary/90 text-white"
               >
                 Close
               </Button>

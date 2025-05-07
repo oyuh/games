@@ -1,8 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { password } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { imposterCategories } from "~/data/categoryList";
+
+interface Game {
+  id: string;
+  game_data: unknown;
+  round_data: unknown;
+  teams: Record<string, string[]>;
+}
+
+interface RequestBody {
+  word: unknown;
+}
 
 export async function POST(
   req: NextRequest,
@@ -13,10 +25,11 @@ export async function POST(
 
   try {
     // Parse request body
-    const { word } = await req.json();
-    if (!word || typeof word !== "string") {
+    const body = await req.json() as RequestBody;
+    if (!body.word || typeof body.word !== "string") {
       return NextResponse.json({ error: "Word is required" }, { status: 400 });
     }
+    const word = body.word;
 
     // Find game by ID
     const game = await db.query.password.findFirst({
@@ -33,73 +46,78 @@ export async function POST(
     }
 
     // Type assertions for dynamic JSON fields
-    type GameData = {
-      teamPhases?: Record<string, string>;
-      teamRoles?: Record<string, { clueGiver: string; guesser: string }>;
-      selectedWords?: Record<string, { word: string }>;
-      phase?: string;
-    };
-    type RoundData = { perTeam?: Record<string, { word?: string }> };
-    const gameData = game.game_data as GameData;
-    const roundData = (game.round_data ?? {}) as RoundData;
-
-    // Make sure the player is in one of the teams
-    const teams = game.teams as Record<string, string[]>;
-    let playerTeam: string | null = null;
-
-    for (const teamKey in teams) {
-      if (teamKey !== "noTeam" && Array.isArray(teams[teamKey]) && teams[teamKey]?.includes(sessionId)) {
-        playerTeam = teamKey;
-        break;
-      }
+    interface GameData {
+      teamPhases: Record<string, string>;
+      teamRoles: Record<string, { clueGiver: string; guesser: string }>;
+      selectedWords: Record<string, { word: string }>;
+      phase: string;
+      currentRound?: number;
+      rounds?: RoundData[];
     }
 
+    interface RoundData {
+      perTeam: Record<string, { word: string }>;
+      phase: string;
+      startTime?: string;
+      endTime?: string;
+    }
+
+    const gameData = game.game_data as GameData;
+    const roundData = (game.round_data ?? {}) as RoundData;
+    const teams = game.teams as Record<string, string[]>;
+
+    // Use nullish coalescing for safer property access
+    const teamPhases = gameData.teamPhases ?? {};
+    const teamRoles = gameData.teamRoles ?? {};
+    const selectedWords = gameData.selectedWords ?? {};
+
+    // Make sure the player is in one of the teams
+    const playerTeam = Object.entries(teams).find(([_, players]) => players.includes(sessionId))?.[0];
+
     if (!playerTeam) {
-      return NextResponse.json({ error: "You are not in a team" }, { status: 403 });
+      return NextResponse.json({ error: "You are not in a team" }, { status: 400 });
     }
 
     // Verify team is in the word-selection phase
-    if (!gameData.teamPhases || gameData.teamPhases[playerTeam] !== "word-selection") {
+    if (teamPhases[playerTeam] !== "word-selection") {
       return NextResponse.json({
         error: "Your team is not in word selection phase",
-        phase: gameData.teamPhases?.[playerTeam]
+        phase: teamPhases[playerTeam]
       }, { status: 400 });
     }
 
     // Check if team roles are assigned
-    if (!gameData.teamRoles?.[playerTeam]) {
-      gameData.teamRoles = gameData.teamRoles ?? {};
+    if (!teamRoles[playerTeam]) {
       const teamMembers = teams[playerTeam] ?? [];
-      if (teamMembers.length < 2 || !teamMembers[0] || !teamMembers[1]) {
+      if (teamMembers.length < 2) {
         return NextResponse.json({ error: "Not enough team members to assign roles" }, { status: 400 });
       }
       const randomIndex = Math.floor(Math.random() * 2);
-      gameData.teamRoles[playerTeam] = {
-        clueGiver: teamMembers[randomIndex]!,
-        guesser: teamMembers[1 - randomIndex]!
+      teamRoles[playerTeam] = {
+        clueGiver: teamMembers[randomIndex] ?? "",
+        guesser: teamMembers[1 - randomIndex] ?? ""
       };
     }
 
     // Check if current user is the clue giver for their team
-    if (gameData.teamRoles?.[playerTeam]?.clueGiver !== sessionId) {
+    if (teamRoles[playerTeam]?.clueGiver !== sessionId) {
       return NextResponse.json({ error: "Only the clue giver can select a word" }, { status: 403 });
     }
 
     // Store selected word for this team
-    gameData.selectedWords = gameData.selectedWords ?? {};
-    if (!gameData.selectedWords[playerTeam]) gameData.selectedWords[playerTeam] = { word: "" };
-    gameData.selectedWords[playerTeam].word = word;
+    selectedWords[playerTeam] ??= { word: "" };
+    selectedWords[playerTeam].word = word;
 
     // Ensure perTeam and perTeam[playerTeam] are initialized
     roundData.perTeam ??= {};
-    roundData.perTeam[playerTeam] ??= { category: undefined, word: undefined, guesser: undefined, clueGiver: undefined };
+    roundData.perTeam[playerTeam] ??= { word: "" };
     roundData.perTeam[playerTeam].word = word;
 
     // Update this team's phase to clue-giving phase
-    gameData.teamPhases[playerTeam] = "clue-giving";
+    teamPhases[playerTeam] = "clue-giving";
 
     // For backwards compatibility, also update the global phase if all teams are in the same phase
-    const allTeamsPhases = Object.entries(gameData.teamPhases)
+    const allTeamsPhases = Object.entries(teamPhases)
       .filter(([teamKey]) => teamKey !== "noTeam")
       .map(([_, phase]) => phase);
 

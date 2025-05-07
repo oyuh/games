@@ -16,10 +16,29 @@ import {
   DialogTrigger
 } from "~/components/ui/dialog";
 
+interface ImposterGame {
+  id: string;
+  code: string;
+  host_id: string;
+  category: string;
+  max_players: number;
+  num_imposters: number;
+  player_ids: string[];
+  imposter_ids?: string[];
+  playerNames?: Record<string, string>;
+  game_data?: {
+    phase?: string;
+    clues?: Record<string, string>;
+    votes?: Record<string, string>;
+    shouldVoteVotes?: Record<string, 'yay' | 'nay'>;
+    playerDetectedDisconnected?: string;
+  };
+}
+
 export default function ImposterGamePage({ params }: { params: Promise<{ id: string }> }) {
   const actualParams = React.use(params);
   const { session } = useSessionInfo();
-  const [game, setGame] = useState<any>(null);
+  const [game, setGame] = useState<ImposterGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -47,8 +66,8 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
   }>>([]);
 
   const phase = game?.game_data?.phase;
-  const clues = game?.game_data?.clues || {};
-  const votes = game?.game_data?.votes || {};
+  const clues = game?.game_data?.clues ?? {};
+  const votes = game?.game_data?.votes ?? {};
   const allCluesSubmitted = Object.keys(clues).length === game?.player_ids?.length;
   const allVotesSubmitted = Object.keys(votes).length === game?.player_ids?.length;
 
