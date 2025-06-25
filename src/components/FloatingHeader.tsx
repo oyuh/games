@@ -1,6 +1,7 @@
 "use client";
-import { FaUser, FaUsers, FaCog } from "react-icons/fa";
+import { FaUser, FaUsers, FaCog, FaQuestionCircle } from "react-icons/fa";
 import { useState, useRef, useEffect } from "react";
+import { AboutModal } from "../app/_components/about-modal";
 
 export const FloatingHeader = () => {
   // Open modals via custom events
@@ -10,6 +11,7 @@ export const FloatingHeader = () => {
 
   const [open, setOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const hideTimeout = useRef<NodeJS.Timeout | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
@@ -27,6 +29,8 @@ export const FloatingHeader = () => {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
+
+  const openAbout = () => setAboutOpen(true);
 
   return (
     <div
@@ -61,6 +65,14 @@ export const FloatingHeader = () => {
             <FaCog className="text-primary w-5 h-5" />
             <span>Settings</span>
           </button>
+          <button
+            className="flex items-center justify-between gap-2 py-2 px-3 rounded-md text-sm font-semibold bg-primary/20 border border-primary/30 text-primary hover:bg-primary/30 transition"
+            onClick={openAbout}
+            type="button"
+            aria-label="About"
+          >
+            <FaQuestionCircle className="text-primary w-5 h-5" />
+          </button>
         </>
       ) : (
         <button
@@ -81,6 +93,7 @@ export const FloatingHeader = () => {
           Options
         </button>
       )}
+      <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
       <style jsx>{`
         .floating-header-bar {
           position: fixed;

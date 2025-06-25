@@ -106,7 +106,7 @@ const games: Game[] = [
     available: true,
     color: "blue",
     fields: [
-      { label: "Max Players", name: "maxPlayers", type: "number", min: 2, max: 20, required: true },
+      { label: "Max Players", name: "maxPlayers", type: "number", min: 2, max: 20, required: true, defaultValue: 2 },
       { label: "Rounds", name: "rounds", type: "number", min: 1, max: 20, required: true, defaultValue: 5 },
     ],
     info: {
@@ -540,7 +540,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <p className="text-main text-center text-base mt-4">Stay tuned for updates!</p>
+            <p className="text-secondary font-medium text-center text-base mt-4">Stay tuned for updates!</p>
           </div>
         </div>
       </div>

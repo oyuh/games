@@ -1,13 +1,13 @@
 "use client";
 import { useState } from "react";
 import { Menu } from "lucide-react";
-import { FaUser, FaUsers, FaCog } from "react-icons/fa";
-import { useSessionInfo } from "./session-modal";
+import { FaUser, FaUsers, FaCog, FaQuestionCircle } from "react-icons/fa";
 import { Button } from "~/components/ui/button";
+import { AboutModal } from "./about-modal";
 
 export function MobileMenuButton() {
-  const { session } = useSessionInfo();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   // Function to toggle the menu open/closed
   const toggleMenu = () => {
@@ -21,8 +21,11 @@ export function MobileMenuButton() {
 
   // Handle clicks on specific menu items
   const handleItemClick = (action: string) => {
-    // Close the menu
     setIsMenuOpen(false);
+    if (action === 'about') {
+      setAboutOpen(true);
+      return;
+    }
 
     // Map action names to their corresponding event names
     const eventMap: Record<string, string> = {
@@ -32,7 +35,7 @@ export function MobileMenuButton() {
     };
 
     // Get the correct event name from the map, or fall back to the old pattern
-    const eventName = eventMap[action] || `open-${action}-modal`;
+    const eventName = eventMap[action] ?? `open-${action}-modal`;
 
     // Dispatch custom events that the individual components can listen for
     const event = new CustomEvent(eventName);
@@ -88,10 +91,21 @@ export function MobileMenuButton() {
                 <FaCog size={16} />
                 <span className="ml-2">Settings</span>
               </Button>
+
+              <Button
+                variant="ghost"
+                className="flex items-center justify-start space-x-2 w-full px-3 py-2"
+                onClick={() => handleItemClick('about')}
+                aria-label="About"
+              >
+                <FaQuestionCircle size={16} />
+                <span className="ml-2">About</span>
+              </Button>
             </div>
           </div>
         </>
       )}
+      <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
     </div>
   );
 }

@@ -3,21 +3,16 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import { AboutModal } from "./about-modal";
 
 export function SettingsModal() {
   const [open, setOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') ?? 'system';
     }
     return 'system';
-  });
-
-  const [headerPosition, setHeaderPosition] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('floatingHeaderPosition') ?? 'top';
-    }
-    return 'top';
   });
 
   // Listen for custom event from FloatingHeader
@@ -42,77 +37,71 @@ export function SettingsModal() {
     }
   }, [theme]);
 
-  // Set header position on mount and when it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('floatingHeaderPosition', headerPosition);
-      // Optionally, dispatch an event to notify FloatingHeader
-      window.dispatchEvent(new Event('floating-header-position-change'));
-    }
-  }, [headerPosition]);
-
   const handleThemeChange = (newTheme: 'system' | 'light' | 'dark') => {
     setTheme(newTheme);
   };
 
-  const handleHeaderPositionChange = (pos: 'top' | 'left' | 'right' | 'bottom') => {
-    setHeaderPosition(pos);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-4 w-full max-w-xs sm:max-w-md flex flex-col items-center gap-6">
-        <DialogHeader className="w-full">
-          <DialogTitle className="text-3xl font-bold text-primary text-center uppercase tracking-wide">
-            Settings
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-4 w-full max-w-xs sm:max-w-md flex flex-col items-center gap-6">
+          <DialogHeader className="w-full">
+            <DialogTitle className="text-3xl font-bold text-primary text-center uppercase tracking-wide">
+              Settings
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="w-full bg-secondary/10 rounded-lg p-4 border border-secondary/30">
-          <div className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">
-            Appearance
-          </div>
+          <div className="w-full bg-secondary/10 rounded-lg p-4 border border-secondary/30 mb-4">
+            <div className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">
+              Appearance
+            </div>
 
-          <div className="flex flex-col items-center gap-4">
-            <div className="text-sm font-semibold text-primary">Theme</div>
-            <div className="grid grid-cols-3 gap-2 w-full">
-              <Button
-                size="sm"
-                type="button"
-                onClick={() => handleThemeChange('system')}
-                className={theme === 'system'
-                  ? 'bg-primary text-white font-semibold border-2 border-primary shadow-sm'
-                  : 'bg-secondary/10 hover:bg-secondary/20 text-main border border-secondary/30'
-                }
-              >
-                System
-              </Button>
-              <Button
-                size="sm"
-                type="button"
-                onClick={() => handleThemeChange('light')}
-                className={theme === 'light'
-                  ? 'bg-primary text-white font-semibold border-2 border-primary shadow-sm'
-                  : 'bg-secondary/10 hover:bg-secondary/20 text-main border border-secondary/30'
-                }
-              >
-                Light
-              </Button>
-              <Button
-                size="sm"
-                type="button"
-                onClick={() => handleThemeChange('dark')}
-                className={theme === 'dark'
-                  ? 'bg-primary text-white font-semibold border-2 border-primary shadow-sm'
-                  : 'bg-secondary/10 hover:bg-secondary/20 text-main border border-secondary/30'
-                }
-              >
-                Dark
-              </Button>
+            <div className="flex flex-col items-center gap-4">
+              <div className="text-sm font-semibold text-primary">Theme</div>
+              <div className="grid grid-cols-3 gap-2 w-full">
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => handleThemeChange('system')}
+                  className={theme === 'system'
+                    ? 'bg-primary text-white font-semibold border-2 border-primary shadow-sm'
+                    : 'bg-secondary/10 hover:bg-secondary/20 text-main border border-secondary/30'
+                  }
+                >
+                  System
+                </Button>
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => handleThemeChange('light')}
+                  className={theme === 'light'
+                    ? 'bg-primary text-white font-semibold border-2 border-primary shadow-sm'
+                    : 'bg-secondary/10 hover:bg-secondary/20 text-main border border-secondary/30'
+                  }
+                >
+                  Light
+                </Button>
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => handleThemeChange('dark')}
+                  className={theme === 'dark'
+                    ? 'bg-primary text-white font-semibold border-2 border-primary shadow-sm'
+                    : 'bg-secondary/10 hover:bg-secondary/20 text-main border border-secondary/30'
+                  }
+                >
+                  Dark
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+          <Button type="button" className="w-full mt-2" onClick={() => setAboutOpen(true)}>
+            About
+          </Button>
+        </DialogContent>
+      </Dialog>
+      <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
+    </>
   );
 }

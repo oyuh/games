@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 
@@ -59,13 +59,12 @@ export function SessionNameModal({ onNameSet }: { onNameSet: () => void }) {
 
   return (
     <Dialog open>
-      <DialogContent className="max-w-xs sm:max-w-md w-full bg-card text-main border border-secondary shadow-xl">
+      <DialogContent className="max-w-xs sm:max-w-md w-full max-h-[90vh] overflow-y-auto bg-card text-main border border-secondary shadow-xl">
         <DialogHeader className="w-full">
           <DialogTitle className="text-3xl font-bold text-primary text-center uppercase tracking-wide">
             Enter A Name
           </DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="w-full space-y-6">
           <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30">
             <div className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">Player Info</div>
@@ -86,6 +85,29 @@ export function SessionNameModal({ onNameSet }: { onNameSet: () => void }) {
                   className="bg-main text-main border border-secondary/30 rounded-md px-3 py-2 text-center text-lg"
                   disabled={submitting}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* About section inside session modal */}
+          <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/30 mt-4">
+            <div className="text-3xl font-extrabold text-center bg-gradient-to-r from-[#7ecbff] via-[#3a6ea7] to-[#7ecbff] bg-[400%_auto] bg-clip-text uppercase tracking-widest mb-2 drop-shadow-lg pt-0">
+              About This Site
+            </div>
+            <div className="space-y-6 mt-2">
+              <div className="flex flex-col items-center">
+                <span className="inline-block text-lg sm:text-xl font-semibold text-primary mb-2 animate-gradient bg-gradient-to-r from-[#7ecbff] via-[#3a6ea7] to-[#7ecbff] bg-[400%_auto] bg-clip-text text-transparent">
+                  Play with Friends!
+                </span>
+                <p className="text-main text-center text-base sm:text-lg leading-relaxed max-w-md">
+                  Welcome to <span className="font-bold text-primary">Lawson's Games</span> — a modern collection of social board type games to play with friends, online or in person. Enjoy quick setup, beautiful design.
+                </p>
+                <p className="text-main text-center text-base sm:text-lg leading-relaxed max-w-md">
+                  I made this because I wanted to play games from TikTok with friends but couldn&apos;t find a good solution for them.
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-secondary text-center text-xs">This website may have bugs, please report them accordingly.</span>
               </div>
             </div>
           </div>
