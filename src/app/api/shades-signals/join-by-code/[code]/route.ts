@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-// TODO: Adjust import path for your Prisma Client instance
-import prisma from '@/lib/prisma';
+// import prisma from '@/lib/prisma';
+import { db } from '~/server/db/index';
+import { shadesSignals } from '~/server/db/schema';
+import { eq } from 'drizzle-orm';
 
 // --- Type Definitions (Keep relevant ones for request/response structure) ---
 // Assuming Prisma generates types, but defining request body/player structure explicitly
@@ -42,48 +44,37 @@ export async function POST(
       return NextResponse.json({ message: 'Valid player ID and name are required in request body.' }, { status: 400 });
     }
 
-    // Find the game using Prisma client (case-insensitive code search might require specific DB setup or fetching then filtering)
-    const game = await prisma.game.findUnique({
-      where: { code: gameCode.toUpperCase() }, // Assumes `code` field is unique and indexed
-      // If code isn't unique or needs case-insensitive search:
-      // const games = await prisma.game.findMany({ where: { code: { equals: gameCode, mode: 'insensitive' } } });
-      // if (!games || games.length === 0) { /* not found */ } if (games.length > 1) { /* handle collision */ } game = games[0];
+    // Find the game using Drizzle ORM (case-insensitive code search might require specific DB setup or fetching then filtering)
+    const game = await db.query.shadesSignals.findFirst({
+      where: (fields, { eq }) => eq(fields.code, gameCode.toUpperCase()),
     });
 
     if (!game) {
       return NextResponse.json({ message: `Game not found with code: ${gameCode}` }, { status: 404 });
     }
 
-    // Validate game status - Assuming game.status is a string field
-    if ((game.status as GameStatus) !== 'lobby') {
+    // Extract game_data fields with type safety
+    type GameData = {
+      players?: Player[];
+      playerScores?: Record<string, number>;
+      status?: GameStatus;
+      settings?: { maxPlayers?: number };
+      [key: string]: unknown;
+    };
+    const gameData: GameData = (game.game_data ?? {}) as GameData;
+    const currentPlayers: Player[] = Array.isArray(gameData.players) ? gameData.players : [];
+    const currentScores: Record<string, number> = typeof gameData.playerScores === 'object' && gameData.playerScores !== null ? gameData.playerScores : {};
+    const status: GameStatus = gameData.status ?? 'lobby';
+    const settings = typeof gameData.settings === 'object' && gameData.settings !== null ? gameData.settings as { maxPlayers?: number } : {};
+
+    if (status !== 'lobby') {
       return NextResponse.json({ message: 'This game has already started or finished.' }, { status: 403 });
-    }
-
-    // --- Handle Players and Scores (Assuming JSON storage) ---
-    // TODO: Validate the structure of game.players and game.playerScores if fetched from DB as JSON
-    let currentPlayers: Player[] = [];
-    if (game.players && typeof game.players === 'object' && Array.isArray(game.players)) {
-        // Basic check, you might need more robust validation/parsing based on how JSON is stored/retrieved
-        currentPlayers = game.players as Player[];
-    }
-    let currentScores: Record<string, number> = {};
-    if (game.playerScores && typeof game.playerScores === 'object' && !Array.isArray(game.playerScores)) {
-        currentScores = game.playerScores as Record<string, number>;
-    }
-    // ---
-
-    const playerAlreadyInGame = currentPlayers.find(p => p.id === player.id);
-    if (playerAlreadyInGame) {
-      console.log(`Player ${player.id} already in game ${game.code}, returning current game state.`);
-      // TODO: Ensure the returned 'game' object has correctly parsed players/scores
-      const responseGame = { ...game, players: currentPlayers, playerScores: currentScores };
-      return NextResponse.json({ message: 'Player already in game.', game: responseGame }, { status: 200 });
     }
 
     // --- Handle Max Players (Assuming JSON storage for settings) ---
     let maxPlayers = 10; // Default max players
-    if(game.settings && typeof game.settings === 'object' && game.settings !== null && 'maxPlayers' in game.settings && typeof game.settings.maxPlayers === 'number') {
-        maxPlayers = game.settings.maxPlayers;
+    if (typeof settings.maxPlayers === 'number') {
+      maxPlayers = settings.maxPlayers;
     }
     // ---
 
@@ -96,15 +87,20 @@ export async function POST(
     const updatedPlayers = [...currentPlayers, newPlayer];
     const updatedScores = { ...currentScores, [newPlayer.id]: 0 };
 
-    // Update the game in the database using Prisma
-    const updatedGame = await prisma.game.update({
-      where: { id: game.id },
-      data: {
-        players: updatedPlayers as any, // Prisma expects JsonValue, casting might be needed or use Prisma types
-        playerScores: updatedScores as any, // Prisma expects JsonValue
-        updatedAt: new Date(),
-      },
-    });
+    // Update the game in the database using Drizzle ORM
+    const updatedGameArr = await db.update(shadesSignals)
+      .set({
+        // Add/merge game_data if needed
+        game_data: {
+          ...(game.game_data ?? {}),
+          players: updatedPlayers,
+          playerScores: updatedScores,
+        },
+        // updatedAt: new Date(), // Add this if you have an updatedAt field
+      })
+      .where(eq(shadesSignals.id, game.id))
+      .returning();
+    const updatedGame = updatedGameArr[0];
 
     if (!updatedGame) {
       // This case might indicate a concurrent update conflict or DB issue

@@ -100,7 +100,7 @@ export function SessionNameModal({ onNameSet }: { onNameSet: () => void }) {
                   Play with Friends!
                 </span>
                 <p className="text-main text-center text-base sm:text-lg leading-relaxed max-w-md">
-                  Welcome to <span className="font-bold text-primary">Lawson's Games</span> — a modern collection of social board type games to play with friends, online or in person. Enjoy quick setup, beautiful design.
+                  Welcome to <span className="font-bold text-primary">Lawson&apos;s Games</span> — a modern collection of social board type games to play with friends, online or in person. Enjoy quick setup, beautiful design.
                 </p>
                 <p className="text-main text-center text-base sm:text-lg leading-relaxed max-w-md">
                   I made this because I wanted to play games from TikTok with friends but couldn&apos;t find a good solution for them.
