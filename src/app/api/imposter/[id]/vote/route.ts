@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "../../../../../server/db/index";
 import { imposter } from "../../../../../server/db/schema";
 import { eq } from "drizzle-orm";
@@ -14,6 +15,7 @@ interface ImposterGameData {
   votedOut?: string[];
   revealResult?: string;
   activePlayers?: string[];
+  gameFinished?: boolean;
   history?: Array<{
     round?: number;
     clues?: Record<string, string>;
@@ -24,6 +26,7 @@ interface ImposterGameData {
     activePlayers?: string[];
   }>;
   results?: Record<string, 'win' | 'lose'>;
+  [key: string]: unknown;
 }
 
 export async function POST(
@@ -39,19 +42,23 @@ export async function POST(
 
   const game = await db.query.imposter.findFirst({ where: eq(imposter.id, params.id) });
   if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
-  const gameData = (game.game_data || {}) as ImposterGameData;
+  const gameData = (game.game_data ?? {}) as ImposterGameData;
   if (!gameData.phase || gameData.phase !== "vote") return NextResponse.json({ error: "Not accepting votes" }, { status: 400 });
 
-  // Block voting if player is not in player_ids
+  // Block voting if player is not in current player_ids
   if (!game.player_ids.includes(sessionId)) {
-    return NextResponse.json({ error: "You are out" }, { status: 403 });
+    return NextResponse.json({ error: "You are not in this game" }, { status: 403 });
+  }
+
+  // Block voting if player has been voted out in previous rounds
+  const votedOut = gameData.votedOut ?? [];
+  if (votedOut.includes(sessionId)) {
+    return NextResponse.json({ error: "You have been voted out" }, { status: 403 });
   }
 
   // Remove voted out players from remainingPlayers
-  const votedOutSet = new Set(gameData.votedOut || []);
+  const votedOutSet = new Set(gameData.votedOut ?? []);
   const remainingPlayers = game.player_ids.filter(pid => !votedOutSet.has(pid));
-  const remainingImposters = (game.imposter_ids ?? []).filter(pid => remainingPlayers.includes(pid));
-  let results: Record<string, 'win' | 'lose'> = {};
 
   // --- Remove voted out players from the game ---
   // If there are any voted out players, update player_ids in the DB

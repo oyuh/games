@@ -4,19 +4,7 @@ import { db } from "~/server/db";
 import { password } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import stringSimilarity from "string-similarity";
-
-interface GameData {
-  teamPhases: Record<string, string>;
-  teamRoles: Record<string, { clueGiver: string; guesser: string }>;
-  selectedWords: Record<string, { word: string } | string>;
-  phase: string;
-  guesses?: Record<string, string[]>;
-  roundGuessCount?: Record<string, number>;
-}
-
-interface RoundData {
-  perTeam: Record<string, { word: string }>;
-}
+import type { PasswordGameData, PasswordRoundData } from "~/lib/types/password";
 
 interface RequestBody {
   guess: string;
@@ -51,12 +39,12 @@ export async function POST(
       return NextResponse.json({ error: "Game hasn't been properly initialized" }, { status: 400 });
     }
 
-    const gameData = game.game_data as GameData;
-    const roundData = (game.round_data ?? {}) as RoundData;
+    const gameData = game.game_data as PasswordGameData;
+    const roundData = game.round_data as PasswordRoundData | undefined;
 
     // Make sure the player is in one of the teams
     const teams = game.teams as Record<string, string[]>;
-    const playerTeam = Object.entries(teams).find(([_, players]) => players.includes(sessionId))?.[0];
+    const playerTeam = Object.entries(teams).find(([_, players]) => players?.includes(sessionId))?.[0];
 
     if (!playerTeam) {
       return NextResponse.json({ error: "You are not in a team" }, { status: 400 });
@@ -68,28 +56,28 @@ export async function POST(
     }
 
     // Check if current user is the guesser for their team
-    if (gameData.teamRoles[playerTeam].guesser !== sessionId) {
+    if (gameData.teamRoles[playerTeam]?.guesser !== sessionId) {
       return NextResponse.json({ error: "Only the guesser can submit a guess" }, { status: 403 });
     }
 
     // Get target word for this team
     let targetWord: string | undefined;
-    const selectedWordEntry = gameData.selectedWords[playerTeam];
+    const selectedWordEntry = gameData.selectedWords?.[playerTeam];
     if (typeof selectedWordEntry === "string") {
       targetWord = selectedWordEntry;
-    } else if (selectedWordEntry && typeof selectedWordEntry === "object" && "word" in selectedWordEntry) {
-      targetWord = selectedWordEntry.word;
     }
+
     // fallback to perTeam round_data
-    if (!targetWord && roundData.perTeam?.[playerTeam]?.word) {
-      targetWord = roundData.perTeam[playerTeam].word;
+    if (!targetWord && roundData?.perTeam?.[playerTeam]?.word) {
+      targetWord = roundData.perTeam[playerTeam]?.word ?? undefined;
     }
+
     if (!targetWord) {
       return NextResponse.json({
         error: "No target word found for your team. Debug info:",
         checked: {
-          selectedWords: gameData.selectedWords[playerTeam],
-          roundData: roundData.perTeam?.[playerTeam]
+          selectedWords: gameData.selectedWords?.[playerTeam],
+          roundData: roundData?.perTeam?.[playerTeam]
         },
         message: "If you see this error but a word is selected, please check the structure of gameData.selectedWords and game.round_data.perTeam."
       }, { status: 400 });
@@ -111,7 +99,7 @@ export async function POST(
     );
 
     // Store the guess and increment the guess count
-    gameData.guesses[playerTeam].push(guess);
+    gameData.guesses[playerTeam]?.push(guess);
     gameData.roundGuessCount[playerTeam] += 1;
 
     // Update game data with the new guess

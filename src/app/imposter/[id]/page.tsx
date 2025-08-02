@@ -25,12 +25,29 @@ interface ImposterGame {
   num_imposters: number;
   player_ids: string[];
   imposter_ids?: string[];
+  chosen_word?: string;
   playerNames?: Record<string, string>;
   game_data?: {
-    phase?: string;
+    phase?: "clue" | "shouldVote" | "vote" | "reveal" | "ended";
+    round?: number;
     clues?: Record<string, string>;
     votes?: Record<string, string>;
     shouldVoteVotes?: Record<string, 'yay' | 'nay'>;
+    activePlayers?: string[];
+    votedOut?: string[];
+    currentTurnPlayerId?: string | null;
+    clueOrder?: string[];
+    revealResult?: string;
+    playerLeft?: { id: string; name: string; timestamp: string };
+    gameFinished?: boolean;
+    history?: Array<{
+      round?: number;
+      clues?: Record<string, string>;
+      votes?: Record<string, string>;
+      votedOut?: string[];
+      revealResult?: string;
+      activePlayers?: string[];
+    }>;
     playerDetectedDisconnected?: string;
   };
 }
@@ -68,8 +85,15 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
   const phase = game?.game_data?.phase;
   const clues = game?.game_data?.clues ?? {};
   const votes = game?.game_data?.votes ?? {};
-  const allCluesSubmitted = Object.keys(clues).length === game?.player_ids?.length;
-  const allVotesSubmitted = Object.keys(votes).length === game?.player_ids?.length;
+
+  // Use activePlayers for counting instead of all player_ids
+  // This accounts for players who have been voted out or disconnected
+  const activePlayers = game?.game_data?.activePlayers ?? game?.player_ids ?? [];
+  const votedOut = game?.game_data?.votedOut ?? [];
+  const currentActivePlayers = activePlayers.filter(pid => !votedOut.includes(pid));
+
+  const allCluesSubmitted = Object.keys(clues).length >= currentActivePlayers.length && currentActivePlayers.length > 0;
+  const allVotesSubmitted = Object.keys(votes).length >= currentActivePlayers.length && currentActivePlayers.length > 0;
 
   const addNotification = (notification: typeof notifications[0]) => {
     setNotifications(prev => [...prev, notification]);
@@ -156,12 +180,12 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
               actions: [
                 {
                   label: 'Continue',
-                  action: () => submitDisconnectionVote('continue', notificationId),
+                  action: () => submitDisconnectionVote('continue'),
                   variant: 'default'
                 },
                 {
                   label: 'End Game',
-                  action: () => submitDisconnectionVote('end', notificationId),
+                  action: () => submitDisconnectionVote('end'),
                   variant: 'destructive'
                 }
               ]
@@ -287,8 +311,7 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
   const [shuffledClues, setShuffledClues] = useState<Array<[string, string]>>([]);
 
   function getPlayerName(id: string) {
-    if (game.playerNames && game.playerNames[id]) return game.playerNames[id];
-    return id;
+    return game?.playerNames?.[id] ?? id;
   }
 
   function getClueSubmissionOrder() {
@@ -297,13 +320,13 @@ export default function ImposterGamePage({ params }: { params: Promise<{ id: str
     if (game.game_data?.currentTurnPlayerId) {
       const remainingPlayers = game.player_ids.filter((id: string) => !clues[id]);
       if (remainingPlayers.length > 0) {
-        const otherPlayers = remainingPlayers.filter(id => id !== game.game_data.currentTurnPlayerId);
+        const otherPlayers = remainingPlayers.filter(id => id !== game?.game_data?.currentTurnPlayerId);
         return [game.game_data.currentTurnPlayerId, ...otherPlayers];
       }
     }
 
-    const nonImposters = game.player_ids.filter((id: string) => !game.imposter_ids.includes(id));
-    const imposters = game.player_ids.filter((id: string) => game.imposter_ids.includes(id));
+    const nonImposters = game.player_ids.filter((id: string) => !(game.imposter_ids ?? []).includes(id));
+    const imposters = game.player_ids.filter((id: string) => (game.imposter_ids ?? []).includes(id));
 
     const remainingNonImposters = nonImposters.filter(id => !clues[id]);
     const remainingImposters = imposters.filter(id => !clues[id]);

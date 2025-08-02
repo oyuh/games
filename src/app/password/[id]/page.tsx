@@ -1,66 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "~/components/ui/button";
 import { useSessionInfo } from "~/app/_components/session-modal";
 import { imposterCategories } from "~/data/categoryList";
 import { Input } from "~/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
-
-interface PasswordGame {
-  id: string;
-  code: string;
-  host_id: string;
-  teams: {
-    noTeam: string[];
-    [key: string]: string[];
-  };
-  playerNames?: Record<string, string>;
-  started_at: string | null;
-  finished_at: string | null;
-  game_data?: {
-    round: number;
-    phase: string;
-    // Track team-specific phases
-    teamPhases: Record<string, string>;
-    categoryVotes: Record<string, string>;
-    currentCategory: string | null;
-    selectedWords: Record<string, string>;
-    teamRoles: Record<string, { clueGiver: string; guesser: string }>;
-    clues: Record<string, string[]>;
-    guesses: Record<string, string[]>;
-    currentTeam: string | null;
-    scores: Record<string, number>;
-    roundHistory: any[];
-    round_data?: Record<string, {
-      category: string | null;
-      word: string | null;
-      guesser: string | null;
-      clueGiver: string | null;
-    }>;
-    roundGuessCount?: Record<string, number>;
-    roundSummary?: Record<number, { winningTeams: string[] }>;
-    teamScores?: Record<string, number>;
-    winningTeams?: string[];
-    pointsToWin?: number;
-  };
-  round_data?: {
-    perTeam: Record<string, {
-      category: string | null;
-      word: string | null;
-      guesser: string | null;
-      clueGiver: string | null;
-    }>;
-  };
-}
+import type { PasswordGame as PasswordGameType } from "~/lib/types/password";
 
 export default function PasswordPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const [game, setGame] = useState<PasswordGame | null>(null);
+  const [game, setGame] = useState<PasswordGameType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -73,8 +27,40 @@ export default function PasswordPage({
   const router = useRouter();
   const { session } = useSessionInfo();
   const sessionId = session?.id;
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [playerNamesCache, setPlayerNamesCache] = useState<Record<string, string>>({});
+
+  // Heartbeat functionality
+  const sendHeartbeat = async () => {
+    if (!sessionId || !game) return;
+
+    try {
+      await fetch(`/api/password/${params.id}/heartbeat`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Failed to send heartbeat:", error);
+    }
+  };
+
+  // Start heartbeat when game starts
+  useEffect(() => {
+    if (game?.started_at && sessionId && !game.finished_at) {
+      // Send initial heartbeat
+      sendHeartbeat();
+
+      // Set up interval for heartbeats every 10 seconds
+      heartbeatIntervalRef.current = setInterval(sendHeartbeat, 10000);
+
+      return () => {
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+        }
+      };
+    }
+  }, [game?.started_at, game?.finished_at, sessionId, params.id]);
 
   const fetchGame = async () => {
     try {

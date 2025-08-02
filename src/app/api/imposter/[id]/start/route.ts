@@ -77,14 +77,17 @@ export async function POST(
   // Initialize game_data for rounds and voting
   const initialGameData = {
     round: 1,
-    phase: "clue", // "clue" | "vote" | "reveal"
+    phase: "clue", // "clue" | "shouldVote" | "vote" | "reveal"
     clues: {}, // { [playerId]: string }
     votes: {}, // { [playerId]: string }
+    shouldVoteVotes: {}, // { [playerId]: 'yay' | 'nay' }
     revealed: false,
     history: [], // store past rounds if needed
     clueOrder: playerOrder, // Add randomized player order for clue submissions
     currentTurnPlayerId: playerOrder[0], // Set the first player to submit a clue
-    activePlayers: []
+    activePlayers: [...game.player_ids], // Track all players as active initially
+    votedOut: [], // Track players who have been voted out
+    heartbeats: {} // Initialize heartbeat tracking
   };
 
   await db.update(imposter)

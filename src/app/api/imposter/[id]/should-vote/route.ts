@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "../../../../../server/db/index";
 import { imposter } from "../../../../../server/db/schema";
 import { eq } from "drizzle-orm";
@@ -35,11 +36,15 @@ export async function POST(
   const sessionId = req.cookies.get("session_id")?.value;
   if (!sessionId) return NextResponse.json({ error: "No session" }, { status: 401 });
 
-  let shouldVote;
+  let shouldVote: 'yay' | 'nay';
   try {
-    const body = await req.json();
-    shouldVote = body.shouldVote;
-  } catch (error) {
+    const body = await req.json() as { shouldVote?: unknown };
+    if (typeof body.shouldVote === 'string' && (body.shouldVote === 'yay' || body.shouldVote === 'nay')) {
+      shouldVote = body.shouldVote;
+    } else {
+      return NextResponse.json({ error: "Invalid vote" }, { status: 400 });
+    }
+  } catch {
     return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
   }
 
@@ -57,6 +62,11 @@ export async function POST(
       error: "Not accepting shouldVote votes",
       phase: gameData?.phase
     }, { status: 400 });
+  }
+
+  // Block should-vote if player is not in current player_ids
+  if (!game.player_ids.includes(sessionId)) {
+    return NextResponse.json({ error: "You are not in this game" }, { status: 403 });
   }
 
   // Block should-vote if player is in votedOut
@@ -147,8 +157,8 @@ export async function POST(
             phase: newPhase,
             round: (gameData.round ?? 1) + 1,
             // Keep history unchanged
-            // Reset active players for next round
-            activePlayers: []
+            // Keep activePlayers for next round (don't reset to empty)
+            activePlayers
           }
         })
         .where(eq(imposter.id, params.id))

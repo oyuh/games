@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { password } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import stringSimilarity from 'string-similarity';
+import type { PasswordGameData, PasswordRoundData } from "~/lib/types/password";
 
 export async function POST(
   req: NextRequest,
@@ -13,7 +15,7 @@ export async function POST(
 
   try {
     // Parse request body
-    const { clue } = await req.json();
+    const { clue } = await req.json() as { clue: string };
     if (!clue || typeof clue !== "string") {
       return NextResponse.json({ error: "Clue is required" }, { status: 400 });
     }
@@ -35,10 +37,11 @@ export async function POST(
 
     // Make sure the player is in one of the teams
     const teams = game.teams as Record<string, string[]>;
-    let playerTeam = null;
+    let playerTeam: string | null = null;
 
     for (const teamKey in teams) {
-      if (teamKey !== "noTeam" && teams[teamKey].includes(sessionId)) {
+      const teamPlayers = teams[teamKey];
+      if (teamKey !== "noTeam" && teamPlayers?.includes(sessionId)) {
         playerTeam = teamKey;
         break;
       }
@@ -53,7 +56,8 @@ export async function POST(
       return NextResponse.json({ error: "Game hasn't been properly initialized" }, { status: 400 });
     }
 
-    const gameData = game.game_data;
+    const gameData = game.game_data as PasswordGameData;
+    const roundData = game.round_data as PasswordRoundData | undefined;
 
     // Verify team is in the clue-giving phase
     if (!gameData.teamPhases || gameData.teamPhases[playerTeam] !== "clue-giving") {
@@ -64,12 +68,12 @@ export async function POST(
     }
 
     // Check if team roles are assigned
-    if (!gameData.teamRoles || !gameData.teamRoles[playerTeam]) {
+    if (!gameData.teamRoles?.[playerTeam]) {
       return NextResponse.json({ error: "Team roles haven't been assigned" }, { status: 400 });
     }
 
     // Check if current user is the clue giver for their team
-    if (gameData.teamRoles[playerTeam].clueGiver !== sessionId) {
+    if (gameData.teamRoles[playerTeam]?.clueGiver !== sessionId) {
       return NextResponse.json({ error: "Only the clue giver can submit a clue" }, { status: 403 });
     }
 
@@ -78,13 +82,13 @@ export async function POST(
     const selectedWordEntry = gameData.selectedWords?.[playerTeam];
     if (typeof selectedWordEntry === "string") {
       targetWord = selectedWordEntry;
-    } else if (selectedWordEntry && typeof selectedWordEntry === "object" && selectedWordEntry.word) {
-      targetWord = selectedWordEntry.word;
     }
+
     // fallback to perTeam round_data
-    if (!targetWord && game.round_data && game.round_data.perTeam && game.round_data.perTeam[playerTeam]) {
-      targetWord = game.round_data.perTeam[playerTeam].word;
+    if (!targetWord && roundData?.perTeam?.[playerTeam]) {
+      targetWord = roundData.perTeam[playerTeam]?.word ?? undefined;
     }
+
     if (targetWord) {
       const similarity = stringSimilarity.compareTwoStrings(
         trimmedClue.toLowerCase(),
@@ -104,16 +108,16 @@ export async function POST(
         error: "No target word found for your team. Debug info:",
         checked: {
           selectedWords: gameData.selectedWords?.[playerTeam],
-          roundData: game.round_data?.perTeam?.[playerTeam]
+          roundData: roundData?.perTeam?.[playerTeam]
         },
         message: "If you see this error but a word is selected, please check the structure of gameData.selectedWords and game.round_data.perTeam."
       }, { status: 400 });
     }
 
     // Store the clue for this team
-    if (!gameData.clues) gameData.clues = {};
-    if (!gameData.clues[playerTeam]) gameData.clues[playerTeam] = [];
-    gameData.clues[playerTeam].push(trimmedClue);
+    gameData.clues ??= {};
+    gameData.clues[playerTeam] ??= [];
+    gameData.clues[playerTeam]?.push(trimmedClue);
 
     // Update this team's phase to guessing phase
     gameData.teamPhases[playerTeam] = "guessing";

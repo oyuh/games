@@ -13,6 +13,7 @@ interface ImposterGameData {
   clueOrder?: string[];
   currentTurnPlayerId?: string | null;
   activePlayers?: string[];
+  votedOut?: string[];
   firstClueAt?: string;
   playerDetectedDisconnected?: string;
 }
@@ -25,9 +26,9 @@ export async function POST(req: NextRequest, context: object) {
   // Safely parse the request body with error handling
   let clue: string;
   try {
-    const body: unknown = await req.json();
-    if (typeof body === "object" && body !== null && "clue" in body && typeof (body as any).clue === "string") {
-      clue = (body as any).clue;
+    const body = await req.json() as { clue?: unknown };
+    if (typeof body.clue === "string") {
+      clue = body.clue;
     } else {
       return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
     }
@@ -66,6 +67,12 @@ export async function POST(req: NextRequest, context: object) {
   // Block clue submission if player is not in player_ids
   if (!game.player_ids.includes(sessionId)) {
     return NextResponse.json({ error: "You are out" }, { status: 403 });
+  }
+
+  // Check if player is voted out
+  const votedOut = gameData.votedOut ?? [];
+  if (votedOut.includes(sessionId)) {
+    return NextResponse.json({ error: "You have been voted out" }, { status: 403 });
   }
 
   // If this player already submitted, block

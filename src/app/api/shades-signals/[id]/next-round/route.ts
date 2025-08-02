@@ -46,52 +46,46 @@ export async function POST(
     const player = gameData.players.find((p: ShadesSignalsPlayer) => p.id === playerId);
     if (!player?.isHost) {
       return NextResponse.json(
-        { success: false, error: 'Only the host can start the game' },
+        { success: false, error: 'Only the host can advance to the next round' },
         { status: 403 }
       );
     }
 
-    // Check if game is already started
-    if (gameData.gameStarted) {
+    // Check if game is in round end phase
+    if (!gameData.gameStarted || gameData.currentPhase !== 'roundEnd') {
       return NextResponse.json(
-        { success: false, error: 'Game is already started' },
+        { success: false, error: 'Game is not in round end phase' },
         { status: 400 }
       );
     }
 
-    // Check if there are enough players
-    if (gameData.players.length < 2) {
+    // Check if all rounds are completed
+    if (gameData.currentRound >= gameData.totalRounds) {
       return NextResponse.json(
-        { success: false, error: 'Need at least 2 players to start the game' },
+        { success: false, error: 'All rounds have been completed' },
         { status: 400 }
       );
     }
 
-    // Generate hex colors for the game (288 total hexes: 12 rows × 24 columns)
+    // Advance to next round
+    gameData.currentRound += 1;
+    gameData.currentPhase = 'active';
+
+    // Generate hex colors for the new round
     const hexColors = generateHexColors();
 
-    // Start the game
-    gameData.gameStarted = true;
-    gameData.currentPhase = 'active';
-    gameData.currentRound = 1;
-    gameData.rounds = [];
+    // Create new round
+    const newRound = createNewRound(gameData, gameData.currentRound, hexColors);
+    gameData.rounds.push(newRound);
 
-    // Initialize first round
-    const firstRound = createNewRound(gameData, 1, hexColors);
-    gameData.rounds.push(firstRound);
-
-    // Reset scores
-    gameData.playerScores = {};
-    gameData.players.forEach((p: ShadesSignalsPlayer) => {
-      gameData.playerScores[p.id] = 0;
-    });
+    // Clear round start delay
+    delete gameData.roundStartDelay;
 
     // Save updated game state
     await db
       .update(shadesSignals)
       .set({
-        game_data: gameData,
-        started_at: new Date()
+        game_data: gameData
       })
       .where(eq(shadesSignals.id, gameId));
 
@@ -101,7 +95,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Start game error:', error);
+    console.error('Next round error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -135,7 +129,7 @@ function createNewRound(
   roundNumber: number,
   hexColors: Record<string, string>
 ): ShadesSignalsRound {
-  // Rotate clue giver (start with first player for round 1)
+  // Rotate clue giver
   const clueGiverIndex = (roundNumber - 1) % gameData.players.length;
   const clueGiver = gameData.players[clueGiverIndex];
 
