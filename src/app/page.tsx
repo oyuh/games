@@ -103,7 +103,7 @@ const games: Game[] = [
     key: "shades-and-signals",
     name: "Shades and Signals",
     description: "Guess the color from clues!",
-    available: true,
+    available: false,
     color: "blue",
     fields: [
       { label: "Max Players", name: "maxPlayers", type: "number", min: 2, max: 20, required: true, defaultValue: 2 },
