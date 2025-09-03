@@ -8,12 +8,10 @@ import "./src/env.js";
 const config = {
     typescript: {
         // !! WARN !!
-        // Ignoring build errors is dangerous, but we need this as a temporary workaround
         ignoreBuildErrors: true,
       },
       eslint: {
         // !! WARN !!
-        // Similarly, ignoring ESLint errors is not recommended but helps with deployment
         ignoreDuringBuilds: true,
     },
 };

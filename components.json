@@ -8,8 +8,7 @@
     "css": "src/styles/globals.css",
     "baseColor": "neutral",
     "cssVariables": true,
-    "prefix": ""
-  },
+    "prefix": ""},
   "aliases": {
     "components": "~/components",
     "utils": "~/lib/utils",
