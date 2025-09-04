@@ -1,30 +1,87 @@
 "use client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
 
 export function AboutModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xs sm:max-w-md w-full max-h-[90vh] overflow-y-auto bg-card text-main border border-secondary shadow-xl pt-8 pb-6">
-        <DialogHeader className="w-full p-0 m-0">
-          <DialogTitle className="text-3xl font-extrabold text-center bg-gradient-to-r from-[#7ecbff] via-[#3a6ea7] to-[#7ecbff] bg-[400%_auto] bg-clip-text uppercase tracking-widest mb-2 drop-shadow-lg pt-0">
-            About This Site
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-6 mt-2">
-          <div className="flex flex-col items-center">
-            <span className="inline-block text-lg sm:text-xl font-semibold text-primary mb-2 animate-gradient bg-gradient-to-r from-[#7ecbff] via-[#3a6ea7] to-[#7ecbff] bg-[400%_auto] bg-clip-text text-transparent">
-              Play with Friends!
-            </span>
-            <p className="text-main text-center text-base sm:text-lg leading-relaxed max-w-md">
-              Welcome to{" "}
-              <span className="font-bold text-primary">Lawson&apos;s Games</span> — a modern collection of social board type games to play with friends, online or in person. Enjoy quick setup, beautiful design.
-            </p>
-            <p className="text-main text-center text-base sm:text-lg leading-relaxed max-w-md">
-              I made this because I wanted to play games from TikTok with friends but couldn&apos;t find a good solution for them.
+      <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto bg-card text-card-foreground border border-border shadow-2xl">
+        <div className="flex flex-col items-center space-y-8 py-4">
+          <div className="text-center space-y-4">
+            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center border border-primary/30">
+              <div className="text-4xl">🎮</div>
+            </div>
+
+            <DialogTitle className="text-4xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
+              About This Site
+            </DialogTitle>
+
+            <p className="text-lg text-muted-foreground max-w-md">
+              Welcome to <span className="font-semibold text-primary">Lawson&apos;s Games</span> — a modern collection of social party games perfect for playing with friends!
             </p>
           </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-secondary text-center text-xs">This website may have bugs, please report them accordingly.</span>
+
+          <div className="grid grid-cols-3 gap-4 w-full max-w-sm">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-xl">⚡</span>
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">Quick Setup</p>
+            </div>
+
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-xl">👥</span>
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">Play Together</p>
+            </div>
+
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-xl">🎯</span>
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">Pure Fun</p>
+            </div>
+          </div>
+
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 w-full">
+            <p className="text-sm text-center text-muted-foreground">
+              <span className="font-medium text-primary">Why this exists:</span> I wanted to play those viral TikTok games with friends but couldn&apos;t find a good online version. So I built one!
+            </p>
+          </div>
+
+          <div className="space-y-6 w-full">
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-6">
+              <h3 className="font-semibold text-primary mb-3 flex items-center gap-2">
+                <span>🎯</span> Our Mission
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Create the best online experience for social party games. No downloads, no accounts required, just pure fun with friends whether you&apos;re together or apart.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h4 className="font-semibold text-foreground mb-2 text-sm">🚀 Quick Start</h4>
+                <p className="text-xs text-muted-foreground">
+                  Games start in seconds, not minutes
+                </p>
+              </div>
+
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h4 className="font-semibold text-foreground mb-2 text-sm">📱 Any Device</h4>
+                <p className="text-xs text-muted-foreground">
+                  Phone, tablet, or computer — all work perfectly
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">
+                Found a bug? Have suggestions? Let me know!
+                <br />
+                This site is constantly improving based on player feedback.
+              </p>
+            </div>
           </div>
         </div>
       </DialogContent>

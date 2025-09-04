@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { AboutModal } from "./about-modal";
 
@@ -44,61 +44,118 @@ export function SettingsModal() {
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-card border border-secondary rounded-xl shadow-lg p-4 w-full max-w-xs sm:max-w-md flex flex-col items-center gap-6">
-          <DialogHeader className="w-full">
-            <DialogTitle className="text-3xl font-bold text-primary text-center uppercase tracking-wide">
-              Settings
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto bg-card text-card-foreground border border-border shadow-2xl">
+          <div className="flex flex-col items-center space-y-8 py-4">
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center border border-primary/30">
+                <div className="text-4xl">⚙️</div>
+              </div>
 
-          <div className="w-full bg-secondary/10 rounded-lg p-4 border border-secondary/30 mb-4">
-            <div className="text-base font-bold text-primary border-b border-primary/30 pb-2 mb-3">
-              Appearance
+              <DialogTitle className="text-4xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
+                Settings
+              </DialogTitle>
+
+              <p className="text-lg text-muted-foreground max-w-md">
+                Customize your <span className="font-semibold text-primary">gaming experience</span> to your liking!
+              </p>
             </div>
 
-            <div className="flex flex-col items-center gap-4">
-              <div className="text-sm font-semibold text-primary">Theme</div>
-              <div className="grid grid-cols-3 gap-2 w-full">
-                <Button
-                  size="sm"
-                  type="button"
-                  onClick={() => handleThemeChange('system')}
-                  className={theme === 'system'
-                    ? 'bg-primary text-white font-semibold border-2 border-primary shadow-sm'
-                    : 'bg-secondary/10 hover:bg-secondary/20 text-main border border-secondary/30'
-                  }
-                >
-                  System
-                </Button>
-                <Button
-                  size="sm"
-                  type="button"
-                  onClick={() => handleThemeChange('light')}
-                  className={theme === 'light'
-                    ? 'bg-primary text-white font-semibold border-2 border-primary shadow-sm'
-                    : 'bg-secondary/10 hover:bg-secondary/20 text-main border border-secondary/30'
-                  }
-                >
-                  Light
-                </Button>
-                <Button
-                  size="sm"
-                  type="button"
-                  onClick={() => handleThemeChange('dark')}
-                  className={theme === 'dark'
-                    ? 'bg-primary text-white font-semibold border-2 border-primary shadow-sm'
-                    : 'bg-secondary/10 hover:bg-secondary/20 text-main border border-secondary/30'
-                  }
-                >
-                  Dark
-                </Button>
+            <div className="w-full space-y-6">
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-6">
+                <h3 className="font-semibold text-primary mb-4 flex items-center gap-2">
+                  <span>🎨</span> Appearance
+                </h3>
+
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-foreground mb-3">Theme Preference</div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        onClick={() => handleThemeChange('system')}
+                        className={`p-4 rounded-lg border transition-all text-center ${
+                          theme === 'system'
+                            ? 'border-primary bg-primary/10 shadow-md'
+                            : 'border-border hover:border-primary/50 bg-background'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="text-xl">🖥️</div>
+                          <div className="font-semibold text-sm">System</div>
+                          <div className="text-xs text-muted-foreground">
+                            Auto detect
+                          </div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => handleThemeChange('light')}
+                        className={`p-4 rounded-lg border transition-all text-center ${
+                          theme === 'light'
+                            ? 'border-primary bg-primary/10 shadow-md'
+                            : 'border-border hover:border-primary/50 bg-background'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="text-xl">☀️</div>
+                          <div className="font-semibold text-sm">Light</div>
+                          <div className="text-xs text-muted-foreground">
+                            Bright mode
+                          </div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => handleThemeChange('dark')}
+                        className={`p-4 rounded-lg border transition-all text-center ${
+                          theme === 'dark'
+                            ? 'border-primary bg-primary/10 shadow-md'
+                            : 'border-border hover:border-primary/50 bg-background'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="text-xl">🌙</div>
+                          <div className="font-semibold text-sm">Dark</div>
+                          <div className="text-xs text-muted-foreground">
+                            Night mode
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <h4 className="font-semibold text-foreground mb-2 text-sm">💾 Auto Save</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Settings saved automatically
+                  </p>
+                </div>
+
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <h4 className="font-semibold text-foreground mb-2 text-sm">🔄 Sync</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Works across all your devices
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => setAboutOpen(true)}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                size="lg"
+              >
+                Learn More About This Site 📖
+              </Button>
+
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">
+                  Settings are stored locally in your browser
+                </p>
               </div>
             </div>
           </div>
-
-          <Button type="button" className="w-full mt-2" onClick={() => setAboutOpen(true)}>
-            About
-          </Button>
         </DialogContent>
       </Dialog>
       <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
