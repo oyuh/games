@@ -6,6 +6,7 @@ import { useSessionInfo } from "./_components/session-modal";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
+import { Progress } from "~/components/ui/progress";
 import { imposterCategories } from "~/data/categoryList";
 import Image from "next/image";
 
@@ -45,6 +46,7 @@ interface Game {
   fields: GameField[];
   info?: GameInfo;
   useTeams?: boolean;
+  completion?: number; // For future use, e.g., showing progress bar
 }
 
 const games: Game[] = [
@@ -54,6 +56,7 @@ const games: Game[] = [
     description: "Blend in or find the imposter!",
     available: true,
     color: "blue",
+    completion: 0.9,
     fields: [
       { label: "Category", name: "category", type: "select", options: categoryOptions, required: true },
       { label: "Max Players", name: "maxPlayers", type: "number", min: 3, max: 20, required: true, defaultValue: 8 },
@@ -80,6 +83,7 @@ const games: Game[] = [
     available: true,
     color: "blue",
     useTeams: true,
+    completion: 0.75,
     fields: [
       { label: "Number of Teams", name: "numTeams", type: "number", min: 2, max: 10, required: true, defaultValue: 2 },
       { label: "Points to Win", name: "pointsToWin", type: "number", min: 1, max: 20, required: true, defaultValue: 5 },
@@ -403,6 +407,19 @@ export default function HomePage() {
               <div className="w-full flex flex-col items-center gap-1">
                 <h2 className="text-2xl font-bold animate-gradient bg-gradient-to-r from-[#7ecbff] via-[#3a6ea7] to-[#7ecbff] bg-[400%_auto] bg-clip-text text-transparent text-center uppercase tracking-wide mb-1">{game.name}</h2>
                 <p className="text-secondary font-medium text-center text-base mb-2">{game.description}</p>
+
+                {/* Progress bar for game completion */}
+                {game.completion !== undefined && (
+                  <div className="w-full max-w-40 mb-2 opacity-75">
+                    <Progress
+                      value={game.completion}
+                      showPercentage={true}
+                      variant={game.completion >= 0.8 ? "success" : game.completion >= 0.5 ? "warning" : "default"}
+                      size="sm"
+                    />
+                  </div>
+                )}
+
                 {game.info && (
                   <Button
                     type="button"
