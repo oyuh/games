@@ -16,7 +16,7 @@ export function AboutModal({ open, onOpenChange }: { open: boolean; onOpenChange
             </DialogTitle>
 
             <p className="text-lg text-muted-foreground max-w-md">
-              Welcome to <span className="font-semibold text-primary">Lawson&apos;s Games</span> — a modern collection of social party games perfect for playing with friends!
+              Welcome to <span className="font-semibold text-primary">Lawson&apos;s Games Website</span> — a modern collection of social party games perfect for playing with friends!
             </p>
           </div>
 
@@ -70,7 +70,21 @@ export function AboutModal({ open, onOpenChange }: { open: boolean; onOpenChange
               <div className="bg-card border border-border rounded-lg p-4">
                 <h4 className="font-semibold text-foreground mb-2 text-sm">📱 Any Device</h4>
                 <p className="text-xs text-muted-foreground">
-                  Phone, tablet, or computer — all work perfectly
+                  Anything connected to the internet works, no app needed. UI is functional on both mobile and desktop.
+                </p>
+              </div>
+
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h4 className="font-semibold text-foreground mb-2 text-sm">👥 Play Together</h4>
+                <p className="text-xs text-muted-foreground">
+                  Designed for groups, whether in-person or remote. Just share a link to get started.
+                </p>
+              </div>
+
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h4 className="font-semibold text-foreground mb-2 text-sm">🔒 Privacy First</h4>
+                <p className="text-xs text-muted-foreground">
+                  No accounts, no tracking. Your data is yours. Play anonymously without giving up your privacy.
                 </p>
               </div>
             </div>
