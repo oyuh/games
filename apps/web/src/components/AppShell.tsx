@@ -3,10 +3,10 @@ import { Outlet } from "react-router-dom";
 
 export function AppShell() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar fluid rounded className="border-b">
+    <div className="min-h-screen bg-slate-950 text-slate-100 [background-image:radial-gradient(circle_at_20%_0%,rgba(31,150,255,0.2),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(14,165,233,0.15),transparent_35%)]">
+      <Navbar fluid rounded className="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
         <Navbar.Brand href="/">
-          <span className="self-center whitespace-nowrap text-xl font-semibold text-[var(--color-primary-500)]">
+          <span className="self-center whitespace-nowrap text-xl font-bold tracking-wide text-[var(--color-primary-500)]">
             Games! 🎲
           </span>
         </Navbar.Brand>

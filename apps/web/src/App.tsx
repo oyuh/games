@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { getOrCreateSessionId } from "./lib/session";
 import { HomePage } from "./pages/HomePage";
+import { HomePageStylePreview } from "./pages/HomePageStylePreview";
 import { ImposterPage } from "./pages/ImposterPage";
 import { PasswordBeginPage } from "./pages/PasswordBeginPage";
 import { PasswordGamePage } from "./pages/PasswordGamePage";
@@ -13,6 +14,23 @@ import { PasswordResultsPage } from "./pages/PasswordResultsPage";
 const sessionId = getOrCreateSessionId();
 
 export function App() {
+  const styleOnly = import.meta.env.VITE_STYLE_ONLY === "true";
+
+  if (styleOnly) {
+    return (
+      <>
+        <ThemeModeScript />
+        <BrowserRouter>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="*" element={<HomePageStylePreview />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </>
+    );
+  }
+
   return (
     <>
       <ThemeModeScript />

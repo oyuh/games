@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "pnpm --filter @games/api build"
 
 [deploy]
-startCommand = "node apps/api/dist/apps/api/src/index.js"
+startCommand = "pnpm --filter @games/api exec tsx src/index.ts"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"

@@ -1,5 +1,5 @@
 import { schema as zeroSchema } from "@games/shared";
-import * as drizzleSchema from "@games/shared";
+import { imposterGames, passwordGames, sessions } from "@games/shared";
 import { zeroDrizzle } from "@rocicorp/zero/server/adapters/drizzle";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -9,7 +9,11 @@ const pool = new Pool({
 });
 
 export const drizzleClient = drizzle(pool, {
-  schema: drizzleSchema
+  schema: {
+    sessions,
+    imposterGames,
+    passwordGames
+  }
 });
 
 export const dbProvider = zeroDrizzle(zeroSchema, drizzleClient);

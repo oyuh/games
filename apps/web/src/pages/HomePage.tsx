@@ -146,86 +146,104 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const cardClass = "border border-slate-700/70 !bg-slate-900/75 text-slate-100 shadow-[0_0_40px_rgba(15,23,42,0.5)] backdrop-blur";
+  const primaryButtonClass = "bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]";
+
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card>
-        <h2 className="text-xl font-semibold">Start playing</h2>
-        <p className="text-sm text-gray-600">No sign-up. Play as guest or save a name on this device.</p>
-        <form className="mt-3 space-y-3" onSubmit={saveName}>
-          <div>
-            <Label htmlFor="name" value="Display name (optional)" />
-            <TextInput
-              id="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              maxLength={30}
-              placeholder="Player"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]">
-              Save name
-            </Button>
-            <Button type="button" color="light" onClick={() => void playAsGuest()} disabled={pendingAction !== null}>
-              Play as guest
-            </Button>
-          </div>
-        </form>
-        <p className="text-xs text-gray-500">
-          Your profile is cached locally with your unique player ID and preferred name.
-          {savedName ? ` Saved as: ${savedName}.` : " Currently using guest profile."}
-        </p>
-      </Card>
+    <div className="space-y-5">
+      <section className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-[0_0_60px_rgba(31,150,255,0.08)] md:p-6">
+        <p className="text-xs uppercase tracking-[0.35em] text-sky-300">Game Hub</p>
+        <h1 className="mt-2 text-3xl font-extrabold uppercase tracking-wider text-sky-300 md:text-4xl">Start a game</h1>
+        <p className="mt-2 text-sm text-slate-400">Create a room, share the code, and play instantly.</p>
+      </section>
 
-      <Card>
-        <h2 className="text-xl font-semibold">Create game</h2>
-        <div className="mt-3 flex flex-col gap-2">
-          <Button className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]" onClick={createImposter} isProcessing={pendingAction === "create-imposter"} disabled={pendingAction !== null}>
-            Create Imposter
-          </Button>
-          <Button color="light" onClick={createPassword} isProcessing={pendingAction === "create-password"} disabled={pendingAction !== null}>
-            Create Password
-          </Button>
-        </div>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className={cardClass}>
+          <h2 className="text-xl font-bold uppercase tracking-wide text-sky-300">Start playing</h2>
+          <p className="text-sm text-slate-400">No sign-up. Play as guest or save a name on this device.</p>
+          <form className="mt-3 space-y-3" onSubmit={saveName}>
+            <div>
+              <Label htmlFor="name" value="Display name (optional)" className="text-slate-300" />
+              <TextInput
+                id="name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                maxLength={30}
+                placeholder="Player"
+                className="[&_input]:border-slate-700 [&_input]:bg-slate-800 [&_input]:text-slate-100 [&_input]:placeholder:text-slate-500"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" className={primaryButtonClass}>
+                Save name
+              </Button>
+              <Button type="button" color="light" onClick={() => void playAsGuest()} disabled={pendingAction !== null}>
+                Play as guest
+              </Button>
+            </div>
+          </form>
+          <p className="text-xs text-slate-400">
+            Your profile is cached locally with your unique player ID and preferred name.
+            {savedName ? ` Saved as: ${savedName}.` : " Currently using guest profile."}
+          </p>
+        </Card>
 
-      <Card className="md:col-span-2">
-        <h2 className="text-xl font-semibold">Join game</h2>
+        <Card className={cardClass}>
+          <h2 className="text-xl font-bold uppercase tracking-wide text-sky-300">Create game</h2>
+          <div className="mt-3 flex flex-col gap-2">
+            <Button className={primaryButtonClass} onClick={createImposter} isProcessing={pendingAction === "create-imposter"} disabled={pendingAction !== null}>
+              Create Imposter
+            </Button>
+            <Button color="light" onClick={createPassword} isProcessing={pendingAction === "create-password"} disabled={pendingAction !== null}>
+              Create Password
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      <Card className={cardClass}>
+        <h2 className="text-xl font-bold uppercase tracking-wide text-sky-300">Join game</h2>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <TextInput
             value={joinCode}
             onChange={(event) => setJoinCode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
             placeholder="Enter join code"
+            className="[&_input]:border-slate-700 [&_input]:bg-slate-800 [&_input]:text-slate-100 [&_input]:placeholder:text-slate-500"
           />
-          <Button className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]" onClick={joinAny} isProcessing={pendingAction === "join"} disabled={pendingAction !== null}>
+          <Button className={primaryButtonClass} onClick={joinAny} isProcessing={pendingAction === "join"} disabled={pendingAction !== null}>
             Join
           </Button>
         </div>
-        {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="mt-2 text-sm text-red-400">{error}</p> : null}
       </Card>
 
-      <Card className="md:col-span-2">
+      <Card className={cardClass}>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xl font-semibold">Recent games</h2>
-          <Button color="light" size="xs" onClick={() => {
-            clearRecentGames();
-            setRecentGames([]);
-          }} disabled={!recentGames.length}>
+          <h2 className="text-xl font-bold uppercase tracking-wide text-sky-300">Recent games</h2>
+          <Button
+            color="light"
+            size="xs"
+            onClick={() => {
+              clearRecentGames();
+              setRecentGames([]);
+            }}
+            disabled={!recentGames.length}
+          >
             Clear
           </Button>
         </div>
         {recentGames.length ? (
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {recentGames.map((game) => (
-              <div key={`${game.gameType}-${game.id}`} className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
+              <div key={`${game.gameType}-${game.id}`} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/70 p-3">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide text-gray-700">{game.gameType}</p>
-                  <p className="text-lg font-bold">{game.code}</p>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-slate-300">{game.gameType}</p>
+                  <p className="text-lg font-bold tracking-widest text-sky-300">{game.code}</p>
                 </div>
                 <Button
                   as={Link}
                   to={game.gameType === "imposter" ? `/imposter/${game.id}` : `/password/${game.id}/begin`}
-                  className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]"
+                  className={primaryButtonClass}
                 >
                   Rejoin
                 </Button>
@@ -233,7 +251,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
             ))}
           </div>
         ) : (
-          <p className="mt-3 text-sm text-gray-500">No recent games yet. Create or join one to pin it here.</p>
+          <p className="mt-3 text-sm text-slate-400">No recent games yet. Create or join one to pin it here.</p>
         )}
       </Card>
     </div>
