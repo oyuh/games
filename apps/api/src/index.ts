@@ -40,7 +40,7 @@ app.post("/api/zero/mutate", async (c) => {
   return c.json(result);
 });
 
-const port = Number(process.env.API_PORT ?? 3001);
+const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
 const server = serve(
   {
     fetch: app.fetch,

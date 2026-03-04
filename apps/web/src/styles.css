@@ -1,8 +1,9 @@
 @import "tailwindcss";
+@import "flowbite/src/themes/default";
 @plugin "flowbite/plugin";
 
-@source "../../node_modules/flowbite";
-@source "../../node_modules/flowbite-react";
+@source "../../../node_modules/flowbite";
+@source "../../../node_modules/flowbite-react/dist";
 
 :root {
   --color-primary-50: #e7f4ff;
