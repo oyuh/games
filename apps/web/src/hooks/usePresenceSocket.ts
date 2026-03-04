@@ -16,7 +16,7 @@ export function usePresenceSocket({
       return;
     }
 
-    const url = import.meta.env.VITE_PRESENCE_WS_URL ?? "ws://localhost:3002";
+    const url = import.meta.env.VITE_PRESENCE_WS_URL ?? "ws://localhost:3001/presence";
     const ws = new WebSocket(url);
 
     const sendPresence = () => {

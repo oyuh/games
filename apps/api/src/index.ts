@@ -41,11 +41,7 @@ app.post("/api/zero/mutate", async (c) => {
 });
 
 const port = Number(process.env.API_PORT ?? 3001);
-const presencePort = Number(process.env.PRESENCE_PORT ?? 3002);
-
-startPresenceServer(presencePort);
-
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     port
@@ -54,3 +50,5 @@ serve(
     console.log(`API listening on http://localhost:${port}`);
   }
 );
+
+startPresenceServer(server, "/presence");

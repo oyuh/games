@@ -12,8 +12,20 @@ type PresenceMessage = {
 
 const heartbeatMs = 10_000;
 
-export function startPresenceServer(port: number) {
-  const wss = new WebSocketServer({ port });
+export function startPresenceServer(server: { on: (...args: any[]) => void }, path = "/presence") {
+  const wss = new WebSocketServer({ noServer: true });
+
+  server.on("upgrade", (request: any, socket: any, head: any) => {
+    const requestUrl = request.url ?? "";
+    if (!requestUrl.startsWith(path)) {
+      socket.destroy();
+      return;
+    }
+
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit("connection", ws, request);
+    });
+  });
 
   wss.on("connection", (socket) => {
     let lastSessionId: string | null = null;
@@ -62,6 +74,6 @@ export function startPresenceServer(port: number) {
     });
   });
 
-  console.log(`Presence WS listening on ws://localhost:${port}`);
+  console.log(`Presence WS mounted at ${path}`);
   return wss;
 }

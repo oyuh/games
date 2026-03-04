@@ -2,7 +2,7 @@
 
 This guide is for deploying this monorepo with:
 - **Web (React/Vite)** on **Vercel**
-- **API + Presence WebSocket (Hono/Node)** on **Railway**
+- **API + Presence WebSocket (Hono/Node)** on **Railway** (single service)
 - **Postgres** on Railway Postgres or Neon
 
 It is written as a setup runbook so you can wire everything once and then get automated deploys from Git pushes.
@@ -12,7 +12,7 @@ It is written as a setup runbook so you can wire everything once and then get au
 ## 1) Deployment architecture
 
 - `apps/web` → static frontend on Vercel
-- `apps/api` → Node server on Railway (serves HTTP API + Presence WS)
+- `apps/api` → Node server on Railway (serves HTTP API + Presence WS at `/presence`)
 - DB → Postgres (`DATABASE_URL`)
 - Zero cache URL used by web client via `VITE_ZERO_CACHE_URL`
 
@@ -52,9 +52,8 @@ Set these in Railway API service:
 ```bash
 NODE_ENV=production
 
-# API ports (Railway provides PORT automatically for HTTP)
+# API port (Railway provides PORT automatically for HTTP)
 API_PORT=${{PORT}}
-PRESENCE_PORT=3002
 
 # Database
 DATABASE_URL=<railway_or_neon_postgres_url>
@@ -76,16 +75,10 @@ ZERO_ADMIN_PASSWORD=<strong_secret>
 
 ## 3.4 Presence WebSocket
 
-You have two options:
+Presence is served by the API service on the same public domain and port at path `/presence`.
 
-- **Option A (recommended): same domain + reverse proxy path**
-  - Route WS to `/presence` internally to `PRESENCE_PORT`.
-  - Client uses `wss://<api-domain>/presence`.
-- **Option B: separate WS domain/service**
-  - Expose WS service/port separately.
-  - Client uses that `wss://...` URL directly.
-
-If Railway routing setup for dual ports is inconvenient, split Presence into a second Railway service.
+- Client URL should be: `wss://<api-domain>/presence`
+- No separate Presence Railway service/domain is required.
 
 ---
 
@@ -102,7 +95,7 @@ If Railway routing setup for dual ports is inconvenient, split Presence into a s
 
 ```bash
 VITE_ZERO_CACHE_URL=<your_zero_cache_url>
-VITE_PRESENCE_WS_URL=wss://<your_presence_host_or_path>
+VITE_PRESENCE_WS_URL=wss://<api-domain>/presence
 ```
 
 5. Add SPA fallback rewrite in Vercel project settings (or `vercel.json`):
@@ -166,7 +159,7 @@ Run after each production deploy:
 
 ## 9) Common gotchas
 
-- `VITE_PRESENCE_WS_URL` must be `wss://` in production.
+- `VITE_PRESENCE_WS_URL` must be `wss://` in production and should point to `/presence` on your API domain.
 - Ensure frontend can reach the same Zero cache URL/API environment intended for production.
 - If deep links (`/imposter/:id`) 404 on refresh, SPA rewrite is missing.
 - Keep `DATABASE_URL` and `ZERO_*_DB` aligned unless intentionally split.
