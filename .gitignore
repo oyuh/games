@@ -1,0 +1,10 @@
+node_modules
+.pnpm-store
+.turbo
+.env
+.env.*
+!.env.example
+**/dist
+**/.DS_Store
+coverage
+zero-data

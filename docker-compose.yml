@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: games
+    ports:
+      - "5432:5432"
+    command: postgres -c wal_level=logical
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+  zero-cache:
+    image: rocicorp/zero:0.25.13
+    depends_on:
+      - postgres
+    ports:
+      - "4848:4848"
+    environment:
+      ZERO_UPSTREAM_DB: postgres://postgres:postgres@postgres:5432/games
+      ZERO_CVR_DB: postgres://postgres:postgres@postgres:5432/games
+      ZERO_CHANGE_DB: postgres://postgres:postgres@postgres:5432/games
+      ZERO_REPLICA_FILE: /data/zero.db
+      ZERO_ADMIN_PASSWORD: dev-password
+      ZERO_QUERY_URL: http://host.docker.internal:3001/api/zero/query
+      ZERO_MUTATE_URL: http://host.docker.internal:3001/api/zero/mutate
+    volumes:
+      - zero-data:/data
+
+volumes:
+  pg-data:
+  zero-data:

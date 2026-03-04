@@ -1,0 +1,22 @@
+@import "tailwindcss";
+@plugin "flowbite/plugin";
+
+@source "../../node_modules/flowbite";
+@source "../../node_modules/flowbite-react";
+
+:root {
+  --color-primary-50: #e7f4ff;
+  --color-primary-100: #cbe7ff;
+  --color-primary-200: #9fd3ff;
+  --color-primary-300: #72beff;
+  --color-primary-400: #46a9ff;
+  --color-primary-500: #1f96ff;
+  --color-primary-600: #0f7de0;
+  --color-primary-700: #0c63b3;
+  --color-primary-800: #094986;
+  --color-primary-900: #06305a;
+}
+
+body {
+  min-height: 100vh;
+}

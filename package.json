@@ -1,0 +1,19 @@
+{
+  "name": "games-refac",
+  "private": true,
+  "packageManager": "pnpm@10.6.0",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:push": "pnpm --filter @games/shared db:push",
+    "db:generate": "pnpm --filter @games/shared db:generate",
+    "db:studio": "pnpm --filter @games/shared db:studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.2"
+  }
+}
