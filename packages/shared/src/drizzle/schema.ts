@@ -1,4 +1,5 @@
 import {
+  bigint,
   index,
   integer,
   jsonb,
@@ -19,8 +20,8 @@ export const sessions = pgTable(
     name: text("name"),
     gameType: gameTypeEnum("game_type"),
     gameId: text("game_id"),
-    createdAt: integer("created_at").notNull(),
-    lastSeen: integer("last_seen").notNull()
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+    lastSeen: bigint("last_seen", { mode: "number" }).notNull()
   },
   (table) => ({
     gameLookupIdx: index("sessions_game_lookup_idx").on(table.gameType, table.gameId),
@@ -55,8 +56,8 @@ export const imposterGames = pgTable(
       votingDurationSec: 45,
       phaseEndsAt: null
     }),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull()
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull()
   },
   (table) => ({
     codeUnique: uniqueIndex("imposter_code_unique").on(table.code)
@@ -84,8 +85,8 @@ export const passwordGames = pgTable(
       endsAt: number;
     } | null>().default(null),
     settings: jsonb("settings").$type<{ targetScore: number; turnTeamIndex: number; roundDurationSec: number }>().notNull().default({ targetScore: 10, turnTeamIndex: 0, roundDurationSec: 75 }),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull()
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull()
   },
   (table) => ({
     codeUnique: uniqueIndex("password_code_unique").on(table.code)
