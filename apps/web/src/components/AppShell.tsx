@@ -1,5 +1,6 @@
 import { Navbar } from "flowbite-react";
 import { Outlet } from "react-router-dom";
+import { ConnectionDebugPanel } from "./shared/ConnectionDebugPanel";
 
 export function AppShell() {
   return (
@@ -14,6 +15,7 @@ export function AppShell() {
       <main className="mx-auto max-w-5xl p-4 md:p-6">
         <Outlet />
       </main>
+      <ConnectionDebugPanel />
     </div>
   );
 }
