@@ -1,6 +1,7 @@
 [build]
 builder = "NIXPACKS"
 buildCommand = "pnpm --filter @games/api build"
+watchPatterns = ["/apps/api/**", "/packages/shared/**"]
 
 [deploy]
 startCommand = "pnpm --filter @games/api exec tsx src/index.ts"
