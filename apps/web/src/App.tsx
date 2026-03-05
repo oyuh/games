@@ -1,7 +1,8 @@
+import { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
-import type { ConnectionState, Zero } from "@rocicorp/zero";
+import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import {
@@ -23,6 +24,24 @@ import { PasswordResultsPage } from "./pages/PasswordResultsPage";
 const sessionId = getOrCreateSessionId();
 const API_METADATA_POLL_MS = 30_000;
 
+const zeroCacheURL = import.meta.env.VITE_ZERO_CACHE_URL ?? "http://localhost:4848";
+const presenceURL = import.meta.env.VITE_PRESENCE_WS_URL ?? "ws://localhost:3001/presence";
+const apiInfoURL = resolveApiBuildInfoURL(
+  import.meta.env.VITE_PRESENCE_WS_URL ?? "ws://localhost:3001/presence"
+);
+
+/**
+ * Module-level Zero singleton — created exactly once per page load.
+ * Never recreating it prevents ZeroProvider from resetting the mutation
+ * counter, which would cause "Expected: N, got 0" push-processor errors.
+ */
+const zero = new Zero({
+  userID: sessionId,
+  cacheURL: zeroCacheURL,
+  schema,
+  mutators,
+});
+
 function resolveApiBuildInfoURL(presenceURL: string) {
   try {
     const parsed = new URL(presenceURL);
@@ -42,10 +61,6 @@ function stringifyError(error: unknown) {
 
 export function App() {
   const styleOnly = import.meta.env.VITE_STYLE_ONLY === "true";
-  const zeroCacheURL = import.meta.env.VITE_ZERO_CACHE_URL ?? "http://localhost:4848";
-  const presenceURL = import.meta.env.VITE_PRESENCE_WS_URL ?? "ws://localhost:3001/presence";
-  const apiInfoURL = resolveApiBuildInfoURL(presenceURL);
-  const [zeroInstance, setZeroInstance] = useState<Zero | null>(null);
 
   useEffect(() => {
     initConnectionDebug({
@@ -62,7 +77,7 @@ export function App() {
     });
 
     return startGlobalConnectionDebugCapture();
-  }, [apiInfoURL, presenceURL, zeroCacheURL]);
+  }, []);
 
   useEffect(() => {
     if (styleOnly) {
@@ -152,18 +167,20 @@ export function App() {
   }, [apiInfoURL, styleOnly]);
 
   useEffect(() => {
-    if (!zeroInstance) {
-      return;
-    }
+    addConnectionDebugEvent({
+      level: "info",
+      source: "zero",
+      message: "Zero client initialized"
+    });
 
     const mapAndTrack = (state: ConnectionState) => {
       setZeroConnectionState(state);
     };
 
-    mapAndTrack(zeroInstance.connection.state.current);
+    mapAndTrack(zero.connection.state.current);
 
-    const unsubscribeConnection = zeroInstance.connection.state.subscribe(mapAndTrack);
-    const unsubscribeOnline = zeroInstance.onOnline((online) => {
+    const unsubscribeConnection = zero.connection.state.subscribe(mapAndTrack);
+    const unsubscribeOnline = zero.onOnline((online) => {
       addConnectionDebugEvent({
         level: online ? "info" : "warn",
         source: "zero.online",
@@ -175,15 +192,6 @@ export function App() {
       unsubscribeConnection();
       unsubscribeOnline();
     };
-  }, [zeroInstance]);
-
-  const initZero = useCallback((zero: Zero) => {
-    setZeroInstance(zero);
-    addConnectionDebugEvent({
-      level: "info",
-      source: "zero",
-      message: "Zero client initialized"
-    });
   }, []);
 
   if (styleOnly) {
@@ -199,13 +207,7 @@ export function App() {
   }
 
   return (
-    <ZeroProvider
-        init={initZero}
-        userID={sessionId}
-        cacheURL={zeroCacheURL}
-        schema={schema}
-        mutators={mutators}
-      >
+    <ZeroProvider zero={zero}>
         <BrowserRouter>
           <Routes>
             <Route element={<AppShell />}>
