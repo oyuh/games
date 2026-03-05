@@ -1,5 +1,3 @@
-import { Button } from "flowbite-react";
-
 export function ImposterLobbyActions({
   canStart,
   onStart,
@@ -11,12 +9,12 @@ export function ImposterLobbyActions({
 }) {
   return (
     <div className="flex gap-2">
-      <Button className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]" disabled={!canStart} onClick={onStart}>
+      <button className="btn btn-primary" disabled={!canStart} onClick={onStart}>
         Start round
-      </Button>
-      <Button color="light" onClick={onLeave}>
+      </button>
+      <button className="btn btn-muted" onClick={onLeave}>
         Leave
-      </Button>
+      </button>
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import { mutators, queries } from "@games/shared";
-import { Button, Card, Label, TextInput } from "flowbite-react";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { nanoid } from "nanoid";
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { FaGithub } from "react-icons/fa";
+import { SiDiscord } from "react-icons/si";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, setStoredName } from "../lib/session";
 
 export function HomePage({ sessionId }: { sessionId: string }) {
@@ -103,12 +104,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       const imposterGame = imposterMatches[0];
       if (imposterGame) {
         const result = await zero
-          .mutate(
-            mutators.imposter.join({
-              gameId: imposterGame.id,
-              sessionId
-            })
-          )
+          .mutate(mutators.imposter.join({ gameId: imposterGame.id, sessionId }))
           .server;
         if (result.type === "error") {
           setError(result.error.message);
@@ -123,12 +119,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       const passwordGame = passwordMatches[0];
       if (passwordGame) {
         const result = await zero
-          .mutate(
-            mutators.password.join({
-              gameId: passwordGame.id,
-              sessionId
-            })
-          )
+          .mutate(mutators.password.join({ gameId: passwordGame.id, sessionId }))
           .server;
         if (result.type === "error") {
           setError(result.error.message);
@@ -146,114 +137,251 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     }
   };
 
-  const cardClass = "border border-slate-700/70 !bg-slate-900/75 text-slate-100 shadow-[0_0_40px_rgba(15,23,42,0.5)] backdrop-blur";
-  const primaryButtonClass = "bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]";
-
   return (
-    <div className="space-y-5">
-      <section className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-[0_0_60px_rgba(31,150,255,0.08)] md:p-6">
-        <p className="text-xs uppercase tracking-[0.35em] text-sky-300">Game Hub</p>
-        <h1 className="mt-2 text-3xl font-extrabold uppercase tracking-wider text-sky-300 md:text-4xl">Start a game</h1>
-        <p className="mt-2 text-sm text-slate-400">Create a room, share the code, and play instantly.</p>
-      </section>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className={cardClass}>
-          <h2 className="text-xl font-bold uppercase tracking-wide text-sky-300">Start playing</h2>
-          <p className="text-sm text-slate-400">No sign-up. Play as guest or save a name on this device.</p>
-          <form className="mt-3 space-y-3" onSubmit={saveName}>
-            <div>
-              <Label htmlFor="name" value="Display name (optional)" className="text-slate-300" />
-              <TextInput
-                id="name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={30}
-                placeholder="Player"
-                className="[&_input]:border-slate-700 [&_input]:bg-slate-800 [&_input]:text-slate-100 [&_input]:placeholder:text-slate-500"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" className={primaryButtonClass}>
-                Save name
-              </Button>
-              <Button type="button" color="light" onClick={() => void playAsGuest()} disabled={pendingAction !== null}>
-                Play as guest
-              </Button>
-            </div>
-          </form>
-          <p className="text-xs text-slate-400">
-            Your profile is cached locally with your unique player ID and preferred name.
-            {savedName ? ` Saved as: ${savedName}.` : " Currently using guest profile."}
-          </p>
-        </Card>
-
-        <Card className={cardClass}>
-          <h2 className="text-xl font-bold uppercase tracking-wide text-sky-300">Create game</h2>
-          <div className="mt-3 flex flex-col gap-2">
-            <Button className={primaryButtonClass} onClick={createImposter} isProcessing={pendingAction === "create-imposter"} disabled={pendingAction !== null}>
-              Create Imposter
-            </Button>
-            <Button color="light" onClick={createPassword} isProcessing={pendingAction === "create-password"} disabled={pendingAction !== null}>
-              Create Password
-            </Button>
-          </div>
-        </Card>
+    <main className="min-h-[80vh] flex flex-col items-center justify-start px-4 py-8 relative">
+      {/* Heading */}
+      <div className="mb-8 text-center">
+        <h1 className="gradient-heading text-4xl font-extrabold uppercase tracking-widest mb-2">
+          Start A Game
+        </h1>
+        <p style={{ color: "var(--secondary)", fontSize: "0.95rem" }}>
+          Create a room, share the code, play instantly.
+        </p>
       </div>
 
-      <Card className={cardClass}>
-        <h2 className="text-xl font-bold uppercase tracking-wide text-sky-300">Join game</h2>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <TextInput
-            value={joinCode}
-            onChange={(event) => setJoinCode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
-            placeholder="Enter join code"
-            className="[&_input]:border-slate-700 [&_input]:bg-slate-800 [&_input]:text-slate-100 [&_input]:placeholder:text-slate-500"
-          />
-          <Button className={primaryButtonClass} onClick={joinAny} isProcessing={pendingAction === "join"} disabled={pendingAction !== null}>
-            Join
-          </Button>
-        </div>
-        {error ? <p className="mt-2 text-sm text-red-400">{error}</p> : null}
-      </Card>
+      {/* Cards grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
 
-      <Card className={cardClass}>
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xl font-bold uppercase tracking-wide text-sky-300">Recent games</h2>
-          <Button
-            color="light"
-            size="xs"
-            onClick={() => {
-              clearRecentGames();
-              setRecentGames([]);
-            }}
-            disabled={!recentGames.length}
-          >
-            Clear
-          </Button>
-        </div>
-        {recentGames.length ? (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {recentGames.map((game) => (
-              <div key={`${game.gameType}-${game.id}`} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/70 p-3">
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide text-slate-300">{game.gameType}</p>
-                  <p className="text-lg font-bold tracking-widest text-sky-300">{game.code}</p>
-                </div>
-                <Button
-                  as={Link}
-                  to={game.gameType === "imposter" ? `/imposter/${game.id}` : `/password/${game.id}/begin`}
-                  className={primaryButtonClass}
-                >
-                  Rejoin
-                </Button>
-              </div>
-            ))}
+        {/* ── Profile card ─────────────────────────────────── */}
+        <div className="card p-6 flex flex-col gap-4">
+          <div>
+            <h2 className="gradient-heading text-xl font-bold uppercase tracking-widest mb-1">
+              Profile
+            </h2>
+            <p style={{ color: "var(--secondary)", fontSize: "0.8rem" }}>
+              Set your display name for rooms.
+            </p>
           </div>
-        ) : (
-          <p className="mt-3 text-sm text-slate-400">No recent games yet. Create or join one to pin it here.</p>
-        )}
-      </Card>
-    </div>
+          <div className="panel flex flex-col gap-3">
+            {savedName && (
+              <p style={{ color: "var(--muted-foreground)", fontSize: "0.8rem" }}>
+                Playing as: <strong style={{ color: "var(--primary)" }}>{savedName}</strong>
+              </p>
+            )}
+            <form className="flex flex-col gap-2" onSubmit={saveName}>
+              <label style={{ color: "var(--muted-foreground)", fontSize: "0.8rem", fontWeight: 600 }}>
+                Your name
+              </label>
+              <input
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter display name"
+                maxLength={32}
+              />
+              <div className="flex gap-2 mt-1">
+                <button type="submit" className="btn btn-primary flex-1">
+                  Save
+                </button>
+                <button type="button" className="btn btn-muted flex-1" onClick={() => void playAsGuest()}>
+                  Guest
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* ── Imposter card ─────────────────────────────────── */}
+        <div className="card p-6 flex flex-col gap-4">
+          <div>
+            <h2 className="gradient-heading text-xl font-bold uppercase tracking-widest mb-1">
+              Imposter
+            </h2>
+            <p style={{ color: "var(--secondary)", fontSize: "0.8rem" }}>
+              One player is the imposter. Give clues, find the liar, vote them out.
+            </p>
+          </div>
+          <div className="panel flex-1 flex flex-col gap-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
+            <div className="flex items-center gap-2">
+              <span style={{ color: "var(--primary)" }}>•</span> 4–10 players
+            </div>
+            <div className="flex items-center gap-2">
+              <span style={{ color: "var(--primary)" }}>•</span> Secret word + clues
+            </div>
+            <div className="flex items-center gap-2">
+              <span style={{ color: "var(--primary)" }}>•</span> Multiple rounds
+            </div>
+          </div>
+          <button
+            className="btn btn-primary w-full mt-auto"
+            onClick={() => void createImposter()}
+            disabled={pendingAction !== null}
+          >
+            {pendingAction === "create-imposter" ? "Creating…" : "Create Imposter Room"}
+          </button>
+        </div>
+
+        {/* ── Password card ─────────────────────────────────── */}
+        <div className="card p-6 flex flex-col gap-4">
+          <div>
+            <h2 className="gradient-heading text-xl font-bold uppercase tracking-widest mb-1">
+              Password
+            </h2>
+            <p style={{ color: "var(--secondary)", fontSize: "0.8rem" }}>
+              Teams take turns giving one-word clues to guess the secret word.
+            </p>
+          </div>
+          <div className="panel flex-1 flex flex-col gap-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
+            <div className="flex items-center gap-2">
+              <span style={{ color: "var(--primary)" }}>•</span> Team-based
+            </div>
+            <div className="flex items-center gap-2">
+              <span style={{ color: "var(--primary)" }}>•</span> One-word clues only
+            </div>
+            <div className="flex items-center gap-2">
+              <span style={{ color: "var(--primary)" }}>•</span> Timed rounds
+            </div>
+          </div>
+          <button
+            className="btn btn-primary w-full mt-auto"
+            onClick={() => void createPassword()}
+            disabled={pendingAction !== null}
+          >
+            {pendingAction === "create-password" ? "Creating…" : "Create Password Room"}
+          </button>
+        </div>
+
+        {/* ── Join card ─────────────────────────────────────── */}
+        <div className="card p-6 flex flex-col gap-4">
+          <div>
+            <h2 className="gradient-heading text-xl font-bold uppercase tracking-widest mb-1">
+              Join Game
+            </h2>
+            <p style={{ color: "var(--secondary)", fontSize: "0.8rem" }}>
+              Have a code? Jump into an existing room.
+            </p>
+          </div>
+          <div className="panel flex flex-col gap-3">
+            <input
+              className="input"
+              value={joinCode}
+              onChange={(e) =>
+                setJoinCode(
+                  e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, "")
+                    .slice(0, 6)
+                )
+              }
+              placeholder="Enter join code"
+              maxLength={6}
+            />
+            <button
+              className="btn btn-primary w-full"
+              onClick={() => void joinAny()}
+              disabled={pendingAction !== null}
+            >
+              {pendingAction === "join" ? "Joining…" : "Join"}
+            </button>
+            {error && (
+              <p style={{ color: "#f87171", fontSize: "0.8rem" }}>{error}</p>
+            )}
+          </div>
+        </div>
+
+        {/* ── Recent games card ─────────────────────────────── */}
+        <div className="card p-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="gradient-heading text-xl font-bold uppercase tracking-widest">
+              Recent
+            </h2>
+            <button
+              className="btn btn-muted"
+              style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}
+              onClick={() => {
+                clearRecentGames();
+                setRecentGames([]);
+              }}
+              disabled={!recentGames.length}
+            >
+              Clear
+            </button>
+          </div>
+          {recentGames.length ? (
+            <div className="panel flex flex-col gap-2">
+              {recentGames.map((game) => (
+                <div
+                  key={`${game.gameType}-${game.id}`}
+                  className="flex items-center justify-between gap-2"
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "0.5rem",
+                    background: "color-mix(in srgb, var(--primary) 8%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
+                  }}
+                >
+                  <div>
+                    <p style={{ fontSize: "0.7rem", color: "var(--secondary)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      {game.gameType}
+                    </p>
+                    <p style={{ fontSize: "1rem", fontWeight: 700, letterSpacing: "0.15em", color: "var(--primary)" }}>
+                      {game.code}
+                    </p>
+                  </div>
+                  <Link
+                    to={game.gameType === "imposter" ? `/imposter/${game.id}` : `/password/${game.id}/begin`}
+                    className="btn btn-ghost"
+                    style={{ fontSize: "0.75rem", padding: "0.3rem 0.7rem" }}
+                  >
+                    Rejoin
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: "var(--secondary)", fontSize: "0.85rem" }}>
+              No recent games yet.
+            </p>
+          )}
+        </div>
+
+        {/* ── Social / Links card ───────────────────────────── */}
+        <div className="card p-6 flex flex-col gap-4">
+          <div>
+            <h2 className="gradient-heading text-xl font-bold uppercase tracking-widest mb-1">
+              Links
+            </h2>
+            <p style={{ color: "var(--secondary)", fontSize: "0.8rem" }}>
+              Stay connected and follow updates.
+            </p>
+          </div>
+          <div className="panel flex flex-col gap-2">
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="social-link"
+            >
+              <span className="flex items-center gap-2">
+                <FaGithub size={16} /> GitHub
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "var(--secondary)" }}>→</span>
+            </a>
+            <a
+              href="https://discord.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="social-link"
+            >
+              <span className="flex items-center gap-2">
+                <SiDiscord size={16} /> Discord
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "var(--secondary)" }}>→</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </main>
   );
 }

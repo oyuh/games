@@ -10,8 +10,79 @@ import { startPresenceServer } from "./presence-server";
 config({ path: "../../.env" });
 
 const app = new Hono();
+const apiStartedAt = new Date().toISOString();
+
+function firstNonEmpty(values: Array<string | undefined>) {
+  for (const value of values) {
+    if (value && value.trim()) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
+function detectPlatform() {
+  if (process.env.VERCEL === "1") {
+    return "vercel";
+  }
+  if (process.env.RAILWAY_ENVIRONMENT) {
+    return "railway";
+  }
+  return "unknown";
+}
 
 app.get("/health", (c) => c.json({ ok: true }));
+
+app.get("/debug/build-info", (c) => {
+  const commitSha = firstNonEmpty([
+    process.env.VERCEL_GIT_COMMIT_SHA,
+    process.env.RAILWAY_GIT_COMMIT_SHA,
+    process.env.GITHUB_SHA,
+    process.env.SOURCE_VERSION
+  ]);
+
+  const commitRef = firstNonEmpty([
+    process.env.VERCEL_GIT_COMMIT_REF,
+    process.env.RAILWAY_GIT_BRANCH,
+    process.env.GITHUB_REF_NAME,
+    process.env.BRANCH_NAME
+  ]);
+
+  const commitMessage = firstNonEmpty([
+    process.env.VERCEL_GIT_COMMIT_MESSAGE,
+    process.env.RAILWAY_GIT_COMMIT_MESSAGE,
+    process.env.GITHUB_COMMIT_MESSAGE
+  ]);
+
+  const commitTimestamp = firstNonEmpty([
+    process.env.VERCEL_GIT_COMMIT_TIMESTAMP,
+    process.env.RAILWAY_GIT_COMMIT_TIMESTAMP,
+    process.env.GITHUB_COMMIT_TIMESTAMP
+  ]);
+
+  const buildTimestamp = firstNonEmpty([
+    process.env.API_BUILD_AT,
+    process.env.BUILD_TIMESTAMP,
+    process.env.BUILD_TIME,
+    process.env.VERCEL_BUILD_TIME
+  ]);
+
+  return c.json({
+    ok: true,
+    service: "@games/api",
+    platform: detectPlatform(),
+    commitSha,
+    commitRef,
+    commitMessage,
+    commitTimestamp,
+    buildTimestamp,
+    updatedAt: buildTimestamp || commitTimestamp || apiStartedAt,
+    startedAt: apiStartedAt,
+    uptimeMs: Math.round(process.uptime() * 1000),
+    nodeVersion: process.version,
+    environment: process.env.NODE_ENV ?? "development"
+  });
+});
 
 app.post("/api/zero/query", async (c) => {
   const request = c.req.raw;

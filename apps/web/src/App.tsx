@@ -1,13 +1,14 @@
 import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState, Zero } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
-import { ThemeModeScript } from "flowbite-react";
 import { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import {
   addConnectionDebugEvent,
   initConnectionDebug,
+  setApiBuildInfo,
+  setApiConnectionProbe,
   setZeroConnectionState,
   startGlobalConnectionDebugCapture
 } from "./lib/connection-debug";
@@ -20,18 +21,38 @@ import { PasswordGamePage } from "./pages/PasswordGamePage";
 import { PasswordResultsPage } from "./pages/PasswordResultsPage";
 
 const sessionId = getOrCreateSessionId();
+const API_METADATA_POLL_MS = 30_000;
+
+function resolveApiBuildInfoURL(presenceURL: string) {
+  try {
+    const parsed = new URL(presenceURL);
+    const protocol = parsed.protocol === "wss:" ? "https:" : "http:";
+    return `${protocol}//${parsed.host}/debug/build-info`;
+  } catch {
+    return "http://localhost:3001/debug/build-info";
+  }
+}
+
+function stringifyError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
 
 export function App() {
   const styleOnly = import.meta.env.VITE_STYLE_ONLY === "true";
   const zeroCacheURL = import.meta.env.VITE_ZERO_CACHE_URL ?? "http://localhost:4848";
   const presenceURL = import.meta.env.VITE_PRESENCE_WS_URL ?? "ws://localhost:3001/presence";
+  const apiInfoURL = resolveApiBuildInfoURL(presenceURL);
   const [zeroInstance, setZeroInstance] = useState<Zero | null>(null);
 
   useEffect(() => {
     initConnectionDebug({
       sessionId,
       zeroCacheURL,
-      presenceURL
+      presenceURL,
+      apiInfoURL
     });
 
     addConnectionDebugEvent({
@@ -41,7 +62,94 @@ export function App() {
     });
 
     return startGlobalConnectionDebugCapture();
-  }, [presenceURL, zeroCacheURL]);
+  }, [apiInfoURL, presenceURL, zeroCacheURL]);
+
+  useEffect(() => {
+    if (styleOnly) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const poll = async () => {
+      const started = performance.now();
+      setApiConnectionProbe({ state: "loading" });
+
+      try {
+        const response = await fetch(apiInfoURL, {
+          cache: "no-store"
+        });
+        const latencyMs = Math.round(performance.now() - started);
+
+        if (!response.ok) {
+          throw new Error(`status ${response.status}`);
+        }
+
+        const payload = (await response.json()) as {
+          platform?: string;
+          commitSha?: string;
+          commitRef?: string;
+          commitMessage?: string;
+          commitTimestamp?: string;
+          buildTimestamp?: string;
+          updatedAt?: string;
+          startedAt?: string;
+          uptimeMs?: number;
+        };
+
+        if (cancelled) {
+          return;
+        }
+
+        setApiBuildInfo({
+          platform: payload.platform,
+          commitSha: payload.commitSha,
+          commitRef: payload.commitRef,
+          commitMessage: payload.commitMessage,
+          commitTimestamp: payload.commitTimestamp,
+          buildTimestamp: payload.buildTimestamp,
+          updatedAt: payload.updatedAt,
+          startedAt: payload.startedAt,
+          uptimeMs: payload.uptimeMs
+        });
+
+        setApiConnectionProbe({
+          state: "ok",
+          latencyMs,
+          checkedAt: new Date().toISOString()
+        });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        const latencyMs = Math.round(performance.now() - started);
+        setApiConnectionProbe({
+          state: "error",
+          reason: stringifyError(error),
+          latencyMs,
+          checkedAt: new Date().toISOString()
+        });
+
+        addConnectionDebugEvent({
+          level: "warn",
+          source: "api",
+          message: "metadata probe failed",
+          details: stringifyError(error)
+        });
+      }
+    };
+
+    void poll();
+    const timer = window.setInterval(() => {
+      void poll();
+    }, API_METADATA_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [apiInfoURL, styleOnly]);
 
   useEffect(() => {
     if (!zeroInstance) {
@@ -80,23 +188,18 @@ export function App() {
 
   if (styleOnly) {
     return (
-      <>
-        <ThemeModeScript />
-        <BrowserRouter>
+      <BrowserRouter>
           <Routes>
             <Route element={<AppShell />}>
               <Route path="*" element={<HomePageStylePreview />} />
             </Route>
           </Routes>
         </BrowserRouter>
-      </>
     );
   }
 
   return (
-    <>
-      <ThemeModeScript />
-      <ZeroProvider
+    <ZeroProvider
         init={initZero}
         userID={sessionId}
         cacheURL={zeroCacheURL}
@@ -115,7 +218,6 @@ export function App() {
             </Route>
           </Routes>
         </BrowserRouter>
-      </ZeroProvider>
-    </>
+    </ZeroProvider>
   );
 }

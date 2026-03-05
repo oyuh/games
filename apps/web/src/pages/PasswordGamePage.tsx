@@ -1,5 +1,4 @@
 import { mutators, queries } from "@games/shared";
-import { Button, Card } from "flowbite-react";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -62,10 +61,10 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <Card className="space-y-4">
+    <div className="card p-6 space-y-4 max-w-3xl mx-auto">
       <PasswordHeader title="Password" code={game.code} />
 
-      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+      <div className="flex flex-wrap items-center gap-2" style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>
         <span>Phase: {game.phase}</span>
         <span>•</span>
         <span>Round: {game.current_round}</span>
@@ -103,22 +102,22 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
 
       {game.phase === "results" ? (
         <div className="space-y-2">
-          <p className="text-sm text-gray-600">Game finished. See final results.</p>
-          <Button as={Link} to={`/password/${game.id}/results`} className="w-fit bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]">
+          <p style={{ color: "var(--muted-foreground)", fontSize: "0.875rem" }}>Game finished. See final results.</p>
+          <Link to={`/password/${game.id}/results`} className="btn btn-primary inline-flex">
             Open results
-          </Button>
+          </Link>
         </div>
       ) : (
-        <Button as={Link} to={`/password/${game.id}/results`} color="light" className="w-fit">
+        <Link to={`/password/${game.id}/results`} className="btn btn-ghost inline-flex">
           Live results view
-        </Button>
+        </Link>
       )}
 
       {isHost ? (
-        <Button color="light" className="w-fit" onClick={() => zero.mutate(mutators.password.resetToLobby({ gameId, hostId: sessionId }))}>
+        <button className="btn btn-muted" onClick={() => zero.mutate(mutators.password.resetToLobby({ gameId, hostId: sessionId }))}>
           Reset to lobby
-        </Button>
+        </button>
       ) : null}
-    </Card>
+    </div>
   );
 }

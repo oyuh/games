@@ -1,5 +1,3 @@
-import { Button, Label, Select } from "flowbite-react";
-
 type Player = { sessionId: string };
 
 export function ImposterVoteSection({
@@ -20,20 +18,27 @@ export function ImposterVoteSection({
   onSubmit: () => void;
 }) {
   return (
-    <div className="space-y-3 rounded border p-3">
-      <Label htmlFor="vote" value="Vote for the imposter" />
-      <Select id="vote" value={voteTarget} onChange={(event) => onVoteTargetChange(event.target.value)}>
+    <div className="panel space-y-3">
+      <label htmlFor="vote" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>
+        Vote for the imposter
+      </label>
+      <select
+        id="vote"
+        className="input"
+        value={voteTarget}
+        onChange={(event) => onVoteTargetChange(event.target.value)}
+      >
         <option value="">Choose a player</option>
         {players.map((player) => (
           <option key={player.sessionId} value={player.sessionId}>
             {sessionById[player.sessionId] ?? player.sessionId.slice(0, 6)}
           </option>
         ))}
-      </Select>
-      <Button className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]" onClick={onSubmit}>
+      </select>
+      <button className="btn btn-primary" onClick={onSubmit}>
         Submit vote
-      </Button>
-      <p className="text-xs text-gray-500">Votes in: {voteCount}/{playerCount}</p>
+      </button>
+      <p style={{ fontSize: "0.75rem", color: "var(--secondary)" }}>Votes in: {voteCount}/{playerCount}</p>
     </div>
   );
 }

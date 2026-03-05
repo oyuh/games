@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import {
   addConnectionDebugEvent,
+  setPresenceConnectLatency,
   setPresenceConnectionState
 } from "../lib/connection-debug";
 
@@ -30,6 +31,7 @@ export function usePresenceSocket({
     });
 
     const ws = new WebSocket(url);
+    const connectStartedAt = performance.now();
 
     const sendPresence = () => {
       if (ws.readyState !== WebSocket.OPEN) {
@@ -46,11 +48,14 @@ export function usePresenceSocket({
     };
 
     const onOpen = () => {
+      const latencyMs = Math.round(performance.now() - connectStartedAt);
+      setPresenceConnectLatency(latencyMs);
       setPresenceConnectionState({ state: "connected" });
       addConnectionDebugEvent({
         level: "info",
         source: "presence",
-        message: "websocket connected"
+        message: "websocket connected",
+        details: `connect ${latencyMs}ms`
       });
       sendPresence();
     };

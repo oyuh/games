@@ -1,4 +1,3 @@
-import { Button, Label, TextInput } from "flowbite-react";
 import { FormEvent } from "react";
 
 type ActiveRound = {
@@ -35,8 +34,8 @@ export function PasswordActiveRound({
   onSubmitGuess: (event: FormEvent) => void;
 }) {
   return (
-    <div className="space-y-3 rounded border p-3">
-      <p className="text-sm text-gray-600">
+    <div className="panel space-y-3">
+      <p style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>
         Clue giver: {names[activeRound.clueGiverId] ?? activeRound.clueGiverId.slice(0, 6)}
         {" • "}
         Guesser: {names[activeRound.guesserId] ?? activeRound.guesserId.slice(0, 6)}
@@ -44,27 +43,27 @@ export function PasswordActiveRound({
 
       {isClueGiver && !activeRound.clue ? (
         <form className="space-y-2" onSubmit={onSubmitClue}>
-          <Label htmlFor="word" value="Secret word" />
-          <TextInput id="word" value={word} onChange={(event) => onWordChange(event.target.value)} maxLength={40} />
-          <Label htmlFor="clue" value="One-word clue" />
-          <TextInput id="clue" value={clue} onChange={(event) => onClueChange(event.target.value)} maxLength={80} />
-          <Button type="submit" className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]">Submit clue</Button>
+          <label htmlFor="word" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>Secret word</label>
+          <input id="word" className="input" value={word} onChange={(event) => onWordChange(event.target.value)} maxLength={40} />
+          <label htmlFor="clue" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>One-word clue</label>
+          <input id="clue" className="input" value={clue} onChange={(event) => onClueChange(event.target.value)} maxLength={80} />
+          <button type="submit" className="btn btn-primary">Submit clue</button>
         </form>
       ) : null}
 
       {activeRound.clue ? (
-        <p className="text-sm">
-          Clue: <strong>{activeRound.clue}</strong>
+        <p style={{ fontSize: "0.875rem", color: "var(--foreground)" }}>
+          Clue: <strong style={{ color: "var(--primary)" }}>{activeRound.clue}</strong>
         </p>
       ) : (
-        <p className="text-sm text-gray-500">Waiting for clue giver.</p>
+        <p style={{ fontSize: "0.875rem", color: "var(--secondary)" }}>Waiting for clue giver.</p>
       )}
 
       {isGuesser && activeRound.clue ? (
         <form className="space-y-2" onSubmit={onSubmitGuess}>
-          <Label htmlFor="guess" value="Your guess" />
-          <TextInput id="guess" value={guess} onChange={(event) => onGuessChange(event.target.value)} maxLength={40} />
-          <Button type="submit" className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]">Submit guess</Button>
+          <label htmlFor="guess" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>Your guess</label>
+          <input id="guess" className="input" value={guess} onChange={(event) => onGuessChange(event.target.value)} maxLength={40} />
+          <button type="submit" className="btn btn-primary">Submit guess</button>
         </form>
       ) : null}
     </div>

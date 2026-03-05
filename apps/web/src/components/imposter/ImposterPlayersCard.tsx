@@ -12,9 +12,9 @@ export function ImposterPlayersCard({
   revealRoles: boolean;
 }) {
   return (
-    <div className="rounded border p-3">
-      <h2 className="mb-2 font-semibold">Players</h2>
-      <ul className="space-y-1 text-sm">
+    <div className="panel">
+      <h2 style={{ marginBottom: "0.5rem", fontWeight: 600, color: "var(--primary)" }}>Players</h2>
+      <ul className="space-y-1" style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>
         {players.map((player) => (
           <li key={player.sessionId}>
             {sessionById[player.sessionId] ?? player.sessionId.slice(0, 6)}

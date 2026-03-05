@@ -1,7 +1,7 @@
 {
   "name": "games-refac",
   "private": true,
-  "packageManager": "pnpm@10.6.0",
+  "packageManager": "pnpm@10.30.3",
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",

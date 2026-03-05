@@ -1,5 +1,3 @@
-import { Badge } from "flowbite-react";
-
 type Team = { name: string; members: string[] };
 
 export function PasswordTeamGrid({
@@ -20,13 +18,15 @@ export function PasswordTeamGrid({
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {teams.map((team, index) => (
-        <div key={team.name} className="rounded border p-3 text-sm">
-          <p className="font-semibold">{team.name}</p>
-          {showScores ? <p className="text-gray-600">Score: {scores[team.name] ?? 0}</p> : null}
-          <p className="text-gray-500">
+        <div key={team.name} className="panel" style={{ fontSize: "0.875rem" }}>
+          <p style={{ fontWeight: 600, color: "var(--primary)" }}>{team.name}</p>
+          {showScores ? <p style={{ color: "var(--muted-foreground)" }}>Score: {scores[team.name] ?? 0}</p> : null}
+          <p style={{ color: "var(--secondary)", marginTop: "0.25rem" }}>
             Members: {team.members.map((member) => `${names[member] ?? member.slice(0, 6)}${member === sessionId ? " (you)" : ""}`).join(", ") || "none"}
           </p>
-          {activeTeamIndex === index ? <Badge className="mt-2">Current team</Badge> : null}
+          {activeTeamIndex === index ? (
+            <span className="badge" style={{ marginTop: "0.5rem", display: "inline-flex" }}>Current team</span>
+          ) : null}
         </div>
       ))}
     </div>

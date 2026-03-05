@@ -1,5 +1,4 @@
 import { mutators, queries } from "@games/shared";
-import { Badge, Button, Card, Table } from "flowbite-react";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
@@ -20,49 +19,62 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
   }, [sessions]);
 
   if (!game) {
-    return <p>Password game not found.</p>;
+    return <p style={{ color: "var(--muted-foreground)" }}>Password game not found.</p>;
   }
 
   const isHost = game.host_id === sessionId;
   const top = Object.entries(game.scores).sort((a, b) => b[1] - a[1])[0];
 
   return (
-    <Card className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Password Results</h1>
-        {top ? <Badge color="success">Winner: {top[0]} ({top[1]})</Badge> : null}
+    <div className="card p-6 space-y-4 max-w-3xl mx-auto">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="gradient-heading text-2xl font-bold uppercase tracking-widest">
+          Password Results
+        </h1>
+        {top ? (
+          <span className="badge badge-success">
+            Winner: {top[0]} ({top[1]})
+          </span>
+        ) : null}
       </div>
 
-      <Table striped>
-        <Table.Head>
-          <Table.HeadCell>Round</Table.HeadCell>
-          <Table.HeadCell>Team</Table.HeadCell>
-          <Table.HeadCell>Clue Giver</Table.HeadCell>
-          <Table.HeadCell>Guesser</Table.HeadCell>
-          <Table.HeadCell>Clue</Table.HeadCell>
-          <Table.HeadCell>Guess</Table.HeadCell>
-          <Table.HeadCell>Correct</Table.HeadCell>
-        </Table.Head>
-        <Table.Body className="divide-y">
-          {game.rounds.map((round) => (
-            <Table.Row key={`${round.round}-${round.clueGiverId}-${round.guesserId}`}>
-              <Table.Cell>{round.round}</Table.Cell>
-              <Table.Cell>{game.teams[round.teamIndex]?.name ?? `Team ${round.teamIndex + 1}`}</Table.Cell>
-              <Table.Cell>{names[round.clueGiverId] ?? round.clueGiverId.slice(0, 6)}</Table.Cell>
-              <Table.Cell>{names[round.guesserId] ?? round.guesserId.slice(0, 6)}</Table.Cell>
-              <Table.Cell>{round.clue}</Table.Cell>
-              <Table.Cell>{round.guess ?? "-"}</Table.Cell>
-              <Table.Cell>{round.correct ? "✅" : "❌"}</Table.Cell>
-            </Table.Row>
-          ))}
-        </Table.Body>
-      </Table>
+      <div className="panel overflow-x-auto">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Round</th>
+              <th>Team</th>
+              <th>Clue Giver</th>
+              <th>Guesser</th>
+              <th>Clue</th>
+              <th>Guess</th>
+              <th>Correct</th>
+            </tr>
+          </thead>
+          <tbody>
+            {game.rounds.map((round) => (
+              <tr key={`${round.round}-${round.clueGiverId}-${round.guesserId}`}>
+                <td>{round.round}</td>
+                <td>{game.teams[round.teamIndex]?.name ?? `Team ${round.teamIndex + 1}`}</td>
+                <td>{names[round.clueGiverId] ?? round.clueGiverId.slice(0, 6)}</td>
+                <td>{names[round.guesserId] ?? round.guesserId.slice(0, 6)}</td>
+                <td>{round.clue}</td>
+                <td>{round.guess ?? "-"}</td>
+                <td>{round.correct ? "✅" : "❌"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {isHost ? (
-        <Button className="w-fit bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]" onClick={() => zero.mutate(mutators.password.resetToLobby({ gameId, hostId: sessionId }))}>
+        <button
+          className="btn btn-primary"
+          onClick={() => zero.mutate(mutators.password.resetToLobby({ gameId, hostId: sessionId }))}
+        >
           Back to lobby
-        </Button>
+        </button>
       ) : null}
-    </Card>
+    </div>
   );
 }

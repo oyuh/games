@@ -1,4 +1,3 @@
-import { Button, Label, TextInput } from "flowbite-react";
 import { FormEvent } from "react";
 
 export function ImposterClueSection({
@@ -19,19 +18,27 @@ export function ImposterClueSection({
   onSubmit: (event: FormEvent) => void;
 }) {
   return (
-    <div className="space-y-3 rounded border p-3">
-      <p className="text-sm text-gray-600">
-        Your role: <strong>{role ?? "unknown"}</strong>
+    <div className="panel space-y-3">
+      <p style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>
+        Your role: <strong style={{ color: "var(--primary)" }}>{role ?? "unknown"}</strong>
         {role === "player" && secretWord ? ` — secret word: ${secretWord}` : ""}
       </p>
       <form className="space-y-2" onSubmit={onSubmit}>
-        <Label htmlFor="clue" value="Submit your clue" />
-        <TextInput id="clue" value={clue} onChange={(event) => onClueChange(event.target.value)} maxLength={80} />
-        <Button type="submit" className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]">
+        <label htmlFor="clue" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>
+          Submit your clue
+        </label>
+        <input
+          id="clue"
+          className="input"
+          value={clue}
+          onChange={(event) => onClueChange(event.target.value)}
+          maxLength={80}
+        />
+        <button type="submit" className="btn btn-primary">
           Send clue
-        </Button>
+        </button>
       </form>
-      <p className="text-xs text-gray-500">Clues submitted: {clueCount}/{playerCount}</p>
+      <p style={{ fontSize: "0.75rem", color: "var(--secondary)" }}>Clues submitted: {clueCount}/{playerCount}</p>
     </div>
   );
 }

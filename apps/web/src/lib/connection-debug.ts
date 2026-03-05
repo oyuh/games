@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { ConnectionState } from "@rocicorp/zero";
 
 type DebugLevel = "info" | "warn" | "error";
@@ -16,12 +17,27 @@ export type ConnectionDebugState = {
   sessionId: string;
   zeroCacheURL: string;
   presenceURL: string;
+  apiInfoURL: string;
   location: string;
   isOnline: boolean;
   zeroState: string;
   zeroReason: string;
   presenceState: string;
   presenceReason: string;
+  apiMetaState: "idle" | "loading" | "ok" | "error";
+  apiMetaReason: string;
+  apiMetaCheckedAt: string;
+  apiLatencyMs: number | null;
+  apiCommitSha: string;
+  apiCommitRef: string;
+  apiCommitMessage: string;
+  apiCommitTimestamp: string;
+  apiBuildTimestamp: string;
+  apiUpdatedAt: string;
+  apiStartedAt: string;
+  apiUptimeMs: number | null;
+  apiPlatform: string;
+  presenceConnectLatencyMs: number | null;
   events: ConnectionDebugEvent[];
 };
 
@@ -32,12 +48,27 @@ const state: ConnectionDebugState = {
   sessionId: "",
   zeroCacheURL: "",
   presenceURL: "",
+  apiInfoURL: "",
   location: typeof window !== "undefined" ? window.location.href : "",
   isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
   zeroState: "unknown",
   zeroReason: "",
   presenceState: "unknown",
   presenceReason: "",
+  apiMetaState: "idle",
+  apiMetaReason: "",
+  apiMetaCheckedAt: "",
+  apiLatencyMs: null,
+  apiCommitSha: "",
+  apiCommitRef: "",
+  apiCommitMessage: "",
+  apiCommitTimestamp: "",
+  apiBuildTimestamp: "",
+  apiUpdatedAt: "",
+  apiStartedAt: "",
+  apiUptimeMs: null,
+  apiPlatform: "",
+  presenceConnectLatencyMs: null,
   events: []
 };
 
@@ -104,12 +135,62 @@ export function initConnectionDebug(config: {
   sessionId: string;
   zeroCacheURL: string;
   presenceURL: string;
+  apiInfoURL: string;
 }) {
   state.sessionId = config.sessionId;
   state.zeroCacheURL = config.zeroCacheURL;
   state.presenceURL = config.presenceURL;
+  state.apiInfoURL = config.apiInfoURL;
   state.location = typeof window !== "undefined" ? window.location.href : state.location;
   state.isOnline = typeof navigator !== "undefined" ? navigator.onLine : state.isOnline;
+  emit();
+}
+
+export function setApiConnectionProbe(next: {
+  state: ConnectionDebugState["apiMetaState"];
+  reason?: string;
+  latencyMs?: number;
+  checkedAt?: string;
+}) {
+  state.apiMetaState = next.state;
+  state.apiMetaReason = next.reason ?? "";
+
+  if (typeof next.latencyMs === "number") {
+    state.apiLatencyMs = next.latencyMs;
+  }
+
+  if (next.checkedAt) {
+    state.apiMetaCheckedAt = next.checkedAt;
+  }
+
+  emit();
+}
+
+export function setApiBuildInfo(next: {
+  platform: string | undefined;
+  commitSha: string | undefined;
+  commitRef: string | undefined;
+  commitMessage: string | undefined;
+  commitTimestamp: string | undefined;
+  buildTimestamp: string | undefined;
+  updatedAt: string | undefined;
+  startedAt: string | undefined;
+  uptimeMs: number | undefined;
+}) {
+  state.apiPlatform = next.platform ?? "";
+  state.apiCommitSha = next.commitSha ?? "";
+  state.apiCommitRef = next.commitRef ?? "";
+  state.apiCommitMessage = next.commitMessage ?? "";
+  state.apiCommitTimestamp = next.commitTimestamp ?? "";
+  state.apiBuildTimestamp = next.buildTimestamp ?? "";
+  state.apiUpdatedAt = next.updatedAt ?? "";
+  state.apiStartedAt = next.startedAt ?? "";
+  state.apiUptimeMs = typeof next.uptimeMs === "number" ? next.uptimeMs : null;
+  emit();
+}
+
+export function setPresenceConnectLatency(latencyMs: number) {
+  state.presenceConnectLatencyMs = latencyMs;
   emit();
 }
 
@@ -215,4 +296,19 @@ export function startGlobalConnectionDebugCapture() {
     window.removeEventListener("error", onError);
     window.removeEventListener("unhandledrejection", onUnhandledRejection);
   };
+}
+
+/**
+ * React hook — subscribe to the debug state.
+ * Returns a fresh snapshot; re-renders whenever the state is mutated.
+ */
+export function useConnectionDebug() {
+  const [snap, setSnap] = useState<ConnectionDebugState>(() => ({ ...getConnectionDebugState() }));
+  useEffect(() => {
+    const unsub = subscribeConnectionDebug(() => {
+      setSnap({ ...getConnectionDebugState() });
+    });
+    return () => { unsub(); };
+  }, []);
+  return snap;
 }

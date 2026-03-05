@@ -1,5 +1,4 @@
 import { mutators, queries } from "@games/shared";
-import { Button, Card } from "flowbite-react";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -47,9 +46,9 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const isHost = game.host_id === sessionId;
 
   return (
-    <Card className="space-y-4">
+    <div className="card p-6 space-y-4 max-w-3xl mx-auto">
       <PasswordHeader title="Password Lobby" code={game.code} />
-      <p className="text-sm text-gray-600">Current round: {game.current_round}</p>
+      <p style={{ color: "var(--muted-foreground)", fontSize: "0.875rem" }}>Current round: {game.current_round}</p>
 
       <PasswordTeamGrid
         teams={game.teams}
@@ -60,16 +59,16 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
       />
 
       {isHost ? (
-        <Button className="w-fit bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]" onClick={() => zero.mutate(mutators.password.start({ gameId, hostId: sessionId }))}>
+        <button className="btn btn-primary" onClick={() => zero.mutate(mutators.password.start({ gameId, hostId: sessionId }))}>
           Start game
-        </Button>
+        </button>
       ) : (
-        <p className="text-sm text-gray-500">Waiting for host to start the game.</p>
+        <p style={{ color: "var(--secondary)", fontSize: "0.875rem" }}>Waiting for host to start the game.</p>
       )}
 
-      <Button as={Link} to={`/password/${game.id}`} className="w-fit bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]">
+      <Link to={`/password/${game.id}`} className="btn btn-ghost inline-flex">
         Enter game
-      </Button>
-    </Card>
+      </Link>
+    </div>
   );
 }

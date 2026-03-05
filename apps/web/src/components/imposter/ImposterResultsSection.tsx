@@ -1,5 +1,3 @@
-import { Button } from "flowbite-react";
-
 type Player = { sessionId: string; role?: "imposter" | "player" };
 
 export function ImposterResultsSection({
@@ -16,9 +14,9 @@ export function ImposterResultsSection({
   onNextRound: () => void;
 }) {
   return (
-    <div className="space-y-3 rounded border p-3">
-      <h2 className="font-semibold">Round results</h2>
-      <ul className="space-y-1 text-sm">
+    <div className="panel space-y-3">
+      <h2 style={{ fontWeight: 600, color: "var(--primary)" }}>Round results</h2>
+      <ul className="space-y-1" style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>
         {Object.entries(tally).map(([targetId, count]) => {
           const player = players.find((item) => item.sessionId === targetId);
           return (
@@ -30,9 +28,9 @@ export function ImposterResultsSection({
         })}
       </ul>
       {canAdvance ? (
-        <Button className="bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]" onClick={onNextRound}>
+        <button className="btn btn-primary" onClick={onNextRound}>
           Next round
-        </Button>
+        </button>
       ) : null}
     </div>
   );

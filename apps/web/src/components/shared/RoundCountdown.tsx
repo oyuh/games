@@ -1,4 +1,3 @@
-import { Badge } from "flowbite-react";
 import { useEffect, useMemo, useState } from "react";
 
 export function RoundCountdown({
@@ -30,5 +29,9 @@ export function RoundCountdown({
   const ss = String(remaining % 60).padStart(2, "0");
   const expired = remaining <= 0;
 
-  return <Badge color={expired ? "failure" : "warning"}>{label}: {mm}:{ss}</Badge>;
+  return (
+    <span className={expired ? "badge badge-danger" : "badge badge-warn"}>
+      {label}: {mm}:{ss}
+    </span>
+  );
 }

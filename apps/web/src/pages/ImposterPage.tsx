@@ -1,5 +1,4 @@
 import { mutators, queries } from "@games/shared";
-import { Card } from "flowbite-react";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -87,7 +86,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <Card className="space-y-4">
+    <div className="card p-6 space-y-4 max-w-3xl mx-auto">
       <ImposterHeader code={game.code} />
 
       <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
@@ -148,6 +147,6 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           onNextRound={() => void zero.mutate(mutators.imposter.nextRound({ gameId, hostId: sessionId }))}
         />
       ) : null}
-    </Card>
+    </div>
   );
 }
