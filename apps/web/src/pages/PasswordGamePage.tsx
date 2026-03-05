@@ -37,8 +37,8 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     return <p>Password game not found.</p>;
   }
 
-  const activeRound = game.activeRound;
-  const isHost = game.hostId === sessionId;
+  const activeRound = game.active_round;
+  const isHost = game.host_id === sessionId;
   const isClueGiver = activeRound?.clueGiverId === sessionId;
   const isGuesser = activeRound?.guesserId === sessionId;
 
@@ -68,11 +68,11 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
       <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
         <span>Phase: {game.phase}</span>
         <span>•</span>
-        <span>Round: {game.currentRound}</span>
+        <span>Round: {game.current_round}</span>
         <span>•</span>
         <span>Completed rounds: {game.rounds.length}</span>
         <span>•</span>
-        <RoundCountdown endsAt={game.activeRound?.endsAt} label="Round timer" />
+        <RoundCountdown endsAt={game.active_round?.endsAt} label="Round timer" />
       </div>
 
       <PasswordTeamGrid

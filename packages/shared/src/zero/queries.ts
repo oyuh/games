@@ -12,9 +12,9 @@ export const queries = defineQueries({
       z.object({ gameType: z.enum(["imposter", "password"]), gameId: z.string() }),
       ({ args }) =>
         zql.sessions
-          .where("gameType", args.gameType)
-          .where("gameId", args.gameId)
-          .orderBy("createdAt", "asc")
+          .where("game_type", args.gameType)
+          .where("game_id", args.gameId)
+          .orderBy("created_at", "asc")
     )
   },
   imposter: {

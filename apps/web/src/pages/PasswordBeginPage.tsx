@@ -44,12 +44,12 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
     return <p>Password game not found.</p>;
   }
 
-  const isHost = game.hostId === sessionId;
+  const isHost = game.host_id === sessionId;
 
   return (
     <Card className="space-y-4">
       <PasswordHeader title="Password Lobby" code={game.code} />
-      <p className="text-sm text-gray-600">Current round: {game.currentRound}</p>
+      <p className="text-sm text-gray-600">Current round: {game.current_round}</p>
 
       <PasswordTeamGrid
         teams={game.teams}

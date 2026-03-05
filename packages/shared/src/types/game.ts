@@ -6,10 +6,10 @@ export type PasswordPhase = "lobby" | "playing" | "results";
 export type SessionRecord = {
   id: string;
   name: string | null;
-  gameType: GameType | null;
-  gameId: string | null;
-  createdAt: number;
-  lastSeen: number;
+  game_type: GameType | null;
+  game_id: string | null;
+  created_at: number;
+  last_seen: number;
 };
 
 export type PlayerState = {

@@ -2,7 +2,8 @@
 
 This guide is for deploying this monorepo with:
 - **Web (React/Vite)** on **Vercel**
-- **API + Presence WebSocket (Hono/Node)** on **Railway** (single service)
+- **API + Presence WebSocket (Hono/Node)** on **Railway**
+- **Zero Cache** on **Railway** (separate service)
 - **Postgres** on Railway Postgres or Neon
 
 It is written as a setup runbook so you can wire everything once and then get automated deploys from Git pushes.
@@ -13,6 +14,7 @@ It is written as a setup runbook so you can wire everything once and then get au
 
 - `apps/web` → static frontend on Vercel
 - `apps/api` → Node server on Railway (serves HTTP API + Presence WS at `/presence`)
+- `zero-cache` → dedicated Railway service running `@rocicorp/zero`
 - DB → Postgres (`DATABASE_URL`)
 - Zero cache URL used by web client via `VITE_ZERO_CACHE_URL`
 
@@ -28,57 +30,82 @@ It is written as a setup runbook so you can wire everything once and then get au
 
 ---
 
-## 3) Railway setup (API + DB)
+## 3) Railway setup (API + Zero + DB)
 
-## 3.1 Create project and service
+## 3.1 Create project and services
 
 1. In Railway, create a new project from this GitHub repo.
-2. Add a **service** for API (from repo).
-3. Add a **Postgres** plugin/service (or use Neon external DB).
-4. Configure API service commands:
-   - **Install Command**
-     - `pnpm install --frozen-lockfile`
-   - **Build Command**
-     - `pnpm --filter @games/api build`
-   - **Start Command**
-     - `node apps/api/dist/apps/api/src/index.js`
+2. Add an **API service** (from repo).
+3. Add a **Zero service** (from repo, same project).
+4. Add a **Postgres** plugin/service (or use Neon external DB).
 
-> Note: Start command uses the current TypeScript output path.
+### API service commands
+
+- **Install Command**
+  - `pnpm install --frozen-lockfile`
+- **Build Command**
+  - `pnpm --filter @games/api build`
+- **Start Command**
+  - `pnpm --filter @games/api start`
+
+### Zero service commands
+
+- **Install Command**
+  - `pnpm install --frozen-lockfile`
+- **Build Command**
+  - (empty)
+- **Start Command**
+  - `pnpm dlx @rocicorp/zero@0.25.13 zero-cache --port "$PORT"`
+
+> Important: do **not** set `ZERO_PORT` in Railway variables. Railway does not shell-expand env values, so `ZERO_PORT="$PORT"` is treated as a literal string and crashes with `Invalid input for ZERO_PORT: "$PORT"`.
 
 ## 3.2 API environment variables (Railway)
 
-Set these in Railway API service:
+Set these in Railway **API** service:
 
 ```bash
 NODE_ENV=production
 
-# API port (Railway provides PORT automatically for HTTP)
-API_PORT=${{PORT}}
-
 # Database
 DATABASE_URL=<railway_or_neon_postgres_url>
-ZERO_UPSTREAM_DB=<same_as_DATABASE_URL>
-ZERO_CVR_DB=<same_as_DATABASE_URL>
-ZERO_CHANGE_DB=<same_as_DATABASE_URL>
-
-# Zero/cache/auth
-ZERO_CACHE_URL=<your_zero_cache_url>
-ZERO_ADMIN_PASSWORD=<strong_secret>
 ```
 
-## 3.3 Networking / domains
+## 3.3 Zero environment variables (Railway)
 
-1. Generate Railway domain for API service (example: `https://games-api.up.railway.app`).
-2. Confirm health endpoint:
-   - `GET /health`
-   - Expect `{ "ok": true }`.
+Set these in Railway **Zero** service:
 
-## 3.4 Presence WebSocket
+```bash
+NODE_ENV=production
+
+ZERO_UPSTREAM_DB=<railway_or_neon_postgres_url>
+ZERO_QUERY_URL=https://<api-domain>/api/zero/query
+ZERO_MUTATE_URL=https://<api-domain>/api/zero/mutate
+ZERO_ADMIN_PASSWORD=<strong_secret>
+
+# Optional explicit overrides (if omitted, Zero defaults change/cvr DB to upstream)
+# ZERO_CVR_DB=<railway_or_neon_postgres_url>
+# ZERO_CHANGE_DB=<railway_or_neon_postgres_url>
+```
+
+Postgres requirements for Zero:
+
+- `wal_level` must be `logical`
+- Use a direct Postgres endpoint for `ZERO_UPSTREAM_DB` (avoid transaction pooler endpoints)
+
+## 3.4 Networking / domains
+
+1. Generate Railway domains for both services:
+   - API domain: `https://<api-domain>`
+   - Zero domain: `https://<zero-domain>`
+2. Confirm health endpoints:
+   - API: `GET /health` → `{ "ok": true }`
+   - Zero: `GET /` should return a non-502 response once running.
+
+## 3.5 Presence WebSocket
 
 Presence is served by the API service on the same public domain and port at path `/presence`.
 
 - Client URL should be: `wss://<api-domain>/presence`
-- No separate Presence Railway service/domain is required.
 
 ---
 
@@ -94,7 +121,7 @@ Presence is served by the API service on the same public domain and port at path
 4. Add Vercel env vars:
 
 ```bash
-VITE_ZERO_CACHE_URL=<your_zero_cache_url>
+VITE_ZERO_CACHE_URL=https://<zero-domain>
 VITE_PRESENCE_WS_URL=wss://<api-domain>/presence
 ```
 
@@ -112,7 +139,7 @@ After setup, use native Git-based automation:
   - Preview deploy on every PR
   - Production deploy on merge to `main`
 - **Railway**
-  - Auto-deploy API service on merge to `main`
+  - Auto-deploy API + Zero services on merge to `main`
 
 Recommended branch policy:
 1. Open PR → Vercel preview auto-builds
@@ -146,20 +173,22 @@ Run after each production deploy:
 5. Confirm disconnect/reconnect updates presence.
 6. Confirm timers advance phases correctly.
 7. Confirm API health endpoint returns OK.
+8. Confirm Zero endpoint responds and no `ZERO_PORT` parse errors in logs.
 
 ---
 
 ## 8) Rollback process
 
 - **Vercel**: promote previous successful deployment.
-- **Railway**: rollback to previous deployment from Deployments tab.
+- **Railway**: rollback API and Zero services from Deployments tab.
 - If issue is DB migration-related, restore DB backup before re-deploy.
 
 ---
 
 ## 9) Common gotchas
 
+- Do not define `ZERO_PORT` as `"$PORT"` in Railway variables.
 - `VITE_PRESENCE_WS_URL` must be `wss://` in production and should point to `/presence` on your API domain.
-- Ensure frontend can reach the same Zero cache URL/API environment intended for production.
+- `VITE_ZERO_CACHE_URL` must point to the Zero service public domain.
 - If deep links (`/imposter/:id`) 404 on refresh, SPA rewrite is missing.
-- Keep `DATABASE_URL` and `ZERO_*_DB` aligned unless intentionally split.
+- If Zero logs show `wal_level=replica`, fix Postgres to `wal_level=logical` on the exact upstream endpoint.

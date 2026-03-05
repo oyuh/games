@@ -34,14 +34,14 @@ function chooseRoles(players: Array<{ sessionId: string; name: string | null; co
   }));
 }
 
-function getConnectedSet(sessions: Array<{ id: string; lastSeen: number }>) {
+function getConnectedSet(sessions: Array<{ id: string; last_seen: number }>) {
   const cutoff = now() - PRESENCE_TIMEOUT_MS;
-  return new Set(sessions.filter((session) => session.lastSeen >= cutoff).map((session) => session.id));
+  return new Set(sessions.filter((session) => session.last_seen >= cutoff).map((session) => session.id));
 }
 
 function nextPasswordRoundState(game: {
   teams: Array<{ name: string; members: string[] }>;
-  currentRound: number;
+  current_round: number;
   settings: { targetScore: number; turnTeamIndex: number; roundDurationSec: number };
 }) {
   if (!game.teams.length) {
@@ -54,8 +54,8 @@ function nextPasswordRoundState(game: {
     throw new Error("Active team has no members");
   }
 
-  const clueGiverId = team.members[(game.currentRound - 1) % team.members.length]!;
-  const guesserId = team.members.length > 1 ? team.members[game.currentRound % team.members.length]! : clueGiverId;
+  const clueGiverId = team.members[(game.current_round - 1) % team.members.length]!;
+  const guesserId = team.members.length > 1 ? team.members[game.current_round % team.members.length]! : clueGiverId;
 
   const startedAt = now();
   return {
@@ -77,8 +77,8 @@ export const mutators = defineMutators({
         await tx.mutate.sessions.upsert({
           id: args.id,
           name: args.name ?? null,
-          createdAt: now(),
-          lastSeen: now()
+          created_at: now(),
+          last_seen: now()
         });
       }
     ),
@@ -88,7 +88,7 @@ export const mutators = defineMutators({
         await tx.mutate.sessions.update({
           id: args.id,
           name: args.name,
-          lastSeen: now()
+          last_seen: now()
         });
       }
     ),
@@ -101,9 +101,9 @@ export const mutators = defineMutators({
       async ({ args, tx }) => {
         await tx.mutate.sessions.update({
           id: args.id,
-          gameType: args.gameType,
-          gameId: args.gameId,
-          lastSeen: now()
+          game_type: args.gameType,
+          game_id: args.gameId,
+          last_seen: now()
         });
       }
     ),
@@ -112,7 +112,7 @@ export const mutators = defineMutators({
       async ({ args, tx }) => {
         await tx.mutate.sessions.update({
           id: args.id,
-          lastSeen: now()
+          last_seen: now()
         });
       }
     )
@@ -125,10 +125,10 @@ export const mutators = defineMutators({
         await tx.mutate.imposter_games.insert({
           id: args.id,
           code: code(),
-          hostId: args.hostId,
+          host_id: args.hostId,
           phase: "lobby",
           category: args.category ?? "general",
-          secretWord: null,
+          secret_word: null,
           players: [],
           clues: [],
           votes: [],
@@ -140,14 +140,14 @@ export const mutators = defineMutators({
             votingDurationSec: 45,
             phaseEndsAt: null
           },
-          createdAt: ts,
-          updatedAt: ts
+          created_at: ts,
+          updated_at: ts
         });
         await tx.mutate.sessions.update({
           id: args.hostId,
-          gameType: "imposter",
-          gameId: args.id,
-          lastSeen: ts
+          game_type: "imposter",
+          game_id: args.id,
+          last_seen: ts
         });
       }
     ),
@@ -172,14 +172,14 @@ export const mutators = defineMutators({
         await tx.mutate.imposter_games.update({
           id: game.id,
           players,
-          updatedAt: now()
+          updated_at: now()
         });
 
         await tx.mutate.sessions.update({
           id: args.sessionId,
-          gameType: "imposter",
-          gameId: game.id,
-          lastSeen: now()
+          game_type: "imposter",
+          game_id: game.id,
+          last_seen: now()
         });
       }
     ),
@@ -192,28 +192,28 @@ export const mutators = defineMutators({
         }
 
         const players = game.players.filter((player) => player.sessionId !== args.sessionId);
-        const gameSessions = await tx.run(zql.sessions.where("gameType", "imposter").where("gameId", game.id));
+        const gameSessions = await tx.run(zql.sessions.where("game_type", "imposter").where("game_id", game.id));
         const connectedSet = getConnectedSet(gameSessions);
-        let nextHostId = game.hostId;
+        let nextHostId = game.host_id;
 
-        if (game.hostId === args.sessionId) {
+        if (game.host_id === args.sessionId) {
           nextHostId = players.find((player) => connectedSet.has(player.sessionId))?.sessionId
             ?? players[0]?.sessionId
-            ?? game.hostId;
+            ?? game.host_id;
         }
 
         await tx.mutate.imposter_games.update({
           id: game.id,
-          hostId: nextHostId,
+          host_id: nextHostId,
           players,
-          updatedAt: now()
+          updated_at: now()
         });
 
         await tx.mutate.sessions.update({
           id: args.sessionId,
-          gameType: undefined,
-          gameId: undefined,
-          lastSeen: now()
+          game_type: undefined,
+          game_id: undefined,
+          last_seen: now()
         });
       }
     ),
@@ -224,7 +224,7 @@ export const mutators = defineMutators({
         if (!game) {
           throw new Error("Game not found");
         }
-        if (game.hostId !== args.hostId) {
+        if (game.host_id !== args.hostId) {
           throw new Error("Only host can start");
         }
 
@@ -240,12 +240,12 @@ export const mutators = defineMutators({
         await tx.mutate.imposter_games.update({
           id: game.id,
           phase: "playing",
-          secretWord: pickRandom(bank),
+          secret_word: pickRandom(bank),
           players: withRoles,
           clues: [],
           votes: [],
           settings: { ...game.settings, phaseEndsAt },
-          updatedAt: now()
+          updated_at: now()
         });
       }
     ),
@@ -276,7 +276,7 @@ export const mutators = defineMutators({
           settings: allSubmitted
             ? { ...game.settings, phaseEndsAt: now() + game.settings.votingDurationSec * 1000 }
             : game.settings,
-          updatedAt: now()
+          updated_at: now()
         });
       }
     ),
@@ -309,7 +309,7 @@ export const mutators = defineMutators({
           votes: nextVotes,
           phase: allVoted ? "results" : game.phase,
           settings: allVoted ? { ...game.settings, phaseEndsAt: null } : game.settings,
-          updatedAt: now()
+          updated_at: now()
         });
       }
     ),
@@ -317,7 +317,7 @@ export const mutators = defineMutators({
       z.object({ gameId: z.string(), hostId: z.string() }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
-        if (!game || game.hostId !== args.hostId) {
+        if (!game || game.host_id !== args.hostId) {
           throw new Error("Not allowed");
         }
 
@@ -330,13 +330,13 @@ export const mutators = defineMutators({
             phase: "lobby",
             clues: [],
             votes: [],
-            secretWord: null,
+            secret_word: null,
             players: game.players.map((player) => {
               const { role: _role, ...rest } = player;
               return rest;
             }),
             settings: { ...game.settings, currentRound: 1, phaseEndsAt: null },
-            updatedAt: now()
+            updated_at: now()
           });
           return;
         }
@@ -348,12 +348,12 @@ export const mutators = defineMutators({
         await tx.mutate.imposter_games.update({
           id: game.id,
           phase: "playing",
-          secretWord: pickRandom(bank),
+          secret_word: pickRandom(bank),
           clues: [],
           votes: [],
           players,
           settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
-          updatedAt: now()
+          updated_at: now()
         });
       }
     )
@@ -365,23 +365,23 @@ export const mutators = defineMutators({
         await tx.mutate.password_games.insert({
           id: args.id,
           code: code(),
-          hostId: args.hostId,
+          host_id: args.hostId,
           phase: "lobby",
           teams: [{ name: "Team A", members: [] }, { name: "Team B", members: [] }],
           rounds: [],
           scores: { "Team A": 0, "Team B": 0 },
-          currentRound: 0,
-          activeRound: null,
+          current_round: 0,
+          active_round: null,
           settings: { targetScore: 10, turnTeamIndex: 0, roundDurationSec: 75 },
-          createdAt: now(),
-          updatedAt: now()
+          created_at: now(),
+          updated_at: now()
         });
 
         await tx.mutate.sessions.update({
           id: args.hostId,
-          gameType: "password",
-          gameId: args.id,
-          lastSeen: now()
+          game_type: "password",
+          game_id: args.id,
+          last_seen: now()
         });
       }
     ),
@@ -406,14 +406,14 @@ export const mutators = defineMutators({
         await tx.mutate.password_games.update({
           id: game.id,
           teams,
-          updatedAt: now()
+          updated_at: now()
         });
 
         await tx.mutate.sessions.update({
           id: args.sessionId,
-          gameType: "password",
-          gameId: game.id,
-          lastSeen: now()
+          game_type: "password",
+          game_id: game.id,
+          last_seen: now()
         });
       }
     ),
@@ -431,28 +431,28 @@ export const mutators = defineMutators({
         }));
 
         const remainingMembers = teams.flatMap((team) => team.members);
-        const gameSessions = await tx.run(zql.sessions.where("gameType", "password").where("gameId", game.id));
+        const gameSessions = await tx.run(zql.sessions.where("game_type", "password").where("game_id", game.id));
         const connectedSet = getConnectedSet(gameSessions);
-        let nextHostId = game.hostId;
+        let nextHostId = game.host_id;
 
-        if (game.hostId === args.sessionId) {
+        if (game.host_id === args.sessionId) {
           nextHostId = remainingMembers.find((member) => connectedSet.has(member))
             ?? remainingMembers[0]
-            ?? game.hostId;
+            ?? game.host_id;
         }
 
         await tx.mutate.password_games.update({
           id: game.id,
-          hostId: nextHostId,
+          host_id: nextHostId,
           teams,
-          updatedAt: now()
+          updated_at: now()
         });
 
         await tx.mutate.sessions.update({
           id: args.sessionId,
-          gameType: undefined,
-          gameId: undefined,
-          lastSeen: now()
+          game_type: undefined,
+          game_id: undefined,
+          last_seen: now()
         });
       }
     ),
@@ -463,7 +463,7 @@ export const mutators = defineMutators({
         if (!game) {
           throw new Error("Game not found");
         }
-        if (game.hostId !== args.hostId) {
+        if (game.host_id !== args.hostId) {
           throw new Error("Only host can start");
         }
 
@@ -474,16 +474,16 @@ export const mutators = defineMutators({
 
         const nextGame = {
           ...game,
-          currentRound: 1,
+          current_round: 1,
           settings: { ...game.settings, turnTeamIndex: 0 }
         };
 
         await tx.mutate.password_games.update({
           id: game.id,
           phase: "playing",
-          currentRound: 1,
-          activeRound: nextPasswordRoundState(nextGame),
-          updatedAt: now()
+          current_round: 1,
+          active_round: nextPasswordRoundState(nextGame),
+          updated_at: now()
         });
       }
     ),
@@ -491,13 +491,13 @@ export const mutators = defineMutators({
       z.object({ gameId: z.string(), sessionId: z.string(), word: z.string().min(1).max(40), clue: z.string().min(1).max(80) }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.password_games.where("id", args.gameId).one());
-        if (!game || game.phase !== "playing" || !game.activeRound) {
+        if (!game || game.phase !== "playing" || !game.active_round) {
           throw new Error("Game is not in active round");
         }
-        if (game.activeRound.clueGiverId !== args.sessionId) {
+        if (game.active_round.clueGiverId !== args.sessionId) {
           throw new Error("Only clue giver can submit clue");
         }
-        if (now() > game.activeRound.endsAt) {
+        if (now() > game.active_round.endsAt) {
           throw new Error("Round time expired");
         }
         if (!isOneWord(args.clue)) {
@@ -506,12 +506,12 @@ export const mutators = defineMutators({
 
         await tx.mutate.password_games.update({
           id: game.id,
-          activeRound: {
-            ...game.activeRound,
+          active_round: {
+            ...game.active_round,
             word: args.word.trim(),
             clue: args.clue.trim()
           },
-          updatedAt: now()
+          updated_at: now()
         });
       }
     ),
@@ -519,30 +519,30 @@ export const mutators = defineMutators({
       z.object({ gameId: z.string(), sessionId: z.string(), guess: z.string().min(1).max(40) }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.password_games.where("id", args.gameId).one());
-        if (!game || game.phase !== "playing" || !game.activeRound || !game.activeRound.word || !game.activeRound.clue) {
+        if (!game || game.phase !== "playing" || !game.active_round || !game.active_round.word || !game.active_round.clue) {
           throw new Error("Round is not ready for guessing");
         }
-        if (game.activeRound.guesserId !== args.sessionId) {
+        if (game.active_round.guesserId !== args.sessionId) {
           throw new Error("Only guesser can submit guess");
         }
-        if (now() > game.activeRound.endsAt) {
+        if (now() > game.active_round.endsAt) {
           throw new Error("Round time expired");
         }
 
-        const correct = normalized(args.guess) === normalized(game.activeRound.word);
-        const teamName = game.teams[game.activeRound.teamIndex]?.name ?? `Team ${game.activeRound.teamIndex + 1}`;
+        const correct = normalized(args.guess) === normalized(game.active_round.word);
+        const teamName = game.teams[game.active_round.teamIndex]?.name ?? `Team ${game.active_round.teamIndex + 1}`;
         const currentScore = game.scores[teamName] ?? 0;
         const nextScores = { ...game.scores, [teamName]: correct ? currentScore + 1 : currentScore };
 
         const nextRounds = [
           ...game.rounds,
           {
-            round: game.currentRound,
-            teamIndex: game.activeRound.teamIndex,
-            clueGiverId: game.activeRound.clueGiverId,
-            guesserId: game.activeRound.guesserId,
-            word: game.activeRound.word,
-            clue: game.activeRound.clue,
+            round: game.current_round,
+            teamIndex: game.active_round.teamIndex,
+            clueGiverId: game.active_round.clueGiverId,
+            guesserId: game.active_round.guesserId,
+            word: game.active_round.word,
+            clue: game.active_round.clue,
             guess: args.guess.trim(),
             correct
           }
@@ -555,17 +555,17 @@ export const mutators = defineMutators({
             phase: "results",
             rounds: nextRounds,
             scores: nextScores,
-            activeRound: null,
-            updatedAt: now()
+            active_round: null,
+            updated_at: now()
           });
           return;
         }
 
-        const nextRoundNum = game.currentRound + 1;
+        const nextRoundNum = game.current_round + 1;
         const turnTeamIndex = (game.settings.turnTeamIndex + 1) % Math.max(1, game.teams.length);
         const basis = {
           ...game,
-          currentRound: nextRoundNum,
+          current_round: nextRoundNum,
           settings: { ...game.settings, turnTeamIndex }
         };
 
@@ -573,10 +573,10 @@ export const mutators = defineMutators({
           id: game.id,
           rounds: nextRounds,
           scores: nextScores,
-          currentRound: nextRoundNum,
-          activeRound: nextPasswordRoundState(basis),
+          current_round: nextRoundNum,
+          active_round: nextPasswordRoundState(basis),
           settings: { ...game.settings, turnTeamIndex },
-          updatedAt: now()
+          updated_at: now()
         });
       }
     ),
@@ -584,7 +584,7 @@ export const mutators = defineMutators({
       z.object({ gameId: z.string(), hostId: z.string() }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.password_games.where("id", args.gameId).one());
-        if (!game || game.hostId !== args.hostId) {
+        if (!game || game.host_id !== args.hostId) {
           throw new Error("Not allowed");
         }
 
@@ -593,10 +593,10 @@ export const mutators = defineMutators({
           phase: "lobby",
           rounds: [],
           scores: { "Team A": 0, "Team B": 0 },
-          currentRound: 0,
-          activeRound: null,
+          current_round: 0,
+          active_round: null,
           settings: { ...game.settings, turnTeamIndex: 0 },
-          updatedAt: now()
+          updated_at: now()
         });
       }
     )

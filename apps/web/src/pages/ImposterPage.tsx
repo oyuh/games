@@ -36,7 +36,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
     gameType: "imposter"
   });
 
-  const isHost = game?.hostId === sessionId;
+  const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((player) => player.sessionId === sessionId), [game, sessionId]);
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, session) => {
@@ -118,7 +118,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
       {game.phase === "playing" ? (
         <ImposterClueSection
           role={me?.role}
-          secretWord={game.secretWord}
+          secretWord={game.secret_word}
           clue={clue}
           clueCount={game.clues.length}
           playerCount={game.players.length}

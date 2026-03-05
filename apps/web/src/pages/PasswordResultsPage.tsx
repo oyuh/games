@@ -23,7 +23,7 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
     return <p>Password game not found.</p>;
   }
 
-  const isHost = game.hostId === sessionId;
+  const isHost = game.host_id === sessionId;
   const top = Object.entries(game.scores).sort((a, b) => b[1] - a[1])[0];
 
   return (
