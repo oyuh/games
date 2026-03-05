@@ -6,6 +6,7 @@ import { config } from "dotenv";
 import { Hono } from "hono";
 import { dbProvider } from "./db-provider";
 import { startPresenceServer } from "./presence-server";
+//fix
 
 config({ path: "../../.env" });
 
