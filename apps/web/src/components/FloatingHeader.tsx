@@ -1,118 +1,83 @@
-import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { FiHome, FiMenu, FiX, FiSettings, FiInfo } from "react-icons/fi";
+import { OptionsModal } from "./shared/OptionsModal";
+import { InfoModal } from "./shared/InfoModal";
+import { useSettings } from "../lib/settings";
 
-export function FloatingHeader() {
-  const [visible, setVisible] = useState(true);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+export function Sidebar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [modal, setModal] = useState<"options" | "info" | null>(null);
+  const location = useLocation();
+  const settings = useSettings();
 
   useEffect(() => {
-    const onMove = (event: MouseEvent) => {
-      if (event.clientY < 80) {
-        if (hideTimer.current !== null) {
-          clearTimeout(hideTimer.current);
-          hideTimer.current = null;
-        }
-        setVisible(true);
-      }
-    };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
+    setMobileOpen(false);
+  }, [location.pathname]);
 
-  const handleMouseLeave = () => {
-    hideTimer.current = setTimeout(() => setVisible(false), 150);
-  };
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
 
-  const handleMouseEnter = () => {
-    if (hideTimer.current !== null) {
-      clearTimeout(hideTimer.current);
-      hideTimer.current = null;
-    }
-    setVisible(true);
-  };
+  const isTop = settings.sidebarPosition === "top";
 
   return (
-    <header
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        position: "fixed",
-        left: "50%",
-        transform: "translateX(-50%)",
-        top: "0.5rem",
-        zIndex: 50,
-        transition: "opacity 0.2s, transform 0.2s",
-        opacity: visible ? 1 : 0,
-        pointerEvents: visible ? "auto" : "none",
-      }}
-    >
-      <nav
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          padding: "0.45rem 0.75rem",
-          background: "rgba(24,26,27,0.88)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          border: "1.5px solid #23232a",
-          borderRadius: "9999px",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {/* Logo / home */}
-        <Link
-          to="/"
-          style={{
-            fontWeight: 700,
-            fontSize: "0.9rem",
-            color: "var(--primary)",
-            textDecoration: "none",
-            paddingRight: "0.5rem",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-          }}
+    <>
+      {/* Mobile toggle */}
+      {!isTop && (
+        <button
+          onClick={() => setMobileOpen((o) => !o)}
+          aria-label="Toggle menu"
+          className="sidebar-mobile-toggle"
         >
-          Games!
-        </Link>
+          {mobileOpen ? <FiX size={18} /> : <FiMenu size={18} />}
+        </button>
+      )}
 
-        <div style={{ width: "1px", height: "1.25rem", background: "var(--border)" }} />
+      {/* Mobile backdrop */}
+      {mobileOpen && !isTop && (
+        <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
+      )}
 
-        <NavBtn to="/">Home</NavBtn>
+      {/* Floating sidebar / top bar */}
+      <nav className={`sidebar ${mobileOpen ? "sidebar--open" : ""}`}>
+        <SidebarLink to="/" icon={<FiHome size={16} />} label="Home" active={location.pathname === "/"} />
+        <SidebarButton icon={<FiInfo size={16} />} label="Info" onClick={() => { setModal("info"); setMobileOpen(false); }} />
+        <SidebarButton icon={<FiSettings size={16} />} label="Options" onClick={() => { setModal("options"); setMobileOpen(false); }} />
       </nav>
-    </header>
+
+      {/* Modals */}
+      {modal === "options" && <OptionsModal onClose={() => setModal(null)} />}
+      {modal === "info" && <InfoModal onClose={() => setModal(null)} />}
+    </>
   );
 }
 
-function NavBtn({ to, children }: { to: string; children: React.ReactNode }) {
+function SidebarLink({
+  to,
+  icon,
+  label,
+  active,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+}) {
   return (
-    <Link
-      to={to}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "0.3rem",
-        padding: "0.35rem 0.75rem",
-        borderRadius: "9999px",
-        fontSize: "0.8rem",
-        fontWeight: 600,
-        background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
-        color: "var(--primary)",
-        textDecoration: "none",
-        transition: "background 0.15s",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.background =
-          "color-mix(in srgb, var(--primary) 25%, transparent)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.background =
-          "color-mix(in srgb, var(--primary) 15%, transparent)";
-      }}
-    >
-      {children}
+    <Link to={to} className={`sidebar-link ${active ? "sidebar-link--active" : ""}`} title={label}>
+      {icon}
+      <span className="sidebar-link-label">{label}</span>
     </Link>
+  );
+}
+
+function SidebarButton({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button className="sidebar-link" title={label} onClick={onClick}>
+      {icon}
+      <span className="sidebar-link-label">{label}</span>
+    </button>
   );
 }

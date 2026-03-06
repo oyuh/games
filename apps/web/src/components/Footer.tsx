@@ -1,140 +1,69 @@
-import { FaGithub, FaTwitter } from "react-icons/fa";
-import { SiDiscord } from "react-icons/si";
+import { useEffect, useState } from "react";
 import { useConnectionDebug } from "../lib/connection-debug";
 
 export function Footer() {
   const debug = useConnectionDebug();
+  const [showUptime, setShowUptime] = useState(false);
 
-  const lastUpdated = debug.apiCommitTimestamp
-    ? new Date(debug.apiCommitTimestamp).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
+  // Alternate between uptime and "updated" every 5s
+  useEffect(() => {
+    const timer = setInterval(() => setShowUptime((v) => !v), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const isHealthy = debug.apiMetaState === "ok";
+
+  const uptimeText = debug.apiUptimeMs != null
+    ? formatUptime(debug.apiUptimeMs)
+    : null;
+
+  const updatedText = debug.apiCommitTimestamp
+    ? `Updated ${relativeTime(debug.apiCommitTimestamp)}`
     : debug.apiBuildTimestamp
-      ? new Date(debug.apiBuildTimestamp).toLocaleDateString(undefined, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })
+      ? `Built ${relativeTime(debug.apiBuildTimestamp)}`
       : null;
 
+  const statusText = showUptime && uptimeText
+    ? `Up ${uptimeText}`
+    : updatedText ?? (isHealthy ? "Operational" : "Unreachable");
+
   return (
-    <footer
-      style={{
-        background: "#121414",
-        borderTop: "1px solid #23232a",
-        padding: "1.25rem 2rem",
-        marginTop: "auto",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "72rem",
-          margin: "0 auto",
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-        }}
-      >
-        {/* Left — logo + nav */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap" }}>
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: "1rem",
-              color: "var(--primary)",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Games!
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <FooterLink href="https://github.com" icon={<FaGithub size={15} />} label="GitHub" />
-            <FooterLink href="https://twitter.com" icon={<FaTwitter size={15} />} label="Twitter" />
-            <FooterLink href="https://discord.com" icon={<SiDiscord size={15} />} label="Discord" />
-          </div>
-        </div>
-
-        {/* Right — status + date */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8rem", color: "var(--secondary)" }}>
-          <span
-            style={{
-              display: "inline-block",
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              background:
-                debug.presenceState === "connected" ? "#4ade80" : "#f87171",
-              boxShadow:
-                debug.presenceState === "connected"
-                  ? "0 0 6px #4ade80"
-                  : "0 0 6px #f87171",
-              flexShrink: 0,
-            }}
-          />
-          {lastUpdated ? (
-            <span>Last updated: {lastUpdated}</span>
-          ) : (
-            <span>API status {debug.apiMetaState === "ok" ? "live" : "—"}</span>
-          )}
-        </div>
-      </div>
-
-      {/* Bottom row — copyright */}
-      <div
-        style={{
-          maxWidth: "72rem",
-          margin: "0.75rem auto 0",
-          fontSize: "0.75rem",
-          color: "var(--secondary)",
-          borderTop: "1px solid #1e1e1e",
-          paddingTop: "0.75rem",
-          textAlign: "center",
-        }}
-      >
-        © {new Date().getFullYear()} Games. All rights reserved.
-      </div>
+    <footer className="app-footer">
+      <span className="app-footer-credit">
+        Made with ❤️ by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" className="app-footer-link">Lawson</a>
+      </span>
+      <span className="app-footer-dot">·</span>
+      <span className="app-footer-status">
+        <span
+          className={`status-dot ${isHealthy ? "status-dot--ok" : "status-dot--err"}`}
+        />
+        <span className="app-footer-status-text">{statusText}</span>
+      </span>
     </footer>
   );
 }
 
-function FooterLink({
-  href,
-  icon,
-  label,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "0.35rem",
-        fontSize: "0.8rem",
-        fontWeight: 500,
-        color: "var(--secondary)",
-        textDecoration: "none",
-        transition: "color 0.15s",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.color = "var(--primary)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.color = "var(--secondary)";
-      }}
-    >
-      {icon}
-      {label}
-    </a>
-  );
+function formatUptime(ms: number) {
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainMinutes = minutes % 60;
+  if (hours < 24) return `${hours}h ${remainMinutes}m`;
+  const days = Math.floor(hours / 24);
+  const remainHours = hours % 24;
+  return `${days}d ${remainHours}h`;
+}
+
+function relativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }

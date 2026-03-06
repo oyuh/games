@@ -1,16 +1,17 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { PasswordActiveRound } from "../components/password/PasswordActiveRound";
 import { PasswordHeader } from "../components/password/PasswordHeader";
+import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
-import { RoundCountdown } from "../components/shared/RoundCountdown";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 
 export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
   const params = useParams();
+  const navigate = useNavigate();
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
@@ -19,21 +20,21 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState("");
 
-  usePresenceSocket({
-    sessionId,
-    gameId,
-    gameType: "password"
-  });
+  usePresenceSocket({ sessionId, gameId, gameType: "password" });
 
   const names = useMemo(() => {
-    return sessions.reduce<Record<string, string>>((acc, session) => {
-      acc[session.id] = session.name ?? session.id.slice(0, 6);
+    return sessions.reduce<Record<string, string>>((acc, s) => {
+      acc[s.id] = s.name ?? s.id.slice(0, 6);
       return acc;
     }, {});
   }, [sessions]);
 
   if (!game) {
-    return <p>Password game not found.</p>;
+    return (
+      <div className="game-page">
+        <div className="game-empty"><p>Game not found</p></div>
+      </div>
+    );
   }
 
   const activeRound = game.active_round;
@@ -43,9 +44,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
 
   const submitClue = async (event: FormEvent) => {
     event.preventDefault();
-    if (!word.trim() || !clue.trim()) {
-      return;
-    }
+    if (!word.trim() || !clue.trim()) return;
     await zero.mutate(mutators.password.submitClue({ gameId, sessionId, word: word.trim(), clue: clue.trim() })).server;
     setWord("");
     setClue("");
@@ -53,26 +52,20 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
 
   const submitGuess = async (event: FormEvent) => {
     event.preventDefault();
-    if (!guess.trim()) {
-      return;
-    }
+    if (!guess.trim()) return;
     await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server;
     setGuess("");
   };
 
   return (
-    <div className="card p-6 space-y-4 max-w-3xl mx-auto">
-      <PasswordHeader title="Password" code={game.code} />
-
-      <div className="flex flex-wrap items-center gap-2" style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>
-        <span>Phase: {game.phase}</span>
-        <span>•</span>
-        <span>Round: {game.current_round}</span>
-        <span>•</span>
-        <span>Completed rounds: {game.rounds.length}</span>
-        <span>•</span>
-        <RoundCountdown endsAt={game.active_round?.endsAt} label="Round timer" />
-      </div>
+    <div className="game-page">
+      <PasswordHeader
+        title="Password"
+        code={game.code}
+        phase={game.phase}
+        currentRound={game.current_round}
+        endsAt={activeRound?.endsAt}
+      />
 
       <PasswordTeamGrid
         teams={game.teams}
@@ -83,7 +76,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         showScores
       />
 
-      {game.phase === "playing" && activeRound ? (
+      {game.phase === "playing" && activeRound && (
         <PasswordActiveRound
           activeRound={activeRound}
           names={names}
@@ -98,26 +91,37 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
           onSubmitClue={submitClue}
           onSubmitGuess={submitGuess}
         />
-      ) : null}
-
-      {game.phase === "results" ? (
-        <div className="space-y-2">
-          <p style={{ color: "var(--muted-foreground)", fontSize: "0.875rem" }}>Game finished. See final results.</p>
-          <Link to={`/password/${game.id}/results`} className="btn btn-primary inline-flex">
-            Open results
-          </Link>
-        </div>
-      ) : (
-        <Link to={`/password/${game.id}/results`} className="btn btn-ghost inline-flex">
-          Live results view
-        </Link>
       )}
 
-      {isHost ? (
-        <button className="btn btn-muted" onClick={() => zero.mutate(mutators.password.resetToLobby({ gameId, hostId: sessionId }))}>
-          Reset to lobby
-        </button>
-      ) : null}
+      {game.phase === "results" && (
+        <div className="game-section">
+          <div className="game-reveal-card game-reveal-card--success">
+            <p className="game-reveal-title">Game Over!</p>
+            <p className="game-reveal-sub">Check the results to see who won.</p>
+          </div>
+          <div className="game-actions">
+            <Link to={`/password/${game.id}/results`} className="btn btn-primary game-action-btn">
+              View Results
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <PasswordRoundsTable rounds={game.rounds} teams={game.teams} names={names} />
+
+      {isHost && (
+        <div className="game-section">
+          <button
+            className="btn btn-muted"
+            onClick={() => {
+              void zero.mutate(mutators.password.resetToLobby({ gameId, hostId: sessionId }));
+              void navigate(`/password/${game.id}/begin`);
+            }}
+          >
+            Reset to Lobby
+          </button>
+        </div>
+      )}
     </div>
   );
 }

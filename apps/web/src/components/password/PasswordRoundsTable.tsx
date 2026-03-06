@@ -19,34 +19,39 @@ export function PasswordRoundsTable({
   teams: Team[];
   names: Record<string, string>;
 }) {
+  if (!rounds.length) {
+    return null;
+  }
+
   return (
-    <div className="panel overflow-x-auto">
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Round</th>
-            <th>Team</th>
-            <th>Clue Giver</th>
-            <th>Guesser</th>
-            <th>Clue</th>
-            <th>Guess</th>
-            <th>Correct</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rounds.map((round) => (
-            <tr key={`${round.round}-${round.clueGiverId}-${round.guesserId}`}>
-              <td>{round.round}</td>
-              <td>{teams[round.teamIndex]?.name ?? `Team ${round.teamIndex + 1}`}</td>
-              <td>{names[round.clueGiverId] ?? round.clueGiverId.slice(0, 6)}</td>
-              <td>{names[round.guesserId] ?? round.guesserId.slice(0, 6)}</td>
-              <td>{round.clue}</td>
-              <td>{round.guess ?? "-"}</td>
-              <td>{round.correct ? "✅" : "❌"}</td>
+    <div className="game-section">
+      <h3 className="game-section-label">Round History</h3>
+      <div className="panel overflow-x-auto">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Team</th>
+              <th>Clue</th>
+              <th>Guess</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rounds.map((round) => (
+              <tr key={`${round.round}-${round.clueGiverId}`}>
+                <td>{round.round}</td>
+                <td>{teams[round.teamIndex]?.name ?? `Team ${round.teamIndex + 1}`}</td>
+                <td style={{ color: "var(--primary)", fontWeight: 600 }}>{round.clue}</td>
+                <td>{round.guess ?? "—"}</td>
+                <td style={{ color: round.correct ? "#4ade80" : "#f87171" }}>
+                  {round.correct ? "✓" : "✗"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

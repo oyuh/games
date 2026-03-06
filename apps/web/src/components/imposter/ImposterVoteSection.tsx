@@ -1,44 +1,80 @@
+import { FiCheck } from "react-icons/fi";
+
 type Player = { sessionId: string };
 
 export function ImposterVoteSection({
   players,
+  sessionId,
   sessionById,
   voteTarget,
   voteCount,
   playerCount,
+  clues,
   onVoteTargetChange,
   onSubmit
 }: {
   players: Player[];
+  sessionId: string;
   sessionById: Record<string, string>;
   voteTarget: string;
   voteCount: number;
   playerCount: number;
+  clues: Array<{ sessionId: string; text: string }>;
   onVoteTargetChange: (value: string) => void;
   onSubmit: () => void;
 }) {
+  const clueByPlayer = new Map(clues.map((c) => [c.sessionId, c.text]));
+
   return (
-    <div className="panel space-y-3">
-      <label htmlFor="vote" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>
-        Vote for the imposter
-      </label>
-      <select
-        id="vote"
-        className="input"
-        value={voteTarget}
-        onChange={(event) => onVoteTargetChange(event.target.value)}
-      >
-        <option value="">Choose a player</option>
-        {players.map((player) => (
-          <option key={player.sessionId} value={player.sessionId}>
-            {sessionById[player.sessionId] ?? player.sessionId.slice(0, 6)}
-          </option>
-        ))}
-      </select>
-      <button className="btn btn-primary" onClick={onSubmit}>
-        Submit vote
-      </button>
-      <p style={{ fontSize: "0.75rem", color: "var(--secondary)" }}>Votes in: {voteCount}/{playerCount}</p>
+    <div className="game-section">
+      <h3 className="game-section-label">Who is the imposter?</h3>
+
+      <div className="game-clue-recap">
+        {players.map((player) => {
+          const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
+          const clueText = clueByPlayer.get(player.sessionId);
+          return (
+            <div key={player.sessionId} className="game-clue-item">
+              <span className="game-clue-name">{name}</span>
+              <span className="game-clue-text">{clueText ?? "—"}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="game-vote-grid">
+        {players
+          .filter((p) => p.sessionId !== sessionId)
+          .map((player) => {
+            const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
+            const selected = voteTarget === player.sessionId;
+            return (
+              <button
+                key={player.sessionId}
+                className={`game-vote-card${selected ? " game-vote-card--selected" : ""}`}
+                onClick={() => onVoteTargetChange(player.sessionId)}
+              >
+                <div className="game-player-avatar">{(name[0] ?? "?").toUpperCase()}</div>
+                <span>{name}</span>
+                {selected && <FiCheck size={16} className="game-vote-check" />}
+              </button>
+            );
+          })}
+      </div>
+
+      <div className="game-actions">
+        <button
+          className="btn btn-primary game-action-btn"
+          onClick={onSubmit}
+          disabled={!voteTarget}
+        >
+          Submit Vote
+        </button>
+      </div>
+
+      <p className="game-progress-text">
+        Votes in: {voteCount} / {playerCount}
+      </p>
     </div>
   );
 }

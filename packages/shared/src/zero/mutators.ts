@@ -8,9 +8,41 @@ const code = () => nanoid(6).toUpperCase();
 const PRESENCE_TIMEOUT_MS = 30_000;
 
 const imposterWordBank: Record<string, string[]> = {
-  general: ["Planet", "Castle", "Coffee", "Guitar", "Rocket", "Jungle", "Bridge", "Ocean"],
-  animals: ["Tiger", "Dolphin", "Panda", "Falcon", "Otter", "Giraffe", "Koala", "Penguin"],
-  food: ["Pizza", "Burger", "Pasta", "Sushi", "Taco", "Ramen", "Donut", "Salad"]
+  animals: ["Dog", "Cat", "Elephant", "Lion", "Tiger", "Bear", "Giraffe", "Zebra", "Kangaroo", "Penguin", "Horse", "Wolf", "Fox", "Panda", "Rabbit", "Koala", "Cheetah", "Dolphin", "Monkey", "Owl"],
+  moviesAndShows: ["Breaking Bad", "Stranger Things", "The Office", "Game of Thrones", "Friends", "The Mandalorian", "The Witcher", "Better Call Saul", "Avatar", "Top Gun", "John Wick", "Oppenheimer", "Dune", "Interstellar", "Spider-Man", "Avengers", "The Batman", "Barbie", "The Boys", "Squid Game"],
+  disneyAndPixar: ["Frozen", "Toy Story", "Moana", "The Lion King", "Encanto", "Finding Nemo", "Coco", "Ratatouille", "Up", "Zootopia", "Inside Out", "Brave", "Cars", "Monsters Inc", "Turning Red", "Aladdin", "Beauty and the Beast", "Mulan", "Big Hero 6", "WALL-E"],
+  fpsGames: ["Call of Duty", "Valorant", "Overwatch", "Counter-Strike", "Rainbow Six Siege", "Battlefield", "Apex Legends", "Destiny 2", "Halo", "PUBG", "Escape from Tarkov", "Fortnite", "Team Fortress 2", "DOOM", "Warframe"],
+  otherGames: ["Minecraft", "Roblox", "League of Legends", "Among Us", "Genshin Impact", "Elden Ring", "Baldur's Gate 3", "The Sims", "Animal Crossing", "Grand Theft Auto V", "Red Dead Redemption 2", "Fall Guys", "Rocket League", "Sea of Thieves", "Cyberpunk 2077"],
+  food: ["Pizza", "Burger", "Pasta", "Sushi", "Taco", "Steak", "Chicken Wings", "Salad", "Fried Rice", "Ramen", "Lasagna", "Burrito", "Sandwich", "Pancakes", "Hot Dog", "Cheesecake", "Nachos", "Dumplings", "Curry", "French Fries"],
+  drinks: ["Coca-Cola", "Pepsi", "Coffee", "Tea", "Lemonade", "Milkshake", "Smoothie", "Orange Juice", "Sprite", "Dr Pepper", "Mountain Dew", "Iced Coffee", "Energy Drink", "Red Bull", "Gatorade", "Hot Chocolate", "Latte", "Root Beer", "Apple Juice", "Mojito"],
+  restaurants: ["McDonald's", "Starbucks", "Chick-fil-A", "Taco Bell", "Subway", "KFC", "Pizza Hut", "Wendy's", "Burger King", "Domino's", "Chipotle", "Panda Express", "Panera Bread", "Five Guys", "Dunkin'", "Olive Garden", "Buffalo Wild Wings", "Sonic", "Arby's", "Popeyes"],
+  carBrands: ["Toyota", "Ford", "Chevrolet", "Honda", "BMW", "Mercedes-Benz", "Audi", "Tesla", "Volkswagen", "Nissan", "Jeep", "Hyundai", "Kia", "Lexus", "Subaru", "Porsche", "Mazda", "Dodge", "Ferrari", "Lamborghini"],
+  luxuryBrands: ["Gucci", "Louis Vuitton", "Chanel", "Prada", "Rolex", "Cartier", "Burberry", "Dior", "Balenciaga", "Versace", "Tiffany", "Fendi", "Givenchy", "Valentino", "Armani", "Tom Ford", "Moncler", "Hermes", "YSL", "Bvlgari"],
+  sports: ["Soccer", "Basketball", "Baseball", "Football", "Tennis", "Golf", "Hockey", "Wrestling", "Swimming", "Boxing", "Skateboarding", "Cycling", "Cricket", "Table Tennis", "Volleyball", "Rugby", "Lacrosse", "Badminton", "Surfing", "Skiing"],
+  celebrities: ["Taylor Swift", "Dwayne Johnson", "Selena Gomez", "Kim Kardashian", "Lionel Messi", "Beyoncé", "Cristiano Ronaldo", "Drake", "LeBron James", "Ariana Grande", "Zendaya", "Billie Eilish", "Elon Musk", "Rihanna", "Tom Holland", "Emma Watson", "Chris Hemsworth", "Shakira", "Travis Scott", "Bad Bunny"],
+  countries: ["United States", "Canada", "Mexico", "United Kingdom", "France", "Germany", "Italy", "Spain", "Japan", "China", "Australia", "India", "Brazil", "Russia", "South Korea", "South Africa", "Netherlands", "Sweden", "Switzerland", "New Zealand"],
+  cities: ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Miami", "Atlanta", "Dallas", "Seattle", "San Francisco", "Boston", "Las Vegas", "Orlando", "San Diego", "Denver", "Philadelphia", "Austin", "Portland", "Washington DC", "Detroit"],
+  minecraftMobs: ["Creeper", "Zombie", "Skeleton", "Enderman", "Spider", "Villager", "Witch", "Slime", "Blaze", "Ghast", "Piglin", "Wither Skeleton", "Iron Golem", "Pillager", "Drowned", "Warden", "Husk", "Stray", "Bee", "Axolotl"]
+};
+
+export const imposterCategories = Object.keys(imposterWordBank) as Array<keyof typeof imposterWordBank>;
+
+export const imposterCategoryLabels: Record<string, string> = {
+  animals: "Animals",
+  moviesAndShows: "Movies & Shows",
+  disneyAndPixar: "Disney & Pixar",
+  fpsGames: "FPS Games",
+  otherGames: "Other Games",
+  food: "Food",
+  drinks: "Drinks",
+  restaurants: "Restaurants",
+  carBrands: "Car Brands",
+  luxuryBrands: "Luxury Brands",
+  sports: "Sports",
+  celebrities: "Celebrities",
+  countries: "Countries",
+  cities: "Cities",
+  minecraftMobs: "Minecraft Mobs"
 };
 
 function pickRandom<T>(values: T[]): T {
@@ -127,7 +159,7 @@ export const mutators = defineMutators({
           code: code(),
           host_id: args.hostId,
           phase: "lobby",
-          category: args.category ?? "general",
+          category: args.category ?? "animals",
           secret_word: null,
           players: [],
           clues: [],
@@ -233,7 +265,7 @@ export const mutators = defineMutators({
           throw new Error("Need at least 3 players");
         }
 
-        const bank = imposterWordBank[game.category ?? "general"] ?? imposterWordBank.general ?? ["Planet"];
+        const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
         const withRoles = chooseRoles(players, game.settings.imposters);
         const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
 
@@ -341,7 +373,7 @@ export const mutators = defineMutators({
           return;
         }
 
-        const bank = imposterWordBank[game.category ?? "general"] ?? imposterWordBank.general ?? ["Planet"];
+        const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
         const players = chooseRoles(game.players, game.settings.imposters);
         const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
 
@@ -360,19 +392,23 @@ export const mutators = defineMutators({
   },
   password: {
     create: defineMutator(
-      z.object({ id: z.string(), hostId: z.string() }),
+      z.object({ id: z.string(), hostId: z.string(), teamCount: z.number().min(2).max(6).optional(), targetScore: z.number().min(1).max(50).optional() }),
       async ({ args, tx }) => {
+        const count = args.teamCount ?? 2;
+        const teams = Array.from({ length: count }, (_, i) => ({ name: `Team ${String.fromCharCode(65 + i)}`, members: [] as string[] }));
+        const scoreInit: Record<string, number> = {};
+        for (const t of teams) scoreInit[t.name] = 0;
         await tx.mutate.password_games.insert({
           id: args.id,
           code: code(),
           host_id: args.hostId,
           phase: "lobby",
-          teams: [{ name: "Team A", members: [] }, { name: "Team B", members: [] }],
+          teams,
           rounds: [],
-          scores: { "Team A": 0, "Team B": 0 },
+          scores: scoreInit,
           current_round: 0,
           active_round: null,
-          settings: { targetScore: 10, turnTeamIndex: 0, roundDurationSec: 75 },
+          settings: { targetScore: args.targetScore ?? 10, turnTeamIndex: 0, roundDurationSec: 75 },
           created_at: now(),
           updated_at: now()
         });
@@ -597,6 +633,102 @@ export const mutators = defineMutators({
           active_round: null,
           settings: { ...game.settings, turnTeamIndex: 0 },
           updated_at: now()
+        });
+      }
+    )
+  },
+
+  /* ── Dev-only demo seeders ──────────────────────────── */
+  demo: {
+    seedImposter: defineMutator(
+      z.object({
+        id: z.string(),
+        hostId: z.string(),
+        phase: z.enum(["lobby", "playing", "voting", "results"]),
+        players: z.array(z.object({
+          sessionId: z.string(),
+          name: z.string().nullable(),
+          connected: z.boolean(),
+          role: z.enum(["imposter", "player"]).optional()
+        })),
+        clues: z.array(z.object({ sessionId: z.string(), text: z.string(), createdAt: z.number() })),
+        votes: z.array(z.object({ voterId: z.string(), targetId: z.string() })),
+        secretWord: z.string().nullable(),
+        currentRound: z.number(),
+        phaseEndsAt: z.number().nullable(),
+      }),
+      async ({ args, tx }) => {
+        const ts = now();
+        const players = args.players.map(p =>
+          p.role != null ? { ...p, role: p.role } : { sessionId: p.sessionId, name: p.name, connected: p.connected }
+        );
+        await tx.mutate.imposter_games.insert({
+          id: args.id,
+          code: code(),
+          host_id: args.hostId,
+          phase: args.phase,
+          category: "animals",
+          secret_word: args.secretWord,
+          players,
+          clues: args.clues,
+          votes: args.votes,
+          settings: {
+            rounds: 3,
+            imposters: 1,
+            currentRound: args.currentRound,
+            roundDurationSec: 75,
+            votingDurationSec: 45,
+            phaseEndsAt: args.phaseEndsAt,
+          },
+          created_at: ts,
+          updated_at: ts,
+        });
+      }
+    ),
+    seedPassword: defineMutator(
+      z.object({
+        id: z.string(),
+        hostId: z.string(),
+        phase: z.enum(["lobby", "playing", "results"]),
+        teams: z.array(z.object({ name: z.string(), members: z.array(z.string()) })),
+        scores: z.record(z.string(), z.number()),
+        rounds: z.array(z.object({
+          round: z.number(),
+          teamIndex: z.number(),
+          clueGiverId: z.string(),
+          guesserId: z.string(),
+          word: z.string(),
+          clue: z.string(),
+          guess: z.string().nullable(),
+          correct: z.boolean(),
+        })),
+        currentRound: z.number(),
+        activeRound: z.object({
+          teamIndex: z.number(),
+          clueGiverId: z.string(),
+          guesserId: z.string(),
+          word: z.string().nullable(),
+          clue: z.string().nullable(),
+          startedAt: z.number(),
+          endsAt: z.number(),
+        }).nullable(),
+        targetScore: z.number(),
+      }),
+      async ({ args, tx }) => {
+        const ts = now();
+        await tx.mutate.password_games.insert({
+          id: args.id,
+          code: code(),
+          host_id: args.hostId,
+          phase: args.phase,
+          teams: args.teams,
+          scores: args.scores,
+          rounds: args.rounds,
+          current_round: args.currentRound,
+          active_round: args.activeRound,
+          settings: { targetScore: args.targetScore, turnTeamIndex: 1, roundDurationSec: 45 },
+          created_at: ts,
+          updated_at: ts,
         });
       }
     )

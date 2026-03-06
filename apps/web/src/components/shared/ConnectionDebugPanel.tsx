@@ -78,6 +78,9 @@ function apiStatusClass(state: ConnectionDebugState["apiMetaState"]) {
 export function ConnectionDebugPanel() {
   const [state, setState] = useState<ConnectionDebugState>(() => ({ ...getConnectionDebugState() }));
   const [open, setOpen] = useState(true);
+  const [enabled, setEnabled] = useState(
+    () => localStorage.getItem("connection-debug") === "enabled"
+  );
 
   useEffect(() => {
     const unsubscribe = subscribeConnectionDebug(() => {
@@ -89,7 +92,26 @@ export function ConnectionDebugPanel() {
     };
   }, []);
 
-  if (!import.meta.env.PROD) {
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>)["connectionDebug"] = (action: unknown) => {
+      if (action === "enable" || action === true) {
+        localStorage.setItem("connection-debug", "enabled");
+        setEnabled(true);
+        console.log("Connection debug panel enabled.");
+      } else if (action === "disable" || action === false) {
+        localStorage.removeItem("connection-debug");
+        setEnabled(false);
+        console.log("Connection debug panel disabled.");
+      } else {
+        console.log("Usage: connectionDebug('enable') or connectionDebug('disable')");
+      }
+    };
+    return () => {
+      delete (window as unknown as Record<string, unknown>)["connectionDebug"];
+    };
+  }, []);
+
+  if (!enabled) {
     return null;
   }
 

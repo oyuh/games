@@ -1,4 +1,5 @@
 import { FormEvent } from "react";
+import { FiSend } from "react-icons/fi";
 
 type ActiveRound = {
   clueGiverId: string;
@@ -33,39 +34,89 @@ export function PasswordActiveRound({
   onSubmitClue: (event: FormEvent) => void;
   onSubmitGuess: (event: FormEvent) => void;
 }) {
+  const giverName = names[activeRound.clueGiverId] ?? activeRound.clueGiverId.slice(0, 6);
+  const guesserName = names[activeRound.guesserId] ?? activeRound.guesserId.slice(0, 6);
+
   return (
-    <div className="panel space-y-3">
-      <p style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>
-        Clue giver: {names[activeRound.clueGiverId] ?? activeRound.clueGiverId.slice(0, 6)}
-        {" • "}
-        Guesser: {names[activeRound.guesserId] ?? activeRound.guesserId.slice(0, 6)}
-      </p>
+    <div className="game-section">
+      <div className="game-round-roles">
+        <div className="game-round-role">
+          <span className="game-round-role-label">Clue Giver</span>
+          <span className={`game-round-role-name${isClueGiver ? " game-round-role-name--me" : ""}`}>
+            {giverName}{isClueGiver ? " (you)" : ""}
+          </span>
+        </div>
+        <div className="game-round-role">
+          <span className="game-round-role-label">Guesser</span>
+          <span className={`game-round-role-name${isGuesser ? " game-round-role-name--me" : ""}`}>
+            {guesserName}{isGuesser ? " (you)" : ""}
+          </span>
+        </div>
+      </div>
 
-      {isClueGiver && !activeRound.clue ? (
-        <form className="space-y-2" onSubmit={onSubmitClue}>
-          <label htmlFor="word" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>Secret word</label>
-          <input id="word" className="input" value={word} onChange={(event) => onWordChange(event.target.value)} maxLength={40} />
-          <label htmlFor="clue" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>One-word clue</label>
-          <input id="clue" className="input" value={clue} onChange={(event) => onClueChange(event.target.value)} maxLength={80} />
-          <button type="submit" className="btn btn-primary">Submit clue</button>
+      {isClueGiver && !activeRound.clue && (
+        <form className="game-clue-form" onSubmit={onSubmitClue}>
+          <div className="game-input-group">
+            <label className="game-input-label">Secret Word</label>
+            <input
+              className="input"
+              value={word}
+              onChange={(e) => onWordChange(e.target.value)}
+              placeholder="Type the secret word…"
+              maxLength={40}
+            />
+          </div>
+          <div className="game-input-group">
+            <label className="game-input-label">One-Word Clue</label>
+            <input
+              className="input"
+              value={clue}
+              onChange={(e) => onClueChange(e.target.value)}
+              placeholder="One word only…"
+              maxLength={80}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary game-action-btn" disabled={!word.trim() || !clue.trim()}>
+            <FiSend size={14} /> Submit Clue
+          </button>
         </form>
-      ) : null}
-
-      {activeRound.clue ? (
-        <p style={{ fontSize: "0.875rem", color: "var(--foreground)" }}>
-          Clue: <strong style={{ color: "var(--primary)" }}>{activeRound.clue}</strong>
-        </p>
-      ) : (
-        <p style={{ fontSize: "0.875rem", color: "var(--secondary)" }}>Waiting for clue giver.</p>
       )}
 
-      {isGuesser && activeRound.clue ? (
-        <form className="space-y-2" onSubmit={onSubmitGuess}>
-          <label htmlFor="guess" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>Your guess</label>
-          <input id="guess" className="input" value={guess} onChange={(event) => onGuessChange(event.target.value)} maxLength={40} />
-          <button type="submit" className="btn btn-primary">Submit guess</button>
+      {!isClueGiver && !activeRound.clue && (
+        <div className="game-waiting">
+          <div className="game-waiting-pulse" />
+          <p>Waiting for {giverName} to give a clue…</p>
+        </div>
+      )}
+
+      {activeRound.clue && (
+        <div className="game-clue-reveal">
+          <span className="game-clue-reveal-label">Clue</span>
+          <span className="game-clue-reveal-word">{activeRound.clue}</span>
+        </div>
+      )}
+
+      {isGuesser && activeRound.clue && (
+        <form className="game-input-row" onSubmit={onSubmitGuess}>
+          <input
+            className="input flex-1"
+            value={guess}
+            onChange={(e) => onGuessChange(e.target.value)}
+            placeholder="Your guess…"
+            maxLength={40}
+          />
+          <button type="submit" className="btn btn-primary game-action-btn" disabled={!guess.trim()}>
+            <FiSend size={14} /> Guess
+          </button>
         </form>
-      ) : null}
+      )}
+
+      {!isGuesser && activeRound.clue && (
+        <div className="game-waiting">
+          <div className="game-waiting-pulse" />
+          <p>Waiting for {guesserName} to guess…</p>
+        </div>
+      )}
     </div>
   );
 }

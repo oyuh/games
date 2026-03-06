@@ -1,7 +1,8 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useEffect, useMemo } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { FiPlay, FiLogOut, FiLogIn } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { addRecentGame } from "../lib/session";
@@ -12,43 +13,42 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
+  useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
 
-  useEffect(() => {
-    if (!gameId) {
-      return;
-    }
-    void zero.mutate(mutators.password.join({ gameId, sessionId }));
-  }, [zero, gameId, sessionId]);
-
   const names = useMemo(() => {
-    return sessions.reduce<Record<string, string>>((acc, session) => {
-      acc[session.id] = session.name ?? session.id.slice(0, 6);
+    return sessions.reduce<Record<string, string>>((acc, s) => {
+      acc[s.id] = s.name ?? s.id.slice(0, 6);
       return acc;
     }, {});
   }, [sessions]);
 
   useEffect(() => {
-    if (!game) {
-      return;
-    }
-    addRecentGame({
-      id: game.id,
-      code: game.code,
-      gameType: "password"
-    });
+    if (!game) return;
+    addRecentGame({ id: game.id, code: game.code, gameType: "password" });
   }, [game]);
 
   if (!game) {
-    return <p>Password game not found.</p>;
+    return (
+      <div className="game-page">
+        <div className="game-empty"><p>Game not found</p></div>
+      </div>
+    );
   }
 
   const isHost = game.host_id === sessionId;
+  const inGame = game.teams.some((t) => t.members.includes(sessionId));
+  const teamsWithPlayers = game.teams.filter((t) => t.members.length > 0).length;
+  const canStart = isHost && teamsWithPlayers >= 2;
 
   return (
-    <div className="card p-6 space-y-4 max-w-3xl mx-auto">
-      <PasswordHeader title="Password Lobby" code={game.code} />
-      <p style={{ color: "var(--muted-foreground)", fontSize: "0.875rem" }}>Current round: {game.current_round}</p>
+    <div className="game-page">
+      <PasswordHeader
+        title="Password"
+        code={game.code}
+        phase={game.phase}
+        currentRound={game.current_round}
+      />
 
       <PasswordTeamGrid
         teams={game.teams}
@@ -58,17 +58,44 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
         sessionId={sessionId}
       />
 
-      {isHost ? (
-        <button className="btn btn-primary" onClick={() => zero.mutate(mutators.password.start({ gameId, hostId: sessionId }))}>
-          Start game
-        </button>
-      ) : (
-        <p style={{ color: "var(--secondary)", fontSize: "0.875rem" }}>Waiting for host to start the game.</p>
+      {!inGame && (
+        <div className="game-section game-join-prompt">
+          <p className="game-join-text">You're not in this lobby yet.</p>
+          <button
+            className="btn btn-primary game-action-btn"
+            onClick={() => void zero.mutate(mutators.password.join({ gameId, sessionId }))}
+          >
+            <FiLogIn size={16} /> Join Game
+          </button>
+        </div>
       )}
 
-      <Link to={`/password/${game.id}`} className="btn btn-ghost inline-flex">
-        Enter game
-      </Link>
+      {inGame && (
+        <div className="game-section">
+          {teamsWithPlayers < 2 && (
+            <p className="game-hint">Need at least 2 teams with players to start</p>
+          )}
+          <div className="game-actions">
+            {isHost ? (
+              <button
+                className="btn btn-primary game-action-btn"
+                disabled={!canStart}
+                onClick={() => void zero.mutate(mutators.password.start({ gameId, hostId: sessionId }))}
+              >
+                <FiPlay size={16} /> Start Game
+              </button>
+            ) : (
+              <p className="game-waiting-text">Waiting for host to start…</p>
+            )}
+            <button
+              className="btn btn-muted"
+              onClick={() => void zero.mutate(mutators.password.leave({ gameId, sessionId }))}
+            >
+              <FiLogOut size={14} /> Leave
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { FormEvent } from "react";
+import { FiEye, FiEyeOff, FiSend } from "react-icons/fi";
 
 export function ImposterClueSection({
   role,
@@ -17,28 +18,45 @@ export function ImposterClueSection({
   onClueChange: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
 }) {
+  const isImposter = role === "imposter";
+
   return (
-    <div className="panel space-y-3">
-      <p style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>
-        Your role: <strong style={{ color: "var(--primary)" }}>{role ?? "unknown"}</strong>
-        {role === "player" && secretWord ? ` — secret word: ${secretWord}` : ""}
-      </p>
-      <form className="space-y-2" onSubmit={onSubmit}>
-        <label htmlFor="clue" style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", fontWeight: 600 }}>
-          Submit your clue
-        </label>
+    <div className="game-section">
+      <div className={`game-role-card${isImposter ? " game-role-card--danger" : ""}`}>
+        <div className="game-role-icon">
+          {isImposter ? <FiEyeOff size={24} /> : <FiEye size={24} />}
+        </div>
+        <div>
+          <p className="game-role-title">
+            {isImposter ? "You are the Imposter" : "You are a Player"}
+          </p>
+          {!isImposter && secretWord && (
+            <p className="game-role-word">
+              Secret word: <strong>{secretWord}</strong>
+            </p>
+          )}
+          {isImposter && (
+            <p className="game-role-hint">Blend in! Give a believable clue without knowing the word.</p>
+          )}
+        </div>
+      </div>
+
+      <form className="game-input-row" onSubmit={onSubmit}>
         <input
-          id="clue"
-          className="input"
+          className="input flex-1"
           value={clue}
-          onChange={(event) => onClueChange(event.target.value)}
+          onChange={(e) => onClueChange(e.target.value)}
+          placeholder={isImposter ? "Give a vague clue…" : "Give a clue about the word…"}
           maxLength={80}
         />
-        <button type="submit" className="btn btn-primary">
-          Send clue
+        <button type="submit" className="btn btn-primary" disabled={!clue.trim()}>
+          <FiSend size={14} /> Send
         </button>
       </form>
-      <p style={{ fontSize: "0.75rem", color: "var(--secondary)" }}>Clues submitted: {clueCount}/{playerCount}</p>
+
+      <p className="game-progress-text">
+        Clues submitted: {clueCount} / {playerCount}
+      </p>
     </div>
   );
 }
