@@ -3,8 +3,7 @@ import { useQuery, useZero } from "@rocicorp/zero/react";
 import { nanoid } from "nanoid";
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiChevronLeft, FiChevronRight, FiLink, FiSearch, FiUsers } from "react-icons/fi";
-import { IoColorPaletteOutline } from "react-icons/io5";
+import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 
@@ -241,6 +240,34 @@ export function HomePage({ sessionId }: { sessionId: string }) {
             <span className="hc-tag">Timed rounds</span>
           </div>
 
+          {/* Gameplay preview (hidden when config expanded) */}
+          {!imposterExpanded && (
+            <div className="hc-coming-preview">
+              <div className="hc-mini-board">
+                <div className="hc-mini-board-header hc-mini-board-header--imposter">
+                  <span>Secret Word: DOG</span>
+                </div>
+                <div className="hc-mini-board-rows">
+                  <div className="hc-mini-row">
+                    <span className="hc-mini-avatar hc-mini-avatar--imposter">A</span>
+                    <span className="hc-mini-clue">"Fluffy"</span>
+                    <span className="hc-mini-badge hc-mini-badge--ok">✓</span>
+                  </div>
+                  <div className="hc-mini-row">
+                    <span className="hc-mini-avatar hc-mini-avatar--imposter">B</span>
+                    <span className="hc-mini-clue">"Loyal"</span>
+                    <span className="hc-mini-badge hc-mini-badge--ok">✓</span>
+                  </div>
+                  <div className="hc-mini-row hc-mini-row--suspect">
+                    <span className="hc-mini-avatar hc-mini-avatar--suspect">C</span>
+                    <span className="hc-mini-clue">"Uhh..."</span>
+                    <span className="hc-mini-badge hc-mini-badge--caught">🕵️</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Expandable config */}
           {imposterExpanded && (
             <div className="hc-config">
@@ -320,6 +347,28 @@ export function HomePage({ sessionId }: { sessionId: string }) {
             <span className="hc-tag">Timed</span>
           </div>
 
+          {/* Gameplay preview (hidden when config expanded) */}
+          {!passwordExpanded && (
+            <div className="hc-coming-preview">
+              <div className="hc-mini-board">
+                <div className="hc-mini-board-header hc-mini-board-header--password">
+                  <span>🎯 OCEAN</span>
+                </div>
+                <div className="hc-mini-board-rows">
+                  <div className="hc-mini-row">
+                    <span className="hc-mini-avatar hc-mini-avatar--password">A</span>
+                    <span className="hc-mini-clue">Clue: "Waves"</span>
+                  </div>
+                  <div className="hc-mini-row">
+                    <span className="hc-mini-avatar hc-mini-avatar--password">B</span>
+                    <span className="hc-mini-clue">Guess: OCEAN</span>
+                    <span className="hc-mini-badge hc-mini-badge--correct">+3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Expandable config */}
           {passwordExpanded && (
             <div className="hc-config">
@@ -380,8 +429,6 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       {/* ── Card 4: Chain Reaction (Coming Soon) ──────────── */}
       <div className="home-card home-card--chain">
         <div className="home-card-body hc-centered">
-          <div className="hc-coming-soon-badge">Coming Soon</div>
-          <FiLink size={36} className="hc-coming-icon" style={{ color: "#34d399" }} />
           <h2 className="hc-game-title-lg">Chain Reaction</h2>
           <p className="hc-game-desc">Race to solve a chain of linked words. Every word connects to the next.</p>
 
@@ -400,14 +447,16 @@ export function HomePage({ sessionId }: { sessionId: string }) {
               <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
             </div>
           </div>
+
+          <div className="hc-game-actions">
+            <button className="btn btn-muted w-full" disabled>Coming Soon</button>
+          </div>
         </div>
       </div>
 
       {/* ── Card 5: Shade Signal (Coming Soon) ─────────────── */}
       <div className="home-card home-card--shade">
         <div className="home-card-body hc-centered">
-          <div className="hc-coming-soon-badge">Coming Soon</div>
-          <IoColorPaletteOutline size={36} className="hc-coming-icon" style={{ color: "#f472b6" }} />
           <h2 className="hc-game-title-lg">Shade Signal</h2>
           <p className="hc-game-desc">One leader, one color. Give clues and guess the target shade.</p>
 
@@ -427,6 +476,10 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                 />
               ))}
             </div>
+          </div>
+
+          <div className="hc-game-actions">
+            <button className="btn btn-muted w-full" disabled>Coming Soon</button>
           </div>
         </div>
       </div>

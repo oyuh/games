@@ -574,20 +574,27 @@ body {
 /* ── Home cards layout ───────────────────────────────────────── */
 .home-cards {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   justify-content: center;
+  align-content: center;
   gap: 1.5rem;
   width: 100%;
   padding: 2rem 0;
   min-height: calc(100vh - 6rem);
 }
 
+/* Break out of the .shell-main max-width constraint */
+.shell-main:has(.home-cards) {
+  max-width: 1100px;
+}
+
 .home-cards-dots {
   display: none;
+  width: 100%;
 }
 
 .home-card {
-  flex: 0 0 320px;
+  width: 320px;
   max-width: 340px;
   height: 480px;
   min-height: 480px;
@@ -738,6 +745,114 @@ body {
   width: 100%;
 }
 
+/* ── Mini game board preview (Imposter / Password) ───────────── */
+.hc-mini-board {
+  border-radius: 0.6rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--secondary) 18%, transparent);
+  background: color-mix(in srgb, var(--secondary) 5%, transparent);
+}
+
+.hc-mini-board-header {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.hc-mini-board-header--imposter {
+  background: color-mix(in srgb, #7eb8ff 12%, transparent);
+  color: #7eb8ff;
+  border-bottom: 1px solid color-mix(in srgb, #7eb8ff 20%, transparent);
+}
+
+.hc-mini-board-header--password {
+  background: color-mix(in srgb, #a78bfa 12%, transparent);
+  color: #a78bfa;
+  border-bottom: 1px solid color-mix(in srgb, #a78bfa 20%, transparent);
+}
+
+.hc-mini-board-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hc-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  background: color-mix(in srgb, var(--secondary) 3%, transparent);
+}
+
+.hc-mini-row--suspect {
+  background: color-mix(in srgb, #f87171 6%, transparent);
+}
+
+.hc-mini-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.hc-mini-avatar--imposter {
+  background: color-mix(in srgb, #7eb8ff 20%, transparent);
+  color: #7eb8ff;
+  border: 1px solid color-mix(in srgb, #7eb8ff 30%, transparent);
+}
+
+.hc-mini-avatar--suspect {
+  background: color-mix(in srgb, #f87171 20%, transparent);
+  color: #f87171;
+  border: 1px solid color-mix(in srgb, #f87171 30%, transparent);
+}
+
+.hc-mini-avatar--password {
+  background: color-mix(in srgb, #a78bfa 20%, transparent);
+  color: #a78bfa;
+  border: 1px solid color-mix(in srgb, #a78bfa 30%, transparent);
+}
+
+.hc-mini-clue {
+  font-size: 0.72rem;
+  color: var(--secondary);
+  flex: 1;
+  text-align: left;
+}
+
+.hc-mini-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.hc-mini-badge--ok {
+  background: color-mix(in srgb, #4ade80 12%, transparent);
+  color: #4ade80;
+}
+
+.hc-mini-badge--caught {
+  background: color-mix(in srgb, #f87171 12%, transparent);
+  color: #f87171;
+}
+
+.hc-mini-badge--correct {
+  background: color-mix(in srgb, #4ade80 15%, transparent);
+  color: #4ade80;
+  border: 1px solid color-mix(in srgb, #4ade80 25%, transparent);
+}
+
 /* ── Chain word example ──────────────────────────────────────── */
 .hc-chain-example {
   display: flex;
@@ -777,6 +892,8 @@ body {
   gap: 3px;
   border-radius: 0.5rem;
   overflow: hidden;
+  max-width: 180px;
+  margin: 0 auto;
 }
 
 .hc-shade-cell {
@@ -1041,7 +1158,6 @@ body {
 /* ── Mobile: horizontal snap scroll ──────────────────────────── */
 @media (max-width: 768px) {
   .home-cards {
-    flex-direction: row;
     flex-wrap: nowrap;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
@@ -1054,6 +1170,7 @@ body {
 
   .home-card {
     flex: 0 0 100vw;
+    width: 100vw;
     max-width: 100vw;
     scroll-snap-align: start;
     border-radius: 0;
