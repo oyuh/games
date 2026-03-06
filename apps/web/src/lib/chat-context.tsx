@@ -53,14 +53,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       : queries.chat.byGame({ gameType: "imposter", gameId: "__none__" })
   );
 
-  const lastReadCount = useRef(0);
+  const lastReadCount = useRef(-1);
   const [unread, setUnread] = useState(0);
+
+  // Reset baseline when entering a new game so existing messages aren't "unread"
+  const prevTrackingId = useRef(gameId);
+  useEffect(() => {
+    if (prevTrackingId.current !== gameId) {
+      lastReadCount.current = -1;
+      setUnread(0);
+      prevTrackingId.current = gameId;
+    }
+  }, [gameId]);
 
   useEffect(() => {
     if (open) {
       lastReadCount.current = messages.length;
       setUnread(0);
     } else {
+      // First load for this game — set baseline, don't count existing messages
+      if (lastReadCount.current === -1) {
+        lastReadCount.current = messages.length;
+        return;
+      }
       const diff = messages.length - lastReadCount.current;
       if (diff > 0) setUnread(diff);
     }
