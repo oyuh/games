@@ -10,8 +10,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const gameTypeEnum = pgEnum("game_type", ["imposter", "password"]);
-export const imposterPhaseEnum = pgEnum("imposter_phase", ["lobby", "playing", "voting", "results"]);
-export const passwordPhaseEnum = pgEnum("password_phase", ["lobby", "playing", "results"]);
+export const imposterPhaseEnum = pgEnum("imposter_phase", ["lobby", "playing", "voting", "results", "ended"]);
+export const passwordPhaseEnum = pgEnum("password_phase", ["lobby", "playing", "results", "ended"]);
 
 export const sessions = pgTable(
   "sessions",
@@ -41,6 +41,7 @@ export const imposterGames = pgTable(
     players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player" }>>().notNull().default([]),
     clues: jsonb("clues").$type<Array<{ sessionId: string; text: string; createdAt: number }>>().notNull().default([]),
     votes: jsonb("votes").$type<Array<{ voterId: string; targetId: string }>>().notNull().default([]),
+    kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
     settings: jsonb("settings").$type<{
       rounds: number;
       imposters: number;
@@ -84,7 +85,8 @@ export const passwordGames = pgTable(
       startedAt: number;
       endsAt: number;
     } | null>().default(null),
-    settings: jsonb("settings").$type<{ targetScore: number; turnTeamIndex: number; roundDurationSec: number }>().notNull().default({ targetScore: 10, turnTeamIndex: 0, roundDurationSec: 75 }),
+    kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
+    settings: jsonb("settings").$type<{ targetScore: number; turnTeamIndex: number; roundDurationSec: number; teamsLocked?: boolean }>().notNull().default({ targetScore: 10, turnTeamIndex: 0, roundDurationSec: 75 }),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()
   },

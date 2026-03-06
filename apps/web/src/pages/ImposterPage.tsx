@@ -1,7 +1,7 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn } from "react-icons/fi";
 import { ImposterClueSection } from "../components/imposter/ImposterClueSection";
 import { ImposterHeader } from "../components/imposter/ImposterHeader";
@@ -11,9 +11,11 @@ import { ImposterResultsSection } from "../components/imposter/ImposterResultsSe
 import { ImposterVoteSection } from "../components/imposter/ImposterVoteSection";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
+import { showToast } from "../lib/toast";
 
 export function ImposterPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
+  const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.imposter.byId({ id: gameId }));
@@ -49,6 +51,19 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
     addRecentGame({ id: game.id, code: game.code, gameType: "imposter" });
   }, [game]);
 
+  useEffect(() => {
+    if (!game) return;
+    if (game.phase === "ended") {
+      showToast("The host ended the game", "info");
+      navigate("/");
+      return;
+    }
+    if (game.kicked.includes(sessionId)) {
+      showToast("You were kicked from the game", "error");
+      navigate("/");
+    }
+  }, [game?.phase, game?.kicked, sessionId, navigate]);
+
   if (!game) {
     return (
       <div className="game-page">
@@ -79,6 +94,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         currentRound={game.settings.currentRound}
         totalRounds={game.settings.rounds}
         phaseEndsAt={game.settings.phaseEndsAt}
+        isHost={isHost}
       />
 
       <ImposterPlayersCard
@@ -93,7 +109,10 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           <p className="game-join-text">You're not in this lobby yet.</p>
           <button
             className="btn btn-primary game-action-btn"
-            onClick={() => void zero.mutate(mutators.imposter.join({ gameId, sessionId }))}
+            onClick={() =>
+              void zero.mutate(mutators.imposter.join({ gameId, sessionId }))
+                .client.catch(() => showToast("Couldn't join game", "error"))
+            }
           >
             <FiLogIn size={16} /> Join Game
           </button>

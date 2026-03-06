@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FiCopy, FiCheck } from "react-icons/fi";
+import { PiCrownSimpleFill } from "react-icons/pi";
 import { RoundCountdown } from "../shared/RoundCountdown";
 
 const phaseLabels: Record<string, string> = {
@@ -19,13 +20,15 @@ export function PasswordHeader({
   code,
   phase,
   currentRound,
-  endsAt
+  endsAt,
+  isHost
 }: {
   title: string;
   code: string;
   phase?: string;
   currentRound?: number;
   endsAt?: number | null | undefined;
+  isHost?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -39,6 +42,7 @@ export function PasswordHeader({
     <div className="game-header">
       <div className="game-header-left">
         <h1 className="game-title">{title}</h1>
+        {isHost && <span className="badge host-badge" title="You are the host"><PiCrownSimpleFill size={12} /> Host</span>}
         {phase && (
           <span className={`badge ${phaseVariants[phase] ?? ""}`}>
             {phaseLabels[phase] ?? phase}

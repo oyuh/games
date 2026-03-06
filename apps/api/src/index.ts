@@ -1,11 +1,14 @@
 import { mutators, queries, schema } from "@games/shared";
+import { imposterGames, passwordGames, sessions } from "@games/shared";
 import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
+import { lt } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
+import { drizzleClient } from "./db-provider";
 import { startPresenceServer } from "./presence-server";
 //fix
 
@@ -133,6 +136,41 @@ app.post("/api/zero/mutate", async (c) => {
   return c.json(result);
 });
 
+// ─── Stale game cleanup ────────────────────────────────────
+app.post("/api/cleanup", async (c) => {
+  const authHeader = c.req.header("Authorization");
+  const expectedToken = process.env.CLEANUP_SECRET ?? "cleanup-local";
+  if (authHeader !== `Bearer ${expectedToken}`) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+
+  const deletedImposter = await drizzleClient
+    .delete(imposterGames)
+    .where(lt(imposterGames.updatedAt, oneHourAgo))
+    .returning({ id: imposterGames.id });
+
+  const deletedPassword = await drizzleClient
+    .delete(passwordGames)
+    .where(lt(passwordGames.updatedAt, oneHourAgo))
+    .returning({ id: passwordGames.id });
+
+  const deletedSessions = await drizzleClient
+    .delete(sessions)
+    .where(lt(sessions.lastSeen, oneHourAgo))
+    .returning({ id: sessions.id });
+
+  const summary = {
+    imposterGamesDeleted: deletedImposter.length,
+    passwordGamesDeleted: deletedPassword.length,
+    sessionsDeleted: deletedSessions.length,
+    cutoff: new Date(oneHourAgo).toISOString(),
+  };
+  console.log("[cleanup]", summary);
+  return c.json({ ok: true, ...summary });
+});
+
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
 const server = serve(
   {
@@ -145,3 +183,38 @@ const server = serve(
 );
 
 startPresenceServer(server, "/presence");
+
+// ─── Auto-cleanup: run every hour ──────────────────────────
+async function runCleanup() {
+  try {
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+
+    const deletedImposter = await drizzleClient
+      .delete(imposterGames)
+      .where(lt(imposterGames.updatedAt, oneHourAgo))
+      .returning({ id: imposterGames.id });
+
+    const deletedPassword = await drizzleClient
+      .delete(passwordGames)
+      .where(lt(passwordGames.updatedAt, oneHourAgo))
+      .returning({ id: passwordGames.id });
+
+    const deletedSessions = await drizzleClient
+      .delete(sessions)
+      .where(lt(sessions.lastSeen, oneHourAgo))
+      .returning({ id: sessions.id });
+
+    console.log("[cleanup]", {
+      imposterGamesDeleted: deletedImposter.length,
+      passwordGamesDeleted: deletedPassword.length,
+      sessionsDeleted: deletedSessions.length,
+      cutoff: new Date(oneHourAgo).toISOString(),
+    });
+  } catch (err) {
+    console.error("[cleanup] error:", err);
+  }
+}
+
+// Run once on startup (after 10s delay), then every hour
+setTimeout(runCleanup, 10_000);
+setInterval(runCleanup, 60 * 60 * 1000);

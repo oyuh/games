@@ -1,9 +1,10 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiAward } from "react-icons/fi";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
+import { showToast } from "../lib/toast";
 
 export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
@@ -20,6 +21,19 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
       return acc;
     }, {});
   }, [sessions]);
+
+  useEffect(() => {
+    if (!game) return;
+    if (game.phase === "ended") {
+      showToast("The host ended the game", "info");
+      navigate("/");
+      return;
+    }
+    if (game.kicked.includes(sessionId)) {
+      showToast("You were kicked from the game", "error");
+      navigate("/");
+    }
+  }, [game?.phase, game?.kicked, sessionId, navigate]);
 
   if (!game) {
     return (

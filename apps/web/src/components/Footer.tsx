@@ -3,42 +3,112 @@ import { useConnectionDebug } from "../lib/connection-debug";
 
 export function Footer() {
   const debug = useConnectionDebug();
-  const [showUptime, setShowUptime] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [tick, setTick] = useState(0);
 
-  // Alternate between uptime and "updated" every 5s
+  // Tick every 30s to keep uptime fresh
   useEffect(() => {
-    const timer = setInterval(() => setShowUptime((v) => !v), 5000);
+    const timer = setInterval(() => setTick((t) => t + 1), 30_000);
     return () => clearInterval(timer);
   }, []);
 
   const isHealthy = debug.apiMetaState === "ok";
+  const isLoading = debug.apiMetaState === "loading" || debug.apiMetaState === "idle";
 
   const uptimeText = debug.apiUptimeMs != null
-    ? formatUptime(debug.apiUptimeMs)
+    ? formatUptime(debug.apiUptimeMs + tick * 30_000)
     : null;
 
-  const updatedText = debug.apiCommitTimestamp
-    ? `Updated ${relativeTime(debug.apiCommitTimestamp)}`
-    : debug.apiBuildTimestamp
-      ? `Built ${relativeTime(debug.apiBuildTimestamp)}`
-      : null;
+  const commitShort = debug.apiCommitSha ? debug.apiCommitSha.slice(0, 7) : null;
+  const commitMsg = debug.apiCommitMessage || null;
+  const latency = debug.apiLatencyMs != null ? `${debug.apiLatencyMs}ms` : null;
 
-  const statusText = showUptime && uptimeText
-    ? `Up ${uptimeText}`
-    : updatedText ?? (isHealthy ? "Operational" : "Unreachable");
+  const statusLabel = isLoading
+    ? "Connecting…"
+    : isHealthy
+      ? "Operational"
+      : "Unreachable";
 
   return (
     <footer className="app-footer">
-      <span className="app-footer-credit">
-        Made with ❤️ by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" className="app-footer-link">Lawson</a>
-      </span>
-      <span className="app-footer-dot">·</span>
-      <span className="app-footer-status">
-        <span
-          className={`status-dot ${isHealthy ? "status-dot--ok" : "status-dot--err"}`}
-        />
-        <span className="app-footer-status-text">{statusText}</span>
-      </span>
+      <div className="footer-row footer-row--main">
+        <span className="footer-credit">
+          Made with <span className="footer-heart">❤️</span> by{" "}
+          <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" className="footer-link">
+            Lawson
+          </a>
+        </span>
+        <div className="footer-status-wrap">
+          <button
+            className="footer-status-pill"
+            onClick={() => setExpanded((v) => !v)}
+            title="Toggle API status"
+          >
+            <span className={`status-dot ${isHealthy ? "status-dot--ok" : isLoading ? "status-dot--loading" : "status-dot--err"}`} />
+            <span className="footer-status-label">{statusLabel}</span>
+          </button>
+
+          {expanded && (
+            <div className="footer-details">
+          <div className="footer-detail-grid">
+            <span className="footer-detail-key">status</span>
+            <span className={`footer-detail-val ${isHealthy ? "footer-val--ok" : "footer-val--err"}`}>
+              {statusLabel}
+            </span>
+
+            {uptimeText && (
+              <>
+                <span className="footer-detail-key">uptime</span>
+                <span className="footer-detail-val">{uptimeText}</span>
+              </>
+            )}
+
+            {latency && (
+              <>
+                <span className="footer-detail-key">latency</span>
+                <span className="footer-detail-val">{latency}</span>
+              </>
+            )}
+
+            {debug.apiPlatform && (
+              <>
+                <span className="footer-detail-key">platform</span>
+                <span className="footer-detail-val">{debug.apiPlatform}</span>
+              </>
+            )}
+
+            {commitShort && (
+              <>
+                <span className="footer-detail-key">commit</span>
+                <span className="footer-detail-val footer-val--mono">{commitShort}</span>
+              </>
+            )}
+
+            {commitMsg && (
+              <>
+                <span className="footer-detail-key">message</span>
+                <span className="footer-detail-val footer-val--msg">{commitMsg}</span>
+              </>
+            )}
+
+            {debug.apiCommitRef && (
+              <>
+                <span className="footer-detail-key">branch</span>
+                <span className="footer-detail-val">{debug.apiCommitRef}</span>
+              </>
+            )}
+
+            {debug.apiUpdatedAt && (
+              <>
+                <span className="footer-detail-key">deployed</span>
+                <span className="footer-detail-val">{relativeTime(debug.apiUpdatedAt)}</span>
+              </>
+            )}
+            </div>
+          </div>
+        )}
+        </div>
+      </div>
     </footer>
   );
 }

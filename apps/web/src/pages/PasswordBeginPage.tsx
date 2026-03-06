@@ -1,14 +1,16 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
-import { FiPlay, FiLogOut, FiLogIn } from "react-icons/fi";
+import { useNavigate, useParams } from "react-router-dom";
+import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { addRecentGame } from "../lib/session";
+import { showToast } from "../lib/toast";
 
 export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
+  const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.password.byId({ id: gameId }));
@@ -27,6 +29,19 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
     if (!game) return;
     addRecentGame({ id: game.id, code: game.code, gameType: "password" });
   }, [game]);
+
+  useEffect(() => {
+    if (!game) return;
+    if (game.phase === "ended") {
+      showToast("The host ended the game", "info");
+      navigate("/");
+      return;
+    }
+    if (game.kicked.includes(sessionId)) {
+      showToast("You were kicked from the game", "error");
+      navigate("/");
+    }
+  }, [game?.phase, game?.kicked, sessionId, navigate]);
 
   if (!game) {
     return (
@@ -48,6 +63,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
         code={game.code}
         phase={game.phase}
         currentRound={game.current_round}
+        isHost={isHost}
       />
 
       <PasswordTeamGrid
@@ -56,6 +72,17 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
         names={names}
         activeTeamIndex={undefined}
         sessionId={sessionId}
+        isLobby
+        isHost={isHost}
+        teamsLocked={game.settings.teamsLocked}
+        onSwitchTeam={(teamName) =>
+          void zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName }))
+            .client.catch(() => showToast("Couldn't switch team", "error"))
+        }
+        onMovePlayer={(playerId, teamName) =>
+          void zero.mutate(mutators.password.movePlayer({ gameId, hostId: sessionId, playerId, teamName }))
+            .client.catch(() => showToast("Couldn't move player", "error"))
+        }
       />
 
       {!inGame && (
@@ -63,7 +90,10 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
           <p className="game-join-text">You're not in this lobby yet.</p>
           <button
             className="btn btn-primary game-action-btn"
-            onClick={() => void zero.mutate(mutators.password.join({ gameId, sessionId }))}
+            onClick={() =>
+              void zero.mutate(mutators.password.join({ gameId, sessionId }))
+                .client.catch(() => showToast("Couldn't join game", "error"))
+            }
           >
             <FiLogIn size={16} /> Join Game
           </button>
@@ -76,6 +106,16 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
             <p className="game-hint">Need at least 2 teams with players to start</p>
           )}
           <div className="game-actions">
+            {isHost && (
+              <button
+                className="btn btn-muted"
+                onClick={() =>
+                  void zero.mutate(mutators.password.lockTeams({ gameId, hostId: sessionId, locked: !game.settings.teamsLocked }))
+                }
+              >
+                {game.settings.teamsLocked ? <><FiUnlock size={14} /> Unlock Teams</> : <><FiLock size={14} /> Lock Teams</>}
+              </button>
+            )}
             {isHost ? (
               <button
                 className="btn btn-primary game-action-btn"
