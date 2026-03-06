@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
-import { lt, and, ne, eq } from "drizzle-orm";
+import { lt, and, ne, eq, count } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
@@ -160,7 +160,7 @@ async function runCleanup() {
   // 2) End stale password games (not already ended)
   const endedPassword = await drizzleClient
     .update(passwordGames)
-    .set({ phase: "ended", activeRounds: [], settings: { targetScore: 10, roundDurationSec: 75, roundEndsAt: null }, updatedAt: now })
+    .set({ phase: "ended", updatedAt: now })
     .where(
       and(
         lt(passwordGames.updatedAt, staleCutoff),
@@ -192,12 +192,22 @@ async function runCleanup() {
   // 4) Hard-delete old ended games (1hr+)
   const deletedImposter = await drizzleClient
     .delete(imposterGames)
-    .where(lt(imposterGames.updatedAt, deleteCutoff))
+    .where(
+      and(
+        eq(imposterGames.phase, "ended"),
+        lt(imposterGames.updatedAt, deleteCutoff)
+      )
+    )
     .returning({ id: imposterGames.id });
 
   const deletedPassword = await drizzleClient
     .delete(passwordGames)
-    .where(lt(passwordGames.updatedAt, deleteCutoff))
+    .where(
+      and(
+        eq(passwordGames.phase, "ended"),
+        lt(passwordGames.updatedAt, deleteCutoff)
+      )
+    )
     .returning({ id: passwordGames.id });
 
   // 5) Delete stale sessions (1hr+)
@@ -205,6 +215,11 @@ async function runCleanup() {
     .delete(sessions)
     .where(lt(sessions.lastSeen, deleteCutoff))
     .returning({ id: sessions.id });
+
+  // 6) Counts for diagnostics
+  const [imposterCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames);
+  const [passwordCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames);
+  const [sessionCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(sessions);
 
   return {
     imposterGamesEnded: endedImposter.length,
@@ -214,6 +229,11 @@ async function runCleanup() {
     sessionsDeleted: deletedSessions.length,
     staleCutoff: new Date(staleCutoff).toISOString(),
     deleteCutoff: new Date(deleteCutoff).toISOString(),
+    totals: {
+      imposterGames: imposterCount.total,
+      passwordGames: passwordCount.total,
+      sessions: sessionCount.total,
+    },
   };
 }
 
