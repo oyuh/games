@@ -4,6 +4,7 @@ import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
 import { startPresenceServer } from "./presence-server";
 //fix
@@ -11,6 +12,26 @@ import { startPresenceServer } from "./presence-server";
 config({ path: "../../.env" });
 
 const app = new Hono();
+
+app.use(
+  "*",
+  cors({
+    origin: (origin) => {
+      if (!origin) return "*";
+      if (
+        origin.endsWith(".lawsonhart.me") ||
+        origin === "https://games.lawsonhart.me" ||
+        origin.startsWith("http://localhost:")
+      ) {
+        return origin;
+      }
+      return "https://games.lawsonhart.me";
+    },
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    maxAge: 86400
+  })
+);
 const apiStartedAt = new Date().toISOString();
 
 function firstNonEmpty(values: Array<string | undefined>) {
