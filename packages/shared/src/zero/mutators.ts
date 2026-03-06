@@ -61,7 +61,7 @@ function isClueTooSimilar(clue: string, word: string) {
   const c = normalized(clue);
   const w = normalized(word);
   if (c === w) return true;
-  if (c.includes(w) || w.includes(c)) return true;
+  if (c.startsWith(w) || w.startsWith(c)) return true;
   return false;
 }
 
@@ -84,30 +84,54 @@ function getConnectedSet(sessions: Array<{ id: string; last_seen: number }>) {
   return new Set(sessions.filter((session) => session.last_seen >= cutoff).map((session) => session.id));
 }
 
-function buildTeamRound(team: { name: string; members: string[] }, teamIndex: number, roundNum: number) {
+// Word bank for Password game — common nouns that work well with one-word clues
+const passwordWordBank = [
+  "Apple", "Bridge", "Camera", "Dragon", "Eagle", "Forest", "Guitar", "Hammer",
+  "Island", "Jacket", "Kite", "Ladder", "Mirror", "Needle", "Ocean", "Pillow",
+  "Queen", "Rocket", "Shadow", "Tunnel", "Umbrella", "Volcano", "Window", "Anchor",
+  "Balloon", "Castle", "Diamond", "Engine", "Feather", "Globe", "Helmet", "Igloo",
+  "Jungle", "Kettle", "Lantern", "Mountain", "Noodle", "Oyster", "Penguin", "Puzzle",
+  "Rainbow", "Scarecrow", "Tomato", "Unicorn", "Violin", "Wizard", "Blanket", "Candle",
+  "Desert", "Fossil", "Garage", "Harvest", "Iceberg", "Juggler", "Kitten", "Library",
+  "Magnet", "Napkin", "Orchid", "Parrot", "Quilt", "Robot", "Saddle", "Tornado",
+  "Thunder", "Velvet", "Waffle", "Basket", "Cactus", "Dolphin", "Emerald", "Falcon",
+  "Ghost", "Honey", "Ivory", "Jigsaw", "Koala", "Lemon", "Marble", "Nugget",
+  "Otter", "Pirate", "Rabbit", "Sailor", "Tiger", "Vampire", "Walrus", "Cookie",
+  "Compass", "Crystal", "Dungeon", "Eclipse", "Flame", "Goblin", "Harpoon", "Sphinx",
+  "Treasure", "Trident", "Phantom", "Serpent", "Beacon", "Blizzard", "Canyon", "Comet",
+  "Dagger", "Fortress", "Glacier", "Labyrinth", "Meteor", "Oasis", "Palace", "Raven",
+  "Scepter", "Tempest", "Vortex", "Whistle", "Zombie", "Arrow", "Barrel", "Circus",
+  "Curtain", "Fountain", "Garlic", "Hammock", "Insect", "Jewel", "Knot", "Lotus",
+  "Mango", "Orbit", "Pebble", "Riddle", "Sunset", "Trophy", "Voyage", "Wrench",
+];
+
+function pickPasswordWord(usedWords?: string[]) {
+  const available = usedWords?.length
+    ? passwordWordBank.filter((w) => !usedWords.includes(w))
+    : passwordWordBank;
+  const pool = available.length > 0 ? available : passwordWordBank;
+  return pickRandom(pool);
+}
+
+function buildTeamRound(team: { name: string; members: string[] }, teamIndex: number, roundNum: number, word: string) {
   if (team.members.length < 2) {
     throw new Error(`${team.name} needs at least 2 players`);
   }
   const guesserId = team.members[(roundNum - 1) % team.members.length]!;
-  let wordPickerIdx = roundNum % team.members.length;
-  if (team.members[wordPickerIdx] === guesserId) {
-    wordPickerIdx = (wordPickerIdx + 1) % team.members.length;
-  }
-  const wordPickerId = team.members[wordPickerIdx]!;
 
   return {
     teamIndex,
-    wordPickerId,
     guesserId,
-    word: null as string | null,
+    word,
     clues: [] as Array<{ sessionId: string; text: string }>,
     guess: null as string | null,
   };
 }
 
-function buildAllTeamRounds(teams: Array<{ name: string; members: string[] }>, roundNum: number) {
+function buildAllTeamRounds(teams: Array<{ name: string; members: string[] }>, roundNum: number, usedWords?: string[]) {
+  const word = pickPasswordWord(usedWords);
   return teams
-    .map((team, i) => (team.members.length >= 2 ? buildTeamRound(team, i, roundNum) : null))
+    .map((team, i) => (team.members.length >= 2 ? buildTeamRound(team, i, roundNum, word) : null))
     .filter((r): r is NonNullable<typeof r> => r !== null);
 }
 
@@ -776,33 +800,6 @@ export const mutators = defineMutators({
       }
     ),
 
-    setWord: defineMutator(
-      z.object({ gameId: z.string(), sessionId: z.string(), word: z.string().min(1).max(40) }),
-      async ({ args, tx }) => {
-        const game = await tx.run(zql.password_games.where("id", args.gameId).one());
-        if (!game || game.phase !== "playing" || !game.active_rounds.length) {
-          throw new Error("Game is not in active round");
-        }
-        const roundEndsAt = game.settings.roundEndsAt;
-        if (roundEndsAt && now() > roundEndsAt) throw new Error("Round time expired");
-
-        const idx = game.active_rounds.findIndex((r) => r.wordPickerId === args.sessionId);
-        if (idx === -1) throw new Error("Only the word picker can set the word");
-        const round = game.active_rounds[idx]!;
-        if (round.word) throw new Error("Word is already set");
-
-        const nextRounds = game.active_rounds.map((r, i) =>
-          i === idx ? { ...r, word: args.word.trim() } : r
-        );
-
-        await tx.mutate.password_games.update({
-          id: game.id,
-          active_rounds: nextRounds,
-          updated_at: now()
-        });
-      }
-    ),
-
     submitClue: defineMutator(
       z.object({ gameId: z.string(), sessionId: z.string(), clue: z.string().min(1).max(80) }),
       async ({ args, tx }) => {
@@ -892,7 +889,6 @@ export const mutators = defineMutators({
           {
             round: game.current_round,
             teamIndex: round.teamIndex,
-            wordPickerId: round.wordPickerId,
             guesserId: round.guesserId,
             word: round.word,
             clues: round.clues,
@@ -915,10 +911,12 @@ export const mutators = defineMutators({
           return;
         }
 
-        // Rotate roles for this team and give them a fresh round
+        // Rotate roles for this team and give them a fresh round with a new random word
         const nextRoundNum = game.current_round + 1;
+        const usedWords = game.rounds.map((r) => r.word);
+        const newWord = pickPasswordWord(usedWords);
         const freshRound = team && team.members.length >= 2
-          ? buildTeamRound(team, round.teamIndex, nextRoundNum)
+          ? buildTeamRound(team, round.teamIndex, nextRoundNum, newWord)
           : null;
 
         const nextRounds = game.active_rounds.map((r, i) =>
@@ -951,7 +949,6 @@ export const mutators = defineMutators({
           nextHistory.push({
             round: game.current_round,
             teamIndex: round.teamIndex,
-            wordPickerId: round.wordPickerId,
             guesserId: round.guesserId,
             word: round.word ?? "(no word)",
             clues: round.clues,
@@ -1244,7 +1241,6 @@ export const mutators = defineMutators({
           z.object({
             round: z.number(),
             teamIndex: z.number(),
-            wordPickerId: z.string(),
             guesserId: z.string(),
             word: z.string(),
             clues: z.array(z.object({ sessionId: z.string(), text: z.string() })),
@@ -1256,7 +1252,6 @@ export const mutators = defineMutators({
         activeRounds: z.array(
           z.object({
             teamIndex: z.number(),
-            wordPickerId: z.string(),
             guesserId: z.string(),
             word: z.string().nullable(),
             clues: z.array(z.object({ sessionId: z.string(), text: z.string() })),

@@ -1,7 +1,6 @@
 type Round = {
   round: number;
   teamIndex: number;
-  wordPickerId: string;
   guesserId: string;
   word: string;
   clues: Array<{ sessionId: string; text: string }>;

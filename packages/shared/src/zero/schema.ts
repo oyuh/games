@@ -56,12 +56,11 @@ const passwordGames = table("password_games").columns({
   host_id: string(),
   phase: enumeration<"lobby" | "playing" | "results" | "ended">(),
   teams: json<Array<{ name: string; members: string[] }>>(),
-  rounds: json<Array<{ round: number; teamIndex: number; wordPickerId: string; guesserId: string; word: string; clues: Array<{ sessionId: string; text: string }>; guess: string | null; correct: boolean }>>(),
+  rounds: json<Array<{ round: number; teamIndex: number; guesserId: string; word: string; clues: Array<{ sessionId: string; text: string }>; guess: string | null; correct: boolean }>>(),
   scores: json<Record<string, number>>(),
   current_round: number(),
   active_rounds: json<Array<{
     teamIndex: number;
-    wordPickerId: string;
     guesserId: string;
     word: string | null;
     clues: Array<{ sessionId: string; text: string }>;

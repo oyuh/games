@@ -17,7 +17,6 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   const game = games[0];
-  const [word, setWord] = useState("");
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState("");
   const prevAnnouncementTs = useRef<number | null>(null);
@@ -99,25 +98,26 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   const myTeam = myTeamIndex >= 0 ? game.teams[myTeamIndex] : undefined;
   const myTeamMembers = myTeam?.members ?? [];
 
-  const setSecretWord = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!word.trim()) return;
-    await zero.mutate(mutators.password.setWord({ gameId, sessionId, word: word.trim() })).server;
-    setWord("");
-  };
-
   const submitClue = async (event: FormEvent) => {
     event.preventDefault();
     if (!clue.trim()) return;
-    await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server;
-    setClue("");
+    try {
+      await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server;
+      setClue("");
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Couldn't submit clue", "error");
+    }
   };
 
   const submitGuess = async (event: FormEvent) => {
     event.preventDefault();
     if (!guess.trim()) return;
-    await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server;
-    setGuess("");
+    try {
+      await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server;
+      setGuess("");
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Couldn't submit guess", "error");
+    }
   };
 
   return (
@@ -146,13 +146,10 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
           names={names}
           sessionId={sessionId}
           teamMembers={myTeamMembers}
-          word={word}
           clue={clue}
           guess={guess}
-          onWordChange={setWord}
           onClueChange={setClue}
           onGuessChange={setGuess}
-          onSetWord={setSecretWord}
           onSubmitClue={submitClue}
           onSubmitGuess={submitGuess}
         />

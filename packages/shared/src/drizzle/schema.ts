@@ -82,12 +82,11 @@ export const passwordGames = pgTable(
     hostId: text("host_id").notNull(),
     phase: passwordPhaseEnum("phase").notNull().default("lobby"),
     teams: jsonb("teams").$type<Array<{ name: string; members: string[] }>>().notNull().default([]),
-    rounds: jsonb("rounds").$type<Array<{ round: number; teamIndex: number; wordPickerId: string; guesserId: string; word: string; clues: Array<{ sessionId: string; text: string }>; guess: string | null; correct: boolean }>>().notNull().default([]),
+    rounds: jsonb("rounds").$type<Array<{ round: number; teamIndex: number; guesserId: string; word: string; clues: Array<{ sessionId: string; text: string }>; guess: string | null; correct: boolean }>>().notNull().default([]),
     scores: jsonb("scores").$type<Record<string, number>>().notNull().default({}),
     currentRound: integer("current_round").notNull().default(0),
     activeRounds: jsonb("active_rounds").$type<Array<{
       teamIndex: number;
-      wordPickerId: string;
       guesserId: string;
       word: string | null;
       clues: Array<{ sessionId: string; text: string }>;

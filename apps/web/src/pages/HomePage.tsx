@@ -450,24 +450,22 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     ];
     const scores: Record<string, number> = { "Team 1": phase === "results" ? 10 : 4, "Team 2": phase === "results" ? 7 : 3 };
     const rounds = phase !== "lobby" ? [
-      { round: 1, teamIndex: 0, wordPickerId: sessionId, guesserId: "demo-p2", word: "Ocean", clues: [{ sessionId, text: "Waves" }], guess: "Ocean", correct: true },
-      { round: 2, teamIndex: 1, wordPickerId: "demo-p3", guesserId: "demo-p4", word: "Fire", clues: [{ sessionId: "demo-p3", text: "Hot" }], guess: "Sun", correct: false },
-      { round: 3, teamIndex: 0, wordPickerId: "demo-p2", guesserId: sessionId, word: "Guitar", clues: [{ sessionId: "demo-p2", text: "Strings" }], guess: "Guitar", correct: true },
+      { round: 1, teamIndex: 0, guesserId: "demo-p2", word: "Ocean", clues: [{ sessionId, text: "Waves" }], guess: "Ocean", correct: true },
+      { round: 2, teamIndex: 1, guesserId: "demo-p4", word: "Fire", clues: [{ sessionId: "demo-p3", text: "Hot" }], guess: "Sun", correct: false },
+      { round: 3, teamIndex: 0, guesserId: sessionId, word: "Guitar", clues: [{ sessionId: "demo-p2", text: "Strings" }], guess: "Guitar", correct: true },
     ] : [];
     const activeRounds = phase === "playing" ? [
       {
         teamIndex: 0,
-        wordPickerId: sessionId,
         guesserId: "demo-p2",
-        word: null as string | null,
+        word: "Balloon" as string | null,
         clues: [] as Array<{ sessionId: string; text: string }>,
         guess: null as string | null,
       },
       {
         teamIndex: 1,
-        wordPickerId: "demo-p3",
         guesserId: "demo-p4",
-        word: null as string | null,
+        word: "Balloon" as string | null,
         clues: [] as Array<{ sessionId: string; text: string }>,
         guess: null as string | null,
       }

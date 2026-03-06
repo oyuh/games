@@ -3,7 +3,6 @@ import { FiSend } from "react-icons/fi";
 
 type ActiveRound = {
   teamIndex: number;
-  wordPickerId: string;
   guesserId: string;
   word: string | null;
   clues: Array<{ sessionId: string; text: string }>;
@@ -15,13 +14,10 @@ export function PasswordActiveRound({
   names,
   sessionId,
   teamMembers,
-  word,
   clue,
   guess,
-  onWordChange,
   onClueChange,
   onGuessChange,
-  onSetWord,
   onSubmitClue,
   onSubmitGuess
 }: {
@@ -29,19 +25,14 @@ export function PasswordActiveRound({
   names: Record<string, string>;
   sessionId: string;
   teamMembers: string[];
-  word: string;
   clue: string;
   guess: string;
-  onWordChange: (value: string) => void;
   onClueChange: (value: string) => void;
   onGuessChange: (value: string) => void;
-  onSetWord: (event: FormEvent) => void;
   onSubmitClue: (event: FormEvent) => void;
   onSubmitGuess: (event: FormEvent) => void;
 }) {
-  const pickerName = names[activeRound.wordPickerId] ?? activeRound.wordPickerId.slice(0, 6);
   const guesserName = names[activeRound.guesserId] ?? activeRound.guesserId.slice(0, 6);
-  const isWordPicker = activeRound.wordPickerId === sessionId;
   const isGuesser = activeRound.guesserId === sessionId;
   const isOnTeam = teamMembers.includes(sessionId);
   const isClueGiver = isOnTeam && !isGuesser;
@@ -54,44 +45,12 @@ export function PasswordActiveRound({
     <div className="game-section">
       <div className="game-round-roles">
         <div className="game-round-role">
-          <span className="game-round-role-label">Word Picker</span>
-          <span className={`game-round-role-name${isWordPicker ? " game-round-role-name--me" : ""}`}>
-            {pickerName}{isWordPicker ? " (you)" : ""}
-          </span>
-        </div>
-        <div className="game-round-role">
           <span className="game-round-role-label">Guesser</span>
           <span className={`game-round-role-name${isGuesser ? " game-round-role-name--me" : ""}`}>
             {guesserName}{isGuesser ? " (you)" : ""}
           </span>
         </div>
       </div>
-
-      {/* Phase 1: Word picker sets the word */}
-      {!activeRound.word && isWordPicker && (
-        <form className="game-clue-form" onSubmit={onSetWord}>
-          <div className="game-input-group">
-            <label className="game-input-label">Choose a Secret Word</label>
-            <input
-              className="input"
-              value={word}
-              onChange={(e) => onWordChange(e.target.value)}
-              placeholder="Type the secret word…"
-              maxLength={40}
-            />
-          </div>
-          <button type="submit" className="btn btn-primary game-action-btn" disabled={!word.trim()}>
-            <FiSend size={14} /> Set Word
-          </button>
-        </form>
-      )}
-
-      {!activeRound.word && !isWordPicker && (
-        <div className="game-waiting">
-          <div className="game-waiting-pulse" />
-          <p>Waiting for {pickerName} to pick a word…</p>
-        </div>
-      )}
 
       {/* Wrong guess — retry notice */}
       {hasWrongGuess && (
@@ -103,15 +62,13 @@ export function PasswordActiveRound({
         </div>
       )}
 
-      {/* Phase 2: Clue givers submit one-word clues (word is set, not all clues in) */}
+      {/* Clue givers submit one-word clues (not all clues in yet) */}
       {activeRound.word && !allCluesIn && isClueGiver && !alreadyClued && (
         <>
-          {!isGuesser && (
-            <div className="game-clue-reveal" style={{ marginBottom: "0.75rem" }}>
-              <span className="game-clue-reveal-label">Secret Word</span>
-              <span className="game-clue-reveal-word">{activeRound.word}</span>
-            </div>
-          )}
+          <div className="game-clue-reveal" style={{ marginBottom: "0.75rem" }}>
+            <span className="game-clue-reveal-label">Secret Word</span>
+            <span className="game-clue-reveal-word">{activeRound.word}</span>
+          </div>
           <form className="game-input-row" onSubmit={onSubmitClue}>
             <input
               className="input flex-1"

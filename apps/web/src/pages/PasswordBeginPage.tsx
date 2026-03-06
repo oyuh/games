@@ -1,6 +1,6 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
@@ -17,6 +17,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
+  const prevAnnouncementTs = useRef<number | null>(null);
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -50,6 +51,16 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
+  // Announcement watcher (skip for host — they sent it)
+  const isHost = game?.host_id === sessionId;
+  useEffect(() => {
+    if (!game?.announcement) return;
+    if (prevAnnouncementTs.current !== game.announcement.ts) {
+      prevAnnouncementTs.current = game.announcement.ts;
+      if (!isHost) showToast(`📢 ${game.announcement.text}`, "info");
+    }
+  }, [game?.announcement, isHost]);
+
   if (!game) {
     return (
       <div className="game-page">
@@ -58,7 +69,6 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const isHost = game.host_id === sessionId;
   const inGame = game.teams.some((t) => t.members.includes(sessionId));
   const teamsWithPlayers = game.teams.filter((t) => t.members.length > 0).length;
   const canStart = isHost && teamsWithPlayers >= 2;
