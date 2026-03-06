@@ -84,30 +84,17 @@ function getConnectedSet(sessions: Array<{ id: string; last_seen: number }>) {
   return new Set(sessions.filter((session) => session.last_seen >= cutoff).map((session) => session.id));
 }
 
-function nextPasswordRoundState(game: {
-  teams: Array<{ name: string; members: string[] }>;
-  current_round: number;
-  settings: { targetScore: number; turnTeamIndex: number; roundDurationSec: number };
-}) {
-  if (!game.teams.length) {
-    throw new Error("No teams are available");
-  }
-
-  const teamIndex = game.settings.turnTeamIndex % game.teams.length;
-  const team = game.teams[teamIndex]!;
+function buildTeamRound(team: { name: string; members: string[] }, teamIndex: number, roundNum: number) {
   if (team.members.length < 2) {
-    throw new Error("Active team needs at least 2 members");
+    throw new Error(`${team.name} needs at least 2 players`);
   }
-
-  const guesserId = team.members[(game.current_round - 1) % team.members.length]!;
-  // Word picker is a different member from the guesser
-  let wordPickerIdx = game.current_round % team.members.length;
+  const guesserId = team.members[(roundNum - 1) % team.members.length]!;
+  let wordPickerIdx = roundNum % team.members.length;
   if (team.members[wordPickerIdx] === guesserId) {
     wordPickerIdx = (wordPickerIdx + 1) % team.members.length;
   }
   const wordPickerId = team.members[wordPickerIdx]!;
 
-  const startedAt = now();
   return {
     teamIndex,
     wordPickerId,
@@ -115,9 +102,13 @@ function nextPasswordRoundState(game: {
     word: null as string | null,
     clues: [] as Array<{ sessionId: string; text: string }>,
     guess: null as string | null,
-    startedAt,
-    endsAt: startedAt + game.settings.roundDurationSec * 1000
   };
+}
+
+function buildAllTeamRounds(teams: Array<{ name: string; members: string[] }>, roundNum: number) {
+  return teams
+    .map((team, i) => (team.members.length >= 2 ? buildTeamRound(team, i, roundNum) : null))
+    .filter((r): r is NonNullable<typeof r> => r !== null);
 }
 
 export const mutators = defineMutators({
@@ -644,10 +635,10 @@ export const mutators = defineMutators({
           rounds: [],
           scores: scoreInit,
           current_round: 0,
-          active_round: null,
+          active_rounds: [],
           kicked: [],
           announcement: null,
-          settings: { targetScore: args.targetScore ?? 10, turnTeamIndex: 0, roundDurationSec: 75 },
+          settings: { targetScore: args.targetScore ?? 10, roundDurationSec: 75, roundEndsAt: null },
           created_at: now(),
           updated_at: now()
         });
@@ -716,7 +707,8 @@ export const mutators = defineMutators({
           await tx.mutate.password_games.update({
             id: game.id,
             phase: "ended",
-            active_round: null,
+            active_rounds: [],
+            settings: { ...game.settings, roundEndsAt: null },
             updated_at: now()
           });
           const gameSessions = await tx.run(
@@ -770,17 +762,15 @@ export const mutators = defineMutators({
           throw new Error(`${underStaffed.name} needs at least 2 players`);
         }
 
-        const nextGame = {
-          ...game,
-          current_round: 1,
-          settings: { ...game.settings, turnTeamIndex: 0 }
-        };
+        const activeRounds = buildAllTeamRounds(game.teams, 1);
+        const roundEndsAt = now() + game.settings.roundDurationSec * 1000;
 
         await tx.mutate.password_games.update({
           id: game.id,
           phase: "playing",
           current_round: 1,
-          active_round: nextPasswordRoundState(nextGame),
+          active_rounds: activeRounds,
+          settings: { ...game.settings, roundEndsAt },
           updated_at: now()
         });
       }
@@ -790,18 +780,24 @@ export const mutators = defineMutators({
       z.object({ gameId: z.string(), sessionId: z.string(), word: z.string().min(1).max(40) }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.password_games.where("id", args.gameId).one());
-        if (!game || game.phase !== "playing" || !game.active_round) {
+        if (!game || game.phase !== "playing" || !game.active_rounds.length) {
           throw new Error("Game is not in active round");
         }
-        if (game.active_round.wordPickerId !== args.sessionId) {
-          throw new Error("Only the word picker can set the word");
-        }
-        if (game.active_round.word) throw new Error("Word is already set");
-        if (now() > game.active_round.endsAt) throw new Error("Round time expired");
+        const roundEndsAt = game.settings.roundEndsAt;
+        if (roundEndsAt && now() > roundEndsAt) throw new Error("Round time expired");
+
+        const idx = game.active_rounds.findIndex((r) => r.wordPickerId === args.sessionId);
+        if (idx === -1) throw new Error("Only the word picker can set the word");
+        const round = game.active_rounds[idx]!;
+        if (round.word) throw new Error("Word is already set");
+
+        const nextRounds = game.active_rounds.map((r, i) =>
+          i === idx ? { ...r, word: args.word.trim() } : r
+        );
 
         await tx.mutate.password_games.update({
           id: game.id,
-          active_round: { ...game.active_round, word: args.word.trim() },
+          active_rounds: nextRounds,
           updated_at: now()
         });
       }
@@ -811,33 +807,39 @@ export const mutators = defineMutators({
       z.object({ gameId: z.string(), sessionId: z.string(), clue: z.string().min(1).max(80) }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.password_games.where("id", args.gameId).one());
-        if (!game || game.phase !== "playing" || !game.active_round) {
+        if (!game || game.phase !== "playing" || !game.active_rounds.length) {
           throw new Error("Game is not in active round");
         }
-        if (!game.active_round.word) throw new Error("Word hasn't been set yet");
-        if (now() > game.active_round.endsAt) throw new Error("Round time expired");
-        if (game.active_round.guesserId === args.sessionId) {
+        const roundEndsAt = game.settings.roundEndsAt;
+        if (roundEndsAt && now() > roundEndsAt) throw new Error("Round time expired");
+
+        // Find which team this player is on
+        const teamIdx = game.teams.findIndex((t) => t.members.includes(args.sessionId));
+        if (teamIdx === -1) throw new Error("You are not on any team");
+        const roundIdx = game.active_rounds.findIndex((r) => r.teamIndex === teamIdx);
+        if (roundIdx === -1) throw new Error("Your team has no active round");
+        const round = game.active_rounds[roundIdx]!;
+
+        if (!round.word) throw new Error("Word hasn't been set yet");
+        if (round.guesserId === args.sessionId) {
           throw new Error("The guesser cannot submit a clue");
         }
         if (!isOneWord(args.clue)) throw new Error("Clue must be one word");
-        if (isClueTooSimilar(args.clue, game.active_round.word)) {
+        if (isClueTooSimilar(args.clue, round.word)) {
           throw new Error("Clue is too similar to the word");
         }
-
-        // Must be on the active team
-        const team = game.teams[game.active_round.teamIndex];
-        if (!team || !team.members.includes(args.sessionId)) {
-          throw new Error("You are not on the active team");
-        }
-        if (game.active_round.clues.some((c) => c.sessionId === args.sessionId)) {
+        if (round.clues.some((c) => c.sessionId === args.sessionId)) {
           throw new Error("You already submitted a clue");
         }
 
-        const nextClues = [...game.active_round.clues, { sessionId: args.sessionId, text: args.clue.trim() }];
+        const nextClues = [...round.clues, { sessionId: args.sessionId, text: args.clue.trim() }];
+        const nextRounds = game.active_rounds.map((r, i) =>
+          i === roundIdx ? { ...r, clues: nextClues } : r
+        );
 
         await tx.mutate.password_games.update({
           id: game.id,
-          active_round: { ...game.active_round, clues: nextClues },
+          active_rounds: nextRounds,
           updated_at: now()
         });
       }
@@ -847,47 +849,53 @@ export const mutators = defineMutators({
       z.object({ gameId: z.string(), sessionId: z.string(), guess: z.string().min(1).max(40) }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.password_games.where("id", args.gameId).one());
-        if (!game || game.phase !== "playing" || !game.active_round || !game.active_round.word) {
+        if (!game || game.phase !== "playing" || !game.active_rounds.length) {
           throw new Error("Round is not ready for guessing");
         }
-        if (game.active_round.guesserId !== args.sessionId) {
-          throw new Error("Only guesser can submit guess");
-        }
-        if (now() > game.active_round.endsAt) throw new Error("Round time expired");
+        const roundEndsAt = game.settings.roundEndsAt;
+        if (roundEndsAt && now() > roundEndsAt) throw new Error("Round time expired");
 
-        // Require all team clues before guessing
-        const team = game.teams[game.active_round.teamIndex];
-        const clueGiverCount = team ? team.members.filter((m) => m !== game.active_round!.guesserId).length : 0;
-        if (game.active_round.clues.length < clueGiverCount) {
+        // Find which team round this guesser belongs to
+        const roundIdx = game.active_rounds.findIndex((r) => r.guesserId === args.sessionId);
+        if (roundIdx === -1) throw new Error("Only guesser can submit guess");
+        const round = game.active_rounds[roundIdx]!;
+        if (!round.word) throw new Error("Word hasn't been set yet");
+
+        const team = game.teams[round.teamIndex];
+        const clueGiverCount = team ? team.members.filter((m) => m !== round.guesserId).length : 0;
+        if (round.clues.length < clueGiverCount) {
           throw new Error("Waiting for all clues to be submitted");
         }
 
-        const correct = normalized(args.guess) === normalized(game.active_round.word);
+        const correct = normalized(args.guess) === normalized(round.word);
 
         if (!correct) {
           // Wrong → same team retries with new set of clues, timer keeps running
+          const nextRounds = game.active_rounds.map((r, i) =>
+            i === roundIdx ? { ...r, clues: [], guess: args.guess.trim() } : r
+          );
           await tx.mutate.password_games.update({
             id: game.id,
-            active_round: { ...game.active_round, clues: [], guess: args.guess.trim() },
+            active_rounds: nextRounds,
             updated_at: now()
           });
           return;
         }
 
-        // Correct → record round, +1, advance to next team
-        const teamName = team?.name ?? `Team ${game.active_round.teamIndex + 1}`;
+        // Correct → record round, +1 score, give team a fresh round entry
+        const teamName = team?.name ?? `Team ${round.teamIndex + 1}`;
         const currentScore = game.scores[teamName] ?? 0;
         const nextScores = { ...game.scores, [teamName]: currentScore + 1 };
 
-        const nextRounds = [
+        const nextHistory = [
           ...game.rounds,
           {
             round: game.current_round,
-            teamIndex: game.active_round.teamIndex,
-            wordPickerId: game.active_round.wordPickerId,
-            guesserId: game.active_round.guesserId,
-            word: game.active_round.word,
-            clues: game.active_round.clues,
+            teamIndex: round.teamIndex,
+            wordPickerId: round.wordPickerId,
+            guesserId: round.guesserId,
+            word: round.word,
+            clues: round.clues,
             guess: args.guess.trim(),
             correct: true
           }
@@ -898,29 +906,31 @@ export const mutators = defineMutators({
           await tx.mutate.password_games.update({
             id: game.id,
             phase: "results",
-            rounds: nextRounds,
+            rounds: nextHistory,
             scores: nextScores,
-            active_round: null,
+            active_rounds: [],
+            settings: { ...game.settings, roundEndsAt: null },
             updated_at: now()
           });
           return;
         }
 
+        // Rotate roles for this team and give them a fresh round
         const nextRoundNum = game.current_round + 1;
-        const turnTeamIndex = (game.settings.turnTeamIndex + 1) % Math.max(1, game.teams.length);
-        const basis = {
-          ...game,
-          current_round: nextRoundNum,
-          settings: { ...game.settings, turnTeamIndex }
-        };
+        const freshRound = team && team.members.length >= 2
+          ? buildTeamRound(team, round.teamIndex, nextRoundNum)
+          : null;
+
+        const nextRounds = game.active_rounds.map((r, i) =>
+          i === roundIdx ? (freshRound ?? r) : r
+        );
 
         await tx.mutate.password_games.update({
           id: game.id,
-          rounds: nextRounds,
+          rounds: nextHistory,
           scores: nextScores,
           current_round: nextRoundNum,
-          active_round: nextPasswordRoundState(basis),
-          settings: { ...game.settings, turnTeamIndex },
+          active_rounds: nextRounds,
           updated_at: now()
         });
       }
@@ -930,40 +940,32 @@ export const mutators = defineMutators({
       z.object({ gameId: z.string() }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.password_games.where("id", args.gameId).one());
-        if (!game || game.phase !== "playing" || !game.active_round) return;
-        if (now() < game.active_round.endsAt) return; // not expired
+        if (!game || game.phase !== "playing" || !game.active_rounds.length) return;
+        const roundEndsAt = game.settings.roundEndsAt;
+        if (!roundEndsAt || now() < roundEndsAt) return; // not expired
 
-        // Timer expired — record as incorrect, advance to next team
-        const team = game.teams[game.active_round.teamIndex];
-        const nextRounds = [
-          ...game.rounds,
-          {
+        // Timer expired — game over, highest score wins
+        // Record all in-progress rounds as incomplete
+        const nextHistory = [...game.rounds];
+        for (const round of game.active_rounds) {
+          nextHistory.push({
             round: game.current_round,
-            teamIndex: game.active_round.teamIndex,
-            wordPickerId: game.active_round.wordPickerId,
-            guesserId: game.active_round.guesserId,
-            word: game.active_round.word ?? "(no word)",
-            clues: game.active_round.clues,
+            teamIndex: round.teamIndex,
+            wordPickerId: round.wordPickerId,
+            guesserId: round.guesserId,
+            word: round.word ?? "(no word)",
+            clues: round.clues,
             guess: null as string | null,
             correct: false
-          }
-        ];
-
-        const nextRoundNum = game.current_round + 1;
-        const turnTeamIndex = (game.settings.turnTeamIndex + 1) % Math.max(1, game.teams.length);
-        const basis = {
-          ...game,
-          current_round: nextRoundNum,
-          settings: { ...game.settings, turnTeamIndex }
-        };
+          });
+        }
 
         await tx.mutate.password_games.update({
           id: game.id,
-          rounds: nextRounds,
-          scores: game.scores,
-          current_round: nextRoundNum,
-          active_round: nextPasswordRoundState(basis),
-          settings: { ...game.settings, turnTeamIndex },
+          phase: "results",
+          rounds: nextHistory,
+          active_rounds: [],
+          settings: { ...game.settings, roundEndsAt: null },
           updated_at: now()
         });
       }
@@ -1046,9 +1048,9 @@ export const mutators = defineMutators({
           rounds: [],
           scores,
           current_round: 0,
-          active_round: null,
+          active_rounds: [],
           announcement: null,
-          settings: { ...game.settings, turnTeamIndex: 0 },
+          settings: { ...game.settings, roundEndsAt: null },
           updated_at: now()
         });
 
@@ -1108,7 +1110,8 @@ export const mutators = defineMutators({
         await tx.mutate.password_games.update({
           id: game.id,
           phase: "ended",
-          active_round: null,
+          active_rounds: [],
+          settings: { ...game.settings, roundEndsAt: null },
           updated_at: now()
         });
 
@@ -1250,19 +1253,18 @@ export const mutators = defineMutators({
           })
         ),
         currentRound: z.number(),
-        activeRound: z
-          .object({
+        activeRounds: z.array(
+          z.object({
             teamIndex: z.number(),
             wordPickerId: z.string(),
             guesserId: z.string(),
             word: z.string().nullable(),
             clues: z.array(z.object({ sessionId: z.string(), text: z.string() })),
-            guess: z.string().nullable(),
-            startedAt: z.number(),
-            endsAt: z.number()
+            guess: z.string().nullable()
           })
-          .nullable(),
-        targetScore: z.number()
+        ),
+        targetScore: z.number(),
+        roundEndsAt: z.number().nullable()
       }),
       async ({ args, tx }) => {
         const ts = now();
@@ -1275,13 +1277,13 @@ export const mutators = defineMutators({
           scores: args.scores,
           rounds: args.rounds,
           current_round: args.currentRound,
-          active_round: args.activeRound,
+          active_rounds: args.activeRounds,
           kicked: [],
           announcement: null,
           settings: {
             targetScore: args.targetScore,
-            turnTeamIndex: 1,
             roundDurationSec: 45,
+            roundEndsAt: args.roundEndsAt,
             teamsLocked: false
           },
           created_at: ts,

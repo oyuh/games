@@ -59,19 +59,17 @@ const passwordGames = table("password_games").columns({
   rounds: json<Array<{ round: number; teamIndex: number; wordPickerId: string; guesserId: string; word: string; clues: Array<{ sessionId: string; text: string }>; guess: string | null; correct: boolean }>>(),
   scores: json<Record<string, number>>(),
   current_round: number(),
-  active_round: json<{
+  active_rounds: json<Array<{
     teamIndex: number;
     wordPickerId: string;
     guesserId: string;
     word: string | null;
     clues: Array<{ sessionId: string; text: string }>;
     guess: string | null;
-    startedAt: number;
-    endsAt: number;
-  } | null>(),
+  }>>(),
   kicked: json<string[]>(),
   announcement: json<{ text: string; ts: number } | null>(),
-  settings: json<{ targetScore: number; turnTeamIndex: number; roundDurationSec: number; teamsLocked?: boolean }>(),
+  settings: json<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean }>(),
   created_at: number(),
   updated_at: number()
 }).primaryKey("id");

@@ -2170,6 +2170,29 @@ body {
   filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.3));
 }
 
+.sidebar-chat-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sidebar-chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  color: #fff;
+  background: var(--destructive);
+  pointer-events: none;
+}
+
 .host-section {
   padding: 1rem 0;
   border-bottom: 1px solid var(--border);
@@ -2279,51 +2302,6 @@ body {
 }
 
 /* ─── Chat Window (In-game IRC) ─────────────────────────── */
-
-.chat-toggle-btn {
-  position: fixed;
-  bottom: 1.25rem;
-  right: 1.25rem;
-  z-index: 800;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
-  background: rgba(18, 19, 20, 0.9);
-  backdrop-filter: blur(14px);
-  color: var(--primary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, border-color 0.15s, transform 0.15s;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.chat-toggle-btn:hover {
-  background: color-mix(in srgb, var(--primary) 15%, rgba(18, 19, 20, 0.95));
-  border-color: var(--primary);
-  transform: scale(1.08);
-}
-
-.chat-unread-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 99px;
-  background: var(--destructive);
-  color: #fff;
-  font-size: 0.6rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  line-height: 1;
-  box-shadow: 0 2px 6px rgba(176, 0, 32, 0.4);
-}
 
 .chat-window {
   position: fixed;
@@ -2552,11 +2530,6 @@ body {
 }
 
 /* Light theme overrides */
-[data-theme="light"] .chat-toggle-btn {
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
 [data-theme="light"] .chat-window {
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
 }

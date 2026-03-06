@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
-import { lt } from "drizzle-orm";
+import { lt, and, ne, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
@@ -137,37 +137,96 @@ app.post("/api/zero/mutate", async (c) => {
 });
 
 // ─── Stale game cleanup ────────────────────────────────────
-app.post("/api/cleanup", async (c) => {
+const STALE_MS = 20 * 60 * 1000;   // 20 min idle → end game
+const DELETE_MS = 60 * 60 * 1000;  // 1 hr → delete game row
+
+async function runCleanup() {
+  const now = Date.now();
+  const staleCutoff = now - STALE_MS;
+  const deleteCutoff = now - DELETE_MS;
+
+  // 1) End stale imposter games (not already ended)
+  const endedImposter = await drizzleClient
+    .update(imposterGames)
+    .set({ phase: "ended", updatedAt: now })
+    .where(
+      and(
+        lt(imposterGames.updatedAt, staleCutoff),
+        ne(imposterGames.phase, "ended")
+      )
+    )
+    .returning({ id: imposterGames.id });
+
+  // 2) End stale password games (not already ended)
+  const endedPassword = await drizzleClient
+    .update(passwordGames)
+    .set({ phase: "ended", activeRounds: [], settings: { targetScore: 10, roundDurationSec: 75, roundEndsAt: null }, updatedAt: now })
+    .where(
+      and(
+        lt(passwordGames.updatedAt, staleCutoff),
+        ne(passwordGames.phase, "ended")
+      )
+    )
+    .returning({ id: passwordGames.id });
+
+  // 3) Detach sessions that were in those ended games
+  const endedGameIds = new Set([
+    ...endedImposter.map((g) => g.id),
+    ...endedPassword.map((g) => g.id)
+  ]);
+  if (endedGameIds.size > 0) {
+    const allSessions = await drizzleClient
+      .select({ id: sessions.id, gameId: sessions.gameId })
+      .from(sessions)
+      .where(lt(sessions.lastSeen, staleCutoff));
+    for (const s of allSessions) {
+      if (s.gameId && endedGameIds.has(s.gameId)) {
+        await drizzleClient
+          .update(sessions)
+          .set({ gameType: null, gameId: null, lastSeen: now })
+          .where(eq(sessions.id, s.id));
+      }
+    }
+  }
+
+  // 4) Hard-delete old ended games (1hr+)
+  const deletedImposter = await drizzleClient
+    .delete(imposterGames)
+    .where(lt(imposterGames.updatedAt, deleteCutoff))
+    .returning({ id: imposterGames.id });
+
+  const deletedPassword = await drizzleClient
+    .delete(passwordGames)
+    .where(lt(passwordGames.updatedAt, deleteCutoff))
+    .returning({ id: passwordGames.id });
+
+  // 5) Delete stale sessions (1hr+)
+  const deletedSessions = await drizzleClient
+    .delete(sessions)
+    .where(lt(sessions.lastSeen, deleteCutoff))
+    .returning({ id: sessions.id });
+
+  return {
+    imposterGamesEnded: endedImposter.length,
+    passwordGamesEnded: endedPassword.length,
+    imposterGamesDeleted: deletedImposter.length,
+    passwordGamesDeleted: deletedPassword.length,
+    sessionsDeleted: deletedSessions.length,
+    staleCutoff: new Date(staleCutoff).toISOString(),
+    deleteCutoff: new Date(deleteCutoff).toISOString(),
+  };
+}
+
+// Accept both GET and POST so any cron service works
+app.on(["GET", "POST"], "/api/cleanup", async (c) => {
   const authHeader = c.req.header("Authorization");
   const expectedToken = process.env.CLEANUP_SECRET ?? "cleanup-local";
   if (authHeader !== `Bearer ${expectedToken}`) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
-
-  const deletedImposter = await drizzleClient
-    .delete(imposterGames)
-    .where(lt(imposterGames.updatedAt, oneHourAgo))
-    .returning({ id: imposterGames.id });
-
-  const deletedPassword = await drizzleClient
-    .delete(passwordGames)
-    .where(lt(passwordGames.updatedAt, oneHourAgo))
-    .returning({ id: passwordGames.id });
-
-  const deletedSessions = await drizzleClient
-    .delete(sessions)
-    .where(lt(sessions.lastSeen, oneHourAgo))
-    .returning({ id: sessions.id });
-
-  const summary = {
-    imposterGamesDeleted: deletedImposter.length,
-    passwordGamesDeleted: deletedPassword.length,
-    sessionsDeleted: deletedSessions.length,
-    cutoff: new Date(oneHourAgo).toISOString(),
-  };
-  console.log("[cleanup]", summary);
+  const summary = await runCleanup();
+  console.log("[cleanup] via endpoint", summary);
   return c.json({ ok: true, ...summary });
 });
 
@@ -184,37 +243,15 @@ const server = serve(
 
 startPresenceServer(server, "/presence");
 
-// ─── Auto-cleanup: run every hour ──────────────────────────
-async function runCleanup() {
+// ─── Auto-cleanup: run every 15 minutes ────────────────────
+async function scheduledCleanup() {
   try {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
-
-    const deletedImposter = await drizzleClient
-      .delete(imposterGames)
-      .where(lt(imposterGames.updatedAt, oneHourAgo))
-      .returning({ id: imposterGames.id });
-
-    const deletedPassword = await drizzleClient
-      .delete(passwordGames)
-      .where(lt(passwordGames.updatedAt, oneHourAgo))
-      .returning({ id: passwordGames.id });
-
-    const deletedSessions = await drizzleClient
-      .delete(sessions)
-      .where(lt(sessions.lastSeen, oneHourAgo))
-      .returning({ id: sessions.id });
-
-    console.log("[cleanup]", {
-      imposterGamesDeleted: deletedImposter.length,
-      passwordGamesDeleted: deletedPassword.length,
-      sessionsDeleted: deletedSessions.length,
-      cutoff: new Date(oneHourAgo).toISOString(),
-    });
+    const summary = await runCleanup();
+    console.log("[cleanup] scheduled", summary);
   } catch (err) {
     console.error("[cleanup] error:", err);
   }
 }
 
-// Run once on startup (after 10s delay), then every hour
-setTimeout(runCleanup, 10_000);
-setInterval(runCleanup, 60 * 60 * 1000);
+setTimeout(scheduledCleanup, 10_000);
+setInterval(scheduledCleanup, 15 * 60 * 1000);

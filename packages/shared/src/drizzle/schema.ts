@@ -85,19 +85,17 @@ export const passwordGames = pgTable(
     rounds: jsonb("rounds").$type<Array<{ round: number; teamIndex: number; wordPickerId: string; guesserId: string; word: string; clues: Array<{ sessionId: string; text: string }>; guess: string | null; correct: boolean }>>().notNull().default([]),
     scores: jsonb("scores").$type<Record<string, number>>().notNull().default({}),
     currentRound: integer("current_round").notNull().default(0),
-    activeRound: jsonb("active_round").$type<{
+    activeRounds: jsonb("active_rounds").$type<Array<{
       teamIndex: number;
       wordPickerId: string;
       guesserId: string;
       word: string | null;
       clues: Array<{ sessionId: string; text: string }>;
       guess: string | null;
-      startedAt: number;
-      endsAt: number;
-    } | null>().default(null),
+    }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
     announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
-    settings: jsonb("settings").$type<{ targetScore: number; turnTeamIndex: number; roundDurationSec: number; teamsLocked?: boolean }>().notNull().default({ targetScore: 10, turnTeamIndex: 0, roundDurationSec: 75 }),
+    settings: jsonb("settings").$type<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean }>().notNull().default({ targetScore: 10, roundDurationSec: 75, roundEndsAt: null }),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()
   },

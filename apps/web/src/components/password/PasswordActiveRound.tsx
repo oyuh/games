@@ -2,6 +2,7 @@ import { FormEvent } from "react";
 import { FiSend } from "react-icons/fi";
 
 type ActiveRound = {
+  teamIndex: number;
   wordPickerId: string;
   guesserId: string;
   word: string | null;

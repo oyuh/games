@@ -9,7 +9,6 @@ import { ImposterLobbyActions } from "../components/imposter/ImposterLobbyAction
 import { ImposterPlayersCard } from "../components/imposter/ImposterPlayersCard";
 import { ImposterResultsSection } from "../components/imposter/ImposterResultsSection";
 import { ImposterVoteSection } from "../components/imposter/ImposterVoteSection";
-import { ChatWindow } from "../components/shared/ChatWindow";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
@@ -82,14 +81,14 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
     return () => clearTimeout(timer);
   }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
 
-  // Announcement watcher
+  // Announcement watcher (skip for host — they sent it)
   useEffect(() => {
     if (!game?.announcement) return;
     if (prevAnnouncementTs.current !== game.announcement.ts) {
       prevAnnouncementTs.current = game.announcement.ts;
-      showToast(`📢 ${game.announcement.text}`, "info");
+      if (!isHost) showToast(`📢 ${game.announcement.text}`, "info");
     }
-  }, [game?.announcement]);
+  }, [game?.announcement, isHost]);
 
   if (!game) {
     return (
@@ -265,25 +264,6 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           </div>
         </div>
       )}
-
-      {/* In-game Chat */}
-      {game && game.phase !== "ended" && (
-        <ChatWindow
-          gameType="imposter"
-          gameId={gameId}
-          hostId={game.host_id}
-          myBadge={getChatBadge()}
-          myName={sessionById[sessionId] ?? sessionId.slice(0, 6)}
-        />
-      )}
     </div>
   );
-
-  function getChatBadge() {
-    const parts: string[] = [];
-    if (isHost) parts.push("Host");
-    if (me?.role === "imposter" && (game?.phase === "results" || game?.phase === "finished")) parts.push("Imposter");
-    else if (me?.role) parts.push(me.role.charAt(0).toUpperCase() + me.role.slice(1));
-    return parts.join(" · ") || undefined;
-  }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { FiHome, FiMenu, FiX, FiSettings, FiInfo } from "react-icons/fi";
+import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
@@ -9,6 +9,7 @@ import { InfoModal } from "./shared/InfoModal";
 import { HostControlsModal } from "./shared/HostControlsModal";
 import { useSettings } from "../lib/settings";
 import { getOrCreateSessionId } from "../lib/session";
+import { useChatContext } from "../lib/chat-context";
 
 type GameContext = Parameters<typeof HostControlsModal>[0]["game"];
 
@@ -78,6 +79,7 @@ export function Sidebar() {
   const settings = useSettings();
   const gameContext = useGameContext();
   const sessionId = getOrCreateSessionId();
+  const chat = useChatContext();
 
   useEffect(() => {
     setMobileOpen(false);
@@ -116,6 +118,20 @@ export function Sidebar() {
             icon={<PiCrownSimpleFill size={16} className="sidebar-host-icon" />}
             label="Host"
             onClick={() => { setModal("host"); setMobileOpen(false); }}
+          />
+        )}
+        {chat.inGame && (
+          <SidebarButton
+            icon={
+              <span className="sidebar-chat-icon-wrap">
+                <FiMessageCircle size={16} />
+                {chat.unread > 0 && (
+                  <span className="sidebar-chat-badge">{chat.unread > 99 ? "99+" : chat.unread}</span>
+                )}
+              </span>
+            }
+            label="Chat"
+            onClick={() => { chat.toggle(); setMobileOpen(false); }}
           />
         )}
         <SidebarButton icon={<FiInfo size={16} />} label="Info" onClick={() => { setModal("info"); setMobileOpen(false); }} />

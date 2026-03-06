@@ -6,7 +6,6 @@ import { PasswordActiveRound } from "../components/password/PasswordActiveRound"
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
-import { ChatWindow } from "../components/shared/ChatWindow";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { showToast } from "../lib/toast";
 
@@ -25,6 +24,8 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
 
   usePresenceSocket({ sessionId, gameId, gameType: "password" });
 
+  const isHost = game?.host_id === sessionId;
+
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
       acc[s.id] = s.name ?? s.id.slice(0, 6);
@@ -32,10 +33,22 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     }, {});
   }, [sessions]);
 
+  // Find the player's team index
+  const myTeamIndex = useMemo(() => {
+    if (!game) return -1;
+    return game.teams.findIndex((t) => t.members.includes(sessionId));
+  }, [game?.teams, sessionId]);
+
+  // Find this player's team's active round
+  const myActiveRound = useMemo(() => {
+    if (!game || !game.active_rounds.length || myTeamIndex === -1) return undefined;
+    return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
+  }, [game?.active_rounds, myTeamIndex]);
+
   // Auto-advance timer
   useEffect(() => {
-    if (!game || game.phase !== "playing" || !game.active_round) return;
-    const remaining = game.active_round.endsAt - Date.now();
+    if (!game || game.phase !== "playing" || !game.settings.roundEndsAt) return;
+    const remaining = game.settings.roundEndsAt - Date.now();
     if (remaining <= 0) {
       void zero.mutate(mutators.password.advanceTimer({ gameId }));
       return;
@@ -44,7 +57,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
       void zero.mutate(mutators.password.advanceTimer({ gameId }));
     }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.active_round?.endsAt, game?.phase, gameId, zero]);
+  }, [game?.settings.roundEndsAt, game?.phase, gameId, zero]);
 
   // Auto-navigate to results when game ends
   useEffect(() => {
@@ -66,14 +79,14 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
-  // Announcement watcher
+  // Announcement watcher (skip for host — they sent it)
   useEffect(() => {
     if (!game?.announcement) return;
     if (prevAnnouncementTs.current !== game.announcement.ts) {
       prevAnnouncementTs.current = game.announcement.ts;
-      showToast(`📢 ${game.announcement.text}`, "info");
+      if (!isHost) showToast(`📢 ${game.announcement.text}`, "info");
     }
-  }, [game?.announcement]);
+  }, [game?.announcement, isHost]);
 
   if (!game) {
     return (
@@ -83,10 +96,8 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const activeRound = game.active_round;
-  const isHost = game.host_id === sessionId;
-  const activeTeam = activeRound ? game.teams[activeRound.teamIndex] : undefined;
-  const teamMembers = activeTeam?.members ?? [];
+  const myTeam = myTeamIndex >= 0 ? game.teams[myTeamIndex] : undefined;
+  const myTeamMembers = myTeam?.members ?? [];
 
   const setSecretWord = async (event: FormEvent) => {
     event.preventDefault();
@@ -116,7 +127,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         code={game.code}
         phase={game.phase}
         currentRound={game.current_round}
-        endsAt={activeRound?.endsAt}
+        endsAt={game.settings.roundEndsAt}
         isHost={isHost}
       />
 
@@ -124,17 +135,17 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         teams={game.teams}
         scores={game.scores}
         names={names}
-        activeTeamIndex={activeRound?.teamIndex}
+        activeTeamIndex={undefined}
         sessionId={sessionId}
         showScores
       />
 
-      {game.phase === "playing" && activeRound && (
+      {game.phase === "playing" && myActiveRound && (
         <PasswordActiveRound
-          activeRound={activeRound}
+          activeRound={myActiveRound}
           names={names}
           sessionId={sessionId}
-          teamMembers={teamMembers}
+          teamMembers={myTeamMembers}
           word={word}
           clue={clue}
           guess={guess}
@@ -145,6 +156,15 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
           onSubmitClue={submitClue}
           onSubmitGuess={submitGuess}
         />
+      )}
+
+      {game.phase === "playing" && !myActiveRound && (
+        <div className="game-section">
+          <div className="game-waiting">
+            <div className="game-waiting-pulse" />
+            <p>All teams are racing! Watch the scores update in real time.</p>
+          </div>
+        </div>
       )}
 
       {game.phase === "results" && (
@@ -176,25 +196,6 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
           </button>
         </div>
       )}
-
-      {/* In-game Chat */}
-      {game && game.phase !== "ended" && (
-        <ChatWindow
-          gameType="password"
-          gameId={gameId}
-          hostId={game.host_id}
-          myBadge={getPasswordBadge()}
-          myName={names[sessionId] ?? sessionId.slice(0, 6)}
-        />
-      )}
     </div>
   );
-
-  function getPasswordBadge() {
-    const parts: string[] = [];
-    if (isHost) parts.push("Host");
-    const myTeam = game?.teams.find((t) => t.members.includes(sessionId));
-    if (myTeam) parts.push(myTeam.name);
-    return parts.join(" \u00b7 ") || undefined;
-  }
 }

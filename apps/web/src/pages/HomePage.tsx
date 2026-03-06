@@ -425,11 +425,11 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     // Seed some demo chat messages
     if (phase !== "lobby") {
       const chatMsgs = [
-        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: sessionId, senderName: savedName || "You", badge: "Host · Player", text: "Hey everyone! Good luck this round 🎮" },
-        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", badge: "Player", text: "gl hf!" },
-        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p3", senderName: "Bob", badge: "Player", text: "I have no idea what the word is lol" },
-        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p4", senderName: "Charlie", badge: "Player", text: "hmm suspicious 🤔" },
-        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", badge: "Player", text: "Charlie seems nervous..." },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: sessionId, senderName: savedName || "You", text: "Hey everyone! Good luck this round \ud83c\udfae" },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", text: "gl hf!" },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p3", senderName: "Bob", text: "I have no idea what the word is lol" },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p4", senderName: "Charlie", text: "hmm suspicious \ud83e\udd14" },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", text: "Charlie seems nervous..." },
       ];
       for (const msg of chatMsgs) {
         await zero.mutate(mutators.chat.send(msg));
@@ -454,16 +454,24 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       { round: 2, teamIndex: 1, wordPickerId: "demo-p3", guesserId: "demo-p4", word: "Fire", clues: [{ sessionId: "demo-p3", text: "Hot" }], guess: "Sun", correct: false },
       { round: 3, teamIndex: 0, wordPickerId: "demo-p2", guesserId: sessionId, word: "Guitar", clues: [{ sessionId: "demo-p2", text: "Strings" }], guess: "Guitar", correct: true },
     ] : [];
-    const activeRound = phase === "playing" ? {
-      teamIndex: 1,
-      wordPickerId: "demo-p3",
-      guesserId: "demo-p4",
-      word: null as string | null,
-      clues: [] as Array<{ sessionId: string; text: string }>,
-      guess: null as string | null,
-      startedAt: ts,
-      endsAt: ts + 45_000,
-    } : null;
+    const activeRounds = phase === "playing" ? [
+      {
+        teamIndex: 0,
+        wordPickerId: sessionId,
+        guesserId: "demo-p2",
+        word: null as string | null,
+        clues: [] as Array<{ sessionId: string; text: string }>,
+        guess: null as string | null,
+      },
+      {
+        teamIndex: 1,
+        wordPickerId: "demo-p3",
+        guesserId: "demo-p4",
+        word: null as string | null,
+        clues: [] as Array<{ sessionId: string; text: string }>,
+        guess: null as string | null,
+      }
+    ] : [];
 
     await zero.mutate(mutators.demo.seedPassword({
       id,
@@ -473,17 +481,18 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       scores,
       rounds,
       currentRound: phase === "lobby" ? 1 : 4,
-      activeRound,
+      activeRounds,
       targetScore: 10,
+      roundEndsAt: phase === "playing" ? ts + 45_000 : null,
     }));
 
     // Seed some demo chat messages
     if (phase !== "lobby") {
       const chatMsgs = [
-        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: sessionId, senderName: savedName || "You", badge: "Host · Team 1", text: "Let's go team! 💪" },
-        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: "demo-p3", senderName: "Bob", badge: "Team 2", text: "Good luck everyone!" },
-        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: "demo-p4", senderName: "Charlie", badge: "Team 2", text: "We're catching up 📈" },
-        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", badge: "Team 1", text: "nice round!" },
+        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: sessionId, senderName: savedName || "You", text: "Let's go team! \ud83d\udcaa" },
+        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: "demo-p3", senderName: "Bob", text: "Good luck everyone!" },
+        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: "demo-p4", senderName: "Charlie", text: "We're catching up \ud83d\udcc8" },
+        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", text: "nice round!" },
       ];
       for (const msg of chatMsgs) {
         await zero.mutate(mutators.chat.send(msg));
