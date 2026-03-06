@@ -3,7 +3,8 @@ import { useQuery, useZero } from "@rocicorp/zero/react";
 import { nanoid } from "nanoid";
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiLink, FiSearch, FiUsers } from "react-icons/fi";
+import { IoColorPaletteOutline } from "react-icons/io5";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 
@@ -376,8 +377,64 @@ export function HomePage({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
+      {/* ── Card 4: Chain Reaction (Coming Soon) ──────────── */}
+      <div className="home-card home-card--chain">
+        <div className="home-card-body hc-centered">
+          <div className="hc-coming-soon-badge">Coming Soon</div>
+          <FiLink size={36} className="hc-coming-icon" style={{ color: "#34d399" }} />
+          <h2 className="hc-game-title-lg">Chain Reaction</h2>
+          <p className="hc-game-desc">Race to solve a chain of linked words. Every word connects to the next.</p>
+
+          <div className="hc-game-tags hc-game-tags--centered">
+            <span className="hc-tag">2 players</span>
+            <span className="hc-tag">Word chains</span>
+            <span className="hc-tag">Turns</span>
+          </div>
+
+          <div className="hc-coming-preview">
+            <div className="hc-chain-example">
+              <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
+              <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _ _</span>
+              <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
+              <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
+              <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Card 5: Shade Signal (Coming Soon) ─────────────── */}
+      <div className="home-card home-card--shade">
+        <div className="home-card-body hc-centered">
+          <div className="hc-coming-soon-badge">Coming Soon</div>
+          <IoColorPaletteOutline size={36} className="hc-coming-icon" style={{ color: "#f472b6" }} />
+          <h2 className="hc-game-title-lg">Shade Signal</h2>
+          <p className="hc-game-desc">One leader, one color. Give clues and guess the target shade.</p>
+
+          <div className="hc-game-tags hc-game-tags--centered">
+            <span className="hc-tag">3–10 players</span>
+            <span className="hc-tag">Color clues</span>
+            <span className="hc-tag">Proximity</span>
+          </div>
+
+          <div className="hc-coming-preview">
+            <div className="hc-shade-grid">
+              {Array.from({ length: 20 }, (_, i) => (
+                <div
+                  key={i}
+                  className="hc-shade-cell"
+                  style={{ background: `hsl(${i * 18}, 60%, ${45 + (i % 3) * 10}%)` }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Scroll indicators (mobile) */}
       <div className="home-cards-dots">
+        <span className="home-cards-dot" />
+        <span className="home-cards-dot" />
         <span className="home-cards-dot" />
         <span className="home-cards-dot" />
         <span className="home-cards-dot" />
