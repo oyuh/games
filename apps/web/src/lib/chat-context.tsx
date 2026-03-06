@@ -53,31 +53,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       : queries.chat.byGame({ gameType: "imposter", gameId: "__none__" })
   );
 
-  const lastReadCount = useRef(-1);
+  // Track the timestamp of the newest "seen" message instead of counts.
+  // Count-based tracking breaks because useQuery returns [] before data loads,
+  // setting a baseline of 0 and treating all pre-existing messages as unread.
+  const baselineTs = useRef<number | null>(null);
   const [unread, setUnread] = useState(0);
 
-  // Reset baseline when entering a new game so existing messages aren't "unread"
+  // Reset when entering a new game so existing messages aren't "unread"
   const prevTrackingId = useRef(gameId);
   useEffect(() => {
     if (prevTrackingId.current !== gameId) {
-      lastReadCount.current = -1;
+      baselineTs.current = null;
       setUnread(0);
       prevTrackingId.current = gameId;
     }
   }, [gameId]);
 
   useEffect(() => {
+    const latest = messages.length > 0 ? messages[messages.length - 1]!.created_at : null;
+
     if (open) {
-      lastReadCount.current = messages.length;
+      if (latest !== null) baselineTs.current = latest;
       setUnread(0);
+    } else if (baselineTs.current === null) {
+      // First data load for this game — set baseline without showing unread
+      if (latest !== null) baselineTs.current = latest;
     } else {
-      // First load for this game — set baseline, don't count existing messages
-      if (lastReadCount.current === -1) {
-        lastReadCount.current = messages.length;
-        return;
-      }
-      const diff = messages.length - lastReadCount.current;
-      if (diff > 0) setUnread(diff);
+      const newCount = messages.filter(m => m.created_at > baselineTs.current!).length;
+      setUnread(newCount);
     }
   }, [messages.length, open]);
 

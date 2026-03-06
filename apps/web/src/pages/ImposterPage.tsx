@@ -32,6 +32,26 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
 
+  // Keep refs current so the unmount cleanup reads fresh values
+  const inGameRef = useRef(inGame);
+  const phaseRef = useRef(game?.phase);
+  inGameRef.current = inGame;
+  phaseRef.current = game?.phase;
+
+  // When the host navigates away (unmount), call the leave mutator so the
+  // game ends for everyone.  A 500ms guard prevents React StrictMode's
+  // double-mount from accidentally triggering the leave.
+  useEffect(() => {
+    let active = false;
+    const timer = setTimeout(() => { active = true; }, 500);
+    return () => {
+      clearTimeout(timer);
+      if (active && inGameRef.current && phaseRef.current !== "ended") {
+        void zero.mutate(mutators.imposter.leave({ gameId, sessionId }));
+      }
+    };
+  }, [gameId, sessionId, zero]);
+
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
       acc[s.id] = s.name ?? s.id.slice(0, 6);
