@@ -7,14 +7,16 @@ const phaseLabels: Record<string, string> = {
   lobby: "Lobby",
   playing: "Clues",
   voting: "Voting",
-  results: "Results"
+  results: "Results",
+  finished: "Finished"
 };
 
 const phaseVariants: Record<string, string> = {
   lobby: "",
   playing: "badge-warn",
   voting: "badge-danger",
-  results: "badge-success"
+  results: "badge-success",
+  finished: "badge-success"
 };
 
 export function ImposterHeader({

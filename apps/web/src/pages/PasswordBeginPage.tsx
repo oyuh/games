@@ -30,6 +30,13 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
     addRecentGame({ id: game.id, code: game.code, gameType: "password" });
   }, [game]);
 
+  // Auto-navigate to game when host starts
+  useEffect(() => {
+    if (game?.phase === "playing") {
+      navigate(`/password/${game.id}`);
+    }
+  }, [game?.phase, game?.id, navigate]);
+
   useEffect(() => {
     if (!game) return;
     if (game.phase === "ended") {

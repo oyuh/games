@@ -90,7 +90,7 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
 
       <PasswordRoundsTable rounds={game.rounds} teams={game.teams} names={names} />
 
-      {isHost && (
+      {isHost ? (
         <div className="game-section">
           <button
             className="btn btn-primary game-action-btn"
@@ -100,6 +100,12 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
             }}
           >
             Play Again
+          </button>
+        </div>
+      ) : (
+        <div className="game-section">
+          <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
+            Back to Home
           </button>
         </div>
       )}

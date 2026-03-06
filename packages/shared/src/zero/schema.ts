@@ -22,13 +22,22 @@ const imposterGames = table("imposter_games").columns({
   id: string(),
   code: string(),
   host_id: string(),
-  phase: enumeration<"lobby" | "playing" | "voting" | "results" | "ended">(),
+  phase: enumeration<"lobby" | "playing" | "voting" | "results" | "finished" | "ended">(),
   category: string().optional(),
   secret_word: string().optional(),
   players: json<Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player" }>>(),
   clues: json<Array<{ sessionId: string; text: string; createdAt: number }>>(),
   votes: json<Array<{ voterId: string; targetId: string }>>(),
   kicked: json<string[]>(),
+  round_history: json<Array<{
+    round: number;
+    secretWord: string | null;
+    imposters: string[];
+    caught: boolean;
+    clues: Array<{ sessionId: string; text: string }>;
+    votes: Array<{ voterId: string; targetId: string }>;
+  }>>(),
+  announcement: json<{ text: string; ts: number } | null>(),
   settings: json<{
     rounds: number;
     imposters: number;
@@ -47,22 +56,35 @@ const passwordGames = table("password_games").columns({
   host_id: string(),
   phase: enumeration<"lobby" | "playing" | "results" | "ended">(),
   teams: json<Array<{ name: string; members: string[] }>>(),
-  rounds: json<Array<{ round: number; teamIndex: number; clueGiverId: string; guesserId: string; word: string; clue: string; guess: string | null; correct: boolean }>>(),
+  rounds: json<Array<{ round: number; teamIndex: number; wordPickerId: string; guesserId: string; word: string; clues: Array<{ sessionId: string; text: string }>; guess: string | null; correct: boolean }>>(),
   scores: json<Record<string, number>>(),
   current_round: number(),
   active_round: json<{
     teamIndex: number;
-    clueGiverId: string;
+    wordPickerId: string;
     guesserId: string;
     word: string | null;
-    clue: string | null;
+    clues: Array<{ sessionId: string; text: string }>;
+    guess: string | null;
     startedAt: number;
     endsAt: number;
   } | null>(),
   kicked: json<string[]>(),
+  announcement: json<{ text: string; ts: number } | null>(),
   settings: json<{ targetScore: number; turnTeamIndex: number; roundDurationSec: number; teamsLocked?: boolean }>(),
   created_at: number(),
   updated_at: number()
+}).primaryKey("id");
+
+const chatMessages = table("chat_messages").columns({
+  id: string(),
+  game_type: enumeration<"imposter" | "password">(),
+  game_id: string(),
+  sender_id: string(),
+  sender_name: string(),
+  badge: string().optional(),
+  text: string(),
+  created_at: number()
 }).primaryKey("id");
 
 const sessionRelationships = relationships(sessions, ({ one }) => ({
@@ -79,7 +101,7 @@ const sessionRelationships = relationships(sessions, ({ one }) => ({
 }));
 
 export const schema = createSchema({
-  tables: [sessions, imposterGames, passwordGames],
+  tables: [sessions, imposterGames, passwordGames, chatMessages],
   relationships: [sessionRelationships]
 });
 

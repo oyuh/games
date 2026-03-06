@@ -53,7 +53,11 @@ export function HostControlsModal({
   const handleAnnounce = () => {
     const text = announcement.trim();
     if (!text) return;
-    showToast(`📢 ${text}`, "info");
+    if (game.type === "imposter") {
+      void zero.mutate(mutators.imposter.announce({ gameId: game.gameId, hostId: sessionId, text }));
+    } else {
+      void zero.mutate(mutators.password.announce({ gameId: game.gameId, hostId: sessionId, text }));
+    }
     setAnnouncement("");
   };
 

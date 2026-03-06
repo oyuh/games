@@ -1,9 +1,10 @@
 type Round = {
   round: number;
   teamIndex: number;
-  clueGiverId: string;
+  wordPickerId: string;
   guesserId: string;
-  clue: string;
+  word: string;
+  clues: Array<{ sessionId: string; text: string }>;
   guess: string | null;
   correct: boolean;
 };
@@ -32,17 +33,21 @@ export function PasswordRoundsTable({
             <tr>
               <th>#</th>
               <th>Team</th>
-              <th>Clue</th>
+              <th>Clues</th>
               <th>Guess</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {rounds.map((round) => (
-              <tr key={`${round.round}-${round.clueGiverId}`}>
+            {rounds.map((round, idx) => (
+              <tr key={`${round.round}-${idx}`}>
                 <td>{round.round}</td>
                 <td>{teams[round.teamIndex]?.name ?? `Team ${round.teamIndex + 1}`}</td>
-                <td style={{ color: "var(--primary)", fontWeight: 600 }}>{round.clue}</td>
+                <td style={{ color: "var(--primary)", fontWeight: 600 }}>
+                  {round.clues.length > 0
+                    ? round.clues.map((c) => c.text).join(", ")
+                    : "—"}
+                </td>
                 <td>{round.guess ?? "—"}</td>
                 <td style={{ color: round.correct ? "#4ade80" : "#f87171" }}>
                   {round.correct ? "✓" : "✗"}

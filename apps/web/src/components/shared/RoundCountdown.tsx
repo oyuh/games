@@ -28,9 +28,10 @@ export function RoundCountdown({
   const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
   const ss = String(remaining % 60).padStart(2, "0");
   const expired = remaining <= 0;
+  const urgent = remaining <= 10 && !expired;
 
   return (
-    <span className={expired ? "badge badge-danger" : "badge badge-warn"}>
+    <span className={`${expired ? "badge badge-danger" : urgent ? "badge badge-danger countdown-flash" : "badge badge-warn"}`}>
       {label}: {mm}:{ss}
     </span>
   );

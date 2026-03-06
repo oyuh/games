@@ -47,7 +47,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     setPendingAction("create-imposter");
     const id = nanoid();
     try {
-      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory })).server;
+      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -421,6 +421,21 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       currentRound: phase === "lobby" ? 1 : 2,
       phaseEndsAt: phase === "playing" || phase === "voting" ? ts + 60_000 : null,
     }));
+
+    // Seed some demo chat messages
+    if (phase !== "lobby") {
+      const chatMsgs = [
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: sessionId, senderName: savedName || "You", badge: "Host · Player", text: "Hey everyone! Good luck this round 🎮" },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", badge: "Player", text: "gl hf!" },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p3", senderName: "Bob", badge: "Player", text: "I have no idea what the word is lol" },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p4", senderName: "Charlie", badge: "Player", text: "hmm suspicious 🤔" },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", badge: "Player", text: "Charlie seems nervous..." },
+      ];
+      for (const msg of chatMsgs) {
+        await zero.mutate(mutators.chat.send(msg));
+      }
+    }
+
     addRecentGame({ id, code: "DEMO", gameType: "imposter" });
     setRecentGames(getRecentGames());
     navigate(`/imposter/${id}`);
@@ -435,16 +450,17 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     ];
     const scores: Record<string, number> = { "Team 1": phase === "results" ? 10 : 4, "Team 2": phase === "results" ? 7 : 3 };
     const rounds = phase !== "lobby" ? [
-      { round: 1, teamIndex: 0, clueGiverId: sessionId, guesserId: "demo-p2", word: "Ocean", clue: "Waves", guess: "Ocean", correct: true },
-      { round: 2, teamIndex: 1, clueGiverId: "demo-p3", guesserId: "demo-p4", word: "Fire", clue: "Hot", guess: "Sun", correct: false },
-      { round: 3, teamIndex: 0, clueGiverId: "demo-p2", guesserId: sessionId, word: "Guitar", clue: "Strings", guess: "Guitar", correct: true },
+      { round: 1, teamIndex: 0, wordPickerId: sessionId, guesserId: "demo-p2", word: "Ocean", clues: [{ sessionId, text: "Waves" }], guess: "Ocean", correct: true },
+      { round: 2, teamIndex: 1, wordPickerId: "demo-p3", guesserId: "demo-p4", word: "Fire", clues: [{ sessionId: "demo-p3", text: "Hot" }], guess: "Sun", correct: false },
+      { round: 3, teamIndex: 0, wordPickerId: "demo-p2", guesserId: sessionId, word: "Guitar", clues: [{ sessionId: "demo-p2", text: "Strings" }], guess: "Guitar", correct: true },
     ] : [];
     const activeRound = phase === "playing" ? {
       teamIndex: 1,
-      clueGiverId: "demo-p3",
+      wordPickerId: "demo-p3",
       guesserId: "demo-p4",
       word: null as string | null,
-      clue: null as string | null,
+      clues: [] as Array<{ sessionId: string; text: string }>,
+      guess: null as string | null,
       startedAt: ts,
       endsAt: ts + 45_000,
     } : null;
@@ -460,6 +476,20 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       activeRound,
       targetScore: 10,
     }));
+
+    // Seed some demo chat messages
+    if (phase !== "lobby") {
+      const chatMsgs = [
+        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: sessionId, senderName: savedName || "You", badge: "Host · Team 1", text: "Let's go team! 💪" },
+        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: "demo-p3", senderName: "Bob", badge: "Team 2", text: "Good luck everyone!" },
+        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: "demo-p4", senderName: "Charlie", badge: "Team 2", text: "We're catching up 📈" },
+        { id: nanoid(), gameType: "password" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", badge: "Team 1", text: "nice round!" },
+      ];
+      for (const msg of chatMsgs) {
+        await zero.mutate(mutators.chat.send(msg));
+      }
+    }
+
     addRecentGame({ id, code: "DEMO", gameType: "password" });
     setRecentGames(getRecentGames());
     navigate(phase === "results" ? `/password/${id}/results` : phase === "playing" ? `/password/${id}` : `/password/${id}/begin`);

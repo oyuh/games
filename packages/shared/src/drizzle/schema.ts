@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const gameTypeEnum = pgEnum("game_type", ["imposter", "password"]);
-export const imposterPhaseEnum = pgEnum("imposter_phase", ["lobby", "playing", "voting", "results", "ended"]);
+export const imposterPhaseEnum = pgEnum("imposter_phase", ["lobby", "playing", "voting", "results", "finished", "ended"]);
 export const passwordPhaseEnum = pgEnum("password_phase", ["lobby", "playing", "results", "ended"]);
 
 export const sessions = pgTable(
@@ -42,6 +42,15 @@ export const imposterGames = pgTable(
     clues: jsonb("clues").$type<Array<{ sessionId: string; text: string; createdAt: number }>>().notNull().default([]),
     votes: jsonb("votes").$type<Array<{ voterId: string; targetId: string }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
+    roundHistory: jsonb("round_history").$type<Array<{
+      round: number;
+      secretWord: string | null;
+      imposters: string[];
+      caught: boolean;
+      clues: Array<{ sessionId: string; text: string }>;
+      votes: Array<{ voterId: string; targetId: string }>;
+    }>>().notNull().default([]),
+    announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
     settings: jsonb("settings").$type<{
       rounds: number;
       imposters: number;
@@ -73,19 +82,21 @@ export const passwordGames = pgTable(
     hostId: text("host_id").notNull(),
     phase: passwordPhaseEnum("phase").notNull().default("lobby"),
     teams: jsonb("teams").$type<Array<{ name: string; members: string[] }>>().notNull().default([]),
-    rounds: jsonb("rounds").$type<Array<{ round: number; teamIndex: number; clueGiverId: string; guesserId: string; word: string; clue: string; guess: string | null; correct: boolean }>>().notNull().default([]),
+    rounds: jsonb("rounds").$type<Array<{ round: number; teamIndex: number; wordPickerId: string; guesserId: string; word: string; clues: Array<{ sessionId: string; text: string }>; guess: string | null; correct: boolean }>>().notNull().default([]),
     scores: jsonb("scores").$type<Record<string, number>>().notNull().default({}),
     currentRound: integer("current_round").notNull().default(0),
     activeRound: jsonb("active_round").$type<{
       teamIndex: number;
-      clueGiverId: string;
+      wordPickerId: string;
       guesserId: string;
       word: string | null;
-      clue: string | null;
+      clues: Array<{ sessionId: string; text: string }>;
+      guess: string | null;
       startedAt: number;
       endsAt: number;
     } | null>().default(null),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
+    announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
     settings: jsonb("settings").$type<{ targetScore: number; turnTeamIndex: number; roundDurationSec: number; teamsLocked?: boolean }>().notNull().default({ targetScore: 10, turnTeamIndex: 0, roundDurationSec: 75 }),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()
@@ -95,8 +106,26 @@ export const passwordGames = pgTable(
   })
 );
 
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: text("id").primaryKey(),
+    gameType: gameTypeEnum("game_type").notNull(),
+    gameId: text("game_id").notNull(),
+    senderId: text("sender_id").notNull(),
+    senderName: text("sender_name").notNull(),
+    badge: text("badge"),
+    text: text("text").notNull(),
+    createdAt: bigint("created_at", { mode: "number" }).notNull()
+  },
+  (table) => ({
+    gameLookupIdx: index("chat_messages_game_lookup_idx").on(table.gameType, table.gameId)
+  })
+);
+
 export type DrizzleSchema = {
   sessions: typeof sessions;
   imposterGames: typeof imposterGames;
   passwordGames: typeof passwordGames;
+  chatMessages: typeof chatMessages;
 };

@@ -1,4 +1,4 @@
-import { FiArrowRight } from "react-icons/fi";
+import { FiArrowRight, FiHome } from "react-icons/fi";
 
 type Player = { sessionId: string; role?: "imposter" | "player" };
 
@@ -20,20 +20,30 @@ export function ImposterResultsSection({
   onNextRound: () => void;
 }) {
   const maxVotes = Math.max(...Object.values(tally), 1);
-  const imposter = players.find((p) => p.role === "imposter");
-  const imposterName = imposter ? (sessionById[imposter.sessionId] ?? imposter.sessionId.slice(0, 6)) : null;
-  const topVoted = Object.entries(tally).sort((a, b) => b[1] - a[1])[0];
-  const caught = topVoted && imposter && topVoted[0] === imposter.sessionId;
+  const imposters = players.filter((p) => p.role === "imposter");
+  const imposterNames = imposters.map((p) => sessionById[p.sessionId] ?? p.sessionId.slice(0, 6));
+
+  // Check if ALL imposters were caught (each must be among the top voted)
+  const topVoteCount = Math.max(...Object.values(tally), 0);
+  const topVoted = new Set(
+    Object.entries(tally)
+      .filter(([, count]) => count === topVoteCount && topVoteCount > 0)
+      .map(([id]) => id)
+  );
+  const caught = imposters.length > 0 && imposters.every((p) => topVoted.has(p.sessionId));
 
   return (
     <div className="game-section">
       <div className={`game-reveal-card ${caught ? "game-reveal-card--success" : "game-reveal-card--fail"}`}>
         <p className="game-reveal-title">
-          {caught ? "Imposter Caught!" : "Imposter Got Away!"}
+          {caught
+            ? imposters.length > 1 ? "Imposters Caught!" : "Imposter Caught!"
+            : imposters.length > 1 ? "Imposters Got Away!" : "Imposter Got Away!"}
         </p>
-        {imposterName && (
+        {imposterNames.length > 0 && (
           <p className="game-reveal-sub">
-            The imposter was <strong>{imposterName}</strong>
+            {imposters.length > 1 ? "The imposters were " : "The imposter was "}
+            <strong>{imposterNames.join(", ")}</strong>
           </p>
         )}
         {secretWord && (
@@ -70,13 +80,16 @@ export function ImposterResultsSection({
         })}
       </div>
 
-      {canAdvance && (
-        <div className="game-actions">
+      <div className="game-actions">
+        {canAdvance && (
           <button className="btn btn-primary game-action-btn" onClick={onNextRound}>
-            <FiArrowRight size={16} /> {isLastRound ? "Back to Lobby" : "Next Round"}
+            <FiArrowRight size={16} /> {isLastRound ? "View Summary" : "Next Round"}
           </button>
-        </div>
-      )}
+        )}
+        {!canAdvance && (
+          <p className="game-waiting-text">Waiting for host to continue…</p>
+        )}
+      </div>
     </div>
   );
 }

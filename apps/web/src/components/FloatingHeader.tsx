@@ -33,6 +33,12 @@ function useGameContext(): GameContext | null {
       : queries.password.byId({ id: "__none__" })
   );
 
+  const [sessions] = useQuery(
+    gameType === "password" && gameId
+      ? queries.sessions.byGame({ gameType: "password", gameId })
+      : queries.sessions.byGame({ gameType: "password", gameId: "__none__" })
+  );
+
   return useMemo(() => {
     if (gameType === "imposter") {
       const game = imposterGames[0];
@@ -47,8 +53,12 @@ function useGameContext(): GameContext | null {
     if (gameType === "password") {
       const game = passwordGames[0];
       if (!game || game.host_id !== sessionId) return null;
+      const sessionNames = sessions.reduce<Record<string, string>>((acc, s) => {
+        acc[s.id] = s.name ?? s.id.slice(0, 6);
+        return acc;
+      }, {});
       const allPlayers = game.teams.flatMap((t) =>
-        t.members.map((id) => ({ id, name: id.slice(0, 6) }))
+        t.members.map((id) => ({ id, name: sessionNames[id] ?? id.slice(0, 6) }))
       );
       return {
         type: "password",
@@ -58,7 +68,7 @@ function useGameContext(): GameContext | null {
       };
     }
     return null;
-  }, [gameType, imposterGames, passwordGames, sessionId]);
+  }, [gameType, imposterGames, passwordGames, sessions, sessionId]);
 }
 
 export function Sidebar() {

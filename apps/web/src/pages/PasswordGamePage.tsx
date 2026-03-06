@@ -1,11 +1,12 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { PasswordActiveRound } from "../components/password/PasswordActiveRound";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
+import { ChatWindow } from "../components/shared/ChatWindow";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { showToast } from "../lib/toast";
 
@@ -20,6 +21,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   const [word, setWord] = useState("");
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState("");
+  const prevAnnouncementTs = useRef<number | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "password" });
 
@@ -29,6 +31,27 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
       return acc;
     }, {});
   }, [sessions]);
+
+  // Auto-advance timer
+  useEffect(() => {
+    if (!game || game.phase !== "playing" || !game.active_round) return;
+    const remaining = game.active_round.endsAt - Date.now();
+    if (remaining <= 0) {
+      void zero.mutate(mutators.password.advanceTimer({ gameId }));
+      return;
+    }
+    const timer = setTimeout(() => {
+      void zero.mutate(mutators.password.advanceTimer({ gameId }));
+    }, remaining + 500);
+    return () => clearTimeout(timer);
+  }, [game?.active_round?.endsAt, game?.phase, gameId, zero]);
+
+  // Auto-navigate to results when game ends
+  useEffect(() => {
+    if (game?.phase === "results") {
+      navigate(`/password/${game.id}/results`);
+    }
+  }, [game?.phase, game?.id, navigate]);
 
   useEffect(() => {
     if (!game) return;
@@ -43,6 +66,15 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
+  // Announcement watcher
+  useEffect(() => {
+    if (!game?.announcement) return;
+    if (prevAnnouncementTs.current !== game.announcement.ts) {
+      prevAnnouncementTs.current = game.announcement.ts;
+      showToast(`📢 ${game.announcement.text}`, "info");
+    }
+  }, [game?.announcement]);
+
   if (!game) {
     return (
       <div className="game-page">
@@ -53,14 +85,20 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
 
   const activeRound = game.active_round;
   const isHost = game.host_id === sessionId;
-  const isClueGiver = activeRound?.clueGiverId === sessionId;
-  const isGuesser = activeRound?.guesserId === sessionId;
+  const activeTeam = activeRound ? game.teams[activeRound.teamIndex] : undefined;
+  const teamMembers = activeTeam?.members ?? [];
+
+  const setSecretWord = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!word.trim()) return;
+    await zero.mutate(mutators.password.setWord({ gameId, sessionId, word: word.trim() })).server;
+    setWord("");
+  };
 
   const submitClue = async (event: FormEvent) => {
     event.preventDefault();
-    if (!word.trim() || !clue.trim()) return;
-    await zero.mutate(mutators.password.submitClue({ gameId, sessionId, word: word.trim(), clue: clue.trim() })).server;
-    setWord("");
+    if (!clue.trim()) return;
+    await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server;
     setClue("");
   };
 
@@ -95,14 +133,15 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         <PasswordActiveRound
           activeRound={activeRound}
           names={names}
-          isClueGiver={Boolean(isClueGiver)}
-          isGuesser={Boolean(isGuesser)}
+          sessionId={sessionId}
+          teamMembers={teamMembers}
           word={word}
           clue={clue}
           guess={guess}
           onWordChange={setWord}
           onClueChange={setClue}
           onGuessChange={setGuess}
+          onSetWord={setSecretWord}
           onSubmitClue={submitClue}
           onSubmitGuess={submitGuess}
         />
@@ -137,6 +176,25 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
           </button>
         </div>
       )}
+
+      {/* In-game Chat */}
+      {game && game.phase !== "ended" && (
+        <ChatWindow
+          gameType="password"
+          gameId={gameId}
+          hostId={game.host_id}
+          myBadge={getPasswordBadge()}
+          myName={names[sessionId] ?? sessionId.slice(0, 6)}
+        />
+      )}
     </div>
   );
+
+  function getPasswordBadge() {
+    const parts: string[] = [];
+    if (isHost) parts.push("Host");
+    const myTeam = game?.teams.find((t) => t.members.includes(sessionId));
+    if (myTeam) parts.push(myTeam.name);
+    return parts.join(" \u00b7 ") || undefined;
+  }
 }

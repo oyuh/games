@@ -1,6 +1,6 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn } from "react-icons/fi";
 import { ImposterClueSection } from "../components/imposter/ImposterClueSection";
@@ -9,6 +9,7 @@ import { ImposterLobbyActions } from "../components/imposter/ImposterLobbyAction
 import { ImposterPlayersCard } from "../components/imposter/ImposterPlayersCard";
 import { ImposterResultsSection } from "../components/imposter/ImposterResultsSection";
 import { ImposterVoteSection } from "../components/imposter/ImposterVoteSection";
+import { ChatWindow } from "../components/shared/ChatWindow";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
@@ -24,6 +25,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   const game = games[0];
   const [clue, setClue] = useState("");
   const [voteTarget, setVoteTarget] = useState("");
+  const prevAnnouncementTs = useRef<number | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "imposter" });
 
@@ -64,6 +66,31 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
+  // Timer auto-advance
+  useEffect(() => {
+    if (!game) return;
+    const phaseEnd = game.settings.phaseEndsAt;
+    if (!phaseEnd || (game.phase !== "playing" && game.phase !== "voting")) return;
+    const remaining = phaseEnd - Date.now();
+    if (remaining <= 0) {
+      void zero.mutate(mutators.imposter.advanceTimer({ gameId }));
+      return;
+    }
+    const timer = setTimeout(() => {
+      void zero.mutate(mutators.imposter.advanceTimer({ gameId }));
+    }, remaining + 500);
+    return () => clearTimeout(timer);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
+
+  // Announcement watcher
+  useEffect(() => {
+    if (!game?.announcement) return;
+    if (prevAnnouncementTs.current !== game.announcement.ts) {
+      prevAnnouncementTs.current = game.announcement.ts;
+      showToast(`📢 ${game.announcement.text}`, "info");
+    }
+  }, [game?.announcement]);
+
   if (!game) {
     return (
       <div className="game-page">
@@ -101,7 +128,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         players={game.players}
         sessionId={sessionId}
         sessionById={sessionById}
-        revealRoles={game.phase === "results"}
+        revealRoles={game.phase === "results" || game.phase === "finished"}
       />
 
       {game.phase === "lobby" && !inGame && (
@@ -122,13 +149,14 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
       {game.phase === "lobby" && inGame && (
         <ImposterLobbyActions
           canStart={Boolean(isHost && game.players.length >= 3)}
+          isHost={Boolean(isHost)}
           playerCount={game.players.length}
           onStart={() => void zero.mutate(mutators.imposter.start({ gameId, hostId: sessionId }))}
           onLeave={() => void zero.mutate(mutators.imposter.leave({ gameId, sessionId }))}
         />
       )}
 
-      {game.phase === "playing" && (
+      {game.phase === "playing" && inGame && (
         <ImposterClueSection
           role={me?.role}
           secretWord={game.secret_word}
@@ -140,7 +168,16 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         />
       )}
 
-      {game.phase === "voting" && (
+      {game.phase === "playing" && !inGame && (
+        <div className="game-section">
+          <div className="game-waiting">
+            <div className="game-waiting-pulse" />
+            <p>Players are submitting clues… ({game.clues.length}/{game.players.length})</p>
+          </div>
+        </div>
+      )}
+
+      {game.phase === "voting" && inGame && (
         <ImposterVoteSection
           players={game.players}
           sessionId={sessionId}
@@ -154,6 +191,15 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         />
       )}
 
+      {game.phase === "voting" && !inGame && (
+        <div className="game-section">
+          <div className="game-waiting">
+            <div className="game-waiting-pulse" />
+            <p>Players are voting… ({game.votes.length}/{game.players.length})</p>
+          </div>
+        </div>
+      )}
+
       {game.phase === "results" && (
         <ImposterResultsSection
           tally={tally}
@@ -165,6 +211,79 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           onNextRound={() => void zero.mutate(mutators.imposter.nextRound({ gameId, hostId: sessionId }))}
         />
       )}
+
+      {game.phase === "finished" && (
+        <div className="game-section">
+          <div className="game-reveal-card game-reveal-card--success">
+            <p className="game-reveal-title">Game Complete!</p>
+            <p className="game-reveal-sub">{game.settings.rounds} rounds played</p>
+          </div>
+
+          {(game.round_history ?? []).length > 0 && (
+            <>
+              <h3 className="game-section-label">Round Summary</h3>
+              <div className="panel overflow-x-auto">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Word</th>
+                      <th>Imposters</th>
+                      <th>Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(game.round_history ?? []).map((rh) => (
+                      <tr key={rh.round}>
+                        <td>{rh.round}</td>
+                        <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ?? "—"}</td>
+                        <td>{rh.imposters.map((id) => sessionById[id] ?? id.slice(0, 6)).join(", ")}</td>
+                        <td style={{ color: rh.caught ? "#4ade80" : "#f87171" }}>
+                          {rh.caught ? "Caught" : "Escaped"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          <div className="game-actions">
+            {isHost ? (
+              <button
+                className="btn btn-primary game-action-btn"
+                onClick={() => void zero.mutate(mutators.imposter.resetToLobby({ gameId, hostId: sessionId }))}
+              >
+                Play Again
+              </button>
+            ) : (
+              <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
+                Back to Home
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* In-game Chat */}
+      {game && game.phase !== "ended" && (
+        <ChatWindow
+          gameType="imposter"
+          gameId={gameId}
+          hostId={game.host_id}
+          myBadge={getChatBadge()}
+          myName={sessionById[sessionId] ?? sessionId.slice(0, 6)}
+        />
+      )}
     </div>
   );
+
+  function getChatBadge() {
+    const parts: string[] = [];
+    if (isHost) parts.push("Host");
+    if (me?.role === "imposter" && (game?.phase === "results" || game?.phase === "finished")) parts.push("Imposter");
+    else if (me?.role) parts.push(me.role.charAt(0).toUpperCase() + me.role.slice(1));
+    return parts.join(" · ") || undefined;
+  }
 }

@@ -36,5 +36,15 @@ export const queries = defineQueries({
       z.object({ code: z.string() }),
       ({ args }) => zql.password_games.where("code", args.code).limit(1)
     )
+  },
+  chat: {
+    byGame: defineQuery(
+      z.object({ gameType: z.enum(["imposter", "password"]), gameId: z.string() }),
+      ({ args }) =>
+        zql.chat_messages
+          .where("game_type", args.gameType)
+          .where("game_id", args.gameId)
+          .orderBy("created_at", "asc")
+    )
   }
 });

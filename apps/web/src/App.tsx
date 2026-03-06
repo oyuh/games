@@ -13,7 +13,7 @@ import {
   setZeroConnectionState,
   startGlobalConnectionDebugCapture
 } from "./lib/connection-debug";
-import { getOrCreateSessionId } from "./lib/session";
+import { getOrCreateSessionId, getStoredName } from "./lib/session";
 import { HomePage } from "./pages/HomePage";
 import { HomePageStylePreview } from "./pages/HomePageStylePreview";
 import { ImposterPage } from "./pages/ImposterPage";
@@ -61,6 +61,11 @@ function stringifyError(error: unknown) {
 
 export function App() {
   const styleOnly = import.meta.env.VITE_STYLE_ONLY === "true";
+
+  useEffect(() => {
+    const storedName = getStoredName();
+    void zero.mutate(mutators.sessions.upsert({ id: sessionId, name: storedName || null }));
+  }, []);
 
   useEffect(() => {
     initConnectionDebug({
