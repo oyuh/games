@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef, useEffect } f
 import { useLocation } from "react-router-dom";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
+import { getOrCreateSessionId } from "./session";
 
 type ChatState = {
   open: boolean;
@@ -29,6 +30,7 @@ export function useChatContext() {
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const sessionId = getOrCreateSessionId();
 
   // Derive game info from route
   const imposterMatch = location.pathname.match(/^\/imposter\/([^/]+)/);
@@ -75,7 +77,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       baselineTs.current = latest;
       setUnread(0);
     } else {
-      const newCount = messages.filter(m => m.created_at > baselineTs.current).length;
+      const newCount = messages.filter(m => m.created_at > baselineTs.current && m.sender_id !== sessionId).length;
       setUnread(newCount);
     }
   }, [messages.length, open]);

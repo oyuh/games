@@ -476,13 +476,13 @@ export const mutators = defineMutators({
         const topVoted = Object.entries(tally)
           .filter(([, count]) => count === maxVotes && maxVotes > 0)
           .map(([id]) => id);
-        const caughtAll = imposters.length > 0 && imposters.every((id) => topVoted.includes(id));
+        const caught = imposters.length > 0 && imposters.some((id) => topVoted.includes(id));
 
         const roundEntry = {
           round: game.settings.currentRound,
           secretWord: game.secret_word,
           imposters,
-          caught: caughtAll,
+          caught,
           clues: game.clues.map((c) => ({ sessionId: c.sessionId, text: c.text })),
           votes: game.votes
         };

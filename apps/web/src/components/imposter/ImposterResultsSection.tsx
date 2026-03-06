@@ -23,14 +23,14 @@ export function ImposterResultsSection({
   const imposters = players.filter((p) => p.role === "imposter");
   const imposterNames = imposters.map((p) => sessionById[p.sessionId] ?? p.sessionId.slice(0, 6));
 
-  // Check if ALL imposters were caught (each must be among the top voted)
+  // Check if any imposter was caught (at least one among the top voted)
   const topVoteCount = Math.max(...Object.values(tally), 0);
   const topVoted = new Set(
     Object.entries(tally)
       .filter(([, count]) => count === topVoteCount && topVoteCount > 0)
       .map(([id]) => id)
   );
-  const caught = imposters.length > 0 && imposters.every((p) => topVoted.has(p.sessionId));
+  const caught = imposters.length > 0 && imposters.some((p) => topVoted.has(p.sessionId));
 
   return (
     <div className="game-section">
