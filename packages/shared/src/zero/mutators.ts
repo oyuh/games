@@ -1635,6 +1635,19 @@ export const mutators = defineMutators({
             ts: now()
           };
         } else {
+          // Wrong guess — auto-reveal one letter (unless it would reveal the whole word)
+          const newLettersShown = slot.lettersShown < slot.word.length - 1
+            ? slot.lettersShown + 1
+            : slot.lettersShown;
+          updatedPlayerChain = updatedPlayerChain.map((s, i) =>
+            i === args.wordIndex ? { ...s, lettersShown: newLettersShown } : s
+          );
+          // Save the updated hint, then throw so UI knows it was wrong
+          await tx.mutate.chain_reaction_games.update({
+            id: game.id,
+            chain: { ...game.chain, [args.sessionId]: updatedPlayerChain },
+            updated_at: now()
+          });
           throw new Error("Wrong guess!");
         }
 
