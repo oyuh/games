@@ -1,7 +1,7 @@
 import { imposterCategories, imposterCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { nanoid } from "nanoid";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, RecentGame, setStoredName } from "../lib/session";
@@ -14,6 +14,17 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   const navigate = useNavigate();
   const [name, setName] = useState(getStoredName());
   const [savedName, setSavedName] = useState(getStoredName());
+
+  // Sync when name is changed externally (e.g. welcome modal)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const newName = (e as CustomEvent<string>).detail || "";
+      setName(newName);
+      setSavedName(newName);
+    };
+    window.addEventListener("games:name-changed", handler);
+    return () => window.removeEventListener("games:name-changed", handler);
+  }, []);
   const [recentGames, setRecentGames] = useState(getRecentGames());
   const [joinCode, setJoinCode] = useState("");
   const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "join" | null>(null);
@@ -155,7 +166,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
               <input
                 className="input flex-1"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value.replace(/\s/g, ""))}
                 placeholder="Enter name…"
                 maxLength={32}
               />

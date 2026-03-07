@@ -2110,9 +2110,33 @@ body {
 /* ─── Welcome Modal ─────────────────────────────────────── */
 
 .welcome-panel {
-  max-width: 440px;
-  padding: 2rem 1.75rem 1.75rem;
-  gap: 1.25rem;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem 1.75rem 1.25rem;
+  position: relative;
+}
+
+.welcome-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  background: none;
+  border: none;
+  color: var(--secondary);
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.welcome-close:hover {
+  color: var(--foreground);
+  background: var(--muted);
 }
 
 .welcome-hero {
@@ -2120,56 +2144,103 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .welcome-icon {
-  font-size: 2rem;
-  margin-bottom: 0.25rem;
   color: var(--primary);
+  margin-bottom: 0.5rem;
 }
 
 .welcome-title {
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--foreground);
+  margin: 0;
 }
 
 .welcome-subtitle {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--secondary);
-  line-height: 1.5;
+  line-height: 1.55;
+  margin-top: 0.25rem;
 }
 
 .welcome-games {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .welcome-game {
   display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
-  background: var(--muted);
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
   border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
 }
 
-.welcome-game-emoji {
-  font-size: 1.15rem;
+.welcome-game--imposter {
+  background: color-mix(in srgb, #7eb8ff 8%, var(--muted));
+  border-color: color-mix(in srgb, #7eb8ff 15%, transparent);
+}
+.welcome-game--password {
+  background: color-mix(in srgb, #a78bfa 8%, var(--muted));
+  border-color: color-mix(in srgb, #a78bfa 15%, transparent);
+}
+.welcome-game--chain {
+  background: color-mix(in srgb, #34d399 8%, var(--muted));
+  border-color: color-mix(in srgb, #34d399 15%, transparent);
+}
+.welcome-game--shade {
+  background: color-mix(in srgb, #f472b6 8%, var(--muted));
+  border-color: color-mix(in srgb, #f472b6 15%, transparent);
+}
+
+.welcome-game-icon {
   flex-shrink: 0;
-  margin-top: 0.05rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.welcome-game-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.welcome-game-name {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.welcome-game-soon {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #f472b6 15%, transparent);
+  color: #f472b6;
 }
 
 .welcome-game-desc {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--secondary);
-  line-height: 1.5;
-}
-
-.welcome-game-desc strong {
-  color: var(--foreground);
+  line-height: 1.4;
 }
 
 .welcome-form {
@@ -2207,7 +2278,7 @@ body {
 }
 
 .welcome-go {
-  padding: 0.55rem 1.25rem;
+  padding: 0.55rem 1.1rem;
   border: none;
   border-radius: var(--radius);
   background: var(--primary);
@@ -2215,6 +2286,9 @@ body {
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: opacity 0.15s;
 }
 
@@ -2226,15 +2300,28 @@ body {
   background: none;
   border: none;
   color: var(--secondary);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   cursor: pointer;
-  padding: 0.35rem 0;
+  padding: 0.25rem 0;
   text-align: center;
   transition: color 0.15s;
 }
 
 .welcome-skip:hover {
   color: var(--foreground);
+}
+
+.welcome-footer {
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--secondary);
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.welcome-heart {
+  font-size: 0.72rem;
 }
 
 /* ─── Toast Notifications ───────────────────────────────── */

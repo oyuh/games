@@ -48,7 +48,7 @@ function AppShellInner() {
 
   const handleWelcomeDone = (chosenName: string) => {
     setStoredName(chosenName);
-    void zero.mutate(mutators.sessions.setName({ id: sessionId, name: chosenName }));
+    void zero.mutate(mutators.sessions.upsert({ id: sessionId, name: chosenName }));
     markVisited();
     setShowWelcome(false);
   };

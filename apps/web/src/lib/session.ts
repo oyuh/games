@@ -31,9 +31,10 @@ export function setStoredName(name: string) {
   const trimmedName = name.trim();
   if (!trimmedName) {
     localStorage.removeItem(NAME_KEY);
-    return;
+  } else {
+    localStorage.setItem(NAME_KEY, trimmedName);
   }
-  localStorage.setItem(NAME_KEY, trimmedName);
+  window.dispatchEvent(new CustomEvent("games:name-changed", { detail: trimmedName }));
 }
 
 export function getPlayerProfile() {
