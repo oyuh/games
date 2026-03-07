@@ -1,5 +1,5 @@
 import { mutators, queries, schema } from "@games/shared";
-import { chainReactionGames, imposterGames, passwordGames, sessions } from "@games/shared";
+import { chainReactionGames, imposterGames, passwordGames, sessions, statusTable } from "@games/shared";
 import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -10,11 +10,12 @@ import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
 import { drizzleClient } from "./db-provider";
 import { startPresenceServer } from "./presence-server";
-//fix
 
 config({ path: "../../.env" });
 
 const app = new Hono();
+const DB_STATUS_KEY = process.env.DB_STATUS_KEY?.trim() || "footer";
+const DB_STATUS_EXPECTED_VALUE = process.env.DB_STATUS_EXPECTED_VALUE?.trim() || "ok";
 
 app.use(
   "*",
@@ -56,9 +57,72 @@ function detectPlatform() {
   return "unknown";
 }
 
+type DatabaseProbe = {
+  state: "ok" | "unknown" | "offline";
+  reason: string;
+  key: string;
+  expectedValue: string;
+  actualValue: string;
+  checkedAt: string;
+};
+
+async function probeDatabaseStatus(): Promise<DatabaseProbe> {
+  const checkedAt = new Date().toISOString();
+
+  try {
+    const rows = await drizzleClient
+      .select({ value: statusTable.value })
+      .from(statusTable)
+      .where(eq(statusTable.key, DB_STATUS_KEY))
+      .limit(1);
+
+    const actualValue = rows[0]?.value ?? "";
+
+    if (!actualValue) {
+      return {
+        state: "unknown",
+        reason: `missing status row for key '${DB_STATUS_KEY}'`,
+        key: DB_STATUS_KEY,
+        expectedValue: DB_STATUS_EXPECTED_VALUE,
+        actualValue,
+        checkedAt
+      };
+    }
+
+    if (actualValue !== DB_STATUS_EXPECTED_VALUE) {
+      return {
+        state: "unknown",
+        reason: `status value mismatch for key '${DB_STATUS_KEY}'`,
+        key: DB_STATUS_KEY,
+        expectedValue: DB_STATUS_EXPECTED_VALUE,
+        actualValue,
+        checkedAt
+      };
+    }
+
+    return {
+      state: "ok",
+      reason: "",
+      key: DB_STATUS_KEY,
+      expectedValue: DB_STATUS_EXPECTED_VALUE,
+      actualValue,
+      checkedAt
+    };
+  } catch (error) {
+    return {
+      state: "offline",
+      reason: error instanceof Error ? error.message : String(error),
+      key: DB_STATUS_KEY,
+      expectedValue: DB_STATUS_EXPECTED_VALUE,
+      actualValue: "",
+      checkedAt
+    };
+  }
+}
+
 app.get("/health", (c) => c.json({ ok: true }));
 
-app.get("/debug/build-info", (c) => {
+app.get("/debug/build-info", async (c) => {
   const commitSha = firstNonEmpty([
     process.env.VERCEL_GIT_COMMIT_SHA,
     process.env.RAILWAY_GIT_COMMIT_SHA,
@@ -92,6 +156,8 @@ app.get("/debug/build-info", (c) => {
     process.env.VERCEL_BUILD_TIME
   ]);
 
+  const database = await probeDatabaseStatus();
+
   return c.json({
     ok: true,
     service: "@games/api",
@@ -105,7 +171,8 @@ app.get("/debug/build-info", (c) => {
     startedAt: apiStartedAt,
     uptimeMs: Math.round(process.uptime() * 1000),
     nodeVersion: process.version,
-    environment: process.env.NODE_ENV ?? "development"
+    environment: process.env.NODE_ENV ?? "development",
+    database
   });
 });
 

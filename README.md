@@ -494,6 +494,17 @@ The frontend only exposes Vite-prefixed variables to browser code.
 
 - Bearer token required for manual cleanup endpoint access
 
+#### `DB_STATUS_KEY`
+
+- Optional database sentinel key checked by the footer status probe
+- Defaults to `footer`
+
+#### `DB_STATUS_EXPECTED_VALUE`
+
+- Optional database sentinel value checked by the footer status probe
+- Defaults to `ok`
+- If the row exists but the value does not match, the footer shows `Unknown`
+
 ### Zero service variables
 
 For deployed Zero cache:
@@ -556,6 +567,44 @@ Currently present at the workspace level, but linting is effectively a placehold
 - `pnpm db:push` applies schema changes to the target database
 - `pnpm db:generate` generates Drizzle migration artifacts
 - `pnpm db:studio` opens Drizzle Studio
+
+### Footer database status sentinel
+
+The footer status now checks the API's `/debug/build-info` response, and that API route performs a direct Postgres read against a sentinel row in the `status` table.
+
+The status logic is:
+
+- `Operational` when the database is reachable and `status.key = DB_STATUS_KEY` matches `DB_STATUS_EXPECTED_VALUE`
+- `Unknown` when the database is reachable but the row is missing or the value does not match
+- `Offline` when the API cannot reach Postgres at all
+
+Recommended setup:
+
+1. Push the latest schema:
+
+```bash
+pnpm db:push
+```
+
+2. Insert or upsert the sentinel row:
+
+```sql
+INSERT INTO status (key, value, updated_at)
+VALUES ('footer', 'ok', EXTRACT(EPOCH FROM NOW())::bigint * 1000)
+ON CONFLICT (key)
+DO UPDATE SET
+  value = EXCLUDED.value,
+  updated_at = EXCLUDED.updated_at;
+```
+
+3. Set API environment variables:
+
+```bash
+DB_STATUS_KEY=footer
+DB_STATUS_EXPECTED_VALUE=ok
+```
+
+If you want to force the footer into the `Unknown` state for testing, update the row to a different value than `DB_STATUS_EXPECTED_VALUE`.
 
 ## Deployment
 

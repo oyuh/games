@@ -1,7 +1,7 @@
 import { imposterCategories, imposterCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { nanoid } from "nanoid";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, RecentGame, setStoredName } from "../lib/session";
@@ -48,6 +48,25 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   const [chainLength, setChainLength] = useState(5);
   const [chainRounds, setChainRounds] = useState(3);
   const [chainMode, setChainMode] = useState<"premade" | "custom">("premade");
+
+  // Mobile scroll dot tracking
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeDot, setActiveDot] = useState(0);
+  const CARD_COUNT = 5;
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    setActiveDot(Math.min(idx, CARD_COUNT - 1));
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
 
   const saveName = async (event: FormEvent) => {
     event.preventDefault();
@@ -149,7 +168,8 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <div className="home-cards">
+    <>
+    <div className="home-cards" ref={scrollRef}>
 
       {/* ── Card 1: Utils ──────────────────────────────────── */}
       <div className="home-card home-card--utils">
@@ -596,15 +616,19 @@ export function HomePage({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
-      {/* Scroll indicators (mobile) */}
-      <div className="home-cards-dots">
-        <span className="home-cards-dot" />
-        <span className="home-cards-dot" />
-        <span className="home-cards-dot" />
-        <span className="home-cards-dot" />
-        <span className="home-cards-dot" />
-      </div>
     </div>
+
+    {/* Scroll indicators (mobile) */}
+    <div className="home-cards-dots">
+      {Array.from({ length: CARD_COUNT }, (_, i) => (
+        <span
+          key={i}
+          className={`home-cards-dot${activeDot === i ? " home-cards-dot--active" : ""}`}
+          onClick={() => scrollRef.current?.scrollTo({ left: i * (scrollRef.current?.clientWidth ?? 0), behavior: "smooth" })}
+        />
+      ))}
+    </div>
+    </>
   );
 
   /* ── Dev-only demo helpers ─────────────────────────── */
