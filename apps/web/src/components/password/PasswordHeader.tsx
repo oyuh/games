@@ -5,14 +5,18 @@ import { RoundCountdown } from "../shared/RoundCountdown";
 
 const phaseLabels: Record<string, string> = {
   lobby: "Lobby",
+  submitting: "Submitting",
   playing: "Playing",
-  results: "Finished"
+  results: "Finished",
+  finished: "Finished"
 };
 
 const phaseVariants: Record<string, string> = {
   lobby: "",
+  submitting: "badge-warn",
   playing: "badge-warn",
-  results: "badge-success"
+  results: "badge-success",
+  finished: "badge-success"
 };
 
 export function PasswordHeader({

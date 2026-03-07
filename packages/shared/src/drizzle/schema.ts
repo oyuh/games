@@ -12,7 +12,7 @@ import {
 export const gameTypeEnum = pgEnum("game_type", ["imposter", "password", "chain_reaction"]);
 export const imposterPhaseEnum = pgEnum("imposter_phase", ["lobby", "playing", "voting", "results", "finished", "ended"]);
 export const passwordPhaseEnum = pgEnum("password_phase", ["lobby", "playing", "results", "ended"]);
-export const chainReactionPhaseEnum = pgEnum("chain_reaction_phase", ["lobby", "playing", "finished", "ended"]);
+export const chainReactionPhaseEnum = pgEnum("chain_reaction_phase", ["lobby", "submitting", "playing", "finished", "ended"]);
 
 export const sessions = pgTable(
   "sessions",
@@ -129,12 +129,13 @@ export const chainReactionGames = pgTable(
     hostId: text("host_id").notNull(),
     phase: chainReactionPhaseEnum("phase").notNull().default("lobby"),
     players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean }>>().notNull().default([]),
-    chain: jsonb("chain").$type<Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>().notNull().default([]),
+    chain: jsonb("chain").$type<Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>>().notNull().default({}),
+    submittedChains: jsonb("submitted_chains").$type<Record<string, string[]>>().notNull().default({}),
     currentTurn: text("current_turn"),
     scores: jsonb("scores").$type<Record<string, number>>().notNull().default({}),
     roundHistory: jsonb("round_history").$type<Array<{
       round: number;
-      chain: Array<{ word: string; solvedBy: string | null; lettersShown: number }>;
+      chains: Record<string, Array<{ word: string; solvedBy: string | null; lettersShown: number }>>;
       scores: Record<string, number>;
     }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
@@ -145,12 +146,14 @@ export const chainReactionGames = pgTable(
       currentRound: number;
       turnTimeSec: number | null;
       phaseEndsAt: number | null;
+      chainMode: "premade" | "custom";
     }>().notNull().default({
       chainLength: 5,
       rounds: 3,
       currentRound: 1,
       turnTimeSec: null,
-      phaseEndsAt: null
+      phaseEndsAt: null,
+      chainMode: "premade"
     }),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()

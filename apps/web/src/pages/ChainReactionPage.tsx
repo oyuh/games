@@ -2,11 +2,13 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiLogIn, FiLogOut, FiPlay, FiPlus, FiSend, FiX, FiMinus } from "react-icons/fi";
+import { FiEye, FiLogIn, FiLogOut, FiPlay, FiSend, FiX } from "react-icons/fi";
+import { PasswordHeader } from "../components/password/PasswordHeader";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
-import { RoundCountdown } from "../components/shared/RoundCountdown";
+
+type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 
 export function ChainReactionPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
@@ -18,27 +20,30 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
   useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
 
-  const [selectedWord, setSelectedWord] = useState<number | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [guess, setGuess] = useState("");
+  const inlineInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementTs = useRef<number | null>(null);
 
-  // Chain builder state
-  const [chainMode, setChainMode] = useState<"premade" | "custom">("premade");
-  const [customWords, setCustomWords] = useState<string[]>(["", "", "", "", ""]);
+  // Chain submission state (for custom mode)
+  const [submissionWords, setSubmissionWords] = useState<string[]>([]);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  // Which player's chain we're viewing: our own (solving) or opponent's (spectating their progress)
+  const [viewingId, setViewingId] = useState<string>(sessionId);
 
   usePresenceSocket({ sessionId, gameId, gameType: "chain_reaction" });
 
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
-  const isMyTurn = game?.current_turn === sessionId;
 
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
   inGameRef.current = inGame;
   phaseRef.current = game?.phase;
 
-  // Unmount cleanup — leave game when navigating away
+  // Unmount cleanup
   useEffect(() => {
     let active = false;
     const timer = setTimeout(() => { active = true; }, 500);
@@ -58,6 +63,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
   }, [sessions]);
 
   const playerName = (id: string) => sessionById[id] ?? id.slice(0, 6);
+  const opponent = useMemo(() => game?.players.find((p) => p.sessionId !== sessionId), [game, sessionId]);
 
   useEffect(() => {
     if (!game) return;
@@ -77,20 +83,42 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
-  // Announcement watcher
   useEffect(() => {
     if (!game?.announcement) return;
     if (prevAnnouncementTs.current !== game.announcement.ts) {
       prevAnnouncementTs.current = game.announcement.ts;
-      if (!isHost) showToast(`📢 ${game.announcement.text}`, "info");
+      showToast(`📢 ${game.announcement.text}`, "info");
     }
-  }, [game?.announcement, isHost]);
+  }, [game?.announcement]);
 
-  // Reset selection between rounds
+  // Reset between rounds
   useEffect(() => {
-    setSelectedWord(null);
+    setEditingIndex(null);
     setGuess("");
-  }, [game?.settings.currentRound]);
+    setHasSubmitted(false);
+    setViewingId(sessionId);
+  }, [game?.settings.currentRound, sessionId]);
+
+  // Initialize submission words
+  useEffect(() => {
+    if (game?.phase === "submitting" && !hasSubmitted) {
+      setSubmissionWords(Array.from({ length: game.settings.chainLength }, () => ""));
+    }
+  }, [game?.phase, game?.settings.chainLength, hasSubmitted]);
+
+  // Track submitted
+  useEffect(() => {
+    if (game?.phase === "submitting" && game.submitted_chains[sessionId]) {
+      setHasSubmitted(true);
+    }
+  }, [game?.phase, game?.submitted_chains, sessionId]);
+
+  // Auto-focus inline input
+  useEffect(() => {
+    if (editingIndex !== null) {
+      inlineInputRef.current?.focus();
+    }
+  }, [editingIndex]);
 
   if (!game) {
     return (
@@ -100,333 +128,497 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const revealAndGuess = async (event: FormEvent) => {
-    event.preventDefault();
-    if (selectedWord === null || !guess.trim()) return;
+  // Per-player chains
+  const myChain: ChainSlot[] = game.chain[sessionId] ?? [];
+  const opponentId = opponent?.sessionId;
+  const oppChain: ChainSlot[] = opponentId ? (game.chain[opponentId] ?? []) : [];
+  const viewingChain = viewingId === sessionId ? myChain : oppChain;
+  const isViewingMine = viewingId === sessionId;
+
+  const myDone = myChain.length > 0 && myChain.every((s) => s.revealed);
+  const oppDone = oppChain.length > 0 && oppChain.every((s) => s.revealed);
+
+  const handleSlotClick = (i: number) => {
+    if (!isViewingMine || myDone) return;
+    const slot = myChain[i];
+    if (!slot || slot.revealed) return;
+    setEditingIndex(i);
+    // Prefill with revealed hint letters
+    if (slot.lettersShown > 0) {
+      setGuess(slot.word.slice(0, slot.lettersShown));
+    } else {
+      setGuess("");
+    }
+  };
+
+  const handleInlineGuess = async (e: FormEvent) => {
+    e.preventDefault();
+    if (editingIndex === null || !guess.trim()) return;
+
+    const idx = editingIndex;
+    const currentGuess = guess.trim();
+    setGuess("");
+    setEditingIndex(null);
 
     try {
-      // Reveal a letter first
-      await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: selectedWord })).server;
+      await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: idx })).server;
     } catch {
-      // Might fail if all revealable letters are shown — that's ok, proceed to guess
+      // All revealable letters already shown
     }
 
     try {
       await zero.mutate(mutators.chainReaction.guess({
         gameId,
         sessionId,
-        wordIndex: selectedWord,
-        guess: guess.trim()
+        wordIndex: idx,
+        guess: currentGuess
       })).server;
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Guess failed", "error");
+      showToast(err instanceof Error ? err.message : "Wrong!", "error");
     }
-
-    setGuess("");
-    setSelectedWord(null);
   };
 
-  const opponent = game.players.find((p) => p.sessionId !== sessionId);
+  const submitChain = async (event: FormEvent) => {
+    event.preventDefault();
+    if (submissionWords.some((w) => !w.trim())) return;
+    try {
+      await zero.mutate(mutators.chainReaction.submitChain({
+        gameId,
+        sessionId,
+        words: submissionWords.map((w) => w.trim())
+      })).server;
+      setHasSubmitted(true);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Submit failed", "error");
+    }
+  };
+
+  const myScore = game.scores[sessionId] ?? 0;
+  const opponentScore = opponentId ? (game.scores[opponentId] ?? 0) : 0;
+  const myName = playerName(sessionId);
+  const oppName = opponentId ? playerName(opponentId) : "???";
+
+  // Progress counts (hidden words solved)
+  const myProgress = myChain.length > 0 ? myChain.filter((s) => s.revealed).length - 2 : 0;
+  const myTotal = myChain.length > 0 ? myChain.length - 2 : 0;
+  const oppProgress = oppChain.length > 0 ? oppChain.filter((s) => s.revealed).length - 2 : 0;
+  const oppTotal = oppChain.length > 0 ? oppChain.length - 2 : 0;
 
   return (
     <div className="game-page">
-      {/* Header */}
-      <div className="game-header">
-        <div className="game-header-top">
-          <span className="game-code">Code: <strong>{game.code}</strong></span>
-          <span className="game-phase-badge game-phase-badge--chain">{game.phase}</span>
-        </div>
-        {game.phase === "playing" && (
-          <div className="game-header-meta">
-            <span>Round {game.settings.currentRound}/{game.settings.rounds}</span>
-            {game.settings.phaseEndsAt && (
-              <RoundCountdown endsAt={game.settings.phaseEndsAt} label="Turn" />
-            )}
-          </div>
-        )}
-      </div>
+      <PasswordHeader
+        title="Chain Reaction"
+        code={game.code}
+        phase={game.phase}
+        {...(game.phase !== "lobby" ? { currentRound: game.settings.currentRound } : {})}
+        endsAt={game.settings.phaseEndsAt}
+        isHost={isHost}
+      />
 
-      {/* Scoreboard */}
-      {game.phase !== "lobby" && (
-        <div className="game-section">
-          <div className="cr-scoreboard">
-            {game.players.map((p) => (
-              <div
-                key={p.sessionId}
-                className={`cr-score-card ${game.current_turn === p.sessionId ? "cr-score-card--active" : ""}`}
-              >
-                <span className="cr-score-name">
-                  {playerName(p.sessionId)}
-                  {p.sessionId === sessionId && " (you)"}
-                </span>
-                <span className="cr-score-value">{game.scores[p.sessionId] ?? 0}</span>
-              </div>
-            ))}
+      {/* ─── VS Scoreboard with clickable cards ─── */}
+      {game.phase !== "lobby" && game.players.length === 2 && (
+        <div className="cr-versus">
+          <div
+            className={`cr-vs-player cr-vs-player--clickable${isViewingMine && game.phase === "playing" ? " cr-vs-player--active" : ""}${myDone ? " cr-vs-player--done" : ""}`}
+            onClick={() => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); }}
+          >
+            <div className="cr-vs-avatar">{(myName[0] ?? "?").toUpperCase()}</div>
+            <div className="cr-vs-info">
+              <span className="cr-vs-name">{myName}</span>
+              <span className="cr-vs-score">{myScore}</span>
+              {game.phase === "playing" && <span className="cr-vs-progress">{myProgress}/{myTotal}</span>}
+            </div>
+            {myDone && <span className="cr-vs-done-badge">✓</span>}
+          </div>
+
+          <div className="cr-vs-divider">
+            <span className="cr-vs-badge">VS</span>
+            <span className="cr-vs-round">R{game.settings.currentRound}/{game.settings.rounds}</span>
+          </div>
+
+          <div
+            className={`cr-vs-player cr-vs-player--right cr-vs-player--clickable${!isViewingMine && game.phase === "playing" ? " cr-vs-player--active" : ""}${oppDone ? " cr-vs-player--done" : ""}`}
+            onClick={() => { setViewingId(opponentId ?? sessionId); setEditingIndex(null); setGuess(""); }}
+          >
+            <div className="cr-vs-info">
+              <span className="cr-vs-name">{oppName}</span>
+              <span className="cr-vs-score">{opponentScore}</span>
+              {game.phase === "playing" && <span className="cr-vs-progress">{oppProgress}/{oppTotal}</span>}
+            </div>
+            <div className="cr-vs-avatar cr-vs-avatar--opp">{(oppName[0] ?? "?").toUpperCase()}</div>
+            {oppDone && <span className="cr-vs-done-badge">✓</span>}
           </div>
         </div>
       )}
 
-      {/* Players list (lobby) */}
+      {/* ─── Lobby: 1v1 Duel Matchup + chain mode toggle ─── */}
       {game.phase === "lobby" && (
         <div className="game-section">
-          <h3 className="game-section-label">Players ({game.players.length}/2)</h3>
-          <div className="game-players">
-            {game.players.map((p) => (
-              <div key={p.sessionId} className="game-player">
-                <span className="game-player-name">
-                  {playerName(p.sessionId)}
-                  {p.sessionId === game.host_id && " 👑"}
-                  {p.sessionId === sessionId && " (you)"}
-                </span>
-                {isHost && p.sessionId !== sessionId && (
-                  <button
-                    className="btn-icon btn-icon--danger"
-                    title="Kick"
-                    onClick={() => void zero.mutate(mutators.chainReaction.kick({ gameId, hostId: sessionId, targetId: p.sessionId }))}
-                  >
-                    <FiX size={14} />
-                  </button>
-                )}
+          <div className="cr-lobby-duel">
+            {game.players[0] ? (() => {
+              const p = game.players[0];
+              const isMe = p.sessionId === sessionId;
+              const name = playerName(p.sessionId);
+              return (
+                <div className={`cr-lobby-slot cr-lobby-slot--filled${isMe ? " cr-lobby-slot--me" : ""}`}>
+                  <div className="cr-lobby-avatar">{(name[0] ?? "?").toUpperCase()}</div>
+                  <span className="cr-lobby-name">{name}</span>
+                  {isMe && <span className="cr-lobby-you">you</span>}
+                  {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>}
+                  {isHost && !isMe && (
+                    <button className="btn-icon btn-icon--danger cr-lobby-kick" title="Kick"
+                      onClick={() => void zero.mutate(mutators.chainReaction.kick({ gameId, hostId: sessionId, targetId: p.sessionId }))}>
+                      <FiX size={12} />
+                    </button>
+                  )}
+                </div>
+              );
+            })() : (
+              <div className="cr-lobby-slot cr-lobby-slot--empty">
+                <div className="cr-lobby-avatar cr-lobby-avatar--empty">?</div>
+                <span className="cr-lobby-empty-text">Waiting…</span>
               </div>
-            ))}
+            )}
+
+            <div className="cr-lobby-vs">VS</div>
+
+            {game.players[1] ? (() => {
+              const p = game.players[1];
+              const isMe = p.sessionId === sessionId;
+              const name = playerName(p.sessionId);
+              return (
+                <div className={`cr-lobby-slot cr-lobby-slot--filled${isMe ? " cr-lobby-slot--me" : ""}`}>
+                  <div className="cr-lobby-avatar cr-lobby-avatar--opp">{(name[0] ?? "?").toUpperCase()}</div>
+                  <span className="cr-lobby-name">{name}</span>
+                  {isMe && <span className="cr-lobby-you">you</span>}
+                  {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>}
+                  {isHost && !isMe && (
+                    <button className="btn-icon btn-icon--danger cr-lobby-kick" title="Kick"
+                      onClick={() => void zero.mutate(mutators.chainReaction.kick({ gameId, hostId: sessionId, targetId: p.sessionId }))}>
+                      <FiX size={12} />
+                    </button>
+                  )}
+                </div>
+              );
+            })() : !inGame ? (
+              <div className="cr-lobby-slot cr-lobby-slot--join"
+                onClick={() => void zero.mutate(mutators.chainReaction.join({ gameId, sessionId })).client.catch(() => showToast("Couldn't join", "error"))}>
+                <div className="cr-lobby-avatar cr-lobby-avatar--empty"><FiLogIn size={20} /></div>
+                <span className="cr-lobby-join-text">Join Duel</span>
+              </div>
+            ) : (
+              <div className="cr-lobby-slot cr-lobby-slot--empty">
+                <div className="cr-lobby-avatar cr-lobby-avatar--empty">?</div>
+                <span className="cr-lobby-empty-text">Awaiting challenger…</span>
+              </div>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* Join prompt */}
-      {game.phase === "lobby" && !inGame && (
-        <div className="game-section game-join-prompt">
-          <p className="game-join-text">You're not in this lobby yet.</p>
-          <button
-            className="btn btn-primary game-action-btn"
-            onClick={() =>
-              void zero.mutate(mutators.chainReaction.join({ gameId, sessionId }))
-                .client.catch(() => showToast("Couldn't join game", "error"))
-            }
-          >
-            <FiLogIn size={16} /> Join Game
-          </button>
-        </div>
-      )}
-
-      {/* Lobby actions */}
-      {game.phase === "lobby" && inGame && (
-        <div className="game-section">
-          {game.players.length < 2 && (
-            <p className="game-hint">Need 2 players to start (waiting for 1 more)</p>
-          )}
-
-          {/* Chain mode picker (host only) */}
-          {isHost && (
-            <div className="cr-chain-builder">
-              <h3 className="game-section-label">Word Chain</h3>
-              <div className="cr-mode-toggle">
+          {/* Chain mode toggle */}
+          {isHost && inGame && (
+            <div className="cr-mode-toggle">
+              <span className="cr-mode-label">Chain Mode</span>
+              <div className="cr-mode-options">
                 <button
-                  className={`btn btn-sm ${chainMode === "premade" ? "btn-primary" : "btn-muted"}`}
-                  onClick={() => setChainMode("premade")}
+                  className={`cr-mode-btn${game.settings.chainMode === "premade" ? " cr-mode-btn--active" : ""}`}
+                  onClick={() => void zero.mutate(mutators.chainReaction.updateSettings({ gameId, hostId: sessionId, settings: { ...game.settings, chainMode: "premade" } }))}
                 >
-                  Random
+                  Premade
                 </button>
                 <button
-                  className={`btn btn-sm ${chainMode === "custom" ? "btn-primary" : "btn-muted"}`}
-                  onClick={() => setChainMode("custom")}
+                  className={`cr-mode-btn${game.settings.chainMode === "custom" ? " cr-mode-btn--active" : ""}`}
+                  onClick={() => void zero.mutate(mutators.chainReaction.updateSettings({ gameId, hostId: sessionId, settings: { ...game.settings, chainMode: "custom" } }))}
                 >
                   Custom
                 </button>
               </div>
-
-              {chainMode === "premade" ? (
-                <p className="cr-mode-desc">A random word chain will be picked each round.</p>
-              ) : (
-                <div className="cr-custom-chain">
-                  <p className="cr-mode-desc">Enter your own chain of connected words (first &amp; last are revealed as hints).</p>
-                  <div className="cr-custom-words">
-                    {customWords.map((word, i) => (
-                      <div key={i} className="cr-custom-word-row">
-                        <span className="cr-custom-word-num">{i + 1}</span>
-                        <input
-                          className="input cr-custom-word-input"
-                          value={word}
-                          onChange={(e) => {
-                            const next = [...customWords];
-                            next[i] = e.target.value;
-                            setCustomWords(next);
-                          }}
-                          placeholder={i === 0 ? "First word (shown)" : i === customWords.length - 1 ? "Last word (shown)" : `Hidden word ${i}`}
-                          maxLength={20}
-                        />
-                        {customWords.length > 3 && (
-                          <button
-                            className="btn-icon btn-icon--danger"
-                            title="Remove"
-                            onClick={() => setCustomWords(customWords.filter((_, j) => j !== i))}
-                          >
-                            <FiMinus size={14} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {customWords.length < 10 && (
-                    <button
-                      className="btn btn-sm btn-muted cr-add-word-btn"
-                      onClick={() => setCustomWords([...customWords, ""])}
-                    >
-                      <FiPlus size={14} /> Add Word
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
-          <div className="game-actions">
-            {isHost ? (
-              <button
-                className="btn btn-primary game-action-btn"
-                disabled={game.players.length !== 2 || (chainMode === "custom" && customWords.some((w) => !w.trim()))}
-                onClick={() => {
-                  const opts: { gameId: string; hostId: string; customChain?: string[] } = { gameId, hostId: sessionId };
-                  if (chainMode === "custom") opts.customChain = customWords.map((w) => w.trim());
-                  void zero.mutate(mutators.chainReaction.start(opts));
-                }}
-              >
-                <FiPlay size={16} /> Start Game
+          {!isHost && inGame && (
+            <p className="cr-mode-info">
+              Mode: <strong>{game.settings.chainMode === "custom" ? "Custom Chains" : "Premade Chains"}</strong>
+            </p>
+          )}
+
+          {inGame && (
+            <div className="game-actions" style={{ marginTop: "0.75rem" }}>
+              {isHost ? (
+                <button className="btn btn-primary game-action-btn" disabled={game.players.length !== 2}
+                  onClick={() => void zero.mutate(mutators.chainReaction.start({ gameId, hostId: sessionId }))}>
+                  <FiPlay size={16} /> Start Duel
+                </button>
+              ) : (
+                <p className="game-waiting-text">Waiting for host to start…</p>
+              )}
+              <button className="btn btn-muted game-action-btn"
+                onClick={() => void zero.mutate(mutators.chainReaction.leave({ gameId, sessionId }))}>
+                <FiLogOut size={14} /> Leave
               </button>
-            ) : (
-              <p className="game-waiting-text">Waiting for host to start…</p>
-            )}
-            <button
-              className="btn btn-muted game-action-btn"
-              onClick={() => void zero.mutate(mutators.chainReaction.leave({ gameId, sessionId }))}
-            >
-              <FiLogOut size={14} /> Leave
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Chain display */}
-      {game.phase === "playing" && (
-        <div className="game-section">
-          <div className="cr-turn-indicator">
-            {isMyTurn ? (
-              <span className="cr-turn-you">Your turn — pick a word and guess!</span>
-            ) : (
-              <span className="cr-turn-waiting">{playerName(game.current_turn ?? "")}'s turn…</span>
-            )}
-          </div>
-
-          <div className="cr-chain">
-            {game.chain.map((slot, i) => (
-              <div
-                key={i}
-                className={`cr-word-slot ${slot.revealed ? "cr-word-slot--revealed" : "cr-word-slot--hidden"} ${selectedWord === i && !slot.revealed ? "cr-word-slot--selected" : ""}`}
-                onClick={() => {
-                  if (!slot.revealed && isMyTurn) setSelectedWord(i);
-                }}
-              >
-                {slot.revealed ? (
-                  <span className="cr-word-text">{slot.word}</span>
-                ) : (
-                  <span className="cr-word-text">
-                    {renderPartialWord(slot.word, slot.lettersShown)}
-                  </span>
-                )}
-                {!slot.revealed && (
-                  <span className="cr-word-hint">
-                    {i > 0 && game.chain[i - 1]?.revealed ? `${game.chain[i - 1]!.word} + ?` : ""}
-                    {i < game.chain.length - 1 && game.chain[i + 1]?.revealed ? ` → ? + ${game.chain[i + 1]!.word}` : ""}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Guess input */}
-          {isMyTurn && selectedWord !== null && (
-            <form className="cr-guess-form" onSubmit={revealAndGuess}>
-              <input
-                className="input cr-guess-input"
-                value={guess}
-                onChange={(e) => setGuess(e.target.value)}
-                placeholder={`Guess word #${selectedWord + 1}…`}
-                maxLength={40}
-                autoFocus
-              />
-              <button className="btn btn-primary" type="submit" disabled={!guess.trim()}>
-                <FiSend size={14} /> Guess
-              </button>
-            </form>
+            </div>
           )}
         </div>
       )}
 
-      {/* Spectator view */}
+      {/* ─── Submitting: chain input form (not submitted yet) ─── */}
+      {game.phase === "submitting" && inGame && !hasSubmitted && (
+        <div className="game-section">
+          <div className="cr-submit-banner">
+            <FiSend size={18} />
+            <span>Write your chain — {game.settings.chainLength} connected words</span>
+          </div>
+
+          <form onSubmit={submitChain}>
+            <div className="cr-chain">
+              {submissionWords.map((word, i) => {
+                const isEdge = i === 0 || i === submissionWords.length - 1;
+                return (
+                  <div key={i} className="cr-submit-slot">
+                    <span className="cr-slot-num">{i + 1}</span>
+                    <input
+                      className="cr-submit-input"
+                      value={word}
+                      onChange={(e) => {
+                        const next = [...submissionWords];
+                        next[i] = e.target.value;
+                        setSubmissionWords(next);
+                      }}
+                      placeholder={isEdge ? "Hint word (shown)" : "Hidden word"}
+                      maxLength={30}
+                    />
+                    {isEdge && <span className="cr-slot-tag">visible</span>}
+                    {i < submissionWords.length - 1 && <div className="cr-chain-connector" />}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="game-actions" style={{ marginTop: "0.75rem" }}>
+              <button type="submit" className="btn btn-primary game-action-btn"
+                disabled={submissionWords.some((w) => !w.trim())}>
+                <FiSend size={14} /> Lock In Chain
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ─── Submitted: chain preview + opponent status ─── */}
+      {game.phase === "submitting" && inGame && hasSubmitted && (
+        <div className="game-section">
+          <div className="cr-submit-done-banner">✅ Chain locked in!</div>
+          {game.submitted_chains[sessionId] && (
+            <div className="cr-chain-preview">
+              <h4 className="cr-preview-label">Your Chain</h4>
+              <div className="cr-preview-words">
+                {game.submitted_chains[sessionId].map((word, i, arr) => {
+                  const isEdge = i === 0 || i === arr.length - 1;
+                  return (
+                    <div key={i} className={`cr-preview-word${isEdge ? " cr-preview-word--edge" : ""}`}>
+                      <span className="cr-slot-num">{i + 1}</span>
+                      <span className="cr-preview-text">{word}</span>
+                      {isEdge && <span className="cr-slot-tag">hint</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="cr-opponent-status">
+            {game.submitted_chains[opponentId ?? ""] ? (
+              <p className="cr-status-text cr-status-text--done">✅ {oppName} has submitted — starting soon!</p>
+            ) : (
+              <div className="cr-status-writing">
+                <div className="game-waiting-pulse" />
+                <p className="cr-status-text">{oppName} is writing their chain…</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {game.phase === "submitting" && !inGame && (
+        <div className="game-section">
+          <div className="game-waiting">
+            <div className="game-waiting-pulse" />
+            <p>Players are writing their chains…</p>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Playing: simultaneous chain solving ─── */}
+      {game.phase === "playing" && inGame && (
+        <div className="game-section">
+          {/* View indicator */}
+          <div className="cr-view-indicator">
+            {isViewingMine ? (
+              myDone ? (
+                <span className="cr-view-label cr-view-label--done">✅ You finished! Click {oppName}'s card to spectate</span>
+              ) : (
+                <span className="cr-view-label">Solve the chain — tap a word to guess!</span>
+              )
+            ) : (
+              <span className="cr-view-label cr-view-label--spectate">
+                <FiEye size={14} /> Watching {oppName}'s progress
+              </span>
+            )}
+          </div>
+
+          {/* Chain display */}
+          <div className="cr-chain">
+            {viewingChain.map((slot, i) => {
+              const isEditing = isViewingMine && editingIndex === i;
+              const isEdge = i === 0 || i === viewingChain.length - 1;
+              const canClick = isViewingMine && !myDone && !slot.revealed && !isEditing;
+
+              return (
+                <div key={i} className="cr-slot-wrapper">
+                  <div
+                    className={[
+                      "cr-word-slot",
+                      slot.revealed ? "cr-word-slot--revealed" : "cr-word-slot--hidden",
+                      isEditing ? "cr-word-slot--editing" : "",
+                      canClick ? "cr-word-slot--clickable" : "",
+                      slot.solvedBy === sessionId ? "cr-word-slot--mine" : "",
+                      slot.solvedBy && slot.solvedBy !== sessionId ? "cr-word-slot--theirs" : "",
+                    ].filter(Boolean).join(" ")}
+                    onClick={() => canClick && handleSlotClick(i)}
+                  >
+                    <span className="cr-slot-idx">{i + 1}</span>
+
+                    <div className="cr-slot-body">
+                      {isEditing ? (
+                        <form onSubmit={handleInlineGuess} className="cr-inline-form">
+                          <input
+                            ref={inlineInputRef}
+                            className="cr-inline-input"
+                            value={guess}
+                            onChange={(e) => setGuess(e.target.value)}
+                            placeholder="type your guess…"
+                            maxLength={slot.word.length}
+                            onBlur={() => { if (!guess.trim()) { setEditingIndex(null); } }}
+                            onKeyDown={(e) => { if (e.key === "Escape") { setEditingIndex(null); setGuess(""); } }}
+                          />
+                          <button type="submit" className="cr-inline-go" disabled={!guess.trim()}>↵</button>
+                        </form>
+                      ) : slot.revealed ? (
+                        <span className="cr-word-text">{slot.word}</span>
+                      ) : (
+                        <span className="cr-word-text cr-word-text--partial">
+                          {renderPartialWord(slot.word, slot.lettersShown)}
+                        </span>
+                      )}
+                    </div>
+
+                    {!slot.revealed && !isEditing && slot.lettersShown > 0 && (
+                      <span className="cr-letters-count">{slot.lettersShown}/{slot.word.length}</span>
+                    )}
+                    {isEdge && slot.revealed && <span className="cr-slot-tag">hint</span>}
+                    {slot.solvedBy && !isEdge && (
+                      <span className={`cr-solver-tag${slot.solvedBy === sessionId ? " cr-solver-tag--me" : ""}`}>
+                        {slot.solvedBy === sessionId ? "you" : isViewingMine ? "you" : oppName}
+                      </span>
+                    )}
+                  </div>
+
+                  {i < viewingChain.length - 1 && <div className="cr-chain-connector" />}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Progress bar */}
+          {isViewingMine ? (
+            <p className="game-progress-text">{myProgress} / {myTotal} words cracked</p>
+          ) : (
+            <p className="game-progress-text">{oppProgress} / {oppTotal} words cracked</p>
+          )}
+
+          {/* Waiting overlay when you're done */}
+          {myDone && isViewingMine && !oppDone && (
+            <div className="cr-done-waiting">
+              <div className="game-waiting-pulse" />
+              <p>Waiting for {oppName} to finish…</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {game.phase === "playing" && !inGame && (
         <div className="game-section">
           <div className="game-waiting">
             <div className="game-waiting-pulse" />
-            <p>Game in progress — watching!</p>
+            <p>Duel in progress — watching!</p>
           </div>
         </div>
       )}
 
-      {/* Finished */}
+      {/* ─── Finished ─── */}
       {game.phase === "finished" && (
         <div className="game-section">
-          <div className="game-reveal-card game-reveal-card--success">
-            <p className="game-reveal-title">Game Complete!</p>
-            <p className="game-reveal-sub">
-              {game.settings.rounds} round{game.settings.rounds !== 1 ? "s" : ""} played
-            </p>
-          </div>
-
-          {/* Final scores */}
-          <div className="cr-final-scores">
-            {Object.entries(game.scores)
-              .sort(([, a], [, b]) => b - a)
-              .map(([id, score], rank) => (
-                <div key={id} className={`cr-final-score ${rank === 0 ? "cr-final-score--winner" : ""}`}>
-                  <span className="cr-final-rank">{rank === 0 ? "🏆" : "🥈"}</span>
-                  <span className="cr-final-name">{playerName(id)}</span>
-                  <span className="cr-final-pts">{score} pts</span>
+          {(() => {
+            const sorted = Object.entries(game.scores).sort(([, a], [, b]) => b - a);
+            const winnerId = sorted[0]?.[0];
+            const tied = sorted.length > 1 && sorted[0]?.[1] === sorted[1]?.[1];
+            return (
+              <div className={`cr-winner-card${tied ? "" : winnerId === sessionId ? " cr-winner-card--win" : " cr-winner-card--lose"}`}>
+                <span className="cr-winner-icon">{tied ? "🤝" : winnerId === sessionId ? "🏆" : "💀"}</span>
+                <div>
+                  <p className="cr-winner-title">
+                    {tied ? "It's a Tie!" : winnerId === sessionId ? "You Win!" : `${playerName(winnerId ?? "")} Wins!`}
+                  </p>
+                  <p className="cr-winner-sub">{myScore} – {opponentScore}</p>
                 </div>
-              ))}
-          </div>
+              </div>
+            );
+          })()}
 
-          {/* Round history */}
           {game.round_history.length > 0 && (
             <>
-              <h3 className="game-section-label">Round History</h3>
-              {game.round_history.map((r, ri) => (
-                <div key={ri} className="cr-round-history-card">
-                  <div className="cr-round-header">Round {r.round}</div>
-                  <div className="cr-round-chain">
-                    {r.chain.map((w, wi) => (
-                      <span key={wi} className="cr-round-word">
-                        {w.word}
-                        {w.solvedBy && <span className="cr-round-solver"> ({playerName(w.solvedBy)})</span>}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              <h3 className="game-section-label">Rounds</h3>
+              <div className="cr-round-list">
+                {game.round_history.map((r) => {
+                  const myRoundChain = r.chains[sessionId] ?? [];
+                  const oppRoundChain = opponentId ? (r.chains[opponentId] ?? []) : [];
+                  return (
+                    <div key={r.round} className="cr-round-row">
+                      <span className="cr-round-num">R{r.round}</span>
+                      <div className="cr-round-chains">
+                        <div className="cr-round-chain">
+                          <span className="cr-round-chain-label">You</span>
+                          {myRoundChain.map((w, wi) => (
+                            <span key={wi} className="cr-round-word cr-round-word--me">{w.word}</span>
+                          ))}
+                        </div>
+                        <div className="cr-round-chain">
+                          <span className="cr-round-chain-label">{oppName}</span>
+                          {oppRoundChain.map((w, wi) => (
+                            <span key={wi} className="cr-round-word cr-round-word--opp">{w.word}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="cr-round-scores">
+                        <span>{r.scores[sessionId] ?? 0}</span>
+                        <span className="cr-round-dash">–</span>
+                        <span>{opponentId ? (r.scores[opponentId] ?? 0) : 0}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </>
           )}
 
-          <div className="game-actions" style={{ marginTop: "1rem" }}>
-            {isHost && (
-              <button
-                className="btn btn-primary game-action-btn"
-                onClick={() => void zero.mutate(mutators.chainReaction.endGame({ gameId, hostId: sessionId }))}
-              >
+          <div className="game-actions">
+            {isHost ? (
+              <button className="btn btn-primary game-action-btn"
+                onClick={() => void zero.mutate(mutators.chainReaction.endGame({ gameId, hostId: sessionId }))}>
                 End Game
               </button>
+            ) : (
+              <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
+                Back to Home
+              </button>
             )}
-            <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
-              Back to Home
-            </button>
           </div>
         </div>
       )}

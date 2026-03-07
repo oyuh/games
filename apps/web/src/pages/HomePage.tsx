@@ -36,6 +36,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   const [chainExpanded, setChainExpanded] = useState(false);
   const [chainLength, setChainLength] = useState(5);
   const [chainRounds, setChainRounds] = useState(3);
+  const [chainMode, setChainMode] = useState<"premade" | "custom">("premade");
 
   const saveName = async (event: FormEvent) => {
     event.preventDefault();
@@ -83,7 +84,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     setPendingAction("create-chain");
     const id = nanoid();
     try {
-      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds })).server;
+      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -250,6 +251,18 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                   </button>
                   <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoPassword("results")}>
                     Pwd Results
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("lobby")}>
+                    CR Lobby
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("submitting")}>
+                    CR Submit
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("playing")}>
+                    CR Play
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("finished")}>
+                    CR Finish
                   </button>
                 </div>
               </section>
@@ -492,7 +505,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                     value={chainLength}
                     onChange={(e) => setChainLength(Number(e.target.value))}
                   >
-                    {[5, 6, 7].map((n) => (
+                    {[5, 6, 7, 8, 9, 10].map((n) => (
                       <option key={n} value={n}>{n} words</option>
                     ))}
                   </select>
@@ -507,6 +520,19 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                     {[1, 2, 3, 5, 7].map((n) => (
                       <option key={n} value={n}>{n}</option>
                     ))}
+                  </select>
+                </div>
+              </div>
+              <div className="hc-config-row">
+                <div className="hc-config-field flex-1">
+                  <label className="hc-config-label">Chain Mode</label>
+                  <select
+                    className="input"
+                    value={chainMode}
+                    onChange={(e) => setChainMode(e.target.value as "premade" | "custom")}
+                  >
+                    <option value="premade">Random (premade)</option>
+                    <option value="custom">Custom (both players write)</option>
                   </select>
                 </div>
               </div>
@@ -692,5 +718,93 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     addRecentGame({ id, code: "DEMO", gameType: "password" });
     setRecentGames(getRecentGames());
     navigate(phase === "results" ? `/password/${id}/results` : phase === "playing" ? `/password/${id}` : `/password/${id}/begin`);
+  }
+
+  async function createDemoChainReaction(phase: "lobby" | "submitting" | "playing" | "finished") {
+    const id = nanoid();
+    const p1 = sessionId;
+    const p2 = "demo-p2";
+    const players = [
+      { sessionId: p1, name: savedName || "You", connected: true },
+      { sessionId: p2, name: "Alice", connected: true },
+    ];
+    const lobbyPlayers = phase === "lobby" ? [players[0]!] : players;
+
+    // Per-player chains (each player guesses their own chain, created by opponent)
+    const p1Words = ["RAIN", "DROP", "KICK", "BACK", "FIRE"];
+    const p2Words = ["SUN", "LIGHT", "HOUSE", "WORK", "OUT"];
+
+    const makeSlots = (words: string[], progress: "none" | "partial" | "done") =>
+      words.map((word, i) => {
+        const isEdge = i === 0 || i === words.length - 1;
+        if (progress === "none") return { word, revealed: isEdge, lettersShown: isEdge ? word.length : 0, solvedBy: null };
+        if (progress === "partial") {
+          const revealed = isEdge || i === 1;
+          return { word, revealed, lettersShown: revealed ? word.length : (i === 2 ? 1 : 0), solvedBy: i === 1 ? p1 : null };
+        }
+        return { word, revealed: true, lettersShown: word.length, solvedBy: isEdge ? null : p1 };
+      });
+
+    let chain: Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy: string | null }>> = {};
+    if (phase === "playing") {
+      chain = {
+        [p1]: makeSlots(p1Words, "partial"),
+        [p2]: makeSlots(p2Words, "none"),
+      };
+    } else if (phase === "finished") {
+      chain = {
+        [p1]: makeSlots(p1Words, "done"),
+        [p2]: makeSlots(p2Words, "done"),
+      };
+    }
+
+    const roundHistory = phase === "finished" ? [
+      {
+        round: 1,
+        chains: {
+          [p1]: p1Words.map((word, i) => ({ word, solvedBy: i === 0 || i === p1Words.length - 1 ? null : p1, lettersShown: word.length })),
+          [p2]: p2Words.map((word, i) => ({ word, solvedBy: i === 0 || i === p2Words.length - 1 ? null : p2, lettersShown: word.length })),
+        },
+        scores: { [p1]: 2, [p2]: 1 }
+      },
+      {
+        round: 2,
+        chains: {
+          [p1]: ["COLD", "SNAP", "CHAT", "ROOM", "KEY"].map((word, i) => ({ word, solvedBy: i === 0 || i === 4 ? null : p1, lettersShown: word.length })),
+          [p2]: ["BLUE", "BELL", "TOWER", "BLOCK", "CHAIN"].map((word, i) => ({ word, solvedBy: i === 0 || i === 4 ? null : p2, lettersShown: word.length })),
+        },
+        scores: { [p1]: 1, [p2]: 2 }
+      }
+    ] : [];
+
+    const scores: Record<string, number> = phase === "lobby" ? {} :
+      phase === "finished" ? { [p1]: 3, [p2]: 3 } : { [p1]: 1, [p2]: 0 };
+
+    const submittedChains: Record<string, string[]> = phase === "submitting"
+      ? { [p1]: p1Words }
+      : {};
+
+    await zero.mutate(mutators.demo.seedChainReaction({
+      id,
+      hostId: p1,
+      phase,
+      players: lobbyPlayers,
+      chain,
+      submittedChains,
+      scores,
+      roundHistory,
+      settings: {
+        chainLength: 5,
+        rounds: phase === "finished" ? 2 : 3,
+        currentRound: phase === "lobby" ? 1 : phase === "finished" ? 2 : 1,
+        turnTimeSec: null,
+        phaseEndsAt: null,
+        chainMode: phase === "submitting" ? "custom" : "premade"
+      }
+    }));
+
+    addRecentGame({ id, code: "DEMO", gameType: "chain_reaction" });
+    setRecentGames(getRecentGames());
+    navigate(`/chain-reaction/${id}`);
   }
 }

@@ -1444,6 +1444,11 @@ body {
   border-color: color-mix(in srgb, #f87171 20%, transparent);
 }
 
+.game-role-card--muted {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
 .game-role-icon {
   width: 48px;
   height: 48px;
@@ -2787,302 +2792,821 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════
-   CHAIN REACTION GAME
+   CHAIN REACTION GAME — 1v1 DUEL UI
    ═══════════════════════════════════════════════════════ */
 
-.game-header-top {
+/* ── VS Scoreboard ───────────────────────────────────── */
+.cr-versus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
-}
-
-.game-header-meta {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.85rem;
-  color: var(--secondary);
-}
-
-.game-code {
-  font-size: 0.85rem;
-  color: var(--secondary);
-  letter-spacing: 0.05em;
-}
-
-.game-code strong {
-  font-weight: 700;
-  color: var(--primary);
-  letter-spacing: 0.15em;
-}
-
-.game-phase-badge--chain {
-  padding: 0.25rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
-}
-
-/* Scoreboard */
-.cr-scoreboard {
-  display: flex;
   gap: 0.75rem;
-}
-
-.cr-score-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  background: var(--surface-1);
-  border: 2px solid transparent;
-  transition: border-color 0.2s;
-}
-
-.cr-score-card--active {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, var(--surface-1));
-}
-
-.cr-score-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.cr-score-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--primary);
-}
-
-/* Turn indicator */
-.cr-turn-indicator {
-  text-align: center;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.cr-turn-you {
-  color: var(--primary);
-}
-
-.cr-turn-waiting {
-  color: var(--secondary);
-}
-
-/* Chain display */
-.cr-chain {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   background: var(--surface-1);
   border-radius: 1rem;
+  margin-bottom: 0.5rem;
 }
 
-.cr-word-slot {
+.cr-vs-player {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.75rem 1rem;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
   border-radius: 0.75rem;
   border: 2px solid transparent;
-  transition: background 0.15s, border-color 0.15s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.cr-word-slot--revealed {
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
-}
-
-.cr-word-slot--hidden {
-  background: color-mix(in srgb, var(--foreground) 5%, transparent);
-  border-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+.cr-vs-player--clickable {
   cursor: pointer;
 }
 
-.cr-word-slot--hidden:hover {
-  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
+.cr-vs-player--clickable:hover {
+  border-color: color-mix(in srgb, var(--foreground) 15%, transparent);
 }
 
-.cr-word-slot--selected {
-  border-color: var(--primary) !important;
-  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+.cr-vs-player--right {
+  flex-direction: row-reverse;
+  text-align: right;
 }
 
-.cr-word-text {
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--foreground);
+.cr-vs-player--active {
+  border-color: var(--primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.cr-vs-player--done {
+  opacity: 0.7;
+}
+
+.cr-vs-done-badge {
+  font-size: 0.75rem;
+  color: #22c55e;
+  font-weight: 800;
+}
+
+.cr-vs-progress {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--secondary);
+  opacity: 0.7;
   font-family: "JetBrains Mono", monospace;
 }
 
-.cr-word-slot--hidden .cr-word-text {
-  color: var(--secondary);
+.cr-vs-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1rem;
+  background: var(--primary);
+  color: var(--background);
+  flex-shrink: 0;
 }
 
-.cr-word-hint {
-  font-size: 0.7rem;
+.cr-vs-avatar--opp {
+  background: var(--secondary);
+}
+
+.cr-vs-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cr-vs-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cr-vs-score {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--primary);
+  line-height: 1;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.cr-vs-player--right .cr-vs-score {
+  text-align: right;
+}
+
+.cr-vs-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.cr-vs-badge {
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--secondary);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  padding: 0.15rem 0.55rem;
+  border-radius: 0.4rem;
+}
+
+.cr-vs-round {
+  font-size: 0.65rem;
   color: var(--secondary);
   opacity: 0.7;
 }
 
-/* Guess form */
-.cr-guess-form {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.cr-guess-input {
-  flex: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 600;
-}
-
-/* Chain builder (lobby) */
-.cr-chain-builder {
-  margin-bottom: 1rem;
-}
-
-.cr-mode-toggle {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.cr-mode-desc {
-  font-size: 0.85rem;
-  color: var(--color-text-muted, #888);
-  margin: 0 0 0.5rem;
-}
-
-.cr-custom-chain {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.cr-custom-words {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.cr-custom-word-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.cr-custom-word-num {
-  width: 1.5rem;
+/* ── View Indicator ──────────────────────────────────── */
+.cr-view-indicator {
   text-align: center;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--color-text-muted, #888);
-  flex-shrink: 0;
-}
-
-.cr-custom-word-input {
-  flex: 1;
-  text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-}
-
-.cr-add-word-btn {
-  align-self: flex-start;
-  margin-top: 0.25rem;
-}
-
-/* Finished state */
-.cr-final-scores {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin: 1rem 0;
-}
-
-.cr-final-score {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  background: var(--surface-1);
-}
-
-.cr-final-score--winner {
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface-1));
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
-}
-
-.cr-final-rank {
-  font-size: 1.25rem;
-}
-
-.cr-final-name {
-  flex: 1;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.cr-final-pts {
-  font-weight: 700;
-  color: var(--primary);
-  font-size: 1.1rem;
-}
-
-/* Round history */
-.cr-round-history-card {
-  background: var(--surface-1);
-  border-radius: 0.75rem;
-  overflow: hidden;
   margin-bottom: 0.5rem;
 }
 
-.cr-round-header {
-  padding: 0.5rem 0.75rem;
+.cr-view-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.cr-view-label--spectate {
+  color: var(--secondary);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.cr-view-label--done {
+  color: #22c55e;
+  background: color-mix(in srgb, #22c55e 8%, transparent);
+  border-color: color-mix(in srgb, #22c55e 18%, transparent);
+}
+
+/* ── Done / Waiting ──────────────────────────────────── */
+.cr-done-waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--secondary);
+}
+
+/* ── Chain Mode Toggle ───────────────────────────────── */
+.cr-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.cr-mode-label {
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  background: color-mix(in srgb, var(--primary) 10%, var(--surface-1));
-  color: var(--primary);
+  color: var(--secondary);
+}
+
+.cr-mode-options {
+  display: flex;
+  gap: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+.cr-mode-btn {
+  background: transparent;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cr-mode-btn:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.cr-mode-btn--active {
+  background: var(--primary);
+  color: var(--background);
+}
+
+.cr-mode-btn--active:hover {
+  background: var(--primary);
+}
+
+.cr-mode-info {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--secondary);
+  margin-top: 0.5rem;
+}
+
+/* ── Round History (dual chains) ─────────────────────── */
+.cr-round-chains {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
 }
 
 .cr-round-chain {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.2rem;
+  align-items: center;
 }
 
-.cr-round-word {
+.cr-round-chain-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--secondary);
+  opacity: 0.7;
+  min-width: 2.5rem;
+}
+
+/* ── Chain Container ─────────────────────────────────── */
+.cr-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.75rem;
+  background: var(--surface-1);
+  border-radius: 1rem;
+  margin: 0.5rem 0;
+}
+
+/* ── Slot Wrapper (slot + connector) ─────────────────── */
+.cr-slot-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.cr-chain-connector {
+  width: 2px;
+  height: 0.65rem;
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+/* ── Word Slots ──────────────────────────────────────── */
+.cr-word-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 2px solid transparent;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  min-height: 2.8rem;
+  position: relative;
+}
+
+.cr-word-slot--revealed {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.cr-word-slot--hidden {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.cr-word-slot--clickable {
+  cursor: pointer;
+}
+
+.cr-word-slot--clickable:hover {
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.cr-word-slot--editing {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.cr-word-slot--mine {
+  border-left: 3px solid var(--primary);
+}
+
+.cr-word-slot--theirs {
+  border-left: 3px solid var(--secondary);
+}
+
+/* Slot number */
+.cr-slot-idx {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--secondary);
+  opacity: 0.6;
+  min-width: 1rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Slot body (holds text or inline input) */
+.cr-slot-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Word text */
+.cr-word-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  font-family: "JetBrains Mono", monospace;
+}
+
+.cr-word-text--partial {
+  color: var(--secondary);
+}
+
+/* Inline guess form: input + ↵ button inside slot */
+.cr-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cr-inline-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--primary);
+  caret-color: var(--primary);
+  padding: 0;
+}
+
+.cr-inline-input::placeholder {
+  color: var(--secondary);
+  opacity: 0.4;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.cr-inline-go {
+  background: var(--primary);
+  color: var(--background);
+  border: none;
+  border-radius: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+
+.cr-inline-go:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ── Tags / Badges ───────────────────────────────────── */
+.cr-slot-tag {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.cr-solver-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--secondary);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.3rem;
+  flex-shrink: 0;
+}
+
+.cr-solver-tag--me {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* ── Submit Phase ────────────────────────────────────── */
+.cr-submit-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--primary);
+  font-size: 0.8rem;
   font-weight: 600;
-  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.cr-submit-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  position: relative;
+}
+
+.cr-slot-num {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--secondary);
+  opacity: 0.6;
+  min-width: 1.2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cr-submit-input {
+  flex: 1;
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--foreground);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.cr-submit-input:focus {
+  border-color: var(--primary);
+}
+
+.cr-submit-input::placeholder {
+  text-transform: none;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+/* ── Winner Card ─────────────────────────────────────── */
+.cr-winner-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.2rem 1.4rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  border: 2px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  margin-bottom: 0.75rem;
+}
+
+.cr-winner-card--win {
+  background: color-mix(in srgb, #22c55e 10%, transparent);
+  border-color: color-mix(in srgb, #22c55e 30%, transparent);
+}
+
+.cr-winner-card--lose {
+  background: color-mix(in srgb, #ef4444 8%, transparent);
+  border-color: color-mix(in srgb, #ef4444 20%, transparent);
+}
+
+.cr-winner-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.cr-winner-title {
+  font-size: 1.3rem;
+  font-weight: 800;
   color: var(--foreground);
 }
 
-.cr-round-solver {
-  font-weight: 400;
-  font-size: 0.75rem;
+.cr-winner-sub {
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--secondary);
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* ── Round History ───────────────────────────────────── */
+.cr-round-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cr-round-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.cr-round-num {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--secondary);
+  min-width: 2rem;
+  text-transform: uppercase;
+}
+
+.cr-round-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.cr-round-word {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  color: var(--secondary);
+}
+
+.cr-round-word--me {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+}
+
+.cr-round-word--opp {
+  background: color-mix(in srgb, var(--secondary) 12%, transparent);
+  color: var(--foreground);
+}
+
+.cr-round-scores {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--foreground);
+  font-family: "JetBrains Mono", monospace;
+  flex-shrink: 0;
+}
+
+.cr-round-dash {
+  opacity: 0.3;
+}
+
+/* ── Lobby Duel Matchup ──────────────────────────────── */
+.cr-lobby-duel {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  justify-content: center;
+}
+
+.cr-lobby-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.4rem 1rem;
+  border-radius: 1rem;
+  position: relative;
+  max-width: 12rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cr-lobby-slot--filled {
+  background: var(--surface-1);
+  border: 2px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.cr-lobby-slot--me {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.cr-lobby-slot--empty {
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+.cr-lobby-slot--join {
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--primary) 25%, transparent);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cr-lobby-slot--join:hover {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-color: var(--primary);
+}
+
+.cr-lobby-avatar {
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  background: var(--primary);
+  color: var(--background);
+}
+
+.cr-lobby-avatar--opp {
+  background: var(--secondary);
+}
+
+.cr-lobby-avatar--empty {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--secondary);
+  font-size: 1.1rem;
+}
+
+.cr-lobby-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--foreground);
+  text-align: center;
+}
+
+.cr-lobby-you {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  opacity: 0.8;
+}
+
+.cr-lobby-empty-text {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  opacity: 0.6;
+}
+
+.cr-lobby-join-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.cr-lobby-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--secondary);
+  padding: 0 0.6rem;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.cr-lobby-kick {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+/* ── Submit Done / Chain Preview ─────────────────────── */
+.cr-submit-done-banner {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, #22c55e 10%, transparent);
+  color: #22c55e;
+  border: 1px solid color-mix(in srgb, #22c55e 20%, transparent);
+  margin-bottom: 0.5rem;
+}
+
+.cr-chain-preview {
+  background: var(--surface-1);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.cr-preview-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+  margin: 0 0 0.4rem 0;
+}
+
+.cr-preview-words {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cr-preview-word {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.cr-preview-word--edge {
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+.cr-preview-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--foreground);
+}
+
+/* Opponent status */
+.cr-opponent-status {
+  margin-top: 0.5rem;
+}
+
+.cr-status-text {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  text-align: center;
+}
+
+.cr-status-text--done {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.cr-status-writing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ── Letter Progress Count ───────────────────────────── */
+.cr-letters-count {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--secondary);
+  opacity: 0.6;
+  font-family: "JetBrains Mono", monospace;
+  flex-shrink: 0;
+}
+
+/* ── Deprecated / Shared overrides ───────────────────── */
+.game-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.game-input-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--secondary);
+  flex-shrink: 0;
 }

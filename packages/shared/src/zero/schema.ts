@@ -88,14 +88,15 @@ const chainReactionGames = table("chain_reaction_games").columns({
   id: string(),
   code: string(),
   host_id: string(),
-  phase: enumeration<"lobby" | "playing" | "finished" | "ended">(),
+  phase: enumeration<"lobby" | "submitting" | "playing" | "finished" | "ended">(),
   players: json<Array<{ sessionId: string; name: string | null; connected: boolean }>>(),
-  chain: json<Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>(),
+  chain: json<Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>>(),
+  submitted_chains: json<Record<string, string[]>>(),
   current_turn: string().optional(),
   scores: json<Record<string, number>>(),
   round_history: json<Array<{
     round: number;
-    chain: Array<{ word: string; solvedBy: string | null; lettersShown: number }>;
+    chains: Record<string, Array<{ word: string; solvedBy: string | null; lettersShown: number }>>;
     scores: Record<string, number>;
   }>>(),
   kicked: json<string[]>(),
@@ -106,6 +107,7 @@ const chainReactionGames = table("chain_reaction_games").columns({
     currentRound: number;
     turnTimeSec: number | null;
     phaseEndsAt: number | null;
+    chainMode: "premade" | "custom";
   }>(),
   created_at: number(),
   updated_at: number()

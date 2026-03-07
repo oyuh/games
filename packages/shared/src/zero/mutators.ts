@@ -134,6 +134,24 @@ const chainWordBank: string[][] = [
   ["HEAD", "LINE", "BACK", "YARD", "STICK", "BALL", "PARK"],
   ["MOON", "SHINE", "COAT", "TAIL", "SPIN", "WHEEL", "CHAIR"],
   ["EARTH", "BOUND", "LESS", "WORK", "BENCH", "MARK", "DOWN"],
+  // 8-word chains
+  ["RAIN", "DROP", "KICK", "BACK", "FIRE", "SIDE", "WALK", "WAY"],
+  ["SNOW", "BALL", "PARK", "LAND", "MARK", "DOWN", "HILL", "SIDE"],
+  ["FIRE", "PLACE", "KICK", "BACK", "PACK", "HORSE", "PLAY", "GROUND"],
+  ["NIGHT", "FALL", "BACK", "BONE", "HEAD", "BAND", "WAGON", "WHEEL"],
+  ["BOOK", "SHELF", "LIFE", "BOAT", "HOUSE", "WORK", "LOAD", "STAR"],
+  // 9-word chains
+  ["RAIN", "DROP", "KICK", "BACK", "FIRE", "SIDE", "WALK", "WAY", "POINT"],
+  ["SNOW", "BALL", "PARK", "LAND", "MARK", "DOWN", "HILL", "SIDE", "LINE"],
+  ["NIGHT", "FALL", "BACK", "BONE", "HEAD", "BAND", "WAGON", "WHEEL", "CHAIR"],
+  ["TIME", "SHARE", "CROP", "LAND", "SLIDE", "SHOW", "BOAT", "HOUSE", "WIFE"],
+  ["HAND", "SHAKE", "DOWN", "HILL", "SIDE", "KICK", "BACK", "BONE", "HEAD"],
+  // 10-word chains
+  ["RAIN", "DROP", "KICK", "BACK", "FIRE", "SIDE", "WALK", "WAY", "POINT", "GUARD"],
+  ["SNOW", "BALL", "PARK", "LAND", "MARK", "DOWN", "HILL", "SIDE", "LINE", "BACK"],
+  ["NIGHT", "FALL", "BACK", "BONE", "HEAD", "BAND", "WAGON", "WHEEL", "CHAIR", "MAN"],
+  ["TIME", "SHARE", "CROP", "LAND", "SLIDE", "SHOW", "BOAT", "HOUSE", "WORK", "LOAD"],
+  ["HAND", "SHAKE", "DOWN", "HILL", "SIDE", "KICK", "BACK", "BONE", "HEAD", "BAND"],
 ];
 
 function pickChain(length: number): string[] {
@@ -1254,9 +1272,10 @@ export const mutators = defineMutators({
       z.object({
         id: z.string(),
         hostId: z.string(),
-        chainLength: z.number().min(5).max(7).optional(),
+        chainLength: z.number().min(5).max(10).optional(),
         rounds: z.number().min(1).max(10).optional(),
-        turnTimeSec: z.number().nullable().optional()
+        turnTimeSec: z.number().nullable().optional(),
+        chainMode: z.enum(["premade", "custom"]).optional()
       }),
       async ({ args, tx }) => {
         const ts = now();
@@ -1267,7 +1286,8 @@ export const mutators = defineMutators({
           host_id: args.hostId,
           phase: "lobby",
           players: [{ sessionId: args.hostId, name: session?.name ?? null, connected: true }],
-          chain: [],
+          chain: {},
+          submitted_chains: {},
           current_turn: null,
           scores: {},
           round_history: [],
@@ -1278,7 +1298,8 @@ export const mutators = defineMutators({
             rounds: args.rounds ?? 3,
             currentRound: 1,
             turnTimeSec: args.turnTimeSec ?? null,
-            phaseEndsAt: null
+            phaseEndsAt: null,
+            chainMode: args.chainMode ?? "premade"
           },
           created_at: ts,
           updated_at: ts
@@ -1383,6 +1404,32 @@ export const mutators = defineMutators({
       }
     ),
 
+    updateSettings: defineMutator(
+      z.object({
+        gameId: z.string(),
+        hostId: z.string(),
+        settings: z.object({
+          chainLength: z.number(),
+          rounds: z.number(),
+          currentRound: z.number(),
+          turnTimeSec: z.number().nullable(),
+          phaseEndsAt: z.number().nullable(),
+          chainMode: z.enum(["premade", "custom"])
+        })
+      }),
+      async ({ args, tx }) => {
+        const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+        if (!game) throw new Error("Game not found");
+        if (game.host_id !== args.hostId) throw new Error("Only host can update settings");
+        if (game.phase !== "lobby") throw new Error("Can only update settings in lobby");
+        await tx.mutate.chain_reaction_games.update({
+          id: game.id,
+          settings: args.settings,
+          updated_at: now()
+        });
+      }
+    ),
+
     kick: defineMutator(
       z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
       async ({ args, tx }) => {
@@ -1412,8 +1459,7 @@ export const mutators = defineMutators({
     start: defineMutator(
       z.object({
         gameId: z.string(),
-        hostId: z.string(),
-        customChain: z.array(z.string().min(1).max(20)).min(3).max(10).optional()
+        hostId: z.string()
       }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
@@ -1422,18 +1468,34 @@ export const mutators = defineMutators({
         if (game.phase !== "lobby") throw new Error("Game already started");
         if (game.players.length !== 2) throw new Error("Need exactly 2 players");
 
-        const words = args.customChain
-          ? args.customChain.map((w) => w.trim().toUpperCase())
-          : pickChain(game.settings.chainLength);
+        if (game.settings.chainMode === "custom") {
+          // Go to submitting phase — both players will enter their chains
+          await tx.mutate.chain_reaction_games.update({
+            id: game.id,
+            phase: "submitting",
+            submitted_chains: {},
+            scores: Object.fromEntries(game.players.map((p) => [p.sessionId, 0])),
+            announcement: { text: "Both players: submit your word chains!", ts: now() },
+            updated_at: now()
+          });
+          return;
+        }
 
-        const chain = words.map((word, i, arr) => ({
+        // Premade mode — pick two different chains, one for each player to solve
+        const p1 = game.players[0]!.sessionId;
+        const p2 = game.players[1]!.sessionId;
+        const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
           word,
           revealed: i === 0 || i === arr.length - 1,
           lettersShown: 0,
           solvedBy: null as string | null
         }));
 
-        const firstPlayer = pickRandom(game.players).sessionId;
+        const chain: Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy: string | null }>> = {
+          [p1]: makeChainSlots(pickChain(game.settings.chainLength)),
+          [p2]: makeChainSlots(pickChain(game.settings.chainLength))
+        };
+
         const scores: Record<string, number> = {};
         for (const p of game.players) scores[p.sessionId] = 0;
 
@@ -1445,8 +1507,65 @@ export const mutators = defineMutators({
           id: game.id,
           phase: "playing",
           chain,
-          current_turn: firstPlayer,
+          current_turn: undefined,
           scores,
+          settings: { ...game.settings, phaseEndsAt },
+          updated_at: now()
+        });
+      }
+    ),
+
+    submitChain: defineMutator(
+      z.object({ gameId: z.string(), sessionId: z.string(), words: z.array(z.string().min(1).max(30)) }),
+      async ({ args, tx }) => {
+        const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+        if (!game) throw new Error("Game not found");
+        if (game.phase !== "submitting") throw new Error("Not in submission phase");
+        if (!game.players.some((p) => p.sessionId === args.sessionId)) throw new Error("Not in this game");
+        if (args.words.length !== game.settings.chainLength) throw new Error(`Chain must be exactly ${game.settings.chainLength} words`);
+
+        const submitted = { ...game.submitted_chains, [args.sessionId]: args.words.map((w) => w.trim().toUpperCase()) };
+        const allSubmitted = game.players.every((p) => submitted[p.sessionId]?.length === game.settings.chainLength);
+
+        if (!allSubmitted) {
+          // Just save this player's chain and wait
+          const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+          const name = session?.name ?? args.sessionId.slice(0, 6);
+          await tx.mutate.chain_reaction_games.update({
+            id: game.id,
+            submitted_chains: submitted,
+            announcement: { text: `${name} submitted their chain!`, ts: now() },
+            updated_at: now()
+          });
+          return;
+        }
+
+        // Both submitted — each player guesses the OTHER player's chain
+        const p1 = game.players[0]!.sessionId;
+        const p2 = game.players[1]!.sessionId;
+        const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
+          word,
+          revealed: i === 0 || i === arr.length - 1,
+          lettersShown: 0,
+          solvedBy: null as string | null
+        }));
+
+        const chain: Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy: string | null }>> = {
+          [p1]: makeChainSlots(submitted[p2]!), // P1 guesses P2's words
+          [p2]: makeChainSlots(submitted[p1]!)  // P2 guesses P1's words
+        };
+
+        const phaseEndsAt = game.settings.turnTimeSec
+          ? now() + game.settings.turnTimeSec * 1000
+          : null;
+
+        await tx.mutate.chain_reaction_games.update({
+          id: game.id,
+          phase: "playing",
+          chain,
+          submitted_chains: submitted,
+          current_turn: undefined,
+          announcement: { text: "Chains submitted — let's play!", ts: now() },
           settings: { ...game.settings, phaseEndsAt },
           updated_at: now()
         });
@@ -1458,22 +1577,24 @@ export const mutators = defineMutators({
       async ({ args, tx }) => {
         const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
         if (!game || game.phase !== "playing") throw new Error("Game not in playing phase");
-        if (game.current_turn !== args.sessionId) throw new Error("Not your turn");
 
-        const slot = game.chain[args.wordIndex];
+        const playerChain = game.chain[args.sessionId];
+        if (!playerChain) throw new Error("No chain for this player");
+
+        const slot = playerChain[args.wordIndex];
         if (!slot || slot.revealed) throw new Error("Invalid word slot");
 
         // Reveal one more letter (keep last letter hidden to preserve deduction)
         const maxReveal = slot.word.length - 1;
         if (slot.lettersShown >= maxReveal) throw new Error("All revealable letters already shown");
 
-        const chain = game.chain.map((s, i) =>
+        const updatedPlayerChain = playerChain.map((s, i) =>
           i === args.wordIndex ? { ...s, lettersShown: s.lettersShown + 1 } : s
         );
 
         await tx.mutate.chain_reaction_games.update({
           id: game.id,
-          chain,
+          chain: { ...game.chain, [args.sessionId]: updatedPlayerChain },
           updated_at: now()
         });
       }
@@ -1484,52 +1605,54 @@ export const mutators = defineMutators({
       async ({ args, tx }) => {
         const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
         if (!game || game.phase !== "playing") throw new Error("Game not in playing phase");
-        if (game.current_turn !== args.sessionId) throw new Error("Not your turn");
 
-        const slot = game.chain[args.wordIndex];
+        const playerChain = game.chain[args.sessionId];
+        if (!playerChain) throw new Error("No chain for this player");
+
+        const slot = playerChain[args.wordIndex];
         if (!slot || slot.revealed) throw new Error("Invalid word slot");
 
         const correct = normalized(args.guess) === normalized(slot.word);
-        let chain = game.chain;
+        let updatedPlayerChain = [...playerChain];
         let scores = { ...game.scores };
         let announcement: { text: string; ts: number } | null = null;
 
+        const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+        const playerName = session?.name ?? args.sessionId.slice(0, 6);
+
         if (correct) {
-          chain = chain.map((s, i) =>
+          updatedPlayerChain = updatedPlayerChain.map((s, i) =>
             i === args.wordIndex ? { ...s, revealed: true, solvedBy: args.sessionId } : s
           );
           const points = scoreForLetters(slot.lettersShown);
-          const hiddenWords = chain.filter((s) => !s.revealed);
+          const hiddenWords = updatedPlayerChain.filter((s) => !s.revealed);
           const isLastWord = hiddenWords.length === 0;
           const totalPoints = points + (isLastWord ? 1 : 0);
           scores[args.sessionId] = (scores[args.sessionId] ?? 0) + totalPoints;
 
-          const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
-          const playerName = session?.name ?? args.sessionId.slice(0, 6);
           announcement = {
             text: `${playerName} guessed "${slot.word}" for ${totalPoints} point${totalPoints !== 1 ? "s" : ""}!`,
             ts: now()
           };
         } else {
-          const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
-          const playerName = session?.name ?? args.sessionId.slice(0, 6);
           announcement = { text: `${playerName} guessed wrong!`, ts: now() };
         }
 
-        // Check if all hidden words are solved
-        const allSolved = chain.every((s) => s.revealed);
-        const otherPlayer = game.players.find((p) => p.sessionId !== args.sessionId);
-        const nextTurn = correct ? args.sessionId : (otherPlayer?.sessionId ?? args.sessionId);
+        const updatedChains = { ...game.chain, [args.sessionId]: updatedPlayerChain };
 
-        if (allSolved) {
-          // Round complete — check if game is over
+        // Check if ALL players' chains are fully solved → round over
+        const allDone = Object.values(updatedChains).every((ch) => ch.every((s) => s.revealed));
+
+        if (allDone) {
+          // Round complete
           const roundResult = {
             round: game.settings.currentRound,
-            chain: chain.map((s) => ({
-              word: s.word,
-              solvedBy: s.solvedBy ?? null,
-              lettersShown: s.lettersShown
-            })),
+            chains: Object.fromEntries(
+              Object.entries(updatedChains).map(([pid, ch]) => [
+                pid,
+                ch.map((s) => ({ word: s.word, solvedBy: s.solvedBy ?? null, lettersShown: s.lettersShown }))
+              ])
+            ),
             scores: { ...scores }
           };
           const roundHistory = [...game.round_history, roundResult];
@@ -1546,7 +1669,7 @@ export const mutators = defineMutators({
             await tx.mutate.chain_reaction_games.update({
               id: game.id,
               phase: "finished",
-              chain,
+              chain: updatedChains,
               scores,
               round_history: roundHistory,
               announcement: { text: endText, ts: now() },
@@ -1556,42 +1679,58 @@ export const mutators = defineMutators({
           } else {
             // Next round
             const nextRound = game.settings.currentRound + 1;
-            const newChain = pickChain(game.settings.chainLength).map((word, i, arr) => ({
-              word,
-              revealed: i === 0 || i === arr.length - 1,
-              lettersShown: 0,
-              solvedBy: null as string | null
-            }));
-            const phaseEndsAt = game.settings.turnTimeSec
-              ? now() + game.settings.turnTimeSec * 1000
-              : null;
 
-            await tx.mutate.chain_reaction_games.update({
-              id: game.id,
-              chain: newChain,
-              scores,
-              current_turn: pickRandom(game.players).sessionId,
-              round_history: roundHistory,
-              announcement: { text: `Round ${nextRound} starting!`, ts: now() },
-              settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
-              updated_at: now()
-            });
+            if (game.settings.chainMode === "custom") {
+              await tx.mutate.chain_reaction_games.update({
+                id: game.id,
+                phase: "submitting",
+                chain: {},
+                submitted_chains: {},
+                scores,
+                current_turn: undefined,
+                round_history: roundHistory,
+                announcement: { text: `Round ${nextRound} — submit your chains!`, ts: now() },
+                settings: { ...game.settings, currentRound: nextRound, phaseEndsAt: null },
+                updated_at: now()
+              });
+            } else {
+              const p1 = game.players[0]!.sessionId;
+              const p2 = game.players[1]!.sessionId;
+              const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
+                word,
+                revealed: i === 0 || i === arr.length - 1,
+                lettersShown: 0,
+                solvedBy: null as string | null
+              }));
+              const newChain = {
+                [p1]: makeChainSlots(pickChain(game.settings.chainLength)),
+                [p2]: makeChainSlots(pickChain(game.settings.chainLength))
+              };
+              const phaseEndsAt = game.settings.turnTimeSec
+                ? now() + game.settings.turnTimeSec * 1000
+                : null;
+
+              await tx.mutate.chain_reaction_games.update({
+                id: game.id,
+                chain: newChain,
+                scores,
+                current_turn: undefined,
+                round_history: roundHistory,
+                announcement: { text: `Round ${nextRound} starting!`, ts: now() },
+                settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
+                updated_at: now()
+              });
+            }
           }
           return;
         }
 
-        // Normal turn continuation — switch to next player on wrong guess, stay on correct
-        const phaseEndsAt = game.settings.turnTimeSec
-          ? now() + game.settings.turnTimeSec * 1000
-          : null;
-
+        // Not all done yet — just update this player's chain
         await tx.mutate.chain_reaction_games.update({
           id: game.id,
-          chain,
+          chain: updatedChains,
           scores,
-          current_turn: nextTurn,
           announcement,
-          settings: { ...game.settings, phaseEndsAt },
           updated_at: now()
         });
       }
@@ -1730,6 +1869,49 @@ export const mutators = defineMutators({
             roundEndsAt: args.roundEndsAt,
             teamsLocked: false
           },
+          created_at: ts,
+          updated_at: ts
+        });
+      }
+    ),
+    seedChainReaction: defineMutator(
+      z.object({
+        id: z.string(),
+        hostId: z.string(),
+        phase: z.enum(["lobby", "submitting", "playing", "finished"]),
+        players: z.array(z.object({ sessionId: z.string(), name: z.string().nullable(), connected: z.boolean() })),
+        chain: z.record(z.string(), z.array(z.object({ word: z.string(), revealed: z.boolean(), lettersShown: z.number(), solvedBy: z.string().nullable() }))),
+        submittedChains: z.record(z.string(), z.array(z.string())),
+        scores: z.record(z.string(), z.number()),
+        roundHistory: z.array(z.object({
+          round: z.number(),
+          chains: z.record(z.string(), z.array(z.object({ word: z.string(), solvedBy: z.string().nullable(), lettersShown: z.number() }))),
+          scores: z.record(z.string(), z.number())
+        })),
+        settings: z.object({
+          chainLength: z.number(),
+          rounds: z.number(),
+          currentRound: z.number(),
+          turnTimeSec: z.number().nullable(),
+          phaseEndsAt: z.number().nullable(),
+          chainMode: z.enum(["premade", "custom"])
+        })
+      }),
+      async ({ args, tx }) => {
+        const ts = now();
+        await tx.mutate.chain_reaction_games.insert({
+          id: args.id,
+          code: code(),
+          host_id: args.hostId,
+          phase: args.phase,
+          players: args.players,
+          chain: args.chain,
+          submitted_chains: args.submittedChains,
+          scores: args.scores,
+          round_history: args.roundHistory,
+          kicked: [],
+          announcement: null,
+          settings: args.settings,
           created_at: ts,
           updated_at: ts
         });
