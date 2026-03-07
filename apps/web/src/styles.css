@@ -1003,6 +1003,47 @@ body {
   color: var(--primary);
 }
 
+/* Deleted games — greyed out, no pointer */
+.hc-recent-item--deleted {
+  opacity: 0.4;
+  pointer-events: none;
+  border-color: var(--border);
+  background: var(--muted);
+}
+.hc-recent-item--deleted .hc-recent-code {
+  color: var(--secondary);
+}
+
+/* Ended games — subtle dim + tooltip cursor */
+.hc-recent-item--ended {
+  border-color: color-mix(in srgb, var(--secondary) 20%, transparent);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.hc-recent-item--ended .hc-recent-code {
+  color: var(--muted-foreground);
+}
+
+/* Phase / status badge */
+.hc-recent-badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.hc-recent-badge--ended {
+  background: color-mix(in srgb, var(--secondary) 15%, transparent);
+  color: var(--secondary);
+}
+.hc-recent-badge--deleted {
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+  color: var(--destructive);
+}
+
 /* ── Game card header ────────────────────────────────────────── */
 .hc-game-header {
   display: flex;

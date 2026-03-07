@@ -1,10 +1,10 @@
 import { imposterCategories, imposterCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { nanoid } from "nanoid";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers } from "react-icons/fi";
-import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, setStoredName } from "../lib/session";
+import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, RecentGame, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 
 const isDev = import.meta.env.DEV;
@@ -209,14 +209,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
             {recentGames.length > 0 ? (
               <div className="hc-recent-list">
                 {recentGames.map((game) => (
-                  <Link
-                    key={`${game.gameType}-${game.id}`}
-                    to={game.gameType === "imposter" ? `/imposter/${game.id}` : game.gameType === "password" ? `/password/${game.id}/begin` : `/chain/${game.id}`}
-                    className="hc-recent-item"
-                  >
-                    <span className="hc-recent-type">{game.gameType}</span>
-                    <span className="hc-recent-code">{game.code}</span>
-                  </Link>
+                  <RecentGameItem key={`${game.gameType}-${game.id}`} game={game} sessionId={sessionId} />
                 ))}
               </div>
             ) : (
@@ -807,4 +800,110 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     setRecentGames(getRecentGames());
     navigate(`/chain-reaction/${id}`);
   }
+}
+
+/* ── Recent game item with deleted check + hover results ───── */
+
+function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: string }) {
+  const [imposterResults] = useQuery(game.gameType === "imposter" ? queries.imposter.byId({ id: game.id }) : queries.imposter.byId({ id: "__none__" }));
+  const [passwordResults] = useQuery(game.gameType === "password" ? queries.password.byId({ id: game.id }) : queries.password.byId({ id: "__none__" }));
+  const [chainResults] = useQuery(game.gameType === "chain_reaction" ? queries.chainReaction.byId({ id: game.id }) : queries.chainReaction.byId({ id: "__none__" }));
+
+  const gameData = game.gameType === "imposter" ? imposterResults[0]
+    : game.gameType === "password" ? passwordResults[0]
+    : chainResults[0];
+
+  const isDeleted = !gameData;
+  const isEnded = gameData && (gameData.phase === "finished" || gameData.phase === "ended");
+
+  const link = game.gameType === "imposter"
+    ? `/imposter/${game.id}`
+    : game.gameType === "password"
+    ? `/password/${game.id}/begin`
+    : `/chain/${game.id}`;
+
+  const typeLabel = game.gameType === "chain_reaction" ? "chain reaction" : game.gameType;
+
+  // Tooltip content for finished games
+  const tooltip = useMemo(() => {
+    if (!isEnded || !gameData) return null;
+
+    if (game.gameType === "imposter" && "round_history" in gameData) {
+      const g = gameData as typeof imposterResults[0];
+      if (!g) return null;
+      const lines: string[] = [];
+      const players = g.players ?? [];
+      const nameOf = (id: string) => players.find((p) => p.sessionId === id)?.name ?? id.slice(0, 6);
+
+      for (const r of g.round_history ?? []) {
+        const impostersStr = r.imposters.map(nameOf).join(", ");
+        lines.push(`R${r.round}: "${r.secretWord}" — ${r.caught ? "caught" : "missed"} (${impostersStr})`);
+      }
+      return lines.join("\n") || "No rounds played";
+    }
+
+    if (game.gameType === "password" && "teams" in gameData) {
+      const g = gameData as typeof passwordResults[0];
+      if (!g) return null;
+      const lines: string[] = [];
+      const teams = g.teams ?? [];
+      for (const [teamKey, score] of Object.entries(g.scores ?? {})) {
+        const teamIdx = parseInt(teamKey, 10);
+        const teamName = teams[teamIdx]?.name ?? `Team ${teamIdx + 1}`;
+        lines.push(`${teamName}: ${score} pts`);
+      }
+      return lines.join("\n") || "No scores";
+    }
+
+    if (game.gameType === "chain_reaction" && "round_history" in gameData) {
+      const g = gameData as typeof chainResults[0];
+      if (!g) return null;
+      const players = g.players ?? [];
+      const nameOf = (id: string) => players.find((p) => p.sessionId === id)?.name ?? id.slice(0, 6);
+      const lines: string[] = [];
+
+      // Final scores
+      const sorted = Object.entries(g.scores ?? {}).sort(([, a], [, b]) => b - a);
+      lines.push(sorted.map(([id, s]) => `${nameOf(id)}: ${s}`).join(" vs "));
+
+      // Per round
+      for (const r of g.round_history ?? []) {
+        const roundScores = Object.entries(r.scores ?? {})
+          .map(([id, s]) => `${nameOf(id)} ${s}`)
+          .join(" / ");
+        lines.push(`R${r.round}: ${roundScores}`);
+      }
+      return lines.join("\n") || "No rounds played";
+    }
+
+    return null;
+  }, [isEnded, gameData, game.gameType]);
+
+  if (isDeleted) {
+    return (
+      <div className="hc-recent-item hc-recent-item--deleted">
+        <span className="hc-recent-type">{typeLabel}</span>
+        <span className="hc-recent-code">{game.code}</span>
+        <span className="hc-recent-badge hc-recent-badge--deleted">deleted</span>
+      </div>
+    );
+  }
+
+  if (isEnded) {
+    return (
+      <Link to={link} className="hc-recent-item hc-recent-item--ended" title={tooltip ?? undefined}>
+        <span className="hc-recent-type">{typeLabel}</span>
+        <span className="hc-recent-code">{game.code}</span>
+        <span className="hc-recent-badge hc-recent-badge--ended">{gameData.phase}</span>
+      </Link>
+    );
+  }
+
+  return (
+    <Link to={link} className="hc-recent-item">
+      <span className="hc-recent-type">{typeLabel}</span>
+      <span className="hc-recent-code">{game.code}</span>
+      <span className="hc-recent-badge">{gameData.phase}</span>
+    </Link>
+  );
 }
