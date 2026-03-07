@@ -314,32 +314,9 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
             )}
           </div>
 
-          {/* Chain mode toggle */}
-          {isHost && inGame && (
-            <div className="cr-mode-toggle">
-              <span className="cr-mode-label">Chain Mode</span>
-              <div className="cr-mode-options">
-                <button
-                  className={`cr-mode-btn${game.settings.chainMode === "premade" ? " cr-mode-btn--active" : ""}`}
-                  onClick={() => void zero.mutate(mutators.chainReaction.updateSettings({ gameId, hostId: sessionId, settings: { ...game.settings, chainMode: "premade" } }))}
-                >
-                  Premade
-                </button>
-                <button
-                  className={`cr-mode-btn${game.settings.chainMode === "custom" ? " cr-mode-btn--active" : ""}`}
-                  onClick={() => void zero.mutate(mutators.chainReaction.updateSettings({ gameId, hostId: sessionId, settings: { ...game.settings, chainMode: "custom" } }))}
-                >
-                  Custom
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!isHost && inGame && (
-            <p className="cr-mode-info">
-              Mode: <strong>{game.settings.chainMode === "custom" ? "Custom Chains" : "Premade Chains"}</strong>
-            </p>
-          )}
+          <p className="cr-mode-info">
+            Mode: <strong>{game.settings.chainMode === "custom" ? "Custom Chains" : "Premade Chains"}</strong>
+          </p>
 
           {inGame && (
             <div className="game-actions" style={{ marginTop: "0.75rem" }}>
