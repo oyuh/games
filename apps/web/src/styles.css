@@ -2059,6 +2059,184 @@ body {
   font-size: 0.7rem;
 }
 
+/* ─── Info Session ID ───────────────────────────────────── */
+
+.info-session-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+}
+
+.info-session-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+.info-session-id {
+  font-family: "Geist Mono", monospace;
+  font-size: 0.75rem;
+  color: var(--foreground);
+  user-select: all;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.info-session-copy {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--secondary);
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.info-session-copy:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* ─── Welcome Modal ─────────────────────────────────────── */
+
+.welcome-panel {
+  max-width: 440px;
+  padding: 2rem 1.75rem 1.75rem;
+  gap: 1.25rem;
+}
+
+.welcome-hero {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.welcome-icon {
+  font-size: 2rem;
+  margin-bottom: 0.25rem;
+  color: var(--primary);
+}
+
+.welcome-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.welcome-subtitle {
+  font-size: 0.85rem;
+  color: var(--secondary);
+  line-height: 1.5;
+}
+
+.welcome-games {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.welcome-game {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+}
+
+.welcome-game-emoji {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.welcome-game-desc {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  line-height: 1.5;
+}
+
+.welcome-game-desc strong {
+  color: var(--foreground);
+}
+
+.welcome-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.welcome-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.welcome-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.welcome-input {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.welcome-input:focus {
+  border-color: var(--primary);
+}
+
+.welcome-go {
+  padding: 0.55rem 1.25rem;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.welcome-go:hover {
+  opacity: 0.85;
+}
+
+.welcome-skip {
+  background: none;
+  border: none;
+  color: var(--secondary);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0.35rem 0;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.welcome-skip:hover {
+  color: var(--foreground);
+}
+
 /* ─── Toast Notifications ───────────────────────────────── */
 
 .toast-container {

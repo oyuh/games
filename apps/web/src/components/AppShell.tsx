@@ -1,14 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { queries } from "@games/shared";
-import { useQuery } from "@rocicorp/zero/react";
+import { mutators, queries } from "@games/shared";
+import { useQuery, useZero } from "@rocicorp/zero/react";
 import { ConnectionDebugPanel } from "./shared/ConnectionDebugPanel";
 import { ChatWindow } from "./shared/ChatWindow";
+import { WelcomeModal } from "./shared/WelcomeModal";
 import { Sidebar } from "./FloatingHeader";
 import { Footer } from "./Footer";
 import { ToastContainer } from "./shared/ToastContainer";
 import { ChatProvider, useChatContext } from "../lib/chat-context";
-import { getOrCreateSessionId } from "../lib/session";
+import { getOrCreateSessionId, hasVisited, markVisited, setStoredName } from "../lib/session";
 
 export function AppShell() {
   return (
@@ -20,7 +21,9 @@ export function AppShell() {
 
 function AppShellInner() {
   const { inGame, gameType, gameId } = useChatContext();
+  const zero = useZero();
   const sessionId = getOrCreateSessionId();
+  const [showWelcome, setShowWelcome] = useState(() => !hasVisited());
 
   // Query current game for host_id
   const [imposterGames] = useQuery(
@@ -43,6 +46,13 @@ function AppShellInner() {
 
   const myName = sessions[0]?.name ?? sessionId.slice(0, 6);
 
+  const handleWelcomeDone = (chosenName: string) => {
+    setStoredName(chosenName);
+    void zero.mutate(mutators.sessions.setName({ id: sessionId, name: chosenName }));
+    markVisited();
+    setShowWelcome(false);
+  };
+
   return (
     <div className="shell">
       <Sidebar />
@@ -55,6 +65,7 @@ function AppShellInner() {
       <ToastContainer />
       <ConnectionDebugPanel />
       {inGame && <ChatWindow hostId={hostId} myName={myName} />}
+      {showWelcome && <WelcomeModal onDone={handleWelcomeDone} />}
     </div>
   );
 }

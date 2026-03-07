@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 const SESSION_KEY = "games:user-id";
 const NAME_KEY = "games:user-name";
 const RECENT_GAMES_KEY = "games:recent-games";
+const VISITED_KEY = "games:has-visited";
 const MAX_RECENT_GAMES = 6;
 
 export type RecentGame = {
@@ -79,4 +80,12 @@ export function addRecentGame(entry: Omit<RecentGame, "lastPlayedAt">) {
 
 export function clearRecentGames() {
   localStorage.removeItem(RECENT_GAMES_KEY);
+}
+
+export function hasVisited(): boolean {
+  return localStorage.getItem(VISITED_KEY) === "1";
+}
+
+export function markVisited(): void {
+  localStorage.setItem(VISITED_KEY, "1");
 }

@@ -1,6 +1,7 @@
-import { FiX, FiZap, FiGlobe, FiMap, FiEye, FiShield, FiAward } from "react-icons/fi";
+import { FiX, FiZap, FiGlobe, FiMap, FiEye, FiShield, FiAward, FiLink, FiCopy } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { getOrCreateSessionId } from "../../lib/session";
 
 const siteInfo = {
   title: "Games",
@@ -78,6 +79,22 @@ function getPageInfo(pathname: string): PageInfo {
     };
   }
 
+  if (pathname.startsWith("/chain/")) {
+    return {
+      title: "Chain Reaction",
+      icon: <FiLink size={20} />,
+      description: "A 1v1 word chain duel. Each player gets a chain of connected words — the first and last are revealed as hints. Guess the hidden words in between!",
+      tips: [
+        "Tap a hidden word to type your guess",
+        "Wrong guesses auto-reveal one letter as a hint",
+        "Use the hint button to reveal a letter manually (costs points)",
+        "Give up on tough words for 0 points to keep moving",
+        "Fewer hints used = more points per word (3 → 2 → 1)",
+        "Finish your chain first for a bonus point on the last word",
+      ],
+    };
+  }
+
   return {
     title: "Page",
     icon: <FiMap size={20} />,
@@ -88,6 +105,15 @@ function getPageInfo(pathname: string): PageInfo {
 export function InfoModal({ onClose }: { onClose: () => void }) {
   const location = useLocation();
   const page = getPageInfo(location.pathname);
+  const sessionId = getOrCreateSessionId();
+  const [copied, setCopied] = useState(false);
+
+  const copySessionId = () => {
+    void navigator.clipboard.writeText(sessionId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -100,6 +126,17 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="modal-body">
+          {/* Session ID header */}
+          <div className="info-session-row">
+            <span className="info-session-label">Session</span>
+            <code className="info-session-id">{sessionId}</code>
+            <button className="info-session-copy" onClick={copySessionId} title="Copy session ID">
+              {copied ? "✓" : <FiCopy size={12} />}
+            </button>
+          </div>
+
+          <hr className="info-divider" />
+
           {/* Hero */}
           <div className="info-hero">
             <div className="info-hero-icon">
