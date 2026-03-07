@@ -23,12 +23,34 @@ function defaultSslMode(hostname: string) {
   return "verify-full";
 }
 
-if (!url.searchParams.has("sslmode")) {
-  url.searchParams.set("sslmode", defaultSslMode(url.hostname));
+function resolveSslConfig(hostname: string, sslMode: string | null) {
+  if (sslMode === "disable" || isLocalHostname(hostname)) {
+    return false;
+  }
+
+  if (sslMode === "no-verify" || hostname.endsWith(".railway.internal")) {
+    return {
+      rejectUnauthorized: false
+    };
+  }
+
+  return {
+    rejectUnauthorized: true
+  };
 }
 
+const sslMode = url.searchParams.get("sslmode") ?? defaultSslMode(url.hostname);
+
+// node-postgres replaces the explicit ssl object if sslmode-related params are left
+// in the connection string, so strip them before constructing the pool config.
+url.searchParams.delete("sslmode");
+url.searchParams.delete("sslcert");
+url.searchParams.delete("sslkey");
+url.searchParams.delete("sslrootcert");
+
 const pool = new Pool({
-  connectionString: url.toString()
+  connectionString: url.toString(),
+  ssl: resolveSslConfig(url.hostname, sslMode)
 });
 
 export const drizzleClient = drizzle(pool, {
