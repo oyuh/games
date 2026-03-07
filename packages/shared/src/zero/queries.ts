@@ -9,7 +9,7 @@ export const queries = defineQueries({
       ({ args }) => zql.sessions.where("id", args.id).limit(1)
     ),
     byGame: defineQuery(
-      z.object({ gameType: z.enum(["imposter", "password"]), gameId: z.string() }),
+      z.object({ gameType: z.enum(["imposter", "password", "chain_reaction"]), gameId: z.string() }),
       ({ args }) =>
         zql.sessions
           .where("game_type", args.gameType)
@@ -37,9 +37,19 @@ export const queries = defineQueries({
       ({ args }) => zql.password_games.where("code", args.code).limit(1)
     )
   },
+  chainReaction: {
+    byId: defineQuery(
+      z.object({ id: z.string() }),
+      ({ args }) => zql.chain_reaction_games.where("id", args.id).limit(1)
+    ),
+    byCode: defineQuery(
+      z.object({ code: z.string() }),
+      ({ args }) => zql.chain_reaction_games.where("code", args.code).limit(1)
+    )
+  },
   chat: {
     byGame: defineQuery(
-      z.object({ gameType: z.enum(["imposter", "password"]), gameId: z.string() }),
+      z.object({ gameType: z.enum(["imposter", "password", "chain_reaction"]), gameId: z.string() }),
       ({ args }) =>
         zql.chat_messages
           .where("game_type", args.gameType)

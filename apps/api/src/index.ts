@@ -1,5 +1,5 @@
 import { mutators, queries, schema } from "@games/shared";
-import { imposterGames, passwordGames, sessions } from "@games/shared";
+import { chainReactionGames, imposterGames, passwordGames, sessions } from "@games/shared";
 import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -169,10 +169,23 @@ async function runCleanup() {
     )
     .returning({ id: passwordGames.id });
 
+  // 2b) End stale chain reaction games (not already ended)
+  const endedChain = await drizzleClient
+    .update(chainReactionGames)
+    .set({ phase: "ended", updatedAt: now })
+    .where(
+      and(
+        lt(chainReactionGames.updatedAt, staleCutoff),
+        ne(chainReactionGames.phase, "ended")
+      )
+    )
+    .returning({ id: chainReactionGames.id });
+
   // 3) Detach sessions that were in those ended games
   const endedGameIds = new Set([
     ...endedImposter.map((g) => g.id),
-    ...endedPassword.map((g) => g.id)
+    ...endedPassword.map((g) => g.id),
+    ...endedChain.map((g) => g.id)
   ]);
   if (endedGameIds.size > 0) {
     const allSessions = await drizzleClient
@@ -210,6 +223,16 @@ async function runCleanup() {
     )
     .returning({ id: passwordGames.id });
 
+  const deletedChain = await drizzleClient
+    .delete(chainReactionGames)
+    .where(
+      and(
+        eq(chainReactionGames.phase, "ended"),
+        lt(chainReactionGames.updatedAt, deleteCutoff)
+      )
+    )
+    .returning({ id: chainReactionGames.id });
+
   // 5) Delete stale sessions (1hr+)
   const deletedSessions = await drizzleClient
     .delete(sessions)
@@ -219,19 +242,23 @@ async function runCleanup() {
   // 6) Counts for diagnostics
   const [imposterCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames);
   const [passwordCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames);
+  const [chainCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chainReactionGames);
   const [sessionCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(sessions);
 
   return {
     imposterGamesEnded: endedImposter.length,
     passwordGamesEnded: endedPassword.length,
+    chainReactionGamesEnded: endedChain.length,
     imposterGamesDeleted: deletedImposter.length,
     passwordGamesDeleted: deletedPassword.length,
+    chainReactionGamesDeleted: deletedChain.length,
     sessionsDeleted: deletedSessions.length,
     staleCutoff: new Date(staleCutoff).toISOString(),
     deleteCutoff: new Date(deleteCutoff).toISOString(),
     totals: {
       imposterGames: imposterCount.total,
       passwordGames: passwordCount.total,
+      chainReactionGames: chainCount.total,
       sessions: sessionCount.total,
     },
   };

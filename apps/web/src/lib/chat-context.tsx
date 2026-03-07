@@ -10,7 +10,7 @@ type ChatState = {
   unread: number;
   /** Whether the current route is inside a game */
   inGame: boolean;
-  gameType: "imposter" | "password" | null;
+  gameType: "imposter" | "password" | "chain_reaction" | null;
   gameId: string;
 };
 
@@ -35,8 +35,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Derive game info from route
   const imposterMatch = location.pathname.match(/^\/imposter\/([^/]+)/);
   const passwordMatch = location.pathname.match(/^\/password\/([^/]+)/);
-  const gameType: "imposter" | "password" | null = imposterMatch ? "imposter" : passwordMatch ? "password" : null;
-  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? "";
+  const chainMatch = location.pathname.match(/^\/chain\/([^/]+)/);
+  const gameType: "imposter" | "password" | "chain_reaction" | null = imposterMatch ? "imposter" : passwordMatch ? "password" : chainMatch ? "chain_reaction" : null;
+  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch?.[1] ?? "";
   const inGame = Boolean(gameType && gameId);
 
   // Close chat when navigating away from a game

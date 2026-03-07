@@ -9,9 +9,10 @@ import {
   uniqueIndex
 } from "drizzle-orm/pg-core";
 
-export const gameTypeEnum = pgEnum("game_type", ["imposter", "password"]);
+export const gameTypeEnum = pgEnum("game_type", ["imposter", "password", "chain_reaction"]);
 export const imposterPhaseEnum = pgEnum("imposter_phase", ["lobby", "playing", "voting", "results", "finished", "ended"]);
 export const passwordPhaseEnum = pgEnum("password_phase", ["lobby", "playing", "results", "ended"]);
+export const chainReactionPhaseEnum = pgEnum("chain_reaction_phase", ["lobby", "playing", "finished", "ended"]);
 
 export const sessions = pgTable(
   "sessions",
@@ -120,9 +121,49 @@ export const chatMessages = pgTable(
   })
 );
 
+export const chainReactionGames = pgTable(
+  "chain_reaction_games",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    hostId: text("host_id").notNull(),
+    phase: chainReactionPhaseEnum("phase").notNull().default("lobby"),
+    players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean }>>().notNull().default([]),
+    chain: jsonb("chain").$type<Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>().notNull().default([]),
+    currentTurn: text("current_turn"),
+    scores: jsonb("scores").$type<Record<string, number>>().notNull().default({}),
+    roundHistory: jsonb("round_history").$type<Array<{
+      round: number;
+      chain: Array<{ word: string; solvedBy: string | null; lettersShown: number }>;
+      scores: Record<string, number>;
+    }>>().notNull().default([]),
+    kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
+    announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
+    settings: jsonb("settings").$type<{
+      chainLength: number;
+      rounds: number;
+      currentRound: number;
+      turnTimeSec: number | null;
+      phaseEndsAt: number | null;
+    }>().notNull().default({
+      chainLength: 5,
+      rounds: 3,
+      currentRound: 1,
+      turnTimeSec: null,
+      phaseEndsAt: null
+    }),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+  },
+  (table) => ({
+    codeUnique: uniqueIndex("chain_reaction_code_unique").on(table.code)
+  })
+);
+
 export type DrizzleSchema = {
   sessions: typeof sessions;
   imposterGames: typeof imposterGames;
   passwordGames: typeof passwordGames;
   chatMessages: typeof chatMessages;
+  chainReactionGames: typeof chainReactionGames;
 };

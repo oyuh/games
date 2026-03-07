@@ -8,7 +8,7 @@ const MAX_RECENT_GAMES = 6;
 export type RecentGame = {
   id: string;
   code: string;
-  gameType: "imposter" | "password";
+  gameType: "imposter" | "password" | "chain_reaction";
   lastPlayedAt: number;
 };
 

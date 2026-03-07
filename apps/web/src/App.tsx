@@ -20,6 +20,7 @@ import { ImposterPage } from "./pages/ImposterPage";
 import { PasswordBeginPage } from "./pages/PasswordBeginPage";
 import { PasswordGamePage } from "./pages/PasswordGamePage";
 import { PasswordResultsPage } from "./pages/PasswordResultsPage";
+import { ChainReactionPage } from "./pages/ChainReactionPage";
 
 const sessionId = getOrCreateSessionId();
 const API_METADATA_POLL_MS = 30_000;
@@ -221,6 +222,7 @@ export function App() {
               <Route path="/password/:id/begin" element={<PasswordBeginPage sessionId={sessionId} />} />
               <Route path="/password/:id" element={<PasswordGamePage sessionId={sessionId} />} />
               <Route path="/password/:id/results" element={<PasswordResultsPage sessionId={sessionId} />} />
+              <Route path="/chain/:id" element={<ChainReactionPage sessionId={sessionId} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

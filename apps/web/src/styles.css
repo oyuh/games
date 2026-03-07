@@ -2785,3 +2785,304 @@ body {
     display: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   CHAIN REACTION GAME
+   ═══════════════════════════════════════════════════════ */
+
+.game-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.game-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--secondary);
+}
+
+.game-code {
+  font-size: 0.85rem;
+  color: var(--secondary);
+  letter-spacing: 0.05em;
+}
+
+.game-code strong {
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.15em;
+}
+
+.game-phase-badge--chain {
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+/* Scoreboard */
+.cr-scoreboard {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.cr-score-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: var(--surface-1);
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.cr-score-card--active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface-1));
+}
+
+.cr-score-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.cr-score-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+/* Turn indicator */
+.cr-turn-indicator {
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.cr-turn-you {
+  color: var(--primary);
+}
+
+.cr-turn-waiting {
+  color: var(--secondary);
+}
+
+/* Chain display */
+.cr-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--surface-1);
+  border-radius: 1rem;
+}
+
+.cr-word-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 2px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cr-word-slot--revealed {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.cr-word-slot--hidden {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+  cursor: pointer;
+}
+
+.cr-word-slot--hidden:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+.cr-word-slot--selected {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+}
+
+.cr-word-text {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  font-family: "JetBrains Mono", monospace;
+}
+
+.cr-word-slot--hidden .cr-word-text {
+  color: var(--secondary);
+}
+
+.cr-word-hint {
+  font-size: 0.7rem;
+  color: var(--secondary);
+  opacity: 0.7;
+}
+
+/* Guess form */
+.cr-guess-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.cr-guess-input {
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+/* Chain builder (lobby) */
+.cr-chain-builder {
+  margin-bottom: 1rem;
+}
+
+.cr-mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.cr-mode-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #888);
+  margin: 0 0 0.5rem;
+}
+
+.cr-custom-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cr-custom-words {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cr-custom-word-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cr-custom-word-num {
+  width: 1.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-muted, #888);
+  flex-shrink: 0;
+}
+
+.cr-custom-word-input {
+  flex: 1;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.cr-add-word-btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+/* Finished state */
+.cr-final-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.cr-final-score {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--surface-1);
+}
+
+.cr-final-score--winner {
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.cr-final-rank {
+  font-size: 1.25rem;
+}
+
+.cr-final-name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.cr-final-pts {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+/* Round history */
+.cr-round-history-card {
+  background: var(--surface-1);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.cr-round-header {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-1));
+  color: var(--primary);
+}
+
+.cr-round-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.cr-round-word {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--foreground);
+}
+
+.cr-round-solver {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--secondary);
+}

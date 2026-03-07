@@ -12,7 +12,7 @@ import {
 const sessions = table("sessions").columns({
   id: string(),
   name: string().optional(),
-  game_type: enumeration<"imposter" | "password">().optional(),
+  game_type: enumeration<"imposter" | "password" | "chain_reaction">().optional(),
   game_id: string().optional(),
   created_at: number(),
   last_seen: number()
@@ -75,13 +75,40 @@ const passwordGames = table("password_games").columns({
 
 const chatMessages = table("chat_messages").columns({
   id: string(),
-  game_type: enumeration<"imposter" | "password">(),
+  game_type: enumeration<"imposter" | "password" | "chain_reaction">(),
   game_id: string(),
   sender_id: string(),
   sender_name: string(),
   badge: string().optional(),
   text: string(),
   created_at: number()
+}).primaryKey("id");
+
+const chainReactionGames = table("chain_reaction_games").columns({
+  id: string(),
+  code: string(),
+  host_id: string(),
+  phase: enumeration<"lobby" | "playing" | "finished" | "ended">(),
+  players: json<Array<{ sessionId: string; name: string | null; connected: boolean }>>(),
+  chain: json<Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>(),
+  current_turn: string().optional(),
+  scores: json<Record<string, number>>(),
+  round_history: json<Array<{
+    round: number;
+    chain: Array<{ word: string; solvedBy: string | null; lettersShown: number }>;
+    scores: Record<string, number>;
+  }>>(),
+  kicked: json<string[]>(),
+  announcement: json<{ text: string; ts: number } | null>(),
+  settings: json<{
+    chainLength: number;
+    rounds: number;
+    currentRound: number;
+    turnTimeSec: number | null;
+    phaseEndsAt: number | null;
+  }>(),
+  created_at: number(),
+  updated_at: number()
 }).primaryKey("id");
 
 const sessionRelationships = relationships(sessions, ({ one }) => ({
@@ -94,11 +121,16 @@ const sessionRelationships = relationships(sessions, ({ one }) => ({
     sourceField: ["game_id"],
     destSchema: passwordGames,
     destField: ["id"]
+  }),
+  chainReactionGame: one({
+    sourceField: ["game_id"],
+    destSchema: chainReactionGames,
+    destField: ["id"]
   })
 }));
 
 export const schema = createSchema({
-  tables: [sessions, imposterGames, passwordGames, chatMessages],
+  tables: [sessions, imposterGames, passwordGames, chatMessages, chainReactionGames],
   relationships: [sessionRelationships]
 });
 

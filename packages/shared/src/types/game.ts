@@ -1,7 +1,8 @@
-export type GameType = "imposter" | "password";
+export type GameType = "imposter" | "password" | "chain_reaction";
 
 export type ImposterPhase = "lobby" | "playing" | "voting" | "results";
 export type PasswordPhase = "lobby" | "playing" | "results";
+export type ChainReactionPhase = "lobby" | "playing" | "finished" | "ended";
 
 export type SessionRecord = {
   id: string;

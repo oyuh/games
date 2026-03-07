@@ -27,7 +27,7 @@ LANGUAGE    ← sign language
 
 ### Phase 1: Build the Chain
 
-- Generate a chain of 5–7 words.
+- Generate a chain of 5–7 words. (should be an option on the homepage for the game for the length of th chain)
 - Each word must form a valid/common phrase with the word directly above and below it.
 - Reveal only the **first** and **last** word; hide everything in between.
 
@@ -46,7 +46,7 @@ Players alternate turns. On each turn:
 
 1. **Choose** which hidden word to attack (usually adjacent to something already revealed).
 2. **Reveal one letter** — the next unrevealed letter of that word appears (keep the final letter hidden until the word is solved, to preserve deduction).
-3. **Make one guess** — one attempt to guess the full word.
+3. **Make one guess** — one attempt to guess the full word. Unless both people havent got it
 
 **Resolve:**
 - **Correct** → score the word, reveal it fully.
@@ -82,8 +82,8 @@ This incentivizes guessing early rather than waiting for more letters.
 The round ends when all hidden words are solved.
 
 **Win conditions (pick one per game mode):**
-- Best of 3 rounds
-- First to 10 points
+- Best of X rounds (can be selected)
+- First to X points (can be selected)
 - Timed session — most points at the end
 
 ---

@@ -174,7 +174,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
           <div className="chat-input-row">
             <input
               className="chat-input"
-              placeholder="Type a message\u2026"
+              placeholder="Type a message..."
               value={input}
               maxLength={500}
               onChange={(e) => setInput(e.target.value)}

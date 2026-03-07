@@ -16,9 +16,10 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   const [savedName, setSavedName] = useState(getStoredName());
   const [recentGames, setRecentGames] = useState(getRecentGames());
   const [joinCode, setJoinCode] = useState("");
-  const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "join" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "join" | null>(null);
   const [imposterMatches] = useQuery(queries.imposter.byCode({ code: joinCode || "______" }));
   const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
+  const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
 
   // Imposter config
   const [imposterExpanded, setImposterExpanded] = useState(false);
@@ -30,6 +31,11 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   const [passwordExpanded, setPasswordExpanded] = useState(false);
   const [passwordTeams, setPasswordTeams] = useState(2);
   const [passwordTargetScore, setPasswordTargetScore] = useState(10);
+
+  // Chain Reaction config
+  const [chainExpanded, setChainExpanded] = useState(false);
+  const [chainLength, setChainLength] = useState(5);
+  const [chainRounds, setChainRounds] = useState(3);
 
   const saveName = async (event: FormEvent) => {
     event.preventDefault();
@@ -73,6 +79,21 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const createChainReaction = async () => {
+    setPendingAction("create-chain");
+    const id = nanoid();
+    try {
+      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds })).server;
+      if (result.type === "error") {
+        showToast(result.error.message, "error");
+        return;
+      }
+      navigate(`/chain/${id}`);
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   const joinAny = async () => {
     setPendingAction("join");
     const normalizedCode = joinCode.trim().toUpperCase();
@@ -98,6 +119,15 @@ export function HomePage({ sessionId }: { sessionId: string }) {
         addRecentGame({ id: passwordGame.id, code: passwordGame.code, gameType: "password" });
         setRecentGames(getRecentGames());
         navigate(`/password/${passwordGame.id}/begin`);
+        return;
+      }
+      const chainGame = chainMatches[0];
+      if (chainGame) {
+        const result = await zero.mutate(mutators.chainReaction.join({ gameId: chainGame.id, sessionId })).server;
+        if (result.type === "error") { showToast(result.error.message, "error"); return; }
+        addRecentGame({ id: chainGame.id, code: chainGame.code, gameType: "chain_reaction" });
+        setRecentGames(getRecentGames());
+        navigate(`/chain/${chainGame.id}`);
         return;
       }
       showToast("No game found for that code.", "error");
@@ -180,7 +210,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                 {recentGames.map((game) => (
                   <Link
                     key={`${game.gameType}-${game.id}`}
-                    to={game.gameType === "imposter" ? `/imposter/${game.id}` : `/password/${game.id}/begin`}
+                    to={game.gameType === "imposter" ? `/imposter/${game.id}` : game.gameType === "password" ? `/password/${game.id}/begin` : `/chain/${game.id}`}
                     className="hc-recent-item"
                   >
                     <span className="hc-recent-type">{game.gameType}</span>
@@ -426,7 +456,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
-      {/* ── Card 4: Chain Reaction (Coming Soon) ──────────── */}
+      {/* ── Card 4: Chain Reaction ─────────────────────────── */}
       <div className="home-card home-card--chain">
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Chain Reaction</h2>
@@ -438,18 +468,70 @@ export function HomePage({ sessionId }: { sessionId: string }) {
             <span className="hc-tag">Turns</span>
           </div>
 
-          <div className="hc-coming-preview">
-            <div className="hc-chain-example">
-              <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
-              <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _ _</span>
-              <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
-              <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
-              <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
+          {/* Gameplay preview (hidden when config expanded) */}
+          {!chainExpanded && (
+            <div className="hc-coming-preview">
+              <div className="hc-chain-example">
+                <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
+                <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _ _</span>
+                <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
+                <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
+                <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Expandable config */}
+          {chainExpanded && (
+            <div className="hc-config">
+              <div className="hc-config-row">
+                <div className="hc-config-field flex-1">
+                  <label className="hc-config-label">Chain Length</label>
+                  <select
+                    className="input"
+                    value={chainLength}
+                    onChange={(e) => setChainLength(Number(e.target.value))}
+                  >
+                    {[5, 6, 7].map((n) => (
+                      <option key={n} value={n}>{n} words</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="hc-config-field flex-1">
+                  <label className="hc-config-label">Rounds</label>
+                  <select
+                    className="input"
+                    value={chainRounds}
+                    onChange={(e) => setChainRounds(Number(e.target.value))}
+                  >
+                    {[1, 2, 3, 5, 7].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="hc-game-actions">
-            <button className="btn btn-muted w-full" disabled>Coming Soon</button>
+            {!chainExpanded ? (
+              <button className="btn btn-primary w-full" onClick={() => setChainExpanded(true)}>
+                Create Game
+              </button>
+            ) : (
+              <div className="hc-row">
+                <button className="btn btn-muted flex-1" onClick={() => setChainExpanded(false)}>
+                  Back
+                </button>
+                <button
+                  className="btn btn-primary flex-1"
+                  onClick={() => void createChainReaction()}
+                  disabled={pendingAction !== null}
+                >
+                  {pendingAction === "create-chain" ? "Creating…" : "Go"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
