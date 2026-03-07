@@ -1,4 +1,4 @@
-# games-refac
+# Games
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)
@@ -12,7 +12,7 @@
 ![pnpm](https://img.shields.io/badge/Package%20Manager-pnpm-F69220?logo=pnpm&logoColor=white)
 ![Deploy](https://img.shields.io/badge/Deploy-Vercel%20%2B%20Railway-0F172A)
 
-games-refac is a TypeScript monorepo for browser-based multiplayer party games. The frontend is a React 19 + Vite single-page app, the backend is a Hono-powered Node service, realtime state replication is handled through Rocicorp Zero, presence is tracked through a dedicated WebSocket endpoint, and persistent state lives in Postgres via Drizzle schema definitions.
+Games is a TypeScript monorepo for browser-based multiplayer party games. The frontend is a React 19 + Vite single-page app, the backend is a Hono-powered Node service, realtime state replication is handled through Rocicorp Zero, presence is tracked through a dedicated WebSocket endpoint, and persistent state lives in Postgres via Drizzle schema definitions.
 
 This repository currently contains three implemented game flows at the data/model level:
 
