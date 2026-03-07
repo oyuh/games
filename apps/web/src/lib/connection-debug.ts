@@ -28,6 +28,12 @@ export type ConnectionDebugState = {
   apiMetaReason: string;
   apiMetaCheckedAt: string;
   apiLatencyMs: number | null;
+  dbState: "idle" | "loading" | "ok" | "unknown" | "offline";
+  dbReason: string;
+  dbCheckedAt: string;
+  dbKey: string;
+  dbExpectedValue: string;
+  dbActualValue: string;
   apiCommitSha: string;
   apiCommitRef: string;
   apiCommitMessage: string;
@@ -59,6 +65,12 @@ const state: ConnectionDebugState = {
   apiMetaReason: "",
   apiMetaCheckedAt: "",
   apiLatencyMs: null,
+  dbState: "idle",
+  dbReason: "",
+  dbCheckedAt: "",
+  dbKey: "",
+  dbExpectedValue: "",
+  dbActualValue: "",
   apiCommitSha: "",
   apiCommitRef: "",
   apiCommitMessage: "",
@@ -163,6 +175,23 @@ export function setApiConnectionProbe(next: {
     state.apiMetaCheckedAt = next.checkedAt;
   }
 
+  emit();
+}
+
+export function setDatabaseStatusProbe(next: {
+  state: ConnectionDebugState["dbState"];
+  reason?: string;
+  checkedAt?: string;
+  key?: string;
+  expectedValue?: string;
+  actualValue?: string;
+}) {
+  state.dbState = next.state;
+  state.dbReason = next.reason ?? "";
+  state.dbCheckedAt = next.checkedAt ?? state.dbCheckedAt;
+  state.dbKey = next.key ?? state.dbKey;
+  state.dbExpectedValue = next.expectedValue ?? state.dbExpectedValue;
+  state.dbActualValue = next.actualValue ?? state.dbActualValue;
   emit();
 }
 

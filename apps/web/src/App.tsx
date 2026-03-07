@@ -10,6 +10,7 @@ import {
   initConnectionDebug,
   setApiBuildInfo,
   setApiConnectionProbe,
+  setDatabaseStatusProbe,
   setZeroConnectionState,
   startGlobalConnectionDebugCapture
 } from "./lib/connection-debug";
@@ -116,6 +117,14 @@ export function App() {
           updatedAt?: string;
           startedAt?: string;
           uptimeMs?: number;
+          database?: {
+            state?: "ok" | "unknown" | "offline";
+            reason?: string;
+            key?: string;
+            expectedValue?: string;
+            actualValue?: string;
+            checkedAt?: string;
+          };
         };
 
         if (cancelled) {
@@ -139,6 +148,17 @@ export function App() {
           latencyMs,
           checkedAt: new Date().toISOString()
         });
+
+        const nextDatabaseProbe = {
+          state: payload.database?.state ?? "unknown",
+          checkedAt: payload.database?.checkedAt ?? new Date().toISOString(),
+          ...(payload.database?.reason ? { reason: payload.database.reason } : {}),
+          ...(payload.database?.key ? { key: payload.database.key } : {}),
+          ...(payload.database?.expectedValue ? { expectedValue: payload.database.expectedValue } : {}),
+          ...(payload.database?.actualValue ? { actualValue: payload.database.actualValue } : {})
+        };
+
+        setDatabaseStatusProbe(nextDatabaseProbe);
       } catch (error) {
         if (cancelled) {
           return;
@@ -149,6 +169,12 @@ export function App() {
           state: "error",
           reason: stringifyError(error),
           latencyMs,
+          checkedAt: new Date().toISOString()
+        });
+
+        setDatabaseStatusProbe({
+          state: "offline",
+          reason: stringifyError(error),
           checkedAt: new Date().toISOString()
         });
 

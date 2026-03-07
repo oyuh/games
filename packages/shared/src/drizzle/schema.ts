@@ -30,6 +30,15 @@ export const sessions = pgTable(
   })
 );
 
+export const statusTable = pgTable(
+  "status",
+  {
+    key: text("key").primaryKey(),
+    value: text("value").notNull(),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+  }
+);
+
 export const imposterGames = pgTable(
   "imposter_games",
   {
@@ -165,6 +174,7 @@ export const chainReactionGames = pgTable(
 
 export type DrizzleSchema = {
   sessions: typeof sessions;
+  statusTable: typeof statusTable;
   imposterGames: typeof imposterGames;
   passwordGames: typeof passwordGames;
   chatMessages: typeof chatMessages;

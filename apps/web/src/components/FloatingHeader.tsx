@@ -94,19 +94,17 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile toggle */}
-      {!isTop && (
-        <button
-          onClick={() => setMobileOpen((o) => !o)}
-          aria-label="Toggle menu"
-          className="sidebar-mobile-toggle"
-        >
-          {mobileOpen ? <FiX size={18} /> : <FiMenu size={18} />}
-        </button>
-      )}
+      {/* Mobile toggle — always rendered; CSS hides on desktop */}
+      <button
+        onClick={() => setMobileOpen((o) => !o)}
+        aria-label="Toggle menu"
+        className="sidebar-mobile-toggle"
+      >
+        {mobileOpen ? <FiX size={18} /> : <FiMenu size={18} />}
+      </button>
 
       {/* Mobile backdrop */}
-      {mobileOpen && !isTop && (
+      {mobileOpen && (
         <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
       )}
 

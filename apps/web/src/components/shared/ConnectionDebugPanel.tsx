@@ -75,6 +75,22 @@ function apiStatusClass(state: ConnectionDebugState["apiMetaState"]) {
   return "text-slate-300";
 }
 
+function dbStatusClass(state: ConnectionDebugState["dbState"]) {
+  if (state === "ok") {
+    return "text-emerald-300";
+  }
+  if (state === "unknown") {
+    return "text-amber-300";
+  }
+  if (state === "offline") {
+    return "text-rose-300";
+  }
+  if (state === "loading") {
+    return "text-amber-300";
+  }
+  return "text-slate-300";
+}
+
 export function ConnectionDebugPanel() {
   const [state, setState] = useState<ConnectionDebugState>(() => ({ ...getConnectionDebugState() }));
   const [open, setOpen] = useState(true);
@@ -161,6 +177,29 @@ export function ConnectionDebugPanel() {
               <dt className="text-slate-400">API latency</dt>
               <dd>{formatLatency(state.apiLatencyMs)}</dd>
             </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-slate-400">Database</dt>
+              <dd className={dbStatusClass(state.dbState)}>{state.dbState}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-slate-400">DB checked</dt>
+              <dd>{formatDateTime(state.dbCheckedAt)}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-slate-400">DB key</dt>
+              <dd>{state.dbKey || "(unknown)"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-slate-400">DB expected</dt>
+              <dd>{state.dbExpectedValue || "(unknown)"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-slate-400">DB actual</dt>
+              <dd>{state.dbActualValue || "(unknown)"}</dd>
+            </div>
+            {state.dbReason ? (
+              <div className="rounded bg-slate-900 p-1 text-[10px] text-amber-200">{state.dbReason}</div>
+            ) : null}
             {state.apiMetaReason ? (
               <div className="rounded bg-slate-900 p-1 text-[10px] text-rose-300">{state.apiMetaReason}</div>
             ) : null}

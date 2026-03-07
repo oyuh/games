@@ -1214,17 +1214,21 @@ body {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     gap: 0;
     padding: 0;
-    min-height: calc(100vh - 6rem);
+    min-height: calc(100vh - 8rem);
     align-items: stretch;
+    width: 100%;
   }
 
   .home-card {
-    flex: 0 0 100vw;
-    width: 100vw;
-    max-width: 100vw;
-    scroll-snap-align: start;
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 100%;
+    max-width: none;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
     border-radius: 0;
     border-left: none;
     border-right: none;
@@ -1255,11 +1259,13 @@ body {
   }
 
   .home-cards-dot {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--secondary);
     opacity: 0.35;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s, background 0.2s;
   }
 
   /* hide scrollbar */
@@ -4002,4 +4008,537 @@ body {
   font-weight: 700;
   color: var(--secondary);
   flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE OVERHAUL
+   Comprehensive mobile layout fixes for 768px and below
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── Base / Global ───────────────────────────────────── */
+  body {
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+
+  /* ── Sidebar: all positions use drawer on mobile ─────── */
+  [data-sidebar="top"] .sidebar,
+  [data-sidebar="right"] .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: auto;
+    transform: none;
+    width: 220px;
+    border-radius: 0 14px 14px 0;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 4rem 0.75rem 1rem;
+    gap: 0.15rem;
+    translate: -100% 0;
+    transition: translate 0.2s ease;
+  }
+
+  [data-sidebar="top"] .sidebar.sidebar--open,
+  [data-sidebar="right"] .sidebar.sidebar--open {
+    translate: 0 0;
+  }
+
+  [data-sidebar="top"] .sidebar .sidebar-link,
+  [data-sidebar="right"] .sidebar .sidebar-link {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.55rem;
+    padding: 0 0.55rem;
+    height: 38px;
+  }
+
+  [data-sidebar="top"] .sidebar .sidebar-link-label,
+  [data-sidebar="right"] .sidebar .sidebar-link-label {
+    display: inline;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  [data-sidebar="right"] .sidebar-mobile-toggle {
+    display: flex;
+  }
+
+  /* ── Shell layout ────────────────────────────────────── */
+  .shell-main {
+    padding: 3.25rem 0.75rem 1rem;
+  }
+
+  /* Remove padding from shell so cards can be full-width */
+  .shell-main:has(.home-cards) {
+    padding: 3.25rem 0 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* ── Touch-friendly inputs & buttons ─────────────────── */
+  .btn {
+    min-height: 42px;
+    padding: 0.6rem 1rem;
+  }
+
+  .btn-sm {
+    min-height: 34px;
+  }
+
+  .input {
+    min-height: 42px;
+    font-size: 16px; /* prevents iOS auto-zoom */
+  }
+
+  /* ── Game page global ────────────────────────────────── */
+  .game-page {
+    gap: 1rem;
+  }
+
+  .game-header {
+    gap: 0.5rem;
+  }
+
+  .game-header-left {
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .game-title {
+    font-size: 1.1rem;
+  }
+
+  .game-code-btn {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  /* ── Players grid ────────────────────────────────────── */
+  .game-players-grid {
+    gap: 0.35rem;
+  }
+
+  .game-player-chip {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .game-player-name {
+    font-size: 0.75rem;
+  }
+
+  /* ── Vote grid: 2 columns ────────────────────────────── */
+  .game-vote-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.45rem;
+  }
+
+  .game-vote-card {
+    padding: 0.75rem 0.5rem;
+    min-height: 72px;
+  }
+
+  /* ── Teams grid: single column ───────────────────────── */
+  .game-teams-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Role card ───────────────────────────────────────── */
+  .game-role-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 0.85rem;
+  }
+
+  /* ── Game actions: stack buttons ──────────────────────── */
+  .game-actions {
+    flex-direction: column;
+  }
+
+  .game-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── Join prompt ─────────────────────────────────────── */
+  .game-join-prompt {
+    padding: 1.25rem 0.85rem;
+  }
+
+  /* ── Waiting / progress ──────────────────────────────── */
+  .game-waiting {
+    font-size: 0.8rem;
+    padding: 0.7rem;
+  }
+
+  /* ── Results ─────────────────────────────────────────── */
+  .game-reveal-card {
+    padding: 1rem;
+  }
+
+  .game-reveal-title {
+    font-size: 1rem;
+  }
+
+  /* ── Data tables ─────────────────────────────────────── */
+  .data-table {
+    min-width: 420px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.38rem 0.45rem;
+    font-size: 0.72rem;
+  }
+
+  /* ── Home cards ──────────────────────────────────────── */
+  .home-card-body {
+    padding: 1.5rem 1.15rem;
+  }
+
+  .hc-game-title-lg {
+    font-size: 1.3rem;
+  }
+
+  .hc-config {
+    padding: 0.65rem;
+  }
+
+  .hc-config-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .hc-config-field {
+    width: 100%;
+  }
+
+  .hc-game-desc {
+    max-width: 30ch;
+  }
+
+  /* Active dot */
+  .home-cards-dot--active {
+    opacity: 1;
+    background: var(--primary);
+    transform: scale(1.25);
+  }
+
+  /* ── Chain Reaction: VS Scoreboard ───────────────────── */
+  .cr-versus {
+    padding: 0.55rem 0.6rem;
+    gap: 0.35rem;
+  }
+
+  .cr-vs-player {
+    padding: 0.3rem 0.35rem;
+    gap: 0.35rem;
+  }
+
+  .cr-vs-avatar {
+    width: 1.9rem;
+    height: 1.9rem;
+    font-size: 0.8rem;
+  }
+
+  .cr-vs-name {
+    font-size: 0.62rem;
+  }
+
+  .cr-vs-score {
+    font-size: 1.15rem;
+  }
+
+  .cr-vs-badge {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.35rem;
+  }
+
+  .cr-vs-round {
+    font-size: 0.58rem;
+  }
+
+  /* ── Chain Reaction: bigger touch targets ─────────────── */
+  .cr-word-slot {
+    min-height: 3rem;
+    padding: 0.6rem 0.65rem;
+  }
+
+  .cr-word-text {
+    font-size: 0.95rem;
+  }
+
+  .cr-inline-input {
+    font-size: 16px; /* prevents iOS auto-zoom */
+  }
+
+  .cr-action-hint,
+  .cr-action-giveup {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  /* ── Chain Reaction: lobby duel ──────────────────────── */
+  .cr-lobby-duel {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .cr-lobby-slot {
+    max-width: 100%;
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .cr-lobby-vs {
+    padding: 0.4rem 0;
+  }
+
+  .cr-lobby-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
+  }
+
+  /* ── Chain Reaction: submit phase ────────────────────── */
+  .cr-submit-input {
+    font-size: 16px; /* prevents iOS auto-zoom */
+    padding: 0.5rem 0.65rem;
+  }
+
+  .cr-submit-banner {
+    font-size: 0.75rem;
+  }
+
+  /* ── Chain Reaction: view indicator ──────────────────── */
+  .cr-view-label {
+    font-size: 0.72rem;
+    padding: 0.35rem 0.7rem;
+  }
+
+  /* ── Chain Reaction: round history ───────────────────── */
+  .cr-round-row {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .cr-round-word {
+    font-size: 0.62rem;
+  }
+
+  /* ── Chain Reaction: winner card ─────────────────────── */
+  .cr-winner-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .cr-winner-title {
+    font-size: 1.1rem;
+  }
+
+  .cr-winner-sub {
+    font-size: 0.85rem;
+  }
+
+  /* ── Password: round roles ───────────────────────────── */
+  .game-round-roles {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  /* ── Password: clue reveal ───────────────────────────── */
+  .game-clue-reveal {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.3rem;
+    padding: 0.65rem;
+  }
+
+  .game-clue-reveal-word {
+    font-size: 1rem;
+  }
+
+  /* ── Password: winner banner ─────────────────────────── */
+  .game-winner-banner {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .game-winner-title {
+    font-size: 1.05rem;
+  }
+
+  /* ── Modals ──────────────────────────────────────────── */
+  .modal-panel {
+    width: 95vw;
+    max-height: 88vh;
+  }
+
+  .modal-header {
+    padding: 1rem 1.15rem 0.6rem;
+  }
+
+  .modal-body {
+    padding: 1rem 1.15rem 1.15rem;
+  }
+
+  /* ── Welcome modal ───────────────────────────────────── */
+  .welcome-panel {
+    max-width: none;
+    padding: 1.5rem 1.15rem 1rem;
+    gap: 1.15rem;
+  }
+
+  .welcome-title {
+    font-size: 1.15rem;
+  }
+
+  .welcome-input {
+    font-size: 16px; /* prevents iOS auto-zoom */
+  }
+
+  /* ── Footer ──────────────────────────────────────────── */
+  .app-footer {
+    padding: 0.4rem 0.65rem;
+  }
+
+  .footer-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+
+  .footer-details {
+    right: -0.5rem;
+    min-width: 200px;
+    max-width: calc(100vw - 2rem);
+  }
+
+  /* ── Toast: wider on mobile ──────────────────────────── */
+  .toast-container {
+    left: 0.5rem;
+    right: 0.5rem;
+    max-width: none;
+    bottom: 3.5rem;
+  }
+
+  .toast {
+    font-size: 0.82rem;
+  }
+
+  /* ── Clue recap ──────────────────────────────────────── */
+  .game-clue-item {
+    gap: 0.25rem;
+  }
+
+  /* ── Scoreboard ──────────────────────────────────────── */
+  .game-scoreboard {
+    gap: 0.5rem;
+  }
+
+  .game-score-row {
+    gap: 0.5rem;
+  }
+
+  /* ── Host controls modal ─────────────────────────────── */
+  .host-announce-row {
+    flex-direction: column;
+  }
+
+  .host-announce-btn {
+    width: 100%;
+  }
+
+  /* ── Options modal toggles ───────────────────────────── */
+  .option-toggle-row {
+    flex-wrap: wrap;
+  }
+
+  .option-toggle-btn {
+    min-height: 42px;
+  }
+
+  /* ── Connection debug panel ──────────────────────────── */
+  .debug-panel {
+    max-width: calc(100vw - 1rem);
+    font-size: 0.65rem;
+  }
+}
+
+/* ── Extra small screens (≤ 380px) ───────────────────────── */
+@media (max-width: 380px) {
+  .shell-main {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .shell-main:has(.home-cards) {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .game-title {
+    font-size: 0.95rem;
+  }
+
+  .cr-vs-player {
+    gap: 0.2rem;
+  }
+
+  .cr-vs-avatar {
+    width: 1.6rem;
+    height: 1.6rem;
+    font-size: 0.7rem;
+  }
+
+  .cr-vs-name {
+    font-size: 0.55rem;
+  }
+
+  .cr-vs-score {
+    font-size: 0.95rem;
+  }
+
+  .home-card-body {
+    padding: 1.25rem 0.75rem;
+  }
+
+  .hc-game-title-lg {
+    font-size: 1.1rem;
+  }
+
+  .welcome-panel {
+    padding: 1.25rem 0.85rem 0.85rem;
+  }
+
+  .game-vote-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.35rem;
+  }
+
+  .game-vote-card {
+    padding: 0.6rem 0.35rem;
+    font-size: 0.72rem;
+  }
+
+  .game-player-avatar {
+    width: 22px;
+    height: 22px;
+    font-size: 0.65rem;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.12rem 0.5rem;
+  }
 }

@@ -14,8 +14,10 @@ export function Footer() {
     return () => clearInterval(timer);
   }, []);
 
-  const isHealthy = debug.apiMetaState === "ok";
-  const isLoading = debug.apiMetaState === "loading" || debug.apiMetaState === "idle";
+  const dbState = debug.dbState;
+  const isHealthy = dbState === "ok";
+  const isLoading = dbState === "loading" || dbState === "idle";
+  const isOffline = dbState === "offline";
 
   const uptimeText = debug.apiUptimeMs != null
     ? formatUptime(debug.apiUptimeMs + tick * 30_000)
@@ -26,10 +28,12 @@ export function Footer() {
   const latency = debug.apiLatencyMs != null ? `${debug.apiLatencyMs}ms` : null;
 
   const statusLabel = isLoading
-    ? "Connecting…"
+    ? "Checking…"
     : isHealthy
       ? "Operational"
-      : "Unreachable";
+      : isOffline
+        ? "Offline"
+        : "Unknown";
 
   return (
     <footer className="app-footer">
@@ -44,7 +48,7 @@ export function Footer() {
           <button
             className="footer-status-pill"
             onClick={() => setExpanded((v) => !v)}
-            title="Toggle API status"
+            title="Toggle service status"
           >
             <span className={`status-dot ${isHealthy ? "status-dot--ok" : isLoading ? "status-dot--loading" : "status-dot--err"}`} />
             <span className="footer-status-label">{statusLabel}</span>
@@ -57,6 +61,32 @@ export function Footer() {
             <span className={`footer-detail-val ${isHealthy ? "footer-val--ok" : "footer-val--err"}`}>
               {statusLabel}
             </span>
+
+            <span className="footer-detail-key">database</span>
+            <span className={`footer-detail-val ${isHealthy ? "footer-val--ok" : "footer-val--err"}`}>
+              {dbState}
+            </span>
+
+            {debug.dbKey && (
+              <>
+                <span className="footer-detail-key">status key</span>
+                <span className="footer-detail-val footer-val--mono">{debug.dbKey}</span>
+              </>
+            )}
+
+            {debug.dbExpectedValue && (
+              <>
+                <span className="footer-detail-key">expected</span>
+                <span className="footer-detail-val footer-val--mono">{debug.dbExpectedValue}</span>
+              </>
+            )}
+
+            {debug.dbActualValue && (
+              <>
+                <span className="footer-detail-key">actual</span>
+                <span className="footer-detail-val footer-val--mono">{debug.dbActualValue}</span>
+              </>
+            )}
 
             {uptimeText && (
               <>
@@ -118,6 +148,13 @@ export function Footer() {
               <>
                 <span className="footer-detail-key">deployed</span>
                 <span className="footer-detail-val">{relativeTime(debug.apiUpdatedAt)}</span>
+              </>
+            )}
+
+            {debug.dbReason && (
+              <>
+                <span className="footer-detail-key">db reason</span>
+                <span className="footer-detail-val footer-val--msg">{debug.dbReason}</span>
               </>
             )}
             </div>
