@@ -1,6 +1,6 @@
 # Chain Reaction — Game Design Document
 
-> **Status:** Coming Soon
+> **Status:** Implemented
 > **Players:** 2
 > **Type:** Competitive word-chain puzzle
 
