@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useConnectionDebug } from "../lib/connection-debug";
 
+const GITHUB_REPO = "https://github.com/oyuh/games";
+
 export function Footer() {
   const debug = useConnectionDebug();
   const [expanded, setExpanded] = useState(false);
@@ -80,14 +82,28 @@ export function Footer() {
             {commitShort && (
               <>
                 <span className="footer-detail-key">commit</span>
-                <span className="footer-detail-val footer-val--mono">{commitShort}</span>
+                <a
+                  className="footer-detail-val footer-val--mono footer-val--link"
+                  href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {commitShort}
+                </a>
               </>
             )}
 
             {commitMsg && (
               <>
                 <span className="footer-detail-key">message</span>
-                <span className="footer-detail-val footer-val--msg">{commitMsg}</span>
+                <a
+                  className="footer-detail-val footer-val--msg footer-val--link"
+                  href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {commitMsg}
+                </a>
               </>
             )}
 
