@@ -24,7 +24,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   const game = games[0];
   const [clue, setClue] = useState("");
   const [voteTarget, setVoteTarget] = useState("");
-  const prevAnnouncementTs = useRef<number | null>(null);
+  const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "imposter" });
 
@@ -103,11 +103,12 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
 
   // Announcement watcher (skip for host — they sent it)
   useEffect(() => {
-    if (!game?.announcement) return;
-    if (prevAnnouncementTs.current !== game.announcement.ts) {
-      prevAnnouncementTs.current = game.announcement.ts;
-      if (!isHost) showToast(`📢 ${game.announcement.text}`, "info");
-    }
+    if (!game?.announcement || isHost) return;
+    const prev = prevAnnouncementRef.current;
+    const cur = game.announcement;
+    if (prev && prev.text === cur.text && Math.abs(cur.ts - prev.ts) < 3000) return;
+    prevAnnouncementRef.current = cur;
+    showToast(`📢 ${cur.text}`, "info");
   }, [game?.announcement, isHost]);
 
   if (!game) {

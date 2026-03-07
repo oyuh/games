@@ -3051,7 +3051,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 0.75rem 0.75rem 0.75rem 3.5rem;
+  padding: 0.75rem;
   background: var(--surface-1);
   border-radius: 1rem;
   margin: 0.5rem 0;
@@ -3063,28 +3063,24 @@ body {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  position: relative;
 }
 
-/* ── Hint / Give-up action buttons ───────────────────── */
+/* ── Hint / Give-up action buttons (inside slot, right side) ── */
 .cr-slot-actions {
   display: flex;
   gap: 0.3rem;
-  position: absolute;
-  left: -2.8rem;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .cr-action-hint {
   display: grid;
   place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 50%;
-  border: 1.5px solid color-mix(in srgb, var(--primary) 30%, transparent);
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--muted);
   color: var(--primary);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -3092,7 +3088,7 @@ body {
 }
 
 .cr-action-hint:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
   border-color: var(--primary);
 }
 
@@ -3104,44 +3100,44 @@ body {
 .cr-action-giveup {
   display: grid;
   place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 50%;
-  border: 1.5px solid color-mix(in srgb, #ef4444 25%, transparent);
-  background: color-mix(in srgb, #ef4444 6%, transparent);
-  color: #ef4444;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--destructive);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.2s;
   flex-shrink: 0;
 }
 
 .cr-action-giveup:hover {
-  background: color-mix(in srgb, #ef4444 15%, transparent);
-  border-color: #ef4444;
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+  border-color: var(--destructive);
 }
 
 .cr-action-giveup--confirm {
-  background: color-mix(in srgb, #ef4444 20%, transparent);
-  border-color: #ef4444;
-  box-shadow: 0 0 10px color-mix(in srgb, #ef4444 35%, transparent);
+  background: color-mix(in srgb, var(--destructive) 18%, transparent);
+  border-color: var(--destructive);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--destructive) 30%, transparent);
   animation: cr-giveup-pulse 0.8s ease-in-out infinite;
 }
 
 @keyframes cr-giveup-pulse {
-  0%, 100% { box-shadow: 0 0 6px color-mix(in srgb, #ef4444 25%, transparent); }
-  50% { box-shadow: 0 0 14px color-mix(in srgb, #ef4444 50%, transparent); }
+  0%, 100% { box-shadow: 0 0 5px color-mix(in srgb, var(--destructive) 20%, transparent); }
+  50% { box-shadow: 0 0 12px color-mix(in srgb, var(--destructive) 45%, transparent); }
 }
 
 /* Given-up word slot styling */
 .cr-word-slot--givenup {
-  background: color-mix(in srgb, #ef4444 5%, transparent);
-  border-color: color-mix(in srgb, #ef4444 12%, transparent);
+  background: color-mix(in srgb, var(--destructive) 5%, transparent);
+  border-color: color-mix(in srgb, var(--destructive) 12%, transparent);
   opacity: 0.7;
 }
 
 .cr-solver-tag--skip {
-  color: #ef4444;
-  background: color-mix(in srgb, #ef4444 10%, transparent);
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
 }
 
 .cr-chain-connector {

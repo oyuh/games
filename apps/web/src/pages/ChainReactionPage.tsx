@@ -23,7 +23,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [guess, setGuess] = useState("");
   const inlineInputRef = useRef<HTMLInputElement>(null);
-  const prevAnnouncementTs = useRef<number | null>(null);
+  const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   // Chain submission state (for custom mode)
   const [submissionWords, setSubmissionWords] = useState<string[]>([]);
@@ -87,10 +87,12 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!game?.announcement) return;
-    if (prevAnnouncementTs.current !== game.announcement.ts) {
-      prevAnnouncementTs.current = game.announcement.ts;
-      showToast(`📢 ${game.announcement.text}`, "info");
-    }
+    const prev = prevAnnouncementRef.current;
+    const cur = game.announcement;
+    // Skip if same text & ts within 3s (optimistic vs server duplicate)
+    if (prev && prev.text === cur.text && Math.abs(cur.ts - prev.ts) < 3000) return;
+    prevAnnouncementRef.current = cur;
+    showToast(`📢 ${cur.text}`, "info");
   }, [game?.announcement]);
 
   // Reset between rounds
@@ -469,26 +471,6 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
 
               return (
                 <div key={i} className="cr-slot-wrapper">
-                  {/* Hint + Give-up buttons (only on your unrevealed non-edge slots) */}
-                  {isViewingMine && !isEdge && !slot.revealed && !myDone && (
-                    <div className="cr-slot-actions">
-                      <button
-                        className="cr-action-hint"
-                        title="Reveal a letter"
-                        onClick={(e) => { e.stopPropagation(); void handleHint(i); }}
-                        disabled={slot.lettersShown >= slot.word.length - 1}
-                      >
-                        <FiHelpCircle size={14} />
-                      </button>
-                      <button
-                        className={`cr-action-giveup${giveUpConfirm === i ? " cr-action-giveup--confirm" : ""}`}
-                        title={giveUpConfirm === i ? "Press again to confirm" : "Give up (0 pts)"}
-                        onClick={(e) => { e.stopPropagation(); void handleGiveUp(i); }}
-                      >
-                        <FiXCircle size={14} />
-                      </button>
-                    </div>
-                  )}
                   <div
                     className={[
                       "cr-word-slot",
@@ -538,6 +520,27 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                       <span className={`cr-solver-tag${slot.solvedBy === sessionId ? " cr-solver-tag--me" : ""}`}>
                         {slot.solvedBy === sessionId ? "you" : isViewingMine ? "you" : oppName}
                       </span>
+                    )}
+
+                    {/* Hint + Give-up actions (inline, right side) */}
+                    {isViewingMine && !isEdge && !slot.revealed && !myDone && (
+                      <div className="cr-slot-actions">
+                        <button
+                          className="cr-action-hint"
+                          title="Reveal a letter"
+                          onClick={(e) => { e.stopPropagation(); void handleHint(i); }}
+                          disabled={slot.lettersShown >= slot.word.length - 1}
+                        >
+                          <FiHelpCircle size={12} />
+                        </button>
+                        <button
+                          className={`cr-action-giveup${giveUpConfirm === i ? " cr-action-giveup--confirm" : ""}`}
+                          title={giveUpConfirm === i ? "Press again to confirm" : "Give up (0 pts)"}
+                          onClick={(e) => { e.stopPropagation(); void handleGiveUp(i); }}
+                        >
+                          <FiXCircle size={12} />
+                        </button>
+                      </div>
                     )}
                   </div>
 
