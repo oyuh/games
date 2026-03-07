@@ -46,7 +46,7 @@ export function PasswordActiveRound({
       <div className="game-round-roles">
         <div className="game-round-role">
           <span className="game-round-role-label">Guesser</span>
-          <span className={`game-round-role-name${isGuesser ? " game-round-role-name--me" : ""}`}>
+          <span className={`game-round-role-name${isGuesser ? " game-round-role-name--me" : ""}`} data-tooltip={isGuesser ? "You're guessing this round" : `${guesserName} is guessing`} data-tooltip-variant="game">
             {guesserName}{isGuesser ? " (you)" : ""}
           </span>
         </div>
@@ -67,7 +67,7 @@ export function PasswordActiveRound({
         <>
           <div className="game-clue-reveal" style={{ marginBottom: "0.75rem" }}>
             <span className="game-clue-reveal-label">Secret Word</span>
-            <span className="game-clue-reveal-word">{activeRound.word}</span>
+            <span className="game-clue-reveal-word" data-tooltip="Only clue givers can see this" data-tooltip-variant="game">{activeRound.word}</span>
           </div>
           <form className="game-input-row" onSubmit={onSubmitClue}>
             <input

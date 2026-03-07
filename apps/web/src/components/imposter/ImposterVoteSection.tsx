@@ -53,6 +53,8 @@ export function ImposterVoteSection({
                 key={player.sessionId}
                 className={`game-vote-card${selected ? " game-vote-card--selected" : ""}`}
                 onClick={() => onVoteTargetChange(player.sessionId)}
+                data-tooltip={selected ? `Voting for ${name}` : `Vote for ${name}`}
+                data-tooltip-variant="game"
               >
                 <div className="game-player-avatar">{(name[0] ?? "?").toUpperCase()}</div>
                 <span>{name}</span>

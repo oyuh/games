@@ -31,7 +31,11 @@ export function RoundCountdown({
   const urgent = remaining <= 10 && !expired;
 
   return (
-    <span className={`${expired ? "badge badge-danger" : urgent ? "badge badge-danger countdown-flash" : "badge badge-warn"}`}>
+    <span
+      className={`${expired ? "badge badge-danger" : urgent ? "badge badge-danger countdown-flash" : "badge badge-warn"}`}
+      data-tooltip={expired ? "Time's up!" : urgent ? "Hurry! Almost out of time" : "Time remaining this round"}
+      data-tooltip-variant={expired || urgent ? "danger" : "info"}
+    >
       {label}: {mm}:{ss}
     </span>
   );

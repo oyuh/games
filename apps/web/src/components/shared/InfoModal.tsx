@@ -130,7 +130,7 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
           <div className="info-session-row">
             <span className="info-session-label">Session</span>
             <code className="info-session-id">{sessionId}</code>
-            <button className="info-session-copy" onClick={copySessionId} title="Copy session ID">
+            <button className="info-session-copy" onClick={copySessionId} data-tooltip="Copy session ID">
               {copied ? "✓" : <FiCopy size={12} />}
             </button>
           </div>

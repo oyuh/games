@@ -27,6 +27,8 @@ export function ImposterPlayersCard({
             <div
               key={player.sessionId}
               className={`game-player-chip${isMe ? " game-player-chip--me" : ""}${isImposter ? " game-player-chip--danger" : ""}`}
+              data-tooltip={`${name}${!player.connected ? " (disconnected)" : ""}${isImposter ? " — Imposter!" : revealRoles ? " — Innocent" : ""}`}
+              data-tooltip-variant={isImposter ? "danger" : revealRoles ? "success" : "info"}
             >
               <div className={`game-player-avatar${isImposter ? " game-player-avatar--danger" : ""}`}>
                 {initial}

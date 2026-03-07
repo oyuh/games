@@ -247,10 +247,10 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
             <div className="cr-vs-avatar">{(myName[0] ?? "?").toUpperCase()}</div>
             <div className="cr-vs-info">
               <span className="cr-vs-name">{myName}</span>
-              <span className="cr-vs-score">{myScore}</span>
-              {game.phase === "playing" && <span className="cr-vs-progress">{myProgress}/{myTotal}</span>}
+              <span className="cr-vs-score" data-tooltip="Total score" data-tooltip-variant="game">{myScore}</span>
+              {game.phase === "playing" && <span className="cr-vs-progress" data-tooltip="Words solved this round" data-tooltip-variant="info">{myProgress}/{myTotal}</span>}
             </div>
-            {myDone && <span className="cr-vs-done-badge">✓</span>}
+            {myDone && <span className="cr-vs-done-badge" data-tooltip="Finished this round" data-tooltip-variant="success">✓</span>}
           </div>
 
           <div className="cr-vs-divider">
@@ -264,11 +264,11 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
           >
             <div className="cr-vs-info">
               <span className="cr-vs-name">{oppName}</span>
-              <span className="cr-vs-score">{opponentScore}</span>
-              {game.phase === "playing" && <span className="cr-vs-progress">{oppProgress}/{oppTotal}</span>}
+              <span className="cr-vs-score" data-tooltip="Total score" data-tooltip-variant="game">{opponentScore}</span>
+              {game.phase === "playing" && <span className="cr-vs-progress" data-tooltip="Words solved this round" data-tooltip-variant="info">{oppProgress}/{oppTotal}</span>}
             </div>
             <div className="cr-vs-avatar cr-vs-avatar--opp">{(oppName[0] ?? "?").toUpperCase()}</div>
-            {oppDone && <span className="cr-vs-done-badge">✓</span>}
+            {oppDone && <span className="cr-vs-done-badge" data-tooltip="Finished this round" data-tooltip-variant="success">✓</span>}
           </div>
         </div>
       )}
@@ -288,7 +288,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                   {isMe && <span className="cr-lobby-you">you</span>}
                   {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>}
                   {isHost && !isMe && (
-                    <button className="btn-icon btn-icon--danger cr-lobby-kick" title="Kick"
+                    <button className="btn-icon btn-icon--danger cr-lobby-kick" data-tooltip="Remove from game" data-tooltip-variant="danger"
                       onClick={() => void zero.mutate(mutators.chainReaction.kick({ gameId, hostId: sessionId, targetId: p.sessionId }))}>
                       <FiX size={12} />
                     </button>
@@ -315,7 +315,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                   {isMe && <span className="cr-lobby-you">you</span>}
                   {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>}
                   {isHost && !isMe && (
-                    <button className="btn-icon btn-icon--danger cr-lobby-kick" title="Kick"
+                    <button className="btn-icon btn-icon--danger cr-lobby-kick" data-tooltip="Remove from game" data-tooltip-variant="danger"
                       onClick={() => void zero.mutate(mutators.chainReaction.kick({ gameId, hostId: sessionId, targetId: p.sessionId }))}>
                       <FiX size={12} />
                     </button>
@@ -527,7 +527,8 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                       <div className="cr-slot-actions">
                         <button
                           className="cr-action-hint"
-                          title="Reveal a letter"
+                          data-tooltip="Reveal a letter"
+                          data-tooltip-variant="info"
                           onClick={(e) => { e.stopPropagation(); void handleHint(i); }}
                           disabled={slot.lettersShown >= slot.word.length - 1}
                         >
@@ -535,7 +536,8 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                         </button>
                         <button
                           className={`cr-action-giveup${giveUpConfirm === i ? " cr-action-giveup--confirm" : ""}`}
-                          title={giveUpConfirm === i ? "Press again to confirm" : "Give up (0 pts)"}
+                          data-tooltip={giveUpConfirm === i ? "Press again to confirm" : "Give up (0 pts)"}
+                          data-tooltip-variant="danger"
                           onClick={(e) => { e.stopPropagation(); void handleGiveUp(i); }}
                         >
                           <FiXCircle size={12} />
