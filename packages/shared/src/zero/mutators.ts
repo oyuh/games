@@ -1635,7 +1635,7 @@ export const mutators = defineMutators({
             ts: now()
           };
         } else {
-          announcement = { text: `${playerName} guessed wrong!`, ts: now() };
+          throw new Error("Wrong guess!");
         }
 
         const updatedChains = { ...game.chain, [args.sessionId]: updatedPlayerChain };
@@ -1731,6 +1731,121 @@ export const mutators = defineMutators({
           chain: updatedChains,
           scores,
           announcement,
+          updated_at: now()
+        });
+      }
+    ),
+
+    giveUp: defineMutator(
+      z.object({ gameId: z.string(), sessionId: z.string(), wordIndex: z.number() }),
+      async ({ args, tx }) => {
+        const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+        if (!game || game.phase !== "playing") throw new Error("Game not in playing phase");
+
+        const playerChain = game.chain[args.sessionId];
+        if (!playerChain) throw new Error("No chain for this player");
+
+        const slot = playerChain[args.wordIndex];
+        if (!slot || slot.revealed) throw new Error("Invalid word slot");
+
+        // Reveal the word with 0 points (solvedBy null = given up)
+        const updatedPlayerChain = playerChain.map((s, i) =>
+          i === args.wordIndex ? { ...s, revealed: true, lettersShown: s.word.length, solvedBy: null } : s
+        );
+
+        const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+        const playerName = session?.name ?? args.sessionId.slice(0, 6);
+
+        const scores = { ...game.scores };
+        const updatedChains = { ...game.chain, [args.sessionId]: updatedPlayerChain };
+
+        // Check if ALL players' chains are fully solved → round over
+        const allDone = Object.values(updatedChains).every((ch) => ch.every((s) => s.revealed));
+
+        if (allDone) {
+          const roundResult = {
+            round: game.settings.currentRound,
+            chains: Object.fromEntries(
+              Object.entries(updatedChains).map(([pid, ch]) => [
+                pid,
+                ch.map((s) => ({ word: s.word, solvedBy: s.solvedBy ?? null, lettersShown: s.lettersShown }))
+              ])
+            ),
+            scores: { ...scores }
+          };
+          const roundHistory = [...game.round_history, roundResult];
+
+          if (game.settings.currentRound >= game.settings.rounds) {
+            const sorted = Object.entries(scores).sort(([,a], [,b]) => b - a);
+            const winner = sorted[0];
+            const isTie = sorted.length >= 2 && sorted[0]![1] === sorted[1]![1];
+            const winnerSession = winner ? await tx.run(zql.sessions.where("id", winner[0]).one()) : null;
+            const winnerName = winnerSession?.name ?? winner?.[0].slice(0, 6) ?? "???";
+            const endText = isTie ? "Game over! It's a tie!" : `Game over! ${winnerName} wins!`;
+
+            await tx.mutate.chain_reaction_games.update({
+              id: game.id,
+              phase: "finished",
+              chain: updatedChains,
+              scores,
+              round_history: roundHistory,
+              announcement: { text: endText, ts: now() },
+              settings: { ...game.settings, phaseEndsAt: null },
+              updated_at: now()
+            });
+          } else {
+            const nextRound = game.settings.currentRound + 1;
+
+            if (game.settings.chainMode === "custom") {
+              await tx.mutate.chain_reaction_games.update({
+                id: game.id,
+                phase: "submitting",
+                chain: {},
+                submitted_chains: {},
+                scores,
+                current_turn: undefined,
+                round_history: roundHistory,
+                announcement: { text: `Round ${nextRound} — submit your chains!`, ts: now() },
+                settings: { ...game.settings, currentRound: nextRound, phaseEndsAt: null },
+                updated_at: now()
+              });
+            } else {
+              const p1 = game.players[0]!.sessionId;
+              const p2 = game.players[1]!.sessionId;
+              const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
+                word,
+                revealed: i === 0 || i === arr.length - 1,
+                lettersShown: 0,
+                solvedBy: null as string | null
+              }));
+              const newChain = {
+                [p1]: makeChainSlots(pickChain(game.settings.chainLength)),
+                [p2]: makeChainSlots(pickChain(game.settings.chainLength))
+              };
+              const phaseEndsAt = game.settings.turnTimeSec
+                ? now() + game.settings.turnTimeSec * 1000
+                : null;
+
+              await tx.mutate.chain_reaction_games.update({
+                id: game.id,
+                chain: newChain,
+                scores,
+                current_turn: undefined,
+                round_history: roundHistory,
+                announcement: { text: `Round ${nextRound} starting!`, ts: now() },
+                settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
+                updated_at: now()
+              });
+            }
+          }
+          return;
+        }
+
+        await tx.mutate.chain_reaction_games.update({
+          id: game.id,
+          chain: updatedChains,
+          scores,
+          announcement: { text: `${playerName} gave up on "${slot.word}"`, ts: now() },
           updated_at: now()
         });
       }

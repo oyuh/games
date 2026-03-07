@@ -2,7 +2,7 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiEye, FiLogIn, FiLogOut, FiPlay, FiSend, FiX } from "react-icons/fi";
+import { FiEye, FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
@@ -31,6 +31,8 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
 
   // Which player's chain we're viewing: our own (solving) or opponent's (spectating their progress)
   const [viewingId, setViewingId] = useState<string>(sessionId);
+  // Give-up confirmation: index of slot awaiting second press
+  const [giveUpConfirm, setGiveUpConfirm] = useState<number | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "chain_reaction" });
 
@@ -97,6 +99,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
     setGuess("");
     setHasSubmitted(false);
     setViewingId(sessionId);
+    setGiveUpConfirm(null);
   }, [game?.settings.currentRound, sessionId]);
 
   // Initialize submission words
@@ -161,20 +164,37 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
     setEditingIndex(null);
 
     try {
-      await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: idx })).server;
-    } catch {
-      // All revealable letters already shown
-    }
-
-    try {
       await zero.mutate(mutators.chainReaction.guess({
         gameId,
         sessionId,
         wordIndex: idx,
         guess: currentGuess
       })).server;
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Wrong!", "error");
+    } catch {
+      // Wrong guess — no toast, player just sees input cleared
+      setEditingIndex(idx);
+      setGuess("");
+    }
+  };
+
+  const handleHint = async (i: number) => {
+    try {
+      await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })).server;
+    } catch {
+      // All revealable letters already shown
+    }
+  };
+
+  const handleGiveUp = async (i: number) => {
+    if (giveUpConfirm === i) {
+      setGiveUpConfirm(null);
+      try {
+        await zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })).server;
+      } catch {
+        // Already revealed
+      }
+    } else {
+      setGiveUpConfirm(i);
     }
   };
 
@@ -449,6 +469,26 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
 
               return (
                 <div key={i} className="cr-slot-wrapper">
+                  {/* Hint + Give-up buttons (only on your unrevealed non-edge slots) */}
+                  {isViewingMine && !isEdge && !slot.revealed && !myDone && (
+                    <div className="cr-slot-actions">
+                      <button
+                        className="cr-action-hint"
+                        title="Reveal a letter"
+                        onClick={(e) => { e.stopPropagation(); void handleHint(i); }}
+                        disabled={slot.lettersShown >= slot.word.length - 1}
+                      >
+                        <FiHelpCircle size={14} />
+                      </button>
+                      <button
+                        className={`cr-action-giveup${giveUpConfirm === i ? " cr-action-giveup--confirm" : ""}`}
+                        title={giveUpConfirm === i ? "Press again to confirm" : "Give up (0 pts)"}
+                        onClick={(e) => { e.stopPropagation(); void handleGiveUp(i); }}
+                      >
+                        <FiXCircle size={14} />
+                      </button>
+                    </div>
+                  )}
                   <div
                     className={[
                       "cr-word-slot",
@@ -457,6 +497,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                       canClick ? "cr-word-slot--clickable" : "",
                       slot.solvedBy === sessionId ? "cr-word-slot--mine" : "",
                       slot.solvedBy && slot.solvedBy !== sessionId ? "cr-word-slot--theirs" : "",
+                      slot.revealed && !slot.solvedBy && !isEdge ? "cr-word-slot--givenup" : "",
                     ].filter(Boolean).join(" ")}
                     onClick={() => canClick && handleSlotClick(i)}
                   >
@@ -490,6 +531,9 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                       <span className="cr-letters-count">{slot.lettersShown}/{slot.word.length}</span>
                     )}
                     {isEdge && slot.revealed && <span className="cr-slot-tag">hint</span>}
+                    {slot.revealed && !slot.solvedBy && !isEdge && (
+                      <span className="cr-solver-tag cr-solver-tag--skip">skipped</span>
+                    )}
                     {slot.solvedBy && !isEdge && (
                       <span className={`cr-solver-tag${slot.solvedBy === sessionId ? " cr-solver-tag--me" : ""}`}>
                         {slot.solvedBy === sessionId ? "you" : isViewingMine ? "you" : oppName}
