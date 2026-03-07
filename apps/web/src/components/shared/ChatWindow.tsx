@@ -145,10 +145,10 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
         <span className="chat-titlebar-text">Game Chat</span>
         <span className="chat-titlebar-count">{messages.length}</span>
         <div className="chat-titlebar-actions">
-          <button onClick={() => setMinimized((m) => !m)} title={minimized ? "Expand" : "Minimize"}>
+          <button onClick={() => setMinimized((m) => !m)} data-tooltip={minimized ? "Expand" : "Minimize"}>
             {minimized ? <FiMaximize2 size={13} /> : <FiMinus size={13} />}
           </button>
-          <button onClick={toggle} title="Close">
+          <button onClick={toggle} data-tooltip="Close">
             <FiX size={13} />
           </button>
         </div>
@@ -214,7 +214,7 @@ function ChatMessage({
       <div className="chat-msg-header">
         <span className={`chat-msg-name ${isMe ? "chat-msg-name--me" : ""}`}>{senderName}</span>
         {isHost && (
-          <span className="chat-badge chat-badge--host" title="Host">
+          <span className="chat-badge chat-badge--host" data-tooltip="Game host" data-tooltip-variant="info">
             <PiCrownSimpleFill size={10} />
           </span>
         )}

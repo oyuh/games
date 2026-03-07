@@ -37,7 +37,7 @@ export function PasswordTeamGrid({
       <div className="game-section-header">
         <h3 className="game-section-label">Teams</h3>
         {teamsLocked && (
-          <span className="teams-locked-badge"><FiLock size={11} /> Locked</span>
+          <span className="teams-locked-badge" data-tooltip="Host has locked teams" data-tooltip-variant="info"><FiLock size={11} /> Locked</span>
         )}
       </div>
       <div className="game-teams-grid">
@@ -56,8 +56,8 @@ export function PasswordTeamGrid({
             >
               <div className="game-team-header">
                 <span className="game-team-name">{team.name}</span>
-                {showScores && <span className="game-team-score">{score}</span>}
-                {isActive && <span className="badge badge-warn" style={{ fontSize: "0.58rem" }}>Playing</span>}
+                {showScores && <span className="game-team-score" data-tooltip={`${team.name}'s total score`} data-tooltip-variant="game">{score}</span>}
+                {isActive && <span className="badge badge-warn" style={{ fontSize: "0.58rem" }} data-tooltip="This team is currently guessing" data-tooltip-variant="game">Playing</span>}
               </div>
               <div className="game-team-members">
                 {team.members.length > 0 ? (
@@ -87,6 +87,8 @@ export function PasswordTeamGrid({
                 <button
                   className="btn btn-sm game-team-join-btn"
                   onClick={() => onSwitchTeam(team.name)}
+                  data-tooltip={`Switch to ${team.name}`}
+                  data-tooltip-variant="game"
                 >
                   Join
                 </button>
@@ -115,7 +117,7 @@ function MoveDropdown({
     return (
       <button
         className="move-player-btn"
-        title={`Move to ${otherTeams[0]!.name}`}
+        data-tooltip={`Move to ${otherTeams[0]!.name}`}
         onClick={() => onMove(otherTeams[0]!.name)}
       >
         <FiArrowRight size={12} />

@@ -158,7 +158,7 @@ function SidebarLink({
   active: boolean;
 }) {
   return (
-    <Link to={to} className={`sidebar-link ${active ? "sidebar-link--active" : ""}`} title={label}>
+    <Link to={to} className={`sidebar-link ${active ? "sidebar-link--active" : ""}`} data-tooltip={label} data-tooltip-pos="right">
       {icon}
       <span className="sidebar-link-label">{label}</span>
     </Link>
@@ -167,7 +167,7 @@ function SidebarLink({
 
 function SidebarButton({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button className="sidebar-link" title={label} onClick={onClick}>
+    <button className="sidebar-link" data-tooltip={label} data-tooltip-pos="right" onClick={onClick}>
       {icon}
       <span className="sidebar-link-label">{label}</span>
     </button>

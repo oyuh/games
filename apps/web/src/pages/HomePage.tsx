@@ -926,7 +926,7 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
 
   if (isEnded) {
     return (
-      <Link to={link} className="hc-recent-item hc-recent-item--ended" title={tooltip ?? undefined}>
+      <Link to={link} className="hc-recent-item hc-recent-item--ended" data-tooltip={tooltip ?? undefined} data-tooltip-variant="info">
         <span className="hc-recent-type">{typeLabel}</span>
         <span className="hc-recent-code">{game.code}</span>
         <span className="hc-recent-badge hc-recent-badge--ended">{gameData.phase}</span>

@@ -19,6 +19,14 @@ const phaseVariants: Record<string, string> = {
   finished: "badge-success"
 };
 
+const phaseTooltips: Record<string, string> = {
+  lobby: "Waiting for players to join",
+  playing: "Players are submitting clues",
+  voting: "Vote for who you think is the imposter",
+  results: "See who the imposter was",
+  finished: "Game over — all rounds complete"
+};
+
 export function ImposterHeader({
   code,
   phase,
@@ -46,16 +54,16 @@ export function ImposterHeader({
     <div className="game-header">
       <div className="game-header-left">
         <h1 className="game-title">Imposter</h1>
-        {isHost && <span className="badge host-badge" title="You are the host"><PiCrownSimpleFill size={12} /> Host</span>}
-        <span className={`badge ${phaseVariants[phase] ?? ""}`}>
+        {isHost && <span className="badge host-badge" data-tooltip="You created this game" data-tooltip-variant="info"><PiCrownSimpleFill size={12} /> Host</span>}
+        <span className={`badge ${phaseVariants[phase] ?? ""}`} data-tooltip={phaseTooltips[phase]} data-tooltip-variant="game">
           {phaseLabels[phase] ?? phase}
         </span>
         {phase !== "lobby" && (
-          <span className="badge">Rd {currentRound}/{totalRounds}</span>
+          <span className="badge" data-tooltip="Current round out of total" data-tooltip-variant="info">Rd {currentRound}/{totalRounds}</span>
         )}
         <RoundCountdown endsAt={phaseEndsAt} label="Time" />
       </div>
-      <button className="game-code-btn" onClick={copyCode} title="Copy room code">
+      <button className="game-code-btn" onClick={copyCode} data-tooltip={copied ? "Copied!" : "Click to copy room code"} data-tooltip-variant="info">
         {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}
         <span>{code}</span>
       </button>
