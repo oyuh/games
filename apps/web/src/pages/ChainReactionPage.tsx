@@ -173,13 +173,16 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
         guess: currentGuess
       })).server;
     } catch {
-      // Wrong guess — no toast, player just sees input cleared
-      setEditingIndex(idx);
-      setGuess("");
+      // Mutation error — stay out of editing
     }
   };
 
   const handleHint = async (i: number) => {
+    // Exit editing so the updated partial word is visible immediately
+    if (editingIndex === i) {
+      setEditingIndex(null);
+      setGuess("");
+    }
     try {
       await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })).server;
     } catch {
@@ -470,79 +473,88 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
               const canClick = isViewingMine && !myDone && !slot.revealed && !isEditing;
 
               return (
-                <div key={i} className="cr-slot-wrapper">
-                  <div
-                    className={[
-                      "cr-word-slot",
-                      slot.revealed ? "cr-word-slot--revealed" : "cr-word-slot--hidden",
-                      isEditing ? "cr-word-slot--editing" : "",
-                      canClick ? "cr-word-slot--clickable" : "",
-                      slot.solvedBy === sessionId ? "cr-word-slot--mine" : "",
-                      slot.solvedBy && slot.solvedBy !== sessionId ? "cr-word-slot--theirs" : "",
-                      slot.revealed && !slot.solvedBy && !isEdge ? "cr-word-slot--givenup" : "",
-                    ].filter(Boolean).join(" ")}
-                    onClick={() => canClick && handleSlotClick(i)}
-                  >
-                    <span className="cr-slot-idx">{i + 1}</span>
+                <div key={i} className="cr-slot-outer">
+                  <div className="cr-slot-wrapper">
+                    {/* Hint button — left side */}
+                    {isViewingMine && !isEdge && !slot.revealed && !myDone ? (
+                      <button
+                        className="cr-action-hint"
+                        data-tooltip="Reveal a letter"
+                        data-tooltip-pos="left"
+                        onClick={(e) => { e.stopPropagation(); void handleHint(i); }}
+                        disabled={slot.lettersShown >= slot.word.length - 1}
+                      >
+                        <FiHelpCircle size={18} />
+                      </button>
+                    ) : (
+                      <div className="cr-action-spacer" />
+                    )}
 
-                    <div className="cr-slot-body">
-                      {isEditing ? (
-                        <form onSubmit={handleInlineGuess} className="cr-inline-form">
-                          <input
-                            ref={inlineInputRef}
-                            className="cr-inline-input"
-                            value={guess}
-                            onChange={(e) => setGuess(e.target.value)}
-                            placeholder="type your guess…"
-                            maxLength={slot.word.length}
-                            onBlur={() => { if (!guess.trim()) { setEditingIndex(null); } }}
-                            onKeyDown={(e) => { if (e.key === "Escape") { setEditingIndex(null); setGuess(""); } }}
-                          />
-                          <button type="submit" className="cr-inline-go" disabled={!guess.trim()}>↵</button>
-                        </form>
-                      ) : slot.revealed ? (
-                        <span className="cr-word-text">{slot.word}</span>
-                      ) : (
-                        <span className="cr-word-text cr-word-text--partial">
-                          {renderPartialWord(slot.word, slot.lettersShown)}
+                    <div
+                      className={[
+                        "cr-word-slot",
+                        slot.revealed ? "cr-word-slot--revealed" : "cr-word-slot--hidden",
+                        isEditing ? "cr-word-slot--editing" : "",
+                        canClick ? "cr-word-slot--clickable" : "",
+                        slot.solvedBy === sessionId ? "cr-word-slot--mine" : "",
+                        slot.solvedBy && slot.solvedBy !== sessionId ? "cr-word-slot--theirs" : "",
+                        slot.revealed && !slot.solvedBy && !isEdge ? "cr-word-slot--givenup" : "",
+                      ].filter(Boolean).join(" ")}
+                      onClick={() => canClick && handleSlotClick(i)}
+                    >
+                      <span className="cr-slot-idx">{i + 1}</span>
+
+                      <div className="cr-slot-body">
+                        {isEditing ? (
+                          <form onSubmit={handleInlineGuess} className="cr-inline-form">
+                            <input
+                              ref={inlineInputRef}
+                              className="cr-inline-input"
+                              value={guess}
+                              onChange={(e) => setGuess(e.target.value)}
+                              placeholder="type your guess…"
+                              maxLength={slot.word.length}
+                              onBlur={() => { if (!guess.trim()) { setEditingIndex(null); } }}
+                              onKeyDown={(e) => { if (e.key === "Escape") { setEditingIndex(null); setGuess(""); } }}
+                            />
+                            <button type="submit" className="cr-inline-go" disabled={!guess.trim()}>↵</button>
+                          </form>
+                        ) : slot.revealed ? (
+                          <span className="cr-word-text">{slot.word}</span>
+                        ) : (
+                          <span className="cr-word-text cr-word-text--partial">
+                            {renderPartialWord(slot.word, slot.lettersShown)}
+                          </span>
+                        )}
+                      </div>
+
+                      {!slot.revealed && !isEditing && slot.lettersShown > 0 && (
+                        <span className="cr-letters-count">{slot.lettersShown}/{slot.word.length}</span>
+                      )}
+                      {isEdge && slot.revealed && <span className="cr-slot-tag">hint</span>}
+                      {slot.revealed && !slot.solvedBy && !isEdge && (
+                        <span className="cr-solver-tag cr-solver-tag--skip">skipped</span>
+                      )}
+                      {slot.solvedBy && !isEdge && (
+                        <span className={`cr-solver-tag${slot.solvedBy === sessionId ? " cr-solver-tag--me" : ""}`}>
+                          {slot.solvedBy === sessionId ? "you" : isViewingMine ? "you" : oppName}
                         </span>
                       )}
                     </div>
 
-                    {!slot.revealed && !isEditing && slot.lettersShown > 0 && (
-                      <span className="cr-letters-count">{slot.lettersShown}/{slot.word.length}</span>
-                    )}
-                    {isEdge && slot.revealed && <span className="cr-slot-tag">hint</span>}
-                    {slot.revealed && !slot.solvedBy && !isEdge && (
-                      <span className="cr-solver-tag cr-solver-tag--skip">skipped</span>
-                    )}
-                    {slot.solvedBy && !isEdge && (
-                      <span className={`cr-solver-tag${slot.solvedBy === sessionId ? " cr-solver-tag--me" : ""}`}>
-                        {slot.solvedBy === sessionId ? "you" : isViewingMine ? "you" : oppName}
-                      </span>
-                    )}
-
-                    {/* Hint + Give-up actions (inline, right side) */}
-                    {isViewingMine && !isEdge && !slot.revealed && !myDone && (
-                      <div className="cr-slot-actions">
-                        <button
-                          className="cr-action-hint"
-                          data-tooltip="Reveal a letter"
-                          data-tooltip-variant="info"
-                          onClick={(e) => { e.stopPropagation(); void handleHint(i); }}
-                          disabled={slot.lettersShown >= slot.word.length - 1}
-                        >
-                          <FiHelpCircle size={12} />
-                        </button>
-                        <button
-                          className={`cr-action-giveup${giveUpConfirm === i ? " cr-action-giveup--confirm" : ""}`}
-                          data-tooltip={giveUpConfirm === i ? "Press again to confirm" : "Give up (0 pts)"}
-                          data-tooltip-variant="danger"
-                          onClick={(e) => { e.stopPropagation(); void handleGiveUp(i); }}
-                        >
-                          <FiXCircle size={12} />
-                        </button>
-                      </div>
+                    {/* Give-up button — right side */}
+                    {isViewingMine && !isEdge && !slot.revealed && !myDone ? (
+                      <button
+                        className={`cr-action-giveup${giveUpConfirm === i ? " cr-action-giveup--confirm" : ""}`}
+                        data-tooltip={giveUpConfirm === i ? "Press again to confirm" : "Skip word"}
+                        data-tooltip-pos="right"
+                        data-tooltip-variant={giveUpConfirm === i ? "danger" : undefined}
+                        onClick={(e) => { e.stopPropagation(); void handleGiveUp(i); }}
+                      >
+                        <FiXCircle size={18} />
+                      </button>
+                    ) : (
+                      <div className="cr-action-spacer" />
                     )}
                   </div>
 

@@ -1617,24 +1617,7 @@ export const mutators = defineMutators({
         let scores = { ...game.scores };
         let announcement: { text: string; ts: number } | null = null;
 
-        const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
-        const playerName = session?.name ?? args.sessionId.slice(0, 6);
-
-        if (correct) {
-          updatedPlayerChain = updatedPlayerChain.map((s, i) =>
-            i === args.wordIndex ? { ...s, revealed: true, solvedBy: args.sessionId } : s
-          );
-          const points = scoreForLetters(slot.lettersShown);
-          const hiddenWords = updatedPlayerChain.filter((s) => !s.revealed);
-          const isLastWord = hiddenWords.length === 0;
-          const totalPoints = points + (isLastWord ? 1 : 0);
-          scores[args.sessionId] = (scores[args.sessionId] ?? 0) + totalPoints;
-
-          announcement = {
-            text: `${playerName} guessed "${slot.word}" for ${totalPoints} point${totalPoints !== 1 ? "s" : ""}!`,
-            ts: now()
-          };
-        } else {
+        if (!correct) {
           // Wrong guess — auto-reveal one letter (unless it would reveal the whole word)
           const newLettersShown = slot.lettersShown < slot.word.length - 1
             ? slot.lettersShown + 1
@@ -1642,14 +1625,32 @@ export const mutators = defineMutators({
           updatedPlayerChain = updatedPlayerChain.map((s, i) =>
             i === args.wordIndex ? { ...s, lettersShown: newLettersShown } : s
           );
-          // Save the updated hint, then throw so UI knows it was wrong
+
           await tx.mutate.chain_reaction_games.update({
             id: game.id,
             chain: { ...game.chain, [args.sessionId]: updatedPlayerChain },
             updated_at: now()
           });
-          throw new Error("Wrong guess!");
+          return;
         }
+
+        // Correct guess
+        const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+        const playerName = session?.name ?? args.sessionId.slice(0, 6);
+
+        updatedPlayerChain = updatedPlayerChain.map((s, i) =>
+          i === args.wordIndex ? { ...s, revealed: true, solvedBy: args.sessionId } : s
+        );
+        const points = scoreForLetters(slot.lettersShown);
+        const hiddenWords = updatedPlayerChain.filter((s) => !s.revealed);
+        const isLastWord = hiddenWords.length === 0;
+        const totalPoints = points + (isLastWord ? 1 : 0);
+        scores[args.sessionId] = (scores[args.sessionId] ?? 0) + totalPoints;
+
+        announcement = {
+          text: `${playerName} guessed "${slot.word}" for ${totalPoints} point${totalPoints !== 1 ? "s" : ""}!`,
+          ts: now()
+        };
 
         const updatedChains = { ...game.chain, [args.sessionId]: updatedPlayerChain };
 
