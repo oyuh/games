@@ -113,7 +113,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
 
   if (!game) {
     return (
-      <div className="game-page">
+      <div className="game-page" data-game-theme="imposter">
         <div className="game-empty"><p>Game not found</p></div>
       </div>
     );
@@ -134,7 +134,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   const isLastRound = game.settings.currentRound >= game.settings.rounds;
 
   return (
-    <div className="game-page">
+    <div className="game-page" data-game-theme="imposter">
       <ImposterHeader
         code={game.code}
         phase={game.phase}

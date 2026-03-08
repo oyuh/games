@@ -47,7 +47,7 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
 
   if (!game) {
     return (
-      <div className="game-page">
+      <div className="game-page" data-game-theme="password">
         <div className="game-empty"><p>Game not found</p></div>
       </div>
     );
@@ -61,9 +61,14 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
   const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
   return (
-    <div className="game-page">
+    <div className="game-page" data-game-theme="password">
       <div className="game-header">
         <div className="game-header-left">
+          <div className="game-header-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
           <h1 className="game-title">Password</h1>
           <span className="badge badge-success">Finished</span>
         </div>

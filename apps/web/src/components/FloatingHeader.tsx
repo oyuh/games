@@ -142,7 +142,7 @@ export function Sidebar() {
         aria-label="Toggle menu"
         className="sidebar-mobile-toggle"
       >
-        {mobileOpen ? <FiX size={18} /> : <FiMenu size={18} />}
+        {mobileOpen ? <FiX size={22} /> : <FiMenu size={22} />}
       </button>
 
       {/* Mobile backdrop */}
@@ -160,12 +160,12 @@ export function Sidebar() {
           data-tooltip-variant={confirmLeave ? "danger" : undefined}
           onClick={handleHomeClick}
         >
-          <FiHome size={16} />
+          <FiHome size={20} />
           <span className="sidebar-link-label">{confirmLeave ? "Leave?" : "Home"}</span>
         </Link>
         {gameContext && (
           <SidebarButton
-            icon={<PiCrownSimpleFill size={16} className="sidebar-host-icon" />}
+            icon={<PiCrownSimpleFill size={20} className="sidebar-host-icon" />}
             label="Host"
             onClick={() => { setModal("host"); setMobileOpen(false); }}
           />
@@ -174,7 +174,7 @@ export function Sidebar() {
           <SidebarButton
             icon={
               <span className="sidebar-chat-icon-wrap">
-                <FiMessageCircle size={16} />
+                <FiMessageCircle size={20} />
                 {chat.unread > 0 && (
                   <span className="sidebar-chat-badge">{chat.unread > 99 ? "99+" : chat.unread}</span>
                 )}
@@ -184,8 +184,8 @@ export function Sidebar() {
             onClick={() => { chat.toggle(); setMobileOpen(false); }}
           />
         )}
-        <SidebarButton icon={<FiInfo size={16} />} label="Info" onClick={() => { setModal("info"); setMobileOpen(false); }} />
-        <SidebarButton icon={<FiSettings size={16} />} label="Options" onClick={() => { setModal("options"); setMobileOpen(false); }} />
+        <SidebarButton icon={<FiInfo size={20} />} label="Info" onClick={() => { setModal("info"); setMobileOpen(false); }} />
+        <SidebarButton icon={<FiSettings size={20} />} label="Options" onClick={() => { setModal("options"); setMobileOpen(false); }} />
       </nav>
 
       {/* Modals */}
