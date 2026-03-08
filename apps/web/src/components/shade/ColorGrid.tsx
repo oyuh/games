@@ -43,6 +43,8 @@ type GridProps = {
   }>;
   /** Compact mode for smaller display */
   compact?: boolean;
+  /** Show scoring zone overlays around target */
+  showZones?: boolean;
 };
 
 export function ColorGrid({
@@ -56,6 +58,7 @@ export function ColorGrid({
   showTarget = false,
   markers = [],
   compact = false,
+  showZones = false,
 }: GridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
@@ -111,6 +114,17 @@ export function ColorGrid({
               const cellMarkers = markersByCell.get(`${r}-${c}`);
               const hasMarkers = cellMarkers && cellMarkers.length > 0;
 
+              // Scoring zone (Chebyshev distance from target)
+              let zoneClass = "";
+              if (showZones && target) {
+                const dist = Math.max(Math.abs(r - target.row), Math.abs(c - target.col));
+                if (dist === 0) zoneClass = "shade-cell--zone-0";
+                else if (dist === 1) zoneClass = "shade-cell--zone-1";
+                else if (dist === 2) zoneClass = "shade-cell--zone-2";
+                else if (dist <= 4) zoneClass = "shade-cell--zone-3";
+                else if (dist <= 6) zoneClass = "shade-cell--zone-4";
+              }
+
               // Build cell-level tooltip combining all markers on this cell
               const cellTooltip = hasMarkers
                 ? cellMarkers.map((m) => m.tooltip ?? m.name).join("  ·  ")
@@ -125,6 +139,7 @@ export function ColorGrid({
                     isTarget && "shade-cell--target",
                     isHovered && interactive && "shade-cell--hover",
                     hasMarkers && "shade-cell--marked",
+                    zoneClass,
                   ]
                     .filter(Boolean)
                     .join(" ")}

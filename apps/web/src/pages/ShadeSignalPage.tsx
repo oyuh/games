@@ -35,17 +35,43 @@ const phaseVariants: Record<ShadePhase, string> = {
 };
 
 function scoreGuess(guess: { row: number; col: number }, target: { row: number; col: number }): number {
-  const dist = Math.abs(guess.row - target.row) + Math.abs(guess.col - target.col);
+  const dist = Math.max(Math.abs(guess.row - target.row), Math.abs(guess.col - target.col));
   if (dist === 0) return 5;
-  if (dist === 1) return 3;
-  if (dist === 2) return 2;
-  if (dist <= 3) return 1;
+  if (dist === 1) return 4;
+  if (dist === 2) return 3;
+  if (dist <= 4) return 2;
+  if (dist <= 6) return 1;
   return 0;
+}
+
+function chebyshevDist(a: { row: number; col: number }, b: { row: number; col: number }): number {
+  return Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col));
 }
 
 function distLabel(dist: number): string {
   if (dist === 0) return "Exact!";
   return `${dist} away`;
+}
+
+const ZONE_LEGEND = [
+  { pts: 5, label: "Exact", cls: "shade-scoring-swatch--5" },
+  { pts: 4, label: "1 away", cls: "shade-scoring-swatch--4" },
+  { pts: 3, label: "2 away", cls: "shade-scoring-swatch--3" },
+  { pts: 2, label: "3-4 away", cls: "shade-scoring-swatch--2" },
+  { pts: 1, label: "5-6 away", cls: "shade-scoring-swatch--1" },
+];
+
+function ScoringLegend() {
+  return (
+    <div className="shade-scoring-legend">
+      {ZONE_LEGEND.map((z) => (
+        <span key={z.pts} className="shade-scoring-legend-item">
+          <span className={`shade-scoring-swatch ${z.cls}`} />
+          {z.label} = {z.pts}pt{z.pts > 1 ? "s" : ""}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
@@ -209,7 +235,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     return game.guesses.map((g) => {
       const name = sessionById[g.sessionId] ?? g.sessionId.slice(0, 6);
       const dist = target
-        ? Math.abs(g.row - target.row) + Math.abs(g.col - target.col)
+        ? chebyshevDist({ row: g.row, col: g.col }, target)
         : null;
       const pts = latest?.scores[g.sessionId] ?? null;
       const roundLabel = g.round === 1 ? "Clue 1" : "Clue 2";
@@ -247,6 +273,13 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     if (!game || (phase !== "guess1" && phase !== "guess2")) return 0;
     const round = phase === "guess1" ? 1 : 2;
     return new Set(game.guesses.filter((g) => g.round === round).map((g) => g.sessionId)).size;
+  }, [game, phase]);
+
+  // Set of player IDs who have locked in for the current guess round
+  const lockedInIds = useMemo(() => {
+    if (!game || (phase !== "guess1" && phase !== "guess2")) return new Set<string>();
+    const round = phase === "guess1" ? 1 : 2;
+    return new Set(game.guesses.filter((g) => g.round === round).map((g) => g.sessionId));
   }, [game, phase]);
 
   if (!game) {
@@ -341,15 +374,17 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
             const initial = (name[0] ?? "?").toUpperCase();
             const isMe = player.sessionId === sessionId;
             const isCurrentLeader = player.sessionId === game.leader_id;
+            const isGuessPhase = phase === "guess1" || phase === "guess2";
+            const isLockedIn = isGuessPhase && !isCurrentLeader && lockedInIds.has(player.sessionId);
             return (
               <div
                 key={player.sessionId}
-                className={`game-player-chip${isMe ? " game-player-chip--me" : ""}${isCurrentLeader ? " game-player-chip--leader" : ""}`}
-                data-tooltip={`${name}${isCurrentLeader ? " — Leader 🎨" : ""}${isMe ? " (you)" : ""}${isGameActive ? ` — ${player.totalScore} pts` : ""}`}
-                data-tooltip-variant={isCurrentLeader ? "warn" : "info"}
+                className={`game-player-chip${isMe ? " game-player-chip--me" : ""}${isCurrentLeader ? " game-player-chip--leader" : ""}${isLockedIn ? " game-player-chip--locked" : ""}`}
+                data-tooltip={`${name}${isCurrentLeader ? " — Leader 🎨" : ""}${isLockedIn ? " — Locked in ✅" : ""}${isMe ? " (you)" : ""}${isGameActive ? ` — ${player.totalScore} pts` : ""}`}
+                data-tooltip-variant={isCurrentLeader ? "warn" : isLockedIn ? "success" : "info"}
               >
                 <div className={`game-player-avatar${isCurrentLeader ? " game-player-avatar--leader" : ""}`}>
-                  {isCurrentLeader ? "🎨" : initial}
+                  {isCurrentLeader ? "🎨" : isLockedIn ? "✅" : initial}
                 </div>
                 <span className="game-player-name">{name}</span>
                 {isGameActive && (
@@ -406,10 +441,11 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
                 <div className="shade-rule-card">
                   <span className="shade-rule-icon">🎯</span>
                   <div className="shade-rule-text">
-                    Closer = more pts! <em>Exact=5, 1 away=3, 2=2, 3=1</em>
+                    Closer = more pts! The colored zones show scoring ranges
                   </div>
                 </div>
               </div>
+              <ScoringLegend />
             </div>
 
             {/* Preview grid */}
@@ -418,6 +454,9 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
                 rows={game.grid_rows}
                 cols={game.grid_cols}
                 seed={game.grid_seed}
+                target={{ row: Math.floor(game.grid_rows / 2), col: Math.floor(game.grid_cols / 2) }}
+                showTarget
+                showZones
                 compact
               />
             </div>
@@ -653,8 +692,10 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
             seed={game.grid_seed}
             target={target}
             showTarget
+            showZones
             markers={guessMarkers}
           />
+          <ScoringLegend />
 
           {/* Score table */}
           {latestRound && (
@@ -669,7 +710,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
                     const g1 = latestRound.guesses.find((g) => g.sessionId === p.sessionId && g.round === 1);
                     const guess = g2 ?? g1;
                     const dist = guess && target
-                      ? Math.abs(guess.row - target.row) + Math.abs(guess.col - target.col)
+                      ? chebyshevDist({ row: guess.row, col: guess.col }, target)
                       : null;
                     return (
                       <div key={p.sessionId} className="shade-score-row">
