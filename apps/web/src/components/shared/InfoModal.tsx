@@ -1,4 +1,4 @@
-import { FiX, FiZap, FiGlobe, FiMap, FiEye, FiShield, FiAward, FiLink, FiCopy } from "react-icons/fi";
+import { FiX, FiZap, FiGlobe, FiMap, FiEye, FiShield, FiAward, FiLink, FiCopy, FiDroplet } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { useState, type ReactNode } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
@@ -91,6 +91,24 @@ function getPageInfo(pathname: string): PageInfo {
         "Give up on tough words for 0 points to keep moving",
         "Fewer hints used = more points per word (3 → 2 → 1)",
         "Finish your chain first for a bonus point on the last word",
+      ],
+    };
+  }
+
+  if (pathname.startsWith("/shade/")) {
+    return {
+      title: "Shade Signal",
+      icon: <FiDroplet size={20} />,
+      description: "A color-guessing party game. Each round, one player is the Leader who sees a secret color on the grid. They give text clues and everyone else tries to guess which cell it is.",
+      tips: [
+        "Lobby — Wait for players, then the host starts the game",
+        "Clue 1 — The leader writes a clue describing the target color",
+        "Guess 1 — Everyone else picks a cell on the grid based on the clue",
+        "Clue 2 — The leader gives a second, more specific clue",
+        "Guess 2 — Guessers refine their pick with the new info",
+        "Reveal — See the target and how close everyone was",
+        "Scoring: exact = 5 pts, 1 away = 3, 2 away = 2, 3 away = 1",
+        "Every player takes a turn as leader across rounds",
       ],
     };
   }

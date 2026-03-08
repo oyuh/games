@@ -348,16 +348,18 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
               <PiCrownSimpleFill size={12} /> Host
             </span>
           )}
-          <span className={`badge ${phaseVariants[phase]}`}>
+          <span className={`badge ${phaseVariants[phase]}`} data-tooltip={phase === "lobby" ? "Waiting for host to start" : phase === "clue1" ? "Leader gives their 1st clue" : phase === "guess1" ? "Guessers pick a cell (1st guess)" : phase === "clue2" ? "Leader gives a 2nd clue" : phase === "guess2" ? "Guessers pick again (2nd guess)" : phase === "reveal" ? "Showing the target & scores" : phase === "finished" ? "All rounds complete" : "Game ended"} data-tooltip-variant="info">
             {phaseLabels[phase]}
           </span>
           {isGameActive && (
-            <span className="badge">
+            <span className="badge" data-tooltip={`Round ${game.settings.currentRound} of ${totalRounds} total`} data-tooltip-variant="info">
               Rd {game.settings.currentRound}/{totalRounds}
             </span>
           )}
           {(phase === "guess1" || phase === "guess2") && (
-            <RoundCountdown endsAt={game.settings.phaseEndsAt} label="Time" />
+            <span data-tooltip="Time left to lock in a guess" data-tooltip-variant="info">
+              <RoundCountdown endsAt={game.settings.phaseEndsAt} label="Time" />
+            </span>
           )}
         </div>
         <button className="game-code-btn" onClick={copyCode} data-tooltip={copied ? "Copied!" : "Click to copy room code"} data-tooltip-variant="info">
@@ -641,7 +643,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
                         setSelectedCell({ row: g1.row, col: g1.col });
                         void zero.mutate(
                           mutators.shadeSignal.submitGuess({ gameId, sessionId, row: g1.row, col: g1.col })
-                        ).then(() => setGuessLocked(true));
+                        ).server.then(() => setGuessLocked(true));
                       }}
                     >
                       Skip (keep guess 1)

@@ -271,12 +271,23 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
 
           <div className="game-actions">
             {isHost ? (
-              <button
-                className="btn btn-primary game-action-btn"
-                onClick={() => void zero.mutate(mutators.imposter.resetToLobby({ gameId, hostId: sessionId }))}
-              >
-                Play Again
-              </button>
+              <>
+                <button
+                  className="btn btn-primary game-action-btn"
+                  onClick={() => void zero.mutate(mutators.imposter.resetToLobby({ gameId, hostId: sessionId }))}
+                >
+                  Play Again
+                </button>
+                <button
+                  className="btn btn-muted"
+                  onClick={() => {
+                    void zero.mutate(mutators.imposter.endGame({ gameId, hostId: sessionId }));
+                    navigate("/");
+                  }}
+                >
+                  End Game
+                </button>
+              </>
             ) : (
               <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
                 Back to Home
