@@ -883,8 +883,8 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
       const lines: string[] = [];
       const teams = g.teams ?? [];
       for (const [teamKey, score] of Object.entries(g.scores ?? {})) {
-        const teamIdx = parseInt(teamKey, 10);
-        const teamName = teams[teamIdx]?.name ?? `Team ${teamIdx + 1}`;
+        const team = teams.find((t) => t.name === teamKey);
+        const teamName = team?.name ?? teamKey;
         lines.push(`${teamName}: ${score} pts`);
       }
       return lines.join("\n") || "No scores";

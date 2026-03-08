@@ -146,12 +146,18 @@ export function TooltipLayer() {
       if (activeRef.current) hideTip();
     }
 
+    function onMouseDown() {
+      if (activeRef.current) hideTip();
+    }
+
     document.addEventListener("mouseover", onMouseOver, true);
     document.addEventListener("scroll", onScroll, true);
+    document.addEventListener("mousedown", onMouseDown, true);
 
     return () => {
       document.removeEventListener("mouseover", onMouseOver, true);
       document.removeEventListener("scroll", onScroll, true);
+      document.removeEventListener("mousedown", onMouseDown, true);
       if (activeRef.current) {
         activeRef.current.removeEventListener("mouseleave", hideTip);
       }
