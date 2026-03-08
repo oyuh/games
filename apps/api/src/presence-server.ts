@@ -7,7 +7,7 @@ type PresenceMessage = {
   type: "presence";
   sessionId: string;
   gameId?: string;
-  gameType?: "imposter" | "password";
+  gameType?: "imposter" | "password" | "chain_reaction" | "shade_signal";
 };
 
 const heartbeatMs = 10_000;

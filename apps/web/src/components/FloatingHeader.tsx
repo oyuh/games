@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { queries } from "@games/shared";
@@ -20,8 +20,9 @@ function useGameContext(): GameContext | null {
   // Parse route to find game type + id
   const imposterMatch = location.pathname.match(/^\/imposter\/([^/]+)/);
   const passwordMatch = location.pathname.match(/^\/password\/([^/]+)/);
-  const gameType = imposterMatch ? "imposter" as const : passwordMatch ? "password" as const : null;
-  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? "";
+  const shadeMatch = location.pathname.match(/^\/shade\/([^/]+)/);
+  const gameType = imposterMatch ? "imposter" as const : passwordMatch ? "password" as const : shadeMatch ? "shade_signal" as const : null;
+  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? shadeMatch?.[1] ?? "";
 
   const [imposterGames] = useQuery(
     gameType === "imposter"
@@ -32,6 +33,11 @@ function useGameContext(): GameContext | null {
     gameType === "password"
       ? queries.password.byId({ id: gameId })
       : queries.password.byId({ id: "__none__" })
+  );
+  const [shadeGames] = useQuery(
+    gameType === "shade_signal"
+      ? queries.shadeSignal.byId({ id: gameId })
+      : queries.shadeSignal.byId({ id: "__none__" })
   );
 
   const [sessions] = useQuery(
@@ -68,27 +74,63 @@ function useGameContext(): GameContext | null {
         players: allPlayers,
       };
     }
+    if (gameType === "shade_signal") {
+      const game = shadeGames[0];
+      if (!game || game.host_id !== sessionId) return null;
+      return {
+        type: "shade_signal",
+        gameId: game.id,
+        hostId: game.host_id,
+        players: game.players,
+      };
+    }
     return null;
-  }, [gameType, imposterGames, passwordGames, sessions, sessionId]);
+  }, [gameType, imposterGames, passwordGames, shadeGames, sessions, sessionId]);
 }
 
 export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [modal, setModal] = useState<"options" | "info" | "host" | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const settings = useSettings();
   const gameContext = useGameContext();
   const sessionId = getOrCreateSessionId();
   const chat = useChatContext();
 
+  const isInGame = /^\/(imposter|password|chain|shade)\//.test(location.pathname);
+
   useEffect(() => {
     setMobileOpen(false);
+    setConfirmLeave(false);
   }, [location.pathname]);
+
+  // Auto-dismiss confirm after 3 seconds
+  useEffect(() => {
+    if (confirmLeave) {
+      confirmTimerRef.current = setTimeout(() => setConfirmLeave(false), 3000);
+      return () => { if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current); };
+    }
+  }, [confirmLeave]);
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
+
+  const handleHomeClick = useCallback((e: React.MouseEvent) => {
+    if (!isInGame) return; // Let normal link behavior work
+    e.preventDefault();
+    if (confirmLeave) {
+      // Second click = confirmed
+      setConfirmLeave(false);
+      navigate("/");
+    } else {
+      setConfirmLeave(true);
+    }
+  }, [isInGame, confirmLeave, navigate]);
 
   const isTop = settings.sidebarPosition === "top";
 
@@ -110,7 +152,17 @@ export function Sidebar() {
 
       {/* Floating sidebar / top bar */}
       <nav className={`sidebar ${mobileOpen ? "sidebar--open" : ""}`}>
-        <SidebarLink to="/" icon={<FiHome size={16} />} label="Home" active={location.pathname === "/"} />
+        <Link
+          to="/"
+          className={`sidebar-link ${location.pathname === "/" ? "sidebar-link--active" : ""} ${confirmLeave ? "sidebar-link--confirm" : ""}`}
+          data-tooltip={confirmLeave ? "Click again to leave game" : "Home"}
+          data-tooltip-pos="right"
+          data-tooltip-variant={confirmLeave ? "danger" : undefined}
+          onClick={handleHomeClick}
+        >
+          <FiHome size={16} />
+          <span className="sidebar-link-label">{confirmLeave ? "Leave?" : "Home"}</span>
+        </Link>
         {gameContext && (
           <SidebarButton
             icon={<PiCrownSimpleFill size={16} className="sidebar-host-icon" />}

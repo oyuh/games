@@ -7,7 +7,8 @@ import { showToast } from "../../lib/toast";
 
 type GameContext =
   | { type: "imposter"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }> }
-  | { type: "password"; gameId: string; hostId: string; players: Array<{ id: string; name: string }> };
+  | { type: "password"; gameId: string; hostId: string; players: Array<{ id: string; name: string }> }
+  | { type: "shade_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }> };
 
 export function HostControlsModal({
   game,
@@ -26,11 +27,16 @@ export function HostControlsModal({
   const kickablePlayersList =
     game.type === "imposter"
       ? game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }))
+      : game.type === "shade_signal"
+      ? game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }))
       : game.players.filter((p) => p.id !== sessionId);
 
   const handleKick = (targetId: string, targetName: string) => {
     if (game.type === "imposter") {
       void zero.mutate(mutators.imposter.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
+        .client.catch(() => showToast("Couldn't kick player", "error"));
+    } else if (game.type === "shade_signal") {
+      void zero.mutate(mutators.shadeSignal.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
         .client.catch(() => showToast("Couldn't kick player", "error"));
     } else {
       void zero.mutate(mutators.password.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
@@ -42,6 +48,8 @@ export function HostControlsModal({
   const handleEndGame = () => {
     if (game.type === "imposter") {
       void zero.mutate(mutators.imposter.endGame({ gameId: game.gameId, hostId: sessionId }));
+    } else if (game.type === "shade_signal") {
+      void zero.mutate(mutators.shadeSignal.endGame({ gameId: game.gameId, hostId: sessionId }));
     } else {
       void zero.mutate(mutators.password.endGame({ gameId: game.gameId, hostId: sessionId }));
     }
@@ -55,6 +63,8 @@ export function HostControlsModal({
     if (!text) return;
     if (game.type === "imposter") {
       void zero.mutate(mutators.imposter.announce({ gameId: game.gameId, hostId: sessionId, text }));
+    } else if (game.type === "shade_signal") {
+      void zero.mutate(mutators.shadeSignal.announce({ gameId: game.gameId, hostId: sessionId, text }));
     } else {
       void zero.mutate(mutators.password.announce({ gameId: game.gameId, hostId: sessionId, text }));
     }
