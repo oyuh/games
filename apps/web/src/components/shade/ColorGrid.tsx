@@ -121,8 +121,7 @@ export function ColorGrid({
                 if (dist === 0) zoneClass = "shade-cell--zone-0";
                 else if (dist === 1) zoneClass = "shade-cell--zone-1";
                 else if (dist === 2) zoneClass = "shade-cell--zone-2";
-                else if (dist <= 4) zoneClass = "shade-cell--zone-3";
-                else if (dist <= 6) zoneClass = "shade-cell--zone-4";
+                else if (dist <= 3) zoneClass = "shade-cell--zone-3";
               }
 
               // Build cell-level tooltip combining all markers on this cell

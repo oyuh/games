@@ -2286,22 +2286,15 @@ export const mutators = defineMutators({
           const dist = Math.max(Math.abs(guess.row - targetRow), Math.abs(guess.col - targetCol));
           let pts = 0;
           if (dist === 0) pts = 5;
-          else if (dist === 1) pts = 4;
-          else if (dist === 2) pts = 3;
-          else if (dist <= 4) pts = 2;
-          else if (dist <= 6) pts = 1;
+          else if (dist === 1) pts = 3;
+          else if (dist === 2) pts = 2;
+          else if (dist <= 3) pts = 1;
           roundScores[gId] = pts;
           totalGuesserPts += pts;
         }
-        // Leader earns points based on how well guessers did overall
-        const maxPossible = guesserIds.length * 5;
-        if (maxPossible > 0) {
-          const ratio = totalGuesserPts / maxPossible;
-          if (ratio >= 0.8) leaderScore = 5;
-          else if (ratio >= 0.6) leaderScore = 4;
-          else if (ratio >= 0.4) leaderScore = 3;
-          else if (ratio >= 0.2) leaderScore = 2;
-          else if (ratio > 0) leaderScore = 1;
+        // Leader earns the average of all guesser scores (rounded)
+        if (guesserIds.length > 0) {
+          leaderScore = Math.round(totalGuesserPts / guesserIds.length);
         }
 
         // Update player total scores
