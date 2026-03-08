@@ -3808,68 +3808,68 @@ body {
   position: relative;
 }
 
-/* ── Slot Wrapper (slot + connector) ─────────────────── */
-.cr-slot-wrapper {
+/* ── Slot Outer (column: row + connector) ────────────────────── */
+.cr-slot-outer {
   display: flex;
   flex-direction: column;
   align-items: stretch;
 }
 
-/* ── Hint / Give-up action buttons (inside slot, right side) ── */
-.cr-slot-actions {
+/* ── Slot Wrapper (slot + action buttons on sides) ───────────── */
+.cr-slot-wrapper {
   display: flex;
-  gap: 0.3rem;
-  margin-left: auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Spacer to keep slots aligned when no button */
+.cr-action-spacer {
+  width: 40px;
   flex-shrink: 0;
+}
+
+/* ── Hint / Give-up action buttons (flanking the slot) ───────── */
+.cr-slot-actions {
+  display: none;
+}
+
+.cr-action-hint,
+.cr-action-giveup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
 }
 
 .cr-action-hint {
-  display: grid;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--muted);
-  color: var(--primary);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-  flex-shrink: 0;
+  color: var(--secondary);
 }
-
 .cr-action-hint:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  border-color: var(--primary);
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
 }
-
 .cr-action-hint:disabled {
-  opacity: 0.3;
+  opacity: 0.25;
   cursor: default;
 }
 
 .cr-action-giveup {
-  display: grid;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--muted);
-  color: var(--destructive);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.2s;
-  flex-shrink: 0;
+  color: var(--secondary);
 }
-
 .cr-action-giveup:hover {
+  color: var(--destructive);
   background: color-mix(in srgb, var(--destructive) 12%, transparent);
-  border-color: var(--destructive);
 }
-
 .cr-action-giveup--confirm {
-  background: color-mix(in srgb, var(--destructive) 18%, transparent);
-  border-color: var(--destructive);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--destructive) 30%, transparent);
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 14%, transparent);
   animation: cr-giveup-pulse 0.8s ease-in-out infinite;
 }
 
@@ -3909,6 +3909,8 @@ body {
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
   min-height: 2.8rem;
   position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 .cr-word-slot--revealed {
@@ -5416,8 +5418,11 @@ body {
 
   .cr-action-hint,
   .cr-action-giveup {
-    width: 2rem;
-    height: 2rem;
+    width: 40px;
+    height: 40px;
+  }
+  .cr-action-spacer {
+    width: 40px;
   }
 
   /* ── Chain Reaction: lobby duel ──────────────────────── */
