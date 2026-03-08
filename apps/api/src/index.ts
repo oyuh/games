@@ -1,5 +1,5 @@
 import { mutators, queries, schema } from "@games/shared";
-import { chainReactionGames, imposterGames, passwordGames, sessions, statusTable } from "@games/shared";
+import { chainReactionGames, imposterGames, passwordGames, sessions, shadeSignalGames, statusTable } from "@games/shared";
 import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -248,11 +248,24 @@ async function runCleanup() {
     )
     .returning({ id: chainReactionGames.id });
 
+  // 2c) End stale shade signal games (not already ended)
+  const endedShade = await drizzleClient
+    .update(shadeSignalGames)
+    .set({ phase: "ended", updatedAt: now })
+    .where(
+      and(
+        lt(shadeSignalGames.updatedAt, staleCutoff),
+        ne(shadeSignalGames.phase, "ended")
+      )
+    )
+    .returning({ id: shadeSignalGames.id });
+
   // 3) Detach sessions that were in those ended games
   const endedGameIds = new Set([
     ...endedImposter.map((g) => g.id),
     ...endedPassword.map((g) => g.id),
-    ...endedChain.map((g) => g.id)
+    ...endedChain.map((g) => g.id),
+    ...endedShade.map((g) => g.id)
   ]);
   if (endedGameIds.size > 0) {
     const allSessions = await drizzleClient
@@ -300,6 +313,16 @@ async function runCleanup() {
     )
     .returning({ id: chainReactionGames.id });
 
+  const deletedShade = await drizzleClient
+    .delete(shadeSignalGames)
+    .where(
+      and(
+        eq(shadeSignalGames.phase, "ended"),
+        lt(shadeSignalGames.updatedAt, deleteCutoff)
+      )
+    )
+    .returning({ id: shadeSignalGames.id });
+
   // 5) Delete stale sessions (1hr+)
   const deletedSessions = await drizzleClient
     .delete(sessions)
@@ -310,15 +333,18 @@ async function runCleanup() {
   const [imposterCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames);
   const [passwordCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames);
   const [chainCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chainReactionGames);
+  const [shadeCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shadeSignalGames);
   const [sessionCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(sessions);
 
   return {
     imposterGamesEnded: endedImposter.length,
     passwordGamesEnded: endedPassword.length,
     chainReactionGamesEnded: endedChain.length,
+    shadeSignalGamesEnded: endedShade.length,
     imposterGamesDeleted: deletedImposter.length,
     passwordGamesDeleted: deletedPassword.length,
     chainReactionGamesDeleted: deletedChain.length,
+    shadeSignalGamesDeleted: deletedShade.length,
     sessionsDeleted: deletedSessions.length,
     staleCutoff: new Date(staleCutoff).toISOString(),
     deleteCutoff: new Date(deleteCutoff).toISOString(),
@@ -326,6 +352,7 @@ async function runCleanup() {
       imposterGames: imposterCount.total,
       passwordGames: passwordCount.total,
       chainReactionGames: chainCount.total,
+      shadeSignalGames: shadeCount.total,
       sessions: sessionCount.total,
     },
   };

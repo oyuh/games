@@ -27,10 +27,11 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   }, []);
   const [recentGames, setRecentGames] = useState(getRecentGames());
   const [joinCode, setJoinCode] = useState("");
-  const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "join" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "create-shade" | "join" | null>(null);
   const [imposterMatches] = useQuery(queries.imposter.byCode({ code: joinCode || "______" }));
   const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
   const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
+  const [shadeMatches] = useQuery(queries.shadeSignal.byCode({ code: joinCode || "______" }));
 
   // Imposter config
   const [imposterExpanded, setImposterExpanded] = useState(false);
@@ -48,6 +49,11 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   const [chainLength, setChainLength] = useState(5);
   const [chainRounds, setChainRounds] = useState(3);
   const [chainMode, setChainMode] = useState<"premade" | "custom">("premade");
+
+  // Shade Signal config
+  const [shadeExpanded, setShadeExpanded] = useState(false);
+  const [shadeRoundsPerPlayer, setShadeRoundsPerPlayer] = useState(1);
+  const [shadeHardMode, setShadeHardMode] = useState(false);
 
   // Mobile scroll dot tracking
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -125,6 +131,21 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const createShadeSignal = async () => {
+    setPendingAction("create-shade");
+    const id = nanoid();
+    try {
+      const result = await zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode })).server;
+      if (result.type === "error") {
+        showToast(result.error.message, "error");
+        return;
+      }
+      navigate(`/shade/${id}`);
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   const joinAny = async () => {
     setPendingAction("join");
     const normalizedCode = joinCode.trim().toUpperCase();
@@ -159,6 +180,15 @@ export function HomePage({ sessionId }: { sessionId: string }) {
         addRecentGame({ id: chainGame.id, code: chainGame.code, gameType: "chain_reaction" });
         setRecentGames(getRecentGames());
         navigate(`/chain/${chainGame.id}`);
+        return;
+      }
+      const shadeGame = shadeMatches[0];
+      if (shadeGame) {
+        const result = await zero.mutate(mutators.shadeSignal.join({ gameId: shadeGame.id, sessionId })).server;
+        if (result.type === "error") { showToast(result.error.message, "error"); return; }
+        addRecentGame({ id: shadeGame.id, code: shadeGame.code, gameType: "shade_signal" });
+        setRecentGames(getRecentGames());
+        navigate(`/shade/${shadeGame.id}`);
         return;
       }
       showToast("No game found for that code.", "error");
@@ -288,6 +318,18 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                   <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("finished")}>
                     CR Finish
                   </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("lobby")}>
+                    SS Lobby
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("clue1")}>
+                    SS Clue
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("guess1")}>
+                    SS Guess
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("reveal")}>
+                    SS Reveal
+                  </button>
                 </div>
               </section>
             </>
@@ -339,7 +381,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
           {imposterExpanded && (
             <div className="hc-config">
               <div className="hc-config-field">
-                <label className="hc-config-label">Category</label>
+                <label className="hc-config-label" data-tooltip="The theme for the word list. Everyone gets a word from this category — except the imposter." data-tooltip-variant="info">Category &#9432;</label>
                 <select
                   className="input"
                   value={imposterCategory}
@@ -352,7 +394,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
               </div>
               <div className="hc-config-row">
                 <div className="hc-config-field flex-1">
-                  <label className="hc-config-label">Imposters</label>
+                  <label className="hc-config-label" data-tooltip="How many players are secretly the imposter each round. More imposters = harder for the group." data-tooltip-variant="info">Imposters &#9432;</label>
                   <select
                     className="input"
                     value={imposterImposters}
@@ -364,7 +406,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                   </select>
                 </div>
                 <div className="hc-config-field flex-1">
-                  <label className="hc-config-label">Rounds</label>
+                  <label className="hc-config-label" data-tooltip="How many rounds to play. Each round, a new imposter is chosen and everyone votes." data-tooltip-variant="info">Rounds &#9432;</label>
                   <select
                     className="input"
                     value={imposterRounds}
@@ -441,8 +483,8 @@ export function HomePage({ sessionId }: { sessionId: string }) {
             <div className="hc-config">
               <div className="hc-config-row">
                 <div className="hc-config-field flex-1">
-                  <label className="hc-config-label">
-                    <FiUsers size={13} style={{ opacity: 0.6 }} /> Teams
+                  <label className="hc-config-label" data-tooltip="Split players into this many teams. Teams take turns giving and guessing clues." data-tooltip-variant="info">
+                    <FiUsers size={13} style={{ opacity: 0.6 }} /> Teams &#9432;
                   </label>
                   <select
                     className="input"
@@ -455,7 +497,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                   </select>
                 </div>
                 <div className="hc-config-field flex-1">
-                  <label className="hc-config-label">Points to Win</label>
+                  <label className="hc-config-label" data-tooltip="The score a team needs to win. Higher = longer game." data-tooltip-variant="info">Points to Win &#9432;</label>
                   <select
                     className="input"
                     value={passwordTargetScore}
@@ -523,7 +565,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
             <div className="hc-config">
               <div className="hc-config-row">
                 <div className="hc-config-field flex-1">
-                  <label className="hc-config-label">Chain Length</label>
+                  <label className="hc-config-label" data-tooltip="How many words in the chain. Each word links to the next — longer chains are harder!" data-tooltip-variant="info">Chain Length &#9432;</label>
                   <select
                     className="input"
                     value={chainLength}
@@ -535,7 +577,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                   </select>
                 </div>
                 <div className="hc-config-field flex-1">
-                  <label className="hc-config-label">Rounds</label>
+                  <label className="hc-config-label" data-tooltip="How many chains to play. Each round is a fresh chain for both players." data-tooltip-variant="info">Rounds &#9432;</label>
                   <select
                     className="input"
                     value={chainRounds}
@@ -549,7 +591,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
               </div>
               <div className="hc-config-row">
                 <div className="hc-config-field flex-1">
-                  <label className="hc-config-label">Chain Mode</label>
+                  <label className="hc-config-label" data-tooltip="Random uses pre-made chains. Custom lets both players write their own chain for the other to solve." data-tooltip-variant="info">Chain Mode &#9432;</label>
                   <select
                     className="input"
                     value={chainMode}
@@ -586,7 +628,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
-      {/* ── Card 5: Shade Signal (Coming Soon) ─────────────── */}
+      {/* ── Card 5: Shade Signal ──────────────────────────── */}
       <div className="home-card home-card--shade">
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Shade Signal</h2>
@@ -598,20 +640,71 @@ export function HomePage({ sessionId }: { sessionId: string }) {
             <span className="hc-tag">Proximity</span>
           </div>
 
-          <div className="hc-coming-preview">
-            <div className="hc-shade-grid">
-              {Array.from({ length: 20 }, (_, i) => (
-                <div
-                  key={i}
-                  className="hc-shade-cell"
-                  style={{ background: `hsl(${i * 18}, 60%, ${45 + (i % 3) * 10}%)` }}
-                />
-              ))}
+          {/* Gameplay preview (hidden when config expanded) */}
+          {!shadeExpanded && (
+            <div className="hc-coming-preview">
+              <div className="hc-shade-grid">
+                {Array.from({ length: 20 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="hc-shade-cell"
+                    style={{ background: `hsl(${i * 18}, 60%, ${45 + (i % 3) * 10}%)` }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Expandable config */}
+          {shadeExpanded && (
+            <div className="hc-config">
+              <div className="hc-config-row">
+                <div className="hc-config-field flex-1">
+                  <label className="hc-config-label" data-tooltip="Each player takes a turn as Leader. This controls how many turns each person gets, so more = longer game." data-tooltip-variant="info">Game Length &#9432;</label>
+                  <select
+                    className="input"
+                    value={shadeRoundsPerPlayer}
+                    onChange={(e) => setShadeRoundsPerPlayer(Number(e.target.value))}
+                  >
+                    <option value={1}>Quick (1 turn each)</option>
+                    <option value={2}>Standard (2 turns each)</option>
+                    <option value={3}>Long (3 turns each)</option>
+                  </select>
+                </div>
+                <div className="hc-config-field flex-1">
+                  <label className="hc-config-label" data-tooltip="Controls what the Leader can say in their clue. &quot;No Color Names&quot; bans words like red, blue, green, etc." data-tooltip-variant="info">Clue Rules &#9432;</label>
+                  <select
+                    className="input"
+                    value={shadeHardMode ? "yes" : "no"}
+                    onChange={(e) => setShadeHardMode(e.target.value === "yes")}
+                  >
+                    <option value="no">Normal (anything goes)</option>
+                    <option value="yes">No Color Names</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="hc-game-actions">
-            <button className="btn btn-muted w-full" disabled>Coming Soon</button>
+            {!shadeExpanded ? (
+              <button className="btn btn-primary w-full" onClick={() => setShadeExpanded(true)}>
+                Create Game
+              </button>
+            ) : (
+              <div className="hc-row">
+                <button className="btn btn-muted flex-1" onClick={() => setShadeExpanded(false)}>
+                  Back
+                </button>
+                <button
+                  className="btn btn-primary flex-1"
+                  onClick={() => void createShadeSignal()}
+                  disabled={pendingAction !== null}
+                >
+                  {pendingAction === "create-shade" ? "Creating…" : "Go"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -835,6 +928,50 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     setRecentGames(getRecentGames());
     navigate(`/chain-reaction/${id}`);
   }
+
+  async function createDemoShadeSignal(phase: "lobby" | "clue1" | "guess1" | "reveal") {
+    const id = nanoid();
+    const players = [
+      { sessionId, name: savedName || "You", connected: true, totalScore: phase === "reveal" ? 8 : 0 },
+      { sessionId: "demo-p2", name: "Alice", connected: true, totalScore: phase === "reveal" ? 5 : 0 },
+      { sessionId: "demo-p3", name: "Bob", connected: true, totalScore: phase === "reveal" ? 3 : 0 },
+      { sessionId: "demo-p4", name: "Charlie", connected: true, totalScore: phase === "reveal" ? 6 : 0 },
+    ];
+    const lobbyPlayers = phase === "lobby"
+      ? players.slice(0, 2)
+      : players;
+
+    // In guess phase, the leader is someone else so the current user is a guesser
+    const leaderId = phase === "guess1" ? "demo-p2" : (phase === "lobby" ? null : sessionId);
+
+    await zero.mutate(mutators.demo.seedShadeSignal({
+      id,
+      hostId: sessionId,
+      phase,
+      players: lobbyPlayers,
+      leaderId,
+      leaderOrder: lobbyPlayers.map((p) => p.sessionId),
+      gridSeed: Math.floor(Math.random() * 100000),
+      targetRow: phase === "lobby" ? null : 4,
+      targetCol: phase === "lobby" ? null : 7,
+      clue1: phase === "clue1" || phase === "guess1" || phase === "reveal" ? "Sunset" : null,
+      clue2: phase === "reveal" ? "Warm glow" : null,
+      guesses: phase === "reveal" ? [
+        { sessionId: "demo-p2", round: 1, row: 5, col: 8 },
+        { sessionId: "demo-p3", round: 1, row: 3, col: 6 },
+        { sessionId: "demo-p4", round: 1, row: 4, col: 7 },
+        { sessionId: "demo-p2", round: 2, row: 4, col: 8 },
+        { sessionId: "demo-p3", round: 2, row: 4, col: 6 },
+        { sessionId: "demo-p4", round: 2, row: 4, col: 7 },
+      ] : [],
+      currentRound: 1,
+      phaseEndsAt: phase === "clue1" ? Date.now() + 45_000 : phase === "guess1" ? Date.now() + 30_000 : null,
+    }));
+
+    addRecentGame({ id, code: "DEMO", gameType: "shade_signal" });
+    setRecentGames(getRecentGames());
+    navigate(`/shade/${id}`);
+  }
 }
 
 /* ── Recent game item with deleted check + hover results ───── */
@@ -843,10 +980,12 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
   const [imposterResults] = useQuery(game.gameType === "imposter" ? queries.imposter.byId({ id: game.id }) : queries.imposter.byId({ id: "__none__" }));
   const [passwordResults] = useQuery(game.gameType === "password" ? queries.password.byId({ id: game.id }) : queries.password.byId({ id: "__none__" }));
   const [chainResults] = useQuery(game.gameType === "chain_reaction" ? queries.chainReaction.byId({ id: game.id }) : queries.chainReaction.byId({ id: "__none__" }));
+  const [shadeResults] = useQuery(game.gameType === "shade_signal" ? queries.shadeSignal.byId({ id: game.id }) : queries.shadeSignal.byId({ id: "__none__" }));
 
   const gameData = game.gameType === "imposter" ? imposterResults[0]
     : game.gameType === "password" ? passwordResults[0]
-    : chainResults[0];
+    : game.gameType === "chain_reaction" ? chainResults[0]
+    : shadeResults[0];
 
   const isDeleted = !gameData;
   const isEnded = gameData && (gameData.phase === "finished" || gameData.phase === "ended");
@@ -855,9 +994,11 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
     ? `/imposter/${game.id}`
     : game.gameType === "password"
     ? `/password/${game.id}/begin`
+    : game.gameType === "shade_signal"
+    ? `/shade/${game.id}`
     : `/chain/${game.id}`;
 
-  const typeLabel = game.gameType === "chain_reaction" ? "chain reaction" : game.gameType;
+  const typeLabel = game.gameType === "chain_reaction" ? "chain reaction" : game.gameType === "shade_signal" ? "shade signal" : game.gameType;
 
   // Tooltip content for finished games
   const tooltip = useMemo(() => {

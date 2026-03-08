@@ -5,7 +5,7 @@ import {
   setPresenceConnectionState
 } from "../lib/connection-debug";
 
-type GameType = "imposter" | "password" | "chain_reaction";
+type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal";
 
 export function usePresenceSocket({
   sessionId,

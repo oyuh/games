@@ -9,10 +9,11 @@ import {
   uniqueIndex
 } from "drizzle-orm/pg-core";
 
-export const gameTypeEnum = pgEnum("game_type", ["imposter", "password", "chain_reaction"]);
+export const gameTypeEnum = pgEnum("game_type", ["imposter", "password", "chain_reaction", "shade_signal"]);
 export const imposterPhaseEnum = pgEnum("imposter_phase", ["lobby", "playing", "voting", "results", "finished", "ended"]);
 export const passwordPhaseEnum = pgEnum("password_phase", ["lobby", "playing", "results", "ended"]);
 export const chainReactionPhaseEnum = pgEnum("chain_reaction_phase", ["lobby", "submitting", "playing", "finished", "ended"]);
+export const shadeSignalPhaseEnum = pgEnum("shade_signal_phase", ["lobby", "clue1", "guess1", "clue2", "guess2", "reveal", "finished", "ended"]);
 
 export const sessions = pgTable(
   "sessions",
@@ -172,6 +173,60 @@ export const chainReactionGames = pgTable(
   })
 );
 
+export const shadeSignalGames = pgTable(
+  "shade_signal_games",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    hostId: text("host_id").notNull(),
+    phase: shadeSignalPhaseEnum("phase").notNull().default("lobby"),
+    players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean; totalScore: number }>>().notNull().default([]),
+    leaderId: text("leader_id"),
+    leaderOrder: jsonb("leader_order").$type<string[]>().notNull().default([]),
+    currentLeaderIndex: integer("current_leader_index").notNull().default(0),
+    gridSeed: integer("grid_seed").notNull().default(0),
+    gridRows: integer("grid_rows").notNull().default(10),
+    gridCols: integer("grid_cols").notNull().default(12),
+    targetRow: integer("target_row"),
+    targetCol: integer("target_col"),
+    clue1: text("clue1"),
+    clue2: text("clue2"),
+    guesses: jsonb("guesses").$type<Array<{ sessionId: string; round: 1 | 2; row: number; col: number }>>().notNull().default([]),
+    roundHistory: jsonb("round_history").$type<Array<{
+      round: number;
+      leaderId: string;
+      target: { row: number; col: number };
+      clue1: string | null;
+      clue2: string | null;
+      guesses: Array<{ sessionId: string; round: 1 | 2; row: number; col: number }>;
+      scores: Record<string, number>;
+      leaderScore: number;
+    }>>().notNull().default([]),
+    kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
+    announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
+    settings: jsonb("settings").$type<{
+      hardMode: boolean;
+      clueDurationSec: number;
+      guessDurationSec: number;
+      roundsPerPlayer: number;
+      currentRound: number;
+      phaseEndsAt: number | null;
+    }>().notNull().default({
+      hardMode: false,
+      clueDurationSec: 45,
+      guessDurationSec: 30,
+      roundsPerPlayer: 1,
+      currentRound: 1,
+      phaseEndsAt: null
+    }),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+  },
+  (table) => ({
+    codeUnique: uniqueIndex("shade_signal_code_unique").on(table.code)
+  })
+);
+
 export type DrizzleSchema = {
   sessions: typeof sessions;
   statusTable: typeof statusTable;
@@ -179,4 +234,5 @@ export type DrizzleSchema = {
   passwordGames: typeof passwordGames;
   chatMessages: typeof chatMessages;
   chainReactionGames: typeof chainReactionGames;
+  shadeSignalGames: typeof shadeSignalGames;
 };
