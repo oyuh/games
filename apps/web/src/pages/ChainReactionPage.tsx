@@ -127,7 +127,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
 
   if (!game) {
     return (
-      <div className="game-page">
+      <div className="game-page" data-game-theme="chain">
         <div className="game-empty"><p>Game not found</p></div>
       </div>
     );
@@ -227,7 +227,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
   const oppTotal = oppChain.length > 0 ? oppChain.length - 2 : 0;
 
   return (
-    <div className="game-page">
+    <div className="game-page" data-game-theme="chain">
       <PasswordHeader
         title="Chain Reaction"
         code={game.code}

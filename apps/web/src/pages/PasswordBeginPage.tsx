@@ -63,7 +63,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
 
   if (!game) {
     return (
-      <div className="game-page">
+      <div className="game-page" data-game-theme="password">
         <div className="game-empty"><p>Game not found</p></div>
       </div>
     );
@@ -74,7 +74,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const canStart = isHost && teamsWithPlayers >= 2;
 
   return (
-    <div className="game-page">
+    <div className="game-page" data-game-theme="password">
       <PasswordHeader
         title="Password"
         code={game.code}

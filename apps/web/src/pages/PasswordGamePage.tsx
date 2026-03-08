@@ -90,7 +90,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
 
   if (!game) {
     return (
-      <div className="game-page">
+      <div className="game-page" data-game-theme="password">
         <div className="game-empty"><p>Game not found</p></div>
       </div>
     );
@@ -122,7 +122,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <div className="game-page">
+    <div className="game-page" data-game-theme="password">
       <PasswordHeader
         title="Password"
         code={game.code}
