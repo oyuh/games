@@ -672,26 +672,16 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   GLOBAL TOOLTIP SYSTEM
+   GLOBAL TOOLTIP SYSTEM (JS portal — smart positioning)
    Usage: data-tooltip="text" data-tooltip-pos="top|bottom|left|right"
           data-tooltip-variant="default|game|info|success|danger"
    ═══════════════════════════════════════════════════════════════ */
-[data-tooltip] {
-  position: relative;
-}
 
-[data-tooltip]::before,
-[data-tooltip]::after {
-  position: absolute;
-  z-index: 200;
+/* Tooltip bubble (rendered in body via portal) */
+.tt {
+  position: fixed;
+  z-index: 10000;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-/* Tooltip bubble */
-[data-tooltip]::after {
-  content: attr(data-tooltip);
   white-space: pre-line;
   font-family: "Geist", system-ui, -apple-system, sans-serif;
   font-size: 0.68rem;
@@ -707,173 +697,76 @@ body {
   max-width: 260px;
   width: max-content;
   text-align: left;
+  animation: tt-in 0.12s ease-out;
+}
+
+@keyframes tt-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Arrow */
-[data-tooltip]::before {
-  content: "";
+.tt-arrow {
+  position: absolute;
   width: 8px;
   height: 8px;
-  background: #1e1f21;
+  background: inherit;
   border: 1px solid rgba(255, 255, 255, 0.08);
   transform: rotate(45deg);
+  pointer-events: none;
 }
 
-/* ── Position: top (default) ────────────────────────────────── */
-[data-tooltip]::after {
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-}
-
-[data-tooltip]::before {
-  bottom: calc(100% + 2px);
-  left: 50%;
-  margin-left: -4px;
+.tt-arrow--top {
+  bottom: -4px;
   border-top: none;
   border-left: none;
 }
 
-/* Position: bottom */
-[data-tooltip-pos="bottom"]::after {
-  bottom: auto;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%) translateY(-4px);
-}
-
-[data-tooltip-pos="bottom"]::before {
-  bottom: auto;
-  top: calc(100% + 2px);
-  left: 50%;
-  margin-left: -4px;
+.tt-arrow--bottom {
+  top: -4px;
   border-bottom: none;
   border-right: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Position: left */
-[data-tooltip-pos="left"]::after {
-  bottom: auto;
-  left: auto;
-  right: calc(100% + 6px);
-  top: 50%;
-  transform: translateY(-50%) translateX(4px);
-}
-
-[data-tooltip-pos="left"]::before {
-  bottom: auto;
-  left: auto;
-  right: calc(100% + 2px);
-  top: 50%;
-  margin-top: -4px;
-  margin-left: 0;
+.tt-arrow--left {
+  right: -4px;
+  border-bottom: none;
   border-left: none;
-  border-bottom: none;
 }
 
-/* Position: right */
-[data-tooltip-pos="right"]::after {
-  bottom: auto;
-  left: calc(100% + 6px);
-  top: 50%;
-  transform: translateY(-50%) translateX(-4px);
-}
-
-[data-tooltip-pos="right"]::before {
-  bottom: auto;
-  left: calc(100% + 2px);
-  top: 50%;
-  margin-top: -4px;
-  margin-left: 0;
-  border-right: none;
+.tt-arrow--right {
+  left: -4px;
   border-top: none;
-}
-
-/* ── Show on hover ──────────────────────────────────────────── */
-[data-tooltip]:hover::after,
-[data-tooltip]:hover::before {
-  opacity: 1;
-}
-
-[data-tooltip]:hover::after {
-  transform: translateX(-50%) translateY(0);
-}
-
-[data-tooltip-pos="bottom"]:hover::after {
-  transform: translateX(-50%) translateY(0);
-}
-
-[data-tooltip-pos="left"]:hover::after {
-  transform: translateY(-50%) translateX(0);
-}
-
-[data-tooltip-pos="right"]:hover::after {
-  transform: translateY(-50%) translateX(0);
-}
-
-/* Don't show empty tooltips */
-[data-tooltip=""]::before,
-[data-tooltip=""]::after {
-  display: none;
+  border-right: none;
 }
 
 /* ── Variant: game (blue accent) ─────────────────────────────── */
-[data-tooltip-variant="game"]::after {
+.tt--game {
   background: #172033;
   border-color: rgba(126, 203, 255, 0.15);
   color: #b8dcf5;
 }
 
-[data-tooltip-variant="game"]::before {
-  background: #172033;
-  border-color: rgba(126, 203, 255, 0.15);
-}
-
 /* ── Variant: info (muted) ───────────────────────────────────── */
-[data-tooltip-variant="info"]::after {
+.tt--info {
   background: #1a1a1c;
   border-color: rgba(255, 255, 255, 0.06);
   color: #a1a1aa;
   font-size: 0.63rem;
 }
 
-[data-tooltip-variant="info"]::before {
-  background: #1a1a1c;
-  border-color: rgba(255, 255, 255, 0.06);
-}
-
 /* ── Variant: success (green accent) ─────────────────────────── */
-[data-tooltip-variant="success"]::after {
+.tt--success {
   background: #0f2419;
   border-color: rgba(74, 222, 128, 0.15);
   color: #86efac;
 }
 
-[data-tooltip-variant="success"]::before {
-  background: #0f2419;
-  border-color: rgba(74, 222, 128, 0.15);
-}
-
 /* ── Variant: danger (red accent) ────────────────────────────── */
-[data-tooltip-variant="danger"]::after {
+.tt--danger {
   background: #271316;
   border-color: rgba(248, 113, 113, 0.15);
   color: #fca5a5;
-}
-
-[data-tooltip-variant="danger"]::before {
-  background: #271316;
-  border-color: rgba(248, 113, 113, 0.15);
-}
-
-/* ── Disable tooltips on touch devices ───────────────────────── */
-@media (hover: none) {
-  [data-tooltip]::before,
-  [data-tooltip]::after {
-    display: none;
-  }
 }
 
 /* ── Home cards layout ───────────────────────────────────────── */

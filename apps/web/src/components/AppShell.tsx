@@ -8,6 +8,7 @@ import { WelcomeModal } from "./shared/WelcomeModal";
 import { Sidebar } from "./FloatingHeader";
 import { Footer } from "./Footer";
 import { ToastContainer } from "./shared/ToastContainer";
+import { TooltipLayer } from "./shared/Tooltip";
 import { ChatProvider, useChatContext } from "../lib/chat-context";
 import { getOrCreateSessionId, hasVisited, markVisited, setStoredName } from "../lib/session";
 
@@ -63,6 +64,7 @@ function AppShellInner() {
         <Footer />
       </div>
       <ToastContainer />
+      <TooltipLayer />
       <ConnectionDebugPanel />
       {inGame && <ChatWindow hostId={hostId} myName={myName} />}
       {showWelcome && <WelcomeModal onDone={handleWelcomeDone} />}
