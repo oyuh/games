@@ -226,7 +226,7 @@ function buildAllTeamRounds(teams: Array<{ name: string; members: string[] }>, r
 export const mutators = defineMutators({
   sessions: {
     upsert: defineMutator(
-      z.object({ id: z.string(), name: z.string().nullable().optional() }),
+      z.object({ id: z.string(), name: z.string().transform(s => s.replace(/\s/g, "")).nullable().optional() }),
       async ({ args, tx }) => {
         await tx.mutate.sessions.upsert({
           id: args.id,
@@ -237,7 +237,7 @@ export const mutators = defineMutators({
       }
     ),
     setName: defineMutator(
-      z.object({ id: z.string(), name: z.string().min(1).max(30) }),
+      z.object({ id: z.string(), name: z.string().transform(s => s.replace(/\s/g, "")).pipe(z.string().min(1).max(30)) }),
       async ({ args, tx }) => {
         await tx.mutate.sessions.update({
           id: args.id,
