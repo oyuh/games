@@ -636,10 +636,23 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
 
           <div className="game-actions">
             {isHost ? (
-              <button className="btn btn-primary game-action-btn"
-                onClick={() => void zero.mutate(mutators.chainReaction.endGame({ gameId, hostId: sessionId }))}>
-                End Game
-              </button>
+              <>
+                <button
+                  className="btn btn-primary game-action-btn"
+                  onClick={() => void zero.mutate(mutators.chainReaction.resetToLobby({ gameId, hostId: sessionId }))}
+                >
+                  Play Again
+                </button>
+                <button
+                  className="btn btn-muted"
+                  onClick={() => {
+                    void zero.mutate(mutators.chainReaction.endGame({ gameId, hostId: sessionId }));
+                    navigate("/");
+                  }}
+                >
+                  End Game
+                </button>
+              </>
             ) : (
               <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
                 Back to Home

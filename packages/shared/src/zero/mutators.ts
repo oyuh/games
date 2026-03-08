@@ -1864,6 +1864,36 @@ export const mutators = defineMutators({
       }
     ),
 
+    resetToLobby: defineMutator(
+      z.object({ gameId: z.string(), hostId: z.string() }),
+      async ({ args, tx }) => {
+        const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+        if (!game) throw new Error("Game not found");
+        if (game.host_id !== args.hostId) throw new Error("Only host can reset");
+
+        await tx.mutate.chain_reaction_games.update({
+          id: game.id,
+          phase: "lobby",
+          chain: {},
+          submitted_chains: {},
+          current_turn: null,
+          scores: {},
+          round_history: [],
+          announcement: null,
+          settings: { ...game.settings, currentRound: 1, phaseEndsAt: null },
+          updated_at: now()
+        });
+
+        // Clear chat messages
+        const msgs = await tx.run(
+          zql.chat_messages.where("game_type", "chain_reaction").where("game_id", args.gameId)
+        );
+        for (const m of msgs) {
+          await tx.mutate.chat_messages.delete({ id: m.id });
+        }
+      }
+    ),
+
     endGame: defineMutator(
       z.object({ gameId: z.string(), hostId: z.string() }),
       async ({ args, tx }) => {

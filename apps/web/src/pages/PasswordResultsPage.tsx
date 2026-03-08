@@ -121,6 +121,16 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
           >
             Play Again
           </button>
+          <button
+            className="btn btn-muted"
+            style={{ marginTop: "0.5rem" }}
+            onClick={() => {
+              void zero.mutate(mutators.password.endGame({ gameId, hostId: sessionId }));
+              navigate("/");
+            }}
+          >
+            End Game
+          </button>
         </div>
       ) : (
         <div className="game-section">

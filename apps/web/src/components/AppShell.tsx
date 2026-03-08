@@ -11,6 +11,7 @@ import { ToastContainer } from "./shared/ToastContainer";
 import { TooltipLayer } from "./shared/Tooltip";
 import { ChatProvider, useChatContext } from "../lib/chat-context";
 import { getOrCreateSessionId, hasVisited, markVisited, setStoredName } from "../lib/session";
+import { useGameMeta } from "../hooks/useGameMeta";
 
 export function AppShell() {
   return (
@@ -22,6 +23,7 @@ export function AppShell() {
 
 function AppShellInner() {
   const { inGame, gameType, gameId } = useChatContext();
+  useGameMeta();
   const zero = useZero();
   const sessionId = getOrCreateSessionId();
   const [showWelcome, setShowWelcome] = useState(() => !hasVisited());
