@@ -19,8 +19,7 @@ This repository currently contains three implemented game flows at the data/mode
 - Imposter
 - Password
 - Chain Reaction
-
-There is also an additional design document for Shade Signal in [docs/game-shade-signal.md](docs/game-shade-signal.md).
+- Shade Signals
 
 ## Table of Contents
 

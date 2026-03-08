@@ -37,10 +37,9 @@ const phaseVariants: Record<ShadePhase, string> = {
 function scoreGuess(guess: { row: number; col: number }, target: { row: number; col: number }): number {
   const dist = Math.max(Math.abs(guess.row - target.row), Math.abs(guess.col - target.col));
   if (dist === 0) return 5;
-  if (dist === 1) return 4;
-  if (dist === 2) return 3;
-  if (dist <= 4) return 2;
-  if (dist <= 6) return 1;
+  if (dist === 1) return 3;
+  if (dist === 2) return 2;
+  if (dist <= 3) return 1;
   return 0;
 }
 
@@ -55,10 +54,9 @@ function distLabel(dist: number): string {
 
 const ZONE_LEGEND = [
   { pts: 5, label: "Exact", cls: "shade-scoring-swatch--5" },
-  { pts: 4, label: "1 away", cls: "shade-scoring-swatch--4" },
-  { pts: 3, label: "2 away", cls: "shade-scoring-swatch--3" },
-  { pts: 2, label: "3-4 away", cls: "shade-scoring-swatch--2" },
-  { pts: 1, label: "5-6 away", cls: "shade-scoring-swatch--1" },
+  { pts: 3, label: "1 away", cls: "shade-scoring-swatch--4" },
+  { pts: 2, label: "2 away", cls: "shade-scoring-swatch--3" },
+  { pts: 1, label: "3 away", cls: "shade-scoring-swatch--2" },
 ];
 
 function ScoringLegend() {
@@ -165,11 +163,16 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     showToast(`📢 ${cur.text}`, "info");
   }, [game?.announcement, isHost]);
 
-  // Reset selected cell on phase change
+  // Reset selected cell on phase change (pre-select guess1 position when entering guess2)
   useEffect(() => {
-    setSelectedCell(null);
+    if (game?.phase === "guess2") {
+      const g1 = game.guesses.find((g) => g.sessionId === sessionId && g.round === 1);
+      setSelectedCell(g1 ? { row: g1.row, col: g1.col } : null);
+    } else {
+      setSelectedCell(null);
+    }
     setGuessLocked(false);
-  }, [game?.phase]);
+  }, [game?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-reveal: when entering reveal phase, auto-calculate scores
   useEffect(() => {
@@ -621,13 +624,31 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
                 Change Guess
               </button>
             ) : (
-              <button
-                className="btn btn-primary game-action-btn"
-                disabled={!selectedCell}
-                onClick={() => void submitGuess()}
-              >
-                Lock In Guess
-              </button>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  className="btn btn-primary game-action-btn"
+                  disabled={!selectedCell}
+                  onClick={() => void submitGuess()}
+                >
+                  Lock In Guess
+                </button>
+                {phase === "guess2" && (() => {
+                  const g1 = game.guesses.find((g) => g.sessionId === sessionId && g.round === 1);
+                  return g1 ? (
+                    <button
+                      className="btn btn-muted game-action-btn"
+                      onClick={() => {
+                        setSelectedCell({ row: g1.row, col: g1.col });
+                        void zero.mutate(
+                          mutators.shadeSignal.submitGuess({ gameId, sessionId, row: g1.row, col: g1.col })
+                        ).then(() => setGuessLocked(true));
+                      }}
+                    >
+                      Skip (keep guess 1)
+                    </button>
+                  ) : null;
+                })()}
+              </div>
             )}
           </div>
 
