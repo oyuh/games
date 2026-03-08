@@ -24,17 +24,17 @@ export function getOrCreateSessionId() {
 }
 
 export function getStoredName() {
-  return localStorage.getItem(NAME_KEY)?.trim() ?? "";
+  return localStorage.getItem(NAME_KEY)?.replace(/\s/g, "") ?? "";
 }
 
 export function setStoredName(name: string) {
-  const trimmedName = name.trim();
-  if (!trimmedName) {
+  const sanitized = name.replace(/\s/g, "");
+  if (!sanitized) {
     localStorage.removeItem(NAME_KEY);
   } else {
-    localStorage.setItem(NAME_KEY, trimmedName);
+    localStorage.setItem(NAME_KEY, sanitized);
   }
-  window.dispatchEvent(new CustomEvent("games:name-changed", { detail: trimmedName }));
+  window.dispatchEvent(new CustomEvent("games:name-changed", { detail: sanitized }));
 }
 
 export function getPlayerProfile() {

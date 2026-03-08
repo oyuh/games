@@ -4,16 +4,40 @@ import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers } from "react-icons/fi";
-import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, RecentGame, setStoredName } from "../lib/session";
+import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, markVisited, RecentGame, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 
 const isDev = import.meta.env.DEV;
+
+/* ── Word bank for random names ──────────────────────── */
+const adjectives = [
+  "Swift", "Sneaky", "Cosmic", "Lucky", "Dizzy", "Frosty", "Bold", "Chill",
+  "Witty", "Fierce", "Jolly", "Mystic", "Nifty", "Pixel", "Rapid", "Silent",
+  "Turbo", "Vivid", "Wacky", "Zesty", "Brave", "Clever", "Funky", "Groovy",
+  "Hyper", "Keen", "Lively", "Plucky", "Radiant", "Spunky", "Sleepy", "Stormy",
+  "Sunny", "Fuzzy", "Crispy", "Bouncy", "Shifty", "Sparky", "Tricky", "Zippy",
+];
+const nouns = [
+  "Panda", "Fox", "Falcon", "Otter", "Wolf", "Shark", "Raven", "Lynx",
+  "Cobra", "Badger", "Hawk", "Tiger", "Bear", "Moose", "Owl", "Penguin",
+  "Dragon", "Phoenix", "Pirate", "Knight", "Ninja", "Wizard", "Ghost", "Robot",
+  "Yeti", "Gremlin", "Goblin", "Squid", "Toucan", "Ferret", "Walrus", "Jackal",
+  "Beetle", "Puffin", "Coyote", "Mole", "Parrot", "Wasp", "Mantis", "Orca",
+];
+
+function randomName(): string {
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)]!;
+  const noun = nouns[Math.floor(Math.random() * nouns.length)]!;
+  return `${adj}${noun}`;
+}
 
 export function HomePage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
   const navigate = useNavigate();
   const [name, setName] = useState(getStoredName());
   const [savedName, setSavedName] = useState(getStoredName());
+  const [firstVisit, setFirstVisit] = useState(() => !hasVisited());
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Sync when name is changed externally (e.g. welcome modal)
   useEffect(() => {
@@ -74,13 +98,36 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     return () => el.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
+  // Auto-focus name input on first visit
+  useEffect(() => {
+    if (firstVisit && nameInputRef.current) {
+      nameInputRef.current.focus();
+    }
+  }, [firstVisit]);
+
+  const dismissFirstVisit = useCallback(() => {
+    if (firstVisit) {
+      // If they haven't set a name yet, give them a random one
+      if (!getStoredName()) {
+        const generated = randomName();
+        setStoredName(generated);
+        setName(generated);
+        setSavedName(generated);
+        void zero.mutate(mutators.sessions.setName({ id: sessionId, name: generated }));
+      }
+      markVisited();
+      setFirstVisit(false);
+    }
+  }, [firstVisit, zero, sessionId]);
+
   const saveName = async (event: FormEvent) => {
     event.preventDefault();
-    const trimmedName = name.trim();
-    setStoredName(trimmedName);
-    setSavedName(trimmedName);
-    if (trimmedName) {
-      await zero.mutate(mutators.sessions.setName({ id: sessionId, name: trimmedName })).server;
+    dismissFirstVisit();
+    const sanitizedName = name.replace(/\s/g, "");
+    setStoredName(sanitizedName);
+    setSavedName(sanitizedName);
+    if (sanitizedName) {
+      await zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })).server;
     } else {
       await zero.mutate(mutators.sessions.upsert({ id: sessionId, name: null })).server;
     }
@@ -202,8 +249,15 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     <div className="home-cards" ref={scrollRef}>
 
       {/* ── Card 1: Utils ──────────────────────────────────── */}
-      <div className="home-card home-card--utils">
+      <div className={`home-card home-card--utils${firstVisit ? " home-card--glow" : ""}`} onClick={dismissFirstVisit}>
         <div className="home-card-body">
+          {/* First-visit hint */}
+          {firstVisit && (
+            <div className="hc-first-visit-hint">
+              <span className="hc-first-visit-hint-icon">&#9889;</span>
+              <p>Welcome! Set a display name to get started, or just skip and jump into a game.</p>
+            </div>
+          )}
           {/* Name section */}
           <section className="hc-section">
             <h3 className="hc-label">Display Name</h3>
@@ -215,6 +269,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
             <form className="hc-row" onSubmit={saveName}>
               <input
                 className="input flex-1"
+                ref={nameInputRef}
                 value={name}
                 onChange={(e) => setName(e.target.value.replace(/\s/g, ""))}
                 placeholder="Enter name…"
@@ -338,7 +393,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 2: Imposter ───────────────────────────────── */}
-      <div className="home-card home-card--imposter">
+      <div className={`home-card home-card--imposter${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Imposter</h2>
           <p className="hc-game-desc">Find the liar. Give clues. Vote them out.</p>
@@ -445,7 +500,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 3: Password ───────────────────────────────── */}
-      <div className="home-card home-card--password">
+      <div className={`home-card home-card--password${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Password</h2>
           <p className="hc-game-desc">One-word clues. Team guessing. First to target wins.</p>
@@ -536,7 +591,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 4: Chain Reaction ─────────────────────────── */}
-      <div className="home-card home-card--chain">
+      <div className={`home-card home-card--chain${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Chain Reaction</h2>
           <p className="hc-game-desc">Race to solve a chain of linked words. Every word connects to the next.</p>
@@ -629,7 +684,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 5: Shade Signal ──────────────────────────── */}
-      <div className="home-card home-card--shade">
+      <div className={`home-card home-card--shade${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Shade Signal</h2>
           <p className="hc-game-desc">One leader, one color. Give clues and guess the target shade.</p>
