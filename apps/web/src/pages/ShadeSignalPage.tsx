@@ -192,6 +192,63 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     };
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
 
+  // ── All hooks MUST be above the early-return guard ──
+  const phase = (game?.phase ?? "lobby") as ShadePhase;
+
+  const target = game?.target_row != null && game?.target_col != null
+    ? { row: game.target_row, col: game.target_col }
+    : null;
+
+  const targetColor = target && game
+    ? generateGridColor(target.row, target.col, game.grid_rows, game.grid_cols, game.grid_seed)
+    : null;
+
+  const guessMarkers = useMemo(() => {
+    if (!game || (phase !== "reveal" && phase !== "finished")) return [];
+    const latest = game.round_history[game.round_history.length - 1];
+    return game.guesses.map((g) => {
+      const name = sessionById[g.sessionId] ?? g.sessionId.slice(0, 6);
+      const dist = target
+        ? Math.abs(g.row - target.row) + Math.abs(g.col - target.col)
+        : null;
+      const pts = latest?.scores[g.sessionId] ?? null;
+      const roundLabel = g.round === 1 ? "Clue 1" : "Clue 2";
+      const tooltip = [
+        name,
+        roundLabel,
+        dist != null ? (dist === 0 ? "Exact! 🎯" : `${dist} away`) : null,
+        pts != null ? `+${pts} pts` : null,
+      ].filter(Boolean).join(" · ");
+      return {
+        sessionId: g.sessionId,
+        name,
+        row: g.row,
+        col: g.col,
+        isOwn: g.sessionId === sessionId,
+        tooltip,
+      };
+    });
+  }, [game, phase, sessionById, sessionId, target]);
+
+  const myCurrentGuess = useMemo(() => {
+    if (!game || (phase !== "guess1" && phase !== "guess2")) return null;
+    const round = phase === "guess1" ? 1 : 2;
+    return game.guesses.find((g) => g.sessionId === sessionId && g.round === round) ?? null;
+  }, [game, phase, sessionId]);
+
+  // Auto-lock if user already submitted a guess (e.g. page reload)
+  useEffect(() => {
+    if (myCurrentGuess && !guessLocked) {
+      setGuessLocked(true);
+    }
+  }, [myCurrentGuess]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const currentRoundGuesses = useMemo(() => {
+    if (!game || (phase !== "guess1" && phase !== "guess2")) return 0;
+    const round = phase === "guess1" ? 1 : 2;
+    return new Set(game.guesses.filter((g) => g.round === round).map((g) => g.sessionId)).size;
+  }, [game, phase]);
+
   if (!game) {
     return (
       <div className="game-page">
@@ -200,7 +257,6 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const phase = game.phase as ShadePhase;
   const isGameActive = phase !== "lobby" && phase !== "ended" && phase !== "finished";
   const leaderName = game.leader_id ? (sessionById[game.leader_id] ?? "???") : "";
   const totalRounds = game.leader_order.length * game.settings.roundsPerPlayer;
@@ -242,65 +298,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     }
   };
 
-  // Target and reveal info
-  const target = game.target_row != null && game.target_col != null
-    ? { row: game.target_row, col: game.target_col }
-    : null;
-
-  const targetColor = target
-    ? generateGridColor(target.row, target.col, game.grid_rows, game.grid_cols, game.grid_seed)
-    : null;
-
-  // Determine guess markers to show
-  const guessMarkers = useMemo(() => {
-    if (phase !== "reveal" && phase !== "finished") return [];
-    const latest = game.round_history[game.round_history.length - 1];
-    return game.guesses.map((g) => {
-      const name = sessionById[g.sessionId] ?? g.sessionId.slice(0, 6);
-      const dist = target
-        ? Math.abs(g.row - target.row) + Math.abs(g.col - target.col)
-        : null;
-      const pts = latest?.scores[g.sessionId] ?? null;
-      const roundLabel = g.round === 1 ? "Clue 1" : "Clue 2";
-      const tooltip = [
-        name,
-        roundLabel,
-        dist != null ? (dist === 0 ? "Exact! 🎯" : `${dist} away`) : null,
-        pts != null ? `+${pts} pts` : null,
-      ].filter(Boolean).join(" · ");
-      return {
-        sessionId: g.sessionId,
-        name,
-        row: g.row,
-        col: g.col,
-        isOwn: g.sessionId === sessionId,
-        tooltip,
-      };
-    });
-  }, [phase, game.guesses, game.round_history, sessionById, sessionId, target]);
-
-  // My current guess for this phase
-  const myCurrentGuess = useMemo(() => {
-    if (phase !== "guess1" && phase !== "guess2") return null;
-    const round = phase === "guess1" ? 1 : 2;
-    return game.guesses.find((g) => g.sessionId === sessionId && g.round === round) ?? null;
-  }, [phase, game.guesses, sessionId]);
-
-  // Auto-lock if user already submitted a guess (e.g. page reload)
-  useEffect(() => {
-    if (myCurrentGuess && !guessLocked) {
-      setGuessLocked(true);
-    }
-  }, [myCurrentGuess]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const guessersCount = game.players.filter((p) => p.sessionId !== game.leader_id).length;
-  const currentRoundGuesses = useMemo(() => {
-    if (phase !== "guess1" && phase !== "guess2") return 0;
-    const round = phase === "guess1" ? 1 : 2;
-    return new Set(game.guesses.filter((g) => g.round === round).map((g) => g.sessionId)).size;
-  }, [phase, game.guesses]);
-
-  // Reveal scores for display
   const latestRound = game.round_history[game.round_history.length - 1];
 
   return (
