@@ -1,10 +1,10 @@
 import { defineMutator, defineMutators } from "@rocicorp/zero";
-import { nanoid } from "nanoid";
+import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { zql } from "./schema";
 
 const now = () => Date.now();
-const code = () => nanoid(6).toUpperCase();
+const code = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
 const PRESENCE_TIMEOUT_MS = 30_000;
 
 const imposterWordBank: Record<string, string[]> = {
