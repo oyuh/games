@@ -4244,6 +4244,16 @@ body {
   font-size: 0.95rem;
 }
 
+.game-player-chip--locked {
+  border-color: color-mix(in srgb, var(--success) 50%, transparent);
+  background: color-mix(in srgb, var(--success) 8%, transparent);
+}
+
+.game-player-chip--locked .game-player-avatar {
+  background: color-mix(in srgb, var(--success) 22%, transparent);
+  font-size: 0.8rem;
+}
+
 /* ── Lobby ─────────────────────────────────────────── */
 
 .shade-lobby {
@@ -4386,6 +4396,69 @@ body {
 
 .shade-cell--marked {
   overflow: visible;
+}
+
+/* ── Scoring zone overlays ─────────────────────────── */
+
+.shade-cell--zone-0 {
+  box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.9);
+  z-index: 3;
+}
+
+.shade-cell--zone-1 {
+  box-shadow: inset 0 0 0 1.5px rgba(74, 222, 128, 0.75);
+}
+
+.shade-cell--zone-2 {
+  box-shadow: inset 0 0 0 1.5px rgba(96, 165, 250, 0.65);
+}
+
+.shade-cell--zone-3 {
+  box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.45);
+}
+
+.shade-cell--zone-4 {
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.35);
+}
+
+/* Scoring legend */
+.shade-scoring-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--secondary);
+  padding: 0.4rem 0;
+}
+
+.shade-scoring-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.shade-scoring-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.shade-scoring-swatch--5 {
+  background: rgba(250, 204, 21, 0.85);
+}
+.shade-scoring-swatch--4 {
+  background: rgba(74, 222, 128, 0.7);
+}
+.shade-scoring-swatch--3 {
+  background: rgba(96, 165, 250, 0.6);
+}
+.shade-scoring-swatch--2 {
+  background: rgba(168, 85, 247, 0.45);
+}
+.shade-scoring-swatch--1 {
+  background: rgba(251, 146, 60, 0.35);
 }
 
 /* ── Cell sub-elements ─────────────────────────────── */

@@ -2194,22 +2194,16 @@ export const mutators = defineMutators({
         const uniqueGuessers = new Set(roundGuesses.map((g) => g.sessionId));
         const allSubmitted = uniqueGuessers.size >= guessersCount;
 
-        let nextPhase: "lobby" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended" = game.phase;
+        // When everyone locks in, set a 5-second grace timer instead of instantly advancing.
+        // The existing advanceTimer mutator will handle the actual phase transition.
         let nextPhaseEndsAt = game.settings.phaseEndsAt;
         if (allSubmitted) {
-          if (game.phase === "guess1") {
-            nextPhase = "clue2";
-            nextPhaseEndsAt = now() + game.settings.clueDurationSec * 1000;
-          } else {
-            nextPhase = "reveal";
-            nextPhaseEndsAt = null;
-          }
+          nextPhaseEndsAt = now() + 5000;
         }
 
         await tx.mutate.shade_signal_games.update({
           id: game.id,
           guesses: newGuesses,
-          phase: nextPhase as typeof game.phase,
           settings: { ...game.settings, phaseEndsAt: nextPhaseEndsAt },
           updated_at: now()
         });
@@ -2277,7 +2271,7 @@ export const mutators = defineMutators({
 
         const roundScores: Record<string, number> = {};
         let leaderScore = 0;
-        let anyExact = false;
+        let totalGuesserPts = 0;
 
         for (const gId of guesserIds) {
           // Use round 2 guess if available, else round 1
@@ -2288,16 +2282,27 @@ export const mutators = defineMutators({
             roundScores[gId] = 0;
             continue;
           }
-          const dist = Math.abs(guess.row - targetRow) + Math.abs(guess.col - targetCol);
+          // Chebyshev distance (max of row/col diff) — reflects visual grid proximity better
+          const dist = Math.max(Math.abs(guess.row - targetRow), Math.abs(guess.col - targetCol));
           let pts = 0;
-          if (dist === 0) { pts = 5; anyExact = true; }
-          else if (dist === 1) pts = 3;
-          else if (dist === 2) pts = 2;
-          else if (dist <= 3) pts = 1;
+          if (dist === 0) pts = 5;
+          else if (dist === 1) pts = 4;
+          else if (dist === 2) pts = 3;
+          else if (dist <= 4) pts = 2;
+          else if (dist <= 6) pts = 1;
           roundScores[gId] = pts;
-          if (dist <= 3) leaderScore += 1;
+          totalGuesserPts += pts;
         }
-        if (anyExact) leaderScore += 2;
+        // Leader earns points based on how well guessers did overall
+        const maxPossible = guesserIds.length * 5;
+        if (maxPossible > 0) {
+          const ratio = totalGuesserPts / maxPossible;
+          if (ratio >= 0.8) leaderScore = 5;
+          else if (ratio >= 0.6) leaderScore = 4;
+          else if (ratio >= 0.4) leaderScore = 3;
+          else if (ratio >= 0.2) leaderScore = 2;
+          else if (ratio > 0) leaderScore = 1;
+        }
 
         // Update player total scores
         const players = game.players.map((p) => {
