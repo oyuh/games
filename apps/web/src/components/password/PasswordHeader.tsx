@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
-import { FiCopy, FiCheck } from "react-icons/fi";
+import { FiCopy, FiCheck, FiTag } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
+import { gameCategoryLabels } from "@games/shared";
 import { RoundCountdown } from "../shared/RoundCountdown";
 
 const phaseLabels: Record<string, string> = {
@@ -47,7 +48,8 @@ export function PasswordHeader({
   phase,
   currentRound,
   endsAt,
-  isHost
+  isHost,
+  category
 }: {
   title: string;
   code: string;
@@ -55,6 +57,7 @@ export function PasswordHeader({
   currentRound?: number;
   endsAt?: number | null | undefined;
   isHost?: boolean;
+  category?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -70,6 +73,9 @@ export function PasswordHeader({
         {headerIcons[title] && <div className="game-header-icon">{headerIcons[title]}</div>}
         <h1 className="game-title">{title}</h1>
         {isHost && <span className="badge host-badge" data-tooltip="You created this game" data-tooltip-variant="info"><PiCrownSimpleFill size={12} /> Host</span>}
+        {category && gameCategoryLabels[category] && (
+          <span className="badge badge-category" data-tooltip="Word bank category" data-tooltip-variant="info"><FiTag size={10} /> {gameCategoryLabels[category]}</span>
+        )}
         {phase && (
           <span className={`badge ${phaseVariants[phase] ?? ""}`} data-tooltip={phaseTooltips[phase]} data-tooltip-variant="game">
             {phaseLabels[phase] ?? phase}

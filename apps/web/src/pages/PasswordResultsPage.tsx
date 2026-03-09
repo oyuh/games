@@ -1,8 +1,8 @@
-import { mutators, queries } from "@games/shared";
+import { mutators, queries, gameCategoryLabels } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiAward } from "react-icons/fi";
+import { FiAward, FiTag } from "react-icons/fi";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -85,6 +85,9 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
             </svg>
           </div>
           <h1 className="game-title">Password</h1>
+          {game.settings.category && gameCategoryLabels[game.settings.category] && (
+            <span className="badge badge-category" data-tooltip="Word bank category" data-tooltip-variant="info"><FiTag size={10} /> {gameCategoryLabels[game.settings.category]}</span>
+          )}
           <span className="badge badge-success">Finished</span>
         </div>
       </div>

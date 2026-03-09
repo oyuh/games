@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { FiCopy, FiCheck } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
+import { FiTag } from "react-icons/fi";
+import { gameCategoryLabels } from "@games/shared";
 import { RoundCountdown } from "../shared/RoundCountdown";
 
 const phaseLabels: Record<string, string> = {
@@ -33,7 +35,8 @@ export function ImposterHeader({
   currentRound,
   totalRounds,
   phaseEndsAt,
-  isHost
+  isHost,
+  category
 }: {
   code: string;
   phase: string;
@@ -41,6 +44,7 @@ export function ImposterHeader({
   totalRounds: number;
   phaseEndsAt: number | null;
   isHost?: boolean;
+  category?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -61,6 +65,9 @@ export function ImposterHeader({
         </div>
         <h1 className="game-title">Imposter</h1>
         {isHost && <span className="badge host-badge" data-tooltip="You created this game" data-tooltip-variant="info"><PiCrownSimpleFill size={12} /> Host</span>}
+        {category && gameCategoryLabels[category] && (
+          <span className="badge badge-category" data-tooltip="Word bank category" data-tooltip-variant="info"><FiTag size={10} /> {gameCategoryLabels[category]}</span>
+        )}
         <span className={`badge ${phaseVariants[phase] ?? ""}`} data-tooltip={phaseTooltips[phase]} data-tooltip-variant="game">
           {phaseLabels[phase] ?? phase}
         </span>

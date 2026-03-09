@@ -146,6 +146,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         round={game.settings.currentRound}
         totalRounds={game.settings.rounds}
         accent="var(--game-accent)"
+        category={game.category}
       >
         {timeLeft != null && (
           <span className={`m-badge${timeLeft <= 10 ? " m-badge--danger" : " m-badge--warn"}`}>

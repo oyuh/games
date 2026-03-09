@@ -199,6 +199,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
         {...(game.phase !== "lobby" ? { round: game.settings.currentRound } : {})}
         totalRounds={game.settings.rounds}
         accent="var(--game-accent)"
+        category={game.settings.category}
       />
 
       {/* ── VS Scoreboard ── */}

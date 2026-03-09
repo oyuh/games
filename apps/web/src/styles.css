@@ -249,6 +249,13 @@ body {
   color: #4ade80;
   border-color: color-mix(in srgb, #22c55e 30%, transparent);
 }
+.badge-category {
+  background: color-mix(in srgb, #8b5cf6 15%, transparent);
+  color: #a78bfa;
+  border-color: color-mix(in srgb, #8b5cf6 25%, transparent);
+  gap: 0.3rem;
+  font-weight: 500;
+}
 
 /* ── Social link row ─────────────────────────────────────────── */
 .social-link {
