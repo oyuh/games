@@ -26,6 +26,10 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const prevAnnouncementTs = useRef<number | null>(null);
   const [showDemo, setShowDemo] = useState(false);
 
+  const isHost = game?.host_id === sessionId;
+  const inGameRef = useRef(false);
+  const phaseRef = useRef(game?.phase);
+
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
       acc[s.id] = s.name ?? s.id.slice(0, 6);
@@ -36,7 +40,21 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!game) return;
     addRecentGame({ id: game.id, code: game.code, gameType: "password" });
+    inGameRef.current = game.teams.some((t) => t.members.includes(sessionId));
+    phaseRef.current = game.phase;
   }, [game]);
+
+  // Leave on unmount so host-leaving ends the game for everyone
+  useEffect(() => {
+    let active = false;
+    const timer = setTimeout(() => { active = true; }, 500);
+    return () => {
+      clearTimeout(timer);
+      if (active && inGameRef.current && phaseRef.current !== "ended") {
+        void zero.mutate(mutators.password.leave({ gameId, sessionId }));
+      }
+    };
+  }, [gameId, sessionId, zero]);
 
   // Auto-navigate to game when host starts
   useEffect(() => {
@@ -59,7 +77,6 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
   // Announcement watcher (skip for host — they sent it)
-  const isHost = game?.host_id === sessionId;
   useEffect(() => {
     if (!game?.announcement) return;
     if (prevAnnouncementTs.current !== game.announcement.ts) {

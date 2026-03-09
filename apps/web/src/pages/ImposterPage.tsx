@@ -201,55 +201,67 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {game.phase === "playing" && inGame && (
-        <ImposterClueSection
-          role={me?.role}
-          secretWord={game.secret_word}
-          category={game.category ?? null}
-          clue={clue}
-          clueCount={game.clues.length}
-          playerCount={game.players.length}
-          submitted={game.clues.some((c) => c.sessionId === sessionId)}
-          clues={game.clues}
-          sessionId={sessionId}
-          sessionById={sessionById}
-          onClueChange={setClue}
-          onSubmit={submitClue}
-        />
-      )}
+      {game.phase === "playing" && inGame && (() => {
+        const activePlayers = game.players.filter((p) => !p.eliminated);
+        return (
+          <ImposterClueSection
+            role={me?.role}
+            secretWord={game.secret_word}
+            category={game.category ?? null}
+            clue={clue}
+            clueCount={game.clues.length}
+            playerCount={activePlayers.length}
+            submitted={game.clues.some((c) => c.sessionId === sessionId)}
+            clues={game.clues}
+            sessionId={sessionId}
+            sessionById={sessionById}
+            onClueChange={setClue}
+            onSubmit={submitClue}
+          />
+        );
+      })()}
 
-      {game.phase === "playing" && !inGame && (
-        <div className="game-section">
-          <div className="game-waiting">
-            <div className="game-waiting-pulse" />
-            <p>Players are submitting clues… ({game.clues.length}/{game.players.length})</p>
+      {game.phase === "playing" && !inGame && (() => {
+        const activePlayers = game.players.filter((p) => !p.eliminated);
+        return (
+          <div className="game-section">
+            <div className="game-waiting">
+              <div className="game-waiting-pulse" />
+              <p>Players are submitting clues… ({game.clues.length}/{activePlayers.length})</p>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {game.phase === "voting" && inGame && (
-        <ImposterVoteSection
-          players={game.players}
-          sessionId={sessionId}
-          sessionById={sessionById}
-          voteTarget={voteTarget}
-          voteCount={game.votes.length}
-          playerCount={game.players.length}
-          clues={game.clues}
-          submitted={game.votes.some((v) => v.voterId === sessionId)}
-          onVoteTargetChange={setVoteTarget}
-          onSubmit={() => void submitVote()}
-        />
-      )}
+      {game.phase === "voting" && inGame && (() => {
+        const activePlayers = game.players.filter((p) => !p.eliminated);
+        return (
+          <ImposterVoteSection
+            players={activePlayers}
+            sessionId={sessionId}
+            sessionById={sessionById}
+            voteTarget={voteTarget}
+            voteCount={game.votes.length}
+            playerCount={activePlayers.length}
+            clues={game.clues}
+            submitted={game.votes.some((v) => v.voterId === sessionId)}
+            onVoteTargetChange={setVoteTarget}
+            onSubmit={() => void submitVote()}
+          />
+        );
+      })()}
 
-      {game.phase === "voting" && !inGame && (
-        <div className="game-section">
-          <div className="game-waiting">
-            <div className="game-waiting-pulse" />
-            <p>Players are voting… ({game.votes.length}/{game.players.length})</p>
+      {game.phase === "voting" && !inGame && (() => {
+        const activePlayers = game.players.filter((p) => !p.eliminated);
+        return (
+          <div className="game-section">
+            <div className="game-waiting">
+              <div className="game-waiting-pulse" />
+              <p>Players are voting… ({game.votes.length}/{activePlayers.length})</p>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {game.phase === "results" && (
         <ImposterResultsSection
@@ -262,70 +274,92 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         />
       )}
 
-      {game.phase === "finished" && (
-        <div className="game-section">
-          <div className="game-reveal-card game-reveal-card--success">
-            <p className="game-reveal-title">Game Complete!</p>
-            <p className="game-reveal-sub">{game.settings.rounds} rounds played</p>
-          </div>
+      {game.phase === "finished" && (() => {
+        const impostersLeft = game.players.filter((p) => p.role === "imposter" && !p.eliminated).length;
+        const playersWin = impostersLeft === 0;
+        const imposters = game.players.filter((p) => p.role === "imposter");
+        const imposterNames = imposters.map((p) => sessionById[p.sessionId] ?? p.sessionId.slice(0, 6));
 
-          {(game.round_history ?? []).length > 0 && (
-            <>
-              <h3 className="game-section-label">Round Summary</h3>
-              <div className="panel overflow-x-auto">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Word</th>
-                      <th>Imposters</th>
-                      <th>Result</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(game.round_history ?? []).map((rh) => (
-                      <tr key={rh.round}>
-                        <td>{rh.round}</td>
-                        <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ?? "—"}</td>
-                        <td>{rh.imposters.map((id) => sessionById[id] ?? id.slice(0, 6)).join(", ")}</td>
-                        <td style={{ color: rh.caught ? "#4ade80" : "#f87171" }}>
-                          {rh.caught ? "Caught" : "Escaped"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+        return (
+          <div className="game-section">
+            <div className={`game-reveal-card ${playersWin ? "game-reveal-card--success" : "game-reveal-card--fail"}`}>
+              <p className="game-reveal-title">
+                {playersWin ? "Players Win!" : "Imposters Win!"}
+              </p>
+              <p className="game-reveal-sub">
+                {playersWin
+                  ? "All imposters have been found!"
+                  : "The imposters survived!"}
+              </p>
+              <p className="game-reveal-sub">
+                {imposters.length > 1 ? "The imposters were " : "The imposter was "}
+                <strong>{imposterNames.join(", ")}</strong>
+              </p>
+              {game.secret_word && (
+                <p className="game-reveal-word">
+                  The word was: <strong>{game.secret_word}</strong>
+                </p>
+              )}
+            </div>
 
-          <div className="game-actions">
-            {isHost ? (
+            {(game.round_history ?? []).length > 0 && (
               <>
-                <button
-                  className="btn btn-primary game-action-btn"
-                  onClick={() => void zero.mutate(mutators.imposter.resetToLobby({ gameId, hostId: sessionId }))}
-                >
-                  Play Again
-                </button>
-                <button
-                  className="btn btn-muted"
-                  onClick={() => {
-                    void zero.mutate(mutators.imposter.endGame({ gameId, hostId: sessionId }));
-                    navigate("/");
-                  }}
-                >
-                  End Game
-                </button>
+                <h3 className="game-section-label">Round Summary</h3>
+                <div className="panel overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Word</th>
+                        <th>Voted Out</th>
+                        <th>Role</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(game.round_history ?? []).map((rh) => (
+                        <tr key={rh.round}>
+                          <td>{rh.round}</td>
+                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ?? "—"}</td>
+                          <td style={{ fontWeight: 600 }}>{rh.votedOutName ?? "No one"}</td>
+                          <td style={{ color: rh.wasImposter ? "#f87171" : "#4ade80", fontWeight: 600 }}>
+                            {rh.votedOutName ? (rh.wasImposter ? "Imposter" : "Innocent") : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </>
-            ) : (
-              <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
-                Back to Home
-              </button>
             )}
+
+            <div className="game-actions">
+              {isHost ? (
+                <>
+                  <button
+                    className="btn btn-primary game-action-btn"
+                    onClick={() => void zero.mutate(mutators.imposter.resetToLobby({ gameId, hostId: sessionId }))}
+                  >
+                    Play Again
+                  </button>
+                  <button
+                    className="btn btn-muted"
+                    onClick={() => {
+                      void zero.mutate(mutators.imposter.endGame({ gameId, hostId: sessionId }));
+                      navigate("/");
+                    }}
+                  >
+                    End Game
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
+                  Back to Home
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {showDemo && <ImposterDemo onClose={() => setShowDemo(false)} />}
     </div>
   );

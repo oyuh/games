@@ -1837,6 +1837,21 @@ body {
   background: color-mix(in srgb, #f87171 8%, transparent);
 }
 
+.game-player-chip--eliminated {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.game-player-avatar--eliminated {
+  background: color-mix(in srgb, var(--secondary) 18%, transparent);
+  color: var(--secondary);
+}
+
+.game-player-name--eliminated {
+  text-decoration: line-through;
+  color: var(--secondary);
+}
+
 .game-player-avatar {
   width: 28px;
   height: 28px;
@@ -3350,6 +3365,162 @@ body {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.3rem;
+}
+
+/* ── Password Round History (collapsible cards) ────── */
+
+.pw-history-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--foreground);
+}
+
+.pw-history-toggle-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--secondary);
+}
+
+.pw-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.pw-history-card {
+  border-radius: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  background: color-mix(in srgb, var(--pw-team-color, var(--secondary)) 6%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--pw-team-color, var(--secondary)) 18%, transparent);
+  transition: border-color 0.2s;
+}
+
+.pw-history-card:hover {
+  border-color: color-mix(in srgb, var(--pw-team-color, var(--secondary)) 35%, transparent);
+}
+
+.pw-history-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.pw-history-team {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pw-history-result {
+  font-size: 0.72rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+}
+
+.pw-history-result--correct {
+  background: color-mix(in srgb, #4ade80 18%, transparent);
+  color: #4ade80;
+}
+
+.pw-history-result--wrong {
+  background: color-mix(in srgb, #f87171 18%, transparent);
+  color: #f87171;
+}
+
+.pw-history-word-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.pw-history-word {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.pw-history-arrow {
+  font-size: 0.85rem;
+  color: var(--secondary);
+  opacity: 0.5;
+}
+
+.pw-history-guess {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.pw-history-guess--correct {
+  color: #4ade80;
+}
+
+.pw-history-guess--wrong {
+  color: #f87171;
+}
+
+.pw-history-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid color-mix(in srgb, var(--pw-team-color, var(--secondary)) 12%, transparent);
+}
+
+.pw-history-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pw-history-detail-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+  opacity: 0.7;
+}
+
+.pw-history-detail-value {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.pw-history-clues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.pw-history-clue-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+}
+
+.pw-history-none {
+  font-size: 0.72rem;
+  color: var(--secondary);
+  opacity: 0.6;
+  font-style: italic;
 }
 
 /* ── Password round roles ──────────────────────────── */

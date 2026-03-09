@@ -25,15 +25,16 @@ const imposterGames = table("imposter_games").columns({
   phase: enumeration<"lobby" | "playing" | "voting" | "results" | "finished" | "ended">(),
   category: string().optional(),
   secret_word: string().optional(),
-  players: json<Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player" }>>(),
+  players: json<Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player"; eliminated?: boolean }>>(),
   clues: json<Array<{ sessionId: string; text: string; createdAt: number }>>(),
   votes: json<Array<{ voterId: string; targetId: string }>>(),
   kicked: json<string[]>(),
   round_history: json<Array<{
     round: number;
     secretWord: string | null;
-    imposters: string[];
-    caught: boolean;
+    votedOutId: string | null;
+    votedOutName: string | null;
+    wasImposter: boolean;
     clues: Array<{ sessionId: string; text: string }>;
     votes: Array<{ voterId: string; targetId: string }>;
   }>>(),

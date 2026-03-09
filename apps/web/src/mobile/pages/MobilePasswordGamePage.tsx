@@ -256,7 +256,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* Host: reset */}
-      {isHost && (
+      {isHost && game.phase === "results" && (
         <div className="m-card">
           <button
             className="m-btn m-btn-muted"

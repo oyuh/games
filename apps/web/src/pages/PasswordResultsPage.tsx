@@ -131,7 +131,7 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
-      <PasswordRoundsTable rounds={game.rounds} teams={game.teams} names={names} />
+      <PasswordRoundsTable rounds={game.rounds} teams={game.teams} names={names} defaultOpen />
 
       {isHost ? (
         <div className="game-section">
