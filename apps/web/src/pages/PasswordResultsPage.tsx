@@ -5,8 +5,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FiAward } from "react-icons/fi";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
 import { showToast } from "../lib/toast";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { MobilePasswordResultsPage } from "../mobile/pages/MobilePasswordResultsPage";
 
 export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobilePasswordResultsPage sessionId={sessionId} />;
+
   const zero = useZero();
   const params = useParams();
   const navigate = useNavigate();
@@ -45,10 +50,20 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.announcement, game?.host_id, sessionId]);
 
+  useEffect(() => {
+    if (game) return;
+    const timer = setTimeout(() => navigate("/"), 3000);
+    return () => clearTimeout(timer);
+  }, [game, navigate]);
+
   if (!game) {
     return (
       <div className="game-page" data-game-theme="password">
-        <div className="game-empty"><p>Game not found</p></div>
+        <div className="game-empty">
+          <p>Game not found</p>
+          <p style={{ fontSize: "0.85rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
+          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
+        </div>
       </div>
     );
   }

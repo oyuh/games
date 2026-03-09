@@ -34,6 +34,7 @@ This repository currently contains three implemented game flows at the data/mode
 - [Deployment](#deployment)
 - [Operational Notes](#operational-notes)
 - [Known Constraints](#known-constraints)
+- [Mobile UI](#mobile-ui)
 - [Reference Docs](#reference-docs)
 
 ## Project Summary
@@ -803,6 +804,47 @@ If you extend reconnect tolerance, you will likely also want to revisit those cl
 - Game state is heavily JSON-column based, which is pragmatic for mutable party-game state but less ideal for analytical querying.
 - The Railway config currently starts the API through `tsx src/index.ts` instead of `node dist/index.js`.
 - Shade Signal is documented but not implemented as a production game mode in the current app routes/schema.
+
+## Mobile UI
+
+The application includes a fully separate mobile UI that activates automatically on screens 768px or narrower. The mobile UI lives entirely under `apps/web/src/mobile/` and does not share any page components with the desktop UI — this is intentional to prevent mobile changes from regressing the desktop experience.
+
+### Architecture
+
+- **Detection**: A `useIsMobile` hook (in `apps/web/src/hooks/useIsMobile.ts`) uses `matchMedia` via `useSyncExternalStore` to detect viewport width at the 768px breakpoint.
+- **Routing**: Each desktop page component checks `useIsMobile()` and returns the corresponding mobile component early if true. The desktop code path is never reached on mobile.
+- **Layout**: `MobileLayout.tsx` provides the mobile app shell with a bottom navigation bar (Home, Chat, Info, Options) and bottom-sheet modals.
+- **Styling**: All mobile CSS is in `apps/web/src/mobile/mobile.css`, using the `m-` prefix for all class names. No Tailwind utility classes are used in mobile components — all styling is custom CSS with the same CSS variables as desktop.
+
+### File Structure
+
+```text
+apps/web/src/mobile/
+├─ MobileLayout.tsx              # App shell with bottom nav + sheet modals
+├─ mobile.css                    # All mobile-specific CSS (~2100+ lines, m-* prefix)
+├─ components/
+│  ├─ BottomSheet.tsx            # Reusable bottom sheet overlay
+│  ├─ MobileChatSheet.tsx        # Chat bottom sheet
+│  ├─ MobileGameHeader.tsx       # Compact game header with code + phase
+│  ├─ MobileInfoSheet.tsx        # Info/rules bottom sheet
+│  └─ MobileOptionsSheet.tsx     # Options + dev demo tools
+└─ pages/
+   ├─ MobileHomePage.tsx         # Home, join, create game
+   ├─ MobileImposterPage.tsx     # Imposter game (all phases)
+   ├─ MobilePasswordBeginPage.tsx # Password pre-round
+   ├─ MobilePasswordGamePage.tsx  # Password active rounds
+   ├─ MobilePasswordResultsPage.tsx # Password results
+   ├─ MobileChainReactionPage.tsx # Chain Reaction (all phases)
+   └─ MobileShadeSignalPage.tsx   # Shade Signal (all phases)
+```
+
+### Development Guidelines
+
+- **Never** modify desktop components to accommodate mobile. Mobile gets its own components.
+- All mobile class names use the `m-` prefix to avoid collisions with desktop CSS.
+- When adding a new game, create a corresponding `Mobile<Game>Page.tsx` in the mobile pages directory.
+- Use the dev demo buttons in the mobile Options sheet (visible in `DEV` mode only) to quickly test any game phase on mobile.
+- Run `npx vite build` to verify both desktop and mobile code compile cleanly.
 
 ## Reference Docs
 

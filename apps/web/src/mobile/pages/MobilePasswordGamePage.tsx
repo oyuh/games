@@ -1,0 +1,257 @@
+import { mutators, queries } from "@games/shared";
+import { useQuery, useZero } from "@rocicorp/zero/react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { FiSend, FiClock } from "react-icons/fi";
+import { usePresenceSocket } from "../../hooks/usePresenceSocket";
+import { showToast } from "../../lib/toast";
+import { useMobileHostRegister } from "../../lib/mobile-host-context";
+import { MobileGameHeader } from "../components/MobileGameHeader";
+import { MobileGameNotFound } from "../components/MobileGameNotFound";
+
+const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
+
+export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
+  const zero = useZero();
+  const params = useParams();
+  const navigate = useNavigate();
+  const gameId = params.id ?? "";
+  const [games] = useQuery(queries.password.byId({ id: gameId }));
+  const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
+  const game = games[0];
+  const [clue, setClue] = useState("");
+  const [guess, setGuess] = useState("");
+  const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
+
+  usePresenceSocket({ sessionId, gameId, gameType: "password" });
+
+  const isHost = game?.host_id === sessionId;
+  const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
+
+  useMobileHostRegister(
+    isHost && game
+      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? id.slice(0, 6) }))) }
+      : null
+  );
+
+  const myTeamIndex = useMemo(() => {
+    if (!game) return -1;
+    return game.teams.findIndex((t) => t.members.includes(sessionId));
+  }, [game?.teams, sessionId]);
+
+  const myActiveRound = useMemo(() => {
+    if (!game || !game.active_rounds.length || myTeamIndex === -1) return undefined;
+    return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
+  }, [game?.active_rounds, myTeamIndex]);
+
+  useEffect(() => {
+    if (!game || game.phase !== "playing" || !game.settings.roundEndsAt) return;
+    const remaining = game.settings.roundEndsAt - Date.now();
+    if (remaining <= 0) { void zero.mutate(mutators.password.advanceTimer({ gameId })); return; }
+    const timer = setTimeout(() => { void zero.mutate(mutators.password.advanceTimer({ gameId })); }, remaining + 500);
+    return () => clearTimeout(timer);
+  }, [game?.settings.roundEndsAt, game?.phase, gameId, zero]);
+
+  useEffect(() => { if (game?.phase === "results") navigate(`/password/${game.id}/results`); }, [game?.phase, game?.id, navigate]);
+  useEffect(() => {
+    if (!game) return;
+    if (game.phase === "ended") { showToast("The host ended the game", "info"); navigate("/"); return; }
+    if (game.kicked.includes(sessionId)) { showToast("You were kicked from the game", "error"); navigate("/"); }
+  }, [game?.phase, game?.kicked, sessionId, navigate]);
+
+  useEffect(() => {
+    if (!game?.announcement || isHost) return;
+    const prev = prevAnnouncementRef.current;
+    const cur = game.announcement;
+    if (prev && prev.text === cur.text && Math.abs(cur.ts - prev.ts) < 3000) return;
+    prevAnnouncementRef.current = cur;
+    showToast(`📢 ${cur.text}`, "info");
+  }, [game?.announcement, isHost]);
+
+  // Countdown timer
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  useEffect(() => {
+    const endsAt = game?.settings.roundEndsAt;
+    if (!endsAt) { setTimeLeft(null); return; }
+    const tick = () => setTimeLeft(Math.max(0, Math.floor((endsAt - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [game?.settings.roundEndsAt]);
+
+  if (!game) return <MobileGameNotFound theme="password" />;
+
+  const myTeam = myTeamIndex >= 0 ? game.teams[myTeamIndex] : undefined;
+  const myTeamMembers = myTeam?.members ?? [];
+
+  const submitClue = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!clue.trim()) return;
+    try { await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server; setClue(""); }
+    catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit clue", "error"); }
+  };
+
+  const submitGuess = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!guess.trim()) return;
+    try { await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server; setGuess(""); }
+    catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit guess", "error"); }
+  };
+
+  return (
+    <div className="m-page" data-game-theme="password">
+      <MobileGameHeader code={game.code} gameLabel="Password" phase={game.phase} round={game.current_round} accent="var(--game-accent)">
+        {timeLeft != null && (
+          <span className={`m-badge${timeLeft <= 10 ? " m-badge--danger" : " m-badge--warn"}`}>
+            <FiClock size={10} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
+          </span>
+        )}
+      </MobileGameHeader>
+
+      {/* Scores */}
+      <div className="m-card">
+        <h3 className="m-card-title">Scores</h3>
+        <div className="m-scoreboard-mini">
+          {game.teams.map((team, i) => {
+            const color = teamColors[i % teamColors.length]!;
+            const score = game.scores[team.name] ?? 0;
+            const isMyTeam = myTeamIndex === i;
+            return (
+              <div key={team.name} className={`m-score-chip${isMyTeam ? " m-score-chip--mine" : ""}`} style={{ borderColor: color }}>
+                <span style={{ color, fontWeight: 600, fontSize: "0.8rem" }}>{team.name}</span>
+                <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>{score}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Active Round */}
+      {game.phase === "playing" && myActiveRound && (() => {
+        const ar = myActiveRound;
+        const guesserName = names[ar.guesserId] ?? ar.guesserId.slice(0, 6);
+        const isGuesser = ar.guesserId === sessionId;
+        const isOnTeam = myTeamMembers.includes(sessionId);
+        const isClueGiver = isOnTeam && !isGuesser;
+        const alreadyClued = ar.clues.some((c) => c.sessionId === sessionId);
+        const clueGiverCount = myTeamMembers.filter((m) => m !== ar.guesserId).length;
+        const allCluesIn = ar.clues.length >= clueGiverCount;
+        const hasWrongGuess = ar.guess !== null && ar.clues.length === 0;
+
+        return (
+          <div className="m-card">
+            <div className="m-round-role">
+              <span style={{ opacity: 0.6, fontSize: "0.8rem" }}>Guesser:</span>
+              <span style={{ fontWeight: 600, color: isGuesser ? "var(--primary)" : "inherit" }}>
+                {guesserName}{isGuesser ? " (you)" : ""}
+              </span>
+            </div>
+
+            {hasWrongGuess && (
+              <div className="m-alert m-alert--danger" style={{ marginBottom: "0.75rem" }}>
+                <strong>Incorrect!</strong> "{ar.guess}" was wrong — new clues needed!
+              </div>
+            )}
+
+            {/* Clue giver: submit clue */}
+            {ar.word && !allCluesIn && isClueGiver && !alreadyClued && (
+              <>
+                <div className="m-secret-word">
+                  <span style={{ opacity: 0.6, fontSize: "0.75rem" }}>Secret Word</span>
+                  <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)" }}>{ar.word}</span>
+                </div>
+                <form className="m-input-row" onSubmit={submitClue}>
+                  <input className="m-input" style={{ flex: 1 }} value={clue} onChange={(e) => setClue(e.target.value)} placeholder="One-word clue…" maxLength={80} />
+                  <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}><FiSend size={14} /></button>
+                </form>
+                <p className="m-progress-text">Clues: {ar.clues.length} / {clueGiverCount}</p>
+              </>
+            )}
+
+            {/* Waiting states */}
+            {ar.word && !allCluesIn && isClueGiver && alreadyClued && (
+              <div className="m-waiting"><div className="m-waiting-pulse" /><p>Waiting for teammates… ({ar.clues.length}/{clueGiverCount})</p></div>
+            )}
+            {ar.word && !allCluesIn && isGuesser && (
+              <div className="m-waiting"><div className="m-waiting-pulse" /><p>Teammates are writing clues… ({ar.clues.length}/{clueGiverCount})</p></div>
+            )}
+            {ar.word && !allCluesIn && !isOnTeam && (
+              <div className="m-waiting"><div className="m-waiting-pulse" /><p>Clue givers submitting… ({ar.clues.length}/{clueGiverCount})</p></div>
+            )}
+
+            {/* All clues in — guesser guesses */}
+            {ar.word && allCluesIn && (
+              <>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
+                  {ar.clues.map((c) => (
+                    <span key={c.sessionId} className="m-badge m-badge--primary" style={{ fontSize: "0.95rem", padding: "0.3rem 0.6rem" }}>{c.text}</span>
+                  ))}
+                </div>
+                {isGuesser ? (
+                  <form className="m-input-row" onSubmit={submitGuess}>
+                    <input className="m-input" style={{ flex: 1 }} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Your guess…" maxLength={40} />
+                    <button type="submit" className="m-btn m-btn-primary" disabled={!guess.trim()}><FiSend size={14} /> Guess</button>
+                  </form>
+                ) : (
+                  <div className="m-waiting"><div className="m-waiting-pulse" /><p>Waiting for {guesserName} to guess…</p></div>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Spectator/no active round */}
+      {game.phase === "playing" && !myActiveRound && (
+        <div className="m-card">
+          <div className="m-waiting"><div className="m-waiting-pulse" /><p>Teams are racing! Watch scores update live.</p></div>
+        </div>
+      )}
+
+      {/* Results redirect */}
+      {game.phase === "results" && (
+        <div className="m-card" style={{ textAlign: "center" }}>
+          <h3 className="m-reveal-title">Game Over!</h3>
+          <Link to={`/password/${game.id}/results`} className="m-btn m-btn-primary" style={{ width: "100%", marginTop: "0.75rem", display: "block", textAlign: "center" }}>
+            View Results
+          </Link>
+        </div>
+      )}
+
+      {/* Rounds history */}
+      {game.rounds.length > 0 && (
+        <div className="m-card">
+          <h3 className="m-card-title">Rounds</h3>
+          <div className="m-data-table-wrap">
+            <table className="m-data-table">
+              <thead><tr><th>#</th><th>Team</th><th>Word</th><th>Result</th></tr></thead>
+              <tbody>
+                {game.rounds.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.round}</td>
+                    <td>{game.teams[r.teamIndex]?.name ?? `Team ${r.teamIndex + 1}`}</td>
+                    <td style={{ color: "var(--primary)", fontWeight: 600 }}>{r.word}</td>
+                    <td style={{ color: r.correct ? "#4ade80" : "#f87171" }}>{r.correct ? "✓" : "✗"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Host: reset */}
+      {isHost && (
+        <div className="m-card">
+          <button
+            className="m-btn m-btn-muted"
+            style={{ width: "100%" }}
+            onClick={() => { void zero.mutate(mutators.password.resetToLobby({ gameId, hostId: sessionId })); void navigate(`/password/${game.id}/begin`); }}
+          >
+            Reset to Lobby
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

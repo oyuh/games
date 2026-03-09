@@ -34,11 +34,8 @@ const favicons = {
     `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
       <rect width="32" height="32" rx="6" fill="#2a1a2e"/>
       <g transform="translate(4,4)">
-        <circle cx="13.5" cy="6.5" r="2.5" fill="none" stroke="#f472b6" stroke-width="2"/>
-        <circle cx="17.5" cy="10.5" r="2.5" fill="none" stroke="#f472b6" stroke-width="2"/>
-        <circle cx="8.5" cy="7.5" r="2.5" fill="none" stroke="#f472b6" stroke-width="2"/>
-        <circle cx="6.5" cy="12.5" r="2.5" fill="none" stroke="#f472b6" stroke-width="2"/>
-        <path d="M12 22c5.523 0 8-4.477 8-10S17.523 2 12 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5L2.5 21.5l4.5-.838A9.955 9.955 0 0 0 12 22z" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M18.37 2.63a2.12 2.12 0 0 1 3 3l-9.49 9.49-4.24.71.7-4.24z" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8 16c-3 3-4 5-4 6 0 .55.45 1 1 1 1 0 3-1 6-4" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
     </svg>`
   )}`,

@@ -10,6 +10,8 @@ import { TooltipLayer } from "./shared/Tooltip";
 import { ChatProvider, useChatContext } from "../lib/chat-context";
 import { getOrCreateSessionId } from "../lib/session";
 import { useGameMeta } from "../hooks/useGameMeta";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { MobileLayout } from "../mobile/MobileLayout";
 
 export function AppShell() {
   return (
@@ -23,6 +25,9 @@ function AppShellInner() {
   const { inGame, gameType, gameId } = useChatContext();
   useGameMeta();
   const sessionId = getOrCreateSessionId();
+  const isMobile = useIsMobile();
+
+  if (isMobile) return <MobileLayout />;
 
   // Query current game for host_id
   const [imposterGames] = useQuery(

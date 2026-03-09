@@ -7,10 +7,15 @@ import { PasswordHeader } from "../components/password/PasswordHeader";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { MobileChainReactionPage } from "../mobile/pages/MobileChainReactionPage";
 
 type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 
 export function ChainReactionPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileChainReactionPage sessionId={sessionId} />;
+
   const zero = useZero();
   const navigate = useNavigate();
   const params = useParams();
@@ -125,10 +130,20 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
     }
   }, [editingIndex]);
 
+  useEffect(() => {
+    if (game) return;
+    const timer = setTimeout(() => navigate("/"), 3000);
+    return () => clearTimeout(timer);
+  }, [game, navigate]);
+
   if (!game) {
     return (
       <div className="game-page" data-game-theme="chain">
-        <div className="game-empty"><p>Game not found</p></div>
+        <div className="game-empty">
+          <p>Game not found</p>
+          <p style={{ fontSize: "0.85rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
+          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
+        </div>
       </div>
     );
   }

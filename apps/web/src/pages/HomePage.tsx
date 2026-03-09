@@ -6,6 +6,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, markVisited, RecentGame, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { MobileHomePage } from "../mobile/pages/MobileHomePage";
 
 const isDev = import.meta.env.DEV;
 
@@ -32,6 +34,9 @@ function randomName(): string {
 }
 
 export function HomePage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileHomePage sessionId={sessionId} />;
+
   const zero = useZero();
   const navigate = useNavigate();
   const [name, setName] = useState(getStoredName());
@@ -105,20 +110,32 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     }
   }, [firstVisit]);
 
+  /** Assign a random name if the user doesn't have one yet */
+  const ensureName = useCallback(() => {
+    if (!getStoredName()) {
+      const generated = randomName();
+      setStoredName(generated);
+      setName(generated);
+      setSavedName(generated);
+      void zero.mutate(mutators.sessions.setName({ id: sessionId, name: generated }));
+    }
+  }, [zero, sessionId]);
+
   const dismissFirstVisit = useCallback(() => {
     if (firstVisit) {
-      // If they haven't set a name yet, give them a random one
-      if (!getStoredName()) {
-        const generated = randomName();
-        setStoredName(generated);
-        setName(generated);
-        setSavedName(generated);
-        void zero.mutate(mutators.sessions.setName({ id: sessionId, name: generated }));
-      }
+      ensureName();
       markVisited();
       setFirstVisit(false);
     }
-  }, [firstVisit, zero, sessionId]);
+  }, [firstVisit, ensureName]);
+
+  // Dismiss first-visit state on any click anywhere on the page
+  useEffect(() => {
+    if (!firstVisit) return;
+    const handler = () => dismissFirstVisit();
+    window.addEventListener("click", handler, { capture: true });
+    return () => window.removeEventListener("click", handler, { capture: true });
+  }, [firstVisit, dismissFirstVisit]);
 
   const saveName = async (event: FormEvent) => {
     event.preventDefault();
@@ -201,6 +218,8 @@ export function HomePage({ sessionId }: { sessionId: string }) {
       setPendingAction(null);
       return;
     }
+    // Make sure the player has a name before joining any game
+    ensureName();
     try {
       const imposterGame = imposterMatches[0];
       if (imposterGame) {
