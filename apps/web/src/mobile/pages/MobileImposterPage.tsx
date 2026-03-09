@@ -1,4 +1,4 @@
-import { mutators, queries } from "@games/shared";
+import { imposterCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -11,17 +11,17 @@ import { MobileGameHeader } from "../components/MobileGameHeader";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 
-/** Redact roughly half the letters in a clue, keeping first and last visible. */
+/** Redact a clue showing a contiguous ~65% chunk of each word. */
 function redactClue(text: string): string {
-  if (text.length <= 2) return text[0] + "_".repeat(text.length - 1);
-  const chars = text.split("");
-  return chars.map((ch, i) => {
-    if (ch === " ") return " ";
-    const isFirst = i === 0 || chars[i - 1] === " ";
-    const isLast = i === chars.length - 1 || chars[i + 1] === " ";
-    if (isFirst || isLast) return ch;
-    return i % 2 === 0 ? "_" : ch;
-  }).join("");
+  return text.split(" ").map((word) => {
+    const len = word.length;
+    if (len <= 2) return "_".repeat(len);
+    const showCount = Math.max(1, Math.floor(len * 0.65));
+    const start = Math.floor(len * 0.2);
+    return word.split("").map((ch, i) =>
+      i >= start && i < start + showCount ? ch : "_"
+    ).join("");
+  }).join(" ");
 }
 
 export function MobileImposterPage({ sessionId }: { sessionId: string }) {
@@ -209,6 +209,9 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
             {isHost && game.players.length < 3 && (
               <p style={{ textAlign: "center", opacity: 0.6, fontSize: "0.85rem" }}>Need at least 3 players to start</p>
             )}
+            {isHost && game.players.length === 3 && (
+              <p style={{ textAlign: "center", opacity: 0.5, fontSize: "0.8rem" }}>4+ players recommended</p>
+            )}
             <button
               className="m-btn m-btn-muted"
               style={{ width: "100%" }}
@@ -228,6 +231,11 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
         return (
           <div className="m-card">
+            {game.category && (
+              <p style={{ fontSize: "0.75rem", color: "var(--secondary)", textAlign: "center", marginBottom: "0.4rem" }}>
+                Category: <strong style={{ color: "var(--foreground)" }}>{imposterCategoryLabels[game.category] ?? game.category}</strong>
+              </p>
+            )}
             <div className={`m-role-card${isImposter ? " m-role-card--danger" : ""}`}>
               <div className="m-role-icon">
                 {isImposter ? <FiEyeOff size={22} /> : <FiEye size={22} />}

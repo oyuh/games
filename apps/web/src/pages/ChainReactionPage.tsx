@@ -9,6 +9,7 @@ import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileChainReactionPage } from "../mobile/pages/MobileChainReactionPage";
+import { ChainDemo } from "../components/demos/ChainDemo";
 
 type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 
@@ -27,6 +28,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [guess, setGuess] = useState("");
+  const [showDemo, setShowDemo] = useState(false);
   const inlineInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
@@ -377,6 +379,14 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
+      {game.phase === "lobby" && (
+        <div className="game-section" style={{ textAlign: "center" }}>
+          <button className="demo-trigger-btn" onClick={() => setShowDemo(true)}>
+            <FiHelpCircle size={16} /> How to Play
+          </button>
+        </div>
+      )}
+
       {/* ─── Submitting: chain input form (not submitted yet) ─── */}
       {game.phase === "submitting" && inGame && !hasSubmitted && (
         <div className="game-section">
@@ -688,6 +698,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
           </div>
         </div>
       )}
+      {showDemo && <ChainDemo onClose={() => setShowDemo(false)} />}
     </div>
   );
 }

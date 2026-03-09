@@ -1,14 +1,15 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock } from "react-icons/fi";
+import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock, FiHelpCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
+import { PasswordDemo } from "../components/demos/PasswordDemo";
 
 export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const isMobile = useIsMobile();
@@ -23,6 +24,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
+  const [showDemo, setShowDemo] = useState(false);
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -168,6 +170,14 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
           </div>
         </div>
       )}
+
+      <div className="game-section" style={{ textAlign: "center" }}>
+        <button className="demo-trigger-btn" onClick={() => setShowDemo(true)}>
+          <FiHelpCircle size={16} /> How to Play
+        </button>
+      </div>
+
+      {showDemo && <PasswordDemo onClose={() => setShowDemo(false)} />}
     </div>
   );
 }
