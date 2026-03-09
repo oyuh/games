@@ -116,6 +116,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
               <ImposterClueSection
                 role="player"
                 secretWord={SECRET_WORD}
+                category="animals"
                 clue={clue}
                 clueCount={0}
                 playerCount={5}
@@ -139,6 +140,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
               <ImposterClueSection
                 role="imposter"
                 secretWord={null}
+                category="animals"
                 clue={clue}
                 clueCount={3}
                 playerCount={5}
