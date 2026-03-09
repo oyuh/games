@@ -407,7 +407,7 @@ Mutators are organized into separate files by game domain under `packages/shared
 Install the following before starting:
 
 - Node.js 20+ recommended
-- pnpm 10.x
+- pnpm 10.x or really any node
 - Docker Desktop or a compatible Docker runtime
 
 ### 1. Install dependencies
