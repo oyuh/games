@@ -1,4 +1,4 @@
-import { mutators, queries } from "@games/shared";
+import { mutators, queries, chainCategoryLabels } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -330,6 +330,11 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
             <FiSend size={16} />
             <span>Write your chain — {game.settings.chainLength} connected words</span>
           </div>
+          {game.settings.category && (
+            <p style={{ textAlign: "center", margin: "0.25rem 0 0.5rem", fontSize: "0.82rem", color: "var(--secondary)" }}>
+              Category: <strong style={{ color: "var(--primary)" }}>{chainCategoryLabels[game.settings.category] ?? game.settings.category}</strong>
+            </p>
+          )}
 
           <form onSubmit={submitChain}>
             <div className="m-cr-chain">

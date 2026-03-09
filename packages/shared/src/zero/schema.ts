@@ -68,7 +68,7 @@ const passwordGames = table("password_games").columns({
   }>>(),
   kicked: json<string[]>(),
   announcement: json<{ text: string; ts: number } | null>(),
-  settings: json<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean; skipsRemaining?: Record<string, number> }>(),
+  settings: json<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean; skipsRemaining?: Record<string, number>; category?: string }>(),
   created_at: number(),
   updated_at: number()
 }).primaryKey("id");
@@ -108,6 +108,7 @@ const chainReactionGames = table("chain_reaction_games").columns({
     turnTimeSec: number | null;
     phaseEndsAt: number | null;
     chainMode: "premade" | "custom";
+    category?: string;
   }>(),
   created_at: number(),
   updated_at: number()

@@ -1,4 +1,4 @@
-import { imposterCategories, imposterCategoryLabels, mutators, queries } from "@games/shared";
+import { imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
@@ -59,9 +59,11 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [imposterRounds, setImposterRounds] = useState(3);
   const [passwordTeams, setPasswordTeams] = useState(2);
   const [passwordTargetScore, setPasswordTargetScore] = useState(10);
+  const [passwordCategory, setPasswordCategory] = useState("animals");
   const [chainLength, setChainLength] = useState(5);
   const [chainRounds, setChainRounds] = useState(3);
   const [chainMode, setChainMode] = useState<"premade" | "custom">("premade");
+  const [chainCategory, setChainCategory] = useState("animals");
   const [shadeRoundsPerPlayer, setShadeRoundsPerPlayer] = useState(1);
   const [shadeHardMode, setShadeHardMode] = useState(false);
   const [shadeLeaderPick, setShadeLeaderPick] = useState(false);
@@ -122,7 +124,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     setPendingAction("create-password");
     const id = nanoid();
     try {
-      const result = await zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore })).server;
+      const result = await zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })).server;
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       navigate(`/password/${id}/begin`);
     } finally { setPendingAction(null); }
@@ -132,7 +134,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     setPendingAction("create-chain");
     const id = nanoid();
     try {
-      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode })).server;
+      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })).server;
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       navigate(`/chain/${id}`);
     } finally { setPendingAction(null); }
@@ -346,6 +348,14 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         </div>
         {expanded === "password" && (
           <div className="m-game-card-config">
+            <div className="m-config-field">
+              <label className="m-config-label">Category</label>
+              <select className="m-input" value={passwordCategory} onChange={(e) => setPasswordCategory(e.target.value)}>
+                {passwordCategories.map((key) => (
+                  <option key={key} value={key}>{passwordCategoryLabels[key] ?? key}</option>
+                ))}
+              </select>
+            </div>
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
                 <label className="m-config-label"><FiUsers size={13} /> Teams</label>
@@ -391,6 +401,14 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         </div>
         {expanded === "chain" && (
           <div className="m-game-card-config">
+            <div className="m-config-field">
+              <label className="m-config-label">Category</label>
+              <select className="m-input" value={chainCategory} onChange={(e) => setChainCategory(e.target.value)}>
+                {chainCategories.map((key) => (
+                  <option key={key} value={key}>{chainCategoryLabels[key] ?? key}</option>
+                ))}
+              </select>
+            </div>
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
                 <label className="m-config-label">Chain Length</label>

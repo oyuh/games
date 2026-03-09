@@ -11,7 +11,8 @@ export const chainReactionMutators = {
       chainLength: z.number().min(5).max(10).optional(),
       rounds: z.number().min(1).max(10).optional(),
       turnTimeSec: z.number().nullable().optional(),
-      chainMode: z.enum(["premade", "custom"]).optional()
+      chainMode: z.enum(["premade", "custom"]).optional(),
+      category: z.string().optional()
     }),
     async ({ args, tx }) => {
       const ts = now();
@@ -35,7 +36,8 @@ export const chainReactionMutators = {
           currentRound: 1,
           turnTimeSec: args.turnTimeSec ?? null,
           phaseEndsAt: null,
-          chainMode: args.chainMode ?? "premade"
+          chainMode: args.chainMode ?? "premade",
+          category: args.category ?? "animals"
         },
         created_at: ts,
         updated_at: ts
@@ -150,7 +152,8 @@ export const chainReactionMutators = {
         currentRound: z.number(),
         turnTimeSec: z.number().nullable(),
         phaseEndsAt: z.number().nullable(),
-        chainMode: z.enum(["premade", "custom"])
+        chainMode: z.enum(["premade", "custom"]),
+        category: z.string().optional()
       })
     }),
     async ({ args, tx }) => {
@@ -158,9 +161,10 @@ export const chainReactionMutators = {
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can update settings");
       if (game.phase !== "lobby") throw new Error("Can only update settings in lobby");
+      const newCategory = args.settings.category ?? game.settings.category ?? "animals";
       await tx.mutate.chain_reaction_games.update({
         id: game.id,
-        settings: args.settings,
+        settings: { ...game.settings, ...args.settings, category: newCategory },
         updated_at: now()
       });
     }
@@ -228,8 +232,8 @@ export const chainReactionMutators = {
       }));
 
       const chain: Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy: string | null }>> = {
-        [p1]: makeChainSlots(pickChain(game.settings.chainLength)),
-        [p2]: makeChainSlots(pickChain(game.settings.chainLength))
+        [p1]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category)),
+        [p2]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category))
       };
 
       const scores: Record<string, number> = {};
@@ -453,8 +457,8 @@ export const chainReactionMutators = {
               solvedBy: null as string | null
             }));
             const newChain = {
-              [p1]: makeChainSlots(pickChain(game.settings.chainLength)),
-              [p2]: makeChainSlots(pickChain(game.settings.chainLength))
+              [p1]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category)),
+              [p2]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category))
             };
             const phaseEndsAt = game.settings.turnTimeSec
               ? now() + game.settings.turnTimeSec * 1000
@@ -569,8 +573,8 @@ export const chainReactionMutators = {
               solvedBy: null as string | null
             }));
             const newChain = {
-              [p1]: makeChainSlots(pickChain(game.settings.chainLength)),
-              [p2]: makeChainSlots(pickChain(game.settings.chainLength))
+              [p1]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category)),
+              [p2]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category))
             };
             const phaseEndsAt = game.settings.turnTimeSec
               ? now() + game.settings.turnTimeSec * 1000

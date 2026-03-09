@@ -48,9 +48,17 @@ export function chooseRoles(
   }));
 }
 
-export function pickChain(length: number): string[] {
-  const matching = chainWordBank.filter((c) => c.length === length);
-  const pool = matching.length > 0 ? matching : chainWordBank.filter((c) => c.length >= length);
+export function pickChain(length: number, category?: string): string[] {
+  const catChains = category && chainWordBank[category] ? chainWordBank[category] : Object.values(chainWordBank).flat();
+  const matching = catChains.filter((c) => c.length === length);
+  const pool = matching.length > 0 ? matching : catChains.filter((c) => c.length >= length);
+  if (pool.length === 0) {
+    // Fallback to any category if the selected one has no chains of this length
+    const allChains = Object.values(chainWordBank).flat();
+    const fallback = allChains.filter((c) => c.length === length);
+    const chain = pickRandom(fallback.length > 0 ? fallback : allChains.filter((c) => c.length >= length));
+    return chain.slice(0, length);
+  }
   const chain = pickRandom(pool);
   return chain.slice(0, length);
 }
@@ -66,11 +74,12 @@ export function getConnectedSet(sessions: Array<{ id: string; last_seen: number 
   return new Set(sessions.filter((session) => session.last_seen >= cutoff).map((session) => session.id));
 }
 
-export function pickPasswordWord(usedWords?: string[]) {
+export function pickPasswordWord(usedWords?: string[], category?: string) {
+  const catWords = category && passwordWordBank[category] ? passwordWordBank[category] : Object.values(passwordWordBank).flat();
   const available = usedWords?.length
-    ? passwordWordBank.filter((w) => !usedWords.includes(w))
-    : passwordWordBank;
-  const pool = available.length > 0 ? available : passwordWordBank;
+    ? catWords.filter((w) => !usedWords.includes(w))
+    : catWords;
+  const pool = available.length > 0 ? available : catWords;
   return pickRandom(pool);
 }
 
@@ -89,8 +98,8 @@ export function buildTeamRound(team: { name: string; members: string[] }, teamIn
   };
 }
 
-export function buildAllTeamRounds(teams: Array<{ name: string; members: string[] }>, roundNum: number, usedWords?: string[]) {
-  const word = pickPasswordWord(usedWords);
+export function buildAllTeamRounds(teams: Array<{ name: string; members: string[] }>, roundNum: number, usedWords?: string[], category?: string) {
+  const word = pickPasswordWord(usedWords, category);
   return teams
     .map((team, i) => (team.members.length >= 2 ? buildTeamRound(team, i, roundNum, word) : null))
     .filter((r): r is NonNullable<typeof r> => r !== null);

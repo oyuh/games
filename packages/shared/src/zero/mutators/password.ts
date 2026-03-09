@@ -9,7 +9,8 @@ export const passwordMutators = {
       id: z.string(),
       hostId: z.string(),
       teamCount: z.number().min(2).max(6).optional(),
-      targetScore: z.number().min(1).max(50).optional()
+      targetScore: z.number().min(1).max(50).optional(),
+      category: z.string().optional()
     }),
     async ({ args, tx }) => {
       const count = args.teamCount ?? 2;
@@ -31,7 +32,7 @@ export const passwordMutators = {
         active_rounds: [],
         kicked: [],
         announcement: null,
-        settings: { targetScore: args.targetScore ?? 10, roundDurationSec: 120, roundEndsAt: null },
+        settings: { targetScore: args.targetScore ?? 10, roundDurationSec: 120, roundEndsAt: null, category: args.category ?? "animals" },
         created_at: now(),
         updated_at: now()
       });
@@ -155,7 +156,7 @@ export const passwordMutators = {
         throw new Error(`${underStaffed.name} needs at least 2 players`);
       }
 
-      const activeRounds = buildAllTeamRounds(game.teams, 1);
+      const activeRounds = buildAllTeamRounds(game.teams, 1, undefined, game.settings.category);
       const roundEndsAt = now() + game.settings.roundDurationSec * 1000;
 
       const skipsRemaining: Record<string, number> = {};
@@ -287,7 +288,7 @@ export const passwordMutators = {
       // Rotate roles for this team and give them a fresh round with a new random word
       const nextRoundNum = game.current_round + 1;
       const usedWords = game.rounds.map((r) => r.word);
-      const newWord = pickPasswordWord(usedWords);
+      const newWord = pickPasswordWord(usedWords, game.settings.category);
       const freshRound = team && team.members.length >= 2
         ? buildTeamRound(team, round.teamIndex, nextRoundNum, newWord)
         : null;
@@ -329,7 +330,7 @@ export const passwordMutators = {
 
       // Pick a new word, avoiding previously used ones
       const usedWords = game.rounds.map((r) => r.word);
-      const newWord = pickPasswordWord(usedWords);
+      const newWord = pickPasswordWord(usedWords, game.settings.category);
 
       const nextRounds = game.active_rounds.map((r, i) =>
         i === roundIdx ? { ...r, word: newWord, clues: [], guess: null } : r

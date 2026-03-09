@@ -1,4 +1,4 @@
-import { imposterCategories, imposterCategoryLabels, mutators, queries } from "@games/shared";
+import { imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -74,11 +74,13 @@ export function HomePage({ sessionId }: { sessionId: string }) {
 
   // Password config
   const [passwordExpanded, setPasswordExpanded] = useState(false);
+  const [passwordCategory, setPasswordCategory] = useState("animals");
   const [passwordTeams, setPasswordTeams] = useState(2);
   const [passwordTargetScore, setPasswordTargetScore] = useState(10);
 
   // Chain Reaction config
   const [chainExpanded, setChainExpanded] = useState(false);
+  const [chainCategory, setChainCategory] = useState("animals");
   const [chainLength, setChainLength] = useState(5);
   const [chainRounds, setChainRounds] = useState(3);
   const [chainMode, setChainMode] = useState<"premade" | "custom">("premade");
@@ -175,7 +177,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     setPendingAction("create-password");
     const id = nanoid();
     try {
-      const result = await zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore })).server;
+      const result = await zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -190,7 +192,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     setPendingAction("create-chain");
     const id = nanoid();
     try {
-      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode })).server;
+      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -566,6 +568,18 @@ export function HomePage({ sessionId }: { sessionId: string }) {
           {/* Expandable config */}
           {passwordExpanded && (
             <div className="hc-config">
+              <div className="hc-config-field">
+                <label className="hc-config-label" data-tooltip="The theme for the word list. Words will be drawn from this category." data-tooltip-variant="info">Category &#9432;</label>
+                <select
+                  className="input"
+                  value={passwordCategory}
+                  onChange={(e) => setPasswordCategory(e.target.value)}
+                >
+                  {passwordCategories.map((key) => (
+                    <option key={key} value={key}>{passwordCategoryLabels[key] ?? key}</option>
+                  ))}
+                </select>
+              </div>
               <div className="hc-config-row">
                 <div className="hc-config-field flex-1">
                   <label className="hc-config-label" data-tooltip="Split players into this many teams. Teams take turns giving and guessing clues." data-tooltip-variant="info">
@@ -653,6 +667,18 @@ export function HomePage({ sessionId }: { sessionId: string }) {
           {/* Expandable config */}
           {chainExpanded && (
             <div className="hc-config">
+              <div className="hc-config-field">
+                <label className="hc-config-label" data-tooltip="The theme for the word chains. Chains will be drawn from this category." data-tooltip-variant="info">Category &#9432;</label>
+                <select
+                  className="input"
+                  value={chainCategory}
+                  onChange={(e) => setChainCategory(e.target.value)}
+                >
+                  {chainCategories.map((key) => (
+                    <option key={key} value={key}>{chainCategoryLabels[key] ?? key}</option>
+                  ))}
+                </select>
+              </div>
               <div className="hc-config-row">
                 <div className="hc-config-field flex-1">
                   <label className="hc-config-label" data-tooltip="How many words in the chain. Each word links to the next — longer chains are harder!" data-tooltip-variant="info">Chain Length &#9432;</label>
