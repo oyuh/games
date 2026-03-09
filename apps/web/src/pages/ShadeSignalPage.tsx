@@ -9,6 +9,8 @@ import { RoundCountdown } from "../components/shared/RoundCountdown";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 
 type ShadePhase = "lobby" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended";
 
@@ -73,6 +75,9 @@ function ScoringLegend() {
 }
 
 export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileShadeSignalPage sessionId={sessionId} />;
+
   const zero = useZero();
   const navigate = useNavigate();
   const params = useParams();
@@ -285,10 +290,20 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     return new Set(game.guesses.filter((g) => g.round === round).map((g) => g.sessionId));
   }, [game, phase]);
 
+  useEffect(() => {
+    if (game) return;
+    const timer = setTimeout(() => navigate("/"), 3000);
+    return () => clearTimeout(timer);
+  }, [game, navigate]);
+
   if (!game) {
     return (
       <div className="game-page" data-game-theme="shade">
-        <div className="game-empty"><p>Game not found</p></div>
+        <div className="game-empty">
+          <p>Game not found</p>
+          <p style={{ fontSize: "0.85rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
+          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
+        </div>
       </div>
     );
   }
@@ -344,8 +359,9 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
         <div className="game-header-left">
           <div className="game-header-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="13.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="10.5" r="2.5" /><circle cx="8.5" cy="7.5" r="2.5" /><circle cx="6.5" cy="12.5" r="2.5" />
-              <path d="M12 22c5.523 0 8-4.477 8-10S17.523 2 12 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5L2.5 21.5l4.5-.838A9.955 9.955 0 0 0 12 22z" />
+              <path d="M18.37 2.63a2.12 2.12 0 0 1 3 3L14 13l-4 1 1-4Z" />
+              <path d="M9 3.5a8 8 0 1 0 5.59 13.77" />
+              <path d="M14 13l1.07-1.07" />
             </svg>
           </div>
           <h1 className="game-title">Shade Signal</h1>

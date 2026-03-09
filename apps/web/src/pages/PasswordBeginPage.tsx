@@ -7,8 +7,13 @@ import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
 
 export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobilePasswordBeginPage sessionId={sessionId} />;
+
   const zero = useZero();
   const navigate = useNavigate();
   const params = useParams();
@@ -61,10 +66,20 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.announcement, isHost]);
 
+  useEffect(() => {
+    if (game) return;
+    const timer = setTimeout(() => navigate("/"), 3000);
+    return () => clearTimeout(timer);
+  }, [game, navigate]);
+
   if (!game) {
     return (
       <div className="game-page" data-game-theme="password">
-        <div className="game-empty"><p>Game not found</p></div>
+        <div className="game-empty">
+          <p>Game not found</p>
+          <p style={{ fontSize: "0.85rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
+          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
+        </div>
       </div>
     );
   }

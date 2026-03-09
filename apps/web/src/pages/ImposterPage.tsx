@@ -12,8 +12,13 @@ import { ImposterVoteSection } from "../components/imposter/ImposterVoteSection"
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
 
 export function ImposterPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileImposterPage sessionId={sessionId} />;
+
   const zero = useZero();
   const navigate = useNavigate();
   const params = useParams();
@@ -111,10 +116,20 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
     showToast(`📢 ${cur.text}`, "info");
   }, [game?.announcement, isHost]);
 
+  useEffect(() => {
+    if (game) return;
+    const timer = setTimeout(() => navigate("/"), 3000);
+    return () => clearTimeout(timer);
+  }, [game, navigate]);
+
   if (!game) {
     return (
       <div className="game-page" data-game-theme="imposter">
-        <div className="game-empty"><p>Game not found</p></div>
+        <div className="game-empty">
+          <p>Game not found</p>
+          <p style={{ fontSize: "0.85rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
+          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
+        </div>
       </div>
     );
   }

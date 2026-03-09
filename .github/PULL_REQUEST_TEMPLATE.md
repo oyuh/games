@@ -28,6 +28,8 @@
 - [ ] Schema changes pushed (if applicable)
 - [ ] No console errors or warnings added
 - [ ] Docs updated (if adding a new game)
+- [ ] Mobile UI tested (if touching `apps/web/src/mobile/`)
+- [ ] Desktop UI unaffected (if touching shared components)
 
 ## New game checklist (if applicable)
 
@@ -41,6 +43,8 @@
 - [ ] Info modal section added for the new route
 - [ ] Welcome modal game card added
 - [ ] Home page game card added
+- [ ] Mobile home page game card added
+- [ ] Mobile game page created in `apps/web/src/mobile/pages/`
 - [ ] Game doc added to `docs/`
 
 ## Screenshots / recordings
