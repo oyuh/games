@@ -21,6 +21,10 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
       : queries.chat.byGame({ gameType: "imposter", gameId: "__none__" })
   );
 
+  // Get my session name
+  const [sessions] = useQuery(queries.sessions.byId({ id: sessionId }));
+  const myName = sessions[0]?.name ?? sessionId.slice(0, 6);
+
   // Fetch host ID
   const [imposterGames] = useQuery(gameType === "imposter" ? queries.imposter.byId({ id: gameId }) : queries.imposter.byId({ id: "__none__" }));
   const [passwordGames] = useQuery(gameType === "password" ? queries.password.byId({ id: gameId }) : queries.password.byId({ id: "__none__" }));
@@ -44,7 +48,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
         gameType,
         gameId,
         senderId: sessionId,
-        senderName: "",
+        senderName: myName,
         text,
       })
     );
@@ -55,43 +59,52 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
     <BottomSheet title="Chat" onClose={onClose}>
       <div className="m-chat-body" ref={bodyRef}>
         {messages.length === 0 && (
-          <p className="m-chat-empty">No messages yet</p>
+          <p className="m-chat-empty">No messages yet — say something!</p>
         )}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`m-chat-msg${msg.sender_id === sessionId ? " m-chat-msg--me" : ""}`}
-          >
-            <div className="m-chat-msg-header">
-              <span className="m-chat-msg-name">{msg.sender_name}</span>
-              {msg.sender_id === hostId && (
-                <PiCrownSimpleFill size={10} style={{ color: "var(--yellow)" }} />
+        {messages.map((msg, i) => {
+          const prev = messages[i - 1];
+          const sameSender = prev?.sender_id === msg.sender_id;
+          const isMe = msg.sender_id === sessionId;
+          const isHost = msg.sender_id === hostId;
+          const displayName = msg.sender_name || msg.sender_id.slice(0, 6);
+          return (
+            <div
+              key={msg.id}
+              className={`m-chat-msg${isMe ? " m-chat-msg--me" : ""}${sameSender ? " m-chat-msg--grouped" : ""}`}
+            >
+              {!sameSender && (
+                <div className="m-chat-msg-header">
+                  <span className={`m-chat-msg-name${isMe ? " m-chat-msg-name--me" : ""}`}>{displayName}</span>
+                  {isHost && (
+                    <span className="m-chat-badge m-chat-badge--host">
+                      <PiCrownSimpleFill size={8} /> Host
+                    </span>
+                  )}
+                  {isMe && <span className="m-chat-badge">You</span>}
+                </div>
               )}
-              {msg.sender_id === sessionId && (
-                <span className="m-badge" style={{ fontSize: "0.6rem", padding: "1px 4px" }}>You</span>
-              )}
+              <span className="m-chat-msg-text">{msg.text}</span>
             </div>
-            <span className="m-chat-msg-text">{msg.text}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="m-chat-input-row">
         <input
-          className="m-input flex-1"
+          className="m-input"
+          style={{ flex: 1 }}
           placeholder="Type a message..."
           value={input}
           maxLength={500}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+            if (e.key === "Enter") {
               e.preventDefault();
               handleSend();
             }
           }}
-          autoFocus
         />
-        <button className="m-btn m-btn-primary" onClick={handleSend} disabled={!input.trim()} style={{ padding: "0.6rem" }}>
-          <FiSend size={16} />
+        <button className="m-btn m-btn-primary" style={{ padding: "0.5rem 0.75rem", minHeight: 0 }} onClick={handleSend} disabled={!input.trim()}>
+          <FiSend size={14} />
         </button>
       </div>
     </BottomSheet>

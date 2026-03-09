@@ -159,15 +159,21 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
           {/* Messages */}
           <div className="chat-body" ref={chatBodyRef}>
             {messages.length === 0 && <p className="chat-empty">No messages yet. Say something!</p>}
-            {messages.map((msg) => (
-              <ChatMessage
-                key={msg.id}
-                senderName={msg.sender_name}
-                text={msg.text}
-                isHost={msg.sender_id === hostId}
-                isMe={msg.sender_id === sessionId}
-              />
-            ))}
+            {messages.map((msg, i) => {
+              const prev = messages[i - 1];
+              const sameSender = prev?.sender_id === msg.sender_id;
+              const displayName = msg.sender_name || msg.sender_id.slice(0, 6);
+              return (
+                <ChatMessage
+                  key={msg.id}
+                  senderName={displayName}
+                  text={msg.text}
+                  isHost={msg.sender_id === hostId}
+                  isMe={msg.sender_id === sessionId}
+                  grouped={sameSender}
+                />
+              );
+            })}
           </div>
 
           {/* Input */}
@@ -203,23 +209,27 @@ function ChatMessage({
   text,
   isHost,
   isMe,
+  grouped,
 }: {
   senderName: string;
   text: string;
   isHost: boolean;
   isMe: boolean;
+  grouped: boolean;
 }) {
   return (
-    <div className={`chat-msg ${isMe ? "chat-msg--me" : ""}`}>
-      <div className="chat-msg-header">
-        <span className={`chat-msg-name ${isMe ? "chat-msg-name--me" : ""}`}>{senderName}</span>
-        {isHost && (
-          <span className="chat-badge chat-badge--host" data-tooltip="Game host" data-tooltip-variant="info">
-            <PiCrownSimpleFill size={10} />
-          </span>
-        )}
-        {isMe && <span className="chat-badge">You</span>}
-      </div>
+    <div className={`chat-msg${isMe ? " chat-msg--me" : ""}${grouped ? " chat-msg--grouped" : ""}`}>
+      {!grouped && (
+        <div className="chat-msg-header">
+          <span className={`chat-msg-name${isMe ? " chat-msg-name--me" : ""}`}>{senderName}</span>
+          {isHost && (
+            <span className="chat-badge chat-badge--host">
+              <PiCrownSimpleFill size={9} /> Host
+            </span>
+          )}
+          {isMe && <span className="chat-badge chat-badge--you">You</span>}
+        </div>
+      )}
       <span className="chat-msg-text">{text}</span>
     </div>
   );
