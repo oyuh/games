@@ -158,6 +158,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         totalRounds={game.settings.rounds}
         phaseEndsAt={game.settings.phaseEndsAt}
         isHost={isHost}
+        category={game.category}
       />
 
       <ImposterPlayersCard

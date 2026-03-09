@@ -1,5 +1,6 @@
-import { FiCopy } from "react-icons/fi";
+import { FiCopy, FiTag } from "react-icons/fi";
 import { useState } from "react";
+import { gameCategoryLabels } from "@games/shared";
 
 interface MobileGameHeaderProps {
   code: string;
@@ -8,10 +9,11 @@ interface MobileGameHeaderProps {
   round?: number;
   totalRounds?: number;
   accent?: string;
+  category?: string | null;
   children?: React.ReactNode;
 }
 
-export function MobileGameHeader({ code, gameLabel, phase, round, totalRounds, accent, children }: MobileGameHeaderProps) {
+export function MobileGameHeader({ code, gameLabel, phase, round, totalRounds, accent, category, children }: MobileGameHeaderProps) {
   const [copied, setCopied] = useState(false);
 
   const copyCode = () => {
@@ -31,6 +33,9 @@ export function MobileGameHeader({ code, gameLabel, phase, round, totalRounds, a
         </button>
       </div>
       <div className="m-game-header-meta">
+        {category && gameCategoryLabels[category] && (
+          <span className="m-badge m-badge--outline" style={{ gap: "0.25rem" }}><FiTag size={10} /> {gameCategoryLabels[category]}</span>
+        )}
         <span className="m-badge">{phase}</span>
         {round != null && (
           <span className="m-badge m-badge--outline">

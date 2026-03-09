@@ -131,7 +131,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       case 0: // Lobby
         return (
           <div className="game-page" data-game-theme="chain">
-            <PasswordHeader title="Chain Reaction" code="DEMO" phase="lobby" isHost />
+            <PasswordHeader title="Chain Reaction" code="DEMO" phase="lobby" isHost category="moviesAndShows" />
             <DemoGlow label="1v1 duel — two player slots">
               <div className="game-section">
                 <div className="cr-lobby-duel">
@@ -156,7 +156,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       case 1: // Submit chain
         return (
           <div className="game-page" data-game-theme="chain">
-            <PasswordHeader title="Chain Reaction" code="DEMO" phase="submitting" />
+            <PasswordHeader title="Chain Reaction" code="DEMO" phase="submitting" category="moviesAndShows" />
             <DemoGlow label="Write connected words — first & last are shown as hints">
               <div className="game-section">
                 <div className="cr-chain">
@@ -186,7 +186,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       case 2: // Solve chain
         return (
           <div className="game-page" data-game-theme="chain">
-            <PasswordHeader title="Chain Reaction" code="DEMO" phase="playing" currentRound={1} />
+            <PasswordHeader title="Chain Reaction" code="DEMO" phase="playing" currentRound={1} category="moviesAndShows" />
             <DemoGlow label="Click any hidden word to type your guess">
               <div className="game-section">
                 <span className="cr-view-label">Solve the chain — tap a word to guess!</span>
@@ -200,7 +200,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       case 3: // Hints & give up
         return (
           <div className="game-page" data-game-theme="chain">
-            <PasswordHeader title="Chain Reaction" code="DEMO" phase="playing" currentRound={1} />
+            <PasswordHeader title="Chain Reaction" code="DEMO" phase="playing" currentRound={1} category="moviesAndShows" />
             <div className="game-section">
               <span className="cr-view-label">Use hints or give up on tough words</span>
               <DemoGlow label="⬅ Hint button reveals a letter | Give-up button skips ➡">
@@ -222,7 +222,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       case 4: // Finished
         return (
           <div className="game-page" data-game-theme="chain">
-            <PasswordHeader title="Chain Reaction" code="DEMO" phase="finished" />
+            <PasswordHeader title="Chain Reaction" code="DEMO" phase="finished" category="moviesAndShows" />
             <DemoGlow label="Winner is announced with final scores">
               <div className="game-section">
                 <div className="cr-winner-card cr-winner-card--win">

@@ -88,7 +88,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 0: // Lobby
         return (
           <div className="game-page" data-game-theme="password">
-            <PasswordHeader title="Password" code="DEMO" phase="lobby" isHost />
+            <PasswordHeader title="Password" code="DEMO" phase="lobby" isHost category="food" />
             <DemoGlow label="Join a team before the game starts">
               <PasswordTeamGrid
                 teams={TEAMS}
@@ -106,7 +106,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 1: // Clue giver phase
         return (
           <div className="game-page" data-game-theme="password">
-            <PasswordHeader title="Password" code="DEMO" phase="playing" currentRound={1} />
+            <PasswordHeader title="Password" code="DEMO" phase="playing" currentRound={1} category="food" />
             <PasswordTeamGrid
               teams={TEAMS}
               scores={SCORES_MID}
@@ -138,7 +138,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 2: // Guesser phase
         return (
           <div className="game-page" data-game-theme="password">
-            <PasswordHeader title="Password" code="DEMO" phase="playing" currentRound={1} />
+            <PasswordHeader title="Password" code="DEMO" phase="playing" currentRound={1} category="food" />
             <PasswordTeamGrid
               teams={TEAMS}
               scores={SCORES_MID}
@@ -170,7 +170,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 3: // Results
         return (
           <div className="game-page" data-game-theme="password">
-            <PasswordHeader title="Password" code="DEMO" phase="results" currentRound={3} />
+            <PasswordHeader title="Password" code="DEMO" phase="results" currentRound={3} category="food" />
             <DemoGlow label="Final scores — first to the target wins">
               <PasswordTeamGrid
                 teams={TEAMS}

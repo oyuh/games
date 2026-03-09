@@ -255,6 +255,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
         {...(game.phase !== "lobby" ? { currentRound: game.settings.currentRound } : {})}
         endsAt={game.settings.phaseEndsAt}
         isHost={isHost}
+        category={game.settings.category}
       />
 
       {/* ─── VS Scoreboard with clickable cards ─── */}

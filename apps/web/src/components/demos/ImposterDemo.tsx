@@ -97,7 +97,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 0: // Lobby
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="lobby" currentRound={1} totalRounds={3} phaseEndsAt={null} isHost />
+            <ImposterHeader code="DEMO" phase="lobby" currentRound={1} totalRounds={3} phaseEndsAt={null} isHost category="animals" />
             <DemoGlow label="Players waiting in lobby">
               <ImposterPlayersCard players={PLAYERS} sessionId={P.you} sessionById={NAMES} revealRoles={false} />
             </DemoGlow>
@@ -110,7 +110,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 1: // Clues — player perspective
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} />
+            <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
             <ImposterPlayersCard players={PLAYERS} sessionId={P.you} sessionById={NAMES} revealRoles={false} />
             <DemoGlow label="You see the secret word and submit a clue">
               <ImposterClueSection
@@ -134,7 +134,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 2: // Clues — imposter perspective
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} />
+            <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
             <ImposterPlayersCard players={PLAYERS} sessionId={P.charlie} sessionById={NAMES} revealRoles={false} />
             <DemoGlow label="The imposter doesn't see the word — only redacted hints!">
               <ImposterClueSection
@@ -158,7 +158,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 3: // Voting
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="voting" currentRound={1} totalRounds={3} phaseEndsAt={null} />
+            <ImposterHeader code="DEMO" phase="voting" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
             <DemoGlow label="Review all clues and vote for the imposter">
               <ImposterVoteSection
                 players={PLAYERS}
@@ -179,7 +179,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 4: // Results
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="results" currentRound={1} totalRounds={3} phaseEndsAt={null} />
+            <ImposterHeader code="DEMO" phase="results" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
             <DemoGlow label="Roles are revealed">
               <ImposterPlayersCard players={PLAYERS} sessionId={P.you} sessionById={NAMES} revealRoles />
             </DemoGlow>
