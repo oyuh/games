@@ -12,10 +12,11 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 
-type ShadePhase = "lobby" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended";
+type ShadePhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended";
 
 const phaseLabels: Record<ShadePhase, string> = {
   lobby: "Lobby",
+  picking: "Pick Color",
   clue1: "Clue 1",
   guess1: "Guess 1",
   clue2: "Clue 2",
@@ -27,6 +28,7 @@ const phaseLabels: Record<ShadePhase, string> = {
 
 const phaseVariants: Record<ShadePhase, string> = {
   lobby: "",
+  picking: "badge-warn",
   clue1: "badge-warn",
   guess1: "badge-primary",
   clue2: "badge-warn",
@@ -87,8 +89,10 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
   const game = games[0];
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
+  const [pickingCell, setPickingCell] = useState<{ row: number; col: number } | null>(null);
   const [guessLocked, setGuessLocked] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "shade_signal" });
@@ -145,7 +149,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     if (!game) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
-    const activePhases: ShadePhase[] = ["clue1", "guess1", "clue2", "guess2"];
+    const activePhases: ShadePhase[] = ["clue1", "guess1", "clue2", "guess2", "reveal"];
     if (!activePhases.includes(game.phase as ShadePhase)) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
@@ -185,45 +189,11 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     // Only the host triggers the reveal mutator to avoid duplicates
     if (game.host_id !== sessionId) return;
     const latest = game.round_history[game.round_history.length - 1];
-    if (latest) return; // already revealed
+    if (latest && latest.round === game.settings.currentRound) return; // already revealed this round
     const timer = setTimeout(() => {
       void zero.mutate(mutators.shadeSignal.reveal({ gameId }));
     }, 600);
     return () => clearTimeout(timer);
-  }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
-
-  // Auto-next-round: after scores are shown, auto-advance after 8 seconds
-  const [nextRoundCountdown, setNextRoundCountdown] = useState<number | null>(null);
-  const nextRoundTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (!game || game.phase !== "reveal") {
-      setNextRoundCountdown(null);
-      if (nextRoundTimerRef.current) clearInterval(nextRoundTimerRef.current);
-      return;
-    }
-    const latest = game.round_history[game.round_history.length - 1];
-    if (!latest) return; // scores not calculated yet
-    if (game.host_id !== sessionId) {
-      // Non-host: show countdown but don't trigger advance
-      setNextRoundCountdown(8);
-      nextRoundTimerRef.current = setInterval(() => {
-        setNextRoundCountdown((prev) => (prev != null && prev > 0 ? prev - 1 : null));
-      }, 1000);
-      return () => { if (nextRoundTimerRef.current) clearInterval(nextRoundTimerRef.current); };
-    }
-    // Host: countdown then auto-advance
-    setNextRoundCountdown(8);
-    nextRoundTimerRef.current = setInterval(() => {
-      setNextRoundCountdown((prev) => (prev != null && prev > 0 ? prev - 1 : null));
-    }, 1000);
-    const advanceTimer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.nextRound({ gameId, hostId: sessionId }));
-    }, 8500);
-    return () => {
-      clearTimeout(advanceTimer);
-      if (nextRoundTimerRef.current) clearInterval(nextRoundTimerRef.current);
-    };
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
 
   // ── All hooks MUST be above the early-return guard ──
@@ -248,11 +218,11 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       const pts = latest?.scores[g.sessionId] ?? null;
       const roundLabel = g.round === 1 ? "Clue 1" : "Clue 2";
       const tooltip = [
-        name,
-        roundLabel,
-        dist != null ? (dist === 0 ? "Exact! 🎯" : `${dist} away`) : null,
-        pts != null ? `+${pts} pts` : null,
-      ].filter(Boolean).join(" · ");
+        `${name}${g.sessionId === sessionId ? " (you)" : ""}`,
+        `Guess: ${roundLabel}`,
+        dist != null ? (dist === 0 ? "Distance: Exact! 🎯" : `Distance: ${dist} away`) : null,
+        pts != null ? `Points: +${pts}` : null,
+      ].filter(Boolean).join("\n");
       return {
         sessionId: g.sessionId,
         name,
@@ -263,6 +233,23 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       };
     });
   }, [game, phase, sessionById, sessionId, target]);
+
+  // Leader sees guess1 markers while writing clue2
+  const leaderGuess1Markers = useMemo(() => {
+    if (!game || phase !== "clue2" || !isLeader) return [];
+    const guess1s = game.guesses.filter((g) => g.round === 1);
+    return guess1s.map((g) => {
+      const name = sessionById[g.sessionId] ?? g.sessionId.slice(0, 6);
+      return {
+        sessionId: g.sessionId,
+        name,
+        row: g.row,
+        col: g.col,
+        isOwn: false,
+        tooltip: `${name}'s guess 1`,
+      };
+    });
+  }, [game, phase, isLeader, sessionById]);
 
   const myCurrentGuess = useMemo(() => {
     if (!game || (phase !== "guess1" && phase !== "guess2")) return null;
@@ -298,17 +285,17 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
 
   if (!game) {
     return (
-      <div className="game-page" data-game-theme="shade">
+      <div className="game-page">
         <div className="game-empty">
-          <p>Game not found</p>
-          <p style={{ fontSize: "0.85rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
-          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
+          <p className="game-empty-title">Game not found</p>
+          <p className="game-empty-sub">Redirecting home…</p>
+          <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
         </div>
       </div>
     );
   }
 
-  const isGameActive = phase !== "lobby" && phase !== "ended" && phase !== "finished";
+  const isGameActive = phase !== "lobby" && phase !== "ended" && phase !== "finished" && phase !== "picking";
   const leaderName = game.leader_id ? (sessionById[game.leader_id] ?? "???") : "";
   const totalRounds = game.leader_order.length * game.settings.roundsPerPlayer;
 
@@ -350,7 +337,8 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
   };
 
   const guessersCount = game.players.filter((p) => p.sessionId !== game.leader_id).length;
-  const latestRound = game.round_history[game.round_history.length - 1];
+  const latestRoundRaw = game.round_history[game.round_history.length - 1];
+  const latestRound = latestRoundRaw && latestRoundRaw.round === game.settings.currentRound ? latestRoundRaw : undefined;
 
   return (
     <div className="game-page shade-page" data-game-theme="shade">
@@ -443,50 +431,20 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
 
       {phase === "lobby" && inGame && (
         <div className="game-section shade-lobby">
-          <div className="shade-lobby-top">
-            <div className="shade-lobby-info">
-              <h3 className="shade-lobby-heading">How to play</h3>
-              <div className="shade-rules-cards">
-                <div className="shade-rule-card">
-                  <span className="shade-rule-icon">🎨</span>
-                  <div className="shade-rule-text">
-                    <strong>Leader</strong> sees a target color and gives <strong>1-word</strong> clue
-                  </div>
-                </div>
-                <div className="shade-rule-card">
-                  <span className="shade-rule-icon">🔍</span>
-                  <div className="shade-rule-text">
-                    <strong>Guessers</strong> pick the color they think the leader means
-                  </div>
-                </div>
-                <div className="shade-rule-card">
-                  <span className="shade-rule-icon">💡</span>
-                  <div className="shade-rule-text">
-                    Leader gives a <strong>2nd clue</strong>, guessers can adjust their pick
-                  </div>
-                </div>
-                <div className="shade-rule-card">
-                  <span className="shade-rule-icon">🎯</span>
-                  <div className="shade-rule-text">
-                    Closer = more pts! The colored zones show scoring ranges
-                  </div>
-                </div>
-              </div>
-              <ScoringLegend />
-            </div>
-
-            {/* Preview grid */}
-            <div className="shade-lobby-preview">
-              <ColorGrid
-                rows={game.grid_rows}
-                cols={game.grid_cols}
-                seed={game.grid_seed}
-                target={{ row: Math.floor(game.grid_rows / 2), col: Math.floor(game.grid_cols / 2) }}
-                showTarget
-                showZones
-                compact
-              />
-            </div>
+          <div className="shade-lobby-grid-explorer">
+            <p className="shade-lobby-grid-hint">Click any cell to set a target, then hover to see scores</p>
+            <ColorGrid
+              rows={game.grid_rows}
+              cols={game.grid_cols}
+              seed={game.grid_seed}
+              target={lobbyPreviewTarget}
+              onSelect={(r, c) => setLobbyPreviewTarget({ row: r, col: c })}
+              interactive
+              showTarget={!!lobbyPreviewTarget}
+              showZones={!!lobbyPreviewTarget}
+              showScoreTooltips={!!lobbyPreviewTarget}
+            />
+            {lobbyPreviewTarget && <ScoringLegend />}
           </div>
 
           <div className="game-actions">
@@ -508,6 +466,61 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
               Leave
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── PICKING PHASE (Leader chooses target color) ── */}
+      {phase === "picking" && isLeader && (
+        <div className="game-section shade-clue-section">
+          <div className="shade-clue-leader-info">
+            <h3>Pick your target color! 🎨</h3>
+            <p>Tap the color you want to give clues about.</p>
+          </div>
+
+          <ColorGrid
+            rows={game.grid_rows}
+            cols={game.grid_cols}
+            seed={game.grid_seed}
+            selected={pickingCell}
+            onSelect={(r, c) => setPickingCell({ row: r, col: c })}
+            interactive
+          />
+
+          {pickingCell && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", justifyContent: "center", marginTop: "0.5rem" }}>
+              <div style={{
+                width: "32px", height: "32px", borderRadius: "6px",
+                background: generateGridColor(pickingCell.row, pickingCell.col, game.grid_rows, game.grid_cols, game.grid_seed),
+                border: "2px solid rgba(255,255,255,0.3)"
+              }} />
+              <button
+                className="btn btn-primary game-action-btn"
+                onClick={() => {
+                  void zero.mutate(mutators.shadeSignal.setTarget({
+                    gameId, sessionId,
+                    row: pickingCell.row, col: pickingCell.col
+                  }));
+                  setPickingCell(null);
+                }}
+              >
+                Confirm Color
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {phase === "picking" && !isLeader && inGame && (
+        <div className="game-section shade-waiting-section">
+          <div className="game-waiting">
+            <div className="game-waiting-pulse" />
+            <p><strong>{leaderName}</strong> is choosing their target color…</p>
+          </div>
+          <ColorGrid
+            rows={game.grid_rows}
+            cols={game.grid_cols}
+            seed={game.grid_seed}
+          />
         </div>
       )}
 
@@ -538,7 +551,14 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
             seed={game.grid_seed}
             target={target}
             showTarget
+            markers={phase === "clue2" ? leaderGuess1Markers : []}
           />
+
+          {phase === "clue2" && leaderGuess1Markers.length > 0 && (
+            <p style={{ fontSize: "0.75rem", color: "var(--secondary)", textAlign: "center", marginTop: "0.25rem" }}>
+              Showing where guessers picked after your first clue
+            </p>
+          )}
 
           <form className="shade-clue-form" onSubmit={submitClue}>
             <input
@@ -784,11 +804,12 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
           )}
 
           {/* Auto-advance countdown */}
-          {latestRound && nextRoundCountdown != null && (
+          {latestRound && game.settings.phaseEndsAt && (
             <div className="shade-auto-advance">
-              <span className="shade-auto-advance-text">
-                {game.settings.currentRound >= totalRounds ? "Finishing game" : "Next round"} in {nextRoundCountdown}s…
-              </span>
+              <RoundCountdown
+                endsAt={game.settings.phaseEndsAt}
+                label={game.settings.currentRound >= totalRounds ? "Finishing game" : "Next round"}
+              />
             </div>
           )}
           {!latestRound && (

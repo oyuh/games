@@ -8,7 +8,21 @@ import { addRecentGame } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
+import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+
+/** Redact roughly half the letters in a clue, keeping first and last visible. */
+function redactClue(text: string): string {
+  if (text.length <= 2) return text[0] + "_".repeat(text.length - 1);
+  const chars = text.split("");
+  return chars.map((ch, i) => {
+    if (ch === " ") return " ";
+    const isFirst = i === 0 || chars[i - 1] === " ";
+    const isLast = i === chars.length - 1 || chars[i + 1] === " ";
+    if (isFirst || isLast) return ch;
+    return i % 2 === 0 ? "_" : ch;
+  }).join("");
+}
 
 export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
@@ -91,7 +105,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!game) return;
     const phaseEnd = game.settings.phaseEndsAt;
-    if (!phaseEnd || (game.phase !== "playing" && game.phase !== "voting")) return;
+    if (!phaseEnd || (game.phase !== "playing" && game.phase !== "voting" && game.phase !== "results")) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) { void zero.mutate(mutators.imposter.advanceTimer({ gameId })); return; }
     const timer = setTimeout(() => { void zero.mutate(mutators.imposter.advanceTimer({ gameId })); }, remaining + 500);
@@ -121,7 +135,6 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     await zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })).server;
   };
 
-  const isLastRound = game.settings.currentRound >= game.settings.rounds;
   const revealRoles = game.phase === "results" || game.phase === "finished";
 
   return (
@@ -208,42 +221,76 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* Playing: Clue section */}
-      {game.phase === "playing" && inGame && (
-        <div className="m-card">
-          <div className={`m-role-card${me?.role === "imposter" ? " m-role-card--danger" : ""}`}>
-            <div className="m-role-icon">
-              {me?.role === "imposter" ? <FiEyeOff size={22} /> : <FiEye size={22} />}
+      {game.phase === "playing" && inGame && (() => {
+        const isImposter = me?.role === "imposter";
+        const hasSubmitted = game.clues.some((c) => c.sessionId === sessionId);
+        const othersClues = game.clues.filter((c) => c.sessionId !== sessionId);
+
+        return (
+          <div className="m-card">
+            <div className={`m-role-card${isImposter ? " m-role-card--danger" : ""}`}>
+              <div className="m-role-icon">
+                {isImposter ? <FiEyeOff size={22} /> : <FiEye size={22} />}
+              </div>
+              <div>
+                <p className="m-role-title">
+                  {isImposter ? "You are the Imposter" : "You are a Player"}
+                </p>
+                {!isImposter && game.secret_word && (
+                  <p className="m-role-word">Secret word: <strong>{game.secret_word}</strong></p>
+                )}
+                {isImposter && (
+                  <p className="m-role-hint">Blend in! Give a believable clue.</p>
+                )}
+              </div>
             </div>
-            <div>
-              <p className="m-role-title">
-                {me?.role === "imposter" ? "You are the Imposter" : "You are a Player"}
-              </p>
-              {me?.role !== "imposter" && game.secret_word && (
-                <p className="m-role-word">Secret word: <strong>{game.secret_word}</strong></p>
-              )}
-              {me?.role === "imposter" && (
-                <p className="m-role-hint">Blend in! Give a believable clue.</p>
-              )}
-            </div>
+
+            {isImposter && othersClues.length > 0 && (
+              <div style={{ marginTop: "0.5rem" }}>
+                <p style={{ fontSize: "0.75rem", opacity: 0.6, marginBottom: "0.25rem" }}>Hints from other clues</p>
+                <div className="m-clue-recap">
+                  {othersClues.map((c) => {
+                    const name = sessionById[c.sessionId] ?? c.sessionId.slice(0, 6);
+                    return (
+                      <div key={c.sessionId} className="m-clue-item">
+                        <span className="m-clue-name">{name}</span>
+                        <span className="m-clue-text" style={{ fontFamily: "monospace", letterSpacing: "0.1em" }}>
+                          {redactClue(c.text)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {hasSubmitted ? (
+              <div className="m-card m-card--success" style={{ marginTop: "0.75rem", padding: "0.75rem", textAlign: "center" }}>
+                <p style={{ fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
+                  <FiCheck size={16} /> Clue Submitted!
+                </p>
+                <p style={{ fontSize: "0.8rem", opacity: 0.7 }}>Waiting for other players…</p>
+              </div>
+            ) : (
+              <form className="m-input-row" onSubmit={submitClue} style={{ marginTop: "0.75rem" }}>
+                <input
+                  className="m-input"
+                  style={{ flex: 1 }}
+                  value={clue}
+                  onChange={(e) => setClue(e.target.value)}
+                  placeholder={isImposter ? "Give a vague clue…" : "Clue about the word…"}
+                  maxLength={80}
+                />
+                <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}>
+                  <FiSend size={14} />
+                </button>
+              </form>
+            )}
+
+            <p className="m-progress-text">Clues: {game.clues.length} / {game.players.length}</p>
           </div>
-
-          <form className="m-input-row" onSubmit={submitClue} style={{ marginTop: "0.75rem" }}>
-            <input
-              className="m-input"
-              style={{ flex: 1 }}
-              value={clue}
-              onChange={(e) => setClue(e.target.value)}
-              placeholder={me?.role === "imposter" ? "Give a vague clue…" : "Clue about the word…"}
-              maxLength={80}
-            />
-            <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}>
-              <FiSend size={14} />
-            </button>
-          </form>
-
-          <p className="m-progress-text">Clues: {game.clues.length} / {game.players.length}</p>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Playing: Waiting (spectator) */}
       {game.phase === "playing" && !inGame && (
@@ -256,57 +303,73 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* Voting */}
-      {game.phase === "voting" && inGame && (
-        <div className="m-card">
-          <h3 className="m-card-title">Who is the imposter?</h3>
+      {game.phase === "voting" && inGame && (() => {
+        const hasVoted = game.votes.some((v) => v.voterId === sessionId);
+        const votedName = voteTarget ? (sessionById[voteTarget] ?? voteTarget.slice(0, 6)) : null;
 
-          {/* Clue recap */}
-          <div className="m-clue-recap">
-            {game.players.map((p) => {
-              const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
-              const clueText = game.clues.find(c => c.sessionId === p.sessionId)?.text;
-              return (
-                <div key={p.sessionId} className="m-clue-item">
-                  <span className="m-clue-name">{name}</span>
-                  <span className="m-clue-text">{clueText ?? "—"}</span>
-                </div>
-              );
-            })}
-          </div>
+        return (
+          <div className="m-card">
+            <h3 className="m-card-title">Who is the imposter?</h3>
 
-          {/* Vote grid */}
-          <div className="m-vote-grid">
-            {game.players
-              .filter((p) => p.sessionId !== sessionId)
-              .map((p) => {
+            {/* Clue recap */}
+            <div className="m-clue-recap">
+              {game.players.map((p) => {
                 const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
-                const selected = voteTarget === p.sessionId;
+                const clueText = game.clues.find(c => c.sessionId === p.sessionId)?.text;
                 return (
-                  <button
-                    key={p.sessionId}
-                    className={`m-vote-card${selected ? " m-vote-card--selected" : ""}`}
-                    onClick={() => setVoteTarget(p.sessionId)}
-                  >
-                    <span className="m-player-avatar">{(name[0] ?? "?").toUpperCase()}</span>
-                    <span>{name}</span>
-                    {selected && <FiCheck size={14} />}
-                  </button>
+                  <div key={p.sessionId} className="m-clue-item">
+                    <span className="m-clue-name">{name}</span>
+                    <span className="m-clue-text">{clueText ?? "—"}</span>
+                  </div>
                 );
               })}
+            </div>
+
+            {hasVoted ? (
+              <div className="m-card m-card--success" style={{ marginTop: "0.75rem", padding: "0.75rem", textAlign: "center" }}>
+                <p style={{ fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
+                  <FiCheck size={16} /> Vote Submitted!
+                </p>
+                <p style={{ fontSize: "0.8rem", opacity: 0.7 }}>You voted for <strong>{votedName}</strong>. Waiting for others…</p>
+              </div>
+            ) : (
+              <>
+                {/* Vote grid */}
+                <div className="m-vote-grid">
+                  {game.players
+                    .filter((p) => p.sessionId !== sessionId)
+                    .map((p) => {
+                      const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
+                      const selected = voteTarget === p.sessionId;
+                      return (
+                        <button
+                          key={p.sessionId}
+                          className={`m-vote-card${selected ? " m-vote-card--selected" : ""}`}
+                          onClick={() => setVoteTarget(p.sessionId)}
+                        >
+                          <span className="m-player-avatar">{(name[0] ?? "?").toUpperCase()}</span>
+                          <span>{name}</span>
+                          {selected && <FiCheck size={14} />}
+                        </button>
+                      );
+                    })}
+                </div>
+
+                <button
+                  className="m-btn m-btn-primary"
+                  style={{ width: "100%", marginTop: "0.75rem" }}
+                  onClick={() => void submitVote()}
+                  disabled={!voteTarget}
+                >
+                  Submit Vote
+                </button>
+              </>
+            )}
+
+            <p className="m-progress-text">Votes: {game.votes.length} / {game.players.length}</p>
           </div>
-
-          <button
-            className="m-btn m-btn-primary"
-            style={{ width: "100%", marginTop: "0.75rem" }}
-            onClick={() => void submitVote()}
-            disabled={!voteTarget}
-          >
-            Submit Vote
-          </button>
-
-          <p className="m-progress-text">Votes: {game.votes.length} / {game.players.length}</p>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Voting: Waiting (spectator) */}
       {game.phase === "voting" && !inGame && (
@@ -348,36 +411,34 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               <div className="m-results-list">
                 {game.players.map((p) => {
                   const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
-                  const votes = tally[p.sessionId] ?? 0;
-                  const pct = maxVotes > 0 ? (votes / maxVotes) * 100 : 0;
+                  const voteCount = tally[p.sessionId] ?? 0;
+                  const pct = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
                   const isImp = p.role === "imposter";
+                  const voterNames = game.votes
+                    .filter((v) => v.targetId === p.sessionId)
+                    .map((v) => sessionById[v.voterId] ?? v.voterId.slice(0, 6));
                   return (
                     <div key={p.sessionId} className="m-result-row">
                       <div className="m-result-info">
                         <span className={isImp ? "m-result-name--danger" : ""}>{name} {isImp ? "(imp)" : ""}</span>
-                        <span className="m-result-votes">{votes}</span>
+                        <span className="m-result-votes">{voteCount}</span>
                       </div>
                       <div className="m-result-bar-track">
                         <div className={`m-result-bar${isImp ? " m-result-bar--danger" : ""}`} style={{ width: `${pct}%` }} />
                       </div>
+                      {voterNames.length > 0 && (
+                        <p className="m-result-voters" style={{ fontSize: "0.7rem", opacity: 0.7, margin: "0.15rem 0 0" }}>
+                          Voted by: {voterNames.join(", ")}
+                        </p>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            <div className="m-card">
-              {isHost ? (
-                <button
-                  className="m-btn m-btn-primary"
-                  style={{ width: "100%" }}
-                  onClick={() => void zero.mutate(mutators.imposter.nextRound({ gameId, hostId: sessionId }))}
-                >
-                  <FiArrowRight size={16} /> {isLastRound ? "View Summary" : "Next Round"}
-                </button>
-              ) : (
-                <p className="m-waiting-text">Waiting for host to continue…</p>
-              )}
+            <div className="m-card" style={{ textAlign: "center" }}>
+              <RoundCountdown endsAt={game.settings.phaseEndsAt} label={caught ? "Summary" : "Next round"} />
             </div>
           </>
         );

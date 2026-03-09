@@ -1,5 +1,5 @@
 import { FormEvent } from "react";
-import { FiSend } from "react-icons/fi";
+import { FiSend, FiSkipForward } from "react-icons/fi";
 
 type ActiveRound = {
   teamIndex: number;
@@ -16,10 +16,12 @@ export function PasswordActiveRound({
   teamMembers,
   clue,
   guess,
+  skipsRemaining,
   onClueChange,
   onGuessChange,
   onSubmitClue,
-  onSubmitGuess
+  onSubmitGuess,
+  onSkip
 }: {
   activeRound: ActiveRound;
   names: Record<string, string>;
@@ -27,10 +29,12 @@ export function PasswordActiveRound({
   teamMembers: string[];
   clue: string;
   guess: string;
+  skipsRemaining: number;
   onClueChange: (value: string) => void;
   onGuessChange: (value: string) => void;
   onSubmitClue: (event: FormEvent) => void;
   onSubmitGuess: (event: FormEvent) => void;
+  onSkip: () => void;
 }) {
   const guesserName = names[activeRound.guesserId] ?? activeRound.guesserId.slice(0, 6);
   const isGuesser = activeRound.guesserId === sessionId;
@@ -62,7 +66,7 @@ export function PasswordActiveRound({
         </div>
       )}
 
-      {/* Clue givers submit one-word clues (not all clues in yet) */}
+      {/* Clue givers submit clues (not all clues in yet) */}
       {activeRound.word && !allCluesIn && isClueGiver && !alreadyClued && (
         <>
           <div className="game-clue-reveal" style={{ marginBottom: "0.75rem" }}>
@@ -74,7 +78,7 @@ export function PasswordActiveRound({
               className="input flex-1"
               value={clue}
               onChange={(e) => onClueChange(e.target.value)}
-              placeholder="One-word clue…"
+              placeholder="Enter clue…"
               maxLength={80}
             />
             <button type="submit" className="btn btn-primary game-action-btn" disabled={!clue.trim()}>
@@ -129,7 +133,7 @@ export function PasswordActiveRound({
                 value={guess}
                 onChange={(e) => onGuessChange(e.target.value)}
                 placeholder="Your guess…"
-                maxLength={40}
+                maxLength={80}
               />
               <button type="submit" className="btn btn-primary game-action-btn" disabled={!guess.trim()}>
                 <FiSend size={14} /> Guess
@@ -144,6 +148,14 @@ export function PasswordActiveRound({
             </div>
           )}
         </>
+      )}
+
+      {isOnTeam && skipsRemaining > 0 && (
+        <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
+          <button className="btn btn-muted" onClick={onSkip}>
+            <FiSkipForward size={14} /> Skip Word ({skipsRemaining} left)
+          </button>
+        </div>
       )}
     </div>
   );

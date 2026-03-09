@@ -1,23 +1,22 @@
 import { FiArrowRight, FiHome } from "react-icons/fi";
+import { RoundCountdown } from "../shared/RoundCountdown";
 
 type Player = { sessionId: string; role?: "imposter" | "player" };
 
 export function ImposterResultsSection({
   tally,
+  votes,
   players,
   sessionById,
   secretWord,
-  canAdvance,
-  isLastRound,
-  onNextRound
+  phaseEndsAt
 }: {
   tally: Record<string, number>;
+  votes: Array<{ voterId: string; targetId: string }>;
   players: Player[];
   sessionById: Record<string, string>;
   secretWord: string | null;
-  canAdvance: boolean;
-  isLastRound: boolean;
-  onNextRound: () => void;
+  phaseEndsAt: number | null | undefined;
 }) {
   const maxVotes = Math.max(...Object.values(tally), 1);
   const imposters = players.filter((p) => p.role === "imposter");
@@ -57,9 +56,12 @@ export function ImposterResultsSection({
       <div className="game-results-list">
         {players.map((player) => {
           const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
-          const votes = tally[player.sessionId] ?? 0;
-          const pct = maxVotes > 0 ? (votes / maxVotes) * 100 : 0;
+          const voteCount = tally[player.sessionId] ?? 0;
+          const pct = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
           const isImposter = player.role === "imposter";
+          const voterNames = votes
+            .filter((v) => v.targetId === player.sessionId)
+            .map((v) => sessionById[v.voterId] ?? v.voterId.slice(0, 6));
 
           return (
             <div key={player.sessionId} className="game-result-row">
@@ -67,7 +69,7 @@ export function ImposterResultsSection({
                 <span className={`game-result-name${isImposter ? " game-result-name--danger" : ""}`}>
                   {name} {isImposter ? "(imposter)" : ""}
                 </span>
-                <span className="game-result-votes">{votes} vote{votes !== 1 ? "s" : ""}</span>
+                <span className="game-result-votes">{voteCount} vote{voteCount !== 1 ? "s" : ""}</span>
               </div>
               <div className="game-result-bar-track">
                 <div
@@ -75,20 +77,18 @@ export function ImposterResultsSection({
                   style={{ width: `${pct}%` }}
                 />
               </div>
+              {voterNames.length > 0 && (
+                <p className="game-result-voters">
+                  Voted by: {voterNames.join(", ")}
+                </p>
+              )}
             </div>
           );
         })}
       </div>
 
       <div className="game-actions">
-        {canAdvance && (
-          <button className="btn btn-primary game-action-btn" onClick={onNextRound}>
-            <FiArrowRight size={16} /> {isLastRound ? "View Summary" : "Next Round"}
-          </button>
-        )}
-        {!canAdvance && (
-          <p className="game-waiting-text">Waiting for host to continue…</p>
-        )}
+        <RoundCountdown endsAt={phaseEndsAt} label={caught ? "Summary" : "Next round"} />
       </div>
     </div>
   );

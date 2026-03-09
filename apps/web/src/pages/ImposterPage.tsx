@@ -94,7 +94,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!game) return;
     const phaseEnd = game.settings.phaseEndsAt;
-    if (!phaseEnd || (game.phase !== "playing" && game.phase !== "voting")) return;
+    if (!phaseEnd || (game.phase !== "playing" && game.phase !== "voting" && game.phase !== "results")) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
       void zero.mutate(mutators.imposter.advanceTimer({ gameId }));
@@ -124,11 +124,11 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
 
   if (!game) {
     return (
-      <div className="game-page" data-game-theme="imposter">
+      <div className="game-page">
         <div className="game-empty">
-          <p>Game not found</p>
-          <p style={{ fontSize: "0.85rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
-          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
+          <p className="game-empty-title">Game not found</p>
+          <p className="game-empty-sub">Redirecting home…</p>
+          <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
         </div>
       </div>
     );
@@ -146,7 +146,6 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
     await zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })).server;
   };
 
-  const isLastRound = game.settings.currentRound >= game.settings.rounds;
 
   return (
     <div className="game-page" data-game-theme="imposter">
@@ -198,6 +197,10 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           clue={clue}
           clueCount={game.clues.length}
           playerCount={game.players.length}
+          submitted={game.clues.some((c) => c.sessionId === sessionId)}
+          clues={game.clues}
+          sessionId={sessionId}
+          sessionById={sessionById}
           onClueChange={setClue}
           onSubmit={submitClue}
         />
@@ -221,6 +224,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           voteCount={game.votes.length}
           playerCount={game.players.length}
           clues={game.clues}
+          submitted={game.votes.some((v) => v.voterId === sessionId)}
           onVoteTargetChange={setVoteTarget}
           onSubmit={() => void submitVote()}
         />
@@ -238,12 +242,11 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
       {game.phase === "results" && (
         <ImposterResultsSection
           tally={tally}
+          votes={game.votes}
           players={game.players}
           sessionById={sessionById}
           secretWord={game.secret_word}
-          canAdvance={Boolean(isHost)}
-          isLastRound={isLastRound}
-          onNextRound={() => void zero.mutate(mutators.imposter.nextRound({ gameId, hostId: sessionId }))}
+          phaseEndsAt={game.settings.phaseEndsAt}
         />
       )}
 

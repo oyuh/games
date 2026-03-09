@@ -101,11 +101,11 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
 
   if (!game) {
     return (
-      <div className="game-page" data-game-theme="password">
+      <div className="game-page">
         <div className="game-empty">
-          <p>Game not found</p>
-          <p style={{ fontSize: "0.85rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
-          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
+          <p className="game-empty-title">Game not found</p>
+          <p className="game-empty-sub">Redirecting home…</p>
+          <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
         </div>
       </div>
     );
@@ -136,6 +136,16 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const skipWord = async () => {
+    try {
+      await zero.mutate(mutators.password.skipWord({ gameId, sessionId })).server;
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Couldn't skip word", "error");
+    }
+  };
+
+  const myTeamSkips = myTeam ? (game.settings.skipsRemaining?.[myTeam.name] ?? 0) : 0;
+
   return (
     <div className="game-page" data-game-theme="password">
       <PasswordHeader
@@ -154,6 +164,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         activeTeamIndex={undefined}
         sessionId={sessionId}
         showScores
+        targetScore={game.settings.targetScore}
       />
 
       {game.phase === "playing" && myActiveRound && (
@@ -164,10 +175,12 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
           teamMembers={myTeamMembers}
           clue={clue}
           guess={guess}
+          skipsRemaining={myTeamSkips}
           onClueChange={setClue}
           onGuessChange={setGuess}
           onSubmitClue={submitClue}
           onSubmitGuess={submitGuess}
+          onSkip={skipWord}
         />
       )}
 

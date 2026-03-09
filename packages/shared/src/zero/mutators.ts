@@ -65,11 +65,20 @@ function isClueTooSimilar(clue: string, word: string) {
   return false;
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j]!, a[i]!];
+  }
+  return a;
+}
+
 function chooseRoles(
   players: Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player" }>,
   imposterCount: number
 ) {
-  const shuffled = [...players].sort(() => Math.random() - 0.5);
+  const shuffled = shuffle(players);
   const imposterIds = new Set(
     shuffled.slice(0, Math.max(1, Math.min(imposterCount, Math.max(1, players.length - 1)))).map((p) => p.sessionId)
   );
@@ -505,7 +514,7 @@ export const mutators = defineMutators({
           id: game.id,
           votes: nextVotes,
           phase: allVoted ? "results" : game.phase,
-          settings: allVoted ? { ...game.settings, phaseEndsAt: null } : game.settings,
+          settings: allVoted ? { ...game.settings, phaseEndsAt: now() + 8000 } : game.settings,
           updated_at: now()
         });
       }
@@ -537,11 +546,65 @@ export const mutators = defineMutators({
             updated_at: now()
           });
         } else if (game.phase === "voting") {
-          // Move to results with whatever votes exist
+          // Move to results with whatever votes exist; start results countdown
           await tx.mutate.imposter_games.update({
             id: game.id,
             phase: "results",
-            settings: { ...game.settings, phaseEndsAt: null },
+            settings: { ...game.settings, phaseEndsAt: now() + 8000 },
+            updated_at: now()
+          });
+        } else if (game.phase === "results") {
+          // Auto-advance: save current round to history, start next round or finish
+          const imposters = game.players.filter((p) => p.role === "imposter").map((p) => p.sessionId);
+          const tally = game.votes.reduce<Record<string, number>>((acc, v) => {
+            acc[v.targetId] = (acc[v.targetId] ?? 0) + 1;
+            return acc;
+          }, {});
+          const maxVotes = Math.max(...Object.values(tally), 0);
+          const topVoted = Object.entries(tally)
+            .filter(([, count]) => count === maxVotes && maxVotes > 0)
+            .map(([id]) => id);
+          const caught = imposters.length > 0 && imposters.some((id) => topVoted.includes(id));
+
+          const roundEntry = {
+            round: game.settings.currentRound,
+            secretWord: game.secret_word,
+            imposters,
+            caught,
+            clues: game.clues.map((c) => ({ sessionId: c.sessionId, text: c.text })),
+            votes: game.votes
+          };
+          const roundHistory = [...(game.round_history ?? []), roundEntry];
+
+          const nextRound = game.settings.currentRound + 1;
+          const done = nextRound > game.settings.rounds || caught;
+
+          if (done) {
+            await tx.mutate.imposter_games.update({
+              id: game.id,
+              phase: "finished",
+              clues: [],
+              votes: [],
+              round_history: roundHistory,
+              settings: { ...game.settings, phaseEndsAt: null },
+              updated_at: now()
+            });
+            return;
+          }
+
+          const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
+          const players = chooseRoles(game.players, game.settings.imposters);
+          const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
+
+          await tx.mutate.imposter_games.update({
+            id: game.id,
+            phase: "playing",
+            secret_word: pickRandom(bank),
+            clues: [],
+            votes: [],
+            players,
+            round_history: roundHistory,
+            settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
             updated_at: now()
           });
         }
@@ -577,10 +640,10 @@ export const mutators = defineMutators({
         const roundHistory = [...(game.round_history ?? []), roundEntry];
 
         const nextRound = game.settings.currentRound + 1;
-        const done = nextRound > game.settings.rounds;
+        const done = nextRound > game.settings.rounds || caught;
 
         if (done) {
-          // Game finished — show summary
+          // Game finished — imposter caught or all rounds played
           await tx.mutate.imposter_games.update({
             id: game.id,
             phase: "finished",
@@ -750,7 +813,7 @@ export const mutators = defineMutators({
           active_rounds: [],
           kicked: [],
           announcement: null,
-          settings: { targetScore: args.targetScore ?? 10, roundDurationSec: 75, roundEndsAt: null },
+          settings: { targetScore: args.targetScore ?? 10, roundDurationSec: 120, roundEndsAt: null },
           created_at: now(),
           updated_at: now()
         });
@@ -877,12 +940,17 @@ export const mutators = defineMutators({
         const activeRounds = buildAllTeamRounds(game.teams, 1);
         const roundEndsAt = now() + game.settings.roundDurationSec * 1000;
 
+        const skipsRemaining: Record<string, number> = {};
+        for (const team of game.teams) {
+          if (team.members.length >= 2) skipsRemaining[team.name] = 3;
+        }
+
         await tx.mutate.password_games.update({
           id: game.id,
           phase: "playing",
           current_round: 1,
           active_rounds: activeRounds,
-          settings: { ...game.settings, roundEndsAt },
+          settings: { ...game.settings, roundEndsAt, skipsRemaining },
           updated_at: now()
         });
       }
@@ -909,7 +977,6 @@ export const mutators = defineMutators({
         if (round.guesserId === args.sessionId) {
           throw new Error("The guesser cannot submit a clue");
         }
-        if (!isOneWord(args.clue)) throw new Error("Clue must be one word");
         if (isClueTooSimilar(args.clue, round.word)) {
           throw new Error("Clue is too similar to the word");
         }
@@ -931,7 +998,7 @@ export const mutators = defineMutators({
     ),
 
     submitGuess: defineMutator(
-      z.object({ gameId: z.string(), sessionId: z.string(), guess: z.string().min(1).max(40) }),
+      z.object({ gameId: z.string(), sessionId: z.string(), guess: z.string().min(1).max(80) }),
       async ({ args, tx }) => {
         const game = await tx.run(zql.password_games.where("id", args.gameId).one());
         if (!game || game.phase !== "playing" || !game.active_rounds.length) {
@@ -1017,6 +1084,44 @@ export const mutators = defineMutators({
           scores: nextScores,
           current_round: nextRoundNum,
           active_rounds: nextRounds,
+          updated_at: now()
+        });
+      }
+    ),
+
+    skipWord: defineMutator(
+      z.object({ gameId: z.string(), sessionId: z.string() }),
+      async ({ args, tx }) => {
+        const game = await tx.run(zql.password_games.where("id", args.gameId).one());
+        if (!game || game.phase !== "playing" || !game.active_rounds.length) {
+          throw new Error("Game is not in active round");
+        }
+
+        // Find which team round this player belongs to
+        const teamIdx = game.teams.findIndex((t) => t.members.includes(args.sessionId));
+        if (teamIdx === -1) throw new Error("You are not on any team");
+        const roundIdx = game.active_rounds.findIndex((r) => r.teamIndex === teamIdx);
+        if (roundIdx === -1) throw new Error("Your team has no active round");
+
+        const team = game.teams[teamIdx];
+        const teamName = team?.name ?? `Team ${teamIdx + 1}`;
+        const skips = game.settings.skipsRemaining ?? {};
+        const remaining = skips[teamName] ?? 0;
+        if (remaining <= 0) throw new Error("No skips remaining");
+
+        // Pick a new word, avoiding previously used ones
+        const usedWords = game.rounds.map((r) => r.word);
+        const newWord = pickPasswordWord(usedWords);
+
+        const nextRounds = game.active_rounds.map((r, i) =>
+          i === roundIdx ? { ...r, word: newWord, clues: [], guess: null } : r
+        );
+        const nextSkips = { ...skips, [teamName]: remaining - 1 };
+
+        await tx.mutate.password_games.update({
+          id: game.id,
+          active_rounds: nextRounds,
+          settings: { ...game.settings, skipsRemaining: nextSkips },
           updated_at: now()
         });
       }
@@ -1932,6 +2037,7 @@ export const mutators = defineMutators({
         id: z.string(),
         hostId: z.string(),
         hardMode: z.boolean().optional(),
+        leaderPick: z.boolean().optional(),
         roundsPerPlayer: z.number().min(1).max(3).optional(),
         gridRows: z.number().min(6).max(14).optional(),
         gridCols: z.number().min(8).max(16).optional()
@@ -1961,6 +2067,7 @@ export const mutators = defineMutators({
           announcement: null,
           settings: {
             hardMode: args.hardMode ?? false,
+            leaderPick: args.leaderPick ?? false,
             clueDurationSec: 45,
             guessDurationSec: 30,
             roundsPerPlayer: args.roundsPerPlayer ?? 1,
@@ -2096,6 +2203,36 @@ export const mutators = defineMutators({
       }
     ),
 
+    updateSettings: defineMutator(
+      z.object({
+        gameId: z.string(),
+        hostId: z.string(),
+        settings: z.object({
+          leaderPick: z.boolean().optional(),
+          hardMode: z.boolean().optional(),
+          clueDurationSec: z.number().optional(),
+          guessDurationSec: z.number().optional(),
+          roundsPerPlayer: z.number().optional(),
+        })
+      }),
+      async ({ args, tx }) => {
+        const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
+        if (!game) throw new Error("Game not found");
+        if (game.host_id !== args.hostId) throw new Error("Only host can update settings");
+        if (game.phase !== "lobby") throw new Error("Can only update settings in lobby");
+        // Only apply defined keys
+        const patch: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(args.settings)) {
+          if (v !== undefined) patch[k] = v;
+        }
+        await tx.mutate.shade_signal_games.update({
+          id: game.id,
+          settings: { ...game.settings, ...patch },
+          updated_at: now()
+        });
+      }
+    ),
+
     start: defineMutator(
       z.object({ gameId: z.string(), hostId: z.string() }),
       async ({ args, tx }) => {
@@ -2104,17 +2241,18 @@ export const mutators = defineMutators({
         if (game.host_id !== args.hostId) throw new Error("Only host can start");
         if (game.players.length < 3) throw new Error("Need at least 3 players");
 
-        const shuffled = [...game.players].sort(() => Math.random() - 0.5);
+        const shuffled = shuffle(game.players);
         const leaderOrder = shuffled.map((p) => p.sessionId);
         const leaderId = leaderOrder[0]!;
         const rows = game.grid_rows;
         const cols = game.grid_cols;
-        const targetRow = Math.floor(Math.random() * rows);
-        const targetCol = Math.floor(Math.random() * cols);
+        const leaderPick = game.settings.leaderPick ?? false;
+        const targetRow = leaderPick ? null : Math.floor(Math.random() * rows);
+        const targetCol = leaderPick ? null : Math.floor(Math.random() * cols);
 
         await tx.mutate.shade_signal_games.update({
           id: game.id,
-          phase: "clue1",
+          phase: leaderPick ? "picking" : "clue1",
           leader_id: leaderId,
           leader_order: leaderOrder,
           current_leader_index: 0,
@@ -2127,6 +2265,33 @@ export const mutators = defineMutators({
           settings: {
             ...game.settings,
             currentRound: 1,
+            phaseEndsAt: leaderPick ? null : now() + game.settings.clueDurationSec * 1000
+          },
+          updated_at: now()
+        });
+      }
+    ),
+
+    setTarget: defineMutator(
+      z.object({
+        gameId: z.string(),
+        sessionId: z.string(),
+        row: z.number().min(0),
+        col: z.number().min(0)
+      }),
+      async ({ args, tx }) => {
+        const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
+        if (!game) throw new Error("Game not found");
+        if (game.phase !== "picking") throw new Error("Not in picking phase");
+        if (game.leader_id !== args.sessionId) throw new Error("Only the leader can pick the target");
+
+        await tx.mutate.shade_signal_games.update({
+          id: game.id,
+          phase: "clue1",
+          target_row: args.row,
+          target_col: args.col,
+          settings: {
+            ...game.settings,
             phaseEndsAt: now() + game.settings.clueDurationSec * 1000
           },
           updated_at: now()
@@ -2281,6 +2446,45 @@ export const mutators = defineMutators({
             settings: { ...game.settings, phaseEndsAt: null },
             updated_at: now()
           });
+        } else if (game.phase === "reveal") {
+          // Auto-advance: start next round or finish
+          const totalRounds = game.leader_order.length * game.settings.roundsPerPlayer;
+          const nextRound = game.settings.currentRound + 1;
+
+          if (nextRound > totalRounds) {
+            await tx.mutate.shade_signal_games.update({
+              id: game.id,
+              phase: "finished",
+              settings: { ...game.settings, phaseEndsAt: null },
+              updated_at: now()
+            });
+            return;
+          }
+
+          const nextLeaderIndex = (game.current_leader_index + 1) % game.leader_order.length;
+          const nextLeaderId = game.leader_order[nextLeaderIndex]!;
+          const rows = game.grid_rows;
+          const cols = game.grid_cols;
+          const leaderPick = game.settings.leaderPick ?? false;
+
+          await tx.mutate.shade_signal_games.update({
+            id: game.id,
+            phase: leaderPick ? "picking" : "clue1",
+            leader_id: nextLeaderId,
+            current_leader_index: nextLeaderIndex,
+            grid_seed: Math.floor(Math.random() * 100000),
+            target_row: leaderPick ? null : Math.floor(Math.random() * rows),
+            target_col: leaderPick ? null : Math.floor(Math.random() * cols),
+            clue1: null,
+            clue2: null,
+            guesses: [],
+            settings: {
+              ...game.settings,
+              currentRound: nextRound,
+              phaseEndsAt: leaderPick ? null : now() + game.settings.clueDurationSec * 1000
+            },
+            updated_at: now()
+          });
         }
       }
     ),
@@ -2350,7 +2554,7 @@ export const mutators = defineMutators({
           id: game.id,
           players,
           round_history: [...game.round_history, roundEntry],
-          settings: { ...game.settings, phaseEndsAt: null },
+          settings: { ...game.settings, phaseEndsAt: now() + 8000 },
           updated_at: now()
         });
       }
@@ -2383,22 +2587,23 @@ export const mutators = defineMutators({
         const nextLeaderId = game.leader_order[nextLeaderIndex]!;
         const rows = game.grid_rows;
         const cols = game.grid_cols;
+        const leaderPick = game.settings.leaderPick ?? false;
 
         await tx.mutate.shade_signal_games.update({
           id: game.id,
-          phase: "clue1",
+          phase: leaderPick ? "picking" : "clue1",
           leader_id: nextLeaderId,
           current_leader_index: nextLeaderIndex,
           grid_seed: Math.floor(Math.random() * 100000),
-          target_row: Math.floor(Math.random() * rows),
-          target_col: Math.floor(Math.random() * cols),
+          target_row: leaderPick ? null : Math.floor(Math.random() * rows),
+          target_col: leaderPick ? null : Math.floor(Math.random() * cols),
           clue1: null,
           clue2: null,
           guesses: [],
           settings: {
             ...game.settings,
             currentRound: nextRound,
-            phaseEndsAt: now() + game.settings.clueDurationSec * 1000
+            phaseEndsAt: leaderPick ? null : now() + game.settings.clueDurationSec * 1000
           },
           updated_at: now()
         });

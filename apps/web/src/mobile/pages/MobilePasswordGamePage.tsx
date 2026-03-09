@@ -2,7 +2,7 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiSend, FiClock } from "react-icons/fi";
+import { FiSend, FiClock, FiSkipForward } from "react-icons/fi";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
@@ -98,6 +98,13 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
     catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit guess", "error"); }
   };
 
+  const skipWord = async () => {
+    try { await zero.mutate(mutators.password.skipWord({ gameId, sessionId })).server; }
+    catch (e) { showToast(e instanceof Error ? e.message : "Couldn't skip word", "error"); }
+  };
+
+  const myTeamSkips = myTeam ? (game.settings.skipsRemaining?.[myTeam.name] ?? 0) : 0;
+
   return (
     <div className="m-page" data-game-theme="password">
       <MobileGameHeader code={game.code} gameLabel="Password" phase={game.phase} round={game.current_round} accent="var(--game-accent)">
@@ -119,7 +126,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
             return (
               <div key={team.name} className={`m-score-chip${isMyTeam ? " m-score-chip--mine" : ""}`} style={{ borderColor: color }}>
                 <span style={{ color, fontWeight: 600, fontSize: "0.8rem" }}>{team.name}</span>
-                <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>{score}</span>
+                <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>{score} / {game.settings.targetScore}</span>
               </div>
             );
           })}
@@ -161,7 +168,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                   <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)" }}>{ar.word}</span>
                 </div>
                 <form className="m-input-row" onSubmit={submitClue}>
-                  <input className="m-input" style={{ flex: 1 }} value={clue} onChange={(e) => setClue(e.target.value)} placeholder="One-word clue…" maxLength={80} />
+                  <input className="m-input" style={{ flex: 1 }} value={clue} onChange={(e) => setClue(e.target.value)} placeholder="Enter clue…" maxLength={80} />
                   <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}><FiSend size={14} /></button>
                 </form>
                 <p className="m-progress-text">Clues: {ar.clues.length} / {clueGiverCount}</p>
@@ -189,13 +196,21 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                 </div>
                 {isGuesser ? (
                   <form className="m-input-row" onSubmit={submitGuess}>
-                    <input className="m-input" style={{ flex: 1 }} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Your guess…" maxLength={40} />
+                    <input className="m-input" style={{ flex: 1 }} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Your guess…" maxLength={80} />
                     <button type="submit" className="m-btn m-btn-primary" disabled={!guess.trim()}><FiSend size={14} /> Guess</button>
                   </form>
                 ) : (
                   <div className="m-waiting"><div className="m-waiting-pulse" /><p>Waiting for {guesserName} to guess…</p></div>
                 )}
               </>
+            )}
+
+            {isOnTeam && myTeamSkips > 0 && (
+              <div style={{ marginTop: "0.5rem", textAlign: "center" }}>
+                <button className="m-btn m-btn-muted" style={{ width: "100%" }} onClick={() => void skipWord()}>
+                  <FiSkipForward size={14} /> Skip Word ({myTeamSkips} left)
+                </button>
+              </div>
             )}
           </div>
         );
