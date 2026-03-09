@@ -176,7 +176,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         currentRound={game.current_round}
         endsAt={game.settings.roundEndsAt}
         isHost={isHost}
-        category={game.settings.category}
+        category={game.settings.category ?? null}
       />
 
       <PasswordTeamGrid

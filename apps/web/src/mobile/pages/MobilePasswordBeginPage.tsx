@@ -57,7 +57,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="m-page" data-game-theme="password">
-      <MobileGameHeader code={game.code} gameLabel="Password" phase="Lobby" round={game.current_round} accent="var(--game-accent)" category={game.settings.category} />
+      <MobileGameHeader code={game.code} gameLabel="Password" phase="Lobby" round={game.current_round} accent="var(--game-accent)" category={game.settings.category ?? null} />
 
       {/* Join prompt — not yet in a team */}
       {!inGame && (
