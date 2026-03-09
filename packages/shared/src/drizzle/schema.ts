@@ -13,7 +13,7 @@ export const gameTypeEnum = pgEnum("game_type", ["imposter", "password", "chain_
 export const imposterPhaseEnum = pgEnum("imposter_phase", ["lobby", "playing", "voting", "results", "finished", "ended"]);
 export const passwordPhaseEnum = pgEnum("password_phase", ["lobby", "playing", "results", "ended"]);
 export const chainReactionPhaseEnum = pgEnum("chain_reaction_phase", ["lobby", "submitting", "playing", "finished", "ended"]);
-export const shadeSignalPhaseEnum = pgEnum("shade_signal_phase", ["lobby", "clue1", "guess1", "clue2", "guess2", "reveal", "finished", "ended"]);
+export const shadeSignalPhaseEnum = pgEnum("shade_signal_phase", ["lobby", "picking", "clue1", "guess1", "clue2", "guess2", "reveal", "finished", "ended"]);
 
 export const sessions = pgTable(
   "sessions",
@@ -206,6 +206,7 @@ export const shadeSignalGames = pgTable(
     announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
     settings: jsonb("settings").$type<{
       hardMode: boolean;
+      leaderPick?: boolean;
       clueDurationSec: number;
       guessDurationSec: number;
       roundsPerPlayer: number;

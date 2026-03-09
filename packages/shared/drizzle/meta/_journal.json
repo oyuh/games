@@ -15,6 +15,13 @@
       "when": 1772951751175,
       "tag": "0001_round_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773091437557,
+      "tag": "0002_magenta_microchip",
+      "breakpoints": true
     }
   ]
 }
