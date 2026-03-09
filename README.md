@@ -14,12 +14,12 @@
 
 Games is a TypeScript monorepo for browser-based multiplayer party games. The frontend is a React 19 + Vite single-page app, the backend is a Hono-powered Node service, realtime state replication is handled through Rocicorp Zero, presence is tracked through a dedicated WebSocket endpoint, and persistent state lives in Postgres via Drizzle schema definitions.
 
-This repository currently contains three implemented game flows at the data/model level:
+This repository currently contains four implemented game flows at the data/model level:
 
 - Imposter
 - Password
 - Chain Reaction
-- Shade Signals
+- Shade Signal
 
 ## Table of Contents
 
@@ -63,7 +63,7 @@ This architecture gives the project a fairly clean separation:
 │  ├─ api/              # Hono + Node server, Zero query/mutate endpoints, presence WS
 │  └─ web/              # React 19 + Vite frontend
 ├─ packages/
-│  └─ shared/           # Shared schema, types, Zero queries, Zero mutators, Drizzle config
+│  └─ shared/           # Shared schema, types, Zero queries, Zero mutators (modular), Drizzle config
 ├─ docs/                # Deployment notes and game design docs
 ├─ docker-compose.yml   # Local Postgres + Zero cache container stack
 ├─ turbo.json           # Monorepo task orchestration
@@ -108,11 +108,31 @@ Important contents:
 
 - Drizzle Postgres schema definitions
 - Zero schema and query definitions
-- Zero mutator implementations
+- Zero mutator implementations (modular — see structure below)
 - Shared TypeScript types for game state
 - Drizzle migration configuration
 
 This design keeps the frontend and backend from drifting. The web app imports the same mutators and query definitions that the backend resolves and executes.
+
+#### Mutators directory structure
+
+The Zero mutators live in `packages/shared/src/zero/mutators/` and are split by domain:
+
+```text
+packages/shared/src/zero/mutators/
+├─ index.ts            # Barrel — composes defineMutators, re-exports public symbols
+├─ word-banks.ts       # Word banks and category data (imposter, chain reaction, password)
+├─ helpers.ts          # Shared utility functions (now, code, shuffle, pickRandom, etc.)
+├─ sessions.ts         # Session mutators (upsert, setName, attachGame, touchPresence)
+├─ imposter.ts         # Imposter game mutators (12 mutators)
+├─ password.ts         # Password game mutators (15 mutators)
+├─ chat.ts             # Chat mutators (send, clearForGame)
+├─ chain-reaction.ts   # Chain Reaction game mutators (12 mutators)
+├─ shade-signal.ts     # Shade Signal game mutators (15 mutators)
+└─ demo.ts             # Dev-only demo seeders (4 seeders)
+```
+
+The barrel `index.ts` imports all domain-specific mutator objects and composes them into a single `mutators` export via `defineMutators()`. Consumers still import everything from `@games/shared` — the split is internal to the shared package.
 
 ## Technology Stack
 
@@ -188,6 +208,7 @@ The frontend is a single-page application using browser routing. The major route
 - `/password/:id` for active Password rounds
 - `/password/:id/results` for Password results
 - `/chain/:id` for Chain Reaction
+- `/shade/:id` for Shade Signal
 
 Because this is an SPA, production hosting requires a rewrite rule that sends unknown paths back to `index.html`. That is already configured in [vercel.json](vercel.json).
 
@@ -334,6 +355,19 @@ Stores Chain Reaction game state, including:
 - kicked players
 - settings
 
+### shade_signal_games
+
+Stores Shade Signal game state, including:
+
+- players (with cumulative scores)
+- leader rotation order
+- grid seed, target coordinates
+- clues (two per round)
+- guesses per round
+- round history with scoring
+- kicked players
+- settings (hard mode, leader pick, durations, rounds per player)
+
 ### chat_messages
 
 Stores per-game chat history keyed by game type and game ID.
@@ -347,6 +381,7 @@ Shared query definitions cover:
 - Imposter by ID and join code
 - Password by ID and join code
 - Chain Reaction by ID and join code
+- Shade Signal by ID and join code
 - chat messages by game
 
 Because these definitions live in the shared package, the browser and server reference the same query names and argument contracts.
@@ -362,6 +397,8 @@ Shared mutators cover:
 - per-game action flows such as clue submission, voting, guessing, scoring, and progression
 
 The mutators are the real source of game-state transitions. If you are changing behavior, this is usually the first place to inspect.
+
+Mutators are organized into separate files by game domain under `packages/shared/src/zero/mutators/`. Each game has its own file (e.g. `imposter.ts`, `password.ts`, `chain-reaction.ts`, `shade-signal.ts`), with shared utilities in `helpers.ts` and word bank data in `word-banks.ts`. The barrel `index.ts` composes them all via `defineMutators()`.
 
 ## Local Development
 
@@ -755,11 +792,12 @@ Requirements regardless of provider:
 2. Create an Imposter room.
 3. Create a Password room.
 4. Create a Chain Reaction room.
-5. Join from a second browser tab or second device.
-6. Verify that player presence updates.
-7. Verify that game actions propagate in near realtime.
-8. Verify `/health` and `/debug/build-info` on the API.
-9. Verify the Zero service is reachable and not returning 502s.
+5. Create a Shade Signal room.
+6. Join from a second browser tab or second device.
+7. Verify that player presence updates.
+8. Verify that game actions propagate in near realtime.
+9. Verify `/health` and `/debug/build-info` on the API.
+10. Verify the Zero service is reachable and not returning 502s.
 
 ### Rollback approach
 
@@ -803,7 +841,7 @@ If you extend reconnect tolerance, you will likely also want to revisit those cl
 - Linting is not fully configured yet even though `lint` scripts exist.
 - Game state is heavily JSON-column based, which is pragmatic for mutable party-game state but less ideal for analytical querying.
 - The Railway config currently starts the API through `tsx src/index.ts` instead of `node dist/index.js`.
-- Shade Signal is documented but not implemented as a production game mode in the current app routes/schema.
+- Shade Signal is fully implemented with desktop and mobile UI, including leader picking, hard mode, and auto-advance timers.
 
 ## Mobile UI
 
