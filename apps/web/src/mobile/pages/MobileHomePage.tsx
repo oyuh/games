@@ -64,6 +64,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [chainMode, setChainMode] = useState<"premade" | "custom">("premade");
   const [shadeRoundsPerPlayer, setShadeRoundsPerPlayer] = useState(1);
   const [shadeHardMode, setShadeHardMode] = useState(false);
+  const [shadeLeaderPick, setShadeLeaderPick] = useState(false);
 
   useEffect(() => {
     if (firstVisit && nameInputRef.current) nameInputRef.current.focus();
@@ -141,7 +142,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     setPendingAction("create-shade");
     const id = nanoid();
     try {
-      const result = await zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode })).server;
+      const result = await zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })).server;
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       navigate(`/shade/${id}`);
     } finally { setPendingAction(null); }
@@ -459,6 +460,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 </select>
               </div>
             </div>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem", color: "var(--secondary)", cursor: "pointer", marginTop: "0.25rem" }}>
+              <input
+                type="checkbox"
+                checked={shadeLeaderPick}
+                onChange={(e) => setShadeLeaderPick(e.target.checked)}
+                style={{ accentColor: "var(--primary)" }}
+              />
+              🎨 Leader picks their own color
+            </label>
             <button
               className="m-btn m-btn-primary"
               style={{ width: "100%", marginTop: "0.5rem" }}

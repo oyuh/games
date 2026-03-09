@@ -1647,11 +1647,27 @@ body {
 
 .game-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 40vh;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.game-empty-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.game-empty-sub {
+  font-size: 0.85rem;
   color: var(--secondary);
-  font-size: 0.9rem;
+}
+
+.game-empty .btn {
+  margin-top: 0.5rem;
 }
 
 /* ── Game header ───────────────────────────────────── */
@@ -2086,6 +2102,12 @@ body {
 
 .game-result-bar--danger {
   background: #f87171;
+}
+
+.game-result-voters {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin: 0.15rem 0 0;
 }
 
 /* ── Teams grid ────────────────────────────────────── */
@@ -4487,6 +4509,20 @@ body {
   justify-content: center;
 }
 
+.shade-lobby-grid-explorer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.shade-lobby-grid-hint {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  text-align: center;
+  opacity: 0.8;
+}
+
 /* ── Color grid wrapper ────────────────────────────── */
 
 .shade-grid-wrapper {
@@ -4566,57 +4602,65 @@ body {
 /* ── Scoring zone overlays ─────────────────────────── */
 
 .shade-cell--zone-0 {
-  box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.9);
+  box-shadow: inset 0 0 0 2.5px rgba(250, 204, 21, 0.95);
   z-index: 3;
 }
 
 .shade-cell--zone-1 {
-  box-shadow: inset 0 0 0 1.5px rgba(74, 222, 128, 0.75);
+  box-shadow: inset 0 0 0 2px rgba(74, 222, 128, 0.85);
+  background-image: linear-gradient(rgba(74, 222, 128, 0.15), rgba(74, 222, 128, 0.15)) !important;
 }
 
 .shade-cell--zone-2 {
-  box-shadow: inset 0 0 0 1.5px rgba(96, 165, 250, 0.65);
+  box-shadow: inset 0 0 0 1.5px rgba(96, 165, 250, 0.75);
+  background-image: linear-gradient(rgba(96, 165, 250, 0.12), rgba(96, 165, 250, 0.12)) !important;
 }
 
 .shade-cell--zone-3 {
-  box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.45);
+  box-shadow: inset 0 0 0 1.5px rgba(168, 85, 247, 0.55);
+  background-image: linear-gradient(rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.1)) !important;
 }
 
 /* Scoring legend */
 .shade-scoring-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem 0.75rem;
+  gap: 0.5rem 1rem;
   justify-content: center;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--secondary);
-  padding: 0.4rem 0;
+  padding: 0.6rem 0.75rem;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
 .shade-scoring-legend-item {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.4rem;
 }
 
 .shade-scoring-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
   flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.15);
 }
 
 .shade-scoring-swatch--5 {
-  background: rgba(250, 204, 21, 0.85);
+  background: rgba(250, 204, 21, 0.9);
 }
 .shade-scoring-swatch--4 {
-  background: rgba(74, 222, 128, 0.7);
+  background: rgba(74, 222, 128, 0.75);
 }
 .shade-scoring-swatch--3 {
-  background: rgba(96, 165, 250, 0.6);
+  background: rgba(96, 165, 250, 0.65);
 }
 .shade-scoring-swatch--2 {
-  background: rgba(168, 85, 247, 0.45);
+  background: rgba(168, 85, 247, 0.5);
 }
 
 /* ── Cell sub-elements ─────────────────────────────── */

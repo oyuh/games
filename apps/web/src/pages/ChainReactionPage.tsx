@@ -138,11 +138,11 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
 
   if (!game) {
     return (
-      <div className="game-page" data-game-theme="chain">
+      <div className="game-page">
         <div className="game-empty">
-          <p>Game not found</p>
-          <p style={{ fontSize: "0.85rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
-          <button className="btn btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
+          <p className="game-empty-title">Game not found</p>
+          <p className="game-empty-sub">Redirecting home…</p>
+          <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
         </div>
       </div>
     );

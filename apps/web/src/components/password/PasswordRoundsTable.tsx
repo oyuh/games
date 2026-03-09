@@ -32,6 +32,7 @@ export function PasswordRoundsTable({
             <tr>
               <th data-tooltip="Round number" data-tooltip-variant="info">#</th>
               <th data-tooltip="Which team played" data-tooltip-variant="info">Team</th>
+              <th data-tooltip="The secret word" data-tooltip-variant="info">Word</th>
               <th data-tooltip="Clues given to the guesser" data-tooltip-variant="info">Clues</th>
               <th data-tooltip="What the guesser guessed" data-tooltip-variant="info">Guess</th>
               <th data-tooltip="Correct or wrong" data-tooltip-variant="info"></th>
@@ -42,6 +43,7 @@ export function PasswordRoundsTable({
               <tr key={`${round.round}-${idx}`}>
                 <td>{round.round}</td>
                 <td>{teams[round.teamIndex]?.name ?? `Team ${round.teamIndex + 1}`}</td>
+                <td style={{ color: "var(--primary)", fontWeight: 600 }}>{round.word}</td>
                 <td style={{ color: "var(--primary)", fontWeight: 600 }}>
                   {round.clues.length > 0
                     ? round.clues.map((c) => c.text).join(", ")

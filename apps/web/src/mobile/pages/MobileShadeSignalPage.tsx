@@ -6,6 +6,7 @@ import { FiClock, FiLogIn, FiSend } from "react-icons/fi";
 import { ColorGrid, generateGridColor } from "../../components/shade/ColorGrid";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame } from "../../lib/session";
 import { showToast } from "../../lib/toast";
@@ -67,6 +68,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [guessLocked, setGuessLocked] = useState(false);
+  const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "shade_signal" });
@@ -128,7 +130,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
     if (!game) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
-    const activePhases: ShadePhase[] = ["clue1", "guess1", "clue2", "guess2"];
+    const activePhases: ShadePhase[] = ["clue1", "guess1", "clue2", "guess2", "reveal"];
     if (!activePhases.includes(game.phase as ShadePhase)) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
@@ -169,37 +171,6 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       void zero.mutate(mutators.shadeSignal.reveal({ gameId }));
     }, 600);
     return () => clearTimeout(timer);
-  }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
-
-  const [nextRoundCountdown, setNextRoundCountdown] = useState<number | null>(null);
-  const nextRoundTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (!game || game.phase !== "reveal") {
-      setNextRoundCountdown(null);
-      if (nextRoundTimerRef.current) clearInterval(nextRoundTimerRef.current);
-      return;
-    }
-    const latest = game.round_history[game.round_history.length - 1];
-    if (!latest) return;
-    if (game.host_id !== sessionId) {
-      setNextRoundCountdown(8);
-      nextRoundTimerRef.current = setInterval(() => {
-        setNextRoundCountdown((prev) => (prev != null && prev > 0 ? prev - 1 : null));
-      }, 1000);
-      return () => { if (nextRoundTimerRef.current) clearInterval(nextRoundTimerRef.current); };
-    }
-    setNextRoundCountdown(8);
-    nextRoundTimerRef.current = setInterval(() => {
-      setNextRoundCountdown((prev) => (prev != null && prev > 0 ? prev - 1 : null));
-    }, 1000);
-    const advanceTimer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.nextRound({ gameId, hostId: sessionId }));
-    }, 8500);
-    return () => {
-      clearTimeout(advanceTimer);
-      if (nextRoundTimerRef.current) clearInterval(nextRoundTimerRef.current);
-    };
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
 
   const phase = (game?.phase ?? "lobby") as ShadePhase;
@@ -357,26 +328,21 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       {/* ── LOBBY - in game ── */}
       {phase === "lobby" && inGame && (
         <div className="m-section">
-          <h3 className="m-label">How to play</h3>
-          <div className="m-shade-rules">
-            <div className="m-shade-rule">🎨 <strong>Leader</strong> sees a target color and gives a <strong>1-word</strong> clue</div>
-            <div className="m-shade-rule">🔍 <strong>Guessers</strong> pick the color they think the leader means</div>
-            <div className="m-shade-rule">💡 Leader gives a <strong>2nd clue</strong>, guessers can adjust their pick</div>
-            <div className="m-shade-rule">🎯 Closer = more pts! The colored zones show scoring ranges</div>
-          </div>
-          <MobileScoringLegend />
-
-          <div className="m-shade-preview-grid">
-            <ColorGrid
-              rows={game.grid_rows}
-              cols={game.grid_cols}
-              seed={game.grid_seed}
-              target={{ row: Math.floor(game.grid_rows / 2), col: Math.floor(game.grid_cols / 2) }}
-              showTarget
-              showZones
-              compact
-            />
-          </div>
+          <p className="m-text-muted m-text-center" style={{ fontSize: "0.8rem", marginBottom: "0.5rem" }}>
+            Tap any cell to set a target, then tap others to see scores
+          </p>
+          <ColorGrid
+            rows={game.grid_rows}
+            cols={game.grid_cols}
+            seed={game.grid_seed}
+            target={lobbyPreviewTarget}
+            onSelect={(r, c) => setLobbyPreviewTarget({ row: r, col: c })}
+            interactive
+            showTarget={!!lobbyPreviewTarget}
+            showZones={!!lobbyPreviewTarget}
+            showScoreTooltips={!!lobbyPreviewTarget}
+          />
+          {lobbyPreviewTarget && <MobileScoringLegend />}
 
           <div className="m-actions">
             {isHost && (
@@ -626,9 +592,12 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
-          {latestRound && nextRoundCountdown != null && (
+          {latestRound && game.settings.phaseEndsAt && (
             <div className="m-shade-auto-advance">
-              {game.settings.currentRound >= totalRounds ? "Finishing game" : "Next round"} in {nextRoundCountdown}s…
+              <RoundCountdown
+                endsAt={game.settings.phaseEndsAt}
+                label={game.settings.currentRound >= totalRounds ? "Finishing game" : "Next round"}
+              />
             </div>
           )}
           {!latestRound && (

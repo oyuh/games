@@ -45,6 +45,8 @@ type GridProps = {
   compact?: boolean;
   /** Show scoring zone overlays around target */
   showZones?: boolean;
+  /** Show score tooltips on hover (requires target) */
+  showScoreTooltips?: boolean;
 };
 
 export function ColorGrid({
@@ -59,6 +61,7 @@ export function ColorGrid({
   markers = [],
   compact = false,
   showZones = false,
+  showScoreTooltips = false,
 }: GridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
@@ -125,9 +128,14 @@ export function ColorGrid({
               }
 
               // Build cell-level tooltip combining all markers on this cell
-              const cellTooltip = hasMarkers
-                ? cellMarkers.map((m) => m.tooltip ?? m.name).join("  ·  ")
-                : undefined;
+              let cellTooltip: string | undefined;
+              if (hasMarkers) {
+                cellTooltip = cellMarkers.map((m) => m.tooltip ?? m.name).join("\n\n");
+              } else if (showScoreTooltips && target) {
+                const dist = Math.max(Math.abs(r - target.row), Math.abs(c - target.col));
+                const pts = dist === 0 ? 5 : dist === 1 ? 3 : dist === 2 ? 2 : dist <= 3 ? 1 : 0;
+                cellTooltip = pts > 0 ? `${dist === 0 ? "Exact" : `${dist} away`} — ${pts}pt${pts > 1 ? "s" : ""}` : `${dist} away — 0pts`;
+              }
 
               return (
                 <div

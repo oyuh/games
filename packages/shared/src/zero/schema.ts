@@ -68,7 +68,7 @@ const passwordGames = table("password_games").columns({
   }>>(),
   kicked: json<string[]>(),
   announcement: json<{ text: string; ts: number } | null>(),
-  settings: json<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean }>(),
+  settings: json<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean; skipsRemaining?: Record<string, number> }>(),
   created_at: number(),
   updated_at: number()
 }).primaryKey("id");
@@ -117,7 +117,7 @@ const shadeSignalGames = table("shade_signal_games").columns({
   id: string(),
   code: string(),
   host_id: string(),
-  phase: enumeration<"lobby" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended">(),
+  phase: enumeration<"lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended">(),
   players: json<Array<{ sessionId: string; name: string | null; connected: boolean; totalScore: number }>>(),
   leader_id: string().optional(),
   leader_order: json<string[]>(),
@@ -149,6 +149,7 @@ const shadeSignalGames = table("shade_signal_games").columns({
     roundsPerPlayer: number;
     currentRound: number;
     phaseEndsAt: number | null;
+    leaderPick?: boolean;
   }>(),
   created_at: number(),
   updated_at: number()
