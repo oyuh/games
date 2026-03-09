@@ -13,7 +13,7 @@
     "db:studio": "pnpm --filter @games/shared db:studio"
   },
   "devDependencies": {
-    "turbo": "^2.5.0",
-    "typescript": "^5.8.2"
+    "turbo": "^2.8.15",
+    "typescript": "^5.9.3"
   }
 }

@@ -45,7 +45,7 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
 
   return (
     <div className="m-page" data-game-theme="password">
-      <MobileGameHeader code={game.code} gameLabel="Password" phase="Finished" accent="var(--game-accent)" category={game.settings.category} />
+      <MobileGameHeader code={game.code} gameLabel="Password" phase="Finished" accent="var(--game-accent)" category={game.settings.category ?? null} />
 
       {/* Winner banner */}
       {isTie ? (

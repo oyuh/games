@@ -1148,12 +1148,10 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
       const g = gameData as typeof imposterResults[0];
       if (!g) return null;
       const lines: string[] = [];
-      const players = g.players ?? [];
-      const nameOf = (id: string) => players.find((p) => p.sessionId === id)?.name ?? id.slice(0, 6);
 
       for (const r of g.round_history ?? []) {
-        const impostersStr = r.imposters.map(nameOf).join(", ");
-        lines.push(`R${r.round}: "${r.secretWord}" — ${r.caught ? "caught" : "missed"} (${impostersStr})`);
+        const votedOut = r.votedOutName ?? "no one";
+        lines.push(`R${r.round}: "${r.secretWord}" — voted out ${votedOut} (${r.wasImposter ? "imposter" : "innocent"})`);
       }
       return lines.join("\n") || "No rounds played";
     }
