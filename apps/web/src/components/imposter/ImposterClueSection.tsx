@@ -1,26 +1,25 @@
 import { FormEvent } from "react";
 import { FiEye, FiEyeOff, FiSend, FiCheck } from "react-icons/fi";
+import { imposterCategoryLabels } from "@games/shared";
 
-/** Redact roughly half the letters in a clue, keeping first and last visible. */
+/** Redact a clue showing a contiguous ~65% chunk of each word. */
 function redactClue(text: string): string {
-  if (text.length <= 2) return text[0] + "_".repeat(text.length - 1);
-  const chars = text.split("");
-  // Always show first and last character of each word
-  const result = chars.map((ch, i) => {
-    if (ch === " ") return " ";
-    // Find word boundaries
-    const isFirst = i === 0 || chars[i - 1] === " ";
-    const isLast = i === chars.length - 1 || chars[i + 1] === " ";
-    if (isFirst || isLast) return ch;
-    // Hide ~50% of middle characters using a simple deterministic pattern
-    return i % 2 === 0 ? "_" : ch;
-  });
-  return result.join("");
+  return text.split(" ").map((word) => {
+    const len = word.length;
+    if (len <= 2) return "_".repeat(len);
+    const showCount = Math.max(1, Math.floor(len * 0.65));
+    // Start the revealed chunk at a deterministic offset (~20% in)
+    const start = Math.floor(len * 0.2);
+    return word.split("").map((ch, i) =>
+      i >= start && i < start + showCount ? ch : "_"
+    ).join("");
+  }).join(" ");
 }
 
 export function ImposterClueSection({
   role,
   secretWord,
+  category,
   clue,
   clueCount,
   playerCount,
@@ -33,6 +32,7 @@ export function ImposterClueSection({
 }: {
   role: "imposter" | "player" | undefined;
   secretWord: string | null;
+  category: string | null;
   clue: string;
   clueCount: number;
   playerCount: number;
@@ -48,6 +48,11 @@ export function ImposterClueSection({
 
   return (
     <div className="game-section">
+      {category && (
+        <p style={{ fontSize: "0.78rem", color: "var(--secondary)", textAlign: "center", marginBottom: "0.5rem" }}>
+          Category: <strong style={{ color: "var(--foreground)" }}>{imposterCategoryLabels[category] ?? category}</strong>
+        </p>
+      )}
       <div className={`game-role-card${isImposter ? " game-role-card--danger" : ""}`}>
         <div className="game-role-icon">
           {isImposter ? <FiEyeOff size={24} /> : <FiEye size={24} />}

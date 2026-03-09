@@ -3,11 +3,15 @@ import { useQuery, useZero } from "@rocicorp/zero/react";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers, FiHelpCircle } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, markVisited, RecentGame, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileHomePage } from "../mobile/pages/MobileHomePage";
+import { ImposterDemo } from "../components/demos/ImposterDemo";
+import { PasswordDemo } from "../components/demos/PasswordDemo";
+import { ChainDemo } from "../components/demos/ChainDemo";
+import { ShadeDemo } from "../components/demos/ShadeDemo";
 
 const isDev = import.meta.env.DEV;
 
@@ -84,6 +88,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   const [shadeRoundsPerPlayer, setShadeRoundsPerPlayer] = useState(1);
   const [shadeHardMode, setShadeHardMode] = useState(false);
   const [shadeLeaderPick, setShadeLeaderPick] = useState(false);
+  const [activeDemo, setActiveDemo] = useState<string | null>(null);
 
   // Mobile scroll dot tracking
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -419,7 +424,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
           <p className="hc-game-desc">Find the liar. Give clues. Vote them out.</p>
 
           <div className="hc-game-tags hc-game-tags--centered">
-            <span className="hc-tag">4–10 players</span>
+            <span className="hc-tag">3–10 players</span>
             <span className="hc-tag">Deduction</span>
             <span className="hc-tag">Timed rounds</span>
           </div>
@@ -498,9 +503,14 @@ export function HomePage({ sessionId }: { sessionId: string }) {
 
           <div className="hc-game-actions">
             {!imposterExpanded ? (
-              <button className="btn btn-primary w-full" onClick={() => setImposterExpanded(true)}>
-                Create Game
-              </button>
+              <div className="hc-row">
+                <button className="btn btn-primary flex-1" onClick={() => setImposterExpanded(true)}>
+                  Create Game
+                </button>
+                <button className="btn hc-help-btn" onClick={() => setActiveDemo("imposter")} data-tooltip="How to Play" data-tooltip-variant="info">
+                  <FiHelpCircle size={18} />
+                </button>
+              </div>
             ) : (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setImposterExpanded(false)}>
@@ -589,9 +599,14 @@ export function HomePage({ sessionId }: { sessionId: string }) {
 
           <div className="hc-game-actions">
             {!passwordExpanded ? (
-              <button className="btn btn-primary w-full" onClick={() => setPasswordExpanded(true)}>
-                Create Game
-              </button>
+              <div className="hc-row">
+                <button className="btn btn-primary flex-1" onClick={() => setPasswordExpanded(true)}>
+                  Create Game
+                </button>
+                <button className="btn hc-help-btn" onClick={() => setActiveDemo("password")} data-tooltip="How to Play" data-tooltip-variant="info">
+                  <FiHelpCircle size={18} />
+                </button>
+              </div>
             ) : (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setPasswordExpanded(false)}>
@@ -682,9 +697,14 @@ export function HomePage({ sessionId }: { sessionId: string }) {
 
           <div className="hc-game-actions">
             {!chainExpanded ? (
-              <button className="btn btn-primary w-full" onClick={() => setChainExpanded(true)}>
-                Create Game
-              </button>
+              <div className="hc-row">
+                <button className="btn btn-primary flex-1" onClick={() => setChainExpanded(true)}>
+                  Create Game
+                </button>
+                <button className="btn hc-help-btn" onClick={() => setActiveDemo("chain")} data-tooltip="How to Play" data-tooltip-variant="info">
+                  <FiHelpCircle size={18} />
+                </button>
+              </div>
             ) : (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setChainExpanded(false)}>
@@ -772,9 +792,14 @@ export function HomePage({ sessionId }: { sessionId: string }) {
 
           <div className="hc-game-actions">
             {!shadeExpanded ? (
-              <button className="btn btn-primary w-full" onClick={() => setShadeExpanded(true)}>
-                Create Game
-              </button>
+              <div className="hc-row">
+                <button className="btn btn-primary flex-1" onClick={() => setShadeExpanded(true)}>
+                  Create Game
+                </button>
+                <button className="btn hc-help-btn" onClick={() => setActiveDemo("shade")} data-tooltip="How to Play" data-tooltip-variant="info">
+                  <FiHelpCircle size={18} />
+                </button>
+              </div>
             ) : (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setShadeExpanded(false)}>
@@ -805,6 +830,11 @@ export function HomePage({ sessionId }: { sessionId: string }) {
         />
       ))}
     </div>
+
+    {activeDemo === "imposter" && <ImposterDemo onClose={() => setActiveDemo(null)} />}
+    {activeDemo === "password" && <PasswordDemo onClose={() => setActiveDemo(null)} />}
+    {activeDemo === "chain" && <ChainDemo onClose={() => setActiveDemo(null)} />}
+    {activeDemo === "shade" && <ShadeDemo onClose={() => setActiveDemo(null)} />}
     </>
   );
 

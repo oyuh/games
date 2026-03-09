@@ -287,7 +287,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           {expanded === "imposter" ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />}
         </button>
         <div className="m-game-card-tags">
-          <span className="m-tag">4–10 players</span>
+          <span className="m-tag">3–10 players</span>
           <span className="m-tag">Deduction</span>
           <span className="m-tag">Timed</span>
         </div>

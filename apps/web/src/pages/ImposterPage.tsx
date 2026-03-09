@@ -2,7 +2,7 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiLogIn } from "react-icons/fi";
+import { FiLogIn, FiHelpCircle } from "react-icons/fi";
 import { ImposterClueSection } from "../components/imposter/ImposterClueSection";
 import { ImposterHeader } from "../components/imposter/ImposterHeader";
 import { ImposterLobbyActions } from "../components/imposter/ImposterLobbyActions";
@@ -14,6 +14,7 @@ import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
+import { ImposterDemo } from "../components/demos/ImposterDemo";
 
 export function ImposterPage({ sessionId }: { sessionId: string }) {
   const isMobile = useIsMobile();
@@ -28,6 +29,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const [clue, setClue] = useState("");
+  const [showDemo, setShowDemo] = useState(false);
   const [voteTarget, setVoteTarget] = useState("");
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
@@ -190,10 +192,19 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         />
       )}
 
+      {game.phase === "lobby" && (
+        <div className="game-section" style={{ textAlign: "center" }}>
+          <button className="demo-trigger-btn" onClick={() => setShowDemo(true)}>
+            <FiHelpCircle size={16} /> How to Play
+          </button>
+        </div>
+      )}
+
       {game.phase === "playing" && inGame && (
         <ImposterClueSection
           role={me?.role}
           secretWord={game.secret_word}
+          category={game.category ?? null}
           clue={clue}
           clueCount={game.clues.length}
           playerCount={game.players.length}
@@ -314,6 +325,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           </div>
         </div>
       )}
+      {showDemo && <ImposterDemo onClose={() => setShowDemo(false)} />}
     </div>
   );
 }

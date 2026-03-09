@@ -18,6 +18,9 @@ export function ImposterLobbyActions({
       {playerCount < 3 && (
         <p className="game-hint">Need at least 3 players to start ({3 - playerCount} more)</p>
       )}
+      {playerCount === 3 && (
+        <p className="game-hint" style={{ opacity: 0.7 }}>4+ players recommended for the best experience</p>
+      )}
       <div className="game-actions">
         {isHost ? (
           <button className="btn btn-primary game-action-btn" disabled={!canStart} onClick={onStart}>

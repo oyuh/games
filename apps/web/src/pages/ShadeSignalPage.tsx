@@ -2,7 +2,7 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiLogIn, FiCopy, FiCheck, FiSend } from "react-icons/fi";
+import { FiLogIn, FiCopy, FiCheck, FiSend, FiHelpCircle } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { ColorGrid, generateGridColor } from "../components/shade/ColorGrid";
 import { RoundCountdown } from "../components/shared/RoundCountdown";
@@ -11,6 +11,7 @@ import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
+import { ShadeDemo } from "../components/demos/ShadeDemo";
 
 type ShadePhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended";
 
@@ -93,6 +94,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
   const [guessLocked, setGuessLocked] = useState(false);
   const [copied, setCopied] = useState(false);
   const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
+  const [showDemo, setShowDemo] = useState(false);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "shade_signal" });
@@ -466,6 +468,14 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
               Leave
             </button>
           </div>
+        </div>
+      )}
+
+      {phase === "lobby" && (
+        <div className="game-section" style={{ textAlign: "center" }}>
+          <button className="demo-trigger-btn" onClick={() => setShowDemo(true)}>
+            <FiHelpCircle size={16} /> How to Play
+          </button>
         </div>
       )}
 
@@ -873,6 +883,8 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
           </div>
         </div>
       )}
+
+      {showDemo && <ShadeDemo onClose={() => setShowDemo(false)} />}
     </div>
   );
 }
