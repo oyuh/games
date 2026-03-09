@@ -126,18 +126,19 @@ export const imposterMutators = {
 
       const players = game.players.filter((player) => player.sessionId !== args.sessionId);
 
-      // Auto-check: if all remaining players have submitted, advance phase
+      // Auto-check: if all remaining active players have submitted, advance phase
+      const activePlayers = players.filter((p) => !p.eliminated);
       let phase = game.phase;
       let settings = game.settings;
-      if (phase === "playing" && players.length > 0) {
-        const cluesIn = game.clues.filter((c) => players.some((p) => p.sessionId === c.sessionId));
-        if (cluesIn.length >= players.length) {
+      if (phase === "playing" && activePlayers.length > 0) {
+        const cluesIn = game.clues.filter((c) => activePlayers.some((p) => p.sessionId === c.sessionId));
+        if (cluesIn.length >= activePlayers.length) {
           phase = "voting";
           settings = { ...settings, phaseEndsAt: now() + settings.votingDurationSec * 1000 };
         }
-      } else if (phase === "voting" && players.length > 0) {
-        const votesIn = game.votes.filter((v) => players.some((p) => p.sessionId === v.voterId));
-        if (votesIn.length >= players.length) {
+      } else if (phase === "voting" && activePlayers.length > 0) {
+        const votesIn = game.votes.filter((v) => activePlayers.some((p) => p.sessionId === v.voterId));
+        if (votesIn.length >= activePlayers.length) {
           phase = "results";
           settings = { ...settings, phaseEndsAt: null };
         }
@@ -177,10 +178,11 @@ export const imposterMutators = {
         id: game.id,
         phase: "playing",
         secret_word: pickRandom(bank),
-        players: withRoles,
+        players: withRoles.map((p) => ({ ...p, eliminated: false })),
         clues: [],
         votes: [],
-        settings: { ...game.settings, phaseEndsAt },
+        round_history: [],
+        settings: { ...game.settings, currentRound: 1, phaseEndsAt },
         updated_at: now()
       });
     }
@@ -199,7 +201,8 @@ export const imposterMutators = {
 
       const withoutCurrent = game.clues.filter((clue) => clue.sessionId !== args.sessionId);
       const nextClues = [...withoutCurrent, { sessionId: args.sessionId, text: args.text.trim(), createdAt: now() }];
-      const allSubmitted = nextClues.length >= game.players.length;
+      const activePlayers = game.players.filter((p) => !p.eliminated);
+      const allSubmitted = nextClues.length >= activePlayers.length;
 
       await tx.mutate.imposter_games.update({
         id: game.id,
@@ -221,14 +224,15 @@ export const imposterMutators = {
         throw new Error("Game is not in voting phase");
       }
 
-      const voterExists = game.players.some((player) => player.sessionId === args.voterId);
-      const targetExists = game.players.some((player) => player.sessionId === args.targetId);
+      const voterExists = game.players.some((player) => player.sessionId === args.voterId && !player.eliminated);
+      const targetExists = game.players.some((player) => player.sessionId === args.targetId && !player.eliminated);
       if (!voterExists || !targetExists) throw new Error("Invalid vote participants");
       if (args.voterId === args.targetId) throw new Error("Cannot vote for yourself");
 
       const withoutCurrent = game.votes.filter((vote) => vote.voterId !== args.voterId);
       const nextVotes = [...withoutCurrent, { voterId: args.voterId, targetId: args.targetId }];
-      const allVoted = nextVotes.length >= game.players.length;
+      const activePlayers = game.players.filter((p) => !p.eliminated);
+      const allVoted = nextVotes.length >= activePlayers.length;
 
       await tx.mutate.imposter_games.update({
         id: game.id,
@@ -250,10 +254,11 @@ export const imposterMutators = {
       if (!phaseEnd || now() < phaseEnd) return; // not expired yet
 
       if (game.phase === "playing") {
-        // Auto-fill empty clues for players who didn't submit
+        // Auto-fill empty clues for active (non-eliminated) players who didn't submit
+        const activePlayers = game.players.filter((p) => !p.eliminated);
         const submittedIds = new Set(game.clues.map((c) => c.sessionId));
         const clues = [...game.clues];
-        for (const p of game.players) {
+        for (const p of activePlayers) {
           if (!submittedIds.has(p.sessionId)) {
             clues.push({ sessionId: p.sessionId, text: "(no clue)", createdAt: now() });
           }
@@ -274,8 +279,8 @@ export const imposterMutators = {
           updated_at: now()
         });
       } else if (game.phase === "results") {
-        // Auto-advance: save current round to history, start next round or finish
-        const imposters = game.players.filter((p) => p.role === "imposter").map((p) => p.sessionId);
+        // Tally votes → eliminate most-voted → check win conditions
+        const activePlayers = game.players.filter((p) => !p.eliminated);
         const tally = game.votes.reduce<Record<string, number>>((acc, v) => {
           acc[v.targetId] = (acc[v.targetId] ?? 0) + 1;
           return acc;
@@ -284,20 +289,37 @@ export const imposterMutators = {
         const topVoted = Object.entries(tally)
           .filter(([, count]) => count === maxVotes && maxVotes > 0)
           .map(([id]) => id);
-        const caught = imposters.length > 0 && imposters.some((id) => topVoted.includes(id));
+
+        // Determine who is voted out (first in tie, or null if no votes)
+        const votedOutId = topVoted[0] ?? null;
+        const votedOutPlayer = votedOutId ? activePlayers.find((p) => p.sessionId === votedOutId) : null;
+        const wasImposter = votedOutPlayer?.role === "imposter";
+
+        // Eliminate the voted-out player
+        const updatedPlayers = game.players.map((p) =>
+          p.sessionId === votedOutId ? { ...p, eliminated: true } : p
+        );
 
         const roundEntry = {
           round: game.settings.currentRound,
           secretWord: game.secret_word,
-          imposters,
-          caught,
+          votedOutId,
+          votedOutName: votedOutPlayer?.name ?? null,
+          wasImposter: wasImposter ?? false,
           clues: game.clues.map((c) => ({ sessionId: c.sessionId, text: c.text })),
           votes: game.votes
         };
         const roundHistory = [...(game.round_history ?? []), roundEntry];
 
+        // Check win conditions
+        const remainingAfter = updatedPlayers.filter((p) => !p.eliminated);
+        const impostersLeft = remainingAfter.filter((p) => p.role === "imposter").length;
+        const innocentsLeft = remainingAfter.filter((p) => p.role !== "imposter").length;
         const nextRound = game.settings.currentRound + 1;
-        const done = nextRound > game.settings.rounds || caught;
+        const allImpostersOut = impostersLeft === 0;
+        const impostersOverpower = impostersLeft >= innocentsLeft;
+        const roundsExhausted = nextRound > game.settings.rounds;
+        const done = allImpostersOut || impostersOverpower || roundsExhausted;
 
         if (done) {
           await tx.mutate.imposter_games.update({
@@ -305,6 +327,7 @@ export const imposterMutators = {
             phase: "finished",
             clues: [],
             votes: [],
+            players: updatedPlayers,
             round_history: roundHistory,
             settings: { ...game.settings, phaseEndsAt: null },
             updated_at: now()
@@ -312,17 +335,16 @@ export const imposterMutators = {
           return;
         }
 
+        // Continue to next round — new word, same roles, minus eliminated
         const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
-        const players = chooseRoles(game.players, game.settings.imposters);
         const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
-
         await tx.mutate.imposter_games.update({
           id: game.id,
           phase: "playing",
           secret_word: pickRandom(bank),
           clues: [],
           votes: [],
-          players,
+          players: updatedPlayers,
           round_history: roundHistory,
           settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
           updated_at: now()
@@ -337,8 +359,8 @@ export const imposterMutators = {
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Not allowed");
 
-      // Save current round to history
-      const imposters = game.players.filter((p) => p.role === "imposter").map((p) => p.sessionId);
+      // Tally votes → eliminate most-voted → check win conditions
+      const activePlayers = game.players.filter((p) => !p.eliminated);
       const tally = game.votes.reduce<Record<string, number>>((acc, v) => {
         acc[v.targetId] = (acc[v.targetId] ?? 0) + 1;
         return acc;
@@ -347,28 +369,42 @@ export const imposterMutators = {
       const topVoted = Object.entries(tally)
         .filter(([, count]) => count === maxVotes && maxVotes > 0)
         .map(([id]) => id);
-      const caught = imposters.length > 0 && imposters.some((id) => topVoted.includes(id));
+
+      const votedOutId = topVoted[0] ?? null;
+      const votedOutPlayer = votedOutId ? activePlayers.find((p) => p.sessionId === votedOutId) : null;
+      const wasImposter = votedOutPlayer?.role === "imposter";
+
+      const updatedPlayers = game.players.map((p) =>
+        p.sessionId === votedOutId ? { ...p, eliminated: true } : p
+      );
 
       const roundEntry = {
         round: game.settings.currentRound,
         secretWord: game.secret_word,
-        imposters,
-        caught,
+        votedOutId,
+        votedOutName: votedOutPlayer?.name ?? null,
+        wasImposter: wasImposter ?? false,
         clues: game.clues.map((c) => ({ sessionId: c.sessionId, text: c.text })),
         votes: game.votes
       };
       const roundHistory = [...(game.round_history ?? []), roundEntry];
 
+      const remainingAfter = updatedPlayers.filter((p) => !p.eliminated);
+      const impostersLeft = remainingAfter.filter((p) => p.role === "imposter").length;
+      const innocentsLeft = remainingAfter.filter((p) => p.role !== "imposter").length;
       const nextRound = game.settings.currentRound + 1;
-      const done = nextRound > game.settings.rounds || caught;
+      const allImpostersOut = impostersLeft === 0;
+      const impostersOverpower = impostersLeft >= innocentsLeft;
+      const roundsExhausted = nextRound > game.settings.rounds;
+      const done = allImpostersOut || impostersOverpower || roundsExhausted;
 
       if (done) {
-        // Game finished — imposter caught or all rounds played
         await tx.mutate.imposter_games.update({
           id: game.id,
           phase: "finished",
           clues: [],
           votes: [],
+          players: updatedPlayers,
           round_history: roundHistory,
           settings: { ...game.settings, phaseEndsAt: null },
           updated_at: now()
@@ -376,18 +412,16 @@ export const imposterMutators = {
         return;
       }
 
-      // Start next round
+      // Continue to next round — new word, same roles, minus eliminated
       const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
-      const players = chooseRoles(game.players, game.settings.imposters);
       const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
-
       await tx.mutate.imposter_games.update({
         id: game.id,
         phase: "playing",
         secret_word: pickRandom(bank),
         clues: [],
         votes: [],
-        players,
+        players: updatedPlayers,
         round_history: roundHistory,
         settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
         updated_at: now()
@@ -410,7 +444,7 @@ export const imposterMutators = {
         round_history: [],
         announcement: null,
         players: game.players.map((player) => {
-          const { role: _role, ...rest } = player;
+          const { role: _role, eliminated: _elim, ...rest } = player;
           return rest;
         }),
         settings: { ...game.settings, currentRound: 1, phaseEndsAt: null },

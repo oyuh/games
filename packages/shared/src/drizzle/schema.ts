@@ -49,15 +49,16 @@ export const imposterGames = pgTable(
     phase: imposterPhaseEnum("phase").notNull().default("lobby"),
     category: text("category"),
     secretWord: text("secret_word"),
-    players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player" }>>().notNull().default([]),
+    players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player"; eliminated?: boolean }>>().notNull().default([]),
     clues: jsonb("clues").$type<Array<{ sessionId: string; text: string; createdAt: number }>>().notNull().default([]),
     votes: jsonb("votes").$type<Array<{ voterId: string; targetId: string }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
     roundHistory: jsonb("round_history").$type<Array<{
       round: number;
       secretWord: string | null;
-      imposters: string[];
-      caught: boolean;
+      votedOutId: string | null;
+      votedOutName: string | null;
+      wasImposter: boolean;
       clues: Array<{ sessionId: string; text: string }>;
       votes: Array<{ voterId: string; targetId: string }>;
     }>>().notNull().default([]),

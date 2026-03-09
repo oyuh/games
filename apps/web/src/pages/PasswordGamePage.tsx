@@ -29,6 +29,8 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   usePresenceSocket({ sessionId, gameId, gameType: "password" });
 
   const isHost = game?.host_id === sessionId;
+  const inGameRef = useRef(false);
+  const phaseRef = useRef(game?.phase);
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -48,6 +50,25 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     if (!game || !game.active_rounds.length || myTeamIndex === -1) return undefined;
     return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
   }, [game?.active_rounds, myTeamIndex]);
+
+  // Sync refs
+  useEffect(() => {
+    if (!game) return;
+    inGameRef.current = game.teams.some((t) => t.members.includes(sessionId));
+    phaseRef.current = game.phase;
+  }, [game, sessionId]);
+
+  // Leave on unmount so host-leaving ends the game
+  useEffect(() => {
+    let active = false;
+    const timer = setTimeout(() => { active = true; }, 500);
+    return () => {
+      clearTimeout(timer);
+      if (active && inGameRef.current && phaseRef.current !== "ended") {
+        void zero.mutate(mutators.password.leave({ gameId, sessionId }));
+      }
+    };
+  }, [gameId, sessionId, zero]);
 
   // Auto-advance timer
   useEffect(() => {
@@ -209,20 +230,6 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
       )}
 
       <PasswordRoundsTable rounds={game.rounds} teams={game.teams} names={names} />
-
-      {isHost && (
-        <div className="game-section">
-          <button
-            className="btn btn-muted"
-            onClick={() => {
-              void zero.mutate(mutators.password.resetToLobby({ gameId, hostId: sessionId }));
-              void navigate(`/password/${game.id}/begin`);
-            }}
-          >
-            Reset to Lobby
-          </button>
-        </div>
-      )}
     </div>
   );
 }

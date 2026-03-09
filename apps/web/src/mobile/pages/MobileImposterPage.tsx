@@ -157,20 +157,23 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
       {/* Players */}
       <div className="m-card">
-        <h3 className="m-card-title">Players</h3>
+        <h3 className="m-card-title">Players <span style={{ opacity: 0.5, fontWeight: 400 }}>{game.players.filter((p) => !p.eliminated).length}/{game.players.length}</span></h3>
         <div className="m-player-chips">
           {game.players.map((p) => {
             const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
             const isImposter = revealRoles && p.role === "imposter";
             const isMe = p.sessionId === sessionId;
+            const isEliminated = Boolean(p.eliminated);
             return (
               <div
                 key={p.sessionId}
-                className={`m-player-chip${isImposter ? " m-player-chip--danger" : ""}${isMe ? " m-player-chip--me" : ""}`}
+                className={`m-player-chip${isImposter ? " m-player-chip--danger" : ""}${isMe ? " m-player-chip--me" : ""}${isEliminated ? " m-player-chip--eliminated" : ""}`}
+                style={isEliminated ? { opacity: 0.45, textDecoration: "line-through" } : undefined}
               >
-                <span className="m-player-avatar">{(name[0] ?? "?").toUpperCase()}</span>
+                <span className="m-player-avatar">{isEliminated ? "☠" : (name[0] ?? "?").toUpperCase()}</span>
                 <span>{name}</span>
-                {isImposter && <span className="m-badge m-badge--danger" style={{ fontSize: "0.6rem" }}>IMP</span>}
+                {isEliminated && <span className="m-badge m-badge--muted" style={{ fontSize: "0.6rem" }}>OUT</span>}
+                {!isEliminated && isImposter && <span className="m-badge m-badge--danger" style={{ fontSize: "0.6rem" }}>IMP</span>}
               </div>
             );
           })}
@@ -296,7 +299,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               </form>
             )}
 
-            <p className="m-progress-text">Clues: {game.clues.length} / {game.players.length}</p>
+            <p className="m-progress-text">Clues: {game.clues.length} / {game.players.filter((p) => !p.eliminated).length}</p>
           </div>
         );
       })()}
@@ -306,7 +309,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         <div className="m-card">
           <div className="m-waiting">
             <div className="m-waiting-pulse" />
-            <p>Players are submitting clues… ({game.clues.length}/{game.players.length})</p>
+            <p>Players are submitting clues… ({game.clues.length}/{game.players.filter((p) => !p.eliminated).length})</p>
           </div>
         </div>
       )}
@@ -315,6 +318,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       {game.phase === "voting" && inGame && (() => {
         const hasVoted = game.votes.some((v) => v.voterId === sessionId);
         const votedName = voteTarget ? (sessionById[voteTarget] ?? voteTarget.slice(0, 6)) : null;
+        const activePlayers = game.players.filter((p) => !p.eliminated);
 
         return (
           <div className="m-card">
@@ -322,7 +326,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
             {/* Clue recap */}
             <div className="m-clue-recap">
-              {game.players.map((p) => {
+              {activePlayers.map((p) => {
                 const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
                 const clueText = game.clues.find(c => c.sessionId === p.sessionId)?.text;
                 return (
@@ -345,7 +349,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               <>
                 {/* Vote grid */}
                 <div className="m-vote-grid">
-                  {game.players
+                  {activePlayers
                     .filter((p) => p.sessionId !== sessionId)
                     .map((p) => {
                       const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
@@ -375,7 +379,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               </>
             )}
 
-            <p className="m-progress-text">Votes: {game.votes.length} / {game.players.length}</p>
+            <p className="m-progress-text">Votes: {game.votes.length} / {activePlayers.length}</p>
           </div>
         );
       })()}
@@ -385,30 +389,39 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         <div className="m-card">
           <div className="m-waiting">
             <div className="m-waiting-pulse" />
-            <p>Players are voting… ({game.votes.length}/{game.players.length})</p>
+            <p>Players are voting… ({game.votes.length}/{game.players.filter((p) => !p.eliminated).length})</p>
           </div>
         </div>
       )}
 
       {/* Results */}
       {game.phase === "results" && (() => {
+        const activePlayers = game.players.filter((p) => !p.eliminated);
         const maxVotes = Math.max(...Object.values(tally), 1);
-        const imposters = game.players.filter((p) => p.role === "imposter");
-        const imposterNames = imposters.map((p) => sessionById[p.sessionId] ?? p.sessionId.slice(0, 6));
         const topVoteCount = Math.max(...Object.values(tally), 0);
-        const topVoted = new Set(Object.entries(tally).filter(([, c]) => c === topVoteCount && topVoteCount > 0).map(([id]) => id));
-        const caught = imposters.length > 0 && imposters.some((p) => topVoted.has(p.sessionId));
+        const topVoted = Object.entries(tally).filter(([, c]) => c === topVoteCount && topVoteCount > 0).map(([id]) => id);
+        const votedOutId = topVoted.length > 0 ? topVoted[0] : null;
+        const votedOutPlayer = votedOutId ? activePlayers.find((p) => p.sessionId === votedOutId) : null;
+        const votedOutName = votedOutPlayer ? (sessionById[votedOutPlayer.sessionId] ?? votedOutPlayer.sessionId.slice(0, 6)) : null;
+        const wasImposter = votedOutPlayer?.role === "imposter";
 
         return (
           <>
-            <div className={`m-card ${caught ? "m-card--success" : "m-card--danger"}`}>
-              <h3 className="m-reveal-title">
-                {caught ? "Imposter Caught!" : "Imposter Got Away!"}
-              </h3>
-              {imposterNames.length > 0 && (
-                <p className="m-reveal-sub">
-                  The imposter was <strong>{imposterNames.join(", ")}</strong>
-                </p>
+            <div className={`m-card ${wasImposter ? "m-card--success" : "m-card--danger"}`}>
+              {votedOutName ? (
+                <>
+                  <h3 className="m-reveal-title">{votedOutName} was voted out!</h3>
+                  <p className="m-reveal-sub">
+                    They were {wasImposter
+                      ? <strong style={{ color: "#f87171" }}>the Imposter!</strong>
+                      : <strong style={{ color: "#4ade80" }}>innocent.</strong>}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="m-reveal-title">No one was voted out!</h3>
+                  <p className="m-reveal-sub">Not enough votes were cast.</p>
+                </>
               )}
               {game.secret_word && (
                 <p className="m-reveal-word">The word was: <strong>{game.secret_word}</strong></p>
@@ -418,22 +431,22 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
             <div className="m-card">
               <h3 className="m-card-title">Vote Results</h3>
               <div className="m-results-list">
-                {game.players.map((p) => {
+                {activePlayers.map((p) => {
                   const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
                   const voteCount = tally[p.sessionId] ?? 0;
                   const pct = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
-                  const isImp = p.role === "imposter";
+                  const isVotedOut = p.sessionId === votedOutId;
                   const voterNames = game.votes
                     .filter((v) => v.targetId === p.sessionId)
                     .map((v) => sessionById[v.voterId] ?? v.voterId.slice(0, 6));
                   return (
                     <div key={p.sessionId} className="m-result-row">
                       <div className="m-result-info">
-                        <span className={isImp ? "m-result-name--danger" : ""}>{name} {isImp ? "(imp)" : ""}</span>
+                        <span className={isVotedOut ? "m-result-name--danger" : ""}>{name} {isVotedOut ? "⬅ voted out" : ""}</span>
                         <span className="m-result-votes">{voteCount}</span>
                       </div>
                       <div className="m-result-bar-track">
-                        <div className={`m-result-bar${isImp ? " m-result-bar--danger" : ""}`} style={{ width: `${pct}%` }} />
+                        <div className={`m-result-bar${isVotedOut ? " m-result-bar--danger" : ""}`} style={{ width: `${pct}%` }} />
                       </div>
                       {voterNames.length > 0 && (
                         <p className="m-result-voters" style={{ fontSize: "0.7rem", opacity: 0.7, margin: "0.15rem 0 0" }}>
@@ -447,42 +460,59 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
             </div>
 
             <div className="m-card" style={{ textAlign: "center" }}>
-              <RoundCountdown endsAt={game.settings.phaseEndsAt} label={caught ? "Summary" : "Next round"} />
+              <RoundCountdown endsAt={game.settings.phaseEndsAt} label="Next round" />
             </div>
           </>
         );
       })()}
 
       {/* Finished */}
-      {game.phase === "finished" && (
-        <>
-          <div className="m-card m-card--success">
-            <h3 className="m-reveal-title">Game Complete!</h3>
-            <p className="m-reveal-sub">{game.settings.rounds} rounds played</p>
-          </div>
+      {game.phase === "finished" && (() => {
+        const impostersLeft = game.players.filter((p) => p.role === "imposter" && !p.eliminated).length;
+        const playersWin = impostersLeft === 0;
+        const imposters = game.players.filter((p) => p.role === "imposter");
+        const imposterNames = imposters.map((p) => sessionById[p.sessionId] ?? p.sessionId.slice(0, 6));
 
-          {(game.round_history ?? []).length > 0 && (
-            <div className="m-card">
-              <h3 className="m-card-title">Round Summary</h3>
-              <div className="m-data-table-wrap">
-                <table className="m-data-table">
-                  <thead>
-                    <tr><th>#</th><th>Word</th><th>Imposters</th><th>Result</th></tr>
-                  </thead>
-                  <tbody>
-                    {(game.round_history ?? []).map((rh) => (
-                      <tr key={rh.round}>
-                        <td>{rh.round}</td>
-                        <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ?? "—"}</td>
-                        <td>{rh.imposters.map((id) => sessionById[id] ?? id.slice(0, 6)).join(", ")}</td>
-                        <td style={{ color: rh.caught ? "#4ade80" : "#f87171" }}>{rh.caught ? "Caught" : "Escaped"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        return (
+          <>
+            <div className={`m-card ${playersWin ? "m-card--success" : "m-card--danger"}`}>
+              <h3 className="m-reveal-title">{playersWin ? "Players Win!" : "Imposters Win!"}</h3>
+              <p className="m-reveal-sub">
+                {playersWin ? "All imposters have been found!" : "The imposters survived!"}
+              </p>
+              <p className="m-reveal-sub">
+                {imposters.length > 1 ? "The imposters were " : "The imposter was "}
+                <strong>{imposterNames.join(", ")}</strong>
+              </p>
+              {game.secret_word && (
+                <p className="m-reveal-word">The word was: <strong>{game.secret_word}</strong></p>
+              )}
             </div>
-          )}
+
+            {(game.round_history ?? []).length > 0 && (
+              <div className="m-card">
+                <h3 className="m-card-title">Round Summary</h3>
+                <div className="m-data-table-wrap">
+                  <table className="m-data-table">
+                    <thead>
+                      <tr><th>#</th><th>Word</th><th>Voted Out</th><th>Role</th></tr>
+                    </thead>
+                    <tbody>
+                      {(game.round_history ?? []).map((rh) => (
+                        <tr key={rh.round}>
+                          <td>{rh.round}</td>
+                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ?? "—"}</td>
+                          <td style={{ fontWeight: 600 }}>{rh.votedOutName ?? "No one"}</td>
+                          <td style={{ color: rh.wasImposter ? "#f87171" : "#4ade80", fontWeight: 600 }}>
+                            {rh.votedOutName ? (rh.wasImposter ? "Imposter" : "Innocent") : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
           <div className="m-card">
             {isHost ? (
@@ -508,8 +538,9 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               </button>
             )}
           </div>
-        </>
-      )}
+          </>
+        );
+      })()}
     </div>
   );
 }

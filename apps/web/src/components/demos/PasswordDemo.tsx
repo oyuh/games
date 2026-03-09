@@ -183,7 +183,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
               />
             </DemoGlow>
             <DemoGlow label="Full round history with all words, clues, and guesses">
-              <PasswordRoundsTable rounds={ROUNDS_HISTORY} teams={TEAMS} names={NAMES} />
+              <PasswordRoundsTable rounds={ROUNDS_HISTORY} teams={TEAMS} names={NAMES} defaultOpen />
             </DemoGlow>
           </div>
         );
