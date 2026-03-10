@@ -82,18 +82,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [gameId]);
 
-  useEffect(() => {
-    if (open) {
-      const latest = messages.length > 0 ? messages[messages.length - 1]!.created_at : baselineTs.current;
-      baselineTs.current = latest;
-      setUnread(0);
-    } else {
-      const newCount = messages.filter(m => m.created_at > baselineTs.current && m.sender_id !== sessionId).length;
-      setUnread(newCount);
-    }
-  }, [messages.length, open]);
-
-  // Query current game for spectator detection
+  // Query current game for spectator/role detection (must be above unread effect)
   const [impGames] = useQuery(gameType === "imposter" ? queries.imposter.byId({ id: gameId }) : queries.imposter.byId({ id: "__none__" }));
   const [pwdGames] = useQuery(gameType === "password" ? queries.password.byId({ id: gameId }) : queries.password.byId({ id: "__none__" }));
   const [chrGames] = useQuery(gameType === "chain_reaction" ? queries.chainReaction.byId({ id: gameId }) : queries.chainReaction.byId({ id: "__none__" }));
@@ -105,6 +94,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const imposterGame = impGames[0];
   const isImposter = gameType === "imposter" && imposterGame?.players?.some((p: { sessionId: string; role?: string }) => p.sessionId === sessionId && p.role === "imposter") || false;
   const multipleImposters = gameType === "imposter" && (imposterGame?.players?.filter((p: { role?: string }) => p.role === "imposter").length ?? 0) >= 2 || false;
+
+  useEffect(() => {
+    if (open) {
+      const latest = messages.length > 0 ? messages[messages.length - 1]!.created_at : baselineTs.current;
+      baselineTs.current = latest;
+      setUnread(0);
+    } else {
+      const visible = isImposter ? messages : messages.filter(m => !m.channel || m.channel === "all");
+      const newCount = visible.filter(m => m.created_at > baselineTs.current && m.sender_id !== sessionId).length;
+      setUnread(newCount);
+    }
+  }, [messages.length, open, isImposter]);
 
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
