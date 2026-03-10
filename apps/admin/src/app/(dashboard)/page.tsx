@@ -12,16 +12,22 @@ type ClientsData = {
   total: number;
 };
 
-type StatusData = {
-  status: string | null;
-};
+type CustomStatusPayload = {
+  text: string;
+  link?: string | null;
+  color?: string | null;
+  flash?: boolean;
+} | null;
 
 export default function DashboardPage() {
   const { show } = useToast();
   const [games, setGames] = useState<GamesData | null>(null);
   const [clients, setClients] = useState<ClientsData | null>(null);
-  const [status, setStatus] = useState<StatusData>({ status: null });
+  const [currentStatus, setCurrentStatus] = useState<CustomStatusPayload>(null);
   const [statusInput, setStatusInput] = useState("");
+  const [linkInput, setLinkInput] = useState("");
+  const [colorInput, setColorInput] = useState("");
+  const [flashEnabled, setFlashEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const refresh = async () => {
@@ -33,8 +39,12 @@ export default function DashboardPage() {
       ]);
       setGames(g);
       setClients(c);
-      setStatus(s);
-      setStatusInput(s.status ?? "");
+      const st: CustomStatusPayload = s.status ?? null;
+      setCurrentStatus(st);
+      setStatusInput(st?.text ?? "");
+      setLinkInput(st?.link ?? "");
+      setColorInput(st?.color ?? "");
+      setFlashEnabled(st?.flash ?? false);
     } catch (e: any) {
       show(e.message, "error");
     } finally {
@@ -70,9 +80,19 @@ export default function DashboardPage() {
 
   const updateStatus = async () => {
     try {
-      await api("/status", { method: "POST", body: { text: statusInput || null } });
+      const body: any = {
+        text: statusInput || null,
+        link: linkInput || null,
+        color: colorInput || null,
+        flash: flashEnabled,
+      };
+      await api("/status", { method: "POST", body });
       show(statusInput ? "Custom status set" : "Custom status cleared", "success");
-      setStatus({ status: statusInput || null });
+      if (statusInput) {
+        setCurrentStatus({ text: statusInput, link: linkInput || null, color: colorInput || null, flash: flashEnabled });
+      } else {
+        setCurrentStatus(null);
+      }
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -80,8 +100,11 @@ export default function DashboardPage() {
     try {
       await api("/status", { method: "DELETE" });
       show("Custom status cleared", "success");
-      setStatus({ status: null });
+      setCurrentStatus(null);
       setStatusInput("");
+      setLinkInput("");
+      setColorInput("");
+      setFlashEnabled(false);
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -122,22 +145,59 @@ export default function DashboardPage() {
       <div>
         <h2 className="section-title">Custom Footer Status</h2>
         <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {status.status && (
+          {currentStatus && (
             <div style={{ fontSize: "0.875rem", color: "var(--primary)" }}>
-              Current: <strong>{status.status}</strong>
+              Current: <strong style={{ color: currentStatus.color || undefined }}>{currentStatus.text}</strong>
+              {currentStatus.link && <span style={{ color: "var(--muted)" }}> → {currentStatus.link}</span>}
+              {currentStatus.flash && <span className="badge badge-yellow" style={{ marginLeft: "0.5rem" }}>Flash</span>}
             </div>
           )}
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <input
               type="text"
-              placeholder="Set custom status message..."
+              placeholder="Status message..."
               value={statusInput}
               onChange={(e) => setStatusInput(e.target.value)}
               maxLength={200}
               style={{ flex: 1 }}
             />
-            <button className="btn btn-primary" onClick={updateStatus}>Set</button>
-            {status.status && (
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              type="text"
+              placeholder="Link URL (optional)..."
+              value={linkInput}
+              onChange={(e) => setLinkInput(e.target.value)}
+              maxLength={500}
+              style={{ flex: 1, minWidth: "200px" }}
+            />
+            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <label style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Color:</label>
+              <input
+                type="color"
+                value={colorInput || "#ffffff"}
+                onChange={(e) => setColorInput(e.target.value)}
+                style={{ width: "2rem", height: "2rem", padding: 0, border: "1px solid var(--border)", borderRadius: "4px", cursor: "pointer" }}
+              />
+              {colorInput && (
+                <button className="btn btn-ghost" style={{ padding: "0.25rem 0.5rem", fontSize: "0.7rem" }} onClick={() => setColorInput("")}>
+                  ✕
+                </button>
+              )}
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.875rem", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={flashEnabled}
+                onChange={(e) => setFlashEnabled(e.target.checked)}
+                style={{ width: "1rem", height: "1rem" }}
+              />
+              Flash
+            </label>
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button className="btn btn-primary" onClick={updateStatus}>Set Status</button>
+            {currentStatus && (
               <button className="btn btn-ghost" onClick={clearStatus}>Clear</button>
             )}
           </div>

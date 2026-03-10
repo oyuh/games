@@ -32,6 +32,7 @@ export default async function RootLayout({
                 <a href="/games" className="admin-nav__link">Games</a>
                 <a href="/bans" className="admin-nav__link">Bans</a>
                 <a href="/broadcast" className="admin-nav__link">Broadcast</a>
+                <a href="/names" className="admin-nav__link">Names</a>
               </div>
             </div>
             <div className="admin-nav__right">

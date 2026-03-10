@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, ne, and, count } from "drizzle-orm";
+import { eq, ne, and } from "drizzle-orm";
 import {
   sessions,
   imposterGames,
@@ -7,6 +7,10 @@ import {
   chainReactionGames,
   shadeSignalGames,
   chatMessages,
+  adminBans,
+  adminRestrictedNames,
+  adminNameOverrides,
+  statusTable,
 } from "@games/shared";
 import { drizzleClient } from "./db-provider";
 import {
@@ -16,9 +20,14 @@ import {
   getConnectedClients,
   getCustomStatus,
   setCustomStatus,
+  type CustomStatusPayload,
 } from "./broadcast-server";
 
-// ─── Ban storage (in-memory, persisted via status table for durability) ──────
+function genId(prefix: string) {
+  return `${prefix}_${crypto.randomUUID().slice(0, 12)}`;
+}
+
+// ─── Ban storage (database-backed) ──────────────────────────
 type Ban = {
   id: string;
   type: "session" | "ip" | "region";
@@ -27,11 +36,25 @@ type Ban = {
   createdAt: number;
 };
 
-const bans: Ban[] = [];
-let banIdCounter = 0;
+// In-memory cache of bans, synced from DB on startup and on changes
+let bansCache: Ban[] = [];
+
+async function loadBansFromDb() {
+  const rows = await drizzleClient.select().from(adminBans);
+  bansCache = rows.map((r) => ({
+    id: r.id,
+    type: r.type as Ban["type"],
+    value: r.value,
+    reason: r.reason,
+    createdAt: r.createdAt,
+  }));
+}
+
+// Load bans on startup
+loadBansFromDb().catch(console.error);
 
 export function isBanned(sessionId: string, ip: string, region: string): Ban | null {
-  for (const ban of bans) {
+  for (const ban of bansCache) {
     if (ban.type === "session" && ban.value === sessionId) return ban;
     if (ban.type === "ip" && ban.value === ip) return ban;
     if (ban.type === "region" && ban.value.toLowerCase() === region.toLowerCase()) return ban;
@@ -40,7 +63,7 @@ export function isBanned(sessionId: string, ip: string, region: string): Ban | n
 }
 
 export function getBans() {
-  return bans;
+  return bansCache;
 }
 
 // ─── Middleware: verify admin secret ─────────────────────────
@@ -287,7 +310,7 @@ adminRoutes.post("/games/:type/:id/kick/:sessionId", async (c) => {
 
 // ─── Bans ───────────────────────────────────────────────────
 adminRoutes.get("/bans", (c) => {
-  return c.json({ ok: true, bans });
+  return c.json({ ok: true, bans: bansCache });
 });
 
 adminRoutes.post("/bans", async (c) => {
@@ -299,13 +322,21 @@ adminRoutes.post("/bans", async (c) => {
   }
 
   const ban: Ban = {
-    id: `ban_${++banIdCounter}`,
+    id: genId("ban"),
     type: type as Ban["type"],
     value,
     reason: reason || "",
     createdAt: Date.now(),
   };
-  bans.push(ban);
+
+  await drizzleClient.insert(adminBans).values({
+    id: ban.id,
+    type: ban.type,
+    value: ban.value,
+    reason: ban.reason,
+    createdAt: ban.createdAt,
+  });
+  bansCache.push(ban);
 
   // If banning a session, disconnect them
   if (type === "session") {
@@ -325,13 +356,14 @@ adminRoutes.post("/bans", async (c) => {
   return c.json({ ok: true, ban });
 });
 
-adminRoutes.delete("/bans/:id", (c) => {
+adminRoutes.delete("/bans/:id", async (c) => {
   const { id } = c.req.param();
-  const idx = bans.findIndex((b) => b.id === id);
+  const idx = bansCache.findIndex((b) => b.id === id);
   if (idx === -1) {
     return c.json({ error: "Ban not found" }, 404);
   }
-  const removed = bans.splice(idx, 1)[0];
+  const removed = bansCache.splice(idx, 1)[0];
+  await drizzleClient.delete(adminBans).where(eq(adminBans.id, id));
   return c.json({ ok: true, removed });
 });
 
@@ -383,24 +415,52 @@ adminRoutes.post("/broadcast/refresh", async (c) => {
   return c.json({ ok: true });
 });
 
-// ─── Broadcast: custom status ───────────────────────────────
+// ─── Broadcast: custom status (enhanced: link, color, flash) ─
 adminRoutes.get("/status", (c) => {
   return c.json({ ok: true, status: getCustomStatus() });
 });
 
 adminRoutes.post("/status", async (c) => {
   const body = await c.req.json();
-  const { text } = body as { text: string | null };
-  setCustomStatus(text || null);
+  const { text, link, color, flash } = body as { text: string | null; link?: string | null; color?: string | null; flash?: boolean };
 
-  broadcastToAll({ type: "admin:status", text: text || null });
+  if (!text) {
+    setCustomStatus(null);
+    // Persist cleared status
+    await drizzleClient
+      .insert(statusTable)
+      .values({ key: "custom_status", value: JSON.stringify(null), updatedAt: Date.now() })
+      .onConflictDoUpdate({ target: statusTable.key, set: { value: JSON.stringify(null), updatedAt: Date.now() } });
+    broadcastToAll({ type: "admin:status", status: null });
+    return c.json({ ok: true, status: null });
+  }
 
-  return c.json({ ok: true, status: text || null });
+  const payload: CustomStatusPayload = {
+    text,
+    link: link || null,
+    color: color || null,
+    flash: flash || false,
+  };
+  setCustomStatus(payload);
+
+  // Persist to DB
+  await drizzleClient
+    .insert(statusTable)
+    .values({ key: "custom_status", value: JSON.stringify(payload), updatedAt: Date.now() })
+    .onConflictDoUpdate({ target: statusTable.key, set: { value: JSON.stringify(payload), updatedAt: Date.now() } });
+
+  broadcastToAll({ type: "admin:status", status: payload });
+
+  return c.json({ ok: true, status: payload });
 });
 
-adminRoutes.delete("/status", (c) => {
+adminRoutes.delete("/status", async (c) => {
   setCustomStatus(null);
-  broadcastToAll({ type: "admin:status", text: null });
+  await drizzleClient
+    .insert(statusTable)
+    .values({ key: "custom_status", value: JSON.stringify(null), updatedAt: Date.now() })
+    .onConflictDoUpdate({ target: statusTable.key, set: { value: JSON.stringify(null), updatedAt: Date.now() } });
+  broadcastToAll({ type: "admin:status", status: null });
   return c.json({ ok: true });
 });
 
@@ -465,13 +525,21 @@ adminRoutes.post("/clients/:sessionId/restrict", async (c) => {
   if (type === "region") banValue = client.region;
 
   const ban: Ban = {
-    id: `ban_${++banIdCounter}`,
+    id: genId("ban"),
     type: type || "session",
     value: banValue,
     reason: reason || "Restricted by admin",
     createdAt: Date.now(),
   };
-  bans.push(ban);
+
+  await drizzleClient.insert(adminBans).values({
+    id: ban.id,
+    type: ban.type,
+    value: ban.value,
+    reason: ban.reason,
+    createdAt: ban.createdAt,
+  });
+  bansCache.push(ban);
 
   disconnectSession(sessionId);
 
@@ -495,3 +563,133 @@ adminRoutes.post("/clients/:sessionId/toast", async (c) => {
 
   return c.json({ ok: true });
 });
+
+// ─── Name Management ────────────────────────────────────────
+
+// Change a client's name (admin override)
+adminRoutes.post("/clients/:sessionId/name", async (c) => {
+  const { sessionId } = c.req.param();
+  const body = await c.req.json();
+  const { name, reason } = body as { name: string; reason?: string };
+
+  if (!name || !name.trim()) {
+    return c.json({ error: "Name is required" }, 400);
+  }
+
+  const sanitizedName = name.trim().replace(/\s/g, "");
+  if (sanitizedName.length > 20) {
+    return c.json({ error: "Name too long (max 20 chars)" }, 400);
+  }
+
+  // Save override in DB
+  await drizzleClient
+    .insert(adminNameOverrides)
+    .values({ sessionId, forcedName: sanitizedName, reason: reason || "", updatedAt: Date.now() })
+    .onConflictDoUpdate({ target: adminNameOverrides.sessionId, set: { forcedName: sanitizedName, reason: reason || "", updatedAt: Date.now() } });
+
+  // Update the session's name in sessions table if it exists
+  await drizzleClient
+    .update(sessions)
+    .set({ name: sanitizedName })
+    .where(eq(sessions.id, sessionId));
+
+  // Notify the client to update their name
+  broadcastToSession(sessionId, {
+    type: "admin:name-changed",
+    sessionId,
+    name: sanitizedName,
+  });
+
+  return c.json({ ok: true, name: sanitizedName });
+});
+
+// Remove admin name override
+adminRoutes.delete("/clients/:sessionId/name", async (c) => {
+  const { sessionId } = c.req.param();
+  await drizzleClient.delete(adminNameOverrides).where(eq(adminNameOverrides.sessionId, sessionId));
+  return c.json({ ok: true });
+});
+
+// Get all name overrides
+adminRoutes.get("/names/overrides", async (c) => {
+  const overrides = await drizzleClient.select().from(adminNameOverrides);
+  return c.json({ ok: true, overrides });
+});
+
+// ─── Restricted Names ───────────────────────────────────────
+
+adminRoutes.get("/names/restricted", async (c) => {
+  const restricted = await drizzleClient.select().from(adminRestrictedNames);
+  return c.json({ ok: true, restricted });
+});
+
+adminRoutes.post("/names/restricted", async (c) => {
+  const body = await c.req.json();
+  const { pattern, reason } = body as { pattern: string; reason?: string };
+
+  if (!pattern || !pattern.trim()) {
+    return c.json({ error: "Pattern is required" }, 400);
+  }
+
+  const entry = {
+    id: genId("rn"),
+    pattern: pattern.trim().toLowerCase(),
+    reason: reason || "",
+    createdAt: Date.now(),
+  };
+
+  await drizzleClient.insert(adminRestrictedNames).values(entry);
+
+  // Broadcast updated restrictions to all clients
+  const allRestricted = await drizzleClient.select({ pattern: adminRestrictedNames.pattern }).from(adminRestrictedNames);
+  broadcastToAll({ type: "admin:name-restricted", patterns: allRestricted.map((r) => r.pattern) });
+
+  return c.json({ ok: true, entry });
+});
+
+adminRoutes.delete("/names/restricted/:id", async (c) => {
+  const { id } = c.req.param();
+
+  const [existing] = await drizzleClient.select().from(adminRestrictedNames).where(eq(adminRestrictedNames.id, id));
+  if (!existing) {
+    return c.json({ error: "Restricted name not found" }, 404);
+  }
+
+  await drizzleClient.delete(adminRestrictedNames).where(eq(adminRestrictedNames.id, id));
+
+  // Broadcast updated restrictions
+  const allRestricted = await drizzleClient.select({ pattern: adminRestrictedNames.pattern }).from(adminRestrictedNames);
+  broadcastToAll({ type: "admin:name-restricted", patterns: allRestricted.map((r) => r.pattern) });
+
+  return c.json({ ok: true, removed: existing });
+});
+
+// ─── Public: check restricted names (no auth required) ──────
+// This is mounted separately in index.ts
+
+export function getRestrictedNamesRoute() {
+  const publicRoutes = new Hono();
+
+  publicRoutes.get("/names/restricted", async (c) => {
+    const restricted = await drizzleClient.select({ pattern: adminRestrictedNames.pattern }).from(adminRestrictedNames);
+    return c.json({ ok: true, patterns: restricted.map((r) => r.pattern) });
+  });
+
+  return publicRoutes;
+}
+
+// ─── Load persisted custom status from DB on startup ────────
+export async function loadPersistedStatus() {
+  try {
+    const [row] = await drizzleClient
+      .select()
+      .from(statusTable)
+      .where(eq(statusTable.key, "custom_status"));
+    if (row) {
+      const parsed = JSON.parse(row.value);
+      setCustomStatus(parsed);
+    }
+  } catch {
+    // ignore - status not set yet
+  }
+}

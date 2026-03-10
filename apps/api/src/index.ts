@@ -11,7 +11,7 @@ import { dbProvider } from "./db-provider";
 import { drizzleClient } from "./db-provider";
 import { startPresenceServer } from "./presence-server";
 import { startBroadcastServer, broadcastToAll, getCustomStatus, setBanChecker } from "./broadcast-server";
-import { adminRoutes, isBanned } from "./admin-routes";
+import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 
 config({ path: "../../.env" });
 
@@ -42,11 +42,17 @@ app.use(
 // ─── Admin routes ──────────────────────────────────────────
 app.route("/api/admin", adminRoutes);
 
+// ─── Public endpoints (no auth) ─────────────────────────────
+app.route("/api/public", getRestrictedNamesRoute());
+
 // ─── Custom status in build-info ───────────────────────────
 app.get("/api/admin-status", (c) => {
   return c.json({ ok: true, status: getCustomStatus() });
 });
 const apiStartedAt = new Date().toISOString();
+
+// Load persisted status from DB
+loadPersistedStatus().catch(console.error);
 
 function firstNonEmpty(values: Array<string | undefined>) {
   for (const value of values) {

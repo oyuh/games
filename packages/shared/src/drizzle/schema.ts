@@ -235,6 +235,42 @@ export const shadeSignalGames = pgTable(
   })
 );
 
+// ─── Admin tables ───────────────────────────────────────────
+
+export const adminBans = pgTable(
+  "admin_bans",
+  {
+    id: text("id").primaryKey(),
+    type: text("type").notNull(), // "session" | "ip" | "region"
+    value: text("value").notNull(),
+    reason: text("reason").notNull().default(""),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  },
+  (table) => ({
+    typeValueIdx: index("admin_bans_type_value_idx").on(table.type, table.value),
+  })
+);
+
+export const adminRestrictedNames = pgTable(
+  "admin_restricted_names",
+  {
+    id: text("id").primaryKey(),
+    pattern: text("pattern").notNull(), // exact match or glob-like pattern
+    reason: text("reason").notNull().default(""),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  }
+);
+
+export const adminNameOverrides = pgTable(
+  "admin_name_overrides",
+  {
+    sessionId: text("session_id").primaryKey(),
+    forcedName: text("forced_name").notNull(),
+    reason: text("reason").notNull().default(""),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
+  }
+);
+
 export type DrizzleSchema = {
   sessions: typeof sessions;
   statusTable: typeof statusTable;
@@ -243,4 +279,7 @@ export type DrizzleSchema = {
   chatMessages: typeof chatMessages;
   chainReactionGames: typeof chainReactionGames;
   shadeSignalGames: typeof shadeSignalGames;
+  adminBans: typeof adminBans;
+  adminRestrictedNames: typeof adminRestrictedNames;
+  adminNameOverrides: typeof adminNameOverrides;
 };

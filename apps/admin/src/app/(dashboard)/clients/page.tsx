@@ -6,6 +6,7 @@ import { useToast } from "@/components/Toast";
 
 type Client = {
   sessionId: string | null;
+  name: string | null;
   ip: string;
   userAgent: string;
   region: string;
@@ -25,6 +26,8 @@ export default function ClientsPage() {
   const [restrictTarget, setRestrictTarget] = useState<string | null>(null);
   const [restrictType, setRestrictType] = useState<"session" | "ip" | "region">("session");
   const [restrictReason, setRestrictReason] = useState("");
+  const [nameTarget, setNameTarget] = useState<string | null>(null);
+  const [nameInput, setNameInput] = useState("");
 
   const refresh = async () => {
     try {
@@ -63,6 +66,17 @@ export default function ClientsPage() {
       show("Global toast sent", "success");
       setToastTarget(null);
       setToastMsg("");
+    } catch (e: any) { show(e.message, "error"); }
+  };
+
+  const changeName = async (sessionId: string) => {
+    if (!nameInput.trim()) return;
+    try {
+      await api(`/clients/${sessionId}/name`, { method: "POST", body: { name: nameInput } });
+      show("Name changed", "success");
+      setNameTarget(null);
+      setNameInput("");
+      refresh();
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -143,11 +157,33 @@ export default function ClientsPage() {
         </div>
       )}
 
+      {/* Name change modal */}
+      {nameTarget && (
+        <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+            Change name for {nameTarget.slice(0, 8)}...
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <input
+              type="text"
+              placeholder="New name..."
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              style={{ flex: 1 }}
+              maxLength={20}
+            />
+            <button className="btn btn-primary" onClick={() => changeName(nameTarget)}>Change</button>
+            <button className="btn btn-ghost" onClick={() => setNameTarget(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead>
             <tr>
               <th>Session</th>
+              <th>Name</th>
               <th>IP</th>
               <th>Region</th>
               <th>Game</th>
@@ -158,15 +194,24 @@ export default function ClientsPage() {
           </thead>
           <tbody>
             {clients.length === 0 && (
-              <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)" }}>No clients connected</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)" }}>No clients connected</td></tr>
             )}
             {clients.map((c, i) => (
               <tr key={i}>
                 <td style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
                   {c.sessionId?.slice(0, 12) ?? "—"}
                 </td>
+                <td style={{ fontWeight: 500 }}>
+                  {c.name || <span style={{ color: "var(--muted)" }}>Anonymous</span>}
+                </td>
                 <td style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{c.ip}</td>
-                <td>{c.region}</td>
+                <td>
+                  {c.region && c.region !== "unknown" ? (
+                    <span className="badge badge-gray">{c.region}</span>
+                  ) : (
+                    <span style={{ color: "var(--muted)" }}>—</span>
+                  )}
+                </td>
                 <td>
                   {c.gameType ? (
                     <span className="badge badge-blue">{c.gameType}</span>
@@ -179,6 +224,13 @@ export default function ClientsPage() {
                 <td>
                   {c.sessionId && (
                     <div style={{ display: "flex", gap: "0.375rem" }}>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                        onClick={() => { setNameTarget(c.sessionId!); setNameInput(c.name || ""); }}
+                      >
+                        Name
+                      </button>
                       <button
                         className="btn btn-ghost"
                         style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
