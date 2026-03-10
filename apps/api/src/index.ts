@@ -10,6 +10,8 @@ import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
 import { drizzleClient } from "./db-provider";
 import { startPresenceServer } from "./presence-server";
+import { startBroadcastServer, broadcastToAll, getCustomStatus, setBanChecker } from "./broadcast-server";
+import { adminRoutes, isBanned } from "./admin-routes";
 
 config({ path: "../../.env" });
 
@@ -31,11 +33,19 @@ app.use(
       }
       return "https://games.lawsonhart.me";
     },
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400
   })
 );
+
+// ─── Admin routes ──────────────────────────────────────────
+app.route("/api/admin", adminRoutes);
+
+// ─── Custom status in build-info ───────────────────────────
+app.get("/api/admin-status", (c) => {
+  return c.json({ ok: true, status: getCustomStatus() });
+});
 const apiStartedAt = new Date().toISOString();
 
 function firstNonEmpty(values: Array<string | undefined>) {
@@ -383,6 +393,8 @@ const server = serve(
 );
 
 startPresenceServer(server, "/presence");
+startBroadcastServer(server, "/broadcast");
+setBanChecker(isBanned);
 
 // ─── Auto-cleanup: run every 15 minutes ────────────────────
 async function scheduledCleanup() {

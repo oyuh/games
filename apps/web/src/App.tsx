@@ -15,6 +15,7 @@ import {
   startGlobalConnectionDebugCapture
 } from "./lib/connection-debug";
 import { getOrCreateSessionId, getStoredName } from "./lib/session";
+import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { HomePage } from "./pages/HomePage";
 import { HomePageStylePreview } from "./pages/HomePageStylePreview";
 import { ImposterPage } from "./pages/ImposterPage";
@@ -64,6 +65,9 @@ function stringifyError(error: unknown) {
 
 export function App() {
   const styleOnly = import.meta.env.VITE_STYLE_ONLY === "true";
+
+  // Global admin broadcast listener (toasts, refresh, custom status, kick)
+  useAdminBroadcast();
 
   useEffect(() => {
     const storedName = getStoredName();

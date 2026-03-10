@@ -1,10 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useConnectionDebug } from "../lib/connection-debug";
+import { getCustomStatus, subscribeCustomStatus } from "../hooks/useAdminBroadcast";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
 
+function useCustomStatus() {
+  return useSyncExternalStore(subscribeCustomStatus, getCustomStatus);
+}
+
 export function Footer() {
   const debug = useConnectionDebug();
+  const customStatus = useCustomStatus();
   const [expanded, setExpanded] = useState(false);
   const [tick, setTick] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -53,6 +59,11 @@ export function Footer() {
 
   return (
     <footer className="app-footer">
+      {customStatus && (
+        <div className="footer-row footer-row--status">
+          <span className="footer-custom-status">{customStatus}</span>
+        </div>
+      )}
       <div className="footer-row footer-row--main">
         <span className="footer-credit">
           Made with <span className="footer-heart">❤️</span> by{" "}
