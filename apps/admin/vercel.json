@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @games/admin build"
+  "buildCommand": "pnpm --filter @games/admin build",
+  "outputDirectory": "apps/admin/.next"
 }
