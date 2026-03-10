@@ -714,6 +714,7 @@ export const shadeSignalMutators = {
       await tx.mutate.shade_signal_games.update({
         id: game.id,
         spectators: game.spectators.filter((s) => s.sessionId !== args.targetId),
+        kicked: [...game.kicked, args.targetId],
         updated_at: now()
       });
       await tx.mutate.sessions.update({

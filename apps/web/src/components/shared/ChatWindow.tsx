@@ -32,7 +32,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
 
   const filteredMessages = showChannels
     ? messages.filter((m) => (m.channel ?? "all") === channel)
-    : messages;
+    : messages.filter((m) => !m.channel || m.channel === "all");
 
   const [minimized, setMinimized] = useState(false);
   const [input, setInput] = useState("");
