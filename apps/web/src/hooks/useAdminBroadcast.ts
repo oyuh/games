@@ -1,17 +1,30 @@
 import { useEffect, useRef } from "react";
 import { showToast } from "../lib/toast";
-import { getOrCreateSessionId } from "../lib/session";
+import { getOrCreateSessionId, getStoredName, setStoredName } from "../lib/session";
+
+type CustomStatusPayload = {
+  text: string;
+  link?: string | null;
+  color?: string | null;
+  flash?: boolean;
+} | null;
 
 type AdminBroadcastMessage =
   | { type: "admin:toast"; message: string; level: "error" | "success" | "info" }
   | { type: "admin:refresh"; countdown?: number }
-  | { type: "admin:status"; text: string | null }
-  | { type: "admin:kick"; sessionId: string; reason?: string };
+  | { type: "admin:status"; status: CustomStatusPayload }
+  | { type: "admin:kick"; sessionId: string; reason?: string }
+  | { type: "admin:name-changed"; sessionId: string; name: string }
+  | { type: "admin:name-restricted"; patterns: string[] };
 
 const statusListeners = new Set<() => void>();
-let currentCustomStatus: string | null = null;
+let currentCustomStatus: CustomStatusPayload = null;
 
-export function getCustomStatus() {
+// Restricted name patterns (synced from server)
+const restrictedListeners = new Set<() => void>();
+let restrictedPatterns: string[] = [];
+
+export function getCustomStatus(): CustomStatusPayload {
   return currentCustomStatus;
 }
 
@@ -20,9 +33,30 @@ export function subscribeCustomStatus(cb: () => void) {
   return () => { statusListeners.delete(cb); };
 }
 
-function setStatus(text: string | null) {
-  currentCustomStatus = text;
+function setStatus(status: CustomStatusPayload) {
+  currentCustomStatus = status;
   statusListeners.forEach((cb) => cb());
+}
+
+export function getRestrictedPatterns(): string[] {
+  return restrictedPatterns;
+}
+
+export function subscribeRestrictedPatterns(cb: () => void) {
+  restrictedListeners.add(cb);
+  return () => { restrictedListeners.delete(cb); };
+}
+
+export function isNameRestricted(name: string): boolean {
+  if (!name) return false;
+  const lower = name.toLowerCase().trim();
+  return restrictedPatterns.some((pattern) => {
+    if (pattern.includes("*")) {
+      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$", "i");
+      return regex.test(lower);
+    }
+    return lower === pattern;
+  });
 }
 
 export function useAdminBroadcast() {
@@ -35,6 +69,18 @@ export function useAdminBroadcast() {
     // Derive broadcast URL from presence URL
     const broadcastUrl = presenceUrl.replace(/\/presence$/, "/broadcast");
 
+    // Fetch initial restricted patterns
+    const apiBase = presenceUrl.replace(/^ws/, "http").replace(/\/presence$/, "");
+    fetch(`${apiBase}/api/public/names/restricted`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.patterns) {
+          restrictedPatterns = data.patterns;
+          restrictedListeners.forEach((cb) => cb());
+        }
+      })
+      .catch(() => {});
+
     let cancelled = false;
 
     function connect() {
@@ -44,8 +90,8 @@ export function useAdminBroadcast() {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        // Identify ourselves
-        ws.send(JSON.stringify({ type: "identify", sessionId }));
+        // Identify ourselves with name
+        ws.send(JSON.stringify({ type: "identify", sessionId, name: getStoredName() || null }));
       };
 
       ws.onmessage = (event) => {
@@ -62,7 +108,7 @@ export function useAdminBroadcast() {
               break;
 
             case "admin:status":
-              setStatus(msg.text);
+              setStatus(msg.status);
               break;
 
             case "admin:kick":
@@ -72,6 +118,20 @@ export function useAdminBroadcast() {
                 setTimeout(() => {
                   window.location.href = "/";
                 }, 2000);
+              }
+              break;
+
+            case "admin:name-changed":
+              if (msg.sessionId === sessionId && msg.name) {
+                setStoredName(msg.name);
+                showToast(`Your name has been changed to "${msg.name}" by an admin.`, "info");
+              }
+              break;
+
+            case "admin:name-restricted":
+              if (msg.patterns) {
+                restrictedPatterns = msg.patterns;
+                restrictedListeners.forEach((cb) => cb());
               }
               break;
           }
@@ -114,6 +174,7 @@ export function useAdminBroadcast() {
 
         wsRef.current.send(JSON.stringify({
           type: "heartbeat",
+          name: getStoredName() || null,
           gameId,
           gameType,
         }));

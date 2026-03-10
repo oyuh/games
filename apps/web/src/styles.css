@@ -519,12 +519,21 @@ body {
   margin-bottom: 0.15rem;
 }
 
+
 .footer-custom-status {
   font-size: 0.7rem;
   color: var(--primary);
   text-align: center;
   opacity: 0.85;
   letter-spacing: 0.02em;
+  transition: color 0.2s;
+}
+.footer-custom-status--flash {
+  animation: footer-flash 1s linear infinite alternate;
+}
+@keyframes footer-flash {
+  0% { opacity: 1; }
+  100% { opacity: 0.3; }
 }
 
 .footer-credit {

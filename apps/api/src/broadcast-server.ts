@@ -1,14 +1,24 @@
 import { WebSocketServer, WebSocket } from "ws";
 
+export type CustomStatusPayload = {
+  text: string;
+  link?: string | null;
+  color?: string | null;
+  flash?: boolean;
+} | null;
+
 export type BroadcastMessage =
   | { type: "admin:toast"; message: string; level: "error" | "success" | "info"; targetSessionId?: string }
   | { type: "admin:refresh"; countdown?: number }
-  | { type: "admin:status"; text: string | null }
-  | { type: "admin:kick"; sessionId: string; reason?: string };
+  | { type: "admin:status"; status: CustomStatusPayload }
+  | { type: "admin:kick"; sessionId: string; reason?: string }
+  | { type: "admin:name-changed"; sessionId: string; name: string }
+  | { type: "admin:name-restricted"; patterns: string[] };
 
 type ConnectedClient = {
   ws: WebSocket;
   sessionId: string | null;
+  name: string | null;
   ip: string;
   userAgent: string;
   region: string;
@@ -20,23 +30,24 @@ type ConnectedClient = {
 
 const clients = new Map<WebSocket, ConnectedClient>();
 
-let customStatus: string | null = null;
+let customStatus: CustomStatusPayload = null;
 let banChecker: ((sessionId: string, ip: string, region: string) => any) | null = null;
 
 export function setBanChecker(fn: (sessionId: string, ip: string, region: string) => any) {
   banChecker = fn;
 }
 
-export function getCustomStatus() {
+export function getCustomStatus(): CustomStatusPayload {
   return customStatus;
 }
 
-export function setCustomStatus(text: string | null) {
-  customStatus = text;
+export function setCustomStatus(status: CustomStatusPayload) {
+  customStatus = status;
 }
 
 export function getConnectedClients(): Array<{
   sessionId: string | null;
+  name: string | null;
   ip: string;
   userAgent: string;
   region: string;
@@ -47,6 +58,7 @@ export function getConnectedClients(): Array<{
 }> {
   const result: Array<{
     sessionId: string | null;
+    name: string | null;
     ip: string;
     userAgent: string;
     region: string;
@@ -58,6 +70,7 @@ export function getConnectedClients(): Array<{
   for (const client of clients.values()) {
     result.push({
       sessionId: client.sessionId,
+      name: client.name,
       ip: client.ip,
       userAgent: client.userAgent,
       region: client.region,
@@ -130,6 +143,7 @@ export function startBroadcastServer(server: { on: (...args: any[]) => void }, p
     const client: ConnectedClient = {
       ws,
       sessionId: null,
+      name: null,
       ip,
       userAgent,
       region,
@@ -142,7 +156,7 @@ export function startBroadcastServer(server: { on: (...args: any[]) => void }, p
 
     // Send current custom status on connect
     if (customStatus) {
-      ws.send(JSON.stringify({ type: "admin:status", text: customStatus }));
+      ws.send(JSON.stringify({ type: "admin:status", status: customStatus }));
     }
 
     ws.on("message", (raw) => {
@@ -151,6 +165,7 @@ export function startBroadcastServer(server: { on: (...args: any[]) => void }, p
         if (msg.type === "identify" && typeof msg.sessionId === "string") {
           client.sessionId = msg.sessionId;
           client.lastSeen = Date.now();
+          if (msg.name) client.name = msg.name;
           if (msg.gameId) client.gameId = msg.gameId;
           if (msg.gameType) client.gameType = msg.gameType;
 
@@ -170,6 +185,7 @@ export function startBroadcastServer(server: { on: (...args: any[]) => void }, p
         }
         if (msg.type === "heartbeat") {
           client.lastSeen = Date.now();
+          if (msg.name !== undefined) client.name = msg.name || null;
           if (msg.gameId !== undefined) client.gameId = msg.gameId;
           if (msg.gameType !== undefined) client.gameType = msg.gameType;
         }

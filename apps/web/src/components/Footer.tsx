@@ -57,13 +57,29 @@ export function Footer() {
       ? "All Systems Operational"
       : "Issues Detected";
 
+  // Render custom status with link, color, flash
+  function renderCustomStatus() {
+    if (!customStatus || !customStatus.text) return null;
+    const style: React.CSSProperties = {};
+    if (customStatus.color) style.color = customStatus.color;
+    let className = "footer-custom-status";
+    if (customStatus.flash) className += " footer-custom-status--flash";
+    const content = customStatus.link ? (
+      <a href={customStatus.link} target="_blank" rel="noopener noreferrer" style={{ color: style.color || undefined, textDecoration: "underline" }}>
+        {customStatus.text}
+      </a>
+    ) : (
+      customStatus.text
+    );
+    return (
+      <div className="footer-row footer-row--status">
+        <span className={className} style={style}>{content}</span>
+      </div>
+    );
+  }
   return (
     <footer className="app-footer">
-      {customStatus && (
-        <div className="footer-row footer-row--status">
-          <span className="footer-custom-status">{customStatus}</span>
-        </div>
-      )}
+      {renderCustomStatus()}
       <div className="footer-row footer-row--main">
         <span className="footer-credit">
           Made with <span className="footer-heart">❤️</span> by{" "}
