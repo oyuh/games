@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { FiMessageCircle, FiMinus, FiX, FiSend, FiMaximize2 } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../../lib/zero";
 import { getOrCreateSessionId } from "../../lib/session";
 import { useChatContext } from "../../lib/chat-context";
 
@@ -20,13 +20,19 @@ const DEFAULT_H = 420;
 export function ChatWindow({ hostId, myName }: ChatWindowProps) {
   const zero = useZero();
   const sessionId = getOrCreateSessionId();
-  const { open, toggle, gameType, gameId } = useChatContext();
+  const { open, toggle, gameType, gameId, isImposter, multipleImposters } = useChatContext();
+  const showChannels = isImposter && multipleImposters;
+  const [channel, setChannel] = useState<"all" | "imposter">("all");
 
   const [messages] = useQuery(
     gameType
       ? queries.chat.byGame({ gameType, gameId })
       : queries.chat.byGame({ gameType: "imposter", gameId: "__none__" })
   );
+
+  const filteredMessages = showChannels
+    ? messages.filter((m) => (m.channel ?? "all") === channel)
+    : messages;
 
   const [minimized, setMinimized] = useState(false);
   const [input, setInput] = useState("");
@@ -56,7 +62,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
     if (chatBodyRef.current && open && !minimized) {
       chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
     }
-  }, [messages.length, open, minimized]);
+  }, [filteredMessages.length, open, minimized]);
 
   // Drag handlers
   const onDragStart = useCallback(
@@ -122,6 +128,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
         senderId: sessionId,
         senderName: myName,
         text,
+        ...(showChannels ? { channel } : {}),
       })
     );
     setInput("");
@@ -142,8 +149,8 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
       {/* Title bar (draggable) */}
       <div className="chat-titlebar" onMouseDown={onDragStart}>
         <FiMessageCircle size={14} />
-        <span className="chat-titlebar-text">Game Chat</span>
-        <span className="chat-titlebar-count">{messages.length}</span>
+        <span className="chat-titlebar-text">{showChannels && channel === "imposter" ? "Imposter Chat" : "Game Chat"}</span>
+        <span className="chat-titlebar-count">{filteredMessages.length}</span>
         <div className="chat-titlebar-actions">
           <button onClick={() => setMinimized((m) => !m)} data-tooltip={minimized ? "Expand" : "Minimize"}>
             {minimized ? <FiMaximize2 size={13} /> : <FiMinus size={13} />}
@@ -156,11 +163,19 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
 
       {!minimized && (
         <>
+          {/* Channel tabs */}
+          {showChannels && (
+            <div className="chat-channel-tabs">
+              <button className={`chat-channel-tab${channel === "all" ? " chat-channel-tab--active" : ""}`} onClick={() => setChannel("all")}>All</button>
+              <button className={`chat-channel-tab${channel === "imposter" ? " chat-channel-tab--active" : ""}`} onClick={() => setChannel("imposter")}>Imposter</button>
+            </div>
+          )}
+
           {/* Messages */}
           <div className="chat-body" ref={chatBodyRef}>
-            {messages.length === 0 && <p className="chat-empty">No messages yet. Say something!</p>}
-            {messages.map((msg, i) => {
-              const prev = messages[i - 1];
+            {filteredMessages.length === 0 && <p className="chat-empty">No messages yet. Say something!</p>}
+            {filteredMessages.map((msg, i) => {
+              const prev = filteredMessages[i - 1];
               const sameSender = prev?.sender_id === msg.sender_id;
               const displayName = msg.sender_name || msg.sender_id.slice(0, 6);
               return (

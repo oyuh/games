@@ -29,6 +29,7 @@ export const chainReactionMutators = {
         scores: {},
         round_history: [],
         kicked: [],
+        spectators: [],
         announcement: null,
         settings: {
           chainLength: args.chainLength ?? 5,
@@ -61,7 +62,25 @@ export const chainReactionMutators = {
       if (!game) throw new Error("Game not found");
       if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");
       if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
-      if (game.phase !== "lobby") throw new Error("Game is already in progress");
+      if (game.phase !== "lobby") {
+        // Mid-game visitors join as spectators
+        if (!game.players.some((p) => p.sessionId === args.sessionId) && !game.spectators.find((s) => s.sessionId === args.sessionId)) {
+          await tx.mutate.chain_reaction_games.update({
+            id: game.id,
+            spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+            updated_at: now()
+          });
+          await tx.mutate.sessions.upsert({
+            id: args.sessionId,
+            name: session?.name ?? null,
+            game_type: "chain_reaction",
+            game_id: game.id,
+            created_at: now(),
+            last_seen: now()
+          });
+        }
+        return;
+      }
       if (game.players.length >= 2 && !game.players.some((p) => p.sessionId === args.sessionId)) {
         throw new Error("Game is full (2 players max)");
       }
@@ -621,6 +640,7 @@ export const chainReactionMutators = {
         scores: {},
         round_history: [],
         announcement: null,
+        spectators: [],
         settings: { ...game.settings, currentRound: 1, phaseEndsAt: null },
         updated_at: now()
       });
@@ -659,6 +679,84 @@ export const chainReactionMutators = {
           last_seen: now()
         });
       }
+    }
+  ),
+
+  joinAsSpectator: defineMutator(
+    z.object({ gameId: z.string(), sessionId: z.string() }),
+    async ({ args, tx }) => {
+      const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+      if (!game) throw new Error("Game not found");
+      if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");
+      if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
+      if (game.players.some((p) => p.sessionId === args.sessionId)) throw new Error("Already in game as player");
+      if (game.spectators.find((s) => s.sessionId === args.sessionId)) return;
+
+      await tx.mutate.chain_reaction_games.update({
+        id: game.id,
+        spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+        updated_at: now()
+      });
+      await tx.mutate.sessions.upsert({
+        id: args.sessionId,
+        name: session?.name ?? null,
+        game_type: "chain_reaction",
+        game_id: game.id,
+        created_at: now(),
+        last_seen: now()
+      });
+    }
+  ),
+
+  leaveSpectator: defineMutator(
+    z.object({ gameId: z.string(), sessionId: z.string() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+      if (!game) return;
+      await tx.mutate.chain_reaction_games.update({
+        id: game.id,
+        spectators: game.spectators.filter((s) => s.sessionId !== args.sessionId),
+        updated_at: now()
+      });
+      await tx.mutate.sessions.update({
+        id: args.sessionId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
+    }
+  ),
+
+  announce: defineMutator(
+    z.object({ gameId: z.string(), hostId: z.string(), text: z.string().min(1).max(120) }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+      if (!game || game.host_id !== args.hostId) throw new Error("Only host can announce");
+      await tx.mutate.chain_reaction_games.update({
+        id: game.id,
+        announcement: { text: args.text.trim(), ts: now() },
+        updated_at: now()
+      });
+    }
+  ),
+
+  removeSpectator: defineMutator(
+    z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+      if (!game || game.host_id !== args.hostId) throw new Error("Only host can remove spectators");
+      await tx.mutate.chain_reaction_games.update({
+        id: game.id,
+        spectators: game.spectators.filter((s) => s.sessionId !== args.targetId),
+        updated_at: now()
+      });
+      await tx.mutate.sessions.update({
+        id: args.targetId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   )
 };

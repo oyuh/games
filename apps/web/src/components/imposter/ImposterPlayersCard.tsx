@@ -4,12 +4,14 @@ export function ImposterPlayersCard({
   players,
   sessionId,
   sessionById,
-  revealRoles
+  revealRoles,
+  votedOutId
 }: {
   players: Player[];
   sessionId: string;
   sessionById: Record<string, string>;
   revealRoles: boolean;
+  votedOutId?: string | null;
 }) {
   const activePlayers = players.filter((p) => !p.eliminated);
   return (
@@ -22,15 +24,16 @@ export function ImposterPlayersCard({
           const isMe = player.sessionId === sessionId;
           const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
           const initial = (name[0] ?? "?").toUpperCase();
-          const isImposter = revealRoles && player.role === "imposter";
+          const showRole = revealRoles || player.sessionId === votedOutId;
+          const isImposter = showRole && player.role === "imposter";
           const isEliminated = Boolean(player.eliminated);
 
           return (
             <div
               key={player.sessionId}
               className={`game-player-chip${isMe ? " game-player-chip--me" : ""}${isImposter ? " game-player-chip--danger" : ""}${isEliminated ? " game-player-chip--eliminated" : ""}`}
-              data-tooltip={`${name}${!player.connected ? " (disconnected)" : ""}${isEliminated ? " — Eliminated" : ""}${isImposter ? " — Imposter!" : revealRoles ? " — Innocent" : ""}`}
-              data-tooltip-variant={isEliminated ? "warning" : isImposter ? "danger" : revealRoles ? "success" : "info"}
+              data-tooltip={`${name}${!player.connected ? " (disconnected)" : ""}${isEliminated ? " — Eliminated" : ""}${isImposter ? " — Imposter!" : showRole ? " — Innocent" : ""}`}
+              data-tooltip-variant={isEliminated ? "warning" : isImposter ? "danger" : showRole ? "success" : "info"}
             >
               <div className={`game-player-avatar${isImposter ? " game-player-avatar--danger" : ""}${isEliminated ? " game-player-avatar--eliminated" : ""}`}>
                 {isEliminated ? "☠" : initial}
@@ -40,7 +43,7 @@ export function ImposterPlayersCard({
               {isEliminated && (
                 <span className="badge badge-muted" style={{ fontSize: "0.58rem" }}>out</span>
               )}
-              {!isEliminated && revealRoles && player.role && (
+              {!isEliminated && showRole && player.role && (
                 <span className={`badge ${isImposter ? "badge-danger" : "badge-success"}`} style={{ fontSize: "0.58rem" }}>
                   {player.role}
                 </span>

@@ -1,5 +1,5 @@
 import { imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";

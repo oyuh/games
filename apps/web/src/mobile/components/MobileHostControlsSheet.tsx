@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiUserMinus, FiPower, FiMessageCircle, FiSend } from "react-icons/fi";
+import { FiUserMinus, FiPower, FiMessageCircle, FiSend, FiEye } from "react-icons/fi";
 import { mutators } from "@games/shared";
-import { useZero } from "@rocicorp/zero/react";
+import { useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
 import { BottomSheet } from "./BottomSheet";
 
 type GameContext =
-  | { type: "imposter"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }> }
-  | { type: "password"; gameId: string; hostId: string; players: Array<{ id: string; name: string }> }
-  | { type: "shade_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }> };
+  | { type: "imposter"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "password"; gameId: string; hostId: string; players: Array<{ id: string; name: string }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "shade_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "chain_reaction"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
 
 export type { GameContext as MobileHostGameContext };
 
@@ -32,15 +33,32 @@ export function MobileHostControlsSheet({
       ? game.players.filter((p) => p.id !== sessionId)
       : game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }));
 
+  const spectatorsList = (game.spectators ?? []).map((s) => ({ id: s.sessionId, name: s.name ?? s.sessionId.slice(0, 6) }));
+
   const handleKick = (targetId: string, targetName: string) => {
     if (game.type === "imposter") {
       void zero.mutate(mutators.imposter.kick({ gameId: game.gameId, hostId: sessionId, targetId }));
     } else if (game.type === "shade_signal") {
       void zero.mutate(mutators.shadeSignal.kick({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else if (game.type === "chain_reaction") {
+      void zero.mutate(mutators.chainReaction.kick({ gameId: game.gameId, hostId: sessionId, targetId }));
     } else {
       void zero.mutate(mutators.password.kick({ gameId: game.gameId, hostId: sessionId, targetId }));
     }
     showToast(`Kicked ${targetName}`, "info");
+  };
+
+  const handleRemoveSpectator = (targetId: string, targetName: string) => {
+    if (game.type === "imposter") {
+      void zero.mutate(mutators.imposter.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else if (game.type === "shade_signal") {
+      void zero.mutate(mutators.shadeSignal.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else if (game.type === "chain_reaction") {
+      void zero.mutate(mutators.chainReaction.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else {
+      void zero.mutate(mutators.password.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    }
+    showToast(`Removed spectator ${targetName}`, "info");
   };
 
   const handleEndGame = () => {
@@ -48,6 +66,8 @@ export function MobileHostControlsSheet({
       void zero.mutate(mutators.imposter.endGame({ gameId: game.gameId, hostId: sessionId }));
     } else if (game.type === "shade_signal") {
       void zero.mutate(mutators.shadeSignal.endGame({ gameId: game.gameId, hostId: sessionId }));
+    } else if (game.type === "chain_reaction") {
+      void zero.mutate(mutators.chainReaction.endGame({ gameId: game.gameId, hostId: sessionId }));
     } else {
       void zero.mutate(mutators.password.endGame({ gameId: game.gameId, hostId: sessionId }));
     }
@@ -63,6 +83,8 @@ export function MobileHostControlsSheet({
       void zero.mutate(mutators.imposter.announce({ gameId: game.gameId, hostId: sessionId, text }));
     } else if (game.type === "shade_signal") {
       void zero.mutate(mutators.shadeSignal.announce({ gameId: game.gameId, hostId: sessionId, text }));
+    } else if (game.type === "chain_reaction") {
+      void zero.mutate(mutators.chainReaction.announce({ gameId: game.gameId, hostId: sessionId, text }));
     } else {
       void zero.mutate(mutators.password.announce({ gameId: game.gameId, hostId: sessionId, text }));
     }
@@ -112,6 +134,21 @@ export function MobileHostControlsSheet({
           <p className="m-host-section-desc">No other players to kick.</p>
         )}
       </div>
+
+      {/* Spectators */}
+      {spectatorsList.length > 0 && (
+        <div className="m-host-section">
+          <h3 className="m-host-section-title"><FiEye size={14} /> Spectators</h3>
+          <div className="m-host-player-list">
+            {spectatorsList.map((s) => (
+              <div key={s.id} className="m-host-player-row">
+                <span className="m-host-player-name">{s.name}</span>
+                <button className="m-btn m-btn-danger m-btn-sm" onClick={() => handleRemoveSpectator(s.id, s.name)}>Remove</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* End Game */}
       <div className="m-host-section m-host-section--danger">

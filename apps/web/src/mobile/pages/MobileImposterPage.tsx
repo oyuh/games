@@ -1,5 +1,5 @@
 import { imposterCategoryLabels, mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiEye, FiEyeOff, FiSend, FiCheck, FiArrowRight, FiClock } from "react-icons/fi";
@@ -8,6 +8,8 @@ import { addRecentGame } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
+import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
+import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 
@@ -42,6 +44,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
+  const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
 
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -52,21 +55,31 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "imposter", gameId, hostId: game.host_id, players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null })) }
+      ? { type: "imposter", gameId, hostId: game.host_id, players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null })), spectators: game.spectators ?? [] }
       : null
   );
 
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
+  const isSpectatorRef = useRef(isSpectator);
   inGameRef.current = inGame;
   phaseRef.current = game?.phase;
+  isSpectatorRef.current = isSpectator;
+
+  useEffect(() => {
+    if (isSpectator) {
+      showToast("You are a spectator", "info");
+    }
+  }, [isSpectator]);
 
   useEffect(() => {
     let active = false;
     const timer = setTimeout(() => { active = true; }, 500);
     return () => {
       clearTimeout(timer);
-      if (active && inGameRef.current && phaseRef.current !== "ended") {
+      if (active && isSpectatorRef.current) {
+        void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }));
+      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
         void zero.mutate(mutators.imposter.leave({ gameId, sessionId }));
       }
     };
@@ -135,7 +148,14 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     await zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })).server;
   };
 
-  const revealRoles = game.phase === "results" || game.phase === "finished";
+  const revealRoles = game.phase === "finished";
+  // During results, only reveal the voted-out player's role
+  const mobileVotedOutId = game.phase === "results" ? (() => {
+    const t = game.votes.reduce<Record<string, number>>((acc, v) => { acc[v.targetId] = (acc[v.targetId] ?? 0) + 1; return acc; }, {});
+    const max = Math.max(...Object.values(t), 0);
+    const top = Object.entries(t).filter(([, c]) => c === max && max > 0).map(([id]) => id);
+    return top[0] ?? null;
+  })() : null;
 
   return (
     <div className="m-page" data-game-theme="imposter">
@@ -148,6 +168,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         accent="var(--game-accent)"
         category={game.category}
       >
+        {isSpectator && <MobileSpectatorBadge />}
         {timeLeft != null && (
           <span className={`m-badge${timeLeft <= 10 ? " m-badge--danger" : " m-badge--warn"}`}>
             <FiClock size={10} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
@@ -161,7 +182,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         <div className="m-player-chips">
           {game.players.map((p) => {
             const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
-            const isImposter = revealRoles && p.role === "imposter";
+            const showRole = revealRoles || p.sessionId === mobileVotedOutId;
+            const isImposter = showRole && p.role === "imposter";
             const isMe = p.sessionId === sessionId;
             const isEliminated = Boolean(p.eliminated);
             return (
@@ -174,6 +196,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                 <span>{name}</span>
                 {isEliminated && <span className="m-badge m-badge--muted" style={{ fontSize: "0.6rem" }}>OUT</span>}
                 {!isEliminated && isImposter && <span className="m-badge m-badge--danger" style={{ fontSize: "0.6rem" }}>IMP</span>}
+                {!isEliminated && showRole && !isImposter && p.role && <span className="m-badge m-badge--success" style={{ fontSize: "0.6rem" }}>OK</span>}
               </div>
             );
           })}
@@ -183,14 +206,20 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       {/* Lobby: Join prompt */}
       {game.phase === "lobby" && !inGame && (
         <div className="m-card" style={{ textAlign: "center" }}>
-          <p style={{ marginBottom: "0.75rem", opacity: 0.7 }}>You're not in this lobby yet.</p>
+          <p style={{ marginBottom: "0.75rem", opacity: 0.7 }}>{isSpectator ? "You're spectating. Join to play!" : "You're not in this lobby yet."}</p>
           <button
             className="m-btn m-btn-primary"
             style={{ width: "100%" }}
-            onClick={() =>
-              void zero.mutate(mutators.imposter.join({ gameId, sessionId }))
-                .client.catch(() => showToast("Couldn't join game", "error"))
-            }
+            onClick={() => {
+              if (isSpectator) {
+                void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }))
+                  .client.then(() => zero.mutate(mutators.imposter.join({ gameId, sessionId })))
+                  .catch(() => showToast("Couldn't join game", "error"));
+              } else {
+                void zero.mutate(mutators.imposter.join({ gameId, sessionId }))
+                  .client.catch(() => showToast("Couldn't join game", "error"));
+              }
+            }}
           >
             <FiLogIn size={16} /> Join Game
           </button>
@@ -227,8 +256,16 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
+      {isSpectator && game.phase !== "lobby" && (
+        <MobileSpectatorOverlay
+          playerCount={game.players.filter((p) => !p.eliminated).length}
+          phase={game.phase}
+          onLeave={() => void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId })).client.then(() => navigate("/"))}
+        />
+      )}
+
       {/* Playing: Clue section */}
-      {game.phase === "playing" && inGame && (() => {
+      {!isSpectator && game.phase === "playing" && inGame && !me?.eliminated && (() => {
         const isImposter = me?.role === "imposter";
         const hasSubmitted = game.clues.some((c) => c.sessionId === sessionId);
         const othersClues = game.clues.filter((c) => c.sessionId !== sessionId);
@@ -305,17 +342,17 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       })()}
 
       {/* Playing: Waiting (spectator) */}
-      {game.phase === "playing" && !inGame && (
+      {!isSpectator && game.phase === "playing" && (!inGame || me?.eliminated) && (
         <div className="m-card">
           <div className="m-waiting">
             <div className="m-waiting-pulse" />
-            <p>Players are submitting clues… ({game.clues.length}/{game.players.filter((p) => !p.eliminated).length})</p>
+            <p>{me?.eliminated ? "You've been eliminated. Spectating\u2026" : "Players are submitting clues\u2026"} ({game.clues.length}/{game.players.filter((p) => !p.eliminated).length})</p>
           </div>
         </div>
       )}
 
       {/* Voting */}
-      {game.phase === "voting" && inGame && (() => {
+      {!isSpectator && game.phase === "voting" && inGame && !me?.eliminated && (() => {
         const hasVoted = game.votes.some((v) => v.voterId === sessionId);
         const votedName = voteTarget ? (sessionById[voteTarget] ?? voteTarget.slice(0, 6)) : null;
         const activePlayers = game.players.filter((p) => !p.eliminated);
@@ -385,17 +422,17 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       })()}
 
       {/* Voting: Waiting (spectator) */}
-      {game.phase === "voting" && !inGame && (
+      {!isSpectator && game.phase === "voting" && (!inGame || me?.eliminated) && (
         <div className="m-card">
           <div className="m-waiting">
             <div className="m-waiting-pulse" />
-            <p>Players are voting… ({game.votes.length}/{game.players.filter((p) => !p.eliminated).length})</p>
+            <p>{me?.eliminated ? "You've been eliminated. Spectating\u2026" : "Players are voting\u2026"} ({game.votes.length}/{game.players.filter((p) => !p.eliminated).length})</p>
           </div>
         </div>
       )}
 
       {/* Results */}
-      {game.phase === "results" && (() => {
+      {!isSpectator && game.phase === "results" && (() => {
         const activePlayers = game.players.filter((p) => !p.eliminated);
         const maxVotes = Math.max(...Object.values(tally), 1);
         const topVoteCount = Math.max(...Object.values(tally), 0);
@@ -461,13 +498,23 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
             <div className="m-card" style={{ textAlign: "center" }}>
               <RoundCountdown endsAt={game.settings.phaseEndsAt} label="Next round" />
+              <button
+                className={`m-btn ${(game.settings.skipVotes ?? []).includes(sessionId) ? "m-btn-muted" : "m-btn-primary"}`}
+                style={{ width: "100%", marginTop: "0.5rem" }}
+                onClick={() => void zero.mutate(mutators.imposter.voteSkipResults({ gameId, sessionId }))}
+                disabled={(game.settings.skipVotes ?? []).includes(sessionId)}
+              >
+                {(game.settings.skipVotes ?? []).includes(sessionId)
+                  ? `Voted to Skip (${(game.settings.skipVotes ?? []).length}/${activePlayers.length})`
+                  : `Skip (${(game.settings.skipVotes ?? []).length}/${activePlayers.length})`}
+              </button>
             </div>
           </>
         );
       })()}
 
       {/* Finished */}
-      {game.phase === "finished" && (() => {
+      {!isSpectator && game.phase === "finished" && (() => {
         const impostersLeft = game.players.filter((p) => p.role === "imposter" && !p.eliminated).length;
         const playersWin = impostersLeft === 0;
         const imposters = game.players.filter((p) => p.role === "imposter");

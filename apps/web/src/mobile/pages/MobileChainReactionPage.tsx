@@ -1,10 +1,12 @@
 import { mutators, queries, chainCategoryLabels } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle, FiEye } from "react-icons/fi";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
+import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame } from "../../lib/session";
 import { showToast } from "../../lib/toast";
@@ -36,18 +38,29 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
+  const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
 
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
+  const isSpectatorRef = useRef(isSpectator);
   inGameRef.current = inGame;
   phaseRef.current = game?.phase;
+  isSpectatorRef.current = isSpectator;
+
+  useEffect(() => {
+    if (isSpectator) {
+      showToast("You are a spectator", "info");
+    }
+  }, [isSpectator]);
 
   useEffect(() => {
     let active = false;
     const timer = setTimeout(() => { active = true; }, 500);
     return () => {
       clearTimeout(timer);
-      if (active && inGameRef.current && phaseRef.current !== "ended") {
+      if (active && isSpectatorRef.current) {
+        void zero.mutate(mutators.chainReaction.leaveSpectator({ gameId, sessionId }));
+      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
         void zero.mutate(mutators.chainReaction.leave({ gameId, sessionId }));
       }
     };
@@ -200,7 +213,9 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
         totalRounds={game.settings.rounds}
         accent="var(--game-accent)"
         category={game.settings.category ?? null}
-      />
+      >
+        {isSpectator && <MobileSpectatorBadge />}
+      </MobileGameHeader>
 
       {/* ── VS Scoreboard ── */}
       {game.phase !== "lobby" && game.players.length === 2 && (
@@ -324,8 +339,16 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
+      {isSpectator && game.phase !== "lobby" && (
+        <MobileSpectatorOverlay
+          playerCount={game.players.length}
+          phase={game.phase}
+          onLeave={() => void zero.mutate(mutators.chainReaction.leaveSpectator({ gameId, sessionId })).client.then(() => navigate("/"))}
+        />
+      )}
+
       {/* ── Submitting (custom mode) - not submitted ── */}
-      {game.phase === "submitting" && inGame && !hasSubmitted && (
+      {!isSpectator && game.phase === "submitting" && inGame && !hasSubmitted && (
         <div className="m-section">
           <div className="m-cr-submit-banner">
             <FiSend size={16} />
@@ -372,7 +395,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── Submitting - already submitted ── */}
-      {game.phase === "submitting" && inGame && hasSubmitted && (
+      {!isSpectator && game.phase === "submitting" && inGame && hasSubmitted && (
         <div className="m-section">
           <div className="m-cr-done-banner">✅ Chain locked in!</div>
           {game.submitted_chains[sessionId] && (
@@ -405,7 +428,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {game.phase === "submitting" && !inGame && (
+      {!isSpectator && game.phase === "submitting" && !inGame && (
         <div className="m-section">
           <div className="m-waiting">
             <div className="m-pulse" />
@@ -415,7 +438,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── Playing ── */}
-      {game.phase === "playing" && inGame && (
+      {!isSpectator && game.phase === "playing" && inGame && (
         <div className="m-section">
           <div className="m-cr-view-indicator">
             {isViewingMine ? (
@@ -534,7 +557,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {game.phase === "playing" && !inGame && (
+      {!isSpectator && game.phase === "playing" && !inGame && (
         <div className="m-section">
           <div className="m-waiting">
             <div className="m-pulse" />
@@ -544,7 +567,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── Finished ── */}
-      {game.phase === "finished" && (
+      {!isSpectator && game.phase === "finished" && (
         <div className="m-section">
           {(() => {
             const sorted = Object.entries(game.scores).sort(([, a], [, b]) => b - a);

@@ -10,6 +10,12 @@ type ChatState = {
   unread: number;
   /** Whether the current route is inside a game */
   inGame: boolean;
+  /** Whether the current user is spectating */
+  isSpectator: boolean;
+  /** Whether the current user is an imposter (imposter game only) */
+  isImposter: boolean;
+  /** Whether the game has multiple imposters (imposter game only) */
+  multipleImposters: boolean;
   gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | null;
   gameId: string;
 };
@@ -19,6 +25,9 @@ const ChatContext = createContext<ChatState>({
   toggle: () => {},
   unread: 0,
   inGame: false,
+  isSpectator: false,
+  isImposter: false,
+  multipleImposters: false,
   gameType: null,
   gameId: "",
 });
@@ -84,10 +93,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [messages.length, open]);
 
+  // Query current game for spectator detection
+  const [impGames] = useQuery(gameType === "imposter" ? queries.imposter.byId({ id: gameId }) : queries.imposter.byId({ id: "__none__" }));
+  const [pwdGames] = useQuery(gameType === "password" ? queries.password.byId({ id: gameId }) : queries.password.byId({ id: "__none__" }));
+  const [chrGames] = useQuery(gameType === "chain_reaction" ? queries.chainReaction.byId({ id: gameId }) : queries.chainReaction.byId({ id: "__none__" }));
+  const [shdGames] = useQuery(gameType === "shade_signal" ? queries.shadeSignal.byId({ id: gameId }) : queries.shadeSignal.byId({ id: "__none__" }));
+  const currentGame = gameType === "imposter" ? impGames[0] : gameType === "password" ? pwdGames[0] : gameType === "chain_reaction" ? chrGames[0] : gameType === "shade_signal" ? shdGames[0] : null;
+  const isSpectator = currentGame?.spectators?.some((s: { sessionId: string }) => s.sessionId === sessionId) ?? false;
+
+  // Imposter role detection for private chat channels
+  const imposterGame = impGames[0];
+  const isImposter = gameType === "imposter" && imposterGame?.players?.some((p: { sessionId: string; role?: string }) => p.sessionId === sessionId && p.role === "imposter") || false;
+  const multipleImposters = gameType === "imposter" && (imposterGame?.players?.filter((p: { role?: string }) => p.role === "imposter").length ?? 0) >= 2 || false;
+
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
   return (
-    <ChatContext.Provider value={{ open, toggle, unread, inGame, gameType, gameId }}>
+    <ChatContext.Provider value={{ open, toggle, unread, inGame, isSpectator, isImposter, multipleImposters, gameType, gameId }}>
       {children}
     </ChatContext.Provider>
   );

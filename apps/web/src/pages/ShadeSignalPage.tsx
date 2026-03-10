@@ -1,11 +1,13 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiCopy, FiCheck, FiSend, FiHelpCircle } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { ColorGrid, generateGridColor } from "../components/shade/ColorGrid";
 import { RoundCountdown } from "../components/shared/RoundCountdown";
+import { SpectatorBadge } from "../components/shared/SpectatorBadge";
+import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
@@ -103,11 +105,21 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
   const isLeader = game?.leader_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
+  const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
 
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
+  const isSpectatorRef = useRef(isSpectator);
   inGameRef.current = inGame;
   phaseRef.current = game?.phase;
+  isSpectatorRef.current = isSpectator;
+
+  // Show toast when user becomes a spectator
+  useEffect(() => {
+    if (isSpectator) {
+      showToast("You are a spectator", "info");
+    }
+  }, [isSpectator]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -115,7 +127,9 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     const timer = setTimeout(() => { active = true; }, 500);
     return () => {
       clearTimeout(timer);
-      if (active && inGameRef.current && phaseRef.current !== "ended") {
+      if (active && isSpectatorRef.current) {
+        void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId }));
+      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
         void zero.mutate(mutators.shadeSignal.leave({ gameId, sessionId }));
       }
     };
@@ -374,10 +388,13 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
             </span>
           )}
         </div>
-        <button className="game-code-btn" onClick={copyCode} data-tooltip={copied ? "Copied!" : "Click to copy room code"} data-tooltip-variant="info">
-          {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}
-          <span>{game.code}</span>
-        </button>
+        <div className="game-header-right">
+          {isSpectator && <SpectatorBadge />}
+          <button className="game-code-btn" onClick={copyCode} data-tooltip={copied ? "Copied!" : "Click to copy room code"} data-tooltip-variant="info">
+            {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}
+            <span>{game.code}</span>
+          </button>
+        </div>
       </div>
 
       {/* ── Players bar ─────────────────────────────── */}
@@ -417,14 +434,19 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       {/* ── LOBBY ───────────────────────────────────── */}
       {phase === "lobby" && !inGame && (
         <div className="game-section game-join-prompt">
-          <p className="game-join-text">You're not in this lobby yet.</p>
+          <p className="game-join-text">{isSpectator ? "You're spectating. Join to play!" : "You're not in this lobby yet."}</p>
           <button
             className="btn btn-primary game-action-btn"
-            onClick={() =>
-              void zero
-                .mutate(mutators.shadeSignal.join({ gameId, sessionId }))
-                .client.catch(() => showToast("Couldn't join game", "error"))
-            }
+            onClick={() => {
+              if (isSpectator) {
+                void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId }))
+                  .client.then(() => zero.mutate(mutators.shadeSignal.join({ gameId, sessionId })))
+                  .catch(() => showToast("Couldn't join game", "error"));
+              } else {
+                void zero.mutate(mutators.shadeSignal.join({ gameId, sessionId }))
+                  .client.catch(() => showToast("Couldn't join game", "error"));
+              }
+            }}
           >
             <FiLogIn size={16} /> Join Game
           </button>
@@ -479,8 +501,16 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
+      {isSpectator && phase !== "lobby" && (
+        <SpectatorOverlay
+          playerCount={game.players.length}
+          phase={phase}
+          onLeave={() => void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId })).client.then(() => navigate("/"))}
+        />
+      )}
+
       {/* ── PICKING PHASE (Leader chooses target color) ── */}
-      {phase === "picking" && isLeader && (
+      {!isSpectator && phase === "picking" && isLeader && (
         <div className="game-section shade-clue-section">
           <div className="shade-clue-leader-info">
             <h3>Pick your target color! 🎨</h3>
@@ -520,7 +550,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {phase === "picking" && !isLeader && inGame && (
+      {!isSpectator && phase === "picking" && !isLeader && inGame && (
         <div className="game-section shade-waiting-section">
           <div className="game-waiting">
             <div className="game-waiting-pulse" />
@@ -535,7 +565,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── CLUE PHASE (Leader) ─────────────────────── */}
-      {(phase === "clue1" || phase === "clue2") && isLeader && (
+      {!isSpectator && (phase === "clue1" || phase === "clue2") && isLeader && (
         <div className="game-section shade-clue-section">
           <div className="shade-clue-leader-info">
             <h3>You are the Leader! 🎨</h3>
@@ -590,7 +620,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── CLUE PHASE (Guessers) ───────────────────── */}
-      {(phase === "clue1" || phase === "clue2") && !isLeader && inGame && (
+      {!isSpectator && (phase === "clue1" || phase === "clue2") && !isLeader && inGame && (
         <div className="game-section shade-waiting-section">
           <div className="game-waiting">
             <div className="game-waiting-pulse" />
@@ -613,7 +643,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── GUESS PHASE (Guessers) ──────────────────── */}
-      {(phase === "guess1" || phase === "guess2") && !isLeader && inGame && (
+      {!isSpectator && (phase === "guess1" || phase === "guess2") && !isLeader && inGame && (
         <div className="game-section shade-guess-section">
           <div className="shade-clue-display-row">
             {game.clue1 && (
@@ -713,7 +743,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── GUESS PHASE (Leader / spectator) ────────── */}
-      {(phase === "guess1" || phase === "guess2") && (isLeader || !inGame) && (
+      {!isSpectator && (phase === "guess1" || phase === "guess2") && (isLeader || !inGame) && (
         <div className="game-section shade-waiting-section">
           <div className="shade-clue-display-row">
             {game.clue1 && (
@@ -744,7 +774,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── REVEAL ──────────────────────────────────── */}
-      {phase === "reveal" && (
+      {!isSpectator && phase === "reveal" && (
         <div className="game-section shade-reveal-section">
           <h3 className="shade-reveal-title">🎯 Reveal!</h3>
 
@@ -832,7 +862,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── FINISHED ────────────────────────────────── */}
-      {phase === "finished" && (
+      {!isSpectator && phase === "finished" && (
         <div className="game-section shade-finished-section">
           <h3 className="shade-finished-title">🏆 Game Over!</h3>
 

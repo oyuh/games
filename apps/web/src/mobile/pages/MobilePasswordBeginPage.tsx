@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../../lib/zero";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogIn, FiLock, FiUnlock, FiArrowRight, FiCheck, FiXCircle } from "react-icons/fi";
@@ -8,6 +8,7 @@ import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
@@ -21,6 +22,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
   useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
+  const isSpectatorRef = useRef(false);
 
   const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
 
@@ -32,11 +34,27 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
     if (game.kicked.includes(sessionId)) { showToast("You were kicked from the game", "error"); navigate("/"); }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
+  useEffect(() => {
+    const spectating = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
+    isSpectatorRef.current = spectating;
+  }, [game?.spectators, sessionId]);
+
+  useEffect(() => {
+    let active = false;
+    const timer = setTimeout(() => { active = true; }, 500);
+    return () => {
+      clearTimeout(timer);
+      if (active && isSpectatorRef.current) {
+        void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }));
+      }
+    };
+  }, [gameId, sessionId, zero]);
+
   const isHost = game?.host_id === sessionId;
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? id.slice(0, 6) }))) }
+      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? id.slice(0, 6) }))), spectators: game.spectators ?? [] }
       : null
   );
 
@@ -51,18 +69,21 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
   if (!game) return <MobileGameNotFound theme="password" />;
 
   const inGame = game.teams.some((t) => t.members.includes(sessionId));
+  const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
   const myTeam = game.teams.find((t) => t.members.includes(sessionId))?.name;
   const teamsWithPlayers = game.teams.filter((t) => t.members.length > 0).length;
   const canStart = isHost && teamsWithPlayers >= 2;
 
   return (
     <div className="m-page" data-game-theme="password">
-      <MobileGameHeader code={game.code} gameLabel="Password" phase="Lobby" round={game.current_round} accent="var(--game-accent)" category={game.settings.category ?? null} />
+      <MobileGameHeader code={game.code} gameLabel="Password" phase="Lobby" round={game.current_round} accent="var(--game-accent)" category={game.settings.category ?? null}>
+        {isSpectator && <MobileSpectatorBadge />}
+      </MobileGameHeader>
 
       {/* Join prompt — not yet in a team */}
       {!inGame && (
         <div className="m-card" style={{ textAlign: "center" }}>
-          <p style={{ marginBottom: "0.75rem", opacity: 0.7 }}>Pick a team to join!</p>
+          <p style={{ marginBottom: "0.75rem", opacity: 0.7 }}>{isSpectator ? "You're spectating. Join a team to play!" : "Pick a team to join!"}</p>
         </div>
       )}
 
@@ -123,9 +144,11 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
                       style={{ borderColor: color, color }}
                       onClick={() => {
                         if (!inGame) {
-                          void zero.mutate(mutators.password.join({ gameId, sessionId }))
+                          const doJoin = () => zero.mutate(mutators.password.join({ gameId, sessionId }))
                             .client.then(() => zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName: team.name })))
                             .catch(() => showToast("Couldn't join team", "error"));
+                          if (isSpectator) void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId })).client.then(doJoin).catch(doJoin);
+                          else void doJoin();
                         } else {
                           void zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName: team.name }))
                             .client.catch(() => showToast("Couldn't switch team", "error"));

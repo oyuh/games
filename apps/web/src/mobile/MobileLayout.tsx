@@ -48,7 +48,7 @@ function MobileLayoutInner() {
           <span>Home</span>
         </Link>
 
-        {chat.inGame && (
+        {chat.inGame && !chat.isSpectator && (
           <button
             className={`m-nav-item${sheet === "chat" ? " m-nav-item--active" : ""}`}
             onClick={() => setSheet(sheet === "chat" ? null : "chat")}
@@ -91,7 +91,7 @@ function MobileLayoutInner() {
       </nav>
 
       {/* Sheets */}
-      {sheet === "chat" && chat.inGame && (
+      {sheet === "chat" && chat.inGame && !chat.isSpectator && (
         <MobileChatSheet onClose={() => setSheet(null)} />
       )}
       {sheet === "host" && hostGame && (

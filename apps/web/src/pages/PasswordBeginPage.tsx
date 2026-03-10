@@ -1,10 +1,11 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../lib/zero";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock, FiHelpCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
+import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -29,6 +30,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const isHost = game?.host_id === sessionId;
   const inGameRef = useRef(false);
   const phaseRef = useRef(game?.phase);
+  const isSpectatorRef = useRef(false);
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -42,6 +44,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
     addRecentGame({ id: game.id, code: game.code, gameType: "password" });
     inGameRef.current = game.teams.some((t) => t.members.includes(sessionId));
     phaseRef.current = game.phase;
+    isSpectatorRef.current = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
   }, [game]);
 
   // Leave on unmount so host-leaving ends the game for everyone
@@ -50,7 +53,9 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
     const timer = setTimeout(() => { active = true; }, 500);
     return () => {
       clearTimeout(timer);
-      if (active && inGameRef.current && phaseRef.current !== "ended") {
+      if (active && isSpectatorRef.current) {
+        void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }));
+      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
         void zero.mutate(mutators.password.leave({ gameId, sessionId }));
       }
     };
@@ -104,6 +109,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   }
 
   const inGame = game.teams.some((t) => t.members.includes(sessionId));
+  const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
   const teamsWithPlayers = game.teams.filter((t) => t.members.length > 0).length;
   const canStart = isHost && teamsWithPlayers >= 2;
 
@@ -116,6 +122,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
         currentRound={game.current_round}
         isHost={isHost}
         category={game.settings.category ?? null}
+        isSpectator={isSpectator}
       />
 
       <PasswordTeamGrid
@@ -139,13 +146,19 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
 
       {!inGame && (
         <div className="game-section game-join-prompt">
-          <p className="game-join-text">You're not in this lobby yet.</p>
+          <p className="game-join-text">{isSpectator ? "You're spectating. Join to play!" : "You're not in this lobby yet."}</p>
           <button
             className="btn btn-primary game-action-btn"
-            onClick={() =>
-              void zero.mutate(mutators.password.join({ gameId, sessionId }))
-                .client.catch(() => showToast("Couldn't join game", "error"))
-            }
+            onClick={() => {
+              if (isSpectator) {
+                void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }))
+                  .client.then(() => zero.mutate(mutators.password.join({ gameId, sessionId })))
+                  .catch(() => showToast("Couldn't join game", "error"));
+              } else {
+                void zero.mutate(mutators.password.join({ gameId, sessionId }))
+                  .client.catch(() => showToast("Couldn't join game", "error"));
+              }
+            }}
           >
             <FiLogIn size={16} /> Join Game
           </button>

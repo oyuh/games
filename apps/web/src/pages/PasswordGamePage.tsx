@@ -1,11 +1,12 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { PasswordActiveRound } from "../components/password/PasswordActiveRound";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
+import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -31,6 +32,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   const isHost = game?.host_id === sessionId;
   const inGameRef = useRef(false);
   const phaseRef = useRef(game?.phase);
+  const isSpectatorRef = useRef(false);
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -56,6 +58,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     if (!game) return;
     inGameRef.current = game.teams.some((t) => t.members.includes(sessionId));
     phaseRef.current = game.phase;
+    isSpectatorRef.current = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
   }, [game, sessionId]);
 
   // Leave on unmount so host-leaving ends the game
@@ -64,7 +67,9 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     const timer = setTimeout(() => { active = true; }, 500);
     return () => {
       clearTimeout(timer);
-      if (active && inGameRef.current && phaseRef.current !== "ended") {
+      if (active && isSpectatorRef.current) {
+        void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }));
+      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
         void zero.mutate(mutators.password.leave({ gameId, sessionId }));
       }
     };
@@ -166,6 +171,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   };
 
   const myTeamSkips = myTeam ? (game.settings.skipsRemaining?.[myTeam.name] ?? 0) : 0;
+  const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
 
   return (
     <div className="game-page" data-game-theme="password">
@@ -177,6 +183,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         endsAt={game.settings.roundEndsAt}
         isHost={isHost}
         category={game.settings.category ?? null}
+        isSpectator={isSpectator}
       />
 
       <PasswordTeamGrid
@@ -189,7 +196,15 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         targetScore={game.settings.targetScore}
       />
 
-      {game.phase === "playing" && myActiveRound && (
+      {isSpectator && (
+        <SpectatorOverlay
+          playerCount={game.teams.reduce((n, t) => n + t.members.length, 0)}
+          phase={game.phase}
+          onLeave={() => void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId })).client.then(() => navigate("/"))}
+        />
+      )}
+
+      {!isSpectator && game.phase === "playing" && myActiveRound && (
         <PasswordActiveRound
           activeRound={myActiveRound}
           names={names}
@@ -206,7 +221,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         />
       )}
 
-      {game.phase === "playing" && !myActiveRound && (
+      {!isSpectator && game.phase === "playing" && !myActiveRound && (
         <div className="game-section">
           <div className="game-waiting">
             <div className="game-waiting-pulse" />
@@ -215,7 +230,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {game.phase === "results" && (
+      {!isSpectator && game.phase === "results" && (
         <div className="game-section">
           <div className="game-reveal-card game-reveal-card--success">
             <p className="game-reveal-title">Game Over!</p>

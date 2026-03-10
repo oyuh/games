@@ -3898,6 +3898,32 @@ body {
   background: color-mix(in srgb, var(--secondary) 15%, transparent);
 }
 
+/* Chat channel tabs (imposter private chat) */
+.chat-channel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.chat-channel-tab {
+  flex: 1;
+  padding: 0.4rem 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.chat-channel-tab:hover {
+  color: var(--foreground);
+}
+.chat-channel-tab--active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
 .chat-body {
   flex: 1;
   overflow-y: auto;

@@ -28,6 +28,7 @@ const imposterGames = table("imposter_games").columns({
   players: json<Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player"; eliminated?: boolean }>>(),
   clues: json<Array<{ sessionId: string; text: string; createdAt: number }>>(),
   votes: json<Array<{ voterId: string; targetId: string }>>(),
+  spectators: json<Array<{ sessionId: string; name: string | null }>>(),
   kicked: json<string[]>(),
   round_history: json<Array<{
     round: number;
@@ -46,6 +47,7 @@ const imposterGames = table("imposter_games").columns({
     roundDurationSec: number;
     votingDurationSec: number;
     phaseEndsAt: number | null;
+    skipVotes?: string[];
   }>(),
   created_at: number(),
   updated_at: number()
@@ -67,6 +69,7 @@ const passwordGames = table("password_games").columns({
     clues: Array<{ sessionId: string; text: string }>;
     guess: string | null;
   }>>(),
+  spectators: json<Array<{ sessionId: string; name: string | null }>>(),
   kicked: json<string[]>(),
   announcement: json<{ text: string; ts: number } | null>(),
   settings: json<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean; skipsRemaining?: Record<string, number>; category?: string }>(),
@@ -81,6 +84,7 @@ const chatMessages = table("chat_messages").columns({
   sender_id: string(),
   sender_name: string(),
   badge: string().optional(),
+  channel: string(),
   text: string(),
   created_at: number()
 }).primaryKey("id");
@@ -100,6 +104,7 @@ const chainReactionGames = table("chain_reaction_games").columns({
     chains: Record<string, Array<{ word: string; solvedBy: string | null; lettersShown: number }>>;
     scores: Record<string, number>;
   }>>(),
+  spectators: json<Array<{ sessionId: string; name: string | null }>>(),
   kicked: json<string[]>(),
   announcement: json<{ text: string; ts: number } | null>(),
   settings: json<{
@@ -142,6 +147,7 @@ const shadeSignalGames = table("shade_signal_games").columns({
     scores: Record<string, number>;
     leaderScore: number;
   }>>(),
+  spectators: json<Array<{ sessionId: string; name: string | null }>>(),
   kicked: json<string[]>(),
   announcement: json<{ text: string; ts: number } | null>(),
   settings: json<{

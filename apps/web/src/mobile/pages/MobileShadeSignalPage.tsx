@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiClock, FiLogIn, FiSend } from "react-icons/fi";
@@ -7,6 +7,8 @@ import { ColorGrid, generateGridColor } from "../../components/shade/ColorGrid";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
+import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
+import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame } from "../../lib/session";
 import { showToast } from "../../lib/toast";
@@ -77,6 +79,9 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const isLeader = game?.leader_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
+  const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game?.spectators, sessionId]);
+  const isSpectatorRef = useRef(false);
+  isSpectatorRef.current = isSpectator;
 
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
@@ -84,11 +89,17 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   phaseRef.current = game?.phase;
 
   useEffect(() => {
+    if (isSpectator) showToast("You are a spectator", "info");
+  }, [isSpectator]);
+
+  useEffect(() => {
     let active = false;
     const timer = setTimeout(() => { active = true; }, 500);
     return () => {
       clearTimeout(timer);
-      if (active && inGameRef.current && phaseRef.current !== "ended") {
+      if (active && isSpectatorRef.current) {
+        void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId }));
+      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
         void zero.mutate(mutators.shadeSignal.leave({ gameId, sessionId }));
       }
     };
@@ -103,7 +114,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "shade_signal", gameId, hostId: game.host_id, players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null })) }
+      ? { type: "shade_signal", gameId, hostId: game.host_id, players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null })), spectators: game.spectators ?? [] }
       : null
   );
 
@@ -277,6 +288,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
         totalRounds={totalRounds}
         accent="var(--game-accent)"
       >
+        {isSpectator && <MobileSpectatorBadge />}
         {timeLeft != null && (() => {
           const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
           const ss = String(timeLeft % 60).padStart(2, "0");
@@ -317,9 +329,12 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       {/* ── LOBBY - not in game ── */}
       {phase === "lobby" && !inGame && (
         <div className="m-section">
-          <p className="m-text-muted m-text-center">You're not in this lobby yet.</p>
+          <p className="m-text-muted m-text-center">{isSpectator ? "You're spectating. Join to play!" : "You're not in this lobby yet."}</p>
           <button className="m-btn m-btn-primary"
-            onClick={() => void zero.mutate(mutators.shadeSignal.join({ gameId, sessionId })).client.catch(() => showToast("Couldn't join game", "error"))}>
+            onClick={() => {
+              if (isSpectator) void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId })).client.then(() => zero.mutate(mutators.shadeSignal.join({ gameId, sessionId }))).catch(() => showToast("Couldn't join game", "error"));
+              else void zero.mutate(mutators.shadeSignal.join({ gameId, sessionId })).client.catch(() => showToast("Couldn't join game", "error"));
+            }}>
             <FiLogIn size={16} /> Join Game
           </button>
         </div>
@@ -361,8 +376,12 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
+      {isSpectator && phase !== "lobby" && (
+        <MobileSpectatorOverlay playerCount={game.players.length} phase={phaseLabels[phase]} onLeave={() => void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId }))} />
+      )}
+
       {/* ── CLUE PHASE (Leader) ── */}
-      {(phase === "clue1" || phase === "clue2") && isLeader && (
+      {!isSpectator && (phase === "clue1" || phase === "clue2") && isLeader && (
         <div className="m-section">
           <div className="m-shade-leader-banner">
             <h3>You are the Leader! 🎨</h3>
@@ -409,7 +428,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── CLUE PHASE (Guessers waiting) ── */}
-      {(phase === "clue1" || phase === "clue2") && !isLeader && inGame && (
+      {!isSpectator && (phase === "clue1" || phase === "clue2") && !isLeader && inGame && (
         <div className="m-section">
           <div className="m-waiting">
             <div className="m-pulse" />
@@ -426,7 +445,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── GUESS PHASE (Guessers) ── */}
-      {(phase === "guess1" || phase === "guess2") && !isLeader && inGame && (
+      {!isSpectator && (phase === "guess1" || phase === "guess2") && !isLeader && inGame && (
         <div className="m-section">
           <div className="m-shade-clues-row">
             {game.clue1 && (
@@ -500,7 +519,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── GUESS PHASE (Leader / spectator) ── */}
-      {(phase === "guess1" || phase === "guess2") && (isLeader || !inGame) && (
+      {!isSpectator && (phase === "guess1" || phase === "guess2") && (isLeader || !inGame) && (
         <div className="m-section">
           <div className="m-shade-clues-row">
             {game.clue1 && (
@@ -532,7 +551,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── REVEAL ── */}
-      {phase === "reveal" && (
+      {!isSpectator && phase === "reveal" && (
         <div className="m-section">
           <h3 className="m-label" style={{ textAlign: "center" }}>🎯 Reveal!</h3>
 
@@ -610,7 +629,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ── FINISHED ── */}
-      {phase === "finished" && (
+      {!isSpectator && phase === "finished" && (
         <div className="m-section">
           <h3 className="m-label" style={{ textAlign: "center" }}>🏆 Game Over!</h3>
 
