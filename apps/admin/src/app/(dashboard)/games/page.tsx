@@ -88,7 +88,7 @@ export default function GamesPage() {
     return "badge-green";
   };
 
-  if (loading) return <p style={{ color: "#888" }}>Loading...</p>;
+  if (loading) return <p style={{ color: "var(--muted)" }}>Loading...</p>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -117,9 +117,9 @@ export default function GamesPage() {
 
           {/* Players */}
           <div>
-            <div style={{ fontSize: "0.8125rem", fontWeight: 500, marginBottom: "0.5rem", color: "#888" }}>Players</div>
+            <div style={{ fontSize: "0.8125rem", fontWeight: 600, marginBottom: "0.5rem", color: "var(--text-secondary)" }}>Players</div>
             {detail.game?.players?.map((p: any, i: number) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.375rem 0", borderBottom: "1px solid #222" }}>
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.375rem 0", borderBottom: "1px solid var(--border)" }}>
                 <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{p.sessionId?.slice(0, 12)}</span>
                 <span>{p.name || "—"}</span>
                 {p.role && <span className="badge badge-yellow">{p.role}</span>}
@@ -135,7 +135,7 @@ export default function GamesPage() {
             ))}
             {detail.game?.teams?.map((t: any, ti: number) => (
               <div key={ti} style={{ marginBottom: "0.5rem" }}>
-                <div style={{ fontSize: "0.75rem", fontWeight: 500, color: "#7ecbff" }}>{t.name}</div>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--primary)" }}>{t.name}</div>
                 {t.members?.map((mId: string) => (
                   <div key={mId} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.25rem 0" }}>
                     <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{mId.slice(0, 12)}</span>
@@ -154,8 +154,8 @@ export default function GamesPage() {
 
           {/* Raw JSON (collapsed) */}
           <details style={{ fontSize: "0.75rem" }}>
-            <summary style={{ cursor: "pointer", color: "#888" }}>Raw game state</summary>
-            <pre style={{ marginTop: "0.5rem", padding: "0.75rem", background: "#0a0a0a", borderRadius: "0.5rem", overflow: "auto", maxHeight: "400px" }}>
+            <summary>Raw game state</summary>
+            <pre>
               {JSON.stringify(detail.game, null, 2)}
             </pre>
           </details>
@@ -184,7 +184,7 @@ export default function GamesPage() {
                 <td><code style={{ fontSize: "0.8125rem" }}>{g.code}</code></td>
                 <td><span className={`badge ${phaseColor(g.phase)}`}>{g.phase}</span></td>
                 <td>{playerCount(g)}</td>
-                <td style={{ fontSize: "0.75rem", color: "#888" }}>{ago(g.updatedAt)} ago</td>
+                <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{ago(g.updatedAt)} ago</td>
                 <td>
                   <div style={{ display: "flex", gap: "0.375rem" }}>
                     <button

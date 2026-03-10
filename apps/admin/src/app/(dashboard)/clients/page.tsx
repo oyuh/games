@@ -73,7 +73,7 @@ export default function ClientsPage() {
     return `${Math.floor(diff / 3600)}h ago`;
   };
 
-  if (loading) return <p style={{ color: "#888" }}>Loading...</p>;
+  if (loading) return <p style={{ color: "var(--muted)" }}>Loading...</p>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -158,7 +158,7 @@ export default function ClientsPage() {
           </thead>
           <tbody>
             {clients.length === 0 && (
-              <tr><td colSpan={7} style={{ textAlign: "center", color: "#888" }}>No clients connected</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)" }}>No clients connected</td></tr>
             )}
             {clients.map((c, i) => (
               <tr key={i}>
@@ -171,11 +171,11 @@ export default function ClientsPage() {
                   {c.gameType ? (
                     <span className="badge badge-blue">{c.gameType}</span>
                   ) : (
-                    <span style={{ color: "#666" }}>—</span>
+                    <span style={{ color: "var(--muted)" }}>—</span>
                   )}
                 </td>
-                <td style={{ fontSize: "0.75rem", color: "#888" }}>{ago(c.connectedAt)}</td>
-                <td style={{ fontSize: "0.75rem", color: "#888" }}>{ago(c.lastSeen)}</td>
+                <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{ago(c.connectedAt)}</td>
+                <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{ago(c.lastSeen)}</td>
                 <td>
                   {c.sessionId && (
                     <div style={{ display: "flex", gap: "0.375rem" }}>

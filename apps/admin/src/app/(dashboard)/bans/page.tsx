@@ -58,7 +58,7 @@ export default function BansPage() {
     return "badge-blue";
   };
 
-  if (loading) return <p style={{ color: "#888" }}>Loading...</p>;
+  if (loading) return <p style={{ color: "var(--muted)" }}>Loading...</p>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -112,14 +112,14 @@ export default function BansPage() {
           </thead>
           <tbody>
             {bans.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign: "center", color: "#888" }}>No active bans</td></tr>
+              <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)" }}>No active bans</td></tr>
             )}
             {bans.map((b) => (
               <tr key={b.id}>
                 <td><span className={`badge ${typeColor(b.type)}`}>{b.type}</span></td>
                 <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{b.value}</td>
                 <td>{b.reason || "—"}</td>
-                <td style={{ fontSize: "0.75rem", color: "#888" }}>
+                <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
                   {new Date(b.createdAt).toLocaleString()}
                 </td>
                 <td>
@@ -137,7 +137,7 @@ export default function BansPage() {
         </table>
       </div>
 
-      <div style={{ fontSize: "0.75rem", color: "#666" }}>
+      <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
         Note: Bans are stored in-memory on the API server. They will reset when the API restarts.
         IP bans will disconnect all clients with the banned IP immediately.
       </div>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
 import { ToastProvider } from "@/components/Toast";
 import "../globals.css";
@@ -20,32 +20,35 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body>
         <ToastProvider>
-          <div className="min-h-screen bg-[#0a0a0a] text-gray-100">
-            <nav className="border-b border-gray-800 bg-[#111] px-6 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h1 className="text-lg font-semibold text-white">🎮 Games Admin</h1>
-                <a href="/" className="text-sm text-gray-400 hover:text-gray-200">Dashboard</a>
-                <a href="/clients" className="text-sm text-gray-400 hover:text-gray-200">Clients</a>
-                <a href="/games" className="text-sm text-gray-400 hover:text-gray-200">Games</a>
-                <a href="/bans" className="text-sm text-gray-400 hover:text-gray-200">Bans</a>
-                <a href="/broadcast" className="text-sm text-gray-400 hover:text-gray-200">Broadcast</a>
+          <nav className="admin-nav">
+            <div className="admin-nav__left">
+              <a href="/" className="admin-nav__brand">🎮 Games Admin</a>
+              <div className="admin-nav__links">
+                <a href="/" className="admin-nav__link">Dashboard</a>
+                <a href="/clients" className="admin-nav__link">Clients</a>
+                <a href="/games" className="admin-nav__link">Games</a>
+                <a href="/bans" className="admin-nav__link">Bans</a>
+                <a href="/broadcast" className="admin-nav__link">Broadcast</a>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-400">{session.user.name ?? session.user.email}</span>
-                <form action="/api/auth/signout" method="POST">
-                  <button type="submit" className="text-sm text-red-400 hover:text-red-300">
-                    Sign Out
-                  </button>
-                </form>
-              </div>
-            </nav>
-            <main className="max-w-7xl mx-auto px-6 py-8">
-              {children}
-            </main>
-          </div>
+            </div>
+            <div className="admin-nav__right">
+              <span className="admin-nav__user">{session.user.name ?? session.user.email}</span>
+              <form
+                action={async () => {
+                  "use server";
+                  await signOut();
+                }}
+              >
+                <button type="submit" className="admin-nav__signout">Sign Out</button>
+              </form>
+            </div>
+          </nav>
+          <main className="admin-main">
+            {children}
+          </main>
         </ToastProvider>
       </body>
     </html>

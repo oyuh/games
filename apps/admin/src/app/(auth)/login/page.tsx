@@ -8,13 +8,13 @@ export default function LoginPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#0a0a0a",
+        background: "var(--bg)",
       }}
     >
       <div
         style={{
-          background: "#141414",
-          border: "1px solid #222",
+          background: "var(--card)",
+          border: "1px solid var(--border)",
           borderRadius: "1rem",
           padding: "2.5rem",
           textAlign: "center",
@@ -22,10 +22,10 @@ export default function LoginPage() {
           width: "100%",
         }}
       >
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: "#fff", marginBottom: "0.5rem" }}>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text)", marginBottom: "0.5rem" }}>
           🎮 Games Admin
         </h1>
-        <p style={{ fontSize: "0.875rem", color: "#888", marginBottom: "2rem" }}>
+        <p style={{ fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "2rem" }}>
           Sign in with your authorized GitHub account to continue.
         </p>
         <form
