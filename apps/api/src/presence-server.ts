@@ -18,8 +18,7 @@ export function startPresenceServer(server: { on: (...args: any[]) => void }, pa
   server.on("upgrade", (request: any, socket: any, head: any) => {
     const requestUrl = request.url ?? "";
     if (!requestUrl.startsWith(path)) {
-      socket.destroy();
-      return;
+      return; // Let other upgrade handlers run
     }
 
     wss.handleUpgrade(request, socket, head, (ws) => {

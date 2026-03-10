@@ -513,6 +513,20 @@ body {
   justify-content: center;
 }
 
+.footer-row--status {
+  justify-content: center;
+  padding: 0.25rem 0.75rem;
+  margin-bottom: 0.15rem;
+}
+
+.footer-custom-status {
+  font-size: 0.7rem;
+  color: var(--primary);
+  text-align: center;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+}
+
 .footer-credit {
   white-space: nowrap;
 }
