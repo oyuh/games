@@ -3126,22 +3126,22 @@ body {
 /* ─── Light Theme ───────────────────────────────────────── */
 
 [data-theme="light"] {
-  --background: #f5f5f5;
+  --background: #e8e6e3;
   --foreground: #1a1a1a;
-  --card: #ffffff;
+  --card: #f0eeeb;
   --card-foreground: #1a1a1a;
   --primary: #2563eb;
   --primary-foreground: #ffffff;
   --secondary: #6b7280;
   --secondary-foreground: #1a1a1a;
-  --muted: #e5e7eb;
+  --muted: #d9d7d4;
   --muted-foreground: #64748b;
-  --accent: #d1d5db;
+  --accent: #cbc8c4;
   --destructive: #dc2626;
-  --border: #d4d4d8;
-  --input: #ffffff;
+  --border: #c8c5c1;
+  --input: #f0eeeb;
   --ring: #a1a1aa;
-  --bg: #f5f5f5;
+  --bg: #e8e6e3;
   --text: #1a1a1a;
 }
 
@@ -3151,7 +3151,7 @@ body {
 }
 
 [data-theme="light"] .sidebar {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(240, 238, 235, 0.85);
   border-color: var(--border);
 }
 
@@ -3164,11 +3164,11 @@ body {
 }
 
 [data-theme="light"] .modal-overlay {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(200, 197, 193, 0.4);
 }
 
 [data-theme="light"] .home-card {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(240, 238, 235, 0.75);
   border-color: var(--border);
 }
 
