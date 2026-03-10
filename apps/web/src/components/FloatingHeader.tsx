@@ -24,9 +24,10 @@ function useGameContext(): GameContext | null {
   // Parse route to find game type + id
   const imposterMatch = location.pathname.match(/^\/imposter\/([^/]+)/);
   const passwordMatch = location.pathname.match(/^\/password\/([^/]+)/);
+  const chainMatch2 = location.pathname.match(/^\/chain\/([^/]+)/);
   const shadeMatch = location.pathname.match(/^\/shade\/([^/]+)/);
-  const gameType = imposterMatch ? "imposter" as const : passwordMatch ? "password" as const : shadeMatch ? "shade_signal" as const : null;
-  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? shadeMatch?.[1] ?? "";
+  const gameType = imposterMatch ? "imposter" as const : passwordMatch ? "password" as const : chainMatch2 ? "chain_reaction" as const : shadeMatch ? "shade_signal" as const : null;
+  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch2?.[1] ?? shadeMatch?.[1] ?? "";
 
   const [imposterGames] = useQuery(
     gameType === "imposter"
@@ -37,6 +38,11 @@ function useGameContext(): GameContext | null {
     gameType === "password"
       ? queries.password.byId({ id: gameId })
       : queries.password.byId({ id: "__none__" })
+  );
+  const [chainGames] = useQuery(
+    gameType === "chain_reaction"
+      ? queries.chainReaction.byId({ id: gameId })
+      : queries.chainReaction.byId({ id: "__none__" })
   );
   const [shadeGames] = useQuery(
     gameType === "shade_signal"
@@ -59,6 +65,7 @@ function useGameContext(): GameContext | null {
         gameId: game.id,
         hostId: game.host_id,
         players: game.players,
+        spectators: game.spectators ?? [],
       };
     }
     if (gameType === "password") {
@@ -76,6 +83,18 @@ function useGameContext(): GameContext | null {
         gameId: game.id,
         hostId: game.host_id,
         players: allPlayers,
+        spectators: game.spectators ?? [],
+      };
+    }
+    if (gameType === "chain_reaction") {
+      const game = chainGames[0];
+      if (!game || game.host_id !== sessionId) return null;
+      return {
+        type: "chain_reaction",
+        gameId: game.id,
+        hostId: game.host_id,
+        players: game.players,
+        spectators: game.spectators ?? [],
       };
     }
     if (gameType === "shade_signal") {
@@ -86,10 +105,11 @@ function useGameContext(): GameContext | null {
         gameId: game.id,
         hostId: game.host_id,
         players: game.players,
+        spectators: game.spectators ?? [],
       };
     }
     return null;
-  }, [gameType, imposterGames, passwordGames, shadeGames, sessions, sessionId]);
+  }, [gameType, imposterGames, passwordGames, chainGames, shadeGames, sessions, sessionId]);
 }
 
 /* ── Phase → demo step mappings ─────────────────────────── */
@@ -211,7 +231,7 @@ export function Sidebar() {
             onClick={() => { setModal("host"); setMobileOpen(false); }}
           />
         )}
-        {chat.inGame && (
+        {chat.inGame && !chat.isSpectator && (
           <SidebarButton
             icon={
               <span className="sidebar-chat-icon-wrap">

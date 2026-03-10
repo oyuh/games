@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { FiSend } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../../lib/zero";
 import { getOrCreateSessionId } from "../../lib/session";
 import { useChatContext } from "../../lib/chat-context";
 import { BottomSheet } from "./BottomSheet";
@@ -11,7 +11,9 @@ import { BottomSheet } from "./BottomSheet";
 export function MobileChatSheet({ onClose }: { onClose: () => void }) {
   const zero = useZero();
   const sessionId = getOrCreateSessionId();
-  const { gameType, gameId } = useChatContext();
+  const { gameType, gameId, isImposter, multipleImposters } = useChatContext();
+  const showChannels = isImposter && multipleImposters;
+  const [channel, setChannel] = useState<"all" | "imposter">("all");
   const [input, setInput] = useState("");
   const bodyRef = useRef<HTMLDivElement>(null);
 
@@ -20,6 +22,10 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
       ? queries.chat.byGame({ gameType, gameId })
       : queries.chat.byGame({ gameType: "imposter", gameId: "__none__" })
   );
+
+  const filteredMessages = showChannels
+    ? messages.filter((m) => (m.channel ?? "all") === channel)
+    : messages;
 
   // Get my session name
   const [sessions] = useQuery(queries.sessions.byId({ id: sessionId }));
@@ -37,7 +43,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
     if (bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
-  }, [messages.length]);
+  }, [filteredMessages.length]);
 
   const handleSend = () => {
     const text = input.trim();
@@ -50,19 +56,28 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
         senderId: sessionId,
         senderName: myName,
         text,
+        ...(showChannels ? { channel } : {}),
       })
     );
     setInput("");
   };
 
   return (
-    <BottomSheet title="Chat" onClose={onClose}>
+    <BottomSheet title={showChannels && channel === "imposter" ? "Imposter Chat" : "Chat"} onClose={onClose}>
+      {/* Channel tabs */}
+      {showChannels && (
+        <div className="m-chat-channel-tabs">
+          <button className={`m-chat-channel-tab${channel === "all" ? " m-chat-channel-tab--active" : ""}`} onClick={() => setChannel("all")}>All</button>
+          <button className={`m-chat-channel-tab${channel === "imposter" ? " m-chat-channel-tab--active" : ""}`} onClick={() => setChannel("imposter")}>Imposter</button>
+        </div>
+      )}
+
       <div className="m-chat-body" ref={bodyRef}>
-        {messages.length === 0 && (
+        {filteredMessages.length === 0 && (
           <p className="m-chat-empty">No messages yet — say something!</p>
         )}
-        {messages.map((msg, i) => {
-          const prev = messages[i - 1];
+        {filteredMessages.map((msg, i) => {
+          const prev = filteredMessages[i - 1];
           const sameSender = prev?.sender_id === msg.sender_id;
           const isMe = msg.sender_id === sessionId;
           const isHost = msg.sender_id === hostId;

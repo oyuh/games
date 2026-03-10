@@ -31,6 +31,7 @@ export const passwordMutators = {
         current_round: 0,
         active_rounds: [],
         kicked: [],
+        spectators: [],
         announcement: null,
         settings: { targetScore: args.targetScore ?? 10, roundDurationSec: 120, roundEndsAt: null, category: args.category ?? "animals" },
         created_at: now(),
@@ -57,8 +58,26 @@ export const passwordMutators = {
       if (!game) throw new Error("Game not found");
       if (game.phase === "ended") throw new Error("Game has ended");
       if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
-      // Only allow joining during lobby; mid-game visitors spectate
-      if (game.phase !== "lobby") throw new Error("Game is already in progress");
+      // Only allow joining during lobby; mid-game visitors join as spectators
+      if (game.phase !== "lobby") {
+        const allMembers = new Set(game.teams.flatMap((t) => t.members));
+        if (!allMembers.has(args.sessionId) && !game.spectators.find((s) => s.sessionId === args.sessionId)) {
+          await tx.mutate.password_games.update({
+            id: game.id,
+            spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+            updated_at: now()
+          });
+          await tx.mutate.sessions.upsert({
+            id: args.sessionId,
+            name: session?.name ?? null,
+            game_type: "password",
+            game_id: game.id,
+            created_at: now(),
+            last_seen: now()
+          });
+        }
+        return;
+      }
 
       const allMembers = new Set(game.teams.flatMap((team) => team.members));
       let teams = game.teams;
@@ -459,6 +478,7 @@ export const passwordMutators = {
         current_round: 0,
         active_rounds: [],
         announcement: null,
+        spectators: [],
         settings: { ...game.settings, roundEndsAt: null },
         updated_at: now()
       });
@@ -543,6 +563,72 @@ export const passwordMutators = {
       for (const m of chatMsgs) {
         await tx.mutate.chat_messages.delete({ id: m.id });
       }
+    }
+  ),
+
+  joinAsSpectator: defineMutator(
+    z.object({ gameId: z.string(), sessionId: z.string() }),
+    async ({ args, tx }) => {
+      const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const game = await tx.run(zql.password_games.where("id", args.gameId).one());
+      if (!game) throw new Error("Game not found");
+      if (game.phase === "ended") throw new Error("Game has ended");
+      if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
+      const allMembers = new Set(game.teams.flatMap((t) => t.members));
+      if (allMembers.has(args.sessionId)) throw new Error("Already in game as player");
+      if (game.spectators.find((s) => s.sessionId === args.sessionId)) return;
+
+      await tx.mutate.password_games.update({
+        id: game.id,
+        spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+        updated_at: now()
+      });
+      await tx.mutate.sessions.upsert({
+        id: args.sessionId,
+        name: session?.name ?? null,
+        game_type: "password",
+        game_id: game.id,
+        created_at: now(),
+        last_seen: now()
+      });
+    }
+  ),
+
+  leaveSpectator: defineMutator(
+    z.object({ gameId: z.string(), sessionId: z.string() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.password_games.where("id", args.gameId).one());
+      if (!game) return;
+      await tx.mutate.password_games.update({
+        id: game.id,
+        spectators: game.spectators.filter((s) => s.sessionId !== args.sessionId),
+        updated_at: now()
+      });
+      await tx.mutate.sessions.update({
+        id: args.sessionId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
+    }
+  ),
+
+  removeSpectator: defineMutator(
+    z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.password_games.where("id", args.gameId).one());
+      if (!game || game.host_id !== args.hostId) throw new Error("Only host can remove spectators");
+      await tx.mutate.password_games.update({
+        id: game.id,
+        spectators: game.spectators.filter((s) => s.sessionId !== args.targetId),
+        updated_at: now()
+      });
+      await tx.mutate.sessions.update({
+        id: args.targetId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   )
 };

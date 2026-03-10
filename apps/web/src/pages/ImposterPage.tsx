@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiHelpCircle } from "react-icons/fi";
@@ -9,6 +9,7 @@ import { ImposterLobbyActions } from "../components/imposter/ImposterLobbyAction
 import { ImposterPlayersCard } from "../components/imposter/ImposterPlayersCard";
 import { ImposterResultsSection } from "../components/imposter/ImposterResultsSection";
 import { ImposterVoteSection } from "../components/imposter/ImposterVoteSection";
+import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
@@ -38,12 +39,22 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
+  const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
 
   // Keep refs current so the unmount cleanup reads fresh values
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
+  const isSpectatorRef = useRef(isSpectator);
   inGameRef.current = inGame;
   phaseRef.current = game?.phase;
+  isSpectatorRef.current = isSpectator;
+
+  // Show toast when user becomes a spectator
+  useEffect(() => {
+    if (isSpectator) {
+      showToast("You are a spectator", "info");
+    }
+  }, [isSpectator]);
 
   // When the host navigates away (unmount), call the leave mutator so the
   // game ends for everyone.  A 500ms guard prevents React StrictMode's
@@ -53,7 +64,9 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
     const timer = setTimeout(() => { active = true; }, 500);
     return () => {
       clearTimeout(timer);
-      if (active && inGameRef.current && phaseRef.current !== "ended") {
+      if (active && isSpectatorRef.current) {
+        void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }));
+      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
         void zero.mutate(mutators.imposter.leave({ gameId, sessionId }));
       }
     };
@@ -159,24 +172,37 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         phaseEndsAt={game.settings.phaseEndsAt}
         isHost={isHost}
         category={game.category}
+        isSpectator={isSpectator}
       />
 
       <ImposterPlayersCard
         players={game.players}
         sessionId={sessionId}
         sessionById={sessionById}
-        revealRoles={game.phase === "results" || game.phase === "finished"}
+        revealRoles={game.phase === "finished"}
+        votedOutId={game.phase === "results" ? (() => {
+          const t = game.votes.reduce<Record<string, number>>((acc, v) => { acc[v.targetId] = (acc[v.targetId] ?? 0) + 1; return acc; }, {});
+          const max = Math.max(...Object.values(t), 0);
+          const top = Object.entries(t).filter(([, c]) => c === max && max > 0).map(([id]) => id);
+          return top[0] ?? null;
+        })() : null}
       />
 
       {game.phase === "lobby" && !inGame && (
         <div className="game-section game-join-prompt">
-          <p className="game-join-text">You're not in this lobby yet.</p>
+          <p className="game-join-text">{isSpectator ? "You're spectating. Join to play!" : "You're not in this lobby yet."}</p>
           <button
             className="btn btn-primary game-action-btn"
-            onClick={() =>
-              void zero.mutate(mutators.imposter.join({ gameId, sessionId }))
-                .client.catch(() => showToast("Couldn't join game", "error"))
-            }
+            onClick={() => {
+              if (isSpectator) {
+                void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }))
+                  .client.then(() => zero.mutate(mutators.imposter.join({ gameId, sessionId })))
+                  .catch(() => showToast("Couldn't join game", "error"));
+              } else {
+                void zero.mutate(mutators.imposter.join({ gameId, sessionId }))
+                  .client.catch(() => showToast("Couldn't join game", "error"));
+              }
+            }}
           >
             <FiLogIn size={16} /> Join Game
           </button>
@@ -201,7 +227,15 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {game.phase === "playing" && inGame && (() => {
+      {isSpectator && game.phase !== "lobby" && (
+        <SpectatorOverlay
+          playerCount={game.players.filter((p) => !p.eliminated).length}
+          phase={game.phase}
+          onLeave={() => void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId })).client.then(() => navigate("/"))}
+        />
+      )}
+
+      {!isSpectator && game.phase === "playing" && inGame && !me?.eliminated && (() => {
         const activePlayers = game.players.filter((p) => !p.eliminated);
         return (
           <ImposterClueSection
@@ -221,19 +255,19 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         );
       })()}
 
-      {game.phase === "playing" && !inGame && (() => {
+      {!isSpectator && game.phase === "playing" && (!inGame || me?.eliminated) && (() => {
         const activePlayers = game.players.filter((p) => !p.eliminated);
         return (
           <div className="game-section">
             <div className="game-waiting">
               <div className="game-waiting-pulse" />
-              <p>Players are submitting clues… ({game.clues.length}/{activePlayers.length})</p>
+              <p>{me?.eliminated ? "You've been eliminated. Spectating…" : "Players are submitting clues…"} ({game.clues.length}/{activePlayers.length})</p>
             </div>
           </div>
         );
       })()}
 
-      {game.phase === "voting" && inGame && (() => {
+      {!isSpectator && game.phase === "voting" && inGame && !me?.eliminated && (() => {
         const activePlayers = game.players.filter((p) => !p.eliminated);
         return (
           <ImposterVoteSection
@@ -251,19 +285,19 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         );
       })()}
 
-      {game.phase === "voting" && !inGame && (() => {
+      {!isSpectator && game.phase === "voting" && (!inGame || me?.eliminated) && (() => {
         const activePlayers = game.players.filter((p) => !p.eliminated);
         return (
           <div className="game-section">
             <div className="game-waiting">
               <div className="game-waiting-pulse" />
-              <p>Players are voting… ({game.votes.length}/{activePlayers.length})</p>
+              <p>{me?.eliminated ? "You've been eliminated. Spectating…" : "Players are voting…"} ({game.votes.length}/{activePlayers.length})</p>
             </div>
           </div>
         );
       })()}
 
-      {game.phase === "results" && (
+      {!isSpectator && game.phase === "results" && (
         <ImposterResultsSection
           tally={tally}
           votes={game.votes}
@@ -271,10 +305,14 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           sessionById={sessionById}
           secretWord={game.secret_word}
           phaseEndsAt={game.settings.phaseEndsAt}
+          skipVotes={(game.settings.skipVotes ?? []).length}
+          activePlayerCount={game.players.filter((p) => !p.eliminated).length}
+          hasVotedSkip={(game.settings.skipVotes ?? []).includes(sessionId)}
+          onSkip={() => void zero.mutate(mutators.imposter.voteSkipResults({ gameId, sessionId }))}
         />
       )}
 
-      {game.phase === "finished" && (() => {
+      {!isSpectator && game.phase === "finished" && (() => {
         const impostersLeft = game.players.filter((p) => p.role === "imposter" && !p.eliminated).length;
         const playersWin = impostersLeft === 0;
         const imposters = game.players.filter((p) => p.role === "imposter");

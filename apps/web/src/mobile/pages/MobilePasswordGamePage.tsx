@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "@rocicorp/zero/react";
+import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiSend, FiClock, FiSkipForward } from "react-icons/fi";
@@ -8,6 +8,8 @@ import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
+import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
@@ -22,15 +24,32 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState("");
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
+  const isSpectatorRef = useRef(false);
 
   usePresenceSocket({ sessionId, gameId, gameType: "password" });
 
   const isHost = game?.host_id === sessionId;
   const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
 
+  useEffect(() => {
+    const spectating = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
+    isSpectatorRef.current = spectating;
+  }, [game?.spectators, sessionId]);
+
+  useEffect(() => {
+    let active = false;
+    const timer = setTimeout(() => { active = true; }, 500);
+    return () => {
+      clearTimeout(timer);
+      if (active && isSpectatorRef.current) {
+        void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }));
+      }
+    };
+  }, [gameId, sessionId, zero]);
+
   useMobileHostRegister(
     isHost && game
-      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? id.slice(0, 6) }))) }
+      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? id.slice(0, 6) }))), spectators: game.spectators ?? [] }
       : null
   );
 
@@ -81,6 +100,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
 
   if (!game) return <MobileGameNotFound theme="password" />;
 
+  const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
   const myTeam = myTeamIndex >= 0 ? game.teams[myTeamIndex] : undefined;
   const myTeamMembers = myTeam?.members ?? [];
 
@@ -108,6 +128,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   return (
     <div className="m-page" data-game-theme="password">
       <MobileGameHeader code={game.code} gameLabel="Password" phase={game.phase} round={game.current_round} accent="var(--game-accent)" category={game.settings.category ?? null}>
+        {isSpectator && <MobileSpectatorBadge />}
         {timeLeft != null && (
           <span className={`m-badge${timeLeft <= 10 ? " m-badge--danger" : " m-badge--warn"}`}>
             <FiClock size={10} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
@@ -133,8 +154,12 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
+      {isSpectator && (
+        <MobileSpectatorOverlay playerCount={game.teams.reduce((n, t) => n + t.members.length, 0)} phase={game.phase} onLeave={() => void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }))} />
+      )}
+
       {/* Active Round */}
-      {game.phase === "playing" && myActiveRound && (() => {
+      {!isSpectator && game.phase === "playing" && myActiveRound && (() => {
         const ar = myActiveRound;
         const guesserName = names[ar.guesserId] ?? ar.guesserId.slice(0, 6);
         const isGuesser = ar.guesserId === sessionId;
@@ -217,14 +242,14 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       })()}
 
       {/* Spectator/no active round */}
-      {game.phase === "playing" && !myActiveRound && (
+      {!isSpectator && game.phase === "playing" && !myActiveRound && (
         <div className="m-card">
           <div className="m-waiting"><div className="m-waiting-pulse" /><p>Teams are racing! Watch scores update live.</p></div>
         </div>
       )}
 
       {/* Results redirect */}
-      {game.phase === "results" && (
+      {!isSpectator && game.phase === "results" && (
         <div className="m-card" style={{ textAlign: "center" }}>
           <h3 className="m-reveal-title">Game Over!</h3>
           <Link to={`/password/${game.id}/results`} className="m-btn m-btn-primary" style={{ width: "100%", marginTop: "0.75rem", display: "block", textAlign: "center" }}>
@@ -256,7 +281,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* Host: reset */}
-      {isHost && game.phase === "results" && (
+      {!isSpectator && isHost && game.phase === "results" && (
         <div className="m-card">
           <button
             className="m-btn m-btn-muted"

@@ -4,6 +4,7 @@ import { PiCrownSimpleFill } from "react-icons/pi";
 import { FiTag } from "react-icons/fi";
 import { gameCategoryLabels } from "@games/shared";
 import { RoundCountdown } from "../shared/RoundCountdown";
+import { SpectatorBadge } from "../shared/SpectatorBadge";
 
 const phaseLabels: Record<string, string> = {
   lobby: "Lobby",
@@ -36,6 +37,7 @@ export function ImposterHeader({
   totalRounds,
   phaseEndsAt,
   isHost,
+  isSpectator,
   category
 }: {
   code: string;
@@ -44,6 +46,7 @@ export function ImposterHeader({
   totalRounds: number;
   phaseEndsAt: number | null;
   isHost?: boolean;
+  isSpectator?: boolean;
   category?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
@@ -76,10 +79,13 @@ export function ImposterHeader({
         )}
         <RoundCountdown endsAt={phaseEndsAt} label="Time" />
       </div>
-      <button className="game-code-btn" onClick={copyCode} data-tooltip={copied ? "Copied!" : "Click to copy room code"} data-tooltip-variant="info">
+      <div className="game-header-right">
+        {isSpectator && <SpectatorBadge />}
+        <button className="game-code-btn" onClick={copyCode} data-tooltip={copied ? "Copied!" : "Click to copy room code"} data-tooltip-variant="info">
         {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}
         <span>{code}</span>
       </button>
+      </div>
     </div>
   );
 }

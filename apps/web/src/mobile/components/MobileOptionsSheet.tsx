@@ -2,7 +2,7 @@ import { FiMoon, FiSun, FiPlay } from "react-icons/fi";
 import { useSettings, updateSettings } from "../../lib/settings";
 import { BottomSheet } from "./BottomSheet";
 import { mutators } from "@games/shared";
-import { useZero } from "@rocicorp/zero/react";
+import { useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { useNavigate } from "react-router-dom";
 import { getOrCreateSessionId, getStoredName, addRecentGame } from "../../lib/session";

@@ -12,6 +12,7 @@ export const chatMutators = {
       senderId: z.string(),
       senderName: z.string(),
       badge: z.string().optional(),
+      channel: z.string().optional(),
       text: z.string().min(1).max(500)
     }),
     async ({ args, tx }) => {
@@ -22,6 +23,7 @@ export const chatMutators = {
         sender_id: args.senderId,
         sender_name: args.senderName,
         badge: args.badge,
+        channel: args.channel ?? "all",
         text: args.text.trim(),
         created_at: now()
       });

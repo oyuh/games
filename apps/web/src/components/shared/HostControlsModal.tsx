@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiX, FiUserMinus, FiPower, FiMessageCircle, FiSend } from "react-icons/fi";
+import { FiX, FiUserMinus, FiPower, FiMessageCircle, FiSend, FiEye } from "react-icons/fi";
 import { mutators } from "@games/shared";
-import { useZero } from "@rocicorp/zero/react";
+import { useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
 
 type GameContext =
-  | { type: "imposter"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }> }
-  | { type: "password"; gameId: string; hostId: string; players: Array<{ id: string; name: string }> }
-  | { type: "shade_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }> };
+  | { type: "imposter"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "password"; gameId: string; hostId: string; players: Array<{ id: string; name: string }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "shade_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "chain_reaction"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
 
 export function HostControlsModal({
   game,
@@ -29,7 +30,11 @@ export function HostControlsModal({
       ? game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }))
       : game.type === "shade_signal"
       ? game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }))
+      : game.type === "chain_reaction"
+      ? game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }))
       : game.players.filter((p) => p.id !== sessionId);
+
+  const spectatorsList = (game.spectators ?? []).map((s) => ({ id: s.sessionId, name: s.name ?? s.sessionId.slice(0, 6) }));
 
   const handleKick = (targetId: string, targetName: string) => {
     if (game.type === "imposter") {
@@ -38,6 +43,9 @@ export function HostControlsModal({
     } else if (game.type === "shade_signal") {
       void zero.mutate(mutators.shadeSignal.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
         .client.catch(() => showToast("Couldn't kick player", "error"));
+    } else if (game.type === "chain_reaction") {
+      void zero.mutate(mutators.chainReaction.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
+        .client.catch(() => showToast("Couldn't kick player", "error"));
     } else {
       void zero.mutate(mutators.password.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
         .client.catch(() => showToast("Couldn't kick player", "error"));
@@ -45,11 +53,26 @@ export function HostControlsModal({
     showToast(`Kicked ${targetName}`, "info");
   };
 
+  const handleRemoveSpectator = (targetId: string, targetName: string) => {
+    if (game.type === "imposter") {
+      void zero.mutate(mutators.imposter.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else if (game.type === "shade_signal") {
+      void zero.mutate(mutators.shadeSignal.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else if (game.type === "chain_reaction") {
+      void zero.mutate(mutators.chainReaction.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else {
+      void zero.mutate(mutators.password.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    }
+    showToast(`Removed spectator ${targetName}`, "info");
+  };
+
   const handleEndGame = () => {
     if (game.type === "imposter") {
       void zero.mutate(mutators.imposter.endGame({ gameId: game.gameId, hostId: sessionId }));
     } else if (game.type === "shade_signal") {
       void zero.mutate(mutators.shadeSignal.endGame({ gameId: game.gameId, hostId: sessionId }));
+    } else if (game.type === "chain_reaction") {
+      void zero.mutate(mutators.chainReaction.endGame({ gameId: game.gameId, hostId: sessionId }));
     } else {
       void zero.mutate(mutators.password.endGame({ gameId: game.gameId, hostId: sessionId }));
     }
@@ -65,6 +88,8 @@ export function HostControlsModal({
       void zero.mutate(mutators.imposter.announce({ gameId: game.gameId, hostId: sessionId, text }));
     } else if (game.type === "shade_signal") {
       void zero.mutate(mutators.shadeSignal.announce({ gameId: game.gameId, hostId: sessionId, text }));
+    } else if (game.type === "chain_reaction") {
+      void zero.mutate(mutators.chainReaction.announce({ gameId: game.gameId, hostId: sessionId, text }));
     } else {
       void zero.mutate(mutators.password.announce({ gameId: game.gameId, hostId: sessionId, text }));
     }
@@ -125,6 +150,27 @@ export function HostControlsModal({
               <p className="host-empty-text">No other players in the game.</p>
             )}
           </section>
+
+          {/* Spectators */}
+          {spectatorsList.length > 0 && (
+            <section className="host-section">
+              <h3 className="host-section-title"><FiEye size={14} /> Spectators</h3>
+              <p className="host-section-desc">People watching the game. Remove to kick them out.</p>
+              <div className="host-player-list">
+                {spectatorsList.map((s) => (
+                  <div key={s.id} className="host-player-row">
+                    <span className="host-player-name">{s.name}</span>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => handleRemoveSpectator(s.id, s.name)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* End Game */}
           <section className="host-section host-section--danger">

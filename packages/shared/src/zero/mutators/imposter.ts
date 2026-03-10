@@ -27,6 +27,7 @@ export const imposterMutators = {
         clues: [],
         votes: [],
         kicked: [],
+        spectators: [],
         round_history: [],
         announcement: null,
         settings: {
@@ -65,9 +66,24 @@ export const imposterMutators = {
       if (game.kicked.includes(args.sessionId)) {
         throw new Error("You have been kicked from this game");
       }
-      // Only allow actual joining during lobby; mid-game visitors spectate
+      // Only allow actual joining during lobby; mid-game visitors join as spectators
       if (game.phase !== "lobby") {
-        throw new Error("Game is already in progress");
+        // Add as spectator instead of throwing
+        if (game.spectators.find((s) => s.sessionId === args.sessionId)) return;
+        await tx.mutate.imposter_games.update({
+          id: game.id,
+          spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+          updated_at: now()
+        });
+        await tx.mutate.sessions.upsert({
+          id: args.sessionId,
+          name: session?.name ?? null,
+          game_type: "imposter",
+          game_id: game.id,
+          created_at: now(),
+          last_seen: now()
+        });
+        return;
       }
 
       const existing = game.players.find((player) => player.sessionId === args.sessionId);
@@ -198,6 +214,7 @@ export const imposterMutators = {
 
       const player = game.players.find((item) => item.sessionId === args.sessionId);
       if (!player) throw new Error("Player is not in game");
+      if (player.eliminated) throw new Error("Eliminated players cannot submit clues");
 
       const withoutCurrent = game.clues.filter((clue) => clue.sessionId !== args.sessionId);
       const nextClues = [...withoutCurrent, { sessionId: args.sessionId, text: args.text.trim(), createdAt: now() }];
@@ -238,7 +255,7 @@ export const imposterMutators = {
         id: game.id,
         votes: nextVotes,
         phase: allVoted ? "results" : game.phase,
-        settings: allVoted ? { ...game.settings, phaseEndsAt: now() + 8000 } : game.settings,
+        settings: allVoted ? { ...game.settings, phaseEndsAt: now() + 8000, skipVotes: [] } : game.settings,
         updated_at: now()
       });
     }
@@ -275,7 +292,7 @@ export const imposterMutators = {
         await tx.mutate.imposter_games.update({
           id: game.id,
           phase: "results",
-          settings: { ...game.settings, phaseEndsAt: now() + 8000 },
+          settings: { ...game.settings, phaseEndsAt: now() + 8000, skipVotes: [] },
           updated_at: now()
         });
       } else if (game.phase === "results") {
@@ -299,6 +316,12 @@ export const imposterMutators = {
         const updatedPlayers = game.players.map((p) =>
           p.sessionId === votedOutId ? { ...p, eliminated: true } : p
         );
+
+        // Move eliminated player to spectators
+        const updatedSpectators = [...(game.spectators ?? [])];
+        if (votedOutPlayer) {
+          updatedSpectators.push({ sessionId: votedOutPlayer.sessionId, name: votedOutPlayer.name });
+        }
 
         const roundEntry = {
           round: game.settings.currentRound,
@@ -328,6 +351,7 @@ export const imposterMutators = {
             clues: [],
             votes: [],
             players: updatedPlayers,
+            spectators: updatedSpectators,
             round_history: roundHistory,
             settings: { ...game.settings, phaseEndsAt: null },
             updated_at: now()
@@ -345,6 +369,7 @@ export const imposterMutators = {
           clues: [],
           votes: [],
           players: updatedPlayers,
+          spectators: updatedSpectators,
           round_history: roundHistory,
           settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
           updated_at: now()
@@ -378,6 +403,12 @@ export const imposterMutators = {
         p.sessionId === votedOutId ? { ...p, eliminated: true } : p
       );
 
+      // Move eliminated player to spectators
+      const updatedSpectators = [...(game.spectators ?? [])];
+      if (votedOutPlayer) {
+        updatedSpectators.push({ sessionId: votedOutPlayer.sessionId, name: votedOutPlayer.name });
+      }
+
       const roundEntry = {
         round: game.settings.currentRound,
         secretWord: game.secret_word,
@@ -405,6 +436,7 @@ export const imposterMutators = {
           clues: [],
           votes: [],
           players: updatedPlayers,
+          spectators: updatedSpectators,
           round_history: roundHistory,
           settings: { ...game.settings, phaseEndsAt: null },
           updated_at: now()
@@ -422,6 +454,7 @@ export const imposterMutators = {
         clues: [],
         votes: [],
         players: updatedPlayers,
+        spectators: updatedSpectators,
         round_history: roundHistory,
         settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
         updated_at: now()
@@ -443,6 +476,7 @@ export const imposterMutators = {
         secret_word: null,
         round_history: [],
         announcement: null,
+        spectators: [],
         players: game.players.map((player) => {
           const { role: _role, eliminated: _elim, ...rest } = player;
           return rest;
@@ -532,6 +566,102 @@ export const imposterMutators = {
       for (const m of chatMsgs) {
         await tx.mutate.chat_messages.delete({ id: m.id });
       }
+    }
+  ),
+
+  joinAsSpectator: defineMutator(
+    z.object({ gameId: z.string(), sessionId: z.string() }),
+    async ({ args, tx }) => {
+      const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
+      if (!game) throw new Error("Game not found");
+      if (game.phase === "ended") throw new Error("Game has ended");
+      if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
+      // Already a player? Not allowed
+      if (game.players.some((p) => p.sessionId === args.sessionId)) throw new Error("Already in game as player");
+      const existing = game.spectators.find((s) => s.sessionId === args.sessionId);
+      if (existing) return; // already spectating
+
+      await tx.mutate.imposter_games.update({
+        id: game.id,
+        spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+        updated_at: now()
+      });
+      await tx.mutate.sessions.upsert({
+        id: args.sessionId,
+        name: session?.name ?? null,
+        game_type: "imposter",
+        game_id: game.id,
+        created_at: now(),
+        last_seen: now()
+      });
+    }
+  ),
+
+  leaveSpectator: defineMutator(
+    z.object({ gameId: z.string(), sessionId: z.string() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
+      if (!game) return;
+      await tx.mutate.imposter_games.update({
+        id: game.id,
+        spectators: game.spectators.filter((s) => s.sessionId !== args.sessionId),
+        updated_at: now()
+      });
+      await tx.mutate.sessions.update({
+        id: args.sessionId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
+    }
+  ),
+
+  removeSpectator: defineMutator(
+    z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
+      if (!game || game.host_id !== args.hostId) throw new Error("Only host can remove spectators");
+      await tx.mutate.imposter_games.update({
+        id: game.id,
+        spectators: game.spectators.filter((s) => s.sessionId !== args.targetId),
+        updated_at: now()
+      });
+      await tx.mutate.sessions.update({
+        id: args.targetId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
+    }
+  ),
+
+  voteSkipResults: defineMutator(
+    z.object({ gameId: z.string(), sessionId: z.string() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
+      if (!game || game.phase !== "results") throw new Error("Not in results phase");
+
+      const isActive = game.players.some((p) => p.sessionId === args.sessionId && !p.eliminated);
+      if (!isActive) throw new Error("Not an active player");
+
+      const current = game.settings.skipVotes ?? [];
+      if (current.includes(args.sessionId)) return; // already voted
+
+      const nextSkipVotes = [...current, args.sessionId];
+      const activePlayers = game.players.filter((p) => !p.eliminated);
+      const allSkipped = nextSkipVotes.length >= activePlayers.length;
+
+      await tx.mutate.imposter_games.update({
+        id: game.id,
+        settings: {
+          ...game.settings,
+          skipVotes: nextSkipVotes,
+          // If everyone voted skip, expire the timer immediately
+          phaseEndsAt: allSkipped ? 1 : game.settings.phaseEndsAt
+        },
+        updated_at: now()
+      });
     }
   )
 };

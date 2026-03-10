@@ -2350,6 +2350,32 @@
   padding: 0.3rem 0.4rem;
 }
 
+/* Mobile chat channel tabs (imposter private chat) */
+.m-chat-channel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.m-chat-channel-tab {
+  flex: 1;
+  padding: 0.45rem 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.m-chat-channel-tab:hover {
+  color: var(--foreground);
+}
+.m-chat-channel-tab--active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
 .m-chat-body {
   flex: 1;
   overflow-y: auto;

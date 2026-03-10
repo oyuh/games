@@ -41,6 +41,7 @@ export const demoMutators = {
         clues: args.clues,
         votes: args.votes,
         kicked: [],
+        spectators: [],
         round_history: [],
         announcement: null,
         settings: {
@@ -100,6 +101,7 @@ export const demoMutators = {
         current_round: args.currentRound,
         active_rounds: args.activeRounds,
         kicked: [],
+        spectators: [],
         announcement: null,
         settings: {
           targetScore: args.targetScore,
@@ -148,6 +150,7 @@ export const demoMutators = {
         scores: args.scores,
         round_history: args.roundHistory,
         kicked: [],
+        spectators: [],
         announcement: null,
         settings: args.settings,
         created_at: ts,
@@ -193,6 +196,7 @@ export const demoMutators = {
         guesses: args.guesses,
         round_history: [],
         kicked: [],
+        spectators: [],
         announcement: null,
         settings: {
           hardMode: false,

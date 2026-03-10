@@ -52,6 +52,7 @@ export const imposterGames = pgTable(
     players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player"; eliminated?: boolean }>>().notNull().default([]),
     clues: jsonb("clues").$type<Array<{ sessionId: string; text: string; createdAt: number }>>().notNull().default([]),
     votes: jsonb("votes").$type<Array<{ voterId: string; targetId: string }>>().notNull().default([]),
+    spectators: jsonb("spectators").$type<Array<{ sessionId: string; name: string | null }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
     roundHistory: jsonb("round_history").$type<Array<{
       round: number;
@@ -70,6 +71,7 @@ export const imposterGames = pgTable(
       roundDurationSec: number;
       votingDurationSec: number;
       phaseEndsAt: number | null;
+      skipVotes?: string[];
     }>().notNull().default({
       rounds: 3,
       imposters: 1,
@@ -104,6 +106,7 @@ export const passwordGames = pgTable(
       clues: Array<{ sessionId: string; text: string }>;
       guess: string | null;
     }>>().notNull().default([]),
+    spectators: jsonb("spectators").$type<Array<{ sessionId: string; name: string | null }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
     announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
     settings: jsonb("settings").$type<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean }>().notNull().default({ targetScore: 10, roundDurationSec: 75, roundEndsAt: null }),
@@ -124,6 +127,7 @@ export const chatMessages = pgTable(
     senderId: text("sender_id").notNull(),
     senderName: text("sender_name").notNull(),
     badge: text("badge"),
+    channel: text("channel").notNull().default("all"),
     text: text("text").notNull(),
     createdAt: bigint("created_at", { mode: "number" }).notNull()
   },
@@ -149,6 +153,7 @@ export const chainReactionGames = pgTable(
       chains: Record<string, Array<{ word: string; solvedBy: string | null; lettersShown: number }>>;
       scores: Record<string, number>;
     }>>().notNull().default([]),
+    spectators: jsonb("spectators").$type<Array<{ sessionId: string; name: string | null }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
     announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
     settings: jsonb("settings").$type<{
@@ -203,6 +208,7 @@ export const shadeSignalGames = pgTable(
       scores: Record<string, number>;
       leaderScore: number;
     }>>().notNull().default([]),
+    spectators: jsonb("spectators").$type<Array<{ sessionId: string; name: string | null }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
     announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
     settings: jsonb("settings").$type<{

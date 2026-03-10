@@ -1,3 +1,4 @@
+import { FiSkipForward } from "react-icons/fi";
 import { RoundCountdown } from "../shared/RoundCountdown";
 
 type Player = { sessionId: string; role?: "imposter" | "player"; eliminated?: boolean };
@@ -8,7 +9,11 @@ export function ImposterResultsSection({
   players,
   sessionById,
   secretWord,
-  phaseEndsAt
+  phaseEndsAt,
+  skipVotes,
+  activePlayerCount,
+  hasVotedSkip,
+  onSkip
 }: {
   tally: Record<string, number>;
   votes: Array<{ voterId: string; targetId: string }>;
@@ -16,6 +21,10 @@ export function ImposterResultsSection({
   sessionById: Record<string, string>;
   secretWord: string | null;
   phaseEndsAt: number | null | undefined;
+  skipVotes: number;
+  activePlayerCount: number;
+  hasVotedSkip: boolean;
+  onSkip: () => void;
 }) {
   const activePlayers = players.filter((p) => !p.eliminated);
   const maxVotes = Math.max(...Object.values(tally), 1);
@@ -95,6 +104,15 @@ export function ImposterResultsSection({
 
       <div className="game-actions">
         <RoundCountdown endsAt={phaseEndsAt} label="Next round" />
+        <button
+          className={`btn ${hasVotedSkip ? "btn-muted" : "btn-primary"} game-action-btn`}
+          onClick={onSkip}
+          disabled={hasVotedSkip}
+          style={{ marginTop: "0.5rem" }}
+        >
+          <FiSkipForward size={14} />
+          {hasVotedSkip ? `Voted to Skip (${skipVotes}/${activePlayerCount})` : `Skip (${skipVotes}/${activePlayerCount})`}
+        </button>
       </div>
     </div>
   );

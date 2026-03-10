@@ -22,7 +22,7 @@ export function AppShell() {
 }
 
 function AppShellInner() {
-  const { inGame, gameType, gameId } = useChatContext();
+  const { inGame, isSpectator, gameType, gameId } = useChatContext();
   useGameMeta();
   const sessionId = getOrCreateSessionId();
   const isMobile = useIsMobile();
@@ -40,6 +40,11 @@ function AppShellInner() {
       ? queries.password.byId({ id: gameId })
       : queries.password.byId({ id: "__none__" })
   );
+  const [chainGames] = useQuery(
+    gameType === "chain_reaction"
+      ? queries.chainReaction.byId({ id: gameId })
+      : queries.chainReaction.byId({ id: "__none__" })
+  );
   const [shadeGames] = useQuery(
     gameType === "shade_signal"
       ? queries.shadeSignal.byId({ id: gameId })
@@ -47,13 +52,11 @@ function AppShellInner() {
   );
   const [sessions] = useQuery(queries.sessions.byId({ id: sessionId }));
 
-  const hostId = gameType === "imposter"
-    ? imposterGames[0]?.host_id ?? ""
-    : gameType === "password"
-      ? passwordGames[0]?.host_id ?? ""
-      : gameType === "shade_signal"
-        ? shadeGames[0]?.host_id ?? ""
-        : "";
+  const hostId = gameType === "imposter" ? (imposterGames[0]?.host_id ?? "")
+    : gameType === "password" ? (passwordGames[0]?.host_id ?? "")
+    : gameType === "chain_reaction" ? (chainGames[0]?.host_id ?? "")
+    : gameType === "shade_signal" ? (shadeGames[0]?.host_id ?? "")
+    : "";
 
   const myName = sessions[0]?.name ?? sessionId.slice(0, 6);
 
@@ -69,7 +72,7 @@ function AppShellInner() {
       <ToastContainer />
       <TooltipLayer />
       <ConnectionDebugPanel />
-      {inGame && <ChatWindow hostId={hostId} myName={myName} />}
+      {inGame && !isSpectator && <ChatWindow hostId={hostId} myName={myName} />}
     </div>
   );
 }
