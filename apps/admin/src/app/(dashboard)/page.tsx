@@ -85,7 +85,7 @@ export default function DashboardPage() {
     } catch (e: any) { show(e.message, "error"); }
   };
 
-  if (loading) return <p style={{ color: "#888" }}>Loading...</p>;
+  if (loading) return <p style={{ color: "var(--muted)" }}>Loading...</p>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
@@ -123,7 +123,7 @@ export default function DashboardPage() {
         <h2 className="section-title">Custom Footer Status</h2>
         <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {status.status && (
-            <div style={{ fontSize: "0.875rem", color: "#7ecbff" }}>
+            <div style={{ fontSize: "0.875rem", color: "var(--primary)" }}>
               Current: <strong>{status.status}</strong>
             </div>
           )}
