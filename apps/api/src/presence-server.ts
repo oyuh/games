@@ -44,11 +44,18 @@ export function startPresenceServer(server: { on: (...args: any[]) => void }, pa
 
     socket.on("message", async (raw) => {
       try {
-        const parsed = JSON.parse(raw.toString()) as PresenceMessage;
-        if (parsed.type !== "presence" || !parsed.sessionId) {
+        const parsed = JSON.parse(raw.toString());
+
+        if (parsed.type === "ping") {
+          socket.send(JSON.stringify({ type: "pong", ts: parsed.ts }));
           return;
         }
-        await markSeen(parsed);
+
+        const msg = parsed as PresenceMessage;
+        if (msg.type !== "presence" || !msg.sessionId) {
+          return;
+        }
+        await markSeen(msg);
       } catch {
       }
     });

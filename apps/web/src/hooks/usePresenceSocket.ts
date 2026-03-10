@@ -2,10 +2,13 @@ import { useEffect } from "react";
 import {
   addConnectionDebugEvent,
   setPresenceConnectLatency,
-  setPresenceConnectionState
+  setPresenceConnectionState,
+  setApiConnectionProbe
 } from "../lib/connection-debug";
 
 type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal";
+
+const PING_INTERVAL_MS = 15_000;
 
 export function usePresenceSocket({
   sessionId,
@@ -32,6 +35,8 @@ export function usePresenceSocket({
 
     const ws = new WebSocket(url);
     const connectStartedAt = performance.now();
+    let pingTimer: ReturnType<typeof setInterval> | null = null;
+    let pendingPingTs: number | null = null;
 
     const sendPresence = () => {
       if (ws.readyState !== WebSocket.OPEN) {
@@ -47,6 +52,12 @@ export function usePresenceSocket({
       );
     };
 
+    const sendPing = () => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      pendingPingTs = performance.now();
+      ws.send(JSON.stringify({ type: "ping", ts: pendingPingTs }));
+    };
+
     const onOpen = () => {
       const latencyMs = Math.round(performance.now() - connectStartedAt);
       setPresenceConnectLatency(latencyMs);
@@ -58,6 +69,26 @@ export function usePresenceSocket({
         details: `connect ${latencyMs}ms`
       });
       sendPresence();
+      // Start periodic pings for latency measurement
+      sendPing();
+      pingTimer = setInterval(sendPing, PING_INTERVAL_MS);
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "pong" && pendingPingTs != null) {
+          const rtt = Math.round(performance.now() - pendingPingTs);
+          pendingPingTs = null;
+          setApiConnectionProbe({
+            state: "ok",
+            latencyMs: rtt,
+            checkedAt: new Date().toISOString()
+          });
+        }
+      } catch {
+        // ignore non-JSON or malformed messages
+      }
     };
 
     const onError = () => {
@@ -81,13 +112,16 @@ export function usePresenceSocket({
     };
 
     ws.addEventListener("open", onOpen);
+    ws.addEventListener("message", onMessage);
     ws.addEventListener("error", onError);
     ws.addEventListener("close", onClose);
     const interval = setInterval(sendPresence, 10_000);
 
     return () => {
       clearInterval(interval);
+      if (pingTimer) clearInterval(pingTimer);
       ws.removeEventListener("open", onOpen);
+      ws.removeEventListener("message", onMessage);
       ws.removeEventListener("error", onError);
       ws.removeEventListener("close", onClose);
       ws.close();
