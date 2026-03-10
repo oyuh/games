@@ -25,7 +25,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
 
   const filteredMessages = showChannels
     ? messages.filter((m) => (m.channel ?? "all") === channel)
-    : messages;
+    : messages.filter((m) => !m.channel || m.channel === "all");
 
   // Get my session name
   const [sessions] = useQuery(queries.sessions.byId({ id: sessionId }));

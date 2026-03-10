@@ -58,7 +58,7 @@ export function MobileHostControlsSheet({
     } else {
       void zero.mutate(mutators.password.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
     }
-    showToast(`Removed spectator ${targetName}`, "info");
+    showToast(`Kicked ${targetName}`, "info");
   };
 
   const handleEndGame = () => {

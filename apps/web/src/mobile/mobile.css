@@ -338,6 +338,7 @@
 .m-badge--success { background: color-mix(in srgb, #4ade80 20%, transparent); color: #4ade80; }
 .m-badge--warn { background: color-mix(in srgb, #f59e0b 20%, transparent); color: #f59e0b; }
 .m-badge--danger { background: color-mix(in srgb, #f87171 20%, transparent); color: #f87171; }
+.m-badge--muted { background: color-mix(in srgb, var(--muted-foreground) 15%, transparent); color: var(--muted-foreground); }
 
 /* ── Mobile Players Grid ─────────────────────────────────── */
 .m-players-row {
