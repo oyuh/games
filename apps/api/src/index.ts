@@ -9,8 +9,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
 import { drizzleClient } from "./db-provider";
-import { startPresenceServer } from "./presence-server";
-import { startBroadcastServer, broadcastToAll, getCustomStatus, setBanChecker } from "./broadcast-server";
+import { pusher, getCustomStatus, setBanChecker, getBanChecker } from "./broadcast-server";
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 
 config({ path: "../../.env" });
@@ -44,6 +43,67 @@ app.route("/api/admin", adminRoutes);
 
 // ─── Public endpoints (no auth) ─────────────────────────────
 app.route("/api/public", getRestrictedNamesRoute());
+
+// ─── Pusher auth endpoint ───────────────────────────────────
+app.post("/api/pusher/auth", async (c) => {
+  const body = await c.req.parseBody();
+  const socketId = body["socket_id"] as string;
+  const channelName = body["channel_name"] as string;
+  const sessionId = (body["session_id"] as string) || "";
+
+  if (!socketId || !channelName) {
+    return c.json({ error: "Missing socket_id or channel_name" }, 400);
+  }
+
+  // Ban check on auth — banned users can't subscribe
+  if (sessionId) {
+    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const region = c.req.header("cf-ipcountry") || c.req.header("x-vercel-ip-country") || "unknown";
+    const checker = getBanChecker();
+    if (checker) {
+      const ban = checker(sessionId, ip, region);
+      if (ban) {
+        return c.json({ error: "Banned" }, 403);
+      }
+    }
+  }
+
+  // Only allow private-user-{sessionId} channels where sessionId matches
+  if (channelName.startsWith("private-user-")) {
+    const channelSessionId = channelName.replace("private-user-", "");
+    if (channelSessionId !== sessionId) {
+      return c.json({ error: "Unauthorized channel" }, 403);
+    }
+  }
+
+  const authResponse = pusher.authorizeChannel(socketId, channelName);
+  return c.json(authResponse);
+});
+
+// ─── Presence heartbeat (replaces WebSocket presence) ───────
+app.post("/api/presence/heartbeat", async (c) => {
+  const body = await c.req.json();
+  const { sessionId, gameId, gameType } = body as {
+    sessionId?: string;
+    gameId?: string;
+    gameType?: string;
+  };
+
+  if (!sessionId) {
+    return c.json({ error: "sessionId required" }, 400);
+  }
+
+  await drizzleClient
+    .update(sessions)
+    .set({
+      gameId: gameId ?? null,
+      gameType: (gameType as any) ?? null,
+      lastSeen: Date.now(),
+    })
+    .where(eq(sessions.id, sessionId));
+
+  return c.json({ ok: true });
+});
 
 // ─── Custom status in build-info ───────────────────────────
 app.get("/api/admin-status", (c) => {
@@ -398,9 +458,8 @@ const server = serve(
   }
 );
 
-startPresenceServer(server, "/presence");
-startBroadcastServer(server, "/broadcast");
 setBanChecker(isBanned);
+console.log("Pusher broadcast configured (no WebSocket servers)");
 
 // ─── Auto-cleanup: run every 15 minutes ────────────────────
 async function scheduledCleanup() {

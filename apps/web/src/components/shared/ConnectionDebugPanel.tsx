@@ -244,7 +244,7 @@ export function ConnectionDebugPanel() {
             ) : null}
             <div className="truncate text-[10px] text-slate-400">API Info URL: {state.apiInfoURL || "(unset)"}</div>
             <div className="truncate text-[10px] text-slate-400">Zero URL: {state.zeroCacheURL || "(unset)"}</div>
-            <div className="truncate text-[10px] text-slate-400">Presence URL: {state.presenceURL || "(unset)"}</div>
+            <div className="truncate text-[10px] text-slate-400">API URL: {state.apiBaseURL || "(unset)"}</div>
             <div className="truncate text-[10px] text-slate-400">Session: {state.sessionId || "(unset)"}</div>
           </dl>
 

@@ -16,7 +16,7 @@ export type ConnectionDebugState = {
   bootedAt: string;
   sessionId: string;
   zeroCacheURL: string;
-  presenceURL: string;
+  apiBaseURL: string;
   apiInfoURL: string;
   location: string;
   isOnline: boolean;
@@ -53,7 +53,7 @@ const state: ConnectionDebugState = {
   bootedAt: new Date().toISOString(),
   sessionId: "",
   zeroCacheURL: "",
-  presenceURL: "",
+  apiBaseURL: "",
   apiInfoURL: "",
   location: typeof window !== "undefined" ? window.location.href : "",
   isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -146,12 +146,12 @@ export function addConnectionDebugEvent(event: {
 export function initConnectionDebug(config: {
   sessionId: string;
   zeroCacheURL: string;
-  presenceURL: string;
+  apiBaseURL: string;
   apiInfoURL: string;
 }) {
   state.sessionId = config.sessionId;
   state.zeroCacheURL = config.zeroCacheURL;
-  state.presenceURL = config.presenceURL;
+  state.apiBaseURL = config.apiBaseURL;
   state.apiInfoURL = config.apiInfoURL;
   state.location = typeof window !== "undefined" ? window.location.href : state.location;
   state.isOnline = typeof navigator !== "undefined" ? navigator.onLine : state.isOnline;

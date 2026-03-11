@@ -7,10 +7,10 @@ import { useToast } from "@/components/Toast";
 type Client = {
   sessionId: string | null;
   name: string | null;
-  ip: string;
-  userAgent: string;
-  region: string;
-  connectedAt: number;
+  ip: string | null;
+  userAgent: string | null;
+  region: string | null;
+  connectedAt: number | null;
   lastSeen: number;
   gameId: string | null;
   gameType: string | null;
@@ -204,7 +204,7 @@ export default function ClientsPage() {
                 <td style={{ fontWeight: 500 }}>
                   {c.name || <span style={{ color: "var(--muted)" }}>Anonymous</span>}
                 </td>
-                <td style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{c.ip}</td>
+                <td style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{c.ip || <span style={{ color: "var(--muted)" }}>—</span>}</td>
                 <td>
                   {c.region && c.region !== "unknown" ? (
                     <span className="badge badge-gray">{c.region}</span>
@@ -219,7 +219,7 @@ export default function ClientsPage() {
                     <span style={{ color: "var(--muted)" }}>—</span>
                   )}
                 </td>
-                <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{ago(c.connectedAt)}</td>
+                <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{c.connectedAt ? ago(c.connectedAt) : "—"}</td>
                 <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{ago(c.lastSeen)}</td>
                 <td>
                   {c.sessionId && (

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, ne, and } from "drizzle-orm";
+import { eq, ne, and, gt } from "drizzle-orm";
 import {
   sessions,
   imposterGames,
@@ -17,7 +17,6 @@ import {
   broadcastToAll,
   broadcastToSession,
   disconnectSession,
-  getConnectedClients,
   getCustomStatus,
   setCustomStatus,
   type CustomStatusPayload,
@@ -83,9 +82,25 @@ export const adminRoutes = new Hono();
 
 adminRoutes.use("*", adminAuth);
 
-// ─── Connected clients ──────────────────────────────────────
-adminRoutes.get("/clients", (c) => {
-  const clients = getConnectedClients();
+// ─── Connected clients (from sessions table) ───────────────
+adminRoutes.get("/clients", async (c) => {
+  const recentCutoff = Date.now() - 5 * 60 * 1000; // active in last 5 min
+  const allSessions = await drizzleClient
+    .select()
+    .from(sessions)
+    .where(gt(sessions.lastSeen, recentCutoff));
+
+  const clients = allSessions.map((s) => ({
+    sessionId: s.id,
+    name: s.name,
+    ip: null,
+    userAgent: null,
+    region: null,
+    connectedAt: null,
+    lastSeen: s.lastSeen,
+    gameId: s.gameId,
+    gameType: s.gameType,
+  }));
   return c.json({ ok: true, clients, total: clients.length });
 });
 
@@ -343,15 +358,8 @@ adminRoutes.post("/bans", async (c) => {
     disconnectSession(value);
   }
 
-  // If banning an IP, disconnect all clients with that IP
-  if (type === "ip") {
-    const clients = getConnectedClients();
-    for (const client of clients) {
-      if (client.ip === value && client.sessionId) {
-        disconnectSession(client.sessionId);
-      }
-    }
-  }
+  // For IP/region bans, the ban check happens at Pusher auth time.
+  // The user won't be able to re-subscribe on their next auth attempt.
 
   return c.json({ ok: true, ban });
 });
@@ -510,19 +518,18 @@ adminRoutes.post("/broadcast/update-warning", async (c) => {
 adminRoutes.post("/clients/:sessionId/restrict", async (c) => {
   const { sessionId } = c.req.param();
   const body = await c.req.json();
-  const { type, reason } = body as { type: "session" | "ip" | "region"; reason?: string };
+  const { type, value, reason } = body as { type: "session" | "ip" | "region"; value?: string; reason?: string };
 
-  // Find the client to get their ip/region
-  const clients = getConnectedClients();
-  const client = clients.find((cl) => cl.sessionId === sessionId);
-
-  if (!client) {
-    return c.json({ error: "Client not connected" }, 404);
-  }
-
+  // For session bans, use the sessionId. For ip/region bans, value must be provided by the admin.
   let banValue = sessionId;
-  if (type === "ip") banValue = client.ip;
-  if (type === "region") banValue = client.region;
+  if (type === "ip") {
+    if (!value) return c.json({ error: "IP value is required for ip bans" }, 400);
+    banValue = value;
+  }
+  if (type === "region") {
+    if (!value) return c.json({ error: "Region value is required for region bans" }, 400);
+    banValue = value;
+  }
 
   const ban: Ban = {
     id: genId("ban"),

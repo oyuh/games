@@ -50,7 +50,9 @@ url.searchParams.delete("sslrootcert");
 
 const pool = new Pool({
   connectionString: url.toString(),
-  ssl: resolveSslConfig(url.hostname, sslMode)
+  ssl: resolveSslConfig(url.hostname, sslMode),
+  max: 3,
+  idleTimeoutMillis: 30_000,
 });
 
 export const drizzleClient = drizzle(pool, {
