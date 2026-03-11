@@ -29,10 +29,8 @@ const sessionId = getOrCreateSessionId();
 const API_METADATA_POLL_MS = 30_000;
 
 const zeroCacheURL = import.meta.env.VITE_ZERO_CACHE_URL ?? "http://localhost:4848";
-const presenceURL = import.meta.env.VITE_PRESENCE_WS_URL ?? "ws://localhost:3001/presence";
-const apiInfoURL = resolveApiBuildInfoURL(
-  import.meta.env.VITE_PRESENCE_WS_URL ?? "ws://localhost:3001/presence"
-);
+const apiBaseURL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+const apiInfoURL = `${apiBaseURL}/debug/build-info`;
 
 /**
  * Module-level Zero singleton — created exactly once per page load.
@@ -45,16 +43,6 @@ const zero = new Zero({
   schema,
   mutators,
 });
-
-function resolveApiBuildInfoURL(presenceURL: string) {
-  try {
-    const parsed = new URL(presenceURL);
-    const protocol = parsed.protocol === "wss:" ? "https:" : "http:";
-    return `${protocol}//${parsed.host}/debug/build-info`;
-  } catch {
-    return "http://localhost:3001/debug/build-info";
-  }
-}
 
 function stringifyError(error: unknown) {
   if (error instanceof Error) {
@@ -78,7 +66,7 @@ export function App() {
     initConnectionDebug({
       sessionId,
       zeroCacheURL,
-      presenceURL,
+      apiBaseURL,
       apiInfoURL
     });
 

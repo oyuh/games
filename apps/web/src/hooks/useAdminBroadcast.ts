@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import Pusher from "pusher-js";
 import { showToast } from "../lib/toast";
 import { getOrCreateSessionId, getStoredName, setStoredName } from "../lib/session";
 
@@ -59,18 +60,79 @@ export function isNameRestricted(name: string): boolean {
   });
 }
 
+// Singleton Pusher instance so multiple components share one connection
+let pusherInstance: Pusher | null = null;
+
+function getPusherInstance(): Pusher {
+  if (pusherInstance) return pusherInstance;
+
+  const sessionId = getOrCreateSessionId();
+  const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+
+  pusherInstance = new Pusher(import.meta.env.VITE_PUSHER_KEY ?? "", {
+    cluster: import.meta.env.VITE_PUSHER_CLUSTER ?? "us2",
+    channelAuthorization: {
+      endpoint: `${apiBase}/api/pusher/auth`,
+      transport: "ajax",
+      params: { session_id: sessionId },
+    },
+  });
+
+  return pusherInstance;
+}
+
+function handleMessage(msg: AdminBroadcastMessage) {
+  const sessionId = getOrCreateSessionId();
+
+  switch (msg.type) {
+    case "admin:toast":
+      showToast(msg.message, msg.level || "info");
+      break;
+
+    case "admin:refresh":
+      window.location.reload();
+      break;
+
+    case "admin:status":
+      setStatus(msg.status);
+      break;
+
+    case "admin:kick":
+      if (msg.sessionId === sessionId) {
+        showToast(msg.reason || "You have been disconnected by an admin.", "error");
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+      }
+      break;
+
+    case "admin:name-changed":
+      if (msg.sessionId === sessionId && msg.name) {
+        setStoredName(msg.name);
+        showToast(`Your name has been changed to "${msg.name}" by an admin.`, "info");
+      }
+      break;
+
+    case "admin:name-restricted":
+      if (msg.patterns) {
+        restrictedPatterns = msg.patterns;
+        restrictedListeners.forEach((cb) => cb());
+      }
+      break;
+  }
+}
+
 export function useAdminBroadcast() {
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialized = useRef(false);
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     const sessionId = getOrCreateSessionId();
-    const presenceUrl = import.meta.env.VITE_PRESENCE_WS_URL ?? "ws://localhost:3001/presence";
-    // Derive broadcast URL from presence URL
-    const broadcastUrl = presenceUrl.replace(/\/presence$/, "/broadcast");
+    const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
     // Fetch initial restricted patterns
-    const apiBase = presenceUrl.replace(/^ws/, "http").replace(/\/presence$/, "");
     fetch(`${apiBase}/api/public/names/restricted`)
       .then((r) => r.json())
       .then((data) => {
@@ -81,111 +143,31 @@ export function useAdminBroadcast() {
       })
       .catch(() => {});
 
-    let cancelled = false;
-
-    function connect() {
-      if (cancelled) return;
-
-      const ws = new WebSocket(broadcastUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        // Identify ourselves with name
-        ws.send(JSON.stringify({ type: "identify", sessionId, name: getStoredName() || null }));
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data) as AdminBroadcastMessage;
-
-          switch (msg.type) {
-            case "admin:toast":
-              showToast(msg.message, msg.level || "info");
-              break;
-
-            case "admin:refresh":
-              window.location.reload();
-              break;
-
-            case "admin:status":
-              setStatus(msg.status);
-              break;
-
-            case "admin:kick":
-              if (msg.sessionId === sessionId) {
-                showToast(msg.reason || "You have been disconnected by an admin.", "error");
-                // Redirect to home after a moment
-                setTimeout(() => {
-                  window.location.href = "/";
-                }, 2000);
-              }
-              break;
-
-            case "admin:name-changed":
-              if (msg.sessionId === sessionId && msg.name) {
-                setStoredName(msg.name);
-                showToast(`Your name has been changed to "${msg.name}" by an admin.`, "info");
-              }
-              break;
-
-            case "admin:name-restricted":
-              if (msg.patterns) {
-                restrictedPatterns = msg.patterns;
-                restrictedListeners.forEach((cb) => cb());
-              }
-              break;
-          }
-        } catch {
-          // ignore
+    // Fetch initial custom status
+    fetch(`${apiBase}/api/admin-status`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.status) {
+          setStatus(data.status);
         }
-      };
+      })
+      .catch(() => {});
 
-      ws.onclose = () => {
-        if (!cancelled) {
-          // Reconnect after 5 seconds
-          reconnectTimer.current = setTimeout(connect, 5000);
-        }
-      };
+    const pusher = getPusherInstance();
 
-      ws.onerror = () => {
-        // Will trigger onclose
-      };
-    }
+    // Subscribe to global broadcast channel
+    const broadcastChannel = pusher.subscribe("games-broadcast");
+    broadcastChannel.bind("admin:toast", (data: any) => handleMessage(data));
+    broadcastChannel.bind("admin:refresh", (data: any) => handleMessage(data));
+    broadcastChannel.bind("admin:status", (data: any) => handleMessage(data));
+    broadcastChannel.bind("admin:name-restricted", (data: any) => handleMessage(data));
 
-    connect();
+    // Subscribe to private user channel for targeted messages
+    const userChannel = pusher.subscribe(`private-user-${sessionId}`);
+    userChannel.bind("admin:toast", (data: any) => handleMessage(data));
+    userChannel.bind("admin:kick", (data: any) => handleMessage(data));
+    userChannel.bind("admin:name-changed", (data: any) => handleMessage(data));
 
-    // Send heartbeat every 30s
-    const heartbeat = setInterval(() => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        // Include current game context from URL
-        const path = window.location.pathname;
-        let gameType: string | null = null;
-        let gameId: string | null = null;
-
-        const impMatch = path.match(/^\/imposter\/(.+)/);
-        const pwMatch = path.match(/^\/password\/(.+)/);
-        const chMatch = path.match(/^\/chain\/(.+)/);
-        const shMatch = path.match(/^\/shade\/(.+)/);
-
-        if (impMatch?.[1]) { gameType = "imposter"; gameId = impMatch[1]; }
-        else if (pwMatch?.[1]) { gameType = "password"; gameId = pwMatch[1]; }
-        else if (chMatch?.[1]) { gameType = "chain_reaction"; gameId = chMatch[1]; }
-        else if (shMatch?.[1]) { gameType = "shade_signal"; gameId = shMatch[1]; }
-
-        wsRef.current.send(JSON.stringify({
-          type: "heartbeat",
-          name: getStoredName() || null,
-          gameId,
-          gameType,
-        }));
-      }
-    }, 30_000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(heartbeat);
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      wsRef.current?.close();
-    };
+    // No cleanup — this is app-level, stays active for the entire session
   }, []);
 }

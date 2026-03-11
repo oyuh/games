@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "pnpm --filter @games/api build"
 
 [deploy]
-startCommand = "pnpm --filter @games/api exec tsx src/index.ts"
+startCommand = "NODE_OPTIONS='--max-old-space-size=256' pnpm --filter @games/api exec tsx src/index.ts"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
