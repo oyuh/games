@@ -903,25 +903,20 @@ export function HomePage({ sessionId }: { sessionId: string }) {
 
           {/* Mini map preview */}
           {!locationExpanded && (
-            <div className="hc-coming-preview">
-              <div className="hc-mini-board" style={{ padding: "0.5rem" }}>
-                <div className="hc-mini-board-header" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>
-                  <span>🌍 Clue: "Ancient empire"</span>
+            <div className="hc-coming-preview hc-location-preview">
+              <div className="hc-mini-board">
+                <div className="hc-mini-board-header hc-mini-board-header--location">
+                  <span>🌍 Clue: Ancient empire</span>
                 </div>
                 <div className="hc-mini-board-rows">
                   <div className="hc-mini-row">
-                    <span className="hc-mini-avatar" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>A</span>
-                    <span className="hc-mini-clue">Athens → 600 km</span>
+                    <span className="hc-mini-avatar hc-mini-avatar--location">A</span>
+                    <span className="hc-mini-clue">Athens • 600km</span>
                     <span className="hc-mini-badge hc-mini-badge--ok">+3</span>
                   </div>
-                  <div className="hc-mini-row">
-                    <span className="hc-mini-avatar" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>B</span>
-                    <span className="hc-mini-clue">Paris → 1100 km</span>
-                    <span className="hc-mini-badge hc-mini-badge--caught">+5</span>
-                  </div>
-                  <div className="hc-mini-row hc-mini-row--suspect">
-                    <span className="hc-mini-avatar" style={{ background: "rgba(6,214,160,0.15)", color: "#06d6a0" }}>Y</span>
-                    <span className="hc-mini-clue">Rome → Exact! 🎯</span>
+                  <div className="hc-mini-row hc-mini-row--location-hit">
+                    <span className="hc-mini-avatar hc-mini-avatar--location">Y</span>
+                    <span className="hc-mini-clue">Rome • Exact</span>
                     <span className="hc-mini-badge hc-mini-badge--ok">+0</span>
                   </div>
                 </div>
