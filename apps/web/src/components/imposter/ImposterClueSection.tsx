@@ -103,6 +103,7 @@ export function ImposterClueSection({
           <input
             className="input flex-1"
             autoFocus
+            onFocus={(e) => e.currentTarget.select()}
             value={clue}
             onChange={(e) => onClueChange(e.target.value)}
             placeholder={isImposter ? "Give a vague clue…" : "Give a clue about the word…"}

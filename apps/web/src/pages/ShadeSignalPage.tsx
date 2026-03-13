@@ -660,6 +660,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
               className="input shade-clue-input"
               value={clue}
               onChange={(e) => setClue(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
               placeholder={phase === "clue1" ? "One word clue…" : "Second clue (1-2 words)…"}
               maxLength={60}
               autoFocus

@@ -77,6 +77,7 @@ export function PasswordActiveRound({
             <input
               className="input flex-1"
               autoFocus
+              onFocus={(e) => e.currentTarget.select()}
               value={clue}
               onChange={(e) => onClueChange(e.target.value)}
               placeholder="Enter clue…"
@@ -132,6 +133,7 @@ export function PasswordActiveRound({
               <input
                 className="input flex-1"
                 autoFocus
+                onFocus={(e) => e.currentTarget.select()}
                 value={guess}
                 onChange={(e) => onGuessChange(e.target.value)}
                 placeholder="Your guess…"

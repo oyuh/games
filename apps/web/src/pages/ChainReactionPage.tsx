@@ -150,6 +150,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (editingIndex !== null) {
       inlineInputRef.current?.focus();
+      inlineInputRef.current?.select();
     }
   }, [editingIndex]);
 
@@ -496,6 +497,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                     <input
                       className="cr-submit-input"
                       autoFocus={i === 0}
+                      onFocus={(e) => e.currentTarget.select()}
                       value={word}
                       onChange={(e) => {
                         const next = [...submissionWords];
@@ -628,6 +630,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                               ref={inlineInputRef}
                               className="cr-inline-input"
                               value={guess}
+                              onFocus={(e) => e.currentTarget.select()}
                               onChange={(e) => setGuess(e.target.value)}
                               placeholder="type your guess…"
                               maxLength={slot.word.length}

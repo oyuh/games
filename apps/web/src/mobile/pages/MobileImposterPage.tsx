@@ -371,6 +371,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                 <input
                   className="m-input"
                   autoFocus
+                  onFocus={(e) => e.currentTarget.select()}
                   style={{ flex: 1 }}
                   value={clue}
                   onChange={(e) => setClue(e.target.value)}

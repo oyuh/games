@@ -506,7 +506,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
             </div>
           )}
           <form onSubmit={(e) => void submitClue(e, currentClueRound)} className="m-shade-clue-form">
-            <input className="m-input" autoFocus value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire..." : `Clue ${currentClueRound}...`} maxLength={80} />
+            <input className="m-input" autoFocus onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire..." : `Clue ${currentClueRound}...`} maxLength={80} />
             <button className="m-btn m-btn-primary" type="submit" disabled={!draftClue.trim()}>
               <FiSend size={14} /> Send
             </button>
