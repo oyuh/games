@@ -25,12 +25,13 @@ interface WorldMapProps {
   defaultZoom?: number;
 }
 
-// Google Hybrid tiles — satellite imagery with labels/roads/place names
+// Google Hybrid tiles — satellite imagery with labels/roads/place names.
+// Force label language/region so names stay in English across zoom levels.
 // Wrap x so the map repeats horizontally instead of showing white edges
 const hybridProvider = (x: number, y: number, z: number) => {
   const maxTile = 1 << z;
   const wrappedX = ((x % maxTile) + maxTile) % maxTile;
-  return `https://mt${(wrappedX + y) % 4}.google.com/vt/lyrs=y&x=${wrappedX}&y=${y}&z=${z}`;
+  return `https://mt${(wrappedX + y) % 4}.google.com/vt/lyrs=y&x=${wrappedX}&y=${y}&z=${z}&hl=en&gl=US`;
 };
 
 export function WorldMap({
