@@ -39,6 +39,15 @@ const favicons = {
       </g>
     </svg>`
   )}`,
+  location: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="6" fill="#2a1e0e"/>
+      <g transform="translate(4,4)">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="10" r="3" fill="none" stroke="#f59e0b" stroke-width="2"/>
+      </g>
+    </svg>`
+  )}`,
 } as const;
 
 const titles: Record<string, string> = {
@@ -47,6 +56,7 @@ const titles: Record<string, string> = {
   password: "Password | Games",
   chain: "Chain Reaction | Games",
   shade: "Shade Signal | Games",
+  location: "Location Signal | Games",
 };
 
 function getGameFromPath(pathname: string): keyof typeof favicons {
@@ -54,6 +64,7 @@ function getGameFromPath(pathname: string): keyof typeof favicons {
   if (pathname.startsWith("/password")) return "password";
   if (pathname.startsWith("/chain")) return "chain";
   if (pathname.startsWith("/shade")) return "shade";
+  if (pathname.startsWith("/location")) return "location";
   return "home";
 }
 

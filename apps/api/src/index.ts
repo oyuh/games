@@ -1,5 +1,5 @@
 import { mutators, queries, schema } from "@games/shared";
-import { chainReactionGames, imposterGames, passwordGames, sessions, shadeSignalGames, statusTable } from "@games/shared";
+import { chainReactionGames, imposterGames, locationSignalGames, passwordGames, sessions, shadeSignalGames, statusTable } from "@games/shared";
 import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -43,6 +43,56 @@ app.route("/api/admin", adminRoutes);
 
 // ─── Public endpoints (no auth) ─────────────────────────────
 app.route("/api/public", getRestrictedNamesRoute());
+
+// ─── Map helpers (Location Signal scaffold) ──────────────────
+app.get("/api/maps/config", (c) => {
+  const tileUrlTemplate = process.env.MAP_TILE_URL_TEMPLATE ?? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const attribution = process.env.MAP_TILE_ATTRIBUTION ?? "© OpenStreetMap contributors";
+  return c.json({
+    ok: true,
+    provider: "openstreetmap",
+    tileUrlTemplate,
+    attribution,
+    minZoom: 1,
+    maxZoom: 18,
+  });
+});
+
+app.get("/api/maps/geocode", async (c) => {
+  const q = c.req.query("q")?.trim() ?? "";
+  if (!q) {
+    return c.json({ ok: false, error: "q is required" }, 400);
+  }
+
+  const endpoint = process.env.MAP_GEOCODE_URL ?? "https://nominatim.openstreetmap.org/search";
+  const url = new URL(endpoint);
+  url.searchParams.set("q", q);
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("limit", "5");
+
+  try {
+    const response = await fetch(url.toString(), {
+      headers: {
+        "User-Agent": "games-refac-location-signal/1.0"
+      }
+    });
+    if (!response.ok) {
+      return c.json({ ok: false, error: `geocode upstream status ${response.status}` }, 502);
+    }
+
+    const payload = (await response.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+    return c.json({
+      ok: true,
+      results: payload.map((entry) => ({
+        lat: Number(entry.lat),
+        lng: Number(entry.lon),
+        label: entry.display_name,
+      })),
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: error instanceof Error ? error.message : String(error) }, 502);
+  }
+});
 
 // ─── Pusher auth endpoint ───────────────────────────────────
 app.post("/api/pusher/auth", async (c) => {
@@ -336,12 +386,25 @@ async function runCleanup() {
     )
     .returning({ id: shadeSignalGames.id });
 
+  // 2d) End stale location signal games (not already ended)
+  const endedLocation = await drizzleClient
+    .update(locationSignalGames)
+    .set({ phase: "ended", updatedAt: now })
+    .where(
+      and(
+        lt(locationSignalGames.updatedAt, staleCutoff),
+        ne(locationSignalGames.phase, "ended")
+      )
+    )
+    .returning({ id: locationSignalGames.id });
+
   // 3) Detach sessions that were in those ended games
   const endedGameIds = new Set([
     ...endedImposter.map((g) => g.id),
     ...endedPassword.map((g) => g.id),
     ...endedChain.map((g) => g.id),
-    ...endedShade.map((g) => g.id)
+    ...endedShade.map((g) => g.id),
+    ...endedLocation.map((g) => g.id)
   ]);
   if (endedGameIds.size > 0) {
     const allSessions = await drizzleClient
@@ -399,6 +462,16 @@ async function runCleanup() {
     )
     .returning({ id: shadeSignalGames.id });
 
+  const deletedLocation = await drizzleClient
+    .delete(locationSignalGames)
+    .where(
+      and(
+        eq(locationSignalGames.phase, "ended"),
+        lt(locationSignalGames.updatedAt, deleteCutoff)
+      )
+    )
+    .returning({ id: locationSignalGames.id });
+
   // 5) Delete stale sessions (1hr+)
   const deletedSessions = await drizzleClient
     .delete(sessions)
@@ -410,6 +483,7 @@ async function runCleanup() {
   const [passwordCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames);
   const [chainCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chainReactionGames);
   const [shadeCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shadeSignalGames);
+  const [locationCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(locationSignalGames);
   const [sessionCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(sessions);
 
   return {
@@ -417,10 +491,12 @@ async function runCleanup() {
     passwordGamesEnded: endedPassword.length,
     chainReactionGamesEnded: endedChain.length,
     shadeSignalGamesEnded: endedShade.length,
+    locationSignalGamesEnded: endedLocation.length,
     imposterGamesDeleted: deletedImposter.length,
     passwordGamesDeleted: deletedPassword.length,
     chainReactionGamesDeleted: deletedChain.length,
     shadeSignalGamesDeleted: deletedShade.length,
+    locationSignalGamesDeleted: deletedLocation.length,
     sessionsDeleted: deletedSessions.length,
     staleCutoff: new Date(staleCutoff).toISOString(),
     deleteCutoff: new Date(deleteCutoff).toISOString(),
@@ -429,6 +505,7 @@ async function runCleanup() {
       passwordGames: passwordCount.total,
       chainReactionGames: chainCount.total,
       shadeSignalGames: shadeCount.total,
+      locationSignalGames: locationCount.total,
       sessions: sessionCount.total,
     },
   };

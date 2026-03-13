@@ -1,4 +1,5 @@
 import { FiCheck } from "react-icons/fi";
+import { BorringAvatar } from "../shared/BorringAvatar";
 
 type Player = { sessionId: string };
 
@@ -60,6 +61,8 @@ export function ImposterVoteSection({
               .map((player) => {
                 const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
                 const selected = voteTarget === player.sessionId;
+                // Find the actual index in the full players array to get consistent colors
+                const playerIndex = players.findIndex(p => p.sessionId === player.sessionId);
                 return (
                   <button
                     key={player.sessionId}
@@ -68,7 +71,12 @@ export function ImposterVoteSection({
                     data-tooltip={selected ? `Voting for ${name}` : `Vote for ${name}`}
                     data-tooltip-variant="game"
                   >
-                    <div className="game-player-avatar">{(name[0] ?? "?").toUpperCase()}</div>
+                    <div className="game-player-avatar">
+                      <BorringAvatar
+                        seed={player.sessionId}
+                        playerIndex={playerIndex}
+                      />
+                    </div>
                     <span>{name}</span>
                     {selected && <FiCheck size={16} className="game-vote-check" />}
                   </button>

@@ -6,7 +6,7 @@ import {
   setApiConnectionProbe
 } from "../lib/connection-debug";
 
-type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal";
+type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 
 const HEARTBEAT_INTERVAL_MS = 60_000; // 60s — relaxed interval via HTTP
 

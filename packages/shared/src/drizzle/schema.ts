@@ -5,15 +5,17 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  real,
   text,
   uniqueIndex
 } from "drizzle-orm/pg-core";
 
-export const gameTypeEnum = pgEnum("game_type", ["imposter", "password", "chain_reaction", "shade_signal"]);
+export const gameTypeEnum = pgEnum("game_type", ["imposter", "password", "chain_reaction", "shade_signal", "location_signal"]);
 export const imposterPhaseEnum = pgEnum("imposter_phase", ["lobby", "playing", "voting", "results", "finished", "ended"]);
 export const passwordPhaseEnum = pgEnum("password_phase", ["lobby", "playing", "results", "ended"]);
 export const chainReactionPhaseEnum = pgEnum("chain_reaction_phase", ["lobby", "submitting", "playing", "finished", "ended"]);
 export const shadeSignalPhaseEnum = pgEnum("shade_signal_phase", ["lobby", "picking", "clue1", "guess1", "clue2", "guess2", "reveal", "finished", "ended"]);
+export const locationSignalPhaseEnum = pgEnum("location_signal_phase", ["lobby", "picking", "clue1", "guess1", "clue2", "guess2", "clue3", "guess3", "clue4", "guess4", "reveal", "finished", "ended"]);
 
 export const sessions = pgTable(
   "sessions",
@@ -235,6 +237,61 @@ export const shadeSignalGames = pgTable(
   })
 );
 
+export const locationSignalGames = pgTable(
+  "location_signal_games",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    hostId: text("host_id").notNull(),
+    phase: locationSignalPhaseEnum("phase").notNull().default("lobby"),
+    players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean; totalScore: number }>>().notNull().default([]),
+    leaderId: text("leader_id"),
+    leaderOrder: jsonb("leader_order").$type<string[]>().notNull().default([]),
+    currentLeaderIndex: integer("current_leader_index").notNull().default(0),
+    targetLat: real("target_lat"),
+    targetLng: real("target_lng"),
+    clue1: text("clue1"),
+    clue2: text("clue2"),
+    clue3: text("clue3"),
+    clue4: text("clue4"),
+    guesses: jsonb("guesses").$type<Array<{ sessionId: string; round: 1 | 2 | 3 | 4; lat: number; lng: number }>>().notNull().default([]),
+    roundHistory: jsonb("round_history").$type<Array<{
+      round: number;
+      leaderId: string;
+      target: { lat: number; lng: number };
+      clue1: string | null;
+      clue2: string | null;
+      clue3: string | null;
+      clue4: string | null;
+      guesses: Array<{ sessionId: string; round: 1 | 2 | 3 | 4; lat: number; lng: number }>;
+      scores: Record<string, number>;
+    }>>().notNull().default([]),
+    spectators: jsonb("spectators").$type<Array<{ sessionId: string; name: string | null }>>().notNull().default([]),
+    kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
+    announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
+    settings: jsonb("settings").$type<{
+      clueDurationSec: number;
+      guessDurationSec: number;
+      roundsPerPlayer: number;
+      currentRound: number;
+      phaseEndsAt: number | null;
+      cluePairs: number;
+    }>().notNull().default({
+      clueDurationSec: 45,
+      guessDurationSec: 45,
+      roundsPerPlayer: 1,
+      currentRound: 1,
+      phaseEndsAt: null,
+      cluePairs: 2
+    }),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+  },
+  (table) => ({
+    codeUnique: uniqueIndex("location_signal_code_unique").on(table.code)
+  })
+);
+
 // ─── Admin tables ───────────────────────────────────────────
 
 export const adminBans = pgTable(
@@ -279,6 +336,7 @@ export type DrizzleSchema = {
   chatMessages: typeof chatMessages;
   chainReactionGames: typeof chainReactionGames;
   shadeSignalGames: typeof shadeSignalGames;
+  locationSignalGames: typeof locationSignalGames;
   adminBans: typeof adminBans;
   adminRestrictedNames: typeof adminRestrictedNames;
   adminNameOverrides: typeof adminNameOverrides;

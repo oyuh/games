@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { BorringAvatar } from "../shared/BorringAvatar";
 
 /**
  * Deterministic color grid generation from seed.
@@ -41,6 +42,8 @@ type GridProps = {
     isOwn?: boolean;
     tooltip?: string;
   }>;
+  /** Map of sessionId to player index for marker avatars */
+  playerIndexMap?: Record<string, number>;
   /** Compact mode for smaller display */
   compact?: boolean;
   /** Show scoring zone overlays around target */
@@ -59,6 +62,7 @@ export function ColorGrid({
   target,
   showTarget = false,
   markers = [],
+  playerIndexMap = {},
   compact = false,
   showZones = false,
   showScoreTooltips = false,
@@ -184,7 +188,10 @@ export function ColorGrid({
                           data-tooltip={m.tooltip ?? m.name}
                           data-tooltip-pos="top"
                         >
-                          {m.name.charAt(0).toUpperCase()}
+                          <BorringAvatar
+                            seed={m.sessionId}
+                            playerIndex={playerIndexMap[m.sessionId] ?? 0}
+                          />
                         </div>
                       ))}
                     </div>

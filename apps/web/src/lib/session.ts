@@ -9,7 +9,7 @@ const MAX_RECENT_GAMES = 6;
 export type RecentGame = {
   id: string;
   code: string;
-  gameType: "imposter" | "password" | "chain_reaction" | "shade_signal";
+  gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
   lastPlayedAt: number;
 };
 

@@ -12,6 +12,7 @@ import { ImposterDemo } from "../components/demos/ImposterDemo";
 import { PasswordDemo } from "../components/demos/PasswordDemo";
 import { ChainDemo } from "../components/demos/ChainDemo";
 import { ShadeDemo } from "../components/demos/ShadeDemo";
+import { LocationDemo } from "../components/demos/LocationDemo";
 
 const isDev = import.meta.env.DEV;
 
@@ -60,11 +61,12 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   }, []);
   const [recentGames, setRecentGames] = useState(getRecentGames());
   const [joinCode, setJoinCode] = useState("");
-  const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "create-shade" | "join" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "create-shade" | "create-location" | "join" | null>(null);
   const [imposterMatches] = useQuery(queries.imposter.byCode({ code: joinCode || "______" }));
   const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
   const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
   const [shadeMatches] = useQuery(queries.shadeSignal.byCode({ code: joinCode || "______" }));
+  const [locationMatches] = useQuery(queries.locationSignal.byCode({ code: joinCode || "______" }));
 
   // Imposter config
   const [imposterExpanded, setImposterExpanded] = useState(false);
@@ -90,12 +92,15 @@ export function HomePage({ sessionId }: { sessionId: string }) {
   const [shadeRoundsPerPlayer, setShadeRoundsPerPlayer] = useState(1);
   const [shadeHardMode, setShadeHardMode] = useState(false);
   const [shadeLeaderPick, setShadeLeaderPick] = useState(false);
+  const [locationExpanded, setLocationExpanded] = useState(false);
+  const [locCluePairs, setLocCluePairs] = useState(2);
+  const [locRoundsPerPlayer, setLocRoundsPerPlayer] = useState(1);
   const [activeDemo, setActiveDemo] = useState<string | null>(null);
 
   // Mobile scroll dot tracking
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeDot, setActiveDot] = useState(0);
-  const CARD_COUNT = 5;
+  const CARD_COUNT = 6;
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -218,6 +223,21 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const createLocationSignal = async () => {
+    setPendingAction("create-location");
+    const id = nanoid();
+    try {
+      const result = await zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })).server;
+      if (result.type === "error") {
+        showToast(result.error.message, "error");
+        return;
+      }
+      navigate(`/location/${id}`);
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   const joinAny = async () => {
     setPendingAction("join");
     const normalizedCode = joinCode.trim().toUpperCase();
@@ -263,6 +283,16 @@ export function HomePage({ sessionId }: { sessionId: string }) {
         addRecentGame({ id: shadeGame.id, code: shadeGame.code, gameType: "shade_signal" });
         setRecentGames(getRecentGames());
         navigate(`/shade/${shadeGame.id}`);
+        return;
+      }
+
+      const locationGame = locationMatches[0];
+      if (locationGame) {
+        const result = await zero.mutate(mutators.locationSignal.join({ gameId: locationGame.id, sessionId })).server;
+        if (result.type === "error") { showToast(result.error.message, "error"); return; }
+        addRecentGame({ id: locationGame.id, code: locationGame.code, gameType: "location_signal" });
+        setRecentGames(getRecentGames());
+        navigate(`/location/${locationGame.id}`);
         return;
       }
       showToast("No game found for that code.", "error");
@@ -411,6 +441,21 @@ export function HomePage({ sessionId }: { sessionId: string }) {
                   </button>
                   <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("reveal")}>
                     SS Reveal
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("lobby")}>
+                    LS Lobby
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("picking")}>
+                    LS Pick
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("clue1")}>
+                    LS Clue
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("guess1")}>
+                    LS Guess
+                  </button>
+                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("reveal")}>
+                    LS Reveal
                   </button>
                 </div>
               </section>
@@ -844,6 +889,106 @@ export function HomePage({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
+      {/* ── Card 6: Location Signal ──────────────────────────── */}
+      <div className={`home-card home-card--location${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
+        <div className="home-card-body hc-centered">
+          <h2 className="hc-game-title-lg">Location Signal</h2>
+          <p className="hc-game-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
+
+          <div className="hc-game-tags hc-game-tags--centered">
+            <span className="hc-tag">2–10 players</span>
+            <span className="hc-tag">Geography</span>
+            <span className="hc-tag">Golf scoring</span>
+          </div>
+
+          {/* Mini map preview */}
+          {!locationExpanded && (
+            <div className="hc-coming-preview">
+              <div className="hc-mini-board" style={{ padding: "0.5rem" }}>
+                <div className="hc-mini-board-header" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>
+                  <span>🌍 Clue: "Ancient empire"</span>
+                </div>
+                <div className="hc-mini-board-rows">
+                  <div className="hc-mini-row">
+                    <span className="hc-mini-avatar" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>A</span>
+                    <span className="hc-mini-clue">Athens → 600 km</span>
+                    <span className="hc-mini-badge hc-mini-badge--ok">+3</span>
+                  </div>
+                  <div className="hc-mini-row">
+                    <span className="hc-mini-avatar" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>B</span>
+                    <span className="hc-mini-clue">Paris → 1100 km</span>
+                    <span className="hc-mini-badge hc-mini-badge--caught">+5</span>
+                  </div>
+                  <div className="hc-mini-row hc-mini-row--suspect">
+                    <span className="hc-mini-avatar" style={{ background: "rgba(6,214,160,0.15)", color: "#06d6a0" }}>Y</span>
+                    <span className="hc-mini-clue">Rome → Exact! 🎯</span>
+                    <span className="hc-mini-badge hc-mini-badge--ok">+0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {locationExpanded && (
+            <div className="hc-config">
+              <div className="hc-config-row">
+                <div className="hc-config-field flex-1">
+                  <label className="hc-config-label" data-tooltip="How many clue + guess pairs per round. More pairs means the leader gives more hints and guessers refine their answer." data-tooltip-variant="info">Clue Pairs &#9432;</label>
+                  <select
+                    className="input"
+                    value={locCluePairs}
+                    onChange={(e) => setLocCluePairs(Number(e.target.value))}
+                  >
+                    <option value={1}>1 pair (quick)</option>
+                    <option value={2}>2 pairs (standard)</option>
+                    <option value={3}>3 pairs (long)</option>
+                    <option value={4}>4 pairs (marathon)</option>
+                  </select>
+                </div>
+                <div className="hc-config-field flex-1">
+                  <label className="hc-config-label" data-tooltip="Each player takes a turn as the location picker. This controls how many turns each person gets." data-tooltip-variant="info">Rounds / Player &#9432;</label>
+                  <select
+                    className="input"
+                    value={locRoundsPerPlayer}
+                    onChange={(e) => setLocRoundsPerPlayer(Number(e.target.value))}
+                  >
+                    <option value={1}>Quick (1 turn each)</option>
+                    <option value={2}>Standard (2 turns each)</option>
+                    <option value={3}>Long (3 turns each)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="hc-game-actions">
+            {!locationExpanded ? (
+              <div className="hc-row">
+                <button className="btn btn-primary flex-1" onClick={() => setLocationExpanded(true)}>
+                  Create Game
+                </button>
+                <button className="btn hc-help-btn" onClick={() => setActiveDemo("location")} data-tooltip="How to Play" data-tooltip-variant="info">
+                  <FiHelpCircle size={18} />
+                </button>
+              </div>
+            ) : (
+              <div className="hc-row">
+                <button className="btn btn-muted flex-1" onClick={() => setLocationExpanded(false)}>
+                  Back
+                </button>
+                <button
+                  className="btn btn-primary flex-1"
+                  onClick={() => void createLocationSignal()}
+                  disabled={pendingAction !== null}
+                >
+                  {pendingAction === "create-location" ? "Creating…" : "Go"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
     </div>
 
     {/* Scroll indicators (mobile) */}
@@ -861,6 +1006,7 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     {activeDemo === "password" && <PasswordDemo onClose={() => setActiveDemo(null)} />}
     {activeDemo === "chain" && <ChainDemo onClose={() => setActiveDemo(null)} />}
     {activeDemo === "shade" && <ShadeDemo onClose={() => setActiveDemo(null)} />}
+    {activeDemo === "location" && <LocationDemo onClose={() => setActiveDemo(null)} />}
     </>
   );
 
@@ -1112,6 +1258,51 @@ export function HomePage({ sessionId }: { sessionId: string }) {
     setRecentGames(getRecentGames());
     navigate(`/shade/${id}`);
   }
+
+  async function createDemoLocationSignal(phase: "lobby" | "picking" | "clue1" | "guess1" | "reveal") {
+    const id = nanoid();
+    const players = [
+      { sessionId, name: savedName || "You", connected: true, totalScore: phase === "reveal" ? 2 : 0 },
+      { sessionId: "demo-p2", name: "Alice", connected: true, totalScore: phase === "reveal" ? 5 : 0 },
+      { sessionId: "demo-p3", name: "Bob", connected: true, totalScore: phase === "reveal" ? 3 : 0 },
+      { sessionId: "demo-p4", name: "Charlie", connected: true, totalScore: phase === "reveal" ? 8 : 0 },
+    ];
+    const lobbyPlayers = phase === "lobby" ? players.slice(0, 2) : players;
+    const leaderId = phase === "guess1" ? "demo-p2" : (phase === "lobby" ? null : sessionId);
+
+    // Target: Rome, Italy
+    const targetLat = phase === "lobby" || phase === "picking" ? null : 41.9;
+    const targetLng = phase === "lobby" || phase === "picking" ? null : 12.5;
+
+    await zero.mutate(mutators.demo.seedLocationSignal({
+      id,
+      hostId: sessionId,
+      phase,
+      players: lobbyPlayers,
+      leaderId,
+      leaderOrder: lobbyPlayers.map((p) => p.sessionId),
+      targetLat,
+      targetLng,
+      clue1: ["clue1", "guess1", "reveal"].includes(phase) ? "Ancient empire" : null,
+      clue2: phase === "reveal" ? "Colosseum" : null,
+      clue3: null,
+      clue4: null,
+      guesses: phase === "reveal" ? [
+        { sessionId: "demo-p2", round: 1 as const, lat: 37.9, lng: 23.7 },
+        { sessionId: "demo-p3", round: 1 as const, lat: 48.8, lng: 2.3 },
+        { sessionId: "demo-p4", round: 1 as const, lat: 40.4, lng: -3.7 },
+        { sessionId: "demo-p2", round: 2 as const, lat: 43.7, lng: 11.2 },
+        { sessionId: "demo-p3", round: 2 as const, lat: 45.4, lng: 9.2 },
+        { sessionId: "demo-p4", round: 2 as const, lat: 41.9, lng: 12.5 },
+      ] : [],
+      currentRound: 1,
+      phaseEndsAt: phase === "clue1" ? Date.now() + 45_000 : phase === "guess1" ? Date.now() + 45_000 : phase === "reveal" ? Date.now() + 10_000 : null,
+    }));
+
+    addRecentGame({ id, code: "DEMO", gameType: "location_signal" });
+    setRecentGames(getRecentGames());
+    navigate(`/location/${id}`);
+  }
 }
 
 /* ── Recent game item with deleted check + hover results ───── */
@@ -1121,11 +1312,13 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
   const [passwordResults] = useQuery(game.gameType === "password" ? queries.password.byId({ id: game.id }) : queries.password.byId({ id: "__none__" }));
   const [chainResults] = useQuery(game.gameType === "chain_reaction" ? queries.chainReaction.byId({ id: game.id }) : queries.chainReaction.byId({ id: "__none__" }));
   const [shadeResults] = useQuery(game.gameType === "shade_signal" ? queries.shadeSignal.byId({ id: game.id }) : queries.shadeSignal.byId({ id: "__none__" }));
+  const [locationResults] = useQuery(game.gameType === "location_signal" ? queries.locationSignal.byId({ id: game.id }) : queries.locationSignal.byId({ id: "__none__" }));
 
   const gameData = game.gameType === "imposter" ? imposterResults[0]
     : game.gameType === "password" ? passwordResults[0]
     : game.gameType === "chain_reaction" ? chainResults[0]
-    : shadeResults[0];
+    : game.gameType === "shade_signal" ? shadeResults[0]
+    : locationResults[0];
 
   const isDeleted = !gameData;
   const isEnded = gameData && (gameData.phase === "finished" || gameData.phase === "ended");
@@ -1136,9 +1329,11 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
     ? `/password/${game.id}/begin`
     : game.gameType === "shade_signal"
     ? `/shade/${game.id}`
+    : game.gameType === "location_signal"
+    ? `/location/${game.id}`
     : `/chain/${game.id}`;
 
-  const typeLabel = game.gameType === "chain_reaction" ? "chain reaction" : game.gameType === "shade_signal" ? "shade signal" : game.gameType;
+  const typeLabel = game.gameType === "chain_reaction" ? "chain reaction" : game.gameType === "shade_signal" ? "shade signal" : game.gameType === "location_signal" ? "location signal" : game.gameType;
 
   // Tooltip content for finished games
   const tooltip = useMemo(() => {

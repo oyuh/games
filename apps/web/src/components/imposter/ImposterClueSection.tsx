@@ -102,6 +102,7 @@ export function ImposterClueSection({
         <form className="game-input-row" onSubmit={onSubmit}>
           <input
             className="input flex-1"
+            autoFocus
             value={clue}
             onChange={(e) => onClueChange(e.target.value)}
             placeholder={isImposter ? "Give a vague clue…" : "Give a clue about the word…"}

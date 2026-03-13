@@ -391,6 +391,10 @@
   flex-shrink: 0;
 }
 
+.m-player-avatar:has(.boring-avatar) {
+  background: transparent;
+}
+
 .m-player-avatar--danger {
   background: #f87171;
   color: #fff;
@@ -1701,11 +1705,13 @@
 .m-game-card--password { border-left: 3px solid #a78bfa; }
 .m-game-card--chain { border-left: 3px solid #34d399; }
 .m-game-card--shade { border-left: 3px solid #f472b6; }
+.m-game-card--location { border-left: 3px solid #f59e0b; }
 
 .m-game-card--imposter .m-game-card-info > svg { color: #7eb8ff; }
 .m-game-card--password .m-game-card-info > svg { color: #a78bfa; }
 .m-game-card--chain .m-game-card-info > svg { color: #34d399; }
 .m-game-card--shade .m-game-card-info > svg { color: #f472b6; }
+.m-game-card--location .m-game-card-info > svg { color: #f59e0b; }
 
 /* ══════════════════════════════════════════════════════════════
    MISSING CSS — Shared Game Components
@@ -1971,6 +1977,8 @@
   font-weight: 700;
 }
 
+.m-cr-slot-avatar:has(.boring-avatar) { background: transparent; }
+
 .m-cr-slot-avatar--empty {
   background: var(--muted);
   color: var(--secondary);
@@ -2099,6 +2107,8 @@
   font-weight: 700;
   flex-shrink: 0;
 }
+
+.m-cr-vs-avatar:has(.boring-avatar) { background: transparent; }
 
 .m-cr-vs-avatar--opp { background: #f87171; color: #fff; }
 
@@ -2766,6 +2776,12 @@
   --game-accent: #f472b6;
   --game-bg: #2a1a2e;
 }
+[data-game-theme="location"] {
+  --primary: #f59e0b;
+  --primary-foreground: #181a1b;
+  --game-accent: #f59e0b;
+  --game-bg: #2e2418;
+}
 
 /* ── Themed background gradient (matches desktop game-page) ── */
 .m-page[data-game-theme] {
@@ -2786,6 +2802,7 @@
 [data-game-theme="password"] .m-topbar { border-bottom-color: color-mix(in srgb, #a78bfa 40%, var(--border)); }
 [data-game-theme="chain"] .m-topbar { border-bottom-color: color-mix(in srgb, #34d399 40%, var(--border)); }
 [data-game-theme="shade"] .m-topbar { border-bottom-color: color-mix(in srgb, #f472b6 40%, var(--border)); }
+[data-game-theme="location"] .m-topbar { border-bottom-color: color-mix(in srgb, #f59e0b 40%, var(--border)); }
 
 /* ── Theme-aware game header ─────────────────────────────── */
 .m-page[data-game-theme] .m-game-header {

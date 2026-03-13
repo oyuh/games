@@ -155,6 +155,48 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
     go(`/shade/${id}`);
   }
 
+  async function createDemoLocationSignal(phase: "lobby" | "picking" | "clue1" | "guess1" | "reveal") {
+    const id = nanoid();
+    const players = [
+      { sessionId, name: savedName, connected: true, totalScore: phase === "reveal" ? 2 : 0 },
+      { sessionId: "demo-p2", name: "Alice", connected: true, totalScore: phase === "reveal" ? 5 : 0 },
+      { sessionId: "demo-p3", name: "Bob", connected: true, totalScore: phase === "reveal" ? 3 : 0 },
+      { sessionId: "demo-p4", name: "Charlie", connected: true, totalScore: phase === "reveal" ? 8 : 0 },
+    ];
+    const lobbyPlayers = phase === "lobby" ? players.slice(0, 2) : players;
+    const leaderId = phase === "guess1" ? "demo-p2" : (phase === "lobby" ? null : sessionId);
+    const targetLat = phase === "lobby" || phase === "picking" ? null : 41.9;
+    const targetLng = phase === "lobby" || phase === "picking" ? null : 12.5;
+
+    await zero.mutate(mutators.demo.seedLocationSignal({
+      id,
+      hostId: sessionId,
+      phase,
+      players: lobbyPlayers,
+      leaderId,
+      leaderOrder: lobbyPlayers.map((p) => p.sessionId),
+      targetLat,
+      targetLng,
+      clue1: ["clue1", "guess1", "reveal"].includes(phase) ? "Ancient empire" : null,
+      clue2: phase === "reveal" ? "Colosseum" : null,
+      clue3: null,
+      clue4: null,
+      guesses: phase === "reveal" ? [
+        { sessionId: "demo-p2", round: 1 as const, lat: 37.9, lng: 23.7 },
+        { sessionId: "demo-p3", round: 1 as const, lat: 48.8, lng: 2.3 },
+        { sessionId: "demo-p4", round: 1 as const, lat: 40.4, lng: -3.7 },
+        { sessionId: "demo-p2", round: 2 as const, lat: 43.7, lng: 11.2 },
+        { sessionId: "demo-p3", round: 2 as const, lat: 45.4, lng: 9.2 },
+        { sessionId: "demo-p4", round: 2 as const, lat: 41.9, lng: 12.5 },
+      ] : [],
+      currentRound: 1,
+      phaseEndsAt: phase === "clue1" ? Date.now() + 45_000 : phase === "guess1" ? Date.now() + 45_000 : phase === "reveal" ? Date.now() + 10_000 : null,
+    }));
+
+    addRecentGame({ id, code: "DEMO", gameType: "location_signal" });
+    go(`/location/${id}`);
+  }
+
   return (
     <BottomSheet title="Options" onClose={onClose}>
       <div className="m-options-group">
@@ -194,6 +236,11 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
             <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoShadeSignal("clue1")}>SS Clue</button>
             <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoShadeSignal("guess1")}>SS Guess</button>
             <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoShadeSignal("reveal")}>SS Reveal</button>
+            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("lobby")}>LS Lobby</button>
+            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("picking")}>LS Pick</button>
+            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("clue1")}>LS Clue</button>
+            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("guess1")}>LS Guess</button>
+            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("reveal")}>LS Reveal</button>
           </div>
         </div>
       )}

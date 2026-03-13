@@ -11,6 +11,7 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileChainReactionPage } from "../mobile/pages/MobileChainReactionPage";
 import { ChainDemo } from "../components/demos/ChainDemo";
+import { BorringAvatar } from "../components/shared/BorringAvatar";
 
 type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 
@@ -279,7 +280,12 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
             className={`cr-vs-player cr-vs-player--clickable${isViewingMine && game.phase === "playing" ? " cr-vs-player--active" : ""}${myDone ? " cr-vs-player--done" : ""}`}
             onClick={() => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); }}
           >
-            <div className="cr-vs-avatar">{(myName[0] ?? "?").toUpperCase()}</div>
+            <div className="cr-vs-avatar">
+              <BorringAvatar
+                seed={sessionId}
+                playerIndex={0}
+              />
+            </div>
             <div className="cr-vs-info">
               <span className="cr-vs-name">{myName}</span>
               <span className="cr-vs-score" data-tooltip="Total score" data-tooltip-variant="game">{myScore}</span>
@@ -302,7 +308,12 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
               <span className="cr-vs-score" data-tooltip="Total score" data-tooltip-variant="game">{opponentScore}</span>
               {game.phase === "playing" && <span className="cr-vs-progress" data-tooltip="Words solved this round" data-tooltip-variant="info">{oppProgress}/{oppTotal}</span>}
             </div>
-            <div className="cr-vs-avatar cr-vs-avatar--opp">{(oppName[0] ?? "?").toUpperCase()}</div>
+            <div className="cr-vs-avatar cr-vs-avatar--opp">
+              <BorringAvatar
+                seed={opponentId ?? ""}
+                playerIndex={1}
+              />
+            </div>
             {oppDone && <span className="cr-vs-done-badge" data-tooltip="Finished this round" data-tooltip-variant="success">✓</span>}
           </div>
         </div>
@@ -318,7 +329,12 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
               const name = playerName(p.sessionId);
               return (
                 <div className={`cr-lobby-slot cr-lobby-slot--filled${isMe ? " cr-lobby-slot--me" : ""}`}>
-                  <div className="cr-lobby-avatar">{(name[0] ?? "?").toUpperCase()}</div>
+                  <div className="cr-lobby-avatar">
+                    <BorringAvatar
+                      seed={p.sessionId}
+                      playerIndex={0}
+                    />
+                  </div>
                   <span className="cr-lobby-name">{name}</span>
                   {isMe && <span className="cr-lobby-you">you</span>}
                   {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>}
@@ -345,7 +361,12 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
               const name = playerName(p.sessionId);
               return (
                 <div className={`cr-lobby-slot cr-lobby-slot--filled${isMe ? " cr-lobby-slot--me" : ""}`}>
-                  <div className="cr-lobby-avatar cr-lobby-avatar--opp">{(name[0] ?? "?").toUpperCase()}</div>
+                  <div className="cr-lobby-avatar cr-lobby-avatar--opp">
+                    <BorringAvatar
+                      seed={p.sessionId}
+                      playerIndex={1}
+                    />
+                  </div>
                   <span className="cr-lobby-name">{name}</span>
                   {isMe && <span className="cr-lobby-you">you</span>}
                   {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>}
@@ -432,6 +453,7 @@ export function ChainReactionPage({ sessionId }: { sessionId: string }) {
                     <span className="cr-slot-num">{i + 1}</span>
                     <input
                       className="cr-submit-input"
+                      autoFocus={i === 0}
                       value={word}
                       onChange={(e) => {
                         const next = [...submissionWords];

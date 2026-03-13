@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { FiArrowRight, FiCheck, FiLock } from "react-icons/fi";
+import { BorringAvatar } from "../shared/BorringAvatar";
 
 type Team = { name: string; members: string[] };
 
@@ -33,6 +34,8 @@ export function PasswordTeamGrid({
   onMovePlayer?: (playerId: string, teamName: string) => void;
 }) {
   const myTeam = teams.find((t) => t.members.includes(sessionId))?.name;
+  // Create a flat list of all players to determine their index for color assignment
+  const allPlayers = teams.flatMap((t) => t.members);
 
   return (
     <div className="game-section">
@@ -84,11 +87,16 @@ export function PasswordTeamGrid({
                   team.members.map((id) => {
                     const n = names[id] ?? id.slice(0, 6);
                     const isMe = id === sessionId;
-                    const initial = (n[0] ?? "?").toUpperCase();
+                    const playerIndex = allPlayers.indexOf(id);
                     return (
                       <div key={id} className="game-team-member-row">
                         <div className="game-team-member-info">
-                          <span className={`game-team-avatar${isMe ? " game-team-avatar--me" : ""}`}>{initial}</span>
+                          <span className={`game-team-avatar${isMe ? " game-team-avatar--me" : ""}`}>
+                            <BorringAvatar
+                              seed={id}
+                              playerIndex={playerIndex}
+                            />
+                          </span>
                           <div className="game-team-member-copy">
                             <span className={`game-team-member${isMe ? " game-team-member--me" : ""}`}>{n}</span>
                             <span className="game-team-member-caption">{isMe ? "You" : "Player"}</span>

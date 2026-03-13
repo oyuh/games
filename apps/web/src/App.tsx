@@ -2,7 +2,7 @@ import { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
-import { useEffect } from "react";
+import { Component, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import {
@@ -24,6 +24,37 @@ import { PasswordGamePage } from "./pages/PasswordGamePage";
 import { PasswordResultsPage } from "./pages/PasswordResultsPage";
 import { ChainReactionPage } from "./pages/ChainReactionPage";
 import { ShadeSignalPage } from "./pages/ShadeSignalPage";
+import { LocationSignalPage } from "./pages/LocationSignalPage";
+
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 40, color: "#ff6b6b", fontFamily: "monospace" }}>
+          <h2>Something crashed!</h2>
+          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+            {this.state.error.message}
+          </pre>
+          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: "0.8em", opacity: 0.7 }}>
+            {this.state.error.stack}
+          </pre>
+          <button onClick={() => { this.setState({ error: null }); window.location.href = "/"; }}
+            style={{ marginTop: 16, padding: "8px 16px", cursor: "pointer" }}>
+            Go Home
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const sessionId = getOrCreateSessionId();
 const API_METADATA_POLL_MS = 30_000;
@@ -233,6 +264,7 @@ export function App() {
 
   return (
     <ZeroProvider zero={zero}>
+      <ErrorBoundary>
         <BrowserRouter>
           <Routes>
             <Route element={<AppShell />}>
@@ -243,10 +275,12 @@ export function App() {
               <Route path="/password/:id/results" element={<PasswordResultsPage sessionId={sessionId} />} />
               <Route path="/chain/:id" element={<ChainReactionPage sessionId={sessionId} />} />
               <Route path="/shade/:id" element={<ShadeSignalPage sessionId={sessionId} />} />
+              <Route path="/location/:id" element={<LocationSignalPage sessionId={sessionId} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
         </BrowserRouter>
+      </ErrorBoundary>
     </ZeroProvider>
   );
 }

@@ -1,3 +1,5 @@
+import { BorringAvatar } from "../shared/BorringAvatar";
+
 type Player = { sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player"; eliminated?: boolean };
 
 export function ImposterPlayersCard({
@@ -20,10 +22,9 @@ export function ImposterPlayersCard({
         Players <span className="game-section-count">{activePlayers.length}/{players.length}</span>
       </h3>
       <div className="game-players-grid">
-        {players.map((player) => {
+        {players.map((player, playerIndex) => {
           const isMe = player.sessionId === sessionId;
           const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
-          const initial = (name[0] ?? "?").toUpperCase();
           const showRole = revealRoles || player.sessionId === votedOutId;
           const isImposter = showRole && player.role === "imposter";
           const isEliminated = Boolean(player.eliminated);
@@ -36,7 +37,14 @@ export function ImposterPlayersCard({
               data-tooltip-variant={isEliminated ? "warning" : isImposter ? "danger" : showRole ? "success" : "info"}
             >
               <div className={`game-player-avatar${isImposter ? " game-player-avatar--danger" : ""}${isEliminated ? " game-player-avatar--eliminated" : ""}`}>
-                {isEliminated ? "☠" : initial}
+                {isEliminated ? (
+                  "☠"
+                ) : (
+                  <BorringAvatar
+                    seed={player.sessionId}
+                    playerIndex={playerIndex}
+                  />
+                )}
               </div>
               <span className={`game-player-name${isEliminated ? " game-player-name--eliminated" : ""}`}>{name}</span>
               {isMe && !isEliminated && <span className="game-player-you">you</span>}

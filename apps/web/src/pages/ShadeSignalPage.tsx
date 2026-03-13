@@ -8,10 +8,12 @@ import { ColorGrid, generateGridColor } from "../components/shade/ColorGrid";
 import { RoundCountdown } from "../components/shared/RoundCountdown";
 import { SpectatorBadge } from "../components/shared/SpectatorBadge";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
+import { BorringAvatar } from "../components/shared/BorringAvatar";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
+
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 import { ShadeDemo } from "../components/demos/ShadeDemo";
 
@@ -141,6 +143,13 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       return acc;
     }, {});
   }, [sessions]);
+
+  const playerIndexMap = useMemo(() => {
+    return game?.players.reduce<Record<string, number>>((acc, player, playerIndex) => {
+      acc[player.sessionId] = playerIndex;
+      return acc;
+    }, {}) ?? {};
+  }, [game?.players]);
 
   useEffect(() => {
     if (!game) return;
@@ -403,9 +412,8 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
           Players <span className="game-section-count">{game.players.length}</span>
         </h3>
         <div className="game-players-grid">
-          {game.players.map((player) => {
+          {game.players.map((player, playerIndex) => {
             const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
-            const initial = (name[0] ?? "?").toUpperCase();
             const isMe = player.sessionId === sessionId;
             const isCurrentLeader = player.sessionId === game.leader_id;
             const isGuessPhase = phase === "guess1" || phase === "guess2";
@@ -418,7 +426,12 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
                 data-tooltip-variant={isCurrentLeader ? "warn" : isLockedIn ? "success" : "info"}
               >
                 <div className={`game-player-avatar${isCurrentLeader ? " game-player-avatar--leader" : ""}`}>
-                  {isCurrentLeader ? "🎨" : isLockedIn ? "✅" : initial}
+                  {isCurrentLeader ? "🎨" : isLockedIn ? "✅" : (
+                    <BorringAvatar
+                      seed={player.sessionId}
+                      playerIndex={playerIndex}
+                    />
+                  )}
                 </div>
                 <span className="game-player-name">{name}</span>
                 {isGameActive && (
@@ -592,6 +605,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
             target={target}
             showTarget
             markers={phase === "clue2" ? leaderGuess1Markers : []}
+            playerIndexMap={playerIndexMap}
           />
 
           {phase === "clue2" && leaderGuess1Markers.length > 0 && (
@@ -799,6 +813,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
             showTarget
             showZones
             markers={guessMarkers}
+            playerIndexMap={playerIndexMap}
           />
           <ScoringLegend />
 

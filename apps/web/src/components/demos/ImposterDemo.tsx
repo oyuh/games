@@ -191,6 +191,10 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 sessionById={NAMES}
                 secretWord={SECRET_WORD}
                 phaseEndsAt={null}
+                skipVotes={0}
+                activePlayerCount={PLAYERS.length}
+                hasVotedSkip={false}
+                onSkip={noop}
               />
             </DemoGlow>
           </div>

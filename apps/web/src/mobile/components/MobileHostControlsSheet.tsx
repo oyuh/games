@@ -10,7 +10,8 @@ type GameContext =
   | { type: "imposter"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
   | { type: "password"; gameId: string; hostId: string; players: Array<{ id: string; name: string }>; spectators?: Array<{ sessionId: string; name: string | null }> }
   | { type: "shade_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "chain_reaction"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
+  | { type: "chain_reaction"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "location_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
 
 export type { GameContext as MobileHostGameContext };
 
@@ -42,6 +43,8 @@ export function MobileHostControlsSheet({
       void zero.mutate(mutators.shadeSignal.kick({ gameId: game.gameId, hostId: sessionId, targetId }));
     } else if (game.type === "chain_reaction") {
       void zero.mutate(mutators.chainReaction.kick({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else if (game.type === "location_signal") {
+      void zero.mutate(mutators.locationSignal.kick({ gameId: game.gameId, hostId: sessionId, targetId }));
     } else {
       void zero.mutate(mutators.password.kick({ gameId: game.gameId, hostId: sessionId, targetId }));
     }
@@ -55,6 +58,8 @@ export function MobileHostControlsSheet({
       void zero.mutate(mutators.shadeSignal.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
     } else if (game.type === "chain_reaction") {
       void zero.mutate(mutators.chainReaction.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else if (game.type === "location_signal") {
+      void zero.mutate(mutators.locationSignal.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
     } else {
       void zero.mutate(mutators.password.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
     }
@@ -68,6 +73,8 @@ export function MobileHostControlsSheet({
       void zero.mutate(mutators.shadeSignal.endGame({ gameId: game.gameId, hostId: sessionId }));
     } else if (game.type === "chain_reaction") {
       void zero.mutate(mutators.chainReaction.endGame({ gameId: game.gameId, hostId: sessionId }));
+    } else if (game.type === "location_signal") {
+      void zero.mutate(mutators.locationSignal.endGame({ gameId: game.gameId, hostId: sessionId }));
     } else {
       void zero.mutate(mutators.password.endGame({ gameId: game.gameId, hostId: sessionId }));
     }
@@ -85,6 +92,8 @@ export function MobileHostControlsSheet({
       void zero.mutate(mutators.shadeSignal.announce({ gameId: game.gameId, hostId: sessionId, text }));
     } else if (game.type === "chain_reaction") {
       void zero.mutate(mutators.chainReaction.announce({ gameId: game.gameId, hostId: sessionId, text }));
+    } else if (game.type === "location_signal") {
+      void zero.mutate(mutators.locationSignal.announce({ gameId: game.gameId, hostId: sessionId, text }));
     } else {
       void zero.mutate(mutators.password.announce({ gameId: game.gameId, hostId: sessionId, text }));
     }

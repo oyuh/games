@@ -76,6 +76,7 @@ export function PasswordActiveRound({
           <form className="game-input-row" onSubmit={onSubmitClue}>
             <input
               className="input flex-1"
+              autoFocus
               value={clue}
               onChange={(e) => onClueChange(e.target.value)}
               placeholder="Enter clue…"
@@ -130,6 +131,7 @@ export function PasswordActiveRound({
             <form className="game-input-row" onSubmit={onSubmitGuess}>
               <input
                 className="input flex-1"
+                autoFocus
                 value={guess}
                 onChange={(e) => onGuessChange(e.target.value)}
                 placeholder="Your guess…"

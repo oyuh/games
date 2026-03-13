@@ -16,7 +16,7 @@ type ChatState = {
   isImposter: boolean;
   /** Whether the game has multiple imposters (imposter game only) */
   multipleImposters: boolean;
-  gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | null;
+  gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal" | null;
   gameId: string;
 };
 
@@ -46,8 +46,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const passwordMatch = location.pathname.match(/^\/password\/([^/]+)/);
   const chainMatch = location.pathname.match(/^\/chain\/([^/]+)/);
   const shadeMatch = location.pathname.match(/^\/shade\/([^/]+)/);
-  const gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | null = imposterMatch ? "imposter" : passwordMatch ? "password" : chainMatch ? "chain_reaction" : shadeMatch ? "shade_signal" : null;
-  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch?.[1] ?? shadeMatch?.[1] ?? "";
+  const locationMatch = location.pathname.match(/^\/location\/([^/]+)/);
+  const gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal" | null = imposterMatch ? "imposter" : passwordMatch ? "password" : chainMatch ? "chain_reaction" : shadeMatch ? "shade_signal" : locationMatch ? "location_signal" : null;
+  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch?.[1] ?? shadeMatch?.[1] ?? locationMatch?.[1] ?? "";
   const inGame = Boolean(gameType && gameId);
 
   // Close chat when navigating away from a game
@@ -87,7 +88,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [pwdGames] = useQuery(gameType === "password" ? queries.password.byId({ id: gameId }) : queries.password.byId({ id: "__none__" }));
   const [chrGames] = useQuery(gameType === "chain_reaction" ? queries.chainReaction.byId({ id: gameId }) : queries.chainReaction.byId({ id: "__none__" }));
   const [shdGames] = useQuery(gameType === "shade_signal" ? queries.shadeSignal.byId({ id: gameId }) : queries.shadeSignal.byId({ id: "__none__" }));
-  const currentGame = gameType === "imposter" ? impGames[0] : gameType === "password" ? pwdGames[0] : gameType === "chain_reaction" ? chrGames[0] : gameType === "shade_signal" ? shdGames[0] : null;
+  const [locGames] = useQuery(gameType === "location_signal" ? queries.locationSignal.byId({ id: gameId }) : queries.locationSignal.byId({ id: "__none__" }));
+  const currentGame = gameType === "imposter" ? impGames[0] : gameType === "password" ? pwdGames[0] : gameType === "chain_reaction" ? chrGames[0] : gameType === "shade_signal" ? shdGames[0] : gameType === "location_signal" ? locGames[0] : null;
   const isSpectator = currentGame?.spectators?.some((s: { sessionId: string }) => s.sessionId === sessionId) ?? false;
 
   // Imposter role detection for private chat channels

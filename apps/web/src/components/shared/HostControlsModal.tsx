@@ -9,7 +9,8 @@ type GameContext =
   | { type: "imposter"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
   | { type: "password"; gameId: string; hostId: string; players: Array<{ id: string; name: string }>; spectators?: Array<{ sessionId: string; name: string | null }> }
   | { type: "shade_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "chain_reaction"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
+  | { type: "chain_reaction"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "location_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
 
 export function HostControlsModal({
   game,
@@ -26,13 +27,9 @@ export function HostControlsModal({
   const [confirmEnd, setConfirmEnd] = useState(false);
 
   const kickablePlayersList =
-    game.type === "imposter"
-      ? game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }))
-      : game.type === "shade_signal"
-      ? game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }))
-      : game.type === "chain_reaction"
-      ? game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }))
-      : game.players.filter((p) => p.id !== sessionId);
+    game.type === "password"
+      ? game.players.filter((p) => p.id !== sessionId)
+      : game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }));
 
   const spectatorsList = (game.spectators ?? []).map((s) => ({ id: s.sessionId, name: s.name ?? s.sessionId.slice(0, 6) }));
 
@@ -45,6 +42,9 @@ export function HostControlsModal({
         .client.catch(() => showToast("Couldn't kick player", "error"));
     } else if (game.type === "chain_reaction") {
       void zero.mutate(mutators.chainReaction.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
+        .client.catch(() => showToast("Couldn't kick player", "error"));
+    } else if (game.type === "location_signal") {
+      void zero.mutate(mutators.locationSignal.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
         .client.catch(() => showToast("Couldn't kick player", "error"));
     } else {
       void zero.mutate(mutators.password.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
@@ -60,6 +60,8 @@ export function HostControlsModal({
       void zero.mutate(mutators.shadeSignal.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
     } else if (game.type === "chain_reaction") {
       void zero.mutate(mutators.chainReaction.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
+    } else if (game.type === "location_signal") {
+      void zero.mutate(mutators.locationSignal.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
     } else {
       void zero.mutate(mutators.password.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
     }
@@ -73,6 +75,8 @@ export function HostControlsModal({
       void zero.mutate(mutators.shadeSignal.endGame({ gameId: game.gameId, hostId: sessionId }));
     } else if (game.type === "chain_reaction") {
       void zero.mutate(mutators.chainReaction.endGame({ gameId: game.gameId, hostId: sessionId }));
+    } else if (game.type === "location_signal") {
+      void zero.mutate(mutators.locationSignal.endGame({ gameId: game.gameId, hostId: sessionId }));
     } else {
       void zero.mutate(mutators.password.endGame({ gameId: game.gameId, hostId: sessionId }));
     }
@@ -90,6 +94,8 @@ export function HostControlsModal({
       void zero.mutate(mutators.shadeSignal.announce({ gameId: game.gameId, hostId: sessionId, text }));
     } else if (game.type === "chain_reaction") {
       void zero.mutate(mutators.chainReaction.announce({ gameId: game.gameId, hostId: sessionId, text }));
+    } else if (game.type === "location_signal") {
+      void zero.mutate(mutators.locationSignal.announce({ gameId: game.gameId, hostId: sessionId, text }));
     } else {
       void zero.mutate(mutators.password.announce({ gameId: game.gameId, hostId: sessionId, text }));
     }

@@ -12,7 +12,7 @@ import {
 const sessions = table("sessions").columns({
   id: string(),
   name: string().optional(),
-  game_type: enumeration<"imposter" | "password" | "chain_reaction" | "shade_signal">().optional(),
+  game_type: enumeration<"imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal">().optional(),
   game_id: string().optional(),
   created_at: number(),
   last_seen: number()
@@ -79,7 +79,7 @@ const passwordGames = table("password_games").columns({
 
 const chatMessages = table("chat_messages").columns({
   id: string(),
-  game_type: enumeration<"imposter" | "password" | "chain_reaction" | "shade_signal">(),
+  game_type: enumeration<"imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal">(),
   game_id: string(),
   sender_id: string(),
   sender_name: string(),
@@ -163,6 +163,48 @@ const shadeSignalGames = table("shade_signal_games").columns({
   updated_at: number()
 }).primaryKey("id");
 
+const locationSignalGames = table("location_signal_games").columns({
+  id: string(),
+  code: string(),
+  host_id: string(),
+  phase: enumeration<"lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "clue3" | "guess3" | "clue4" | "guess4" | "reveal" | "finished" | "ended">(),
+  players: json<Array<{ sessionId: string; name: string | null; connected: boolean; totalScore: number }>>(),
+  leader_id: string().optional(),
+  leader_order: json<string[]>(),
+  current_leader_index: number(),
+  target_lat: number().optional(),
+  target_lng: number().optional(),
+  clue1: string().optional(),
+  clue2: string().optional(),
+  clue3: string().optional(),
+  clue4: string().optional(),
+  guesses: json<Array<{ sessionId: string; round: 1 | 2 | 3 | 4; lat: number; lng: number }>>(),
+  round_history: json<Array<{
+    round: number;
+    leaderId: string;
+    target: { lat: number; lng: number };
+    clue1: string | null;
+    clue2: string | null;
+    clue3: string | null;
+    clue4: string | null;
+    guesses: Array<{ sessionId: string; round: 1 | 2 | 3 | 4; lat: number; lng: number }>;
+    scores: Record<string, number>;
+  }>>(),
+  spectators: json<Array<{ sessionId: string; name: string | null }>>(),
+  kicked: json<string[]>(),
+  announcement: json<{ text: string; ts: number } | null>(),
+  settings: json<{
+    clueDurationSec: number;
+    guessDurationSec: number;
+    roundsPerPlayer: number;
+    currentRound: number;
+    phaseEndsAt: number | null;
+    cluePairs: number;
+  }>(),
+  created_at: number(),
+  updated_at: number()
+}).primaryKey("id");
+
 const sessionRelationships = relationships(sessions, ({ one }) => ({
   imposterGame: one({
     sourceField: ["game_id"],
@@ -183,11 +225,16 @@ const sessionRelationships = relationships(sessions, ({ one }) => ({
     sourceField: ["game_id"],
     destSchema: shadeSignalGames,
     destField: ["id"]
+  }),
+  locationSignalGame: one({
+    sourceField: ["game_id"],
+    destSchema: locationSignalGames,
+    destField: ["id"]
   })
 }));
 
 export const schema = createSchema({
-  tables: [sessions, imposterGames, passwordGames, chatMessages, chainReactionGames, shadeSignalGames],
+  tables: [sessions, imposterGames, passwordGames, chatMessages, chainReactionGames, shadeSignalGames, locationSignalGames],
   relationships: [sessionRelationships]
 });
 

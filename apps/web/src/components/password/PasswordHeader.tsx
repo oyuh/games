@@ -9,6 +9,16 @@ const phaseLabels: Record<string, string> = {
   lobby: "Lobby",
   submitting: "Submitting",
   playing: "Playing",
+  picking: "Pick Location",
+  clue1: "Clue 1",
+  guess1: "Guess 1",
+  clue2: "Clue 2",
+  guess2: "Guess 2",
+  clue3: "Clue 3",
+  guess3: "Guess 3",
+  clue4: "Clue 4",
+  guess4: "Guess 4",
+  reveal: "Reveal",
   results: "Finished",
   finished: "Finished"
 };
@@ -17,6 +27,16 @@ const phaseVariants: Record<string, string> = {
   lobby: "",
   submitting: "badge-warn",
   playing: "badge-warn",
+  picking: "badge-warn",
+  clue1: "badge-warn",
+  guess1: "badge-primary",
+  clue2: "badge-warn",
+  guess2: "badge-primary",
+  clue3: "badge-warn",
+  guess3: "badge-primary",
+  clue4: "badge-warn",
+  guess4: "badge-primary",
+  reveal: "badge-success",
   results: "badge-success",
   finished: "badge-success"
 };
@@ -25,6 +45,16 @@ const phaseTooltips: Record<string, string> = {
   lobby: "Waiting for players to join teams",
   submitting: "Players are submitting chain words",
   playing: "Active round — give clues or guess",
+  picking: "Leader is choosing a location on the map",
+  clue1: "Leader is writing their first clue",
+  guess1: "Players are guessing the location",
+  clue2: "Leader is writing their second clue",
+  guess2: "Players are refining their guesses",
+  clue3: "Leader is writing their third clue",
+  guess3: "Players are refining their guesses",
+  clue4: "Leader is writing their final clue",
+  guess4: "Players are making their final guesses",
+  reveal: "Showing results for this round",
   results: "Game complete — see final scores",
   finished: "Game complete — see final scores"
 };
@@ -39,6 +69,12 @@ const headerIcons: Record<string, ReactNode> = {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  ),
+  "Location Signal": (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
     </svg>
   ),
 };
