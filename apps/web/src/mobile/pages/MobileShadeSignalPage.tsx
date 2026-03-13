@@ -6,12 +6,14 @@ import { FiClock, FiLogIn, FiSend } from "react-icons/fi";
 import { ColorGrid, generateGridColor } from "../../components/shade/ColorGrid";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { BorringAvatar } from "../../components/shared/BorringAvatar";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame } from "../../lib/session";
 import { showToast } from "../../lib/toast";
+
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 
 type ShadePhase = "lobby" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended";
@@ -111,6 +113,13 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       return acc;
     }, {});
   }, [sessions]);
+
+  const playerIndexMap = useMemo(() => {
+    return game?.players.reduce<Record<string, number>>((acc, player, playerIndex) => {
+      acc[player.sessionId] = playerIndex;
+      return acc;
+    }, {}) ?? {};
+  }, [game?.players]);
 
   useMobileHostRegister(
     isHost && game
@@ -304,9 +313,8 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       <div className="m-section">
         <h3 className="m-label">Players <span className="m-badge-small">{game.players.length}</span></h3>
         <div className="m-players-row">
-          {game.players.map((player) => {
+          {game.players.map((player, playerIndex) => {
             const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
-            const initial = (name[0] ?? "?").toUpperCase();
             const isMe = player.sessionId === sessionId;
             const isCurrentLeader = player.sessionId === game.leader_id;
             const isGuessPhase = phase === "guess1" || phase === "guess2";
@@ -315,7 +323,12 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
               <div key={player.sessionId}
                 className={`m-player-chip${isMe ? " m-player-chip--me" : ""}${isCurrentLeader ? " m-player-chip--leader" : ""}${isLockedIn ? " m-player-chip--locked" : ""}`}>
                 <div className={`m-player-avatar${isCurrentLeader ? " m-player-avatar--leader" : ""}`}>
-                  {isCurrentLeader ? "🎨" : isLockedIn ? "✅" : initial}
+                  {isCurrentLeader ? "🎨" : isLockedIn ? "✅" : (
+                    <BorringAvatar
+                      seed={player.sessionId}
+                      playerIndex={playerIndex}
+                    />
+                  )}
                 </div>
                 <span className="m-player-name">{name}</span>
                 {isGameActive && <span className="m-badge-small">{player.totalScore}</span>}
@@ -576,6 +589,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
             showTarget
             showZones
             markers={guessMarkers}
+            playerIndexMap={playerIndexMap}
             compact
           />
           <MobileScoringLegend />

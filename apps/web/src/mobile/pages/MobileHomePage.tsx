@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiUsers, FiEye, FiShield, FiLink, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { FiSearch, FiUsers, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { PiPaintBrushBold } from "react-icons/pi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, markVisited, setStoredName } from "../../lib/session";
 import { showToast } from "../../lib/toast";
@@ -51,6 +51,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
   const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
   const [shadeMatches] = useQuery(queries.shadeSignal.byCode({ code: joinCode || "______" }));
+  const [locationMatches] = useQuery(queries.locationSignal.byCode({ code: joinCode || "______" }));
 
   // Game configs
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -67,6 +68,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [shadeRoundsPerPlayer, setShadeRoundsPerPlayer] = useState(1);
   const [shadeHardMode, setShadeHardMode] = useState(false);
   const [shadeLeaderPick, setShadeLeaderPick] = useState(false);
+  const [locCluePairs, setLocCluePairs] = useState(2);
+  const [locRoundsPerPlayer, setLocRoundsPerPlayer] = useState(1);
 
   useEffect(() => {
     if (firstVisit && nameInputRef.current) nameInputRef.current.focus();
@@ -150,6 +153,16 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     } finally { setPendingAction(null); }
   };
 
+  const createLocationSignal = async () => {
+    setPendingAction("create-location");
+    const id = nanoid();
+    try {
+      const result = await zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })).server;
+      if (result.type === "error") { showToast(result.error.message, "error"); return; }
+      navigate(`/location/${id}`);
+    } finally { setPendingAction(null); }
+  };
+
   const joinAny = async () => {
     setPendingAction("join");
     const normalizedCode = joinCode.trim().toUpperCase();
@@ -190,6 +203,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         addRecentGame({ id: shadeGame.id, code: shadeGame.code, gameType: "shade_signal" });
         setRecentGames(getRecentGames());
         navigate(`/shade/${shadeGame.id}`);
+        return;
+      }
+      const locationGame = locationMatches[0];
+      if (locationGame) {
+        const result = await zero.mutate(mutators.locationSignal.join({ gameId: locationGame.id, sessionId })).server;
+        if (result.type === "error") { showToast(result.error.message, "error"); return; }
+        addRecentGame({ id: locationGame.id, code: locationGame.code, gameType: "location_signal" });
+        setRecentGames(getRecentGames());
+        navigate(`/location/${locationGame.id}`);
         return;
       }
       showToast("No game found for that code.", "error");
@@ -498,13 +520,62 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           </div>
         )}
       </div>
+
+      <div className="m-game-card m-game-card--location">
+        <button className="m-game-card-header" onClick={() => toggle("location")}>
+          <div className="m-game-card-info">
+            <FiMapPin size={18} />
+            <div>
+              <h3 className="m-game-card-title">Location Signal</h3>
+              <p className="m-game-card-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
+            </div>
+          </div>
+          {expanded === "location" ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />}
+        </button>
+        <div className="m-game-card-tags">
+          <span className="m-tag">2–10 players</span>
+          <span className="m-tag">Geography</span>
+          <span className="m-tag">Golf scoring</span>
+        </div>
+        {expanded === "location" && (
+          <div className="m-game-card-config">
+            <div className="m-config-row">
+              <div className="m-config-field">
+                <label className="m-config-label">Clue Pairs</label>
+                <select className="m-input" value={locCluePairs} onChange={(e) => setLocCluePairs(Number(e.target.value))}>
+                  <option value={1}>1 pair (quick)</option>
+                  <option value={2}>2 pairs (standard)</option>
+                  <option value={3}>3 pairs (long)</option>
+                  <option value={4}>4 pairs (marathon)</option>
+                </select>
+              </div>
+              <div className="m-config-field">
+                <label className="m-config-label">Rounds / Player</label>
+                <select className="m-input" value={locRoundsPerPlayer} onChange={(e) => setLocRoundsPerPlayer(Number(e.target.value))}>
+                  <option value={1}>Quick (1)</option>
+                  <option value={2}>Standard (2)</option>
+                  <option value={3}>Long (3)</option>
+                </select>
+              </div>
+            </div>
+            <button
+              className="m-btn m-btn-primary"
+              style={{ width: "100%" }}
+              onClick={() => void createLocationSignal()}
+              disabled={pendingAction !== null}
+            >
+              {pendingAction === "create-location" ? "Creating…" : "Create Location Signal"}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 /* ── Recent game item (mobile) ───── */
 function MobileRecentGameItem({ game }: { game: { id: string; code: string; gameType: string } }) {
-  const typeLabel = game.gameType === "chain_reaction" ? "Chain Reaction" : game.gameType === "shade_signal" ? "Shade Signal" : game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1);
+  const typeLabel = game.gameType === "chain_reaction" ? "Chain Reaction" : game.gameType === "shade_signal" ? "Shade Signal" : game.gameType === "location_signal" ? "Location Signal" : game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1);
 
   const link = game.gameType === "imposter"
     ? `/imposter/${game.id}`
@@ -512,6 +583,8 @@ function MobileRecentGameItem({ game }: { game: { id: string; code: string; game
     ? `/password/${game.id}/begin`
     : game.gameType === "shade_signal"
     ? `/shade/${game.id}`
+    : game.gameType === "location_signal"
+    ? `/location/${game.id}`
     : `/chain/${game.id}`;
 
   return (

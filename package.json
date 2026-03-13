@@ -4,11 +4,16 @@
   "packageManager": "pnpm@10.30.3",
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "local:up": "powershell -ExecutionPolicy Bypass -File ./scripts/local-dev.ps1",
+    "local:down": "powershell -ExecutionPolicy Bypass -File ./scripts/local-down.ps1",
+    "local:reset": "powershell -ExecutionPolicy Bypass -File ./scripts/local-down.ps1 -SkipPorts && powershell -ExecutionPolicy Bypass -File ./scripts/local-dev.ps1",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "db:push": "pnpm --filter @games/shared db:push",
+    "db:push:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/db-push-prod.ps1",
+    "db:push:prod:linux": "bash ./scripts/db-push-prod.sh",
     "db:generate": "pnpm --filter @games/shared db:generate",
     "db:studio": "pnpm --filter @games/shared db:studio"
   },

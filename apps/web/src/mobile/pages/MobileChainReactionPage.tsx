@@ -369,6 +369,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                     <span className="m-cr-slot-num">{i + 1}</span>
                     <input
                       className="m-input"
+                      autoFocus={i === 0}
                       value={word}
                       onChange={(e) => {
                         const next = [...submissionWords];

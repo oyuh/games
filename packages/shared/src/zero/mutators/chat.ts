@@ -7,7 +7,7 @@ export const chatMutators = {
   send: defineMutator(
     z.object({
       id: z.string(),
-      gameType: z.enum(["imposter", "password", "chain_reaction", "shade_signal"]),
+      gameType: z.enum(["imposter", "password", "chain_reaction", "shade_signal", "location_signal"]),
       gameId: z.string(),
       senderId: z.string(),
       senderName: z.string(),
@@ -31,7 +31,7 @@ export const chatMutators = {
   ),
 
   clearForGame: defineMutator(
-    z.object({ gameType: z.enum(["imposter", "password", "chain_reaction", "shade_signal"]), gameId: z.string() }),
+    z.object({ gameType: z.enum(["imposter", "password", "chain_reaction", "shade_signal", "location_signal"]), gameId: z.string() }),
     async ({ args, tx }) => {
       const msgs = await tx.run(
         zql.chat_messages.where("game_type", args.gameType).where("game_id", args.gameId)

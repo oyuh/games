@@ -6,13 +6,14 @@
 ![Node](https://img.shields.io/badge/Node-Server-5FA04E?logo=node.js&logoColor=white)
 ![Hono](https://img.shields.io/badge/API-Hono-E36002)
 ![Zero](https://img.shields.io/badge/Realtime-Rocicorp%20Zero-111827)
+![Pusher](https://img.shields.io/badge/Broadcast-Pusher%20Channels-300D4F?logo=pusher&logoColor=white)
 ![Postgres](https://img.shields.io/badge/Database-Postgres-4169E1?logo=postgresql&logoColor=white)
 ![Drizzle](https://img.shields.io/badge/ORM-Drizzle-C5F74F&logoColor=111827)
 ![Turbo](https://img.shields.io/badge/Monorepo-Turbo-000000?logo=turborepo&logoColor=white)
 ![pnpm](https://img.shields.io/badge/Package%20Manager-pnpm-F69220?logo=pnpm&logoColor=white)
 ![Deploy](https://img.shields.io/badge/Deploy-Vercel%20%2B%20Railway-0F172A)
 
-Games is a TypeScript monorepo for browser-based multiplayer party games. The frontend is a React 19 + Vite single-page app, the backend is a Hono-powered Node service, realtime state replication is handled through Rocicorp Zero, presence is tracked through a dedicated WebSocket endpoint, and persistent state lives in Postgres via Drizzle schema definitions.
+Games is a TypeScript monorepo for browser-based multiplayer party games. The frontend is a React 19 + Vite single-page app, the backend is a Hono-powered Node service, realtime state replication is handled through Rocicorp Zero, admin broadcasts and targeted messages flow through Pusher Channels, presence is tracked via periodic HTTP heartbeats, and persistent state lives in Postgres via Drizzle schema definitions.
 
 This repository currently contains four implemented game flows at the data/model level:
 
@@ -46,13 +47,14 @@ The core idea of the repo is simple:
 3. The browser connects to Rocicorp Zero for synchronized query/mutation state.
 4. Zero forwards query and mutation work to the API service in `apps/api`.
 5. The API service executes queries and mutators backed by Postgres.
-6. In parallel, the browser opens a WebSocket to `/presence` so the server can keep session `lastSeen` values fresh.
-7. Game state updates are persisted in Postgres and reflected back into the UI through Zero subscriptions.
+6. In parallel, the browser sends periodic HTTP heartbeats to the API so the server can keep session `lastSeen` values fresh.
+7. The browser subscribes to Pusher Channels to receive admin broadcasts (toasts, kicks, status updates).
+8. Game state updates are persisted in Postgres and reflected back into the UI through Zero subscriptions.
 
 This architecture gives the project a fairly clean separation:
 
 - `apps/web` is responsible for rendering, routing, local session persistence, and client-side subscriptions.
-- `apps/api` is responsible for HTTP endpoints, Zero query/mutation handling, presence heartbeats, and cleanup jobs.
+- `apps/api` is responsible for HTTP endpoints, Zero query/mutation handling, Pusher event triggers, presence heartbeats, and cleanup jobs.
 - `packages/shared` is the contract layer used by both apps: schema, types, queries, and mutators.
 
 ## Monorepo Layout
@@ -60,7 +62,7 @@ This architecture gives the project a fairly clean separation:
 ```text
 .
 ├─ apps/
-│  ├─ api/              # Hono + Node server, Zero query/mutate endpoints, presence WS
+│  ├─ api/              # Hono + Node server, Zero query/mutate endpoints, Pusher broadcast
 │  └─ web/              # React 19 + Vite frontend
 ├─ packages/
 │  └─ shared/           # Shared schema, types, Zero queries, Zero mutators (modular), Drizzle config
@@ -82,13 +84,14 @@ Important responsibilities in the web app:
 - Configure a singleton Zero client
 - Generate or restore a persistent browser session ID
 - Maintain local display name and recent-game history in `localStorage`
-- Open presence WebSocket heartbeats to the API service
+- Send periodic HTTP presence heartbeats to the API service
+- Subscribe to Pusher Channels for admin broadcasts and targeted messages
 - Render game routes and game-specific UI
 - Expose connection/debug state for Zero, API metadata, and presence connectivity
 
 ### apps/api
 
-This is the backend service. It uses Hono on Node, exposes health and debug endpoints, receives Zero query/mutate requests, hosts the presence WebSocket, and periodically cleans stale games and sessions.
+This is the backend service. It uses Hono on Node, exposes health and debug endpoints, receives Zero query/mutate requests, triggers Pusher events for admin broadcasts, and periodically cleans stale games and sessions.
 
 Important responsibilities in the API app:
 
@@ -97,7 +100,9 @@ Important responsibilities in the API app:
 - Handle `GET /health`
 - Handle `GET /debug/build-info`
 - Handle `GET|POST /api/cleanup` with bearer auth
-- Upgrade HTTP connections for the `/presence` WebSocket
+- Handle `POST /api/pusher/auth` for Pusher channel authentication
+- Handle `POST /api/presence/heartbeat` for session liveness
+- Trigger Pusher events for admin broadcasts (toasts, kicks, status, name restrictions)
 - Run scheduled stale-session / stale-game cleanup
 
 ### packages/shared
@@ -162,7 +167,7 @@ The barrel `index.ts` imports all domain-specific mutator objects and composes t
 
 - Hono 4 for HTTP routing
 - `@hono/node-server` for Node-based serving
-- `ws` for the presence WebSocket server
+- `pusher` for server-side Pusher Channels event triggers
 - `dotenv` for local environment loading
 
 ### Database and schema management
@@ -234,7 +239,7 @@ Server-side, the `sessions` table stores:
 That means session presence is a hybrid model:
 
 - identity originates in browser local storage
-- liveliness is maintained server-side through WebSocket heartbeat updates
+- liveliness is maintained server-side through HTTP heartbeat updates
 
 ### 4. Query and mutation flow with Zero
 
@@ -255,20 +260,31 @@ This is the main reason the app feels realtime without the frontend manually pol
 
 ### 5. Presence flow
 
-Presence is not handled by Zero directly in this repo. It is handled with a dedicated WebSocket connection to the API service.
+Presence is not handled by Zero directly in this repo. It is handled with periodic HTTP heartbeats from the client to the API service.
 
 Flow:
 
 1. A game page calls the `usePresenceSocket` hook.
-2. The browser opens a WebSocket to `VITE_PRESENCE_WS_URL`.
-3. On connect, the client sends a JSON presence payload containing session ID, game ID, and game type.
-4. Every 10 seconds the client sends another heartbeat payload.
-5. The API service updates the `sessions` row `lastSeen` field and game association.
-6. On close, the API writes one final timestamp update.
+2. The hook sends a `POST /api/presence/heartbeat` request with the session ID, game ID, and game type.
+3. Every 60 seconds the client sends another heartbeat request.
+4. The API service updates the `sessions` row `lastSeen` field and game association.
 
-This lets the system infer connected/disconnected state from `lastSeen` freshness instead of maintaining an in-memory session registry only.
+This lets the system infer connected/disconnected state from `lastSeen` freshness.
 
-### 6. Cleanup flow
+### 6. Admin broadcast flow
+
+Admin broadcasts (toasts, kicks, custom status messages, restricted names) are delivered through Pusher Channels.
+
+Flow:
+
+1. The admin dashboard triggers an action (e.g. broadcast toast, kick user, set custom status).
+2. The API service calls `pusher.trigger()` to send the event on the appropriate channel.
+3. Global events go on the `games-broadcast` channel.
+4. Targeted events (e.g. kicks) go on `private-user-{sessionId}` channels.
+5. The client subscribes to both channels via the `useAdminBroadcast` hook using `pusher-js`.
+6. Pusher channel authentication is handled through `POST /api/pusher/auth`, which validates session ownership and checks bans.
+
+### 7. Cleanup flow
 
 The API service has two cleanup paths:
 
@@ -284,7 +300,7 @@ Cleanup behavior includes:
 
 This matters operationally because multiplayer game rows are long-lived enough to support reconnects, but not intended to accumulate forever.
 
-### 7. API diagnostics flow
+### 8. API diagnostics flow
 
 The frontend periodically probes `/debug/build-info` on the API service. That endpoint exposes:
 
@@ -465,7 +481,6 @@ Expected local endpoints:
 
 - web: `http://localhost:5173`
 - api: `http://localhost:3001`
-- presence websocket: `ws://localhost:3001/presence`
 - zero cache: `http://localhost:4848`
 
 ### 6. Local frontend environment
@@ -473,13 +488,29 @@ Expected local endpoints:
 The web app defaults to local endpoints if environment variables are not set:
 
 - `VITE_ZERO_CACHE_URL=http://localhost:4848`
-- `VITE_PRESENCE_WS_URL=ws://localhost:3001/presence`
+- `VITE_API_URL=http://localhost:3001`
 
 If you want to be explicit, create `apps/web/.env.local`:
 
 ```bash
 VITE_ZERO_CACHE_URL=http://localhost:4848
-VITE_PRESENCE_WS_URL=ws://localhost:3001/presence
+VITE_API_URL=http://localhost:3001
+```
+
+For Pusher Channels to work locally, you also need:
+
+```bash
+VITE_PUSHER_KEY=<your_pusher_key>
+VITE_PUSHER_CLUSTER=<your_pusher_cluster>
+```
+
+And in the root `.env` for the API:
+
+```bash
+PUSHER_APP_ID=<your_pusher_app_id>
+PUSHER_KEY=<your_pusher_key>
+PUSHER_SECRET=<your_pusher_secret>
+PUSHER_CLUSTER=<your_pusher_cluster>
 ```
 
 ## Environment Variables
@@ -495,12 +526,22 @@ The frontend only exposes Vite-prefixed variables to browser code.
 - Example local value: `http://localhost:4848`
 - Example production value: `https://<zero-domain>`
 
-#### `VITE_PRESENCE_WS_URL`
+#### `VITE_API_URL`
 
 - Required for production
-- WebSocket URL for the API presence endpoint
-- Example local value: `ws://localhost:3001/presence`
-- Example production value: `wss://<api-domain>/presence`
+- Base URL of the API service (used for Pusher auth, presence heartbeats, admin status)
+- Example local value: `http://localhost:3001`
+- Example production value: `https://<api-domain>`
+
+#### `VITE_PUSHER_KEY`
+
+- Required for production
+- Pusher Channels app key (from dashboard.pusher.com)
+
+#### `VITE_PUSHER_CLUSTER`
+
+- Required for production
+- Pusher Channels cluster (e.g. `us2`, `eu`, `ap1`)
 
 #### `VITE_STYLE_ONLY`
 
@@ -530,6 +571,22 @@ The frontend only exposes Vite-prefixed variables to browser code.
 #### `CLEANUP_SECRET`
 
 - Bearer token required for manual cleanup endpoint access
+
+#### `PUSHER_APP_ID`
+
+- Pusher Channels app ID (from dashboard.pusher.com)
+
+#### `PUSHER_KEY`
+
+- Pusher Channels app key
+
+#### `PUSHER_SECRET`
+
+- Pusher Channels app secret
+
+#### `PUSHER_CLUSTER`
+
+- Pusher Channels cluster (e.g. `us2`, `eu`, `ap1`)
 
 #### `DB_STATUS_KEY`
 
@@ -660,11 +717,12 @@ Browser
   |  HTTPS (static SPA)
   v
 Vercel: apps/web
-  |
-  |  HTTPS requests for build info
-  |  WSS for presence
-  |  Zero cache URL for realtime sync
-  v
+  |                          Pusher Channels
+  |  HTTPS for presence       (admin broadcasts,
+  |  heartbeat + Pusher auth   targeted messages)
+  |  Zero cache URL for          |
+  |  realtime sync               v
+  v                          Pusher Cloud
 Railway API -----------------------> Postgres
   ^                                    ^
   |                                    |
@@ -693,7 +751,9 @@ Required Vercel variables:
 
 ```bash
 VITE_ZERO_CACHE_URL=https://<zero-domain>
-VITE_PRESENCE_WS_URL=wss://<api-domain>/presence
+VITE_API_URL=https://<api-domain>
+VITE_PUSHER_KEY=<pusher_key>
+VITE_PUSHER_CLUSTER=<pusher_cluster>
 ```
 
 #### Why the rewrite matters
@@ -719,6 +779,10 @@ That means the current Railway deployment starts the TypeScript entrypoint throu
 NODE_ENV=production
 DATABASE_URL=<postgres_url>
 CLEANUP_SECRET=<strong_secret>
+PUSHER_APP_ID=<pusher_app_id>
+PUSHER_KEY=<pusher_key>
+PUSHER_SECRET=<pusher_secret>
+PUSHER_CLUSTER=<pusher_cluster>
 ```
 
 #### API service validation checklist
@@ -727,7 +791,7 @@ After deploy, verify:
 
 - `GET https://<api-domain>/health` returns `{ "ok": true }`
 - `GET https://<api-domain>/debug/build-info` returns metadata JSON
-- `wss://<api-domain>/presence` is reachable from the frontend
+- Pusher auth endpoint `POST https://<api-domain>/api/pusher/auth` is reachable
 
 ### Deploying Zero cache on Railway
 
@@ -783,7 +847,7 @@ Requirements regardless of provider:
 4. Deploy the Zero cache service to Railway.
 5. Configure the Zero service with the API query and mutate URLs.
 6. Deploy the web app to Vercel.
-7. Configure Vercel with the Zero cache URL and presence WebSocket URL.
+7. Configure Vercel with the Zero cache URL, API URL, and Pusher key/cluster.
 8. Open the web app and run smoke tests.
 
 ### Smoke test checklist after deploy
@@ -814,16 +878,16 @@ The frontend includes connection-debug plumbing that tracks:
 
 - Zero connection state
 - Zero online/offline events
-- presence WebSocket state and connect latency
+- API heartbeat latency
 - API metadata probe status and latency
 
 This is useful when diagnosing issues that otherwise look like generic “realtime is broken” symptoms.
 
 ### Presence semantics
 
-Presence is inferred from recent heartbeats rather than a durable authentication/session framework. If you change the heartbeat cadence or timeout assumptions, make sure to update both:
+Presence is inferred from recent HTTP heartbeats (every 60 seconds) rather than a durable authentication/session framework. If you change the heartbeat cadence or timeout assumptions, make sure to update both:
 
-- client heartbeat timing
+- client heartbeat timing in `usePresenceSocket`
 - backend stale/presence cutoff logic
 
 ### Cleanup semantics
@@ -888,7 +952,9 @@ apps/web/src/mobile/
 
 - [docs/deployment-vercel-railway.md](docs/deployment-vercel-railway.md)
 - [docs/game-chain-reaction.md](docs/game-chain-reaction.md)
+- [docs/game-location-signal.md](docs/game-location-signal.md)
 - [docs/game-shade-signal.md](docs/game-shade-signal.md)
+- [docs/todo-location-signal.md](docs/todo-location-signal.md)
 
 ## Quick Start
 

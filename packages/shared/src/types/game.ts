@@ -1,9 +1,10 @@
-export type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal";
+export type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 
 export type ImposterPhase = "lobby" | "playing" | "voting" | "results";
 export type PasswordPhase = "lobby" | "playing" | "results";
 export type ChainReactionPhase = "lobby" | "submitting" | "playing" | "finished" | "ended";
 export type ShadeSignalPhase = "lobby" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended";
+export type LocationSignalPhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "clue3" | "guess3" | "clue4" | "guess4" | "reveal" | "finished" | "ended";
 
 export type SessionRecord = {
   id: string;

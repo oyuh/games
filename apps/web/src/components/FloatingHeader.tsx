@@ -11,6 +11,7 @@ import { ImposterDemo } from "./demos/ImposterDemo";
 import { PasswordDemo } from "./demos/PasswordDemo";
 import { ChainDemo } from "./demos/ChainDemo";
 import { ShadeDemo } from "./demos/ShadeDemo";
+import { LocationDemo } from "./demos/LocationDemo";
 import { useSettings } from "../lib/settings";
 import { getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
@@ -26,8 +27,9 @@ function useGameContext(): GameContext | null {
   const passwordMatch = location.pathname.match(/^\/password\/([^/]+)/);
   const chainMatch2 = location.pathname.match(/^\/chain\/([^/]+)/);
   const shadeMatch = location.pathname.match(/^\/shade\/([^/]+)/);
-  const gameType = imposterMatch ? "imposter" as const : passwordMatch ? "password" as const : chainMatch2 ? "chain_reaction" as const : shadeMatch ? "shade_signal" as const : null;
-  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch2?.[1] ?? shadeMatch?.[1] ?? "";
+  const locationMatch = location.pathname.match(/^\/location\/([^/]+)/);
+  const gameType = imposterMatch ? "imposter" as const : passwordMatch ? "password" as const : chainMatch2 ? "chain_reaction" as const : shadeMatch ? "shade_signal" as const : locationMatch ? "location_signal" as const : null;
+  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch2?.[1] ?? shadeMatch?.[1] ?? locationMatch?.[1] ?? "";
 
   const [imposterGames] = useQuery(
     gameType === "imposter"
@@ -48,6 +50,11 @@ function useGameContext(): GameContext | null {
     gameType === "shade_signal"
       ? queries.shadeSignal.byId({ id: gameId })
       : queries.shadeSignal.byId({ id: "__none__" })
+  );
+  const [locationGames] = useQuery(
+    gameType === "location_signal"
+      ? queries.locationSignal.byId({ id: gameId })
+      : queries.locationSignal.byId({ id: "__none__" })
   );
 
   const [sessions] = useQuery(
@@ -108,8 +115,19 @@ function useGameContext(): GameContext | null {
         spectators: game.spectators ?? [],
       };
     }
+    if (gameType === "location_signal") {
+      const game = locationGames[0];
+      if (!game || game.host_id !== sessionId) return null;
+      return {
+        type: "location_signal",
+        gameId: game.id,
+        hostId: game.host_id,
+        players: game.players,
+        spectators: game.spectators ?? [],
+      };
+    }
     return null;
-  }, [gameType, imposterGames, passwordGames, chainGames, shadeGames, sessions, sessionId]);
+  }, [gameType, imposterGames, passwordGames, chainGames, shadeGames, locationGames, sessions, sessionId]);
 }
 
 /* ── Phase → demo step mappings ─────────────────────────── */
@@ -118,34 +136,39 @@ const IMPOSTER_STEP: Record<string, number> = { lobby: 0, playing: 1, voting: 3,
 const PASSWORD_STEP: Record<string, number> = { lobby: 0, playing: 1, results: 3, finished: 3 };
 const CHAIN_STEP: Record<string, number> = { lobby: 0, submitting: 1, playing: 2, finished: 4 };
 const SHADE_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, guess1: 2, clue2: 3, guess2: 3, reveal: 4, finished: 4 };
+const LOCATION_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, guess1: 2, clue2: 3, guess2: 3, clue3: 3, guess3: 3, clue4: 3, guess4: 3, reveal: 4, finished: 4 };
 
-function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "shade" | null; step: number } {
+function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "shade" | "location" | null; step: number } {
   const location = useLocation();
   const imposterMatch = location.pathname.match(/^\/imposter\/([^/]+)/);
   const passwordMatch = location.pathname.match(/^\/password\/([^/]+)/);
   const chainMatch = location.pathname.match(/^\/chain\/([^/]+)/);
   const shadeMatch = location.pathname.match(/^\/shade\/([^/]+)/);
+  const locationMatch = location.pathname.match(/^\/location\/([^/]+)/);
 
   const detected = imposterMatch ? "imposter" as const
     : passwordMatch ? "password" as const
     : chainMatch ? "chain" as const
     : shadeMatch ? "shade" as const
+    : locationMatch ? "location" as const
     : null;
 
-  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch?.[1] ?? shadeMatch?.[1] ?? "";
+  const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch?.[1] ?? shadeMatch?.[1] ?? locationMatch?.[1] ?? "";
 
   const [imp] = useQuery(detected === "imposter" ? queries.imposter.byId({ id: gameId }) : queries.imposter.byId({ id: "__none__" }));
   const [pwd] = useQuery(detected === "password" ? queries.password.byId({ id: gameId }) : queries.password.byId({ id: "__none__" }));
   const [chr] = useQuery(detected === "chain" ? queries.chainReaction.byId({ id: gameId }) : queries.chainReaction.byId({ id: "__none__" }));
   const [shd] = useQuery(detected === "shade" ? queries.shadeSignal.byId({ id: gameId }) : queries.shadeSignal.byId({ id: "__none__" }));
+  const [loc] = useQuery(detected === "location" ? queries.locationSignal.byId({ id: gameId }) : queries.locationSignal.byId({ id: "__none__" }));
 
   return useMemo(() => {
     if (detected === "imposter") return { gameType: "imposter", step: IMPOSTER_STEP[imp[0]?.phase ?? "lobby"] ?? 0 };
     if (detected === "password") return { gameType: "password", step: PASSWORD_STEP[pwd[0]?.phase ?? "lobby"] ?? 0 };
     if (detected === "chain") return { gameType: "chain", step: CHAIN_STEP[chr[0]?.phase ?? "lobby"] ?? 0 };
     if (detected === "shade") return { gameType: "shade", step: SHADE_STEP[shd[0]?.phase ?? "lobby"] ?? 0 };
+    if (detected === "location") return { gameType: "location", step: LOCATION_STEP[loc[0]?.phase ?? "lobby"] ?? 0 };
     return { gameType: null, step: 0 };
-  }, [detected, imp, pwd, chr, shd]);
+  }, [detected, imp, pwd, chr, shd, loc]);
 }
 
 export function Sidebar() {
@@ -161,7 +184,7 @@ export function Sidebar() {
   const sessionId = getOrCreateSessionId();
   const chat = useChatContext();
 
-  const isInGame = /^\/(imposter|password|chain|shade)\//.test(location.pathname);
+  const isInGame = /^\/(imposter|password|chain|shade|location)\//.test(location.pathname);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -255,6 +278,7 @@ export function Sidebar() {
       {modal === "info" && demoInfo.gameType === "password" && <PasswordDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
       {modal === "info" && demoInfo.gameType === "chain" && <ChainDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
       {modal === "info" && demoInfo.gameType === "shade" && <ShadeDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
+      {modal === "info" && demoInfo.gameType === "location" && <LocationDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
       {modal === "info" && !demoInfo.gameType && <InfoModal onClose={() => setModal(null)} />}
       {modal === "host" && gameContext && (
         <HostControlsModal game={gameContext} sessionId={sessionId} onClose={() => setModal(null)} />

@@ -7,6 +7,7 @@ import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
+import { BorringAvatar } from "../../components/shared/BorringAvatar";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
@@ -180,7 +181,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       <div className="m-card">
         <h3 className="m-card-title">Players <span style={{ opacity: 0.5, fontWeight: 400 }}>{game.players.filter((p) => !p.eliminated).length}/{game.players.length}</span></h3>
         <div className="m-player-chips">
-          {game.players.map((p) => {
+          {game.players.map((p, playerIndex) => {
             const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
             const showRole = revealRoles || p.sessionId === mobileVotedOutId;
             const isImposter = showRole && p.role === "imposter";
@@ -192,7 +193,12 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                 className={`m-player-chip${isImposter ? " m-player-chip--danger" : ""}${isMe ? " m-player-chip--me" : ""}${isEliminated ? " m-player-chip--eliminated" : ""}`}
                 style={isEliminated ? { opacity: 0.45, textDecoration: "line-through" } : undefined}
               >
-                <span className="m-player-avatar">{isEliminated ? "☠" : (name[0] ?? "?").toUpperCase()}</span>
+                <span className="m-player-avatar">{isEliminated ? "☠" : (
+                  <BorringAvatar
+                    seed={p.sessionId}
+                    playerIndex={playerIndex}
+                  />
+                )}</span>
                 <span>{name}</span>
                 {isEliminated && <span className="m-badge m-badge--muted" style={{ fontSize: "0.6rem" }}>OUT</span>}
                 {!isEliminated && isImposter && <span className="m-badge m-badge--danger" style={{ fontSize: "0.6rem" }}>IMP</span>}
@@ -324,6 +330,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               <form className="m-input-row" onSubmit={submitClue} style={{ marginTop: "0.75rem" }}>
                 <input
                   className="m-input"
+                  autoFocus
                   style={{ flex: 1 }}
                   value={clue}
                   onChange={(e) => setClue(e.target.value)}
@@ -397,7 +404,12 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                           className={`m-vote-card${selected ? " m-vote-card--selected" : ""}`}
                           onClick={() => setVoteTarget(p.sessionId)}
                         >
-                          <span className="m-player-avatar">{(name[0] ?? "?").toUpperCase()}</span>
+                          <span className="m-player-avatar">
+                            <BorringAvatar
+                              seed={p.sessionId}
+                              playerIndex={game.players.findIndex(pl => pl.sessionId === p.sessionId)}
+                            />
+                          </span>
                           <span>{name}</span>
                           {selected && <FiCheck size={14} />}
                         </button>

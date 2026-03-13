@@ -210,5 +210,59 @@ export const demoMutators = {
         updated_at: ts
       });
     }
+  ),
+  seedLocationSignal: defineMutator(
+    z.object({
+      id: z.string(),
+      hostId: z.string(),
+      phase: z.enum(["lobby", "picking", "clue1", "guess1", "clue2", "guess2", "clue3", "guess3", "clue4", "guess4", "reveal", "finished"]),
+      players: z.array(z.object({ sessionId: z.string(), name: z.string().nullable(), connected: z.boolean(), totalScore: z.number() })),
+      leaderId: z.string().nullable(),
+      leaderOrder: z.array(z.string()),
+      targetLat: z.number().nullable(),
+      targetLng: z.number().nullable(),
+      clue1: z.string().nullable(),
+      clue2: z.string().nullable(),
+      clue3: z.string().nullable(),
+      clue4: z.string().nullable(),
+      guesses: z.array(z.object({ sessionId: z.string(), round: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]), lat: z.number(), lng: z.number() })),
+      currentRound: z.number(),
+      phaseEndsAt: z.number().nullable(),
+      cluePairs: z.number().min(1).max(4).optional()
+    }),
+    async ({ args, tx }) => {
+      const ts = now();
+      await tx.mutate.location_signal_games.insert({
+        id: args.id,
+        code: code(),
+        host_id: args.hostId,
+        phase: args.phase,
+        players: args.players,
+        leader_id: args.leaderId,
+        leader_order: args.leaderOrder,
+        current_leader_index: 0,
+        target_lat: args.targetLat,
+        target_lng: args.targetLng,
+        clue1: args.clue1,
+        clue2: args.clue2,
+        clue3: args.clue3,
+        clue4: args.clue4,
+        guesses: args.guesses,
+        round_history: [],
+        kicked: [],
+        spectators: [],
+        announcement: null,
+        settings: {
+          clueDurationSec: 45,
+          guessDurationSec: 45,
+          roundsPerPlayer: 1,
+          currentRound: args.currentRound,
+          phaseEndsAt: args.phaseEndsAt,
+          cluePairs: args.cluePairs ?? 2,
+        },
+        created_at: ts,
+        updated_at: ts,
+      });
+    }
   )
 };

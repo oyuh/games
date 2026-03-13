@@ -193,7 +193,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                   <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)" }}>{ar.word}</span>
                 </div>
                 <form className="m-input-row" onSubmit={submitClue}>
-                  <input className="m-input" style={{ flex: 1 }} value={clue} onChange={(e) => setClue(e.target.value)} placeholder="Enter clue…" maxLength={80} />
+                  <input className="m-input" autoFocus style={{ flex: 1 }} value={clue} onChange={(e) => setClue(e.target.value)} placeholder="Enter clue…" maxLength={80} />
                   <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}><FiSend size={14} /></button>
                 </form>
                 <p className="m-progress-text">Clues: {ar.clues.length} / {clueGiverCount}</p>
@@ -221,7 +221,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                 </div>
                 {isGuesser ? (
                   <form className="m-input-row" onSubmit={submitGuess}>
-                    <input className="m-input" style={{ flex: 1 }} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Your guess…" maxLength={80} />
+                    <input className="m-input" autoFocus style={{ flex: 1 }} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Your guess…" maxLength={80} />
                     <button type="submit" className="m-btn m-btn-primary" disabled={!guess.trim()}><FiSend size={14} /> Guess</button>
                   </form>
                 ) : (

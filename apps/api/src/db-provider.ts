@@ -1,10 +1,19 @@
 import { schema as zeroSchema } from "@games/shared";
-import { chainReactionGames, imposterGames, passwordGames, sessions, statusTable } from "@games/shared";
+import { chainReactionGames, imposterGames, passwordGames, shadeSignalGames, locationSignalGames, sessions, statusTable } from "@games/shared";
 import { zeroDrizzle } from "@rocicorp/zero/server/adapters/drizzle";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
+const currentDir = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(currentDir, "../../../.env") });
+
 const connStr = process.env.DATABASE_URL ?? process.env.ZERO_UPSTREAM_DB ?? "";
+if (!connStr) {
+  throw new Error("Missing database connection string. Set DATABASE_URL (or ZERO_UPSTREAM_DB) in the root .env file.");
+}
 const url = new URL(connStr);
 
 function isLocalHostname(hostname: string) {
@@ -61,7 +70,9 @@ export const drizzleClient = drizzle(pool, {
     statusTable,
     imposterGames,
     passwordGames,
-    chainReactionGames
+    chainReactionGames,
+    shadeSignalGames,
+    locationSignalGames
   }
 });
 

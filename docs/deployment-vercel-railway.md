@@ -2,9 +2,10 @@
 
 This guide is for deploying this monorepo with:
 - **Web (React/Vite)** on **Vercel**
-- **API + Presence WebSocket (Hono/Node)** on **Railway**
+- **API (Hono/Node)** on **Railway**
 - **Zero Cache** on **Railway** (separate service)
 - **Postgres** on Railway Postgres or Neon
+- **Pusher Channels** for admin broadcasts and targeted messaging
 
 It is written as a setup runbook so you can wire everything once and then get automated deploys from Git pushes.
 
@@ -13,7 +14,7 @@ It is written as a setup runbook so you can wire everything once and then get au
 ## 1) Deployment architecture
 
 - `apps/web` → static frontend on Vercel
-- `apps/api` → Node server on Railway (serves HTTP API + Presence WS at `/presence`)
+- `apps/api` → Node server on Railway (serves HTTP API, Pusher auth, presence heartbeats)
 - `zero-cache` → dedicated Railway service running `@rocicorp/zero`
 - DB → Postgres (`DATABASE_URL`)
 - Zero cache URL used by web client via `VITE_ZERO_CACHE_URL`
@@ -68,6 +69,15 @@ NODE_ENV=production
 
 # Database
 DATABASE_URL=<railway_or_neon_postgres_url>
+
+# Pusher Channels (from dashboard.pusher.com → Channels → App Keys)
+PUSHER_APP_ID=<your_app_id>
+PUSHER_KEY=<your_key>
+PUSHER_SECRET=<your_secret>
+PUSHER_CLUSTER=<your_cluster>
+
+# Cleanup
+CLEANUP_SECRET=<strong_secret>
 ```
 
 ## 3.3 Zero environment variables (Railway)
@@ -101,11 +111,13 @@ Postgres requirements for Zero:
    - API: `GET /health` → `{ "ok": true }`
    - Zero: `GET /` should return a non-502 response once running.
 
-## 3.5 Presence WebSocket
+## 3.5 Presence and broadcasts
 
-Presence is served by the API service on the same public domain and port at path `/presence`.
+Presence is handled via HTTP heartbeats (`POST /api/presence/heartbeat`) every 60 seconds from the client.
 
-- Client URL should be: `wss://<api-domain>/presence`
+Admin broadcasts (toasts, kicks, custom status) are delivered through Pusher Channels. The API triggers events on Pusher, and clients subscribe using `pusher-js`. Channel authentication goes through `POST /api/pusher/auth`.
+
+No WebSocket servers are hosted by the API service.
 
 ---
 
@@ -122,7 +134,9 @@ Presence is served by the API service on the same public domain and port at path
 
 ```bash
 VITE_ZERO_CACHE_URL=https://<zero-domain>
-VITE_PRESENCE_WS_URL=wss://<api-domain>/presence
+VITE_API_URL=https://<api-domain>
+VITE_PUSHER_KEY=<pusher_key>
+VITE_PUSHER_CLUSTER=<pusher_cluster>
 ```
 
 5. Add SPA fallback rewrite in Vercel project settings (or `vercel.json`):
@@ -170,8 +184,9 @@ Run after each production deploy:
 2. Create/join Imposter room.
 3. Create/join Password room.
 4. Confirm realtime updates across two browser tabs.
-5. Confirm disconnect/reconnect updates presence.
-6. Confirm timers advance phases correctly.
+5. Confirm presence heartbeats update session liveness.
+6. Confirm admin broadcasts (toasts) arrive via Pusher.
+7. Confirm timers advance phases correctly.
 7. Confirm API health endpoint returns OK.
 8. Confirm Zero endpoint responds and no `ZERO_PORT` parse errors in logs.
 
@@ -188,7 +203,8 @@ Run after each production deploy:
 ## 9) Common gotchas
 
 - Do not define `ZERO_PORT` as `"$PORT"` in Railway variables.
-- `VITE_PRESENCE_WS_URL` must be `wss://` in production and should point to `/presence` on your API domain.
+- `VITE_API_URL` must point to your Railway API domain (e.g. `https://<api-domain>`).
+- `VITE_PUSHER_KEY` and `VITE_PUSHER_CLUSTER` must match your Pusher Channels app (not Pusher Beams — they are different products).
 - `VITE_ZERO_CACHE_URL` must point to the Zero service public domain.
 - If deep links (`/imposter/:id`) 404 on refresh, SPA rewrite is missing.
 - If Zero logs show `wal_level=replica`, fix Postgres to `wal_level=logical` on the exact upstream endpoint.

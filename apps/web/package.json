@@ -14,9 +14,11 @@
   "dependencies": {
     "@games/shared": "workspace:*",
     "@rocicorp/zero": "0.25.13",
+    "boring-avatars": "^2.0.4",
     "flowbite": "^3.1.2",
     "flowbite-react": "^0.10.2",
     "nanoid": "^5.1.5",
+    "pigeon-maps": "^0.22.1",
     "pusher-js": "^8.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

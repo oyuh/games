@@ -50,12 +50,18 @@ function AppShellInner() {
       ? queries.shadeSignal.byId({ id: gameId })
       : queries.shadeSignal.byId({ id: "__none__" })
   );
+  const [locationGames] = useQuery(
+    gameType === "location_signal"
+      ? queries.locationSignal.byId({ id: gameId })
+      : queries.locationSignal.byId({ id: "__none__" })
+  );
   const [sessions] = useQuery(queries.sessions.byId({ id: sessionId }));
 
   const hostId = gameType === "imposter" ? (imposterGames[0]?.host_id ?? "")
     : gameType === "password" ? (passwordGames[0]?.host_id ?? "")
     : gameType === "chain_reaction" ? (chainGames[0]?.host_id ?? "")
     : gameType === "shade_signal" ? (shadeGames[0]?.host_id ?? "")
+    : gameType === "location_signal" ? (locationGames[0]?.host_id ?? "")
     : "";
 
   const myName = sessions[0]?.name ?? sessionId.slice(0, 6);
