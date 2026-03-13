@@ -5,7 +5,8 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiSearch, FiUsers, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { PiPaintBrushBold } from "react-icons/pi";
-import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, markVisited, setStoredName } from "../../lib/session";
+import { InSessionModal } from "../../components/shared/InSessionModal";
+import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, SessionGameType, setStoredName } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 
 const adjectives = [
@@ -52,6 +53,10 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
   const [shadeMatches] = useQuery(queries.shadeSignal.byCode({ code: joinCode || "______" }));
   const [locationMatches] = useQuery(queries.locationSignal.byCode({ code: joinCode || "______" }));
+  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
+  const [showInSessionModal, setShowInSessionModal] = useState(false);
+  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
+  const [pendingJoinTarget, setPendingJoinTarget] = useState<{ gameType: SessionGameType; gameId: string; code: string; route: string } | null>(null);
 
   // Game configs
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -168,54 +173,129 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     const normalizedCode = joinCode.trim().toUpperCase();
     if (!normalizedCode) { showToast("Enter a join code first.", "error"); setPendingAction(null); return; }
     ensureName();
+
+    const mySession = mySessionRows[0] ?? null;
+    const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+    const activeGameId = mySession?.game_id ?? null;
+
+    const queueJoinIfNeeded = (target: { gameType: SessionGameType; gameId: string; code: string; route: string }) => {
+      const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== target.gameType || activeGameId !== target.gameId));
+      if (inAnotherGame) {
+        if (activeGameType && activeGameId) {
+          void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+            .catch(() => showToast("Couldn't leave previous game cleanly", "error"));
+        }
+      }
+      return false;
+    };
+
+    const performJoinTarget = async (target: { gameType: SessionGameType; gameId: string; code: string; route: string }) => {
+      if (target.gameType === "imposter") {
+        const result = await zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })).server;
+        if (result.type === "error") { showToast(result.error.message, "error"); return; }
+      } else if (target.gameType === "password") {
+        const result = await zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })).server;
+        if (result.type === "error") { showToast(result.error.message, "error"); return; }
+      } else if (target.gameType === "chain_reaction") {
+        const result = await zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })).server;
+        if (result.type === "error") { showToast(result.error.message, "error"); return; }
+      } else if (target.gameType === "shade_signal") {
+        const result = await zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })).server;
+        if (result.type === "error") { showToast(result.error.message, "error"); return; }
+      } else {
+        const result = await zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })).server;
+        if (result.type === "error") { showToast(result.error.message, "error"); return; }
+      }
+      addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
+      setRecentGames(getRecentGames());
+      navigate(target.route);
+    };
+
     try {
       const imposterGame = imposterMatches[0];
       if (imposterGame) {
-        const result = await zero.mutate(mutators.imposter.join({ gameId: imposterGame.id, sessionId })).server;
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        addRecentGame({ id: imposterGame.id, code: imposterGame.code, gameType: "imposter" });
-        setRecentGames(getRecentGames());
-        navigate(`/imposter/${imposterGame.id}`);
+        const target = { gameType: "imposter" as const, gameId: imposterGame.id, code: imposterGame.code, route: `/imposter/${imposterGame.id}` };
+        if (queueJoinIfNeeded(target)) return;
+        await performJoinTarget(target);
         return;
       }
       const passwordGame = passwordMatches[0];
       if (passwordGame) {
-        const result = await zero.mutate(mutators.password.join({ gameId: passwordGame.id, sessionId })).server;
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        addRecentGame({ id: passwordGame.id, code: passwordGame.code, gameType: "password" });
-        setRecentGames(getRecentGames());
-        navigate(`/password/${passwordGame.id}/begin`);
+        const target = { gameType: "password" as const, gameId: passwordGame.id, code: passwordGame.code, route: `/password/${passwordGame.id}/begin` };
+        if (queueJoinIfNeeded(target)) return;
+        await performJoinTarget(target);
         return;
       }
       const chainGame = chainMatches[0];
       if (chainGame) {
-        const result = await zero.mutate(mutators.chainReaction.join({ gameId: chainGame.id, sessionId })).server;
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        addRecentGame({ id: chainGame.id, code: chainGame.code, gameType: "chain_reaction" });
-        setRecentGames(getRecentGames());
-        navigate(`/chain/${chainGame.id}`);
+        const target = { gameType: "chain_reaction" as const, gameId: chainGame.id, code: chainGame.code, route: `/chain/${chainGame.id}` };
+        if (queueJoinIfNeeded(target)) return;
+        await performJoinTarget(target);
         return;
       }
       const shadeGame = shadeMatches[0];
       if (shadeGame) {
-        const result = await zero.mutate(mutators.shadeSignal.join({ gameId: shadeGame.id, sessionId })).server;
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        addRecentGame({ id: shadeGame.id, code: shadeGame.code, gameType: "shade_signal" });
-        setRecentGames(getRecentGames());
-        navigate(`/shade/${shadeGame.id}`);
+        const target = { gameType: "shade_signal" as const, gameId: shadeGame.id, code: shadeGame.code, route: `/shade/${shadeGame.id}` };
+        if (queueJoinIfNeeded(target)) return;
+        await performJoinTarget(target);
         return;
       }
       const locationGame = locationMatches[0];
       if (locationGame) {
-        const result = await zero.mutate(mutators.locationSignal.join({ gameId: locationGame.id, sessionId })).server;
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        addRecentGame({ id: locationGame.id, code: locationGame.code, gameType: "location_signal" });
-        setRecentGames(getRecentGames());
-        navigate(`/location/${locationGame.id}`);
+        const target = { gameType: "location_signal" as const, gameId: locationGame.id, code: locationGame.code, route: `/location/${locationGame.id}` };
+        if (queueJoinIfNeeded(target)) return;
+        await performJoinTarget(target);
         return;
       }
       showToast("No game found for that code.", "error");
     } finally { setPendingAction(null); }
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!pendingJoinTarget) {
+      setShowInSessionModal(false);
+      return;
+    }
+    const mySession = mySessionRows[0] ?? null;
+    const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+    const activeGameId = mySession?.game_id ?? null;
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      setPendingJoinTarget(null);
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(async () => {
+        const target = pendingJoinTarget;
+        if (!target) return;
+        if (target.gameType === "imposter") {
+          const result = await zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })).server;
+          if (result.type === "error") { showToast(result.error.message, "error"); return; }
+        } else if (target.gameType === "password") {
+          const result = await zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })).server;
+          if (result.type === "error") { showToast(result.error.message, "error"); return; }
+        } else if (target.gameType === "chain_reaction") {
+          const result = await zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })).server;
+          if (result.type === "error") { showToast(result.error.message, "error"); return; }
+        } else if (target.gameType === "shade_signal") {
+          const result = await zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })).server;
+          if (result.type === "error") { showToast(result.error.message, "error"); return; }
+        } else {
+          const result = await zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })).server;
+          if (result.type === "error") { showToast(result.error.message, "error"); return; }
+        }
+        addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
+        setRecentGames(getRecentGames());
+        navigate(target.route);
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => {
+        setJoiningFromOtherGame(false);
+        setShowInSessionModal(false);
+        setPendingJoinTarget(null);
+        setPendingAction(null);
+      });
   };
 
   const toggle = (key: string) => setExpanded(expanded === key ? null : key);
@@ -535,7 +615,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         <div className="m-game-card-tags">
           <span className="m-tag">2–10 players</span>
           <span className="m-tag">Geography</span>
-          <span className="m-tag">Golf scoring</span>
+          <span className="m-tag">Distance Scoring</span>
         </div>
         {expanded === "location" && (
           <div className="m-game-card-config">
@@ -569,6 +649,19 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           </div>
         )}
       </div>
+
+      {showInSessionModal && pendingJoinTarget && (
+        <InSessionModal
+          gameType={pendingJoinTarget.gameType}
+          busy={joiningFromOtherGame}
+          onCancel={() => {
+            setShowInSessionModal(false);
+            setPendingJoinTarget(null);
+            setPendingAction(null);
+          }}
+          onConfirm={confirmLeaveAndJoin}
+        />
+      )}
     </div>
   );
 }

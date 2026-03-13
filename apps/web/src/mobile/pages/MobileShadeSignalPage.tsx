@@ -6,12 +6,13 @@ import { FiClock, FiLogIn, FiSend } from "react-icons/fi";
 import { ColorGrid, generateGridColor } from "../../components/shade/ColorGrid";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { InSessionModal } from "../../components/shared/InSessionModal";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
-import { addRecentGame } from "../../lib/session";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
@@ -68,11 +69,14 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.shadeSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "shade_signal", gameId }));
+  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [guessLocked, setGuessLocked] = useState(false);
   const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
+  const [showInSessionModal, setShowInSessionModal] = useState(false);
+  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "shade_signal" });
@@ -82,6 +86,10 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game?.spectators, sessionId]);
+  const mySession = mySessionRows[0];
+  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+  const activeGameId = mySession?.game_id ?? null;
+  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "shade_signal" || activeGameId !== gameId));
   const isSpectatorRef = useRef(false);
   isSpectatorRef.current = isSpectator;
 
@@ -284,6 +292,48 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const joinGame = () => {
+    ensureName(zero, sessionId);
+    if (isSpectator) {
+      void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId }))
+        .client.then(() => zero.mutate(mutators.shadeSignal.join({ gameId, sessionId })))
+        .catch(() => showToast("Couldn't join game", "error"));
+      return;
+    }
+    void zero.mutate(mutators.shadeSignal.join({ gameId, sessionId }))
+      .client.catch(() => showToast("Couldn't join game", "error"));
+  };
+
+  const handleJoinClick = () => {
+    if (inAnotherGame && activeGameType && activeGameId) {
+      setJoiningFromOtherGame(true);
+      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+        .catch(() => showToast("Couldn't leave current game", "error"))
+        .finally(() => {
+          setJoiningFromOtherGame(false);
+          joinGame();
+        });
+      return;
+    }
+    joinGame();
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      joinGame();
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(() => {
+        setShowInSessionModal(false);
+        joinGame();
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => setJoiningFromOtherGame(false));
+  };
+
   const guessersCount = game.players.filter((p) => p.sessionId !== game.leader_id).length;
   const latestRound = game.round_history[game.round_history.length - 1];
 
@@ -343,11 +393,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       {phase === "lobby" && !inGame && (
         <div className="m-section">
           <p className="m-text-muted m-text-center">{isSpectator ? "You're spectating. Join to play!" : "You're not in this lobby yet."}</p>
-          <button className="m-btn m-btn-primary"
-            onClick={() => {
-              if (isSpectator) void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId })).client.then(() => zero.mutate(mutators.shadeSignal.join({ gameId, sessionId }))).catch(() => showToast("Couldn't join game", "error"));
-              else void zero.mutate(mutators.shadeSignal.join({ gameId, sessionId })).client.catch(() => showToast("Couldn't join game", "error"));
-            }}>
+          <button className="m-btn m-btn-primary" onClick={handleJoinClick}>
             <FiLogIn size={16} /> Join Game
           </button>
         </div>
@@ -683,6 +729,15 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
             )}
           </div>
         </div>
+      )}
+
+      {showInSessionModal && activeGameType && (
+        <InSessionModal
+          gameType={activeGameType}
+          busy={joiningFromOtherGame}
+          onCancel={() => setShowInSessionModal(false)}
+          onConfirm={confirmLeaveAndJoin}
+        />
       )}
     </div>
   );

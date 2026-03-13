@@ -150,12 +150,42 @@ export function TooltipLayer() {
       if (activeRef.current) hideTip();
     }
 
+    // Watch for data-tooltip attribute changes so the tooltip updates live
+    // (e.g. "Copied!" after clicking a copy button).  If the tooltip is
+    // currently hidden but the pointer is still over the target, re-show it.
+    let lastHoverTarget: Element | null = null;
+
+    function trackHover(e: Event) {
+      lastHoverTarget = (e.target as Element).closest?.("[data-tooltip]") ?? null;
+    }
+
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type !== "attributes" || m.attributeName !== "data-tooltip") continue;
+        const el = m.target as Element;
+        const newText = el.getAttribute("data-tooltip");
+        if (!newText) continue;
+
+        if (el === activeRef.current) {
+          // Tooltip is currently shown for this element — update text inline
+          textEl.textContent = newText;
+        } else if (el === lastHoverTarget) {
+          // Tooltip was hidden (e.g. by mousedown) but pointer is still over this element
+          showTip(el);
+        }
+      }
+    });
+    observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ["data-tooltip"] });
+
     document.addEventListener("mouseover", onMouseOver, true);
+    document.addEventListener("mouseover", trackHover, true);
     document.addEventListener("scroll", onScroll, true);
     document.addEventListener("mousedown", onMouseDown, true);
 
     return () => {
+      observer.disconnect();
       document.removeEventListener("mouseover", onMouseOver, true);
+      document.removeEventListener("mouseover", trackHover, true);
       document.removeEventListener("scroll", onScroll, true);
       document.removeEventListener("mousedown", onMouseDown, true);
       if (activeRef.current) {

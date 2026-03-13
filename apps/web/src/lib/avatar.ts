@@ -17,12 +17,16 @@ export const AVATAR_COLORS = [
   "#00B894"   // Organic Green
 ];
 
+function colorAt(index: number): string {
+  return AVATAR_COLORS[index % AVATAR_COLORS.length] ?? AVATAR_COLORS[0] ?? "#4ECDC4";
+}
+
 /**
  * Get avatar color for a player based on their index in the players array
  * Cycles through the color palette to ensure distinct colors within a game
  */
 export function getPlayerColor(playerIndex: number): string {
-  return AVATAR_COLORS[playerIndex % AVATAR_COLORS.length];
+  return colorAt(playerIndex);
 }
 
 /**
@@ -32,7 +36,7 @@ export function getAvatarColors(playerIndex: number): string[] {
   const start = (playerIndex * 3) % AVATAR_COLORS.length;
   const colors: string[] = [];
   for (let i = 0; i < 5; i++) {
-    colors.push(AVATAR_COLORS[(start + i) % AVATAR_COLORS.length]);
+    colors.push(colorAt(start + i));
   }
   return colors;
 }

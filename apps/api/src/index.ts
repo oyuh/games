@@ -133,10 +133,8 @@ app.post("/api/pusher/auth", async (c) => {
 // ─── Presence heartbeat (replaces WebSocket presence) ───────
 app.post("/api/presence/heartbeat", async (c) => {
   const body = await c.req.json();
-  const { sessionId, gameId, gameType } = body as {
+  const { sessionId } = body as {
     sessionId?: string;
-    gameId?: string;
-    gameType?: string;
   };
 
   if (!sessionId) {
@@ -146,8 +144,6 @@ app.post("/api/presence/heartbeat", async (c) => {
   await drizzleClient
     .update(sessions)
     .set({
-      gameId: gameId ?? null,
-      gameType: (gameType as any) ?? null,
       lastSeen: Date.now(),
     })
     .where(eq(sessions.id, sessionId));

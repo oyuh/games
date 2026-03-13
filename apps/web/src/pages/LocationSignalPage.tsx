@@ -2,18 +2,19 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiLogIn, FiLogOut, FiSend, FiMapPin } from "react-icons/fi";
-import { PiCrownSimpleFill } from "react-icons/pi";
+import { FiLogIn, FiLogOut, FiSend, FiMapPin, FiHelpCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
+import { InSessionModal } from "../components/shared/InSessionModal";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
-import { addRecentGame } from "../lib/session";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 
 import { MobileLocationSignalPage } from "../mobile/pages/MobileLocationSignalPage";
 import { WorldMap, MapMarker } from "../components/location/WorldMap";
+import { LocationDemo } from "../components/demos/LocationDemo";
 
 type LocPhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "clue3" | "guess3" | "clue4" | "guess4" | "reveal" | "finished" | "ended";
 
@@ -29,11 +30,14 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.locationSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "location_signal", gameId }));
-  useQuery(queries.sessions.byId({ id: sessionId }));
+  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
 
   const [draftClue, setDraftClue] = useState("");
   const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
+  const [showDemo, setShowDemo] = useState(false);
+  const [showInSessionModal, setShowInSessionModal] = useState(false);
+  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "location_signal" });
@@ -43,6 +47,10 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
   const inGame = Boolean(me);
   const isLeader = game?.leader_id === sessionId;
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
+  const mySession = mySessionRows[0];
+  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+  const activeGameId = mySession?.game_id ?? null;
+  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "location_signal" || activeGameId !== gameId));
 
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
@@ -241,6 +249,11 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
       markers.push({ lat: draftMarker.lat, lng: draftMarker.lng, color: "#ef476f", label: "Your pick", size: 3.5, pulse: true });
     }
 
+    // Leader always sees the target they placed
+    if (isLeader && game.target_lat != null && game.target_lng != null && phase !== "picking" && phase !== "reveal") {
+      markers.push({ lat: game.target_lat, lng: game.target_lng, color: "#ffd166", label: "Your Target", size: 3.5, ring: true });
+    }
+
     // My locked-in guess for current round
     if (myRoundGuess && isGuessPhase) {
       markers.push({ lat: myRoundGuess.lat, lng: myRoundGuess.lng, color: guesserColorMap[sessionId] ?? "#06d6a0", label: "Your guess", size: 3, ring: true });
@@ -309,7 +322,42 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
   const mapClickable = (phase === "picking" && isLeader) || (isGuessPhase && !isLeader && inGame);
   const mapInteractive = mapClickable || (isLeader && isGameActive) || phase === "reveal";
 
-  const sortedPlayers = [...game.players].sort((a, b) => a.totalScore - b.totalScore);
+  const joinGame = () => {
+    ensureName(zero, sessionId);
+    void zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })).server.catch(() => showToast("Couldn't join", "error"));
+  };
+
+  const handleJoinClick = () => {
+    if (inAnotherGame && activeGameType && activeGameId) {
+      setJoiningFromOtherGame(true);
+      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+        .catch(() => showToast("Couldn't leave current game", "error"))
+        .finally(() => {
+          setJoiningFromOtherGame(false);
+          joinGame();
+        });
+      return;
+    }
+    joinGame();
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      joinGame();
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(() => {
+        setShowInSessionModal(false);
+        joinGame();
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => setJoiningFromOtherGame(false));
+  };
+
+  const sortedPlayers = [...game.players].sort((a, b) => b.totalScore - a.totalScore);
 
   /* ── Players bar (shared across phases) ── */
   const renderPlayersBar = () => (
@@ -341,7 +389,7 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
                 )}
               </div>
               <span className="game-player-name">{name}</span>
-              {isGameActive && <span className="badge" data-tooltip={`${name}'s penalty score (lower is better)`} data-tooltip-variant="info" style={{ fontSize: "0.55rem" }}>{p.totalScore}</span>}
+              {isGameActive && <span className="badge" data-tooltip={`${name}'s score`} data-tooltip-variant="info" style={{ fontSize: "0.55rem" }}>{p.totalScore}</span>}
               {isMe && <span className="game-player-you">you</span>}
             </div>
           );
@@ -356,7 +404,7 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
       <div className="locsig-map-wrap">
         <WorldMap
           height={420}
-          onClick={mapClickable ? (coords) => setDraftMarker(coords) : undefined}
+          {...(mapClickable ? { onClick: (coords: { lat: number; lng: number }) => setDraftMarker(coords) } : {})}
           interactive={mapInteractive}
           markers={buildMarkers()}
           coordsOverlay={draftMarker && mapClickable ? draftMarker : null}
@@ -398,7 +446,7 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
                   <div
                     key={p.sessionId}
                     className={`game-player-chip${isMe ? " game-player-chip--me" : ""}`}
-                    data-tooltip={`${name}${isMe ? " (you)" : ""}${p.sessionId === game.host_id ? " — Host" : ""}`}
+                    data-tooltip={`${name}${isMe ? " (you)" : ""}`}
                     data-tooltip-variant="info"
                   >
                     <div className="game-player-avatar">
@@ -409,9 +457,6 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
                     </div>
                     <span className="game-player-name">{name}</span>
                     {isMe && <span className="game-player-you">you</span>}
-                    {p.sessionId === game.host_id && (
-                      <span className="badge" data-tooltip="Game host" data-tooltip-variant="info" style={{ fontSize: "0.55rem" }}><PiCrownSimpleFill size={10} /> host</span>
-                    )}
                   </div>
                 );
               })}
@@ -433,7 +478,7 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
             <div className="game-section game-join-prompt">
               <p className="game-join-text">You're not in this lobby yet.</p>
               <button className="btn btn-primary game-action-btn" data-tooltip="Join this game" data-tooltip-variant="info"
-                onClick={() => void zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })).server.catch(() => showToast("Couldn't join", "error"))}>
+                onClick={handleJoinClick}>
                 <FiLogIn size={16} /> Join Game
               </button>
             </div>
@@ -455,6 +500,14 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
               <button className="btn btn-muted game-action-btn" data-tooltip="Leave this game" data-tooltip-variant="info"
                 onClick={() => void zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })).server}>
                 <FiLogOut size={14} /> Leave
+              </button>
+            </div>
+          )}
+
+          {game.phase === "lobby" && (
+            <div className="game-section" style={{ textAlign: "center" }}>
+              <button className="demo-trigger-btn" onClick={() => setShowDemo(true)}>
+                <FiHelpCircle size={16} /> How to Play
               </button>
             </div>
           )}
@@ -599,7 +652,7 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
                 const isMe = p.sessionId === sessionId;
                 const name = playerName(p.sessionId);
                 return (
-                  <div key={p.sessionId} className="locsig-score-row" data-tooltip={`${name} — ${p.totalScore} penalty points (lower is better)`} data-tooltip-variant="info">
+                  <div key={p.sessionId} className="locsig-score-row" data-tooltip={`${name} — ${p.totalScore} pts`} data-tooltip-variant="info">
                     <span className="locsig-score-name">
                       {name} {isMe && <span className="game-player-you">you</span>}
                     </span>
@@ -627,7 +680,7 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
               const name = playerName(p.sessionId);
               const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
               return (
-                <div key={p.sessionId} className={`locsig-final-row${i === 0 ? " locsig-final-row--winner" : ""}`} data-tooltip={`${name} — ${p.totalScore} penalty points`} data-tooltip-variant="info">
+                <div key={p.sessionId} className={`locsig-final-row${i === 0 ? " locsig-final-row--winner" : ""}`} data-tooltip={`${name} — ${p.totalScore} pts`} data-tooltip-variant="info">
                   <span className="locsig-final-rank">{medal}</span>
                   <span className="locsig-final-name">
                     {name} {isMe && <span className="game-player-you">you</span>}
@@ -639,12 +692,24 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
           </div>
 
           <div className="game-actions">
-            <button className="btn btn-primary game-action-btn" onClick={() => navigate("/")}>
-              Play Again
-            </button>
-            <button className="btn btn-muted" onClick={() => navigate("/")}>
-              Back to Home
-            </button>
+            {isHost ? (
+              <>
+                <button className="btn btn-primary game-action-btn"
+                  onClick={() => void zero.mutate(mutators.locationSignal.resetToLobby({ gameId: game.id, hostId: sessionId }))}>
+                  Play Again
+                </button>
+                <button className="btn btn-muted" onClick={() => {
+                  void zero.mutate(mutators.locationSignal.endGame({ gameId: game.id, hostId: sessionId }));
+                  navigate("/");
+                }}>
+                  End Game
+                </button>
+              </>
+            ) : (
+              <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
+                Back to Home
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -666,6 +731,17 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
             <p>Game in progress — watching!</p>
           </div>
         </div>
+      )}
+
+      {showDemo && <LocationDemo onClose={() => setShowDemo(false)} />}
+
+      {showInSessionModal && activeGameType && (
+        <InSessionModal
+          gameType={activeGameType}
+          busy={joiningFromOtherGame}
+          onCancel={() => setShowInSessionModal(false)}
+          onConfirm={confirmLeaveAndJoin}
+        />
       )}
     </div>
   );

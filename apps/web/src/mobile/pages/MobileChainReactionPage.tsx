@@ -5,10 +5,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle, FiEye } from "react-icons/fi";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { InSessionModal } from "../../components/shared/InSessionModal";
 import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
-import { addRecentGame } from "../../lib/session";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 
 type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
@@ -20,7 +21,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.chainReaction.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "chain_reaction", gameId }));
-  useQuery(queries.sessions.byId({ id: sessionId }));
+  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -32,6 +33,8 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [viewingId, setViewingId] = useState<string>(sessionId);
   const [giveUpConfirm, setGiveUpConfirm] = useState<number | null>(null);
+  const [showInSessionModal, setShowInSessionModal] = useState(false);
+  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
 
   usePresenceSocket({ sessionId, gameId, gameType: "chain_reaction" });
 
@@ -39,6 +42,10 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
+  const mySession = mySessionRows[0];
+  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+  const activeGameId = mySession?.game_id ?? null;
+  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "chain_reaction" || activeGameId !== gameId));
 
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
@@ -193,6 +200,41 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const joinGame = () => {
+    ensureName(zero, sessionId);
+    void zero.mutate(mutators.chainReaction.join({ gameId, sessionId })).client.catch(() => showToast("Couldn't join", "error"));
+  };
+
+  const handleJoinClick = () => {
+    if (inAnotherGame && activeGameType && activeGameId) {
+      setJoiningFromOtherGame(true);
+      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+        .catch(() => showToast("Couldn't leave current game", "error"))
+        .finally(() => {
+          setJoiningFromOtherGame(false);
+          joinGame();
+        });
+      return;
+    }
+    joinGame();
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      joinGame();
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(() => {
+        setShowInSessionModal(false);
+        joinGame();
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => setJoiningFromOtherGame(false));
+  };
+
   const myScore = game.scores[sessionId] ?? 0;
   const opponentScore = opponentId ? (game.scores[opponentId] ?? 0) : 0;
   const myName = playerName(sessionId);
@@ -304,7 +346,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
               );
             })() : !inGame ? (
               <div className="m-cr-slot m-cr-slot--join"
-                onClick={() => void zero.mutate(mutators.chainReaction.join({ gameId, sessionId })).client.catch(() => showToast("Couldn't join", "error"))}>
+                onClick={handleJoinClick}>
                 <div className="m-cr-slot-avatar m-cr-slot-avatar--empty"><FiLogIn size={18} /></div>
                 <span className="m-cr-slot-join-text">Join Duel</span>
               </div>
@@ -646,6 +688,15 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
             )}
           </div>
         </div>
+      )}
+
+      {showInSessionModal && activeGameType && (
+        <InSessionModal
+          gameType={activeGameType}
+          busy={joiningFromOtherGame}
+          onCancel={() => setShowInSessionModal(false)}
+          onConfirm={confirmLeaveAndJoin}
+        />
       )}
     </div>
   );

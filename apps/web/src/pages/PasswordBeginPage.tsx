@@ -5,8 +5,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock, FiHelpCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
+import { InSessionModal } from "../components/shared/InSessionModal";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { addRecentGame } from "../lib/session";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
@@ -22,10 +23,12 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
-  useQuery(queries.sessions.byId({ id: sessionId }));
+  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
   const [showDemo, setShowDemo] = useState(false);
+  const [showInSessionModal, setShowInSessionModal] = useState(false);
+  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
 
   const isHost = game?.host_id === sessionId;
   const inGameRef = useRef(false);
@@ -112,6 +115,52 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
   const teamsWithPlayers = game.teams.filter((t) => t.members.length > 0).length;
   const canStart = isHost && teamsWithPlayers >= 2;
+  const mySession = mySessionRows[0];
+  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+  const activeGameId = mySession?.game_id ?? null;
+  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "password" || activeGameId !== gameId));
+
+  const joinGame = () => {
+    ensureName(zero, sessionId);
+    if (isSpectator) {
+      void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }))
+        .client.then(() => zero.mutate(mutators.password.join({ gameId, sessionId })))
+        .catch(() => showToast("Couldn't join game", "error"));
+      return;
+    }
+    void zero.mutate(mutators.password.join({ gameId, sessionId }))
+      .client.catch(() => showToast("Couldn't join game", "error"));
+  };
+
+  const handleJoinClick = () => {
+    if (inAnotherGame && activeGameType && activeGameId) {
+      setJoiningFromOtherGame(true);
+      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+        .catch(() => showToast("Couldn't leave current game", "error"))
+        .finally(() => {
+          setJoiningFromOtherGame(false);
+          joinGame();
+        });
+      return;
+    }
+    joinGame();
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      joinGame();
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(() => {
+        setShowInSessionModal(false);
+        joinGame();
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => setJoiningFromOtherGame(false));
+  };
 
   return (
     <div className="game-page" data-game-theme="password">
@@ -149,16 +198,7 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
           <p className="game-join-text">{isSpectator ? "You're spectating. Join to play!" : "You're not in this lobby yet."}</p>
           <button
             className="btn btn-primary game-action-btn"
-            onClick={() => {
-              if (isSpectator) {
-                void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }))
-                  .client.then(() => zero.mutate(mutators.password.join({ gameId, sessionId })))
-                  .catch(() => showToast("Couldn't join game", "error"));
-              } else {
-                void zero.mutate(mutators.password.join({ gameId, sessionId }))
-                  .client.catch(() => showToast("Couldn't join game", "error"));
-              }
-            }}
+            onClick={handleJoinClick}
           >
             <FiLogIn size={16} /> Join Game
           </button>
@@ -209,6 +249,15 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
       </div>
 
       {showDemo && <PasswordDemo onClose={() => setShowDemo(false)} />}
+
+      {showInSessionModal && activeGameType && (
+        <InSessionModal
+          gameType={activeGameType}
+          busy={joiningFromOtherGame}
+          onCancel={() => setShowInSessionModal(false)}
+          onConfirm={confirmLeaveAndJoin}
+        />
+      )}
     </div>
   );
 }

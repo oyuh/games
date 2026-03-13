@@ -3,7 +3,8 @@ import { useQuery, useZero } from "../../lib/zero";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogIn, FiLock, FiUnlock, FiArrowRight, FiCheck, FiXCircle } from "react-icons/fi";
-import { addRecentGame } from "../../lib/session";
+import { InSessionModal } from "../../components/shared/InSessionModal";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
@@ -19,10 +20,13 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
-  useQuery(queries.sessions.byId({ id: sessionId }));
+  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
   const isSpectatorRef = useRef(false);
+  const [showInSessionModal, setShowInSessionModal] = useState(false);
+  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
+  const [pendingTeamToJoin, setPendingTeamToJoin] = useState<string | null>(null);
 
   const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
 
@@ -70,9 +74,65 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
 
   const inGame = game.teams.some((t) => t.members.includes(sessionId));
   const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
+  const mySession = mySessionRows[0] ?? null;
+  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+  const activeGameId = mySession?.game_id ?? null;
+  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "password" || activeGameId !== gameId));
   const myTeam = game.teams.find((t) => t.members.includes(sessionId))?.name;
   const teamsWithPlayers = game.teams.filter((t) => t.members.length > 0).length;
   const canStart = isHost && teamsWithPlayers >= 2;
+
+  const joinTeam = (teamName: string) => {
+    if (!inGame) {
+      ensureName(zero, sessionId);
+      const doJoin = () => zero.mutate(mutators.password.join({ gameId, sessionId }))
+        .client.then(() => zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName })))
+        .catch(() => showToast("Couldn't join team", "error"));
+      if (isSpectator) {
+        void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId })).client.then(doJoin).catch(doJoin);
+      } else {
+        void doJoin();
+      }
+      return;
+    }
+    void zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName }))
+      .client.catch(() => showToast("Couldn't switch team", "error"));
+  };
+
+  const handleJoinTeamClick = (teamName: string) => {
+    if (!inGame && inAnotherGame) {
+      if (activeGameType && activeGameId) {
+        setJoiningFromOtherGame(true);
+        void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+          .catch(() => showToast("Couldn't leave current game", "error"))
+          .finally(() => {
+            setJoiningFromOtherGame(false);
+            joinTeam(teamName);
+          });
+        return;
+      }
+      return;
+    }
+    joinTeam(teamName);
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(() => {
+        setShowInSessionModal(false);
+        if (pendingTeamToJoin) {
+          joinTeam(pendingTeamToJoin);
+          setPendingTeamToJoin(null);
+        }
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => setJoiningFromOtherGame(false));
+  };
 
   return (
     <div className="m-page" data-game-theme="password">
@@ -142,18 +202,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
                     <button
                       className="m-pw-team-join"
                       style={{ borderColor: color, color }}
-                      onClick={() => {
-                        if (!inGame) {
-                          const doJoin = () => zero.mutate(mutators.password.join({ gameId, sessionId }))
-                            .client.then(() => zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName: team.name })))
-                            .catch(() => showToast("Couldn't join team", "error"));
-                          if (isSpectator) void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId })).client.then(doJoin).catch(doJoin);
-                          else void doJoin();
-                        } else {
-                          void zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName: team.name }))
-                            .client.catch(() => showToast("Couldn't switch team", "error"));
-                        }
-                      }}
+                      onClick={() => handleJoinTeamClick(team.name)}
                     >
                       {inGame ? <><FiArrowRight size={13} /> Move here</> : <><FiLogIn size={13} /> Join</>}
                     </button>
@@ -212,6 +261,18 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
             </button>
           </div>
         </div>
+      )}
+
+      {showInSessionModal && activeGameType && (
+        <InSessionModal
+          gameType={activeGameType}
+          busy={joiningFromOtherGame}
+          onCancel={() => {
+            setShowInSessionModal(false);
+            setPendingTeamToJoin(null);
+          }}
+          onConfirm={confirmLeaveAndJoin}
+        />
       )}
     </div>
   );

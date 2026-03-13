@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { mutators } from "@games/shared";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
 import { getOrCreateSessionId } from "./session";
+import { useZero } from "./zero";
 
 type ChatState = {
   open: boolean;
@@ -40,6 +42,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const sessionId = getOrCreateSessionId();
+  const zero = useZero();
 
   // Derive game info from route
   const imposterMatch = location.pathname.match(/^\/imposter\/([^/]+)/);
@@ -49,7 +52,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const locationMatch = location.pathname.match(/^\/location\/([^/]+)/);
   const gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal" | null = imposterMatch ? "imposter" : passwordMatch ? "password" : chainMatch ? "chain_reaction" : shadeMatch ? "shade_signal" : locationMatch ? "location_signal" : null;
   const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch?.[1] ?? shadeMatch?.[1] ?? locationMatch?.[1] ?? "";
-  const inGame = Boolean(gameType && gameId);
+  const onGameRoute = Boolean(gameType && gameId);
 
   // Close chat when navigating away from a game
   const prevGameId = useRef(gameId);
@@ -62,7 +65,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // Query messages for unread tracking
   const [messages] = useQuery(
-    inGame
+    onGameRoute
       ? queries.chat.byGame({ gameType: gameType!, gameId })
       : queries.chat.byGame({ gameType: "imposter", gameId: "__none__" })
   );
@@ -91,6 +94,53 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [locGames] = useQuery(gameType === "location_signal" ? queries.locationSignal.byId({ id: gameId }) : queries.locationSignal.byId({ id: "__none__" }));
   const currentGame = gameType === "imposter" ? impGames[0] : gameType === "password" ? pwdGames[0] : gameType === "chain_reaction" ? chrGames[0] : gameType === "shade_signal" ? shdGames[0] : gameType === "location_signal" ? locGames[0] : null;
   const isSpectator = currentGame?.spectators?.some((s: { sessionId: string }) => s.sessionId === sessionId) ?? false;
+  const currentPlayers = (currentGame as { players?: unknown[] } | null)?.players;
+  const isPlayerFromPlayers = Array.isArray(currentPlayers)
+    ? currentPlayers.some((entry) => {
+        if (typeof entry === "string") return entry === sessionId;
+        if (entry && typeof entry === "object" && "sessionId" in entry) {
+          const sessionValue = (entry as { sessionId?: unknown }).sessionId;
+          return typeof sessionValue === "string" && sessionValue === sessionId;
+        }
+        return false;
+      })
+    : false;
+  const isPlayer = gameType === "password"
+    ? (pwdGames[0]?.teams?.some((t: { members: string[] }) => t.members.includes(sessionId)) ?? false)
+    : isPlayerFromPlayers;
+  const isHost = (currentGame as { host_id?: string } | null)?.host_id === sessionId;
+  const inGame = onGameRoute && (isHost || isPlayer || isSpectator);
+
+  const autoSpectateAttemptedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!onGameRoute || !gameType || !gameId || !currentGame) return;
+    if (isHost || isPlayer || isSpectator) {
+      autoSpectateAttemptedRef.current = null;
+      return;
+    }
+
+    const phase = (currentGame as { phase?: string }).phase ?? "lobby";
+    const shouldAutoSpectate = phase !== "lobby" && phase !== "ended" && phase !== "finished";
+    if (!shouldAutoSpectate) return;
+
+    const routeKey = `${gameType}:${gameId}:${sessionId}`;
+    if (autoSpectateAttemptedRef.current === routeKey) return;
+    autoSpectateAttemptedRef.current = routeKey;
+
+    const joinPromise = gameType === "imposter"
+      ? zero.mutate(mutators.imposter.join({ gameId, sessionId })).client
+      : gameType === "password"
+      ? zero.mutate(mutators.password.join({ gameId, sessionId })).client
+      : gameType === "chain_reaction"
+      ? zero.mutate(mutators.chainReaction.join({ gameId, sessionId })).client
+      : gameType === "shade_signal"
+      ? zero.mutate(mutators.shadeSignal.join({ gameId, sessionId })).client
+      : zero.mutate(mutators.locationSignal.join({ gameId, sessionId })).client;
+
+    void joinPromise.catch(() => {
+      autoSpectateAttemptedRef.current = null;
+    });
+  }, [onGameRoute, gameType, gameId, currentGame, isHost, isPlayer, isSpectator, zero, sessionId]);
 
   // Imposter role detection for private chat channels
   const imposterGame = impGames[0];

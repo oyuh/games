@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { FiMapPin, FiSend } from "react-icons/fi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { BorringAvatar } from "../shared/BorringAvatar";
@@ -51,18 +51,9 @@ const GUESS_ROUND2: MapMarker[] = [
 // Reveal markers: target + all final guesses
 const REVEAL_MARKERS: MapMarker[] = [
   { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "Target", size: 4.5, pulse: true, ring: true },
-  { lat: 43.7, lng: 11.2, color: "#7ecbff", label: "Alice (2pts)", size: 2.5 },
-  { lat: 45.4, lng: 9.2, color: "#7ecbff", label: "Bob (3pts)", size: 2.5 },
-  { lat: 41.9, lng: 12.5, color: "#06d6a0", label: "You (0pts!)", size: 2.5, ring: true },
-];
-
-const SCORING_TIERS = [
-  { threshold: "Exact", pts: 0, desc: "< 50 km" },
-  { threshold: "Close", pts: 1, desc: "50–200 km" },
-  { threshold: "Near", pts: 2, desc: "200–500 km" },
-  { threshold: "Far", pts: 3, desc: "500–1000 km" },
-  { threshold: "Way off", pts: 5, desc: "1000–3000 km" },
-  { threshold: "Lost", pts: 8, desc: "> 3000 km" },
+  { lat: 43.7, lng: 11.2, color: "#7ecbff", label: "Alice (4264 pts)", size: 2.5 },
+  { lat: 45.4, lng: 9.2, color: "#7ecbff", label: "Bob (3785 pts)", size: 2.5 },
+  { lat: 41.9, lng: 12.5, color: "#06d6a0", label: "You (5000 pts!)", size: 2.5, ring: true },
 ];
 
 /* ── Steps ──────────────────────────────────────────────── */
@@ -70,8 +61,8 @@ const SCORING_TIERS = [
 const steps: DemoStep[] = [
   {
     label: "Lobby",
-    description: "Players join the game. The host starts when there are at least 3 players. Each player takes turns as the Leader.",
-    hint: "Lower score is better — like golf! Penalty points are added for distance from the target.",
+    description: "Players join the game. The host starts when there are at least 2 players. Each player takes turns as the Leader.",
+    hint: "Higher score is better! You earn up to 5,000 points per round based on how close your guess is.",
   },
   {
     label: "Pick Location (Leader)",
@@ -90,8 +81,8 @@ const steps: DemoStep[] = [
   },
   {
     label: "Reveal & Scoring",
-    description: "The target is revealed! Players score penalty points based on distance. Closer = fewer points = better!",
-    hint: "Exact match = 0 pts, < 200 km = 1 pt, < 500 km = 2 pts, < 1000 km = 3 pts, < 3000 km = 5 pts, further = 8 pts.",
+    description: "The target is revealed! Players earn points based on how close they are. Closer = more points!",
+    hint: "5,000 pts for an exact match, ~3,500 at 500 km, ~1,800 at 1,500 km, scores drop to 0 beyond ~5,000 km.",
   },
 ];
 
@@ -101,6 +92,14 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
   const [step, setStep] = useState(initialStep);
   const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
   const [clue, setClue] = useState("");
+
+  // Force WorldMap remount after modal animation settles so pigeon-maps
+  // measures the container at its final size
+  const [mapKey, setMapKey] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setMapKey(1), 150);
+    return () => clearTimeout(t);
+  }, []);
 
   const noop = (e?: FormEvent) => e?.preventDefault();
 
@@ -113,7 +112,6 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
       <div className="game-players-grid">
         {PLAYERS.map((p, playerIndex) => {
           const isMe = p.sessionId === P.you;
-          const isHost = p.sessionId === P.you;
           return (
             <div key={p.sessionId} className={`game-player-chip${isMe ? " game-player-chip--me" : ""}`}>
               <div className="game-player-avatar">
@@ -122,7 +120,6 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
               <span className="game-player-name">{p.name}</span>
               {opts?.scores && <span className="badge" style={{ fontSize: "0.55rem" }}>{p.totalScore}</span>}
               {isMe && <span className="game-player-you">you</span>}
-              {isHost && !opts?.scores && <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>}
             </div>
           );
         })}
@@ -135,7 +132,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 0: // Lobby
         return (
           <div className="game-page locsig-page" data-game-theme="location">
-            <PasswordHeader title="Location Signal" code="DEMO" phase="lobby" isHost />
+            <PasswordHeader title="Location Signal" code="DEMO" phase="lobby" />
             <DemoGlow label="Players waiting in lobby">
               {renderPlayersBar()}
             </DemoGlow>
@@ -143,7 +140,10 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
               <div className="game-section">
                 <div className="locsig-map-wrap">
                   <WorldMap
-                    height={200}
+                    key={mapKey}
+                    height={280}
+                    defaultZoom={3}
+                    defaultCenter={[30, 10]}
                     onClick={(coords) => setDraftMarker(coords)}
                     interactive
                     markers={draftMarker ? [{ lat: draftMarker.lat, lng: draftMarker.lng, color: "var(--primary)", label: "Preview", size: 2, ring: true }] : []}
@@ -261,7 +261,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
           <div className="game-page locsig-page" data-game-theme="location">
             <PasswordHeader title="Location Signal" code="DEMO" phase="reveal" currentRound={1} />
             {renderPlayersBar({ scores: true })}
-            <DemoGlow label="Target revealed — penalty points based on distance!">
+            <DemoGlow label="Target revealed — points based on distance!">
               <div className="game-section locsig-reveal-section">
                 <h3 className="game-section-label">🎯 Reveal!</h3>
                 <div className="locsig-map-wrap">
@@ -269,16 +269,16 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 </div>
                 <div className="game-players-grid" style={{ marginTop: "0.75rem" }}>
                   {[
-                    { name: "You", pts: 0, label: "Exact! 🎯", id: P.you },
-                    { name: "Alice", pts: 2, label: "~200 km", id: P.alice },
-                    { name: "Bob", pts: 3, label: "~400 km", id: P.bob },
+                    { name: "You", pts: 5000, label: "Exact! 🎯", id: P.you },
+                    { name: "Alice", pts: 4264, label: "~200 km", id: P.alice },
+                    { name: "Bob", pts: 3785, label: "~400 km", id: P.bob },
                   ].map((r, playerIndex) => (
                     <div key={r.name} className={`game-player-chip${r.name === "You" ? " game-player-chip--me" : ""}`}>
                       <div className="game-player-avatar">
                         <BorringAvatar seed={r.id} playerIndex={playerIndex} />
                       </div>
                       <span className="game-player-name">{r.name}</span>
-                      <span className="badge" style={{ fontSize: "0.55rem" }}>+{r.pts} pts</span>
+                      <span className="badge" style={{ fontSize: "0.55rem" }}>{r.pts} pts</span>
                       <span style={{ fontSize: "0.65rem", color: "var(--secondary)" }}>{r.label}</span>
                     </div>
                   ))}

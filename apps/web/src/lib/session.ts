@@ -1,10 +1,71 @@
 import { nanoid } from "nanoid";
+import { mutators } from "@games/shared";
 
 const SESSION_KEY = "games:user-id";
 const NAME_KEY = "games:user-name";
 const RECENT_GAMES_KEY = "games:recent-games";
 const VISITED_KEY = "games:has-visited";
 const MAX_RECENT_GAMES = 6;
+
+/* ── Word bank for random names ──────────────────────── */
+const adjectives = [
+  "Swift", "Sneaky", "Cosmic", "Lucky", "Dizzy", "Frosty", "Bold", "Chill",
+  "Witty", "Fierce", "Jolly", "Mystic", "Nifty", "Pixel", "Rapid", "Silent",
+  "Turbo", "Vivid", "Wacky", "Zesty", "Brave", "Clever", "Funky", "Groovy",
+  "Hyper", "Keen", "Lively", "Plucky", "Radiant", "Spunky", "Sleepy", "Stormy",
+  "Sunny", "Fuzzy", "Crispy", "Bouncy", "Shifty", "Sparky", "Tricky", "Zippy",
+];
+const nouns = [
+  "Panda", "Fox", "Falcon", "Otter", "Wolf", "Shark", "Raven", "Lynx",
+  "Cobra", "Badger", "Hawk", "Tiger", "Bear", "Moose", "Owl", "Penguin",
+  "Dragon", "Phoenix", "Pirate", "Knight", "Ninja", "Wizard", "Ghost", "Robot",
+  "Yeti", "Gremlin", "Goblin", "Squid", "Toucan", "Ferret", "Walrus", "Jackal",
+  "Beetle", "Puffin", "Coyote", "Mole", "Parrot", "Wasp", "Mantis", "Orca",
+];
+
+export function randomName(): string {
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)]!;
+  const noun = nouns[Math.floor(Math.random() * nouns.length)]!;
+  return `${adj}${noun}`;
+}
+
+/**
+ * Guarantee the player has a display name before joining a game.
+ * If no name is stored locally, generates a random one, persists it
+ * to localStorage, and syncs it to the sessions DB so the join
+ * mutator picks it up.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function ensureName(zero: { mutate: any }, sessionId: string) {
+  if (!getStoredName()) {
+    const generated = randomName();
+    setStoredName(generated);
+    void zero.mutate(mutators.sessions.setName({ id: sessionId, name: generated }));
+  }
+}
+
+export type SessionGameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function leaveCurrentGame(zero: { mutate: any }, sessionId: string, gameType: SessionGameType, gameId: string) {
+  if (gameType === "imposter") {
+    await zero.mutate(mutators.imposter.leave({ gameId, sessionId })).client;
+    return;
+  }
+  if (gameType === "password") {
+    await zero.mutate(mutators.password.leave({ gameId, sessionId })).client;
+    return;
+  }
+  if (gameType === "chain_reaction") {
+    await zero.mutate(mutators.chainReaction.leave({ gameId, sessionId })).client;
+    return;
+  }
+  if (gameType === "shade_signal") {
+    await zero.mutate(mutators.shadeSignal.leave({ gameId, sessionId })).client;
+    return;
+  }
+  await zero.mutate(mutators.locationSignal.leave({ gameId, sessionId })).client;
+}
 
 export type RecentGame = {
   id: string;
