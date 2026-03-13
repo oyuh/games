@@ -3,15 +3,15 @@ import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiLogOut, FiSend, FiMapPin } from "react-icons/fi";
-import { PiCrownSimpleFill } from "react-icons/pi";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
+import { InSessionModal } from "../../components/shared/InSessionModal";
 import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
-import { addRecentGame } from "../../lib/session";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 
 import { WorldMap, MapMarker } from "../../components/location/WorldMap";
@@ -34,11 +34,13 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.locationSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "location_signal", gameId }));
-  useQuery(queries.sessions.byId({ id: sessionId }));
+  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
 
   const [draftClue, setDraftClue] = useState("");
   const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
+  const [showInSessionModal, setShowInSessionModal] = useState(false);
+  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "location_signal" });
@@ -48,6 +50,10 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   const inGame = Boolean(me);
   const isLeader = game?.leader_id === sessionId;
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
+  const mySession = mySessionRows[0];
+  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+  const activeGameId = mySession?.game_id ?? null;
+  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "location_signal" || activeGameId !== gameId));
 
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -235,6 +241,10 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     if (draftMarker && (phase === "picking" || isGuessPhase)) {
       markers.push({ lat: draftMarker.lat, lng: draftMarker.lng, color: "#ef476f", label: "Your pick", size: 3.5, pulse: true });
     }
+    // Leader always sees the target they placed
+    if (isLeader && game.target_lat != null && game.target_lng != null && phase !== "picking" && phase !== "reveal") {
+      markers.push({ lat: game.target_lat, lng: game.target_lng, color: "#ffd166", label: "Your Target", size: 3.5, ring: true });
+    }
     if (myRoundGuess && isGuessPhase) {
       markers.push({ lat: myRoundGuess.lat, lng: myRoundGuess.lng, color: guesserColorMap[sessionId] ?? "#06d6a0", label: "Your guess", size: 3, ring: true });
     }
@@ -292,7 +302,42 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   const mapClickable = (phase === "picking" && isLeader) || (isGuessPhase && !isLeader && inGame);
   const mapInteractive = mapClickable || (isLeader && isGameActive) || phase === "reveal";
 
-  const sortedPlayers = [...game.players].sort((a, b) => a.totalScore - b.totalScore);
+  const joinGame = () => {
+    ensureName(zero, sessionId);
+    void zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })).server.catch(() => showToast("Couldn't join", "error"));
+  };
+
+  const handleJoinClick = () => {
+    if (inAnotherGame && activeGameType && activeGameId) {
+      setJoiningFromOtherGame(true);
+      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+        .catch(() => showToast("Couldn't leave current game", "error"))
+        .finally(() => {
+          setJoiningFromOtherGame(false);
+          joinGame();
+        });
+      return;
+    }
+    joinGame();
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      joinGame();
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(() => {
+        setShowInSessionModal(false);
+        joinGame();
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => setJoiningFromOtherGame(false));
+  };
+
+  const sortedPlayers = [...game.players].sort((a, b) => b.totalScore - a.totalScore);
 
   return (
     <div className="m-page" data-game-theme="location">
@@ -346,7 +391,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           <div style={{ borderRadius: "var(--radius)", overflow: "hidden", border: "1px solid var(--border)" }}>
             <WorldMap
               height={300}
-              onClick={mapClickable ? (coords) => setDraftMarker(coords) : undefined}
+              {...(mapClickable ? { onClick: (coords: { lat: number; lng: number }) => setDraftMarker(coords) } : {})}
               interactive={mapInteractive}
               markers={buildMarkers()}
               coordsOverlay={draftMarker && mapClickable ? draftMarker : null}
@@ -373,7 +418,6 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
                   </div>
                   <span className="m-player-name">{name}</span>
                   {isMe && <span className="m-badge-small m-badge-small--you">you</span>}
-                  {p.sessionId === game.host_id && <span className="m-badge-small m-badge-small--host"><PiCrownSimpleFill size={8} /> host</span>}
                 </div>
               );
             })}
@@ -393,8 +437,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           {!inGame && !isSpectator && (
             <div className="m-actions" style={{ marginTop: "0.5rem" }}>
               <p className="m-text-muted m-text-center">You're not in this lobby yet.</p>
-              <button className="m-btn m-btn-primary"
-                onClick={() => void zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })).server.catch(() => showToast("Couldn't join", "error"))}>
+              <button className="m-btn m-btn-primary" onClick={handleJoinClick}>
                 <FiLogIn size={16} /> Join Game
               </button>
             </div>
@@ -588,7 +631,22 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
             })}
           </div>
           <div className="m-actions" style={{ marginTop: "0.5rem" }}>
-            <button className="m-btn m-btn-primary" onClick={() => navigate("/")}>Back to Home</button>
+            {isHost ? (
+              <>
+                <button className="m-btn m-btn-primary"
+                  onClick={() => void zero.mutate(mutators.locationSignal.resetToLobby({ gameId: game.id, hostId: sessionId }))}>
+                  Play Again
+                </button>
+                <button className="m-btn m-btn-muted" onClick={() => {
+                  void zero.mutate(mutators.locationSignal.endGame({ gameId: game.id, hostId: sessionId }));
+                  navigate("/");
+                }}>
+                  End Game
+                </button>
+              </>
+            ) : (
+              <button className="m-btn m-btn-muted" onClick={() => navigate("/")}>Back to Home</button>
+            )}
           </div>
         </div>
       )}
@@ -610,6 +668,15 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
             <p>Game in progress — watching!</p>
           </div>
         </div>
+      )}
+
+      {showInSessionModal && activeGameType && (
+        <InSessionModal
+          gameType={activeGameType}
+          busy={joiningFromOtherGame}
+          onCancel={() => setShowInSessionModal(false)}
+          onConfirm={confirmLeaveAndJoin}
+        />
       )}
     </div>
   );

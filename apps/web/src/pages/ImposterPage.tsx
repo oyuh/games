@@ -9,9 +9,10 @@ import { ImposterLobbyActions } from "../components/imposter/ImposterLobbyAction
 import { ImposterPlayersCard } from "../components/imposter/ImposterPlayersCard";
 import { ImposterResultsSection } from "../components/imposter/ImposterResultsSection";
 import { ImposterVoteSection } from "../components/imposter/ImposterVoteSection";
+import { InSessionModal } from "../components/shared/InSessionModal";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
-import { addRecentGame } from "../lib/session";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
@@ -27,7 +28,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.imposter.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "imposter", gameId }));
-  useQuery(queries.sessions.byId({ id: sessionId }));
+  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const [clue, setClue] = useState("");
   const [showDemo, setShowDemo] = useState(false);
@@ -40,6 +41,13 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
+  const [showInSessionModal, setShowInSessionModal] = useState(false);
+  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
+
+  const mySession = mySessionRows[0];
+  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+  const activeGameId = mySession?.game_id ?? null;
+  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "imposter" || activeGameId !== gameId));
 
   // Keep refs current so the unmount cleanup reads fresh values
   const inGameRef = useRef(inGame);
@@ -161,6 +169,48 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
     await zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })).server;
   };
 
+  const joinGame = () => {
+    ensureName(zero, sessionId);
+    if (isSpectator) {
+      void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }))
+        .client.then(() => zero.mutate(mutators.imposter.join({ gameId, sessionId })))
+        .catch(() => showToast("Couldn't join game", "error"));
+      return;
+    }
+    void zero.mutate(mutators.imposter.join({ gameId, sessionId }))
+      .client.catch(() => showToast("Couldn't join game", "error"));
+  };
+
+  const handleJoinClick = () => {
+    if (inAnotherGame && activeGameType && activeGameId) {
+      setJoiningFromOtherGame(true);
+      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+        .catch(() => showToast("Couldn't leave current game", "error"))
+        .finally(() => {
+          setJoiningFromOtherGame(false);
+          joinGame();
+        });
+      return;
+    }
+    joinGame();
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      joinGame();
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(() => {
+        setShowInSessionModal(false);
+        joinGame();
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => setJoiningFromOtherGame(false));
+  };
+
 
   return (
     <div className="game-page" data-game-theme="imposter">
@@ -193,16 +243,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           <p className="game-join-text">{isSpectator ? "You're spectating. Join to play!" : "You're not in this lobby yet."}</p>
           <button
             className="btn btn-primary game-action-btn"
-            onClick={() => {
-              if (isSpectator) {
-                void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }))
-                  .client.then(() => zero.mutate(mutators.imposter.join({ gameId, sessionId })))
-                  .catch(() => showToast("Couldn't join game", "error"));
-              } else {
-                void zero.mutate(mutators.imposter.join({ gameId, sessionId }))
-                  .client.catch(() => showToast("Couldn't join game", "error"));
-              }
-            }}
+            onClick={handleJoinClick}
           >
             <FiLogIn size={16} /> Join Game
           </button>
@@ -399,6 +440,15 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         );
       })()}
       {showDemo && <ImposterDemo onClose={() => setShowDemo(false)} />}
+
+      {showInSessionModal && activeGameType && (
+        <InSessionModal
+          gameType={activeGameType}
+          busy={joiningFromOtherGame}
+          onCancel={() => setShowInSessionModal(false)}
+          onConfirm={confirmLeaveAndJoin}
+        />
+      )}
     </div>
   );
 }

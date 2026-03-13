@@ -18,13 +18,10 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * c;
 }
 
-function penaltyForDistance(km: number) {
-  if (km <= 25) return 0;
-  if (km <= 100) return 1;
-  if (km <= 250) return 2;
-  if (km <= 500) return 3;
-  if (km <= 1000) return 5;
-  return 8;
+function scoreForDistance(km: number): number {
+  if (km <= 1) return 5000;
+  // Exponential decay: roughly 5000 at 0km, ~2500 at 500km, ~0 at 5000km+
+  return Math.max(0, Math.round(5000 * Math.exp(-km / 1500)));
 }
 
 export const locationSignalMutators = {
@@ -89,9 +86,18 @@ export const locationSignalMutators = {
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
+      const existing = game.players.find((p) => p.sessionId === args.sessionId);
 
       if (game.phase !== "lobby") {
-        if (!game.spectators.some((s) => s.sessionId === args.sessionId)) {
+        if (existing) {
+          await tx.mutate.location_signal_games.update({
+            id: game.id,
+            players: game.players.map((p) =>
+              p.sessionId === args.sessionId ? { ...p, connected: true, name: session?.name ?? p.name } : p
+            ),
+            updated_at: ts,
+          });
+        } else if (!game.spectators.some((s) => s.sessionId === args.sessionId)) {
           await tx.mutate.location_signal_games.update({
             id: game.id,
             spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
@@ -99,7 +105,6 @@ export const locationSignalMutators = {
           });
         }
       } else {
-        const existing = game.players.find((p) => p.sessionId === args.sessionId);
         const players = existing
           ? game.players.map((p) =>
               p.sessionId === args.sessionId ? { ...p, connected: true, name: session?.name ?? p.name } : p
@@ -311,7 +316,7 @@ export const locationSignalMutators = {
         const guess = bestGuesses.get(player.sessionId);
         if (!guess) continue;
         const km = haversineKm(game.target_lat, game.target_lng, guess.lat, guess.lng);
-        scores[player.sessionId] = (scores[player.sessionId] ?? 0) + penaltyForDistance(km);
+        scores[player.sessionId] = (scores[player.sessionId] ?? 0) + scoreForDistance(km);
       }
 
       const players = game.players.map((player) => ({
@@ -453,7 +458,7 @@ export const locationSignalMutators = {
             const guess = bestGuesses.get(player.sessionId);
             if (!guess) continue;
             const km = haversineKm(game.target_lat, game.target_lng, guess.lat, guess.lng);
-            scores[player.sessionId] = (scores[player.sessionId] ?? 0) + penaltyForDistance(km);
+            scores[player.sessionId] = (scores[player.sessionId] ?? 0) + scoreForDistance(km);
           }
 
           const players = game.players.map((player) => ({
@@ -655,6 +660,40 @@ export const locationSignalMutators = {
         game_type: undefined,
         game_id: undefined,
         last_seen: now(),
+      });
+    }
+  ),
+
+  resetToLobby: defineMutator(
+    z.object({ gameId: z.string(), hostId: z.string() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
+      if (!game) throw new Error("Game not found");
+      if (game.host_id !== args.hostId) throw new Error("Only host can reset");
+
+      const players = game.players.map((p) => ({ ...p, totalScore: 0 }));
+      await tx.mutate.location_signal_games.update({
+        id: game.id,
+        phase: "lobby",
+        players,
+        leader_id: null,
+        leader_order: [],
+        current_leader_index: 0,
+        target_lat: null,
+        target_lng: null,
+        clue1: null,
+        clue2: null,
+        clue3: null,
+        clue4: null,
+        guesses: [],
+        round_history: [],
+        spectators: [],
+        settings: {
+          ...game.settings,
+          currentRound: 1,
+          phaseEndsAt: null,
+        },
+        updated_at: now(),
       });
     }
   ),

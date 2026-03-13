@@ -66,8 +66,29 @@ export const imposterMutators = {
       if (game.kicked.includes(args.sessionId)) {
         throw new Error("You have been kicked from this game");
       }
+      const existingPlayer = game.players.find((player) => player.sessionId === args.sessionId);
       // Only allow actual joining during lobby; mid-game visitors join as spectators
       if (game.phase !== "lobby") {
+        if (existingPlayer) {
+          await tx.mutate.imposter_games.update({
+            id: game.id,
+            players: game.players.map((player) =>
+              player.sessionId === args.sessionId
+                ? { ...player, connected: true, name: session?.name ?? player.name }
+                : player
+            ),
+            updated_at: now()
+          });
+          await tx.mutate.sessions.upsert({
+            id: args.sessionId,
+            name: session?.name ?? null,
+            game_type: "imposter",
+            game_id: game.id,
+            created_at: now(),
+            last_seen: now()
+          });
+          return;
+        }
         // Add as spectator instead of throwing
         if (game.spectators.find((s) => s.sessionId === args.sessionId)) return;
         await tx.mutate.imposter_games.update({
@@ -86,8 +107,7 @@ export const imposterMutators = {
         return;
       }
 
-      const existing = game.players.find((player) => player.sessionId === args.sessionId);
-      const players = existing
+      const players = existingPlayer
         ? game.players.map((player) =>
             player.sessionId === args.sessionId
               ? { ...player, connected: true, name: session?.name ?? player.name }

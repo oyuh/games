@@ -19,6 +19,10 @@ interface WorldMapProps {
   className?: string;
   /** Show lat/lng of the last click in a bottom-left overlay */
   coordsOverlay?: { lat: number; lng: number } | null;
+  /** Override default center [lat, lng]. Defaults to [25, 10]. */
+  defaultCenter?: [number, number];
+  /** Override default zoom level. Defaults to 2. */
+  defaultZoom?: number;
 }
 
 // Google Hybrid tiles — satellite imagery with labels/roads/place names
@@ -36,14 +40,16 @@ export function WorldMap({
   interactive = true,
   className,
   coordsOverlay,
+  defaultCenter: center = [25, 10],
+  defaultZoom: zoom = 2,
 }: WorldMapProps) {
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
     <div className={`locsig-map-outer${className ? ` ${className}` : ""}`} style={{ position: "relative", height, overflow: "hidden", background: "#0b1a2e" }}>
       <Map
-        defaultCenter={[25, 10]}
-        defaultZoom={2}
+        defaultCenter={center}
+        defaultZoom={zoom}
         minZoom={2}
         maxZoom={18}
         height={height}

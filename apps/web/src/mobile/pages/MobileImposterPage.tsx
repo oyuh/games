@@ -4,10 +4,11 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiEye, FiEyeOff, FiSend, FiCheck, FiArrowRight, FiClock } from "react-icons/fi";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
-import { addRecentGame } from "../../lib/session";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
+import { InSessionModal } from "../../components/shared/InSessionModal";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
@@ -34,10 +35,12 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.imposter.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "imposter", gameId }));
-  useQuery(queries.sessions.byId({ id: sessionId }));
+  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const [clue, setClue] = useState("");
   const [voteTarget, setVoteTarget] = useState("");
+  const [showInSessionModal, setShowInSessionModal] = useState(false);
+  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "imposter" });
@@ -46,6 +49,10 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
+  const mySession = mySessionRows[0];
+  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
+  const activeGameId = mySession?.game_id ?? null;
+  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "imposter" || activeGameId !== gameId));
 
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -149,6 +156,48 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     await zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })).server;
   };
 
+  const joinGame = () => {
+    ensureName(zero, sessionId);
+    if (isSpectator) {
+      void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }))
+        .client.then(() => zero.mutate(mutators.imposter.join({ gameId, sessionId })))
+        .catch(() => showToast("Couldn't join game", "error"));
+      return;
+    }
+    void zero.mutate(mutators.imposter.join({ gameId, sessionId }))
+      .client.catch(() => showToast("Couldn't join game", "error"));
+  };
+
+  const handleJoinClick = () => {
+    if (inAnotherGame && activeGameType && activeGameId) {
+      setJoiningFromOtherGame(true);
+      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+        .catch(() => showToast("Couldn't leave current game", "error"))
+        .finally(() => {
+          setJoiningFromOtherGame(false);
+          joinGame();
+        });
+      return;
+    }
+    joinGame();
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      joinGame();
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(() => {
+        setShowInSessionModal(false);
+        joinGame();
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => setJoiningFromOtherGame(false));
+  };
+
   const revealRoles = game.phase === "finished";
   // During results, only reveal the voted-out player's role
   const mobileVotedOutId = game.phase === "results" ? (() => {
@@ -216,16 +265,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
           <button
             className="m-btn m-btn-primary"
             style={{ width: "100%" }}
-            onClick={() => {
-              if (isSpectator) {
-                void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }))
-                  .client.then(() => zero.mutate(mutators.imposter.join({ gameId, sessionId })))
-                  .catch(() => showToast("Couldn't join game", "error"));
-              } else {
-                void zero.mutate(mutators.imposter.join({ gameId, sessionId }))
-                  .client.catch(() => showToast("Couldn't join game", "error"));
-              }
-            }}
+            onClick={handleJoinClick}
           >
             <FiLogIn size={16} /> Join Game
           </button>
@@ -600,6 +640,15 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
           </>
         );
       })()}
+
+      {showInSessionModal && activeGameType && (
+        <InSessionModal
+          gameType={activeGameType}
+          busy={joiningFromOtherGame}
+          onCancel={() => setShowInSessionModal(false)}
+          onConfirm={confirmLeaveAndJoin}
+        />
+      )}
     </div>
   );
 }

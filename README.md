@@ -21,6 +21,7 @@ This repository currently contains four implemented game flows at the data/model
 - Password
 - Chain Reaction
 - Shade Signal
+- Location Signal
 
 ## Table of Contents
 
@@ -954,7 +955,6 @@ apps/web/src/mobile/
 - [docs/game-chain-reaction.md](docs/game-chain-reaction.md)
 - [docs/game-location-signal.md](docs/game-location-signal.md)
 - [docs/game-shade-signal.md](docs/game-shade-signal.md)
-- [docs/todo-location-signal.md](docs/todo-location-signal.md)
 
 ## Quick Start
 
