@@ -133,7 +133,6 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (editingIndex !== null) {
       inlineInputRef.current?.focus();
-      inlineInputRef.current?.select();
     }
   }, [editingIndex]);
 
@@ -528,7 +527,6 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                             ref={inlineInputRef}
                             className="m-cr-inline-input"
                             value={guess}
-                            onFocus={(e) => e.currentTarget.select()}
                             onChange={(e) => setGuess(e.target.value)}
                             placeholder="guess…"
                             maxLength={slot.word.length}
