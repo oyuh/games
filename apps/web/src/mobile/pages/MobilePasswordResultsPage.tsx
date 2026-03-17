@@ -18,13 +18,15 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
+  const navHandledRef = useRef(false);
 
   const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
 
   useEffect(() => {
     if (!game) return;
-    if (game.phase === "ended") { showToast("The host ended the game", "info"); navigate("/"); return; }
-    if (game.kicked.includes(sessionId)) { showToast("You were kicked from the game", "error"); navigate("/"); }
+    if (navHandledRef.current) return;
+    if (game.phase === "ended") { navHandledRef.current = true; showToast("The host ended the game", "info"); navigate("/"); return; }
+    if (game.kicked.includes(sessionId)) { navHandledRef.current = true; showToast("You were kicked from the game", "error"); navigate("/"); }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
   useEffect(() => {

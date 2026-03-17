@@ -20,6 +20,7 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
+  const navHandledRef = useRef(false);
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -30,12 +31,15 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!game) return;
+    if (navHandledRef.current) return;
     if (game.phase === "ended") {
+      navHandledRef.current = true;
       showToast("The host ended the game", "info");
       navigate("/");
       return;
     }
     if (game.kicked.includes(sessionId)) {
+      navHandledRef.current = true;
       showToast("You were kicked from the game", "error");
       navigate("/");
     }

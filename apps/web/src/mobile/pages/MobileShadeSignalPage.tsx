@@ -14,6 +14,7 @@ import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
+import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
 
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 
@@ -196,7 +197,8 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
     const latest = game.round_history[game.round_history.length - 1];
     if (latest) return;
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.reveal({ gameId }));
+      void callGameSecretPreReveal("shade_signal", gameId, sessionId)
+        .then(() => zero.mutate(mutators.shadeSignal.reveal({ gameId })));
     }, 600);
     return () => clearTimeout(timer);
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
@@ -216,7 +218,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
     return () => clearInterval(id);
   }, [game?.settings.phaseEndsAt, phase]);
 
-  const target = game?.target_row != null && game?.target_col != null
+  const target = game?.target_row != null && game?.target_col != null && game.target_row >= 0 && game.target_col >= 0
     ? { row: game.target_row, col: game.target_col }
     : null;
 

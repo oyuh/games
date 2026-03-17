@@ -24,9 +24,11 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
   const isSpectatorRef = useRef(false);
+  const navHandledRef = useRef(false);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const [pendingTeamToJoin, setPendingTeamToJoin] = useState<string | null>(null);
+  const [startingGame, setStartingGame] = useState(false);
 
   const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
 
@@ -34,8 +36,9 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
   useEffect(() => { if (game?.phase === "playing") navigate(`/password/${game.id}`); }, [game?.phase, game?.id, navigate]);
   useEffect(() => {
     if (!game) return;
-    if (game.phase === "ended") { showToast("The host ended the game", "info"); navigate("/"); return; }
-    if (game.kicked.includes(sessionId)) { showToast("You were kicked from the game", "error"); navigate("/"); }
+    if (navHandledRef.current) return;
+    if (game.phase === "ended") { navHandledRef.current = true; showToast("The host ended the game", "info"); navigate("/"); return; }
+    if (game.kicked.includes(sessionId)) { navHandledRef.current = true; showToast("You were kicked from the game", "error"); navigate("/"); }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
   useEffect(() => {
@@ -134,6 +137,21 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
       .finally(() => setJoiningFromOtherGame(false));
   };
 
+  const startGame = async () => {
+    if (!isHost || !canStart || startingGame) return;
+    setStartingGame(true);
+    try {
+      const result = await zero.mutate(mutators.password.start({ gameId, hostId: sessionId })).server;
+      if (result.type === "error") {
+        showToast(result.error.message, "error");
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Couldn't start game", "error");
+    } finally {
+      setStartingGame(false);
+    }
+  };
+
   return (
     <div className="m-page" data-game-theme="password">
       <MobileGameHeader code={game.code} gameLabel="Password" phase="Lobby" round={game.current_round} accent="var(--game-accent)" category={game.settings.category ?? null}>
@@ -226,8 +244,8 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
                 <button
                   className="m-btn m-btn-primary"
                   style={{ width: "100%" }}
-                  disabled={!canStart}
-                  onClick={() => void zero.mutate(mutators.password.start({ gameId, hostId: sessionId }))}
+                  disabled={!canStart || startingGame}
+                  onClick={() => void startGame()}
                 >
                   <FiPlay size={16} /> {canStart ? "Start Game" : `Need ${2 - teamsWithPlayers} more team${2 - teamsWithPlayers > 1 ? "s" : ""}`}
                 </button>
@@ -255,7 +273,10 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
             <button
               className="m-btn m-btn-muted"
               style={{ width: "100%" }}
-              onClick={() => void zero.mutate(mutators.password.leave({ gameId, sessionId }))}
+              onClick={() => {
+                void zero.mutate(mutators.password.leave({ gameId, sessionId })).server
+                  .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't leave game", "error"));
+              }}
             >
               Leave Game
             </button>

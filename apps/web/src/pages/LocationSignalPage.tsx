@@ -11,6 +11,7 @@ import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets";
 
 import { MobileLocationSignalPage } from "../mobile/pages/MobileLocationSignalPage";
 import { WorldMap, MapMarker } from "../components/location/WorldMap";
@@ -140,20 +141,32 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
   // Timer auto-advance
   useEffect(() => {
     if (!game) return;
+    if (!isHost) return;
+    const localCluePairs = (game.settings as { cluePairs?: number }).cluePairs ?? 2;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
     const activePhases: string[] = ["clue1","guess1","clue2","guess2","clue3","guess3","clue4","guess4","reveal"];
     if (!activePhases.includes(game.phase)) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
-      void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
+      if (game.phase.startsWith("guess") && Number(game.phase.replace("guess", "")) === localCluePairs) {
+        void callGameSecretPreReveal("location_signal", gameId, sessionId)
+          .then(() => zero.mutate(mutators.locationSignal.advanceTimer({ gameId })));
+      } else {
+        void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
+      }
       return;
     }
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
+      if (game.phase.startsWith("guess") && Number(game.phase.replace("guess", "")) === localCluePairs) {
+        void callGameSecretPreReveal("location_signal", gameId, sessionId)
+          .then(() => zero.mutate(mutators.locationSignal.advanceTimer({ gameId })));
+      } else {
+        void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
+      }
     }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
+  }, [game, game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost, sessionId]);
 
   // Per-player color assignment (guessers only, stable by index)
   // Must be above the `if (!game)` guard so hook count is constant across renders
@@ -250,7 +263,7 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
     }
 
     // Leader always sees the target they placed
-    if (isLeader && game.target_lat != null && game.target_lng != null && phase !== "picking" && phase !== "reveal") {
+    if (isLeader && !game.encrypted_target && game.target_lat != null && game.target_lng != null && phase !== "picking" && phase !== "reveal") {
       markers.push({ lat: game.target_lat, lng: game.target_lng, color: "#ffd166", label: "Your Target", size: 3.5, ring: true });
     }
 
@@ -301,7 +314,7 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
 
     // Reveal: show target + most-recent guess per player prominently; older guesses tiny & label-hidden
     if (phase === "reveal") {
-      if (game.target_lat != null && game.target_lng != null) {
+      if (!game.encrypted_target && game.target_lat != null && game.target_lng != null) {
         markers.push({ lat: game.target_lat, lng: game.target_lng, color: "#ffd166", label: "Target", size: 4.5, pulse: true, ring: true });
       }
       const maxRound = Math.max(...game.guesses.map((g) => g.round), 1);
@@ -529,7 +542,7 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
           <div className="game-actions">
             <button className="btn btn-primary game-action-btn" disabled={!draftMarker}
               data-tooltip={draftMarker ? "Confirm this location as the target" : "Click the map first to pick a target"} data-tooltip-variant="info"
-              onClick={() => draftMarker && void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng })).server}>
+              onClick={() => draftMarker && void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng })).server.then(() => callGameSecretInit("location_signal", game.id, sessionId))}>
               <FiMapPin size={14} /> Lock Target
             </button>
           </div>

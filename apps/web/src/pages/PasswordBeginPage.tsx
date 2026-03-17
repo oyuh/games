@@ -26,14 +26,13 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
+  const navHandledRef = useRef(false);
   const [showDemo, setShowDemo] = useState(false);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
+  const [startingGame, setStartingGame] = useState(false);
 
   const isHost = game?.host_id === sessionId;
-  const inGameRef = useRef(false);
-  const phaseRef = useRef(game?.phase);
-  const isSpectatorRef = useRef(false);
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -45,24 +44,8 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!game) return;
     addRecentGame({ id: game.id, code: game.code, gameType: "password" });
-    inGameRef.current = game.teams.some((t) => t.members.includes(sessionId));
-    phaseRef.current = game.phase;
-    isSpectatorRef.current = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
-  }, [game]);
 
-  // Leave on unmount so host-leaving ends the game for everyone
-  useEffect(() => {
-    let active = false;
-    const timer = setTimeout(() => { active = true; }, 500);
-    return () => {
-      clearTimeout(timer);
-      if (active && isSpectatorRef.current) {
-        void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }));
-      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
-        void zero.mutate(mutators.password.leave({ gameId, sessionId }));
-      }
-    };
-  }, [gameId, sessionId, zero]);
+  }, [game]);
 
   // Auto-navigate to game when host starts
   useEffect(() => {
@@ -73,12 +56,15 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!game) return;
+    if (navHandledRef.current) return;
     if (game.phase === "ended") {
+      navHandledRef.current = true;
       showToast("The host ended the game", "info");
       navigate("/");
       return;
     }
     if (game.kicked.includes(sessionId)) {
+      navHandledRef.current = true;
       showToast("You were kicked from the game", "error");
       navigate("/");
     }
@@ -162,6 +148,21 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
       .finally(() => setJoiningFromOtherGame(false));
   };
 
+  const startGame = async () => {
+    if (!isHost || !canStart || startingGame) return;
+    setStartingGame(true);
+    try {
+      const result = await zero.mutate(mutators.password.start({ gameId, hostId: sessionId })).server;
+      if (result.type === "error") {
+        showToast(result.error.message, "error");
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Couldn't start game", "error");
+    } finally {
+      setStartingGame(false);
+    }
+  };
+
   return (
     <div className="game-page" data-game-theme="password">
       <PasswordHeader
@@ -224,8 +225,8 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
             {isHost ? (
               <button
                 className="btn btn-primary game-action-btn"
-                disabled={!canStart}
-                onClick={() => void zero.mutate(mutators.password.start({ gameId, hostId: sessionId }))}
+                disabled={!canStart || startingGame}
+                onClick={() => void startGame()}
               >
                 <FiPlay size={16} /> Start Game
               </button>
@@ -234,7 +235,10 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
             )}
             <button
               className="btn btn-muted"
-              onClick={() => void zero.mutate(mutators.password.leave({ gameId, sessionId }))}
+              onClick={() => {
+                void zero.mutate(mutators.password.leave({ gameId, sessionId })).server
+                  .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't leave game", "error"));
+              }}
             >
               <FiLogOut size={14} /> Leave
             </button>

@@ -73,6 +73,9 @@ const zero = new Zero({
   cacheURL: zeroCacheURL,
   schema,
   mutators,
+  mutateHeaders: {
+    "x-zero-user-id": sessionId,
+  },
 });
 
 function stringifyError(error: unknown) {
