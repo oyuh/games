@@ -352,8 +352,8 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
           const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
           const ss = String(timeLeft % 60).padStart(2, "0");
           return (
-            <span className={`m-badge ${timeLeft <= 10 ? "m-badge--danger" : "m-badge--warn"}`}>
-              <FiClock size={12} /> {mm}:{ss}
+            <span className={`m-timer ${timeLeft <= 10 ? "m-timer--danger" : "m-timer--warn"}`}>
+              <FiClock size={14} /> {mm}:{ss}
             </span>
           );
         })()}

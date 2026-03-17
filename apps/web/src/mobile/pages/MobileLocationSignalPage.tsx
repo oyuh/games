@@ -2,7 +2,7 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiLogIn, FiLogOut, FiSend, FiMapPin } from "react-icons/fi";
+import { FiLogIn, FiLogOut, FiSend, FiMapPin, FiClock } from "react-icons/fi";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
@@ -104,6 +104,17 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     if (!round) return null;
     return game.guesses.find((g) => g.sessionId === sessionId && g.round === round) ?? null;
   }, [game, sessionId]);
+
+  // Countdown timer
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  useEffect(() => {
+    const endsAt = game?.settings.phaseEndsAt;
+    if (!endsAt) { setTimeLeft(null); return; }
+    const tick = () => setTimeLeft(Math.max(0, Math.floor((endsAt - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [game?.settings.phaseEndsAt]);
 
   useEffect(() => {
     if (!game) return;
@@ -356,6 +367,11 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
         accent="var(--game-accent)"
       >
         {isSpectator && <MobileSpectatorBadge />}
+        {timeLeft != null && (
+          <span className={`m-timer${timeLeft <= 10 ? " m-timer--danger" : " m-timer--warn"}`}>
+            <FiClock size={14} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
+          </span>
+        )}
       </MobileGameHeader>
 
       {/* Players bar */}
