@@ -9,6 +9,8 @@ export interface MapMarker {
   size?: number;
   pulse?: boolean;
   ring?: boolean;
+  /** When true, hide the label unless the marker is hovered */
+  hideLabel?: boolean;
 }
 
 interface WorldMapProps {
@@ -104,8 +106,8 @@ export function WorldMap({
                   onMouseLeave={() => setHovered(null)}
                 />
 
-                {/* Label — above the dot */}
-                {m.label && (
+                {/* Label — above the dot (hidden until hover when hideLabel is set) */}
+                {m.label && (!m.hideLabel || isHovered) && (
                   <span
                     className="locsig-marker-label"
                     style={{

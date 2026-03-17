@@ -291,9 +291,15 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
       for (const g of game.guesses) {
         const name = playerName(g.sessionId);
         const isMe = g.sessionId === sessionId;
-        const color = guesserColorMap[g.sessionId] ?? "#7ecbff";
-        const sizeBase = g.round === maxRound ? 3 : 1.5 + (g.round / maxRound);
-        markers.push({ lat: g.lat, lng: g.lng, color, label: `${isMe ? "You" : name} (G${g.round})`, size: sizeBase, ring: g.round === maxRound });
+        const isLatest = g.round === maxRound;
+        const color = isLatest ? (guesserColorMap[g.sessionId] ?? "#7ecbff") : "#888";
+        markers.push({
+          lat: g.lat, lng: g.lng, color,
+          label: `${isMe ? "You" : name}${isLatest ? "" : ` (G${g.round})`}`,
+          size: isLatest ? 3 : 0.8,
+          ring: isLatest,
+          hideLabel: !isLatest,
+        });
       }
     }
     return markers;
@@ -590,18 +596,24 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           )}
           <div className="m-shade-score-table">
             <h4 className="m-label">Round {game.settings.currentRound} Scores</h4>
-            {sortedPlayers.filter((p) => p.sessionId !== game.leader_id).map((p) => {
-              const isMe = p.sessionId === sessionId;
-              const name = playerName(p.sessionId);
-              return (
-                <div key={p.sessionId} className="m-shade-score-row">
-                  <span className="m-shade-score-name">
-                    {name} {isMe && <span className="m-badge-small m-badge-small--you">you</span>}
-                  </span>
-                  <span className="m-shade-score-pts m-shade-score-pts--ok">{p.totalScore} pts</span>
-                </div>
-              );
-            })}
+            {(() => {
+              const prevHistory = game.round_history.length > 1 ? game.round_history[game.round_history.length - 2] : null;
+              return sortedPlayers.filter((p) => p.sessionId !== game.leader_id).map((p) => {
+                const isMe = p.sessionId === sessionId;
+                const name = playerName(p.sessionId);
+                const roundPts = p.totalScore - (prevHistory?.scores[p.sessionId] ?? 0);
+                return (
+                  <div key={p.sessionId} className="m-shade-score-row">
+                    <span className="m-shade-score-name">
+                      {name} {isMe && <span className="m-badge-small m-badge-small--you">you</span>}
+                    </span>
+                    <span className="m-shade-score-pts m-shade-score-pts--ok">
+                      {p.totalScore} pts {roundPts > 0 && <span style={{ opacity: 0.7, fontSize: "0.85em" }}>(+{roundPts})</span>}
+                    </span>
+                  </div>
+                );
+              });
+            })()}
             <div className="m-shade-score-row m-shade-score-row--leader">
               <span className="m-shade-score-name">Leader: {leaderName}</span>
               <span className="m-shade-score-pts">📍</span>

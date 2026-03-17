@@ -299,19 +299,24 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
       }
     }
 
-    // Reveal: show target + all guesses with per-player colors and round-based sizing
+    // Reveal: show target + most-recent guess per player prominently; older guesses tiny & label-hidden
     if (phase === "reveal") {
       if (game.target_lat != null && game.target_lng != null) {
         markers.push({ lat: game.target_lat, lng: game.target_lng, color: "#ffd166", label: "Target", size: 4.5, pulse: true, ring: true });
       }
-      // Group guesses by round — later rounds get bigger dots
       const maxRound = Math.max(...game.guesses.map((g) => g.round), 1);
       for (const g of game.guesses) {
         const name = playerName(g.sessionId);
         const isMe = g.sessionId === sessionId;
-        const color = guesserColorMap[g.sessionId] ?? "#7ecbff";
-        const sizeBase = g.round === maxRound ? 3 : 1.5 + (g.round / maxRound);
-        markers.push({ lat: g.lat, lng: g.lng, color, label: `${isMe ? "You" : name} (G${g.round})`, size: sizeBase, ring: g.round === maxRound });
+        const isLatest = g.round === maxRound;
+        const color = isLatest ? (guesserColorMap[g.sessionId] ?? "#7ecbff") : "#888";
+        markers.push({
+          lat: g.lat, lng: g.lng, color,
+          label: `${isMe ? "You" : name}${isLatest ? "" : ` (G${g.round})`}`,
+          size: isLatest ? 3 : 0.8,
+          ring: isLatest,
+          hideLabel: !isLatest,
+        });
       }
     }
 
@@ -648,18 +653,24 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
           <div className="locsig-score-table">
             <h4>Round {game.settings.currentRound} Scores</h4>
             <div className="locsig-score-rows">
-              {sortedPlayers.filter((p) => p.sessionId !== game.leader_id).map((p) => {
-                const isMe = p.sessionId === sessionId;
-                const name = playerName(p.sessionId);
-                return (
-                  <div key={p.sessionId} className="locsig-score-row" data-tooltip={`${name} — ${p.totalScore} pts`} data-tooltip-variant="info">
-                    <span className="locsig-score-name">
-                      {name} {isMe && <span className="game-player-you">you</span>}
-                    </span>
-                    <span className="locsig-score-pts locsig-score-pts--ok">{p.totalScore} pts</span>
-                  </div>
-                );
-              })}
+              {(() => {
+                const prevHistory = game.round_history.length > 1 ? game.round_history[game.round_history.length - 2] : null;
+                return sortedPlayers.filter((p) => p.sessionId !== game.leader_id).map((p) => {
+                  const isMe = p.sessionId === sessionId;
+                  const name = playerName(p.sessionId);
+                  const roundPts = p.totalScore - (prevHistory?.scores[p.sessionId] ?? 0);
+                  return (
+                    <div key={p.sessionId} className="locsig-score-row" data-tooltip={`${name} — ${p.totalScore} pts`} data-tooltip-variant="info">
+                      <span className="locsig-score-name">
+                        {name} {isMe && <span className="game-player-you">you</span>}
+                      </span>
+                      <span className="locsig-score-pts locsig-score-pts--ok">
+                        {p.totalScore} pts {roundPts > 0 && <span style={{ opacity: 0.7, fontSize: "0.85em" }}>(+{roundPts})</span>}
+                      </span>
+                    </div>
+                  );
+                });
+              })()}
               <div className="locsig-score-row locsig-score-row--leader">
                 <span className="locsig-score-name">Leader: {leaderName}</span>
                 <span className="locsig-score-pts">📍</span>
