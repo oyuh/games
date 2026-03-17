@@ -2,7 +2,7 @@ import { mutators, queries, chainCategoryLabels } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle, FiEye } from "react-icons/fi";
+import { FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle, FiEye, FiClock } from "react-icons/fi";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { InSessionModal } from "../../components/shared/InSessionModal";
@@ -82,6 +82,17 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
 
   const playerName = (id: string) => sessionById[id] ?? id.slice(0, 6);
   const opponent = useMemo(() => game?.players.find((p) => p.sessionId !== sessionId), [game, sessionId]);
+
+  // Countdown timer
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  useEffect(() => {
+    const endsAt = game?.settings.phaseEndsAt;
+    if (!endsAt) { setTimeLeft(null); return; }
+    const tick = () => setTimeLeft(Math.max(0, Math.floor((endsAt - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [game?.settings.phaseEndsAt]);
 
   useEffect(() => {
     if (!game) return;
@@ -257,6 +268,11 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
         category={game.settings.category ?? null}
       >
         {isSpectator && <MobileSpectatorBadge />}
+        {timeLeft != null && (
+          <span className={`m-timer${timeLeft <= 10 ? " m-timer--danger" : " m-timer--warn"}`}>
+            <FiClock size={14} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
+          </span>
+        )}
       </MobileGameHeader>
 
       {/* ── VS Scoreboard ── */}

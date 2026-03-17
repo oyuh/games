@@ -130,8 +130,8 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       <MobileGameHeader code={game.code} gameLabel="Password" phase={game.phase} round={game.current_round} accent="var(--game-accent)" category={game.settings.category ?? null}>
         {isSpectator && <MobileSpectatorBadge />}
         {timeLeft != null && (
-          <span className={`m-badge${timeLeft <= 10 ? " m-badge--danger" : " m-badge--warn"}`}>
-            <FiClock size={10} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
+          <span className={`m-timer${timeLeft <= 10 ? " m-timer--danger" : " m-timer--warn"}`}>
+            <FiClock size={14} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
           </span>
         )}
       </MobileGameHeader>

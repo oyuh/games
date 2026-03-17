@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiUsers, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { FiSearch, FiUsers, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare } from "react-icons/fi";
 import { PiPaintBrushBold } from "react-icons/pi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, SessionGameType, setStoredName } from "../../lib/session";
@@ -350,8 +350,18 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <div className="m-card">
         {firstVisit && (
           <div className="m-home-welcome">
-            <span style={{ fontSize: "1.3rem" }}>⚡</span>
-            <p>Welcome! Set a display name to get started.</p>
+            <div className="m-home-welcome-row">
+              <span style={{ fontSize: "1.3rem" }}>&#9889;</span>
+              <p>Welcome! Set a display name below to get started.</p>
+            </div>
+            <div className="m-home-welcome-divider" />
+            <div className="m-home-welcome-row">
+              <FiShare size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
+              <p>
+                Tap <strong>Share</strong> then <strong>Add to Home Screen</strong> to
+                install as an app!
+              </p>
+            </div>
           </div>
         )}
 
