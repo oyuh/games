@@ -18,10 +18,12 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * c;
 }
 
+const PERFECT_KM = 120.7; // 75 miles
+
 function scoreForDistance(km: number): number {
-  if (km <= 1) return 5000;
-  // Exponential decay: roughly 5000 at 0km, ~2500 at 500km, ~0 at 5000km+
-  return Math.max(0, Math.round(5000 * Math.exp(-km / 1500)));
+  if (km <= PERFECT_KM) return 5000;
+  // Generous exponential decay: ~2500 at ~2000km, still scoring at 5000km+
+  return Math.max(0, Math.round(5000 * Math.exp(-(km - PERFECT_KM) / 3000)));
 }
 
 export const locationSignalMutators = {
@@ -246,8 +248,49 @@ export const locationSignalMutators = {
       const withoutExisting = game.guesses.filter((g) => !(g.sessionId === args.sessionId && g.round === args.round));
       const guesses = [...withoutExisting, { sessionId: args.sessionId, round: args.round, lat: args.lat, lng: args.lng }];
 
-      // Check if all guessers have submitted for this round
+      // Duel perfect-score shortcut: if there's exactly 1 guesser and they nailed it, skip to reveal
       const guessersCount = game.players.filter((p) => p.sessionId !== game.leader_id).length;
+      const isDuel = guessersCount === 1;
+      if (isDuel && game.target_lat != null && game.target_lng != null) {
+        const km = haversineKm(game.target_lat, game.target_lng, args.lat, args.lng);
+        if (km <= PERFECT_KM) {
+          const scores = game.players.reduce<Record<string, number>>((acc, p) => {
+            acc[p.sessionId] = p.totalScore;
+            return acc;
+          }, {});
+          scores[args.sessionId] = (scores[args.sessionId] ?? 0) + 5000;
+
+          const players = game.players.map((player) => ({
+            ...player,
+            totalScore: scores[player.sessionId] ?? player.totalScore,
+          }));
+
+          const nextHistory = [
+            ...game.round_history,
+            {
+              round: game.settings.currentRound,
+              leaderId: game.leader_id,
+              target: { lat: game.target_lat, lng: game.target_lng },
+              clue1: game.clue1, clue2: game.clue2, clue3: game.clue3, clue4: game.clue4,
+              guesses,
+              scores,
+            },
+          ];
+
+          await tx.mutate.location_signal_games.update({
+            id: game.id,
+            guesses,
+            phase: "reveal",
+            players,
+            round_history: nextHistory,
+            settings: { ...game.settings, phaseEndsAt: null },
+            updated_at: ts,
+          });
+          return;
+        }
+      }
+
+      // Check if all guessers have submitted for this round
       const roundGuesses = guesses.filter((g) => g.round === args.round);
       const uniqueGuessers = new Set(roundGuesses.map((g) => g.sessionId));
       const allSubmitted = uniqueGuessers.size >= guessersCount;

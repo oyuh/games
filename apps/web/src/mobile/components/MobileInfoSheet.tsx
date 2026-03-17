@@ -3,12 +3,28 @@ import { FiZap, FiCopy } from "react-icons/fi";
 import { useState } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { BottomSheet } from "./BottomSheet";
+import { ImposterDemo } from "../../components/demos/ImposterDemo";
+import { PasswordDemo } from "../../components/demos/PasswordDemo";
+import { ChainDemo } from "../../components/demos/ChainDemo";
+import { ShadeDemo } from "../../components/demos/ShadeDemo";
+import { LocationDemo } from "../../components/demos/LocationDemo";
+
+function getGameType(pathname: string): "imposter" | "password" | "chain" | "shade" | "location" | null {
+  if (pathname.startsWith("/imposter/")) return "imposter";
+  if (pathname.startsWith("/password/")) return "password";
+  if (pathname.startsWith("/chain/")) return "chain";
+  if (pathname.startsWith("/shade/")) return "shade";
+  if (pathname.startsWith("/location/")) return "location";
+  return null;
+}
 
 export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
   const location = useLocation();
   const sessionId = getOrCreateSessionId();
   const [copied, setCopied] = useState(false);
   const page = getPageInfo(location.pathname);
+  const gameType = getGameType(location.pathname);
+  const [showDemo, setShowDemo] = useState(false);
 
   const copySessionId = () => {
     void navigator.clipboard.writeText(sessionId).then(() => {
@@ -16,6 +32,14 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
       setTimeout(() => setCopied(false), 1500);
     });
   };
+
+  if (showDemo && gameType) {
+    if (gameType === "imposter") return <ImposterDemo onClose={onClose} />;
+    if (gameType === "password") return <PasswordDemo onClose={onClose} />;
+    if (gameType === "chain") return <ChainDemo onClose={onClose} />;
+    if (gameType === "shade") return <ShadeDemo onClose={onClose} />;
+    if (gameType === "location") return <LocationDemo onClose={onClose} />;
+  }
 
   return (
     <BottomSheet title="Info" onClose={onClose}>
@@ -43,6 +67,17 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* How to Play button on game pages */}
+      {gameType && (
+        <button
+          className="m-btn m-btn--primary"
+          style={{ width: "100%", marginTop: 12 }}
+          onClick={() => setShowDemo(true)}
+        >
+          How to Play
+        </button>
       )}
     </BottomSheet>
   );
@@ -92,6 +127,13 @@ function getPageInfo(pathname: string): { title: string; description: string; ti
       title: "Shade Signal",
       description: "One leader describes a target color. Everyone else guesses which cell it is.",
       tips: ["Leaders: describe the color without naming it", "Guessers: closer guesses = more points"],
+    };
+  }
+  if (pathname.startsWith("/location/")) {
+    return {
+      title: "Location Signal",
+      description: "One leader picks a location on the map and gives clues. Everyone else guesses where it is.",
+      tips: ["Leaders: give clues to narrow it down", "Guessers: closer guesses = more points"],
     };
   }
   return { title: "Page", description: "You're on an unknown page." };
