@@ -1,4 +1,4 @@
-import { mutators, queries } from "@games/shared";
+import { decryptSecret, isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -10,6 +10,7 @@ import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
+import { useGameSecret } from "../../lib/game-secrets";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
@@ -21,14 +22,23 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   const game = games[0];
+  const isHost = game?.host_id === sessionId;
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState("");
+  const [decryptedActiveWord, setDecryptedActiveWord] = useState<string | null>(null);
+  const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
+  const [fallbackKey, setFallbackKey] = useState<string | null>(null);
+  const [fallbackRetryNonce, setFallbackRetryNonce] = useState(0);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
   const isSpectatorRef = useRef(false);
+  const navHandledRef = useRef(false);
+  const isHostRef = useRef(Boolean(isHost));
+  const phaseRef = useRef(game?.phase);
+
+  isHostRef.current = Boolean(isHost);
+  phaseRef.current = game?.phase;
 
   usePresenceSocket({ sessionId, gameId, gameType: "password" });
-
-  const isHost = game?.host_id === sessionId;
   const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
 
   useEffect(() => {
@@ -63,6 +73,121 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
     return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
   }, [game?.active_rounds, myTeamIndex]);
 
+  const { decryptValue } = useGameSecret({
+    gameType: "password",
+    gameId,
+    sessionId,
+    enabled: Boolean(game && game.phase !== "lobby")
+  });
+
+  const encryptedActiveWord = myActiveRound?.encryptedWord
+    ?? (myActiveRound?.word && isEncrypted(myActiveRound.word) ? myActiveRound.word : null);
+
+  useEffect(() => {
+    if (!game || game.phase !== "playing" || !encryptedActiveWord || fallbackKey) return;
+    if (myActiveRound?.guesserId === sessionId) return;
+    const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    void fetch(`${apiBase}/api/game-secret/key`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-zero-user-id": sessionId
+      },
+      body: JSON.stringify({ gameType: "password", gameId, sessionId })
+    })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const data = await res.json() as { key?: string };
+        return data.key ?? null;
+      })
+      .then((key) => {
+        if (!cancelled && key) {
+          setFallbackKey(key);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled && !fallbackKey) {
+          retryTimer = setTimeout(() => setFallbackRetryNonce((n) => n + 1), 1500);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [game?.phase, encryptedActiveWord, fallbackKey, myActiveRound?.guesserId, sessionId, gameId, fallbackRetryNonce]);
+
+  useEffect(() => {
+    let active = false;
+    const timer = setTimeout(() => {
+      active = true;
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      if (!active) return;
+      if (!isHostRef.current) return;
+      if (phaseRef.current === "results" || phaseRef.current === "ended") return;
+      void zero.mutate(mutators.password.leave({ gameId, sessionId }));
+    };
+  }, [gameId, sessionId, zero]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const encryptedOrPlain = myActiveRound?.word ?? myActiveRound?.encryptedWord ?? null;
+    if (!encryptedOrPlain) {
+      setDecryptedActiveWord(null);
+      return;
+    }
+    void decryptValue(encryptedOrPlain).then(async (value) => {
+      if (cancelled) return;
+      if (value !== null) {
+        setDecryptedActiveWord(value);
+        return;
+      }
+      if (!fallbackKey || !isEncrypted(encryptedOrPlain)) {
+        setDecryptedActiveWord(null);
+        return;
+      }
+      const fallbackValue = await decryptSecret(encryptedOrPlain, fallbackKey).catch(() => null);
+      if (!cancelled) {
+        setDecryptedActiveWord(fallbackValue);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myActiveRound?.word, myActiveRound?.encryptedWord, decryptValue, fallbackKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const rounds = game?.rounds ?? [];
+    if (rounds.length === 0) {
+      setDecryptedRoundWords({});
+      return;
+    }
+    void Promise.all(
+      rounds.map(async (round, index) => ({
+        index,
+        value: await decryptValue(round.word)
+      }))
+    ).then((rows) => {
+      if (cancelled) return;
+      setDecryptedRoundWords(
+        rows.reduce<Record<number, string | null>>((acc, row) => {
+          acc[row.index] = row.value;
+          return acc;
+        }, {})
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.rounds, decryptValue]);
+
   useEffect(() => {
     if (!game || game.phase !== "playing" || !game.settings.roundEndsAt) return;
     const remaining = game.settings.roundEndsAt - Date.now();
@@ -74,8 +199,9 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   useEffect(() => { if (game?.phase === "results") navigate(`/password/${game.id}/results`); }, [game?.phase, game?.id, navigate]);
   useEffect(() => {
     if (!game) return;
-    if (game.phase === "ended") { showToast("The host ended the game", "info"); navigate("/"); return; }
-    if (game.kicked.includes(sessionId)) { showToast("You were kicked from the game", "error"); navigate("/"); }
+    if (navHandledRef.current) return;
+    if (game.phase === "ended") { navHandledRef.current = true; showToast("The host ended the game", "info"); navigate("/"); return; }
+    if (game.kicked.includes(sessionId)) { navHandledRef.current = true; showToast("You were kicked from the game", "error"); navigate("/"); }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
   useEffect(() => {
@@ -161,6 +287,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       {/* Active Round */}
       {!isSpectator && game.phase === "playing" && myActiveRound && (() => {
         const ar = myActiveRound;
+        const activeRoundWord = decryptedActiveWord ?? (ar.word && !isEncrypted(ar.word) ? ar.word : null);
         const guesserName = names[ar.guesserId] ?? ar.guesserId.slice(0, 6);
         const isGuesser = ar.guesserId === sessionId;
         const isOnTeam = myTeamMembers.includes(sessionId);
@@ -186,11 +313,11 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
             )}
 
             {/* Clue giver: submit clue */}
-            {ar.word && !allCluesIn && isClueGiver && !alreadyClued && (
+            {activeRoundWord && !allCluesIn && isClueGiver && !alreadyClued && (
               <>
                 <div className="m-secret-word">
                   <span style={{ opacity: 0.6, fontSize: "0.75rem" }}>Secret Word</span>
-                  <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)" }}>{ar.word}</span>
+                  <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)" }}>{activeRoundWord}</span>
                 </div>
                 <form className="m-input-row" onSubmit={submitClue}>
                   <input className="m-input" autoFocus onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={clue} onChange={(e) => setClue(e.target.value)} placeholder="Enter clue…" maxLength={80} />
@@ -200,19 +327,33 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
               </>
             )}
 
+            {!activeRoundWord && !allCluesIn && isClueGiver && !alreadyClued && (
+              <div className="m-waiting">
+                <div className="m-waiting-pulse" />
+                <p>Loading secret word…</p>
+                <button
+                  className="m-btn m-btn-muted"
+                  style={{ width: "100%", marginTop: "0.5rem" }}
+                  onClick={() => setFallbackRetryNonce((n) => n + 1)}
+                >
+                  Retry Sync
+                </button>
+              </div>
+            )}
+
             {/* Waiting states */}
-            {ar.word && !allCluesIn && isClueGiver && alreadyClued && (
+            {activeRoundWord && !allCluesIn && isClueGiver && alreadyClued && (
               <div className="m-waiting"><div className="m-waiting-pulse" /><p>Waiting for teammates… ({ar.clues.length}/{clueGiverCount})</p></div>
             )}
-            {ar.word && !allCluesIn && isGuesser && (
+            {activeRoundWord && !allCluesIn && isGuesser && (
               <div className="m-waiting"><div className="m-waiting-pulse" /><p>Teammates are writing clues… ({ar.clues.length}/{clueGiverCount})</p></div>
             )}
-            {ar.word && !allCluesIn && !isOnTeam && (
+            {activeRoundWord && !allCluesIn && !isOnTeam && (
               <div className="m-waiting"><div className="m-waiting-pulse" /><p>Clue givers submitting… ({ar.clues.length}/{clueGiverCount})</p></div>
             )}
 
             {/* All clues in — guesser guesses */}
-            {ar.word && allCluesIn && (
+            {activeRoundWord && allCluesIn && (
               <>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
                   {ar.clues.map((c) => (
@@ -270,7 +411,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                   <tr key={i}>
                     <td>{r.round}</td>
                     <td>{game.teams[r.teamIndex]?.name ?? `Team ${r.teamIndex + 1}`}</td>
-                    <td style={{ color: "var(--primary)", fontWeight: 600 }}>{r.word}</td>
+                    <td style={{ color: "var(--primary)", fontWeight: 600 }}>{decryptedRoundWords[i] ?? (isEncrypted(r.word) ? "••••" : r.word)}</td>
                     <td style={{ color: r.correct ? "#4ade80" : "#f87171" }}>{r.correct ? "✓" : "✗"}</td>
                   </tr>
                 ))}

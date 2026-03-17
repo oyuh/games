@@ -1,4 +1,4 @@
-import { imposterCategoryLabels, mutators, queries } from "@games/shared";
+import { imposterCategoryLabels, isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -14,6 +14,7 @@ import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { callGameSecretInit, useGameSecret } from "../../lib/game-secrets";
 
 /** Redact a clue showing a contiguous ~65% chunk of each word. */
 function redactClue(text: string): string {
@@ -39,6 +40,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const game = games[0];
   const [clue, setClue] = useState("");
   const [voteTarget, setVoteTarget] = useState("");
+  const [visibleSecretWord, setVisibleSecretWord] = useState<string | null>(null);
+  const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
@@ -100,6 +103,63 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       return acc;
     }, {});
   }, [game]);
+
+  const { decryptValue } = useGameSecret({
+    gameType: "imposter",
+    gameId,
+    sessionId,
+    enabled: Boolean(game && game.phase !== "lobby")
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!game?.secret_word) {
+      setVisibleSecretWord(null);
+      return;
+    }
+    void decryptValue(game.secret_word).then((value) => {
+      if (!cancelled) {
+        setVisibleSecretWord(value);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.secret_word, decryptValue]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const roundHistory = game?.round_history ?? [];
+    if (roundHistory.length === 0) {
+      setDecryptedRoundWords({});
+      return;
+    }
+
+    void Promise.all(
+      roundHistory.map(async (round) => ({
+        round: round.round,
+        value: round.secretWord ? await decryptValue(round.secretWord) : null
+      }))
+    ).then((rows) => {
+      if (cancelled) return;
+      setDecryptedRoundWords(
+        rows.reduce<Record<number, string | null>>((acc, row) => {
+          acc[row.round] = row.value;
+          return acc;
+        }, {})
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.round_history, decryptValue]);
+
+  useEffect(() => {
+    if (!game || !isHost || game.phase !== "playing" || !game.secret_word) return;
+    if (isEncrypted(game.secret_word)) return;
+    void callGameSecretInit("imposter", gameId, sessionId);
+  }, [game, game?.phase, game?.secret_word, isHost, gameId, sessionId]);
 
   // Countdown timer for timed phases
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -331,8 +391,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                 <p className="m-role-title">
                   {isImposter ? "You are the Imposter" : "You are a Player"}
                 </p>
-                {!isImposter && game.secret_word && (
-                  <p className="m-role-word">Secret word: <strong>{game.secret_word}</strong></p>
+                {!isImposter && visibleSecretWord && (
+                  <p className="m-role-word">Secret word: <strong>{visibleSecretWord}</strong></p>
                 )}
                 {isImposter && (
                   <p className="m-role-hint">Blend in! Give a believable clue.</p>
@@ -494,6 +554,11 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         const votedOutPlayer = votedOutId ? activePlayers.find((p) => p.sessionId === votedOutId) : null;
         const votedOutName = votedOutPlayer ? (sessionById[votedOutPlayer.sessionId] ?? votedOutPlayer.sessionId.slice(0, 6)) : null;
         const wasImposter = votedOutPlayer?.role === "imposter";
+        const voteLines = game.votes.map((vote) => {
+          const voter = sessionById[vote.voterId] ?? vote.voterId.slice(0, 6);
+          const target = sessionById[vote.targetId] ?? vote.targetId.slice(0, 6);
+          return `${voter} → ${target}`;
+        });
 
         return (
           <>
@@ -514,12 +579,23 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                 </>
               )}
               {game.secret_word && (
-                <p className="m-reveal-word">The word was: <strong>{game.secret_word}</strong></p>
+                <p className="m-reveal-word">The word was: <strong>{visibleSecretWord ?? "••••"}</strong></p>
               )}
             </div>
 
             <div className="m-card">
-              <h3 className="m-card-title">Vote Results</h3>
+              <h3 className="m-card-title">Vote Breakdown</h3>
+              {voteLines.length > 0 ? (
+                <div style={{ display: "grid", gap: "0.25rem", marginBottom: "0.65rem" }}>
+                  {voteLines.map((line, index) => (
+                    <p key={`${line}-${index}`} style={{ margin: 0, fontSize: "0.85rem", opacity: 0.9 }}>{line}</p>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ margin: "0 0 0.65rem", opacity: 0.7 }}>No votes recorded.</p>
+              )}
+
+              <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.9rem" }}>Vote Totals</h4>
               <div className="m-results-list">
                 {activePlayers.map((p) => {
                   const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
@@ -532,8 +608,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                   return (
                     <div key={p.sessionId} className="m-result-row">
                       <div className="m-result-info">
-                        <span className={isVotedOut ? "m-result-name--danger" : ""}>{name} {isVotedOut ? "⬅ voted out" : ""}</span>
-                        <span className="m-result-votes">{voteCount}</span>
+                        <span className={isVotedOut ? "m-result-name--danger" : ""}>{name}</span>
+                        <span className="m-result-votes">{voteCount} {voteCount === 1 ? "vote" : "votes"}{isVotedOut ? " • Voted Out" : ""}</span>
                       </div>
                       <div className="m-result-bar-track">
                         <div className={`m-result-bar${isVotedOut ? " m-result-bar--danger" : ""}`} style={{ width: `${pct}%` }} />
@@ -585,7 +661,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                 <strong>{imposterNames.join(", ")}</strong>
               </p>
               {game.secret_word && (
-                <p className="m-reveal-word">The word was: <strong>{game.secret_word}</strong></p>
+                <p className="m-reveal-word">The word was: <strong>{visibleSecretWord ?? "••••"}</strong></p>
               )}
             </div>
 
@@ -601,7 +677,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                       {(game.round_history ?? []).map((rh) => (
                         <tr key={rh.round}>
                           <td>{rh.round}</td>
-                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ?? "—"}</td>
+                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ? (decryptedRoundWords[rh.round] ?? "••••") : "—"}</td>
                           <td style={{ fontWeight: 600 }}>{rh.votedOutName ?? "No one"}</td>
                           <td style={{ color: rh.wasImposter ? "#f87171" : "#4ade80", fontWeight: 600 }}>
                             {rh.votedOutName ? (rh.wasImposter ? "Imposter" : "Innocent") : "—"}

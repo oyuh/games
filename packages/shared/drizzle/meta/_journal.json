@@ -36,6 +36,20 @@
       "when": 1773171155688,
       "tag": "0004_cold_elektra",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1778800000000,
+      "tag": "0005_silent_keyring",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778801000000,
+      "tag": "0006_locked_satellite",
+      "breakpoints": true
     }
   ]
 }

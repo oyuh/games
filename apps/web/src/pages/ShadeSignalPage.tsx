@@ -14,6 +14,7 @@ import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets";
 
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 import { ShadeDemo } from "../components/demos/ShadeDemo";
@@ -224,7 +225,8 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
     const latest = game.round_history[game.round_history.length - 1];
     if (latest && latest.round === game.settings.currentRound) return; // already revealed this round
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.reveal({ gameId }));
+      void callGameSecretPreReveal("shade_signal", gameId, sessionId)
+        .then(() => zero.mutate(mutators.shadeSignal.reveal({ gameId })));
     }, 600);
     return () => clearTimeout(timer);
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
@@ -232,7 +234,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
   // ── All hooks MUST be above the early-return guard ──
   const phase = (game?.phase ?? "lobby") as ShadePhase;
 
-  const target = game?.target_row != null && game?.target_col != null
+  const target = game?.target_row != null && game?.target_col != null && game.target_row >= 0 && game.target_col >= 0
     ? { row: game.target_row, col: game.target_col }
     : null;
 
@@ -593,7 +595,7 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
                   void zero.mutate(mutators.shadeSignal.setTarget({
                     gameId, sessionId,
                     row: pickingCell.row, col: pickingCell.col
-                  }));
+                  })).server.then(() => callGameSecretInit("shade_signal", gameId, sessionId));
                   setPickingCell(null);
                 }}
               >

@@ -66,6 +66,7 @@ const passwordGames = table("password_games").columns({
     teamIndex: number;
     guesserId: string;
     word: string | null;
+    encryptedWord?: string | null;
     clues: Array<{ sessionId: string; text: string }>;
     guess: string | null;
   }>>(),
@@ -134,6 +135,7 @@ const shadeSignalGames = table("shade_signal_games").columns({
   grid_cols: number(),
   target_row: number().optional(),
   target_col: number().optional(),
+  encrypted_target: string().optional(),
   clue1: string().optional(),
   clue2: string().optional(),
   guesses: json<Array<{ sessionId: string; round: 1 | 2; row: number; col: number }>>(),
@@ -174,6 +176,7 @@ const locationSignalGames = table("location_signal_games").columns({
   current_leader_index: number(),
   target_lat: number().optional(),
   target_lng: number().optional(),
+  encrypted_target: string().optional(),
   clue1: string().optional(),
   clue2: string().optional(),
   clue3: string().optional(),

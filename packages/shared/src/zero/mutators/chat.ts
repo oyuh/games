@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now } from "./helpers";
+import { assertCaller, now } from "./helpers";
 
 export const chatMutators = {
   send: defineMutator(
@@ -15,7 +15,8 @@ export const chatMutators = {
       channel: z.string().optional(),
       text: z.string().min(1).max(500)
     }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.senderId);
       await tx.mutate.chat_messages.insert({
         id: args.id,
         game_type: args.gameType,

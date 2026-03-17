@@ -5,6 +5,68 @@ export const now = () => Date.now();
 export const code = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
 export const PRESENCE_TIMEOUT_MS = 30_000;
 
+type GameSecretResolver = (gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal", gameId: string) => Promise<string>;
+type ServerContext = { userId?: string; resolveGameSecretKey?: GameSecretResolver };
+type TxLike = { location?: string };
+
+function asServerContext(ctx: unknown): ServerContext {
+  if (ctx && typeof ctx === "object") {
+    const maybeCtx = ctx as { userId?: unknown; resolveGameSecretKey?: unknown };
+    const safeCtx: ServerContext = {};
+    if (typeof maybeCtx.userId === "string") {
+      safeCtx.userId = maybeCtx.userId;
+    }
+    if (typeof maybeCtx.resolveGameSecretKey === "function") {
+      safeCtx.resolveGameSecretKey = maybeCtx.resolveGameSecretKey as GameSecretResolver;
+    }
+    return safeCtx;
+  }
+  return {};
+}
+
+function asTxLike(tx: unknown): TxLike {
+  if (tx && typeof tx === "object" && "location" in tx) {
+    const maybeLocation = (tx as { location?: unknown }).location;
+    return typeof maybeLocation === "string" ? { location: maybeLocation } : {};
+  }
+  return {};
+}
+
+function shouldEnforceServerIdentity(tx: TxLike, ctx: ServerContext) {
+  return tx.location === "server" && !!ctx.userId && ctx.userId !== "anon";
+}
+
+export function assertCaller(tx: unknown, ctx: unknown, claimedId: string) {
+  const safeTx = asTxLike(tx);
+  const safeCtx = asServerContext(ctx);
+  if (!shouldEnforceServerIdentity(safeTx, safeCtx)) {
+    return;
+  }
+  if (safeCtx.userId !== claimedId) {
+    throw new Error("Not allowed");
+  }
+}
+
+export function assertHost(tx: unknown, ctx: unknown, claimedHostId: string, actualHostId: string) {
+  const safeTx = asTxLike(tx);
+  const safeCtx = asServerContext(ctx);
+  if (!shouldEnforceServerIdentity(safeTx, safeCtx)) {
+    return;
+  }
+  if (safeCtx.userId !== claimedHostId || claimedHostId !== actualHostId) {
+    throw new Error("Only host can do that");
+  }
+}
+
+export function isServerTx(tx: unknown) {
+  return asTxLike(tx).location === "server";
+}
+
+export function getGameSecretResolver(ctx: unknown): GameSecretResolver | null {
+  const safeCtx = asServerContext(ctx);
+  return safeCtx.resolveGameSecretKey ?? null;
+}
+
 export function pickRandom<T>(values: T[]): T {
   return values[Math.floor(Math.random() * values.length)]!;
 }
@@ -99,8 +161,17 @@ export function buildTeamRound(team: { name: string; members: string[] }, teamIn
 }
 
 export function buildAllTeamRounds(teams: Array<{ name: string; members: string[] }>, roundNum: number, usedWords?: string[], category?: string) {
-  const word = pickPasswordWord(usedWords, category);
+  const wordsUsedThisRound = new Set<string>();
   return teams
-    .map((team, i) => (team.members.length >= 2 ? buildTeamRound(team, i, roundNum, word) : null))
+    .map((team, i) => {
+      if (team.members.length < 2) return null;
+      const avoidWords = [
+        ...(usedWords ?? []),
+        ...Array.from(wordsUsedThisRound)
+      ];
+      const word = pickPasswordWord(avoidWords, category);
+      wordsUsedThisRound.add(word);
+      return buildTeamRound(team, i, roundNum, word);
+    })
     .filter((r): r is NonNullable<typeof r> => r !== null);
 }

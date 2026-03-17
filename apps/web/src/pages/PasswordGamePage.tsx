@@ -1,4 +1,4 @@
-import { mutators, queries } from "@games/shared";
+import { decryptSecret, isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -11,6 +11,7 @@ import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordGamePage } from "../mobile/pages/MobilePasswordGamePage";
+import { useGameSecret } from "../lib/game-secrets";
 
 export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   const isMobile = useIsMobile();
@@ -23,16 +24,22 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   const game = games[0];
+  const isHost = game?.host_id === sessionId;
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState("");
+  const [decryptedActiveWord, setDecryptedActiveWord] = useState<string | null>(null);
+  const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
+  const [fallbackKey, setFallbackKey] = useState<string | null>(null);
+  const [fallbackRetryNonce, setFallbackRetryNonce] = useState(0);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
+  const navHandledRef = useRef(false);
+  const isHostRef = useRef(Boolean(isHost));
+  const phaseRef = useRef(game?.phase);
+
+  isHostRef.current = Boolean(isHost);
+  phaseRef.current = game?.phase;
 
   usePresenceSocket({ sessionId, gameId, gameType: "password" });
-
-  const isHost = game?.host_id === sessionId;
-  const inGameRef = useRef(false);
-  const phaseRef = useRef(game?.phase);
-  const isSpectatorRef = useRef(false);
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -53,27 +60,120 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
     return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
   }, [game?.active_rounds, myTeamIndex]);
 
-  // Sync refs
-  useEffect(() => {
-    if (!game) return;
-    inGameRef.current = game.teams.some((t) => t.members.includes(sessionId));
-    phaseRef.current = game.phase;
-    isSpectatorRef.current = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
-  }, [game, sessionId]);
+  const { decryptValue } = useGameSecret({
+    gameType: "password",
+    gameId,
+    sessionId,
+    enabled: Boolean(game && game.phase !== "lobby")
+  });
 
-  // Leave on unmount so host-leaving ends the game
+  const encryptedActiveWord = myActiveRound?.encryptedWord
+    ?? (myActiveRound?.word && isEncrypted(myActiveRound.word) ? myActiveRound.word : null);
+
+  useEffect(() => {
+    if (!game || game.phase !== "playing" || !encryptedActiveWord || fallbackKey) return;
+    if (myActiveRound?.guesserId === sessionId) return;
+    const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    void fetch(`${apiBase}/api/game-secret/key`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-zero-user-id": sessionId
+      },
+      body: JSON.stringify({ gameType: "password", gameId, sessionId })
+    })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const data = await res.json() as { key?: string };
+        return data.key ?? null;
+      })
+      .then((key) => {
+        if (!cancelled && key) {
+          setFallbackKey(key);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled && !fallbackKey) {
+          retryTimer = setTimeout(() => setFallbackRetryNonce((n) => n + 1), 1500);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [game?.phase, encryptedActiveWord, fallbackKey, myActiveRound?.guesserId, sessionId, gameId, fallbackRetryNonce]);
+
   useEffect(() => {
     let active = false;
-    const timer = setTimeout(() => { active = true; }, 500);
+    const timer = setTimeout(() => {
+      active = true;
+    }, 500);
+
     return () => {
       clearTimeout(timer);
-      if (active && isSpectatorRef.current) {
-        void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }));
-      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
-        void zero.mutate(mutators.password.leave({ gameId, sessionId }));
-      }
+      if (!active) return;
+      if (!isHostRef.current) return;
+      if (phaseRef.current === "results" || phaseRef.current === "ended") return;
+      void zero.mutate(mutators.password.leave({ gameId, sessionId }));
     };
   }, [gameId, sessionId, zero]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const encryptedOrPlain = myActiveRound?.word ?? myActiveRound?.encryptedWord ?? null;
+    if (!encryptedOrPlain) {
+      setDecryptedActiveWord(null);
+      return;
+    }
+    void decryptValue(encryptedOrPlain).then(async (value) => {
+      if (cancelled) return;
+      if (value !== null) {
+        setDecryptedActiveWord(value);
+        return;
+      }
+      if (!fallbackKey || !isEncrypted(encryptedOrPlain)) {
+        setDecryptedActiveWord(null);
+        return;
+      }
+      const fallbackValue = await decryptSecret(encryptedOrPlain, fallbackKey).catch(() => null);
+      if (!cancelled) {
+        setDecryptedActiveWord(fallbackValue);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myActiveRound?.word, myActiveRound?.encryptedWord, decryptValue, fallbackKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const rounds = game?.rounds ?? [];
+    if (rounds.length === 0) {
+      setDecryptedRoundWords({});
+      return;
+    }
+    void Promise.all(
+      rounds.map(async (round, index) => ({
+        index,
+        value: await decryptValue(round.word)
+      }))
+    ).then((rows) => {
+      if (cancelled) return;
+      setDecryptedRoundWords(
+        rows.reduce<Record<number, string | null>>((acc, row) => {
+          acc[row.index] = row.value;
+          return acc;
+        }, {})
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.rounds, decryptValue]);
 
   // Auto-advance timer
   useEffect(() => {
@@ -98,12 +198,15 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!game) return;
+    if (navHandledRef.current) return;
     if (game.phase === "ended") {
+      navHandledRef.current = true;
       showToast("The host ended the game", "info");
       navigate("/");
       return;
     }
     if (game.kicked.includes(sessionId)) {
+      navHandledRef.current = true;
       showToast("You were kicked from the game", "error");
       navigate("/");
     }
@@ -172,6 +275,18 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
 
   const myTeamSkips = myTeam ? (game.settings.skipsRemaining?.[myTeam.name] ?? 0) : 0;
   const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
+  const activeRoundView = myActiveRound
+    ? {
+        ...myActiveRound,
+        word:
+          decryptedActiveWord ??
+          (myActiveRound.word && !isEncrypted(myActiveRound.word) ? myActiveRound.word : null),
+      }
+    : undefined;
+  const roundsForView = game.rounds.map((round, index) => ({
+    ...round,
+    word: decryptedRoundWords[index] ?? (isEncrypted(round.word) ? "••••" : round.word)
+  }));
 
   return (
     <div className="game-page" data-game-theme="password">
@@ -204,9 +319,9 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         />
       )}
 
-      {!isSpectator && game.phase === "playing" && myActiveRound && (
+      {!isSpectator && game.phase === "playing" && activeRoundView && (
         <PasswordActiveRound
-          activeRound={myActiveRound}
+          activeRound={activeRoundView}
           names={names}
           sessionId={sessionId}
           teamMembers={myTeamMembers}
@@ -218,6 +333,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
           onSubmitClue={submitClue}
           onSubmitGuess={submitGuess}
           onSkip={skipWord}
+          onRetryWordLoad={() => setFallbackRetryNonce((n) => n + 1)}
         />
       )}
 
@@ -244,7 +360,7 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      <PasswordRoundsTable rounds={game.rounds} teams={game.teams} names={names} />
+      <PasswordRoundsTable rounds={roundsForView} teams={game.teams} names={names} />
     </div>
   );
 }

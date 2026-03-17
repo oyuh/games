@@ -105,6 +105,7 @@ export const passwordGames = pgTable(
       teamIndex: number;
       guesserId: string;
       word: string | null;
+      encryptedWord?: string | null;
       clues: Array<{ sessionId: string; text: string }>;
       guess: string | null;
     }>>().notNull().default([]),
@@ -197,6 +198,7 @@ export const shadeSignalGames = pgTable(
     gridCols: integer("grid_cols").notNull().default(12),
     targetRow: integer("target_row"),
     targetCol: integer("target_col"),
+    encryptedTarget: text("encrypted_target"),
     clue1: text("clue1"),
     clue2: text("clue2"),
     guesses: jsonb("guesses").$type<Array<{ sessionId: string; round: 1 | 2; row: number; col: number }>>().notNull().default([]),
@@ -250,6 +252,7 @@ export const locationSignalGames = pgTable(
     currentLeaderIndex: integer("current_leader_index").notNull().default(0),
     targetLat: real("target_lat"),
     targetLng: real("target_lng"),
+    encryptedTarget: text("encrypted_target"),
     clue1: text("clue1"),
     clue2: text("clue2"),
     clue3: text("clue3"),
@@ -289,6 +292,20 @@ export const locationSignalGames = pgTable(
   },
   (table) => ({
     codeUnique: uniqueIndex("location_signal_code_unique").on(table.code)
+  })
+);
+
+export const gameEncryptionKeys = pgTable(
+  "game_encryption_keys",
+  {
+    id: text("id").primaryKey(),
+    gameId: text("game_id").notNull(),
+    gameType: gameTypeEnum("game_type").notNull(),
+    encryptionKey: text("encryption_key").notNull(),
+    createdAt: bigint("created_at", { mode: "number" }).notNull()
+  },
+  (table) => ({
+    gameLookupUnique: uniqueIndex("game_encryption_keys_game_lookup_unique").on(table.gameType, table.gameId)
   })
 );
 
@@ -337,6 +354,7 @@ export type DrizzleSchema = {
   chainReactionGames: typeof chainReactionGames;
   shadeSignalGames: typeof shadeSignalGames;
   locationSignalGames: typeof locationSignalGames;
+  gameEncryptionKeys: typeof gameEncryptionKeys;
   adminBans: typeof adminBans;
   adminRestrictedNames: typeof adminRestrictedNames;
   adminNameOverrides: typeof adminNameOverrides;

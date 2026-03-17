@@ -1,7 +1,46 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds } from "./helpers";
+import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
+import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds } from "./helpers";
+
+async function maybeEncryptPasswordWord(ctx: unknown, gameId: string, word: string | null) {
+  if (!word) {
+    return { word: null, encryptedWord: null as string | null };
+  }
+  const resolver = getGameSecretResolver(ctx);
+  if (!resolver) {
+    return { word, encryptedWord: null as string | null };
+  }
+  const key = await resolver("password", gameId);
+  return { word: null, encryptedWord: await encryptSecret(word, key) };
+}
+
+async function maybeDecryptPasswordWord(ctx: unknown, gameId: string, value: string | null | undefined) {
+  if (!value) return null;
+  if (!isEncrypted(value)) return value;
+  const resolver = getGameSecretResolver(ctx);
+  if (!resolver) return null;
+  const key = await resolver("password", gameId);
+  return decryptSecret(value, key);
+}
+
+async function resolveActiveRoundWord(
+  ctx: unknown,
+  gameId: string,
+  round: { word: string | null; encryptedWord?: string | null }
+) {
+  return maybeDecryptPasswordWord(ctx, gameId, round.word ?? round.encryptedWord ?? null);
+}
+
+async function resolveUsedWords(
+  ctx: unknown,
+  gameId: string,
+  rounds: Array<{ word: string }>
+) {
+  const values = await Promise.all(rounds.map((round) => maybeDecryptPasswordWord(ctx, gameId, round.word)));
+  return values.filter((value): value is string => Boolean(value));
+}
 
 export const passwordMutators = {
   create: defineMutator(
@@ -12,7 +51,7 @@ export const passwordMutators = {
       targetScore: z.number().min(1).max(50).optional(),
       category: z.string().optional()
     }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const count = args.teamCount ?? 2;
       const teams = Array.from({ length: count }, (_, i) => ({
         name: `Team ${String.fromCharCode(65 + i)}`,
@@ -160,7 +199,7 @@ export const passwordMutators = {
 
   start: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can start");
@@ -175,7 +214,15 @@ export const passwordMutators = {
         throw new Error(`${underStaffed.name} needs at least 2 players`);
       }
 
-      const activeRounds = buildAllTeamRounds(game.teams, 1, undefined, game.settings.category);
+      const activeRoundsBase = buildAllTeamRounds(game.teams, 1, undefined, game.settings.category);
+      const activeRounds = isServerTx(tx)
+        ? await Promise.all(
+            activeRoundsBase.map(async (round) => {
+              const encrypted = await maybeEncryptPasswordWord(ctx, game.id, round.word);
+              return { ...round, ...encrypted };
+            })
+          )
+        : activeRoundsBase;
       const roundEndsAt = now() + game.settings.roundDurationSec * 1000;
 
       const skipsRemaining: Record<string, number> = {};
@@ -196,7 +243,7 @@ export const passwordMutators = {
 
   submitClue: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), clue: z.string().min(1).max(80) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing" || !game.active_rounds.length) {
         throw new Error("Game is not in active round");
@@ -210,12 +257,13 @@ export const passwordMutators = {
       const roundIdx = game.active_rounds.findIndex((r) => r.teamIndex === teamIdx);
       if (roundIdx === -1) throw new Error("Your team has no active round");
       const round = game.active_rounds[roundIdx]!;
-
-      if (!round.word) throw new Error("Word hasn't been set yet");
       if (round.guesserId === args.sessionId) {
         throw new Error("The guesser cannot submit a clue");
       }
-      if (isClueTooSimilar(args.clue, round.word)) {
+
+      const roundWord = await resolveActiveRoundWord(ctx, args.gameId, round);
+      if (isServerTx(tx) && !roundWord) throw new Error("Word hasn't been set yet");
+      if (roundWord && isClueTooSimilar(args.clue, roundWord)) {
         throw new Error("Clue is too similar to the word");
       }
       if (round.clues.some((c) => c.sessionId === args.sessionId)) {
@@ -237,7 +285,7 @@ export const passwordMutators = {
 
   submitGuess: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), guess: z.string().min(1).max(80) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing" || !game.active_rounds.length) {
         throw new Error("Round is not ready for guessing");
@@ -249,7 +297,15 @@ export const passwordMutators = {
       const roundIdx = game.active_rounds.findIndex((r) => r.guesserId === args.sessionId);
       if (roundIdx === -1) throw new Error("Only guesser can submit guess");
       const round = game.active_rounds[roundIdx]!;
-      if (!round.word) throw new Error("Word hasn't been set yet");
+      const roundWord = await resolveActiveRoundWord(ctx, args.gameId, round);
+      if (isServerTx(tx) && !roundWord) throw new Error("Word hasn't been set yet");
+      if (!isServerTx(tx) && !roundWord) {
+        return;
+      }
+      if (!roundWord) {
+        return;
+      }
+      const resolvedRoundWord = roundWord;
 
       const team = game.teams[round.teamIndex];
       const clueGiverCount = team ? team.members.filter((m) => m !== round.guesserId).length : 0;
@@ -257,7 +313,7 @@ export const passwordMutators = {
         throw new Error("Waiting for all clues to be submitted");
       }
 
-      const correct = normalized(args.guess) === normalized(round.word);
+      const correct = normalized(args.guess) === normalized(resolvedRoundWord);
 
       if (!correct) {
         // Wrong → same team retries with new set of clues, timer keeps running
@@ -277,13 +333,17 @@ export const passwordMutators = {
       const currentScore = game.scores[teamName] ?? 0;
       const nextScores = { ...game.scores, [teamName]: currentScore + 1 };
 
+      const historyWord = isServerTx(tx)
+        ? (await maybeEncryptPasswordWord(ctx, args.gameId, resolvedRoundWord)).encryptedWord ?? resolvedRoundWord
+        : resolvedRoundWord;
+
       const nextHistory = [
         ...game.rounds,
         {
           round: game.current_round,
           teamIndex: round.teamIndex,
           guesserId: round.guesserId,
-          word: round.word,
+          word: historyWord,
           clues: round.clues,
           guess: args.guess.trim(),
           correct: true
@@ -306,10 +366,25 @@ export const passwordMutators = {
 
       // Rotate roles for this team and give them a fresh round with a new random word
       const nextRoundNum = game.current_round + 1;
-      const usedWords = game.rounds.map((r) => r.word);
-      const newWord = pickPasswordWord(usedWords, game.settings.category);
-      const freshRound = team && team.members.length >= 2
+      const usedWords = await resolveUsedWords(ctx, args.gameId, game.rounds);
+      const activeRoundWords = await Promise.all(
+        game.active_rounds.map((activeRound) => resolveActiveRoundWord(ctx, args.gameId, activeRound))
+      );
+      const allUsedWords = [
+        ...usedWords,
+        ...activeRoundWords.filter((value): value is string => Boolean(value))
+      ];
+      const newWord = pickPasswordWord(allUsedWords, game.settings.category);
+      const freshRoundBase = team && team.members.length >= 2
         ? buildTeamRound(team, round.teamIndex, nextRoundNum, newWord)
+        : null;
+      const freshRound = freshRoundBase
+        ? {
+            ...freshRoundBase,
+            ...(isServerTx(tx)
+              ? await maybeEncryptPasswordWord(ctx, args.gameId, freshRoundBase.word)
+              : { encryptedWord: null as string | null })
+          }
         : null;
 
       const nextRounds = game.active_rounds.map((r, i) =>
@@ -329,7 +404,7 @@ export const passwordMutators = {
 
   skipWord: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing" || !game.active_rounds.length) {
         throw new Error("Game is not in active round");
@@ -348,11 +423,21 @@ export const passwordMutators = {
       if (remaining <= 0) throw new Error("No skips remaining");
 
       // Pick a new word, avoiding previously used ones
-      const usedWords = game.rounds.map((r) => r.word);
-      const newWord = pickPasswordWord(usedWords, game.settings.category);
+      const usedWords = await resolveUsedWords(ctx, args.gameId, game.rounds);
+      const activeRoundWords = await Promise.all(
+        game.active_rounds.map((activeRound) => resolveActiveRoundWord(ctx, args.gameId, activeRound))
+      );
+      const allUsedWords = [
+        ...usedWords,
+        ...activeRoundWords.filter((value): value is string => Boolean(value))
+      ];
+      const newWord = pickPasswordWord(allUsedWords, game.settings.category);
+      const encryptedReplacement = isServerTx(tx)
+        ? await maybeEncryptPasswordWord(ctx, args.gameId, newWord)
+        : { word: newWord, encryptedWord: null as string | null };
 
       const nextRounds = game.active_rounds.map((r, i) =>
-        i === roundIdx ? { ...r, word: newWord, clues: [], guess: null } : r
+        i === roundIdx ? { ...r, ...encryptedReplacement, clues: [], guess: null } : r
       );
       const nextSkips = { ...skips, [teamName]: remaining - 1 };
 
@@ -367,7 +452,7 @@ export const passwordMutators = {
 
   advanceTimer: defineMutator(
     z.object({ gameId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing" || !game.active_rounds.length) return;
       const roundEndsAt = game.settings.roundEndsAt;
@@ -377,11 +462,17 @@ export const passwordMutators = {
       // Record all in-progress rounds as incomplete
       const nextHistory = [...game.rounds];
       for (const round of game.active_rounds) {
+        const roundWord = await resolveActiveRoundWord(ctx, args.gameId, round);
+        const historyWord = roundWord
+          ? (isServerTx(tx)
+              ? ((await maybeEncryptPasswordWord(ctx, args.gameId, roundWord)).encryptedWord ?? roundWord)
+              : roundWord)
+          : "(no word)";
         nextHistory.push({
           round: game.current_round,
           teamIndex: round.teamIndex,
           guesserId: round.guesserId,
-          word: round.word ?? "(no word)",
+          word: historyWord,
           clues: round.clues,
           guess: null as string | null,
           correct: false

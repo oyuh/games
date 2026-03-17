@@ -1,4 +1,4 @@
-import { mutators, queries } from "@games/shared";
+import { isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -17,6 +17,7 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
 import { ImposterDemo } from "../components/demos/ImposterDemo";
+import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
 
 export function ImposterPage({ sessionId }: { sessionId: string }) {
   const isMobile = useIsMobile();
@@ -33,6 +34,8 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
   const [clue, setClue] = useState("");
   const [showDemo, setShowDemo] = useState(false);
   const [voteTarget, setVoteTarget] = useState("");
+  const [visibleSecretWord, setVisibleSecretWord] = useState<string | null>(null);
+  const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "imposter" });
@@ -94,6 +97,63 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
       return acc;
     }, {});
   }, [game]);
+
+  const { decryptValue } = useGameSecret({
+    gameType: "imposter",
+    gameId,
+    sessionId,
+    enabled: Boolean(game && game.phase !== "lobby")
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!game?.secret_word) {
+      setVisibleSecretWord(null);
+      return;
+    }
+    void decryptValue(game.secret_word).then((value) => {
+      if (!cancelled) {
+        setVisibleSecretWord(value);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.secret_word, decryptValue]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const roundHistory = game?.round_history ?? [];
+    if (roundHistory.length === 0) {
+      setDecryptedRoundWords({});
+      return;
+    }
+
+    void Promise.all(
+      roundHistory.map(async (round) => ({
+        round: round.round,
+        value: round.secretWord ? await decryptValue(round.secretWord) : null
+      }))
+    ).then((rows) => {
+      if (cancelled) return;
+      setDecryptedRoundWords(
+        rows.reduce<Record<number, string | null>>((acc, row) => {
+          acc[row.round] = row.value;
+          return acc;
+        }, {})
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.round_history, decryptValue]);
+
+  useEffect(() => {
+    if (!game || !isHost || game.phase !== "playing" || !game.secret_word) return;
+    if (isEncrypted(game.secret_word)) return;
+    void callGameSecretInit("imposter", gameId, sessionId);
+  }, [game, game?.phase, game?.secret_word, isHost, gameId, sessionId]);
 
   useEffect(() => {
     if (!game) return;
@@ -281,7 +341,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
         return (
           <ImposterClueSection
             role={me?.role}
-            secretWord={game.secret_word}
+            secretWord={visibleSecretWord}
             category={game.category ?? null}
             clue={clue}
             clueCount={game.clues.length}
@@ -344,7 +404,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
           votes={game.votes}
           players={game.players}
           sessionById={sessionById}
-          secretWord={game.secret_word}
+          secretWord={visibleSecretWord}
           phaseEndsAt={game.settings.phaseEndsAt}
           skipVotes={(game.settings.skipVotes ?? []).length}
           activePlayerCount={game.players.filter((p) => !p.eliminated).length}
@@ -376,7 +436,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
               </p>
               {game.secret_word && (
                 <p className="game-reveal-word">
-                  The word was: <strong>{game.secret_word}</strong>
+                  The word was: <strong>{visibleSecretWord ?? "••••"}</strong>
                 </p>
               )}
             </div>
@@ -398,7 +458,7 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
                       {(game.round_history ?? []).map((rh) => (
                         <tr key={rh.round}>
                           <td>{rh.round}</td>
-                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ?? "—"}</td>
+                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ? (decryptedRoundWords[rh.round] ?? "••••") : "—"}</td>
                           <td style={{ fontWeight: 600 }}>{rh.votedOutName ?? "No one"}</td>
                           <td style={{ color: rh.wasImposter ? "#f87171" : "#4ade80", fontWeight: 600 }}>
                             {rh.votedOutName ? (rh.wasImposter ? "Imposter" : "Innocent") : "—"}

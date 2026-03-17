@@ -5,6 +5,7 @@ type ActiveRound = {
   teamIndex: number;
   guesserId: string;
   word: string | null;
+  encryptedWord?: string | null;
   clues: Array<{ sessionId: string; text: string }>;
   guess: string | null;
 };
@@ -21,7 +22,8 @@ export function PasswordActiveRound({
   onGuessChange,
   onSubmitClue,
   onSubmitGuess,
-  onSkip
+  onSkip,
+  onRetryWordLoad
 }: {
   activeRound: ActiveRound;
   names: Record<string, string>;
@@ -35,6 +37,7 @@ export function PasswordActiveRound({
   onSubmitClue: (event: FormEvent) => void;
   onSubmitGuess: (event: FormEvent) => void;
   onSkip: () => void;
+  onRetryWordLoad?: () => void;
 }) {
   const guesserName = names[activeRound.guesserId] ?? activeRound.guesserId.slice(0, 6);
   const isGuesser = activeRound.guesserId === sessionId;
@@ -67,47 +70,61 @@ export function PasswordActiveRound({
       )}
 
       {/* Clue givers submit clues (not all clues in yet) */}
-      {activeRound.word && !allCluesIn && isClueGiver && !alreadyClued && (
+      {!allCluesIn && isClueGiver && !alreadyClued && (
         <>
-          <div className="game-clue-reveal" style={{ marginBottom: "0.75rem" }}>
-            <span className="game-clue-reveal-label">Secret Word</span>
-            <span className="game-clue-reveal-word" data-tooltip="Only clue givers can see this" data-tooltip-variant="game">{activeRound.word}</span>
-          </div>
-          <form className="game-input-row" onSubmit={onSubmitClue}>
-            <input
-              className="input flex-1"
-              autoFocus
-              onFocus={(e) => e.currentTarget.select()}
-              value={clue}
-              onChange={(e) => onClueChange(e.target.value)}
-              placeholder="Enter clue…"
-              maxLength={80}
-            />
-            <button type="submit" className="btn btn-primary game-action-btn" disabled={!clue.trim()}>
-              <FiSend size={14} /> Send Clue
-            </button>
-          </form>
+          {activeRound.word ? (
+            <>
+              <div className="game-clue-reveal" style={{ marginBottom: "0.75rem" }}>
+                <span className="game-clue-reveal-label">Secret Word</span>
+                <span className="game-clue-reveal-word" data-tooltip="Only clue givers can see this" data-tooltip-variant="game">{activeRound.word}</span>
+              </div>
+              <form className="game-input-row" onSubmit={onSubmitClue}>
+                <input
+                  className="input flex-1"
+                  autoFocus
+                  onFocus={(e) => e.currentTarget.select()}
+                  value={clue}
+                  onChange={(e) => onClueChange(e.target.value)}
+                  placeholder="Enter clue…"
+                  maxLength={80}
+                />
+                <button type="submit" className="btn btn-primary game-action-btn" disabled={!clue.trim()}>
+                  <FiSend size={14} /> Send Clue
+                </button>
+              </form>
+            </>
+          ) : (
+            <div className="game-waiting">
+              <div className="game-waiting-pulse" />
+              <p>Loading secret word…</p>
+              <div style={{ marginTop: "0.5rem" }}>
+                <button className="btn btn-muted" type="button" onClick={onRetryWordLoad}>
+                  Retry Sync
+                </button>
+              </div>
+            </div>
+          )}
           <p className="game-progress-text">
             Clues: {activeRound.clues.length} / {clueGiverCount}
           </p>
         </>
       )}
 
-      {activeRound.word && !allCluesIn && isClueGiver && alreadyClued && (
+      {!allCluesIn && isClueGiver && alreadyClued && (
         <div className="game-waiting">
           <div className="game-waiting-pulse" />
           <p>Waiting for other teammates to submit clues… ({activeRound.clues.length}/{clueGiverCount})</p>
         </div>
       )}
 
-      {activeRound.word && !allCluesIn && isGuesser && (
+      {!allCluesIn && isGuesser && (
         <div className="game-waiting">
           <div className="game-waiting-pulse" />
           <p>Your teammates are writing clues… ({activeRound.clues.length}/{clueGiverCount})</p>
         </div>
       )}
 
-      {activeRound.word && !allCluesIn && !isOnTeam && (
+      {!allCluesIn && !isOnTeam && (
         <div className="game-waiting">
           <div className="game-waiting-pulse" />
           <p>Clue givers are submitting… ({activeRound.clues.length}/{clueGiverCount})</p>
@@ -115,7 +132,7 @@ export function PasswordActiveRound({
       )}
 
       {/* Phase 3: All clues in — guesser guesses */}
-      {activeRound.word && allCluesIn && (
+      {allCluesIn && (
         <>
           <div className="game-section" style={{ padding: 0 }}>
             <h3 className="game-section-label">Clues</h3>
