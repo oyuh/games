@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { FiZap, FiCopy } from "react-icons/fi";
-import { useState } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { BottomSheet } from "./BottomSheet";
 import { ImposterDemo } from "../../components/demos/ImposterDemo";
@@ -8,6 +8,39 @@ import { PasswordDemo } from "../../components/demos/PasswordDemo";
 import { ChainDemo } from "../../components/demos/ChainDemo";
 import { ShadeDemo } from "../../components/demos/ShadeDemo";
 import { LocationDemo } from "../../components/demos/LocationDemo";
+import { useConnectionDebug } from "../../lib/connection-debug";
+import { getCustomStatus, subscribeCustomStatus } from "../../hooks/useAdminBroadcast";
+
+const GITHUB_REPO = "https://github.com/oyuh/games";
+
+function useCustomStatus() {
+  return useSyncExternalStore(subscribeCustomStatus, getCustomStatus);
+}
+
+function formatUptime(ms: number) {
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainMinutes = minutes % 60;
+  if (hours < 24) return `${hours}h ${remainMinutes}m`;
+  const days = Math.floor(hours / 24);
+  const remainHours = hours % 24;
+  return `${days}d ${remainHours}h`;
+}
+
+function relativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 function getGameType(pathname: string): "imposter" | "password" | "chain" | "shade" | "location" | null {
   if (pathname.startsWith("/imposter/")) return "imposter";
@@ -25,6 +58,31 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
   const page = getPageInfo(location.pathname);
   const gameType = getGameType(location.pathname);
   const [showDemo, setShowDemo] = useState(false);
+  const [showSystemText, setShowSystemText] = useState(false);
+
+  // System status
+  const debug = useConnectionDebug();
+  const customStatus = useCustomStatus();
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const dbState = debug.dbState;
+  const apiOk = debug.apiMetaState === "ok";
+  const dbOk = dbState === "ok";
+  const allHealthy = apiOk && dbOk;
+  const isLoading = dbState === "loading" || dbState === "idle";
+
+  const uptimeText = debug.apiUptimeMs != null
+    ? formatUptime(debug.apiUptimeMs + tick * 30_000)
+    : null;
+  const buildTime = debug.apiBuildTimestamp ? relativeTime(debug.apiBuildTimestamp) : null;
+  const commitShort = debug.apiCommitSha ? debug.apiCommitSha.slice(0, 7) : null;
+  const latency = debug.apiLatencyMs;
+  const overallLabel = isLoading ? "Checking…" : allHealthy ? "All Systems Operational" : "Issues Detected";
 
   const copySessionId = () => {
     void navigator.clipboard.writeText(sessionId).then(() => {
@@ -73,12 +131,86 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
       {gameType && (
         <button
           className="m-btn m-btn--primary"
-          style={{ width: "100%", marginTop: 12 }}
+          style={{ width: "100%", marginTop: 12, marginBottom: 12 }}
           onClick={() => setShowDemo(true)}
         >
           How to Play
         </button>
       )}
+
+      <div className="m-info-divider" />
+
+      {/* System Status Section */}
+      <div style={{ marginTop: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <h3 className="m-info-heading" style={{ margin: 0 }}>System Status</h3>
+          <button
+            onClick={() => setShowSystemText(!showSystemText)}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--card)", border: "1px solid var(--border)", padding: "0.25rem 0.5rem", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 600, color: "var(--foreground)" }}
+          >
+            <span className={`status-dot ${allHealthy ? "status-dot--ok" : isLoading ? "status-dot--loading" : "status-dot--err"}`} />
+            {overallLabel}
+          </button>
+        </div>
+
+        {customStatus?.text && (
+          <div style={{ background: "var(--card)", padding: "0.5rem", borderRadius: "12px", border: "1px solid var(--border)", marginBottom: "0.75rem", fontSize: "0.8rem", color: customStatus.color || "var(--primary)",textAlign: "center" }}>
+            {customStatus.link ? (
+              <a href={customStatus.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit" }}>{customStatus.text}</a>
+            ) : customStatus.text}
+          </div>
+        )}
+
+        {showSystemText && (
+          <div style={{ padding: "0.75rem", background: "var(--card)", borderRadius: "12px", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem", fontSize: "0.75rem" }}>
+              <span style={{ color: "var(--secondary)" }}>API</span>
+              <span style={{ fontWeight: 600, color: apiOk ? "var(--primary)" : "var(--destructive)" }}>{apiOk ? "Online" : isLoading ? "Checking…" : "Offline"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem", fontSize: "0.75rem" }}>
+              <span style={{ color: "var(--secondary)" }}>Database</span>
+              <span style={{ fontWeight: 600, color: dbOk ? "var(--primary)" : "var(--destructive)" }}>{dbOk ? "Connected" : isLoading ? "Checking…" : "Disconnected"}</span>
+            </div>
+
+            <div style={{ paddingTop: "0.5rem", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+              {latency != null && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem" }}>
+                  <span style={{ color: "var(--secondary)" }}>Latency</span>
+                  <span>{latency}ms</span>
+                </div>
+              )}
+              {uptimeText && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem" }}>
+                  <span style={{ color: "var(--secondary)" }}>Uptime</span>
+                  <span>{uptimeText}</span>
+                </div>
+              )}
+              {buildTime && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem" }}>
+                  <span style={{ color: "var(--secondary)" }}>Built</span>
+                  <span>{buildTime}</span>
+                </div>
+              )}
+              {commitShort && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem" }}>
+                  <span style={{ color: "var(--secondary)" }}>Commit</span>
+                  <a href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", fontFamily: "monospace", color: "inherit" }}>
+                    {commitShort}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Made by text */}
+      <div style={{ marginTop: "1.5rem", marginBottom: "0.5rem", textAlign: "center", fontSize: "0.75rem", color: "var(--secondary)" }}>
+        Made with <span style={{ color: "#ef4444" }}>❤️</span> by{" "}
+        <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit", fontWeight: 600 }}>
+          Lawson
+        </a>
+      </div>
     </BottomSheet>
   );
 }
