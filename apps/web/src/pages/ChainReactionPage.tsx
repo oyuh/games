@@ -16,9 +16,7 @@ import { BorringAvatar } from "../components/shared/BorringAvatar";
 
 type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 
-export function ChainReactionPage({ sessionId }: { sessionId: string }) {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileChainReactionPage sessionId={sessionId} />;
+function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const navigate = useNavigate();
@@ -810,4 +808,10 @@ function renderPartialWord(word: string, lettersShown: number): string {
     .split("")
     .map((ch, i) => (i < lettersShown ? ch : "_"))
     .join(" ");
+}
+
+export function ChainReactionPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileChainReactionPage sessionId={sessionId} />;
+  return <ChainReactionPageDesktop sessionId={sessionId} />;
 }

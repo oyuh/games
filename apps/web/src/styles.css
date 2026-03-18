@@ -6682,3 +6682,20 @@ body {
     padding: 0.12rem 0.5rem;
   }
 }
+
+[data-theme='light'][data-game-theme='imposter'] {
+  --game-bg: #e0f0ff;
+}
+[data-theme='light'][data-game-theme='password'] {
+  --game-bg: #f3e8ff;
+}
+[data-theme='light'][data-game-theme='chain'] {
+  --game-bg: #d1fae5;
+}
+[data-theme='light'][data-game-theme='shade'] {
+  --game-bg: #fce7f3;
+}
+[data-theme='light'][data-game-theme='location'] {
+  --game-bg: #fef3c7;
+}
+

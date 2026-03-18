@@ -13,9 +13,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
 import { PasswordDemo } from "../components/demos/PasswordDemo";
 
-export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobilePasswordBeginPage sessionId={sessionId} />;
+function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const navigate = useNavigate();
@@ -264,4 +262,10 @@ export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
       )}
     </div>
   );
+}
+
+export function PasswordBeginPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobilePasswordBeginPage sessionId={sessionId} />;
+  return <PasswordBeginPageDesktop sessionId={sessionId} />;
 }

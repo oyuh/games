@@ -39,9 +39,7 @@ function randomName(): string {
   return `${adj}${noun}`;
 }
 
-export function HomePage({ sessionId }: { sessionId: string }) {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileHomePage sessionId={sessionId} />;
+function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const navigate = useNavigate();
@@ -1503,4 +1501,10 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
       <span className="hc-recent-badge">{gameData.phase}</span>
     </Link>
   );
+}
+
+export function HomePage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileHomePage sessionId={sessionId} />;
+  return <HomePageDesktop sessionId={sessionId} />;
 }

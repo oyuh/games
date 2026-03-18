@@ -8,9 +8,7 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordResultsPage } from "../mobile/pages/MobilePasswordResultsPage";
 
-export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobilePasswordResultsPage sessionId={sessionId} />;
+function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const params = useParams();
@@ -168,4 +166,10 @@ export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
       )}
     </div>
   );
+}
+
+export function PasswordResultsPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobilePasswordResultsPage sessionId={sessionId} />;
+  return <PasswordResultsPageDesktop sessionId={sessionId} />;
 }

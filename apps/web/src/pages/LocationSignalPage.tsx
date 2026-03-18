@@ -21,9 +21,7 @@ type LocPhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | 
 
 const PLAYER_COLORS = ["#06d6a0","#7ecbff","#ef476f","#a78bfa","#fb923c","#38bdf8","#f472b6","#4ade80","#facc15","#34d399"];
 
-export function LocationSignalPage({ sessionId }: { sessionId: string }) {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileLocationSignalPage sessionId={sessionId} />;
+function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const navigate = useNavigate();
@@ -769,4 +767,10 @@ export function LocationSignalPage({ sessionId }: { sessionId: string }) {
       )}
     </div>
   );
+}
+
+export function LocationSignalPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileLocationSignalPage sessionId={sessionId} />;
+  return <LocationSignalPageDesktop sessionId={sessionId} />;
 }

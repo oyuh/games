@@ -22,12 +22,16 @@ export function AppShell() {
 }
 
 function AppShellInner() {
-  const { inGame, isSpectator, gameType, gameId } = useChatContext();
   useGameMeta();
-  const sessionId = getOrCreateSessionId();
   const isMobile = useIsMobile();
 
   if (isMobile) return <MobileLayout />;
+  return <AppShellDesktop />;
+}
+
+function AppShellDesktop() {
+  const { inGame, isSpectator, gameType, gameId } = useChatContext();
+  const sessionId = getOrCreateSessionId();
 
   // Query current game for host_id
   const [imposterGames] = useQuery(

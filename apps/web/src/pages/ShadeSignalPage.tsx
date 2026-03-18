@@ -83,9 +83,7 @@ function ScoringLegend() {
   );
 }
 
-export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileShadeSignalPage sessionId={sessionId} />;
+function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const navigate = useNavigate();
@@ -985,4 +983,10 @@ export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
       )}
     </div>
   );
+}
+
+export function ShadeSignalPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileShadeSignalPage sessionId={sessionId} />;
+  return <ShadeSignalPageDesktop sessionId={sessionId} />;
 }
