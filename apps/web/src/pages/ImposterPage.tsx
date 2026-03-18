@@ -19,9 +19,7 @@ import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
 import { ImposterDemo } from "../components/demos/ImposterDemo";
 import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
 
-export function ImposterPage({ sessionId }: { sessionId: string }) {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileImposterPage sessionId={sessionId} />;
+function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const navigate = useNavigate();
@@ -511,4 +509,10 @@ export function ImposterPage({ sessionId }: { sessionId: string }) {
       )}
     </div>
   );
+}
+
+export function ImposterPage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileImposterPage sessionId={sessionId} />;
+  return <ImposterPageDesktop sessionId={sessionId} />;
 }

@@ -13,9 +13,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordGamePage } from "../mobile/pages/MobilePasswordGamePage";
 import { useGameSecret } from "../lib/game-secrets";
 
-export function PasswordGamePage({ sessionId }: { sessionId: string }) {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobilePasswordGamePage sessionId={sessionId} />;
+function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const params = useParams();
@@ -363,4 +361,10 @@ export function PasswordGamePage({ sessionId }: { sessionId: string }) {
       <PasswordRoundsTable rounds={roundsForView} teams={game.teams} names={names} />
     </div>
   );
+}
+
+export function PasswordGamePage({ sessionId }: { sessionId: string }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobilePasswordGamePage sessionId={sessionId} />;
+  return <PasswordGamePageDesktop sessionId={sessionId} />;
 }
