@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { FiCopy, FiCheck } from "react-icons/fi";
-import { PiCrownSimpleFill } from "react-icons/pi";
 import { FiTag } from "react-icons/fi";
 import { gameCategoryLabels } from "@games/shared";
 import { RoundCountdown } from "../shared/RoundCountdown";
-import { SpectatorBadge } from "../shared/SpectatorBadge";
+import { SpectatorBadge, HostBadge } from "../shared/SpectatorBadge";
 
 const phaseLabels: Record<string, string> = {
   lobby: "Lobby",
@@ -67,7 +66,6 @@ export function ImposterHeader({
           </svg>
         </div>
         <h1 className="game-title">Imposter</h1>
-        {isHost && <span className="badge host-badge" data-tooltip="You created this game" data-tooltip-variant="info"><PiCrownSimpleFill size={12} /> Host</span>}
         {category && gameCategoryLabels[category] && (
           <span className="badge badge-category" data-tooltip="Word bank category" data-tooltip-variant="info"><FiTag size={10} /> {gameCategoryLabels[category]}</span>
         )}
@@ -81,6 +79,7 @@ export function ImposterHeader({
       </div>
       <div className="game-header-right">
         {isSpectator && <SpectatorBadge />}
+        {isHost && <HostBadge />}
         <button className="game-code-btn" onClick={copyCode} data-tooltip={copied ? "Copied!" : "Click to copy room code"} data-tooltip-variant="info">
         {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}
         <span>{code}</span>

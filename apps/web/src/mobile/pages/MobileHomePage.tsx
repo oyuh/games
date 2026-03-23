@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiUsers, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare, FiGlobe } from "react-icons/fi";
+import { FiSearch, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare, FiGlobe } from "react-icons/fi";
 import { PiPaintBrushBold } from "react-icons/pi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
@@ -26,6 +26,16 @@ function randomName(): string {
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)]!;
   const noun = nouns[Math.floor(Math.random() * nouns.length)]!;
   return `${adj}${noun}`;
+}
+
+/** Scroll-wheel on a <select> cycles through its options */
+function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
+  return (e: React.WheelEvent) => {
+    const i = opts.indexOf(value);
+    if (i < 0) return;
+    const next = e.deltaY < 0 ? Math.max(0, i - 1) : Math.min(opts.length - 1, i + 1);
+    if (next !== i) set(opts[next]);
+  };
 }
 
 export function MobileHomePage({ sessionId }: { sessionId: string }) {
@@ -417,17 +427,17 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         </div>
         {(expanded === "imposter" || browsing === "imposter") && (
           browsing === "imposter" ? (
-            <div className="m-game-card-config">
+            <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="imposter" sessionId={sessionId} />
               <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
                 Back
               </button>
             </div>
           ) : (
-          <div className="m-game-card-config">
+          <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-field">
               <label className="m-config-label">Category</label>
-              <select className="m-input" value={imposterCategory} onChange={(e) => setImposterCategory(e.target.value)}>
+              <select className="m-input" value={imposterCategory} onChange={(e) => setImposterCategory(e.target.value)} onWheel={wheelSelect(imposterCategory, imposterCategories as string[], setImposterCategory)}>
                 {imposterCategories.map((key) => (
                   <option key={key} value={key}>{imposterCategoryLabels[key] ?? key}</option>
                 ))}
@@ -436,13 +446,13 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
                 <label className="m-config-label">Imposters</label>
-                <select className="m-input" value={imposterImposters} onChange={(e) => setImposterImposters(Number(e.target.value))}>
+                <select className="m-input" value={imposterImposters} onChange={(e) => setImposterImposters(Number(e.target.value))} onWheel={wheelSelect(imposterImposters, [1, 2, 3], setImposterImposters)}>
                   {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div className="m-config-field" style={{ flex: 1 }}>
                 <label className="m-config-label">Rounds</label>
-                <select className="m-input" value={imposterRounds} onChange={(e) => setImposterRounds(Number(e.target.value))}>
+                <select className="m-input" value={imposterRounds} onChange={(e) => setImposterRounds(Number(e.target.value))} onWheel={wheelSelect(imposterRounds, [1, 2, 3, 5, 7, 10], setImposterRounds)}>
                   {[1, 2, 3, 5, 7, 10].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
@@ -485,17 +495,17 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         </div>
         {(expanded === "password" || browsing === "password") && (
           browsing === "password" ? (
-            <div className="m-game-card-config">
+            <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="password" sessionId={sessionId} />
               <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
                 Back
               </button>
             </div>
           ) : (
-          <div className="m-game-card-config">
+          <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-field">
               <label className="m-config-label">Category</label>
-              <select className="m-input" value={passwordCategory} onChange={(e) => setPasswordCategory(e.target.value)}>
+              <select className="m-input" value={passwordCategory} onChange={(e) => setPasswordCategory(e.target.value)} onWheel={wheelSelect(passwordCategory, passwordCategories as string[], setPasswordCategory)}>
                 {passwordCategories.map((key) => (
                   <option key={key} value={key}>{passwordCategoryLabels[key] ?? key}</option>
                 ))}
@@ -503,14 +513,14 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             </div>
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label"><FiUsers size={13} /> Teams</label>
-                <select className="m-input" value={passwordTeams} onChange={(e) => setPasswordTeams(Number(e.target.value))}>
-                  {[2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n} teams</option>)}
+                <label className="m-config-label">Teams</label>
+                <select className="m-input" value={passwordTeams} onChange={(e) => setPasswordTeams(Number(e.target.value))} onWheel={wheelSelect(passwordTeams, [2, 3, 4, 5, 6], setPasswordTeams)}>
+                  {[2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Points to Win</label>
-                <select className="m-input" value={passwordTargetScore} onChange={(e) => setPasswordTargetScore(Number(e.target.value))}>
+                <label className="m-config-label">Target Score</label>
+                <select className="m-input" value={passwordTargetScore} onChange={(e) => setPasswordTargetScore(Number(e.target.value))} onWheel={wheelSelect(passwordTargetScore, [3, 5, 7, 10, 15, 20], setPasswordTargetScore)}>
                   {[3, 5, 7, 10, 15, 20].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
@@ -553,17 +563,17 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         </div>
         {(expanded === "chain" || browsing === "chain") && (
           browsing === "chain" ? (
-            <div className="m-game-card-config">
+            <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="chain_reaction" sessionId={sessionId} />
               <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
                 Back
               </button>
             </div>
           ) : (
-          <div className="m-game-card-config">
+          <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-field">
               <label className="m-config-label">Category</label>
-              <select className="m-input" value={chainCategory} onChange={(e) => setChainCategory(e.target.value)}>
+              <select className="m-input" value={chainCategory} onChange={(e) => setChainCategory(e.target.value)} onWheel={wheelSelect(chainCategory, chainCategories as string[], setChainCategory)}>
                 {chainCategories.map((key) => (
                   <option key={key} value={key}>{chainCategoryLabels[key] ?? key}</option>
                 ))}
@@ -571,23 +581,23 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             </div>
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Chain Length</label>
-                <select className="m-input" value={chainLength} onChange={(e) => setChainLength(Number(e.target.value))}>
+                <label className="m-config-label">Length</label>
+                <select className="m-input" value={chainLength} onChange={(e) => setChainLength(Number(e.target.value))} onWheel={wheelSelect(chainLength, [5, 6, 7, 8, 9, 10], setChainLength)}>
                   {[5, 6, 7, 8, 9, 10].map((n) => <option key={n} value={n}>{n} words</option>)}
                 </select>
               </div>
               <div className="m-config-field" style={{ flex: 1 }}>
                 <label className="m-config-label">Rounds</label>
-                <select className="m-input" value={chainRounds} onChange={(e) => setChainRounds(Number(e.target.value))}>
+                <select className="m-input" value={chainRounds} onChange={(e) => setChainRounds(Number(e.target.value))} onWheel={wheelSelect(chainRounds, [1, 2, 3, 5, 7], setChainRounds)}>
                   {[1, 2, 3, 5, 7].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
             </div>
             <div className="m-config-field">
-              <label className="m-config-label">Chain Mode</label>
-              <select className="m-input" value={chainMode} onChange={(e) => setChainMode(e.target.value as "premade" | "custom")}>
+              <label className="m-config-label">Mode</label>
+              <select className="m-input" value={chainMode} onChange={(e) => setChainMode(e.target.value as "premade" | "custom")} onWheel={wheelSelect(chainMode, ["premade", "custom"] as const, (v) => setChainMode(v as "premade" | "custom"))}>
                 <option value="premade">Random (premade)</option>
-                <option value="custom">Custom (both write)</option>
+                <option value="custom">Custom (write your own)</option>
               </select>
             </div>
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
@@ -628,37 +638,36 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         </div>
         {(expanded === "shade" || browsing === "shade") && (
           browsing === "shade" ? (
-            <div className="m-game-card-config">
+            <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="shade_signal" sessionId={sessionId} />
               <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
                 Back
               </button>
             </div>
           ) : (
-          <div className="m-game-card-config">
+          <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
                 <label className="m-config-label">Game Length</label>
-                <select className="m-input" value={shadeRoundsPerPlayer} onChange={(e) => setShadeRoundsPerPlayer(Number(e.target.value))}>
-                  <option value={1}>Quick (1 each)</option>
-                  <option value={2}>Standard (2 each)</option>
-                  <option value={3}>Long (3 each)</option>
+                <select className="m-input" value={shadeRoundsPerPlayer} onChange={(e) => setShadeRoundsPerPlayer(Number(e.target.value))} onWheel={wheelSelect(shadeRoundsPerPlayer, [1, 2, 3], setShadeRoundsPerPlayer)}>
+                  <option value={1}>Quick</option>
+                  <option value={2}>Standard</option>
+                  <option value={3}>Long</option>
                 </select>
               </div>
               <div className="m-config-field" style={{ flex: 1 }}>
                 <label className="m-config-label">Clue Rules</label>
                 <select className="m-input" value={shadeHardMode ? "yes" : "no"} onChange={(e) => setShadeHardMode(e.target.value === "yes")}>
                   <option value="no">Normal</option>
-                  <option value="yes">No Color Names</option>
+                  <option value="yes">No Colors</option>
                 </select>
               </div>
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem", color: "var(--secondary)", cursor: "pointer", marginTop: "0.25rem" }}>
+            <label className="hc-config-check">
               <input
                 type="checkbox"
                 checked={shadeLeaderPick}
                 onChange={(e) => setShadeLeaderPick(e.target.checked)}
-                style={{ accentColor: "var(--primary)" }}
               />
               🎨 Leader picks their own color
             </label>
@@ -699,30 +708,30 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         </div>
         {(expanded === "location" || browsing === "location") && (
           browsing === "location" ? (
-            <div className="m-game-card-config">
+            <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="location_signal" sessionId={sessionId} />
               <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
                 Back
               </button>
             </div>
           ) : (
-          <div className="m-game-card-config">
+          <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-row">
-              <div className="m-config-field">
+              <div className="m-config-field" style={{ flex: 1 }}>
                 <label className="m-config-label">Clue Pairs</label>
-                <select className="m-input" value={locCluePairs} onChange={(e) => setLocCluePairs(Number(e.target.value))}>
-                  <option value={1}>1 pair (quick)</option>
-                  <option value={2}>2 pairs (standard)</option>
-                  <option value={3}>3 pairs (long)</option>
-                  <option value={4}>4 pairs (marathon)</option>
+                <select className="m-input" value={locCluePairs} onChange={(e) => setLocCluePairs(Number(e.target.value))} onWheel={wheelSelect(locCluePairs, [1, 2, 3, 4], setLocCluePairs)}>
+                  <option value={1}>1 pair</option>
+                  <option value={2}>2 pairs</option>
+                  <option value={3}>3 pairs</option>
+                  <option value={4}>4 pairs</option>
                 </select>
               </div>
-              <div className="m-config-field">
+              <div className="m-config-field" style={{ flex: 1 }}>
                 <label className="m-config-label">Rounds / Player</label>
-                <select className="m-input" value={locRoundsPerPlayer} onChange={(e) => setLocRoundsPerPlayer(Number(e.target.value))}>
-                  <option value={1}>Quick (1)</option>
-                  <option value={2}>Standard (2)</option>
-                  <option value={3}>Long (3)</option>
+                <select className="m-input" value={locRoundsPerPlayer} onChange={(e) => setLocRoundsPerPlayer(Number(e.target.value))} onWheel={wheelSelect(locRoundsPerPlayer, [1, 2, 3], setLocRoundsPerPlayer)}>
+                  <option value={1}>1 each</option>
+                  <option value={2}>2 each</option>
+                  <option value={3}>3 each</option>
                 </select>
               </div>
             </div>

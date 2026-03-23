@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogIn, FiLock, FiUnlock, FiArrowRight, FiCheck, FiXCircle } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
+import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
-import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
+import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
@@ -156,6 +157,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
     <div className="m-page" data-game-theme="password">
       <MobileGameHeader code={game.code} gameLabel="Password" phase="Lobby" round={game.current_round} accent="var(--game-accent)" category={game.settings.category ?? null}>
         {isSpectator && <MobileSpectatorBadge />}
+        {isHost && <MobileHostBadge />}
       </MobileGameHeader>
 
       {/* Join prompt — not yet in a team */}
@@ -241,6 +243,9 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {isHost ? (
               <>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <LobbyVisibilityToggle gameType="password" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />
+                </div>
                 <button
                   className="m-btn m-btn-primary"
                   style={{ width: "100%" }}

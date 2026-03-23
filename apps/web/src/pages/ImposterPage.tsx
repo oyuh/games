@@ -10,6 +10,7 @@ import { ImposterPlayersCard } from "../components/imposter/ImposterPlayersCard"
 import { ImposterResultsSection } from "../components/imposter/ImposterResultsSection";
 import { ImposterVoteSection } from "../components/imposter/ImposterVoteSection";
 import { InSessionModal } from "../components/shared/InSessionModal";
+import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
@@ -315,7 +316,9 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
           playerCount={game.players.length}
           onStart={() => void zero.mutate(mutators.imposter.start({ gameId, hostId: sessionId }))}
           onLeave={() => void zero.mutate(mutators.imposter.leave({ gameId, sessionId }))}
-        />
+        >
+          {isHost && <LobbyVisibilityToggle gameType="imposter" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />}
+        </ImposterLobbyActions>
       )}
 
       {game.phase === "lobby" && (
@@ -360,7 +363,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
           <div className="game-section">
             <div className="game-waiting">
               <div className="game-waiting-pulse" />
-              <p>{me?.eliminated ? "You've been eliminated. Spectating…" : "Players are submitting clues…"} ({game.clues.length}/{activePlayers.length})</p>
+              <p>{me?.eliminated && isHost ? "You've been eliminated. Still hosting…" : me?.eliminated ? "You've been eliminated. Spectating…" : "Players are submitting clues…"} ({game.clues.length}/{activePlayers.length})</p>
             </div>
           </div>
         );
@@ -390,7 +393,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
           <div className="game-section">
             <div className="game-waiting">
               <div className="game-waiting-pulse" />
-              <p>{me?.eliminated ? "You've been eliminated. Spectating…" : "Players are voting…"} ({game.votes.length}/{activePlayers.length})</p>
+              <p>{me?.eliminated && isHost ? "You've been eliminated. Still hosting…" : me?.eliminated ? "You've been eliminated. Spectating…" : "Players are voting…"} ({game.votes.length}/{activePlayers.length})</p>
             </div>
           </div>
         );

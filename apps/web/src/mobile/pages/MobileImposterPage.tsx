@@ -9,8 +9,9 @@ import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
 import { InSessionModal } from "../../components/shared/InSessionModal";
+import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { MobileGameHeader } from "../components/MobileGameHeader";
-import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
+import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
@@ -279,6 +280,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         category={game.category}
       >
         {isSpectator && <MobileSpectatorBadge />}
+        {isHost && <MobileHostBadge />}
         {timeLeft != null && (
           <span className={`m-timer${timeLeft <= 10 ? " m-timer--danger" : " m-timer--warn"}`}>
             <FiClock size={14} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
@@ -336,6 +338,11 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       {game.phase === "lobby" && inGame && (
         <div className="m-card">
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {isHost && (
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <LobbyVisibilityToggle gameType="imposter" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />
+              </div>
+            )}
             {isHost && game.players.length >= 3 && (
               <button
                 className="m-btn m-btn-primary"
@@ -454,7 +461,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         <div className="m-card">
           <div className="m-waiting">
             <div className="m-waiting-pulse" />
-            <p>{me?.eliminated ? "You've been eliminated. Spectating\u2026" : "Players are submitting clues\u2026"} ({game.clues.length}/{game.players.filter((p) => !p.eliminated).length})</p>
+            <p>{me?.eliminated && isHost ? "You've been eliminated. Still hosting\u2026" : me?.eliminated ? "You've been eliminated. Spectating\u2026" : "Players are submitting clues\u2026"} ({game.clues.length}/{game.players.filter((p) => !p.eliminated).length})</p>
           </div>
         </div>
       )}
@@ -539,7 +546,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         <div className="m-card">
           <div className="m-waiting">
             <div className="m-waiting-pulse" />
-            <p>{me?.eliminated ? "You've been eliminated. Spectating\u2026" : "Players are voting\u2026"} ({game.votes.length}/{game.players.filter((p) => !p.eliminated).length})</p>
+            <p>{me?.eliminated && isHost ? "You've been eliminated. Still hosting\u2026" : me?.eliminated ? "You've been eliminated. Spectating\u2026" : "Players are voting\u2026"} ({game.votes.length}/{game.players.filter((p) => !p.eliminated).length})</p>
           </div>
         </div>
       )}

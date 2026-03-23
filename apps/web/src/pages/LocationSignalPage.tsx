@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiLogOut, FiSend, FiMapPin, FiHelpCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { InSessionModal } from "../components/shared/InSessionModal";
+import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
@@ -502,6 +503,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
           {inGame && (
             <div className="game-actions" style={{ marginTop: "0.75rem" }}>
+              {isHost && <LobbyVisibilityToggle gameType="location_signal" gameId={game.id} sessionId={sessionId} isPublic={game.is_public} />}
               {isHost ? (
                 <button className="btn btn-primary game-action-btn" disabled={game.players.length < 2}
                   data-tooltip={game.players.length < 2 ? "Need at least 2 players to start" : "Start the game"} data-tooltip-variant="info"
