@@ -1758,8 +1758,11 @@ body {
   color: var(--secondary);
   margin-top: 0.2rem;
   margin-bottom: 0.25rem;
+  width: 100%;
   max-width: 24ch;
+  margin-inline: auto;
   line-height: 1.4;
+  text-align: center;
 }
 
 .hc-empty-text {
