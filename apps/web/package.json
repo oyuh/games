@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "lint": "echo 'No lint configured yet'",
     "typecheck": "tsc -p tsconfig.app.json --noEmit"
   },

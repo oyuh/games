@@ -3,9 +3,11 @@ import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiUsers, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare } from "react-icons/fi";
+import { FiSearch, FiUsers, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare, FiGlobe } from "react-icons/fi";
 import { PiPaintBrushBold } from "react-icons/pi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
+import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
+import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, SessionGameType, setStoredName } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 
@@ -57,9 +59,16 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const [pendingJoinTarget, setPendingJoinTarget] = useState<{ gameType: SessionGameType; gameId: string; code: string; route: string } | null>(null);
-
   // Game configs
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [browsing, setBrowsing] = useState<string | null>(null);
+
+  // Public game counts
+  const imposterPublicCount = usePublicGameCount("imposter");
+  const passwordPublicCount = usePublicGameCount("password");
+  const chainPublicCount = usePublicGameCount("chain_reaction");
+  const shadePublicCount = usePublicGameCount("shade_signal");
+  const locationPublicCount = usePublicGameCount("location_signal");
   const [imposterCategory, setImposterCategory] = useState("animals");
   const [imposterImposters, setImposterImposters] = useState(1);
   const [imposterRounds, setImposterRounds] = useState(3);
@@ -302,6 +311,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="m-home">
+      <ActiveGameModal sessionId={sessionId} suppress={pendingAction !== null} />
       {/* Join Game – top of page */}
       <div className="m-card">
         <h3 className="m-home-section-title">
@@ -405,7 +415,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           <span className="m-tag">Deduction</span>
           <span className="m-tag">Timed</span>
         </div>
-        {expanded === "imposter" && (
+        {(expanded === "imposter" || browsing === "imposter") && (
+          browsing === "imposter" ? (
+            <div className="m-game-card-config">
+              <PublicGamesList gameType="imposter" sessionId={sessionId} />
+              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
+                Back
+              </button>
+            </div>
+          ) : (
           <div className="m-game-card-config">
             <div className="m-config-field">
               <label className="m-config-label">Category</label>
@@ -429,15 +447,22 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 </select>
               </div>
             </div>
-            <button
-              className="m-btn m-btn-primary"
-              style={{ width: "100%", marginTop: "0.5rem" }}
-              onClick={() => void createImposter()}
-              disabled={pendingAction !== null}
-            >
-              {pendingAction === "create-imposter" ? "Creating…" : "Create Imposter Game"}
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button className={`m-btn m-browse-globe${imposterPublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("imposter"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                <FiGlobe size={16} />
+                {imposterPublicCount > 0 && <span className="hc-globe-badge">{imposterPublicCount}</span>}
+              </button>
+              <button
+                className="m-btn m-btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => void createImposter()}
+                disabled={pendingAction !== null}
+              >
+                {pendingAction === "create-imposter" ? "Creating…" : "Create Imposter Game"}
+              </button>
+            </div>
           </div>
+          )
         )}
       </div>
 
@@ -458,7 +483,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           <span className="m-tag">Word clues</span>
           <span className="m-tag">Timed</span>
         </div>
-        {expanded === "password" && (
+        {(expanded === "password" || browsing === "password") && (
+          browsing === "password" ? (
+            <div className="m-game-card-config">
+              <PublicGamesList gameType="password" sessionId={sessionId} />
+              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
+                Back
+              </button>
+            </div>
+          ) : (
           <div className="m-game-card-config">
             <div className="m-config-field">
               <label className="m-config-label">Category</label>
@@ -482,15 +515,22 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 </select>
               </div>
             </div>
-            <button
-              className="m-btn m-btn-primary"
-              style={{ width: "100%", marginTop: "0.5rem" }}
-              onClick={() => void createPassword()}
-              disabled={pendingAction !== null}
-            >
-              {pendingAction === "create-password" ? "Creating…" : "Create Password Game"}
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button className={`m-btn m-browse-globe${passwordPublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("password"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                <FiGlobe size={16} />
+                {passwordPublicCount > 0 && <span className="hc-globe-badge">{passwordPublicCount}</span>}
+              </button>
+              <button
+                className="m-btn m-btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => void createPassword()}
+                disabled={pendingAction !== null}
+              >
+                {pendingAction === "create-password" ? "Creating…" : "Create Password Game"}
+              </button>
+            </div>
           </div>
+          )
         )}
       </div>
 
@@ -511,7 +551,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           <span className="m-tag">Word chains</span>
           <span className="m-tag">Turns</span>
         </div>
-        {expanded === "chain" && (
+        {(expanded === "chain" || browsing === "chain") && (
+          browsing === "chain" ? (
+            <div className="m-game-card-config">
+              <PublicGamesList gameType="chain_reaction" sessionId={sessionId} />
+              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
+                Back
+              </button>
+            </div>
+          ) : (
           <div className="m-game-card-config">
             <div className="m-config-field">
               <label className="m-config-label">Category</label>
@@ -542,15 +590,22 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 <option value="custom">Custom (both write)</option>
               </select>
             </div>
-            <button
-              className="m-btn m-btn-primary"
-              style={{ width: "100%", marginTop: "0.5rem" }}
-              onClick={() => void createChainReaction()}
-              disabled={pendingAction !== null}
-            >
-              {pendingAction === "create-chain" ? "Creating…" : "Create Chain Reaction"}
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button className={`m-btn m-browse-globe${chainPublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("chain"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                <FiGlobe size={16} />
+                {chainPublicCount > 0 && <span className="hc-globe-badge">{chainPublicCount}</span>}
+              </button>
+              <button
+                className="m-btn m-btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => void createChainReaction()}
+                disabled={pendingAction !== null}
+              >
+                {pendingAction === "create-chain" ? "Creating…" : "Create Chain Reaction"}
+              </button>
+            </div>
           </div>
+          )
         )}
       </div>
 
@@ -571,7 +626,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           <span className="m-tag">Color clues</span>
           <span className="m-tag">Proximity</span>
         </div>
-        {expanded === "shade" && (
+        {(expanded === "shade" || browsing === "shade") && (
+          browsing === "shade" ? (
+            <div className="m-game-card-config">
+              <PublicGamesList gameType="shade_signal" sessionId={sessionId} />
+              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
+                Back
+              </button>
+            </div>
+          ) : (
           <div className="m-game-card-config">
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
@@ -599,15 +662,22 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
               />
               🎨 Leader picks their own color
             </label>
-            <button
-              className="m-btn m-btn-primary"
-              style={{ width: "100%", marginTop: "0.5rem" }}
-              onClick={() => void createShadeSignal()}
-              disabled={pendingAction !== null}
-            >
-              {pendingAction === "create-shade" ? "Creating…" : "Create Shade Signal"}
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button className={`m-btn m-browse-globe${shadePublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("shade"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                <FiGlobe size={16} />
+                {shadePublicCount > 0 && <span className="hc-globe-badge">{shadePublicCount}</span>}
+              </button>
+              <button
+                className="m-btn m-btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => void createShadeSignal()}
+                disabled={pendingAction !== null}
+              >
+                {pendingAction === "create-shade" ? "Creating…" : "Create Shade Signal"}
+              </button>
+            </div>
           </div>
+          )
         )}
       </div>
 
@@ -627,7 +697,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           <span className="m-tag">Geography</span>
           <span className="m-tag">Distance Scoring</span>
         </div>
-        {expanded === "location" && (
+        {(expanded === "location" || browsing === "location") && (
+          browsing === "location" ? (
+            <div className="m-game-card-config">
+              <PublicGamesList gameType="location_signal" sessionId={sessionId} />
+              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
+                Back
+              </button>
+            </div>
+          ) : (
           <div className="m-game-card-config">
             <div className="m-config-row">
               <div className="m-config-field">
@@ -648,15 +726,22 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 </select>
               </div>
             </div>
-            <button
-              className="m-btn m-btn-primary"
-              style={{ width: "100%" }}
-              onClick={() => void createLocationSignal()}
-              disabled={pendingAction !== null}
-            >
-              {pendingAction === "create-location" ? "Creating…" : "Create Location Signal"}
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button className={`m-btn m-browse-globe${locationPublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("location"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                <FiGlobe size={16} />
+                {locationPublicCount > 0 && <span className="hc-globe-badge">{locationPublicCount}</span>}
+              </button>
+              <button
+                className="m-btn m-btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => void createLocationSignal()}
+                disabled={pendingAction !== null}
+              >
+                {pendingAction === "create-location" ? "Creating…" : "Create Location Signal"}
+              </button>
+            </div>
           </div>
+          )
         )}
       </div>
 

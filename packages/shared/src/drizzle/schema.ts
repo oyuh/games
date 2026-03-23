@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   index,
   integer,
   jsonb,
@@ -82,6 +83,7 @@ export const imposterGames = pgTable(
       votingDurationSec: 45,
       phaseEndsAt: null
     }),
+    isPublic: boolean("is_public").notNull().default(false),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()
   },
@@ -113,6 +115,7 @@ export const passwordGames = pgTable(
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
     announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
     settings: jsonb("settings").$type<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean }>().notNull().default({ targetScore: 10, roundDurationSec: 75, roundEndsAt: null }),
+    isPublic: boolean("is_public").notNull().default(false),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()
   },
@@ -174,6 +177,7 @@ export const chainReactionGames = pgTable(
       phaseEndsAt: null,
       chainMode: "premade"
     }),
+    isPublic: boolean("is_public").notNull().default(false),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()
   },
@@ -231,6 +235,7 @@ export const shadeSignalGames = pgTable(
       currentRound: 1,
       phaseEndsAt: null
     }),
+    isPublic: boolean("is_public").notNull().default(false),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()
   },
@@ -287,6 +292,7 @@ export const locationSignalGames = pgTable(
       phaseEndsAt: null,
       cluePairs: 2
     }),
+    isPublic: boolean("is_public").notNull().default(false),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()
   },

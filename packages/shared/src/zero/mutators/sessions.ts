@@ -43,6 +43,18 @@ export const sessionMutators = {
       });
     }
   ),
+  clearGame: defineMutator(
+    z.object({ id: z.string() }),
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.id);
+      await tx.mutate.sessions.update({
+        id: args.id,
+        game_type: null,
+        game_id: null,
+        last_seen: now()
+      });
+    }
+  ),
   touchPresence: defineMutator(
     z.object({ id: z.string() }),
     async ({ args, tx, ctx }) => {

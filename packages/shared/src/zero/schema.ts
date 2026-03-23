@@ -4,6 +4,7 @@ import {
   relationships,
   string,
   number,
+  boolean,
   json,
   table,
   enumeration
@@ -49,6 +50,7 @@ const imposterGames = table("imposter_games").columns({
     phaseEndsAt: number | null;
     skipVotes?: string[];
   }>(),
+  is_public: boolean(),
   created_at: number(),
   updated_at: number()
 }).primaryKey("id");
@@ -74,6 +76,7 @@ const passwordGames = table("password_games").columns({
   kicked: json<string[]>(),
   announcement: json<{ text: string; ts: number } | null>(),
   settings: json<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean; skipsRemaining?: Record<string, number>; category?: string }>(),
+  is_public: boolean(),
   created_at: number(),
   updated_at: number()
 }).primaryKey("id");
@@ -117,6 +120,7 @@ const chainReactionGames = table("chain_reaction_games").columns({
     chainMode: "premade" | "custom";
     category?: string;
   }>(),
+  is_public: boolean(),
   created_at: number(),
   updated_at: number()
 }).primaryKey("id");
@@ -161,6 +165,7 @@ const shadeSignalGames = table("shade_signal_games").columns({
     phaseEndsAt: number | null;
     leaderPick?: boolean;
   }>(),
+  is_public: boolean(),
   created_at: number(),
   updated_at: number()
 }).primaryKey("id");
@@ -204,6 +209,7 @@ const locationSignalGames = table("location_signal_games").columns({
     phaseEndsAt: number | null;
     cluePairs: number;
   }>(),
+  is_public: boolean(),
   created_at: number(),
   updated_at: number()
 }).primaryKey("id");
