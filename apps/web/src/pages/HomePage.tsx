@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers, FiHelpCircle, FiGlobe } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiSearch, FiHelpCircle, FiGlobe } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, RecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -39,6 +39,16 @@ function randomName(): string {
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)]!;
   const noun = nouns[Math.floor(Math.random() * nouns.length)]!;
   return `${adj}${noun}`;
+}
+
+/** Scroll-wheel on a <select> cycles through its options */
+function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
+  return (e: React.WheelEvent) => {
+    const i = opts.indexOf(value);
+    if (i < 0) return;
+    const next = e.deltaY < 0 ? Math.max(0, i - 1) : Math.min(opts.length - 1, i + 1);
+    if (next !== i) set(opts[next]);
+  };
 }
 
 function HomePageDesktop({ sessionId }: { sessionId: string }) {
@@ -565,89 +575,88 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           <h2 className="hc-game-title-lg">Imposter</h2>
 
           {imposterBrowsing ? (
-            <PublicGamesList gameType="imposter" sessionId={sessionId} />
+            <div className="hc-card-anim" key="browse">
+              <PublicGamesList gameType="imposter" sessionId={sessionId} />
+            </div>
+          ) : imposterExpanded ? (
+            <div className="hc-card-anim" key="config">
+              <div className="hc-config">
+                <div className="hc-config-field">
+                  <label className="hc-config-label" data-tooltip="The theme for the word list. Everyone gets a word from this category — except the imposter." data-tooltip-variant="info">Category</label>
+                  <select
+                    className="input"
+                    value={imposterCategory}
+                    onChange={(e) => setImposterCategory(e.target.value)}
+                    onWheel={wheelSelect(imposterCategory, imposterCategories as string[], setImposterCategory)}
+                  >
+                    {imposterCategories.map((key) => (
+                      <option key={key} value={key}>{imposterCategoryLabels[key] ?? key}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="hc-config-row">
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="How many players are secretly the imposter each round. More imposters = harder for the group." data-tooltip-variant="info">Imposters</label>
+                    <select
+                      className="input"
+                      value={imposterImposters}
+                      onChange={(e) => setImposterImposters(Number(e.target.value))}
+                      onWheel={wheelSelect(imposterImposters, [1, 2, 3], setImposterImposters)}
+                    >
+                      {[1, 2, 3].map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="How many rounds to play. Each round, a new imposter is chosen and everyone votes." data-tooltip-variant="info">Rounds</label>
+                    <select
+                      className="input"
+                      value={imposterRounds}
+                      onChange={(e) => setImposterRounds(Number(e.target.value))}
+                      onWheel={wheelSelect(imposterRounds, [1, 2, 3, 5, 7, 10], setImposterRounds)}
+                    >
+                      {[1, 2, 3, 5, 7, 10].map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
-            <>
-          <p className="hc-game-desc">Find the liar. Give clues. Vote them out.</p>
-
-          <div className="hc-game-tags hc-game-tags--centered">
-            <span className="hc-tag">3–10 players</span>
-            <span className="hc-tag">Deduction</span>
-            <span className="hc-tag">Timed rounds</span>
-          </div>
-
-          {/* Gameplay preview (hidden when config expanded) */}
-          {!imposterExpanded && (
-            <div className="hc-coming-preview">
-              <div className="hc-mini-board">
-                <div className="hc-mini-board-header hc-mini-board-header--imposter">
-                  <span>Secret Word: DOG</span>
-                </div>
-                <div className="hc-mini-board-rows">
-                  <div className="hc-mini-row">
-                    <span className="hc-mini-avatar hc-mini-avatar--imposter">A</span>
-                    <span className="hc-mini-clue">"Fluffy"</span>
-                    <span className="hc-mini-badge hc-mini-badge--ok">✓</span>
+            <div className="hc-card-anim" key="default">
+              <p className="hc-game-desc">Find the liar. Give clues. Vote them out.</p>
+              <div className="hc-game-tags hc-game-tags--centered">
+                <span className="hc-tag">3–10 players</span>
+                <span className="hc-tag">Deduction</span>
+                <span className="hc-tag">Timed rounds</span>
+              </div>
+              <div className="hc-coming-preview">
+                <div className="hc-mini-board">
+                  <div className="hc-mini-board-header hc-mini-board-header--imposter">
+                    <span>Secret Word: DOG</span>
                   </div>
-                  <div className="hc-mini-row">
-                    <span className="hc-mini-avatar hc-mini-avatar--imposter">B</span>
-                    <span className="hc-mini-clue">"Loyal"</span>
-                    <span className="hc-mini-badge hc-mini-badge--ok">✓</span>
-                  </div>
-                  <div className="hc-mini-row hc-mini-row--suspect">
-                    <span className="hc-mini-avatar hc-mini-avatar--suspect">C</span>
-                    <span className="hc-mini-clue">"Uhh..."</span>
-                    <span className="hc-mini-badge hc-mini-badge--caught">🕵️</span>
+                  <div className="hc-mini-board-rows">
+                    <div className="hc-mini-row">
+                      <span className="hc-mini-avatar hc-mini-avatar--imposter">A</span>
+                      <span className="hc-mini-clue">"Fluffy"</span>
+                      <span className="hc-mini-badge hc-mini-badge--ok">✓</span>
+                    </div>
+                    <div className="hc-mini-row">
+                      <span className="hc-mini-avatar hc-mini-avatar--imposter">B</span>
+                      <span className="hc-mini-clue">"Loyal"</span>
+                      <span className="hc-mini-badge hc-mini-badge--ok">✓</span>
+                    </div>
+                    <div className="hc-mini-row hc-mini-row--suspect">
+                      <span className="hc-mini-avatar hc-mini-avatar--suspect">C</span>
+                      <span className="hc-mini-clue">"Uhh..."</span>
+                      <span className="hc-mini-badge hc-mini-badge--caught">🕵️</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Expandable config */}
-          {imposterExpanded && (
-            <div className="hc-config">
-              <div className="hc-config-field">
-                <label className="hc-config-label" data-tooltip="The theme for the word list. Everyone gets a word from this category — except the imposter." data-tooltip-variant="info">Category &#9432;</label>
-                <select
-                  className="input"
-                  value={imposterCategory}
-                  onChange={(e) => setImposterCategory(e.target.value)}
-                >
-                  {imposterCategories.map((key) => (
-                    <option key={key} value={key}>{imposterCategoryLabels[key] ?? key}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="hc-config-row">
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="How many players are secretly the imposter each round. More imposters = harder for the group." data-tooltip-variant="info">Imposters &#9432;</label>
-                  <select
-                    className="input"
-                    value={imposterImposters}
-                    onChange={(e) => setImposterImposters(Number(e.target.value))}
-                  >
-                    {[1, 2, 3].map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="How many rounds to play. Each round, a new imposter is chosen and everyone votes." data-tooltip-variant="info">Rounds &#9432;</label>
-                  <select
-                    className="input"
-                    value={imposterRounds}
-                    onChange={(e) => setImposterRounds(Number(e.target.value))}
-                  >
-                    {[1, 2, 3, 5, 7, 10].map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-            </>
           )}
 
           <div className="hc-game-actions">
@@ -694,89 +703,86 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           <h2 className="hc-game-title-lg">Password</h2>
 
           {passwordBrowsing ? (
-            <PublicGamesList gameType="password" sessionId={sessionId} />
+            <div className="hc-card-anim" key="browse">
+              <PublicGamesList gameType="password" sessionId={sessionId} />
+            </div>
+          ) : passwordExpanded ? (
+            <div className="hc-card-anim" key="config">
+              <div className="hc-config">
+                <div className="hc-config-field">
+                  <label className="hc-config-label" data-tooltip="The theme for the word list. Words will be drawn from this category." data-tooltip-variant="info">Category</label>
+                  <select
+                    className="input"
+                    value={passwordCategory}
+                    onChange={(e) => setPasswordCategory(e.target.value)}
+                    onWheel={wheelSelect(passwordCategory, passwordCategories as string[], setPasswordCategory)}
+                  >
+                    {passwordCategories.map((key) => (
+                      <option key={key} value={key}>{passwordCategoryLabels[key] ?? key}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="hc-config-row">
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="Split players into this many teams. Teams take turns giving and guessing clues." data-tooltip-variant="info">Teams</label>
+                    <select
+                      className="input"
+                      value={passwordTeams}
+                      onChange={(e) => setPasswordTeams(Number(e.target.value))}
+                      onWheel={wheelSelect(passwordTeams, [2, 3, 4, 5, 6], setPasswordTeams)}
+                    >
+                      {[2, 3, 4, 5, 6].map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="The score a team needs to win. Higher = longer game." data-tooltip-variant="info">Target Score</label>
+                    <select
+                      className="input"
+                      value={passwordTargetScore}
+                      onChange={(e) => setPasswordTargetScore(Number(e.target.value))}
+                      onWheel={wheelSelect(passwordTargetScore, [3, 5, 7, 10, 15, 20], setPasswordTargetScore)}
+                    >
+                      {[3, 5, 7, 10, 15, 20].map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
-            <>
-          <p className="hc-game-desc">One-word clues. Team guessing. First to target wins.</p>
-
-          <div className="hc-game-tags hc-game-tags--centered">
-            <span className="hc-tag">Teams</span>
-            <span className="hc-tag">Word clues</span>
-            <span className="hc-tag">Timed</span>
-          </div>
-
-          {/* Gameplay preview (hidden when config expanded) */}
-          {!passwordExpanded && (
-            <div className="hc-coming-preview">
-              <div className="hc-pw-preview">
-                <div className="hc-pw-teams">
-                  <div className="hc-pw-team hc-pw-team--red">
-                    <span className="hc-pw-team-name">Red</span>
-                    <span className="hc-pw-team-score">2</span>
+            <div className="hc-card-anim" key="default">
+              <p className="hc-game-desc">One-word clues. Team guessing. First to target wins.</p>
+              <div className="hc-game-tags hc-game-tags--centered">
+                <span className="hc-tag">Teams</span>
+                <span className="hc-tag">Word clues</span>
+                <span className="hc-tag">Timed</span>
+              </div>
+              <div className="hc-coming-preview">
+                <div className="hc-pw-preview">
+                  <div className="hc-pw-teams">
+                    <div className="hc-pw-team hc-pw-team--red">
+                      <span className="hc-pw-team-name">Red</span>
+                      <span className="hc-pw-team-score">2</span>
+                    </div>
+                    <span className="hc-pw-vs">vs</span>
+                    <div className="hc-pw-team hc-pw-team--blue">
+                      <span className="hc-pw-team-name">Blue</span>
+                      <span className="hc-pw-team-score">1</span>
+                    </div>
                   </div>
-                  <span className="hc-pw-vs">vs</span>
-                  <div className="hc-pw-team hc-pw-team--blue">
-                    <span className="hc-pw-team-name">Blue</span>
-                    <span className="hc-pw-team-score">1</span>
+                  <div className="hc-pw-word">? ? ? ? ?</div>
+                  <div className="hc-pw-flow">
+                    <span className="hc-pw-flow-clue">"Waves"</span>
+                    <span className="hc-pw-flow-arrow">→</span>
+                    <span className="hc-pw-flow-guess">OCEAN</span>
+                    <span className="hc-pw-flow-result">✓</span>
                   </div>
-                </div>
-                <div className="hc-pw-word">? ? ? ? ?</div>
-                <div className="hc-pw-flow">
-                  <span className="hc-pw-flow-clue">"Waves"</span>
-                  <span className="hc-pw-flow-arrow">→</span>
-                  <span className="hc-pw-flow-guess">OCEAN</span>
-                  <span className="hc-pw-flow-result">✓</span>
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Expandable config */}
-          {passwordExpanded && (
-            <div className="hc-config">
-              <div className="hc-config-field">
-                <label className="hc-config-label" data-tooltip="The theme for the word list. Words will be drawn from this category." data-tooltip-variant="info">Category &#9432;</label>
-                <select
-                  className="input"
-                  value={passwordCategory}
-                  onChange={(e) => setPasswordCategory(e.target.value)}
-                >
-                  {passwordCategories.map((key) => (
-                    <option key={key} value={key}>{passwordCategoryLabels[key] ?? key}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="hc-config-row">
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="Split players into this many teams. Teams take turns giving and guessing clues." data-tooltip-variant="info">
-                    <FiUsers size={13} style={{ opacity: 0.6 }} /> Teams &#9432;
-                  </label>
-                  <select
-                    className="input"
-                    value={passwordTeams}
-                    onChange={(e) => setPasswordTeams(Number(e.target.value))}
-                  >
-                    {[2, 3, 4, 5, 6].map((n) => (
-                      <option key={n} value={n}>{n} teams</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="The score a team needs to win. Higher = longer game." data-tooltip-variant="info">Points to Win &#9432;</label>
-                  <select
-                    className="input"
-                    value={passwordTargetScore}
-                    onChange={(e) => setPasswordTargetScore(Number(e.target.value))}
-                  >
-                    {[3, 5, 7, 10, 15, 20].map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-            </>
           )}
 
           <div className="hc-game-actions">
@@ -823,87 +829,85 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           <h2 className="hc-game-title-lg">Chain Reaction</h2>
 
           {chainBrowsing ? (
-            <PublicGamesList gameType="chain_reaction" sessionId={sessionId} />
-          ) : (
-            <>
-          <p className="hc-game-desc">Race to solve a chain of linked words. Every word connects to the next.</p>
-
-          <div className="hc-game-tags hc-game-tags--centered">
-            <span className="hc-tag">2 players</span>
-            <span className="hc-tag">Word chains</span>
-            <span className="hc-tag">Turns</span>
-          </div>
-
-          {/* Gameplay preview (hidden when config expanded) */}
-          {!chainExpanded && (
-            <div className="hc-coming-preview">
-              <div className="hc-chain-example">
-                <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
-                <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _ _</span>
-                <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
-                <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
-                <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
-              </div>
+            <div className="hc-card-anim" key="browse">
+              <PublicGamesList gameType="chain_reaction" sessionId={sessionId} />
             </div>
-          )}
-
-          {/* Expandable config */}
-          {chainExpanded && (
-            <div className="hc-config">
-              <div className="hc-config-field">
-                <label className="hc-config-label" data-tooltip="The theme for the word chains. Chains will be drawn from this category." data-tooltip-variant="info">Category &#9432;</label>
-                <select
-                  className="input"
-                  value={chainCategory}
-                  onChange={(e) => setChainCategory(e.target.value)}
-                >
-                  {chainCategories.map((key) => (
-                    <option key={key} value={key}>{chainCategoryLabels[key] ?? key}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="hc-config-row">
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="How many words in the chain. Each word links to the next — longer chains are harder!" data-tooltip-variant="info">Chain Length &#9432;</label>
+          ) : chainExpanded ? (
+            <div className="hc-card-anim" key="config">
+              <div className="hc-config">
+                <div className="hc-config-field">
+                  <label className="hc-config-label" data-tooltip="The theme for the word chains. Chains will be drawn from this category." data-tooltip-variant="info">Category</label>
                   <select
                     className="input"
-                    value={chainLength}
-                    onChange={(e) => setChainLength(Number(e.target.value))}
+                    value={chainCategory}
+                    onChange={(e) => setChainCategory(e.target.value)}
+                    onWheel={wheelSelect(chainCategory, chainCategories as string[], setChainCategory)}
                   >
-                    {[5, 6, 7, 8, 9, 10].map((n) => (
-                      <option key={n} value={n}>{n} words</option>
+                    {chainCategories.map((key) => (
+                      <option key={key} value={key}>{chainCategoryLabels[key] ?? key}</option>
                     ))}
                   </select>
                 </div>
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="How many chains to play. Each round is a fresh chain for both players." data-tooltip-variant="info">Rounds &#9432;</label>
-                  <select
-                    className="input"
-                    value={chainRounds}
-                    onChange={(e) => setChainRounds(Number(e.target.value))}
-                  >
-                    {[1, 2, 3, 5, 7].map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
+                <div className="hc-config-row">
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="How many words in the chain. Each word links to the next — longer chains are harder!" data-tooltip-variant="info">Length</label>
+                    <select
+                      className="input"
+                      value={chainLength}
+                      onChange={(e) => setChainLength(Number(e.target.value))}
+                      onWheel={wheelSelect(chainLength, [5, 6, 7, 8, 9, 10], setChainLength)}
+                    >
+                      {[5, 6, 7, 8, 9, 10].map((n) => (
+                        <option key={n} value={n}>{n} words</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="How many chains to play. Each round is a fresh chain for both players." data-tooltip-variant="info">Rounds</label>
+                    <select
+                      className="input"
+                      value={chainRounds}
+                      onChange={(e) => setChainRounds(Number(e.target.value))}
+                      onWheel={wheelSelect(chainRounds, [1, 2, 3, 5, 7], setChainRounds)}
+                    >
+                      {[1, 2, 3, 5, 7].map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
-              <div className="hc-config-row">
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="Random uses pre-made chains. Custom lets both players write their own chain for the other to solve." data-tooltip-variant="info">Chain Mode &#9432;</label>
+                <div className="hc-config-field">
+                  <label className="hc-config-label" data-tooltip="Random uses pre-made chains. Custom lets both players write their own chain for the other to solve." data-tooltip-variant="info">Mode</label>
                   <select
                     className="input"
                     value={chainMode}
                     onChange={(e) => setChainMode(e.target.value as "premade" | "custom")}
+                    onWheel={wheelSelect(chainMode, ["premade", "custom"] as const, (v) => setChainMode(v as "premade" | "custom"))}
                   >
                     <option value="premade">Random (premade)</option>
-                    <option value="custom">Custom (both players write)</option>
+                    <option value="custom">Custom (write your own)</option>
                   </select>
                 </div>
               </div>
             </div>
-          )}
-            </>
+          ) : (
+            <div className="hc-card-anim" key="default">
+              <p className="hc-game-desc">Race to solve a chain of linked words. Every word connects to the next.</p>
+              <div className="hc-game-tags hc-game-tags--centered">
+                <span className="hc-tag">2 players</span>
+                <span className="hc-tag">Word chains</span>
+                <span className="hc-tag">Turns</span>
+              </div>
+              <div className="hc-coming-preview">
+                <div className="hc-chain-example">
+                  <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
+                  <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _ _</span>
+                  <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
+                  <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
+                  <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
+                </div>
+              </div>
+            </div>
           )}
 
           <div className="hc-game-actions">
@@ -950,72 +954,68 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           <h2 className="hc-game-title-lg">Shade Signal</h2>
 
           {shadeBrowsing ? (
-            <PublicGamesList gameType="shade_signal" sessionId={sessionId} />
-          ) : (
-            <>
-          <p className="hc-game-desc">One leader, one color. Give clues and guess the target shade.</p>
-
-          <div className="hc-game-tags hc-game-tags--centered">
-            <span className="hc-tag">3–10 players</span>
-            <span className="hc-tag">Color clues</span>
-            <span className="hc-tag">Proximity</span>
-          </div>
-
-          {/* Gameplay preview (hidden when config expanded) */}
-          {!shadeExpanded && (
-            <div className="hc-coming-preview">
-              <div className="hc-shade-grid">
-                {Array.from({ length: 20 }, (_, i) => (
-                  <div
-                    key={i}
-                    className="hc-shade-cell"
-                    style={{ background: `hsl(${i * 18}, 60%, ${45 + (i % 3) * 10}%)` }}
+            <div className="hc-card-anim" key="browse">
+              <PublicGamesList gameType="shade_signal" sessionId={sessionId} />
+            </div>
+          ) : shadeExpanded ? (
+            <div className="hc-card-anim" key="config">
+              <div className="hc-config">
+                <div className="hc-config-row">
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="Each player takes a turn as Leader. This controls how many turns each person gets, so more = longer game." data-tooltip-variant="info">Game Length</label>
+                    <select
+                      className="input"
+                      value={shadeRoundsPerPlayer}
+                      onChange={(e) => setShadeRoundsPerPlayer(Number(e.target.value))}
+                      onWheel={wheelSelect(shadeRoundsPerPlayer, [1, 2, 3], setShadeRoundsPerPlayer)}
+                    >
+                      <option value={1}>Quick</option>
+                      <option value={2}>Standard</option>
+                      <option value={3}>Long</option>
+                    </select>
+                  </div>
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="Controls what the Leader can say in their clue. &quot;No Color Names&quot; bans words like red, blue, green, etc." data-tooltip-variant="info">Clue Rules</label>
+                    <select
+                      className="input"
+                      value={shadeHardMode ? "yes" : "no"}
+                      onChange={(e) => setShadeHardMode(e.target.value === "yes")}
+                    >
+                      <option value="no">Normal</option>
+                      <option value="yes">No Colors</option>
+                    </select>
+                  </div>
+                </div>
+                <label className="hc-config-check">
+                  <input
+                    type="checkbox"
+                    checked={shadeLeaderPick}
+                    onChange={(e) => setShadeLeaderPick(e.target.checked)}
                   />
-                ))}
+                  🎨 Leader picks their own color
+                </label>
               </div>
             </div>
-          )}
-
-          {/* Expandable config */}
-          {shadeExpanded && (
-            <div className="hc-config">
-              <div className="hc-config-row">
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="Each player takes a turn as Leader. This controls how many turns each person gets, so more = longer game." data-tooltip-variant="info">Game Length &#9432;</label>
-                  <select
-                    className="input"
-                    value={shadeRoundsPerPlayer}
-                    onChange={(e) => setShadeRoundsPerPlayer(Number(e.target.value))}
-                  >
-                    <option value={1}>Quick (1 turn each)</option>
-                    <option value={2}>Standard (2 turns each)</option>
-                    <option value={3}>Long (3 turns each)</option>
-                  </select>
-                </div>
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="Controls what the Leader can say in their clue. &quot;No Color Names&quot; bans words like red, blue, green, etc." data-tooltip-variant="info">Clue Rules &#9432;</label>
-                  <select
-                    className="input"
-                    value={shadeHardMode ? "yes" : "no"}
-                    onChange={(e) => setShadeHardMode(e.target.value === "yes")}
-                  >
-                    <option value="no">Normal (anything goes)</option>
-                    <option value="yes">No Color Names</option>
-                  </select>
+          ) : (
+            <div className="hc-card-anim" key="default">
+              <p className="hc-game-desc">One leader, one color. Give clues and guess the target shade.</p>
+              <div className="hc-game-tags hc-game-tags--centered">
+                <span className="hc-tag">3–10 players</span>
+                <span className="hc-tag">Color clues</span>
+                <span className="hc-tag">Proximity</span>
+              </div>
+              <div className="hc-coming-preview">
+                <div className="hc-shade-grid">
+                  {Array.from({ length: 20 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="hc-shade-cell"
+                      style={{ background: `hsl(${i * 18}, 60%, ${45 + (i % 3) * 10}%)` }}
+                    />
+                  ))}
                 </div>
               </div>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "var(--secondary)", cursor: "pointer", marginTop: "0.25rem" }}>
-                <input
-                  type="checkbox"
-                  checked={shadeLeaderPick}
-                  onChange={(e) => setShadeLeaderPick(e.target.checked)}
-                  style={{ accentColor: "var(--primary)" }}
-                />
-                🎨 Leader picks their own color
-              </label>
             </div>
-          )}
-            </>
           )}
 
           <div className="hc-game-actions">
@@ -1062,67 +1062,66 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           <h2 className="hc-game-title-lg">Location Signal</h2>
 
           {locationBrowsing ? (
-            <PublicGamesList gameType="location_signal" sessionId={sessionId} />
+            <div className="hc-card-anim" key="browse">
+              <PublicGamesList gameType="location_signal" sessionId={sessionId} />
+            </div>
+          ) : locationExpanded ? (
+            <div className="hc-card-anim" key="config">
+              <div className="hc-config">
+                <div className="hc-config-row">
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="How many clue + guess pairs per round. More pairs means the leader gives more hints and guessers refine their answer." data-tooltip-variant="info">Clue Pairs</label>
+                    <select
+                      className="input"
+                      value={locCluePairs}
+                      onChange={(e) => setLocCluePairs(Number(e.target.value))}
+                      onWheel={wheelSelect(locCluePairs, [1, 2, 3, 4], setLocCluePairs)}
+                    >
+                      <option value={1}>1 pair</option>
+                      <option value={2}>2 pairs</option>
+                      <option value={3}>3 pairs</option>
+                      <option value={4}>4 pairs</option>
+                    </select>
+                  </div>
+                  <div className="hc-config-field flex-1">
+                    <label className="hc-config-label" data-tooltip="Each player takes a turn as the location picker. This controls how many turns each person gets." data-tooltip-variant="info">Rounds / Player</label>
+                    <select
+                      className="input"
+                      value={locRoundsPerPlayer}
+                      onChange={(e) => setLocRoundsPerPlayer(Number(e.target.value))}
+                      onWheel={wheelSelect(locRoundsPerPlayer, [1, 2, 3], setLocRoundsPerPlayer)}
+                    >
+                      <option value={1}>1 each</option>
+                      <option value={2}>2 each</option>
+                      <option value={3}>3 each</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
-            <>
-          <p className="hc-game-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
-
-          <div className="hc-game-tags hc-game-tags--centered">
-            <span className="hc-tag">2–10 players</span>
-            <span className="hc-tag">Geography</span>
-            <span className="hc-tag">Distance Scoring</span>
-          </div>
-
-          {/* Mini map preview */}
-          {!locationExpanded && (
-            <div className="hc-coming-preview">
-              <div className="hc-loc-preview">
-                <div className="hc-loc-map">
-                  <div className="hc-loc-pin hc-loc-pin--guess" style={{ top: "25%", left: "30%" }} />
-                  <div className="hc-loc-pin hc-loc-pin--guess" style={{ top: "55%", left: "72%" }} />
-                  <div className="hc-loc-pin hc-loc-pin--close" style={{ top: "38%", left: "53%" }} />
-                  <div className="hc-loc-pin hc-loc-pin--target" style={{ top: "36%", left: "56%" }} />
-                </div>
-                <div className="hc-loc-clue-row">
-                  <span className="hc-loc-clue-tag">Clue</span>
-                  <span className="hc-loc-clue-text">"Ancient empire"</span>
+            <div className="hc-card-anim" key="default">
+              <p className="hc-game-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
+              <div className="hc-game-tags hc-game-tags--centered">
+                <span className="hc-tag">2–10 players</span>
+                <span className="hc-tag">Geography</span>
+                <span className="hc-tag">Distance Scoring</span>
+              </div>
+              <div className="hc-coming-preview">
+                <div className="hc-loc-preview">
+                  <div className="hc-loc-map">
+                    <div className="hc-loc-pin hc-loc-pin--guess" style={{ top: "25%", left: "30%" }} />
+                    <div className="hc-loc-pin hc-loc-pin--guess" style={{ top: "55%", left: "72%" }} />
+                    <div className="hc-loc-pin hc-loc-pin--close" style={{ top: "38%", left: "53%" }} />
+                    <div className="hc-loc-pin hc-loc-pin--target" style={{ top: "36%", left: "56%" }} />
+                  </div>
+                  <div className="hc-loc-clue-row">
+                    <span className="hc-loc-clue-tag">Clue</span>
+                    <span className="hc-loc-clue-text">"Ancient empire"</span>
+                  </div>
                 </div>
               </div>
             </div>
-          )}
-
-          {locationExpanded && (
-            <div className="hc-config">
-              <div className="hc-config-row">
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="How many clue + guess pairs per round. More pairs means the leader gives more hints and guessers refine their answer." data-tooltip-variant="info">Clue Pairs &#9432;</label>
-                  <select
-                    className="input"
-                    value={locCluePairs}
-                    onChange={(e) => setLocCluePairs(Number(e.target.value))}
-                  >
-                    <option value={1}>1 pair (quick)</option>
-                    <option value={2}>2 pairs (standard)</option>
-                    <option value={3}>3 pairs (long)</option>
-                    <option value={4}>4 pairs (marathon)</option>
-                  </select>
-                </div>
-                <div className="hc-config-field flex-1">
-                  <label className="hc-config-label" data-tooltip="Each player takes a turn as the location picker. This controls how many turns each person gets." data-tooltip-variant="info">Rounds / Player &#9432;</label>
-                  <select
-                    className="input"
-                    value={locRoundsPerPlayer}
-                    onChange={(e) => setLocRoundsPerPlayer(Number(e.target.value))}
-                  >
-                    <option value={1}>Quick (1 turn each)</option>
-                    <option value={2}>Standard (2 turns each)</option>
-                    <option value={3}>Long (3 turns each)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-            </>
           )}
 
           <div className="hc-game-actions">

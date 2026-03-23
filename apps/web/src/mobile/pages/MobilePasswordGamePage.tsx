@@ -8,7 +8,7 @@ import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
-import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
+import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { useGameSecret } from "../../lib/game-secrets";
 
@@ -255,6 +255,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
     <div className="m-page" data-game-theme="password">
       <MobileGameHeader code={game.code} gameLabel="Password" phase={game.phase} round={game.current_round} accent="var(--game-accent)" category={game.settings.category ?? null}>
         {isSpectator && <MobileSpectatorBadge />}
+        {isHost && <MobileHostBadge />}
         {timeLeft != null && (
           <span className={`m-timer${timeLeft <= 10 ? " m-timer--danger" : " m-timer--warn"}`}>
             <FiClock size={14} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}

@@ -1,12 +1,12 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/api/proxy/route": "app/api/proxy/route.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(dashboard)/games/page": "app/(dashboard)/games/page.js",
+  "/(dashboard)/clients/page": "app/(dashboard)/clients/page.js",
   "/(dashboard)/bans/page": "app/(dashboard)/bans/page.js",
-  "/(dashboard)/page": "app/(dashboard)/page.js",
   "/(dashboard)/names/page": "app/(dashboard)/names/page.js",
   "/(dashboard)/broadcast/page": "app/(dashboard)/broadcast/page.js",
-  "/(dashboard)/clients/page": "app/(dashboard)/clients/page.js",
-  "/(dashboard)/games/page": "app/(dashboard)/games/page.js"
+  "/(dashboard)/page": "app/(dashboard)/page.js"
 }

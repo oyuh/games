@@ -1,17 +1,20 @@
 import { FiPlay, FiLogOut } from "react-icons/fi";
+import { type ReactNode } from "react";
 
 export function ImposterLobbyActions({
   canStart,
   isHost,
   playerCount,
   onStart,
-  onLeave
+  onLeave,
+  children
 }: {
   canStart: boolean;
   isHost: boolean;
   playerCount: number;
   onStart: () => void;
   onLeave: () => void;
+  children?: ReactNode;
 }) {
   return (
     <div className="game-section">
@@ -22,6 +25,7 @@ export function ImposterLobbyActions({
         <p className="game-hint" style={{ opacity: 0.7 }}>4+ players recommended for the best experience</p>
       )}
       <div className="game-actions">
+        {children}
         {isHost ? (
           <button className="btn btn-primary game-action-btn" disabled={!canStart} onClick={onStart}>
             <FiPlay size={16} /> Start Game

@@ -6,6 +6,7 @@ import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock, FiHelpCircle } from "react
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { InSessionModal } from "../components/shared/InSessionModal";
+import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
@@ -210,6 +211,9 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
             <p className="game-hint">Need at least 2 teams with players to start</p>
           )}
           <div className="game-actions">
+            {isHost && (
+              <LobbyVisibilityToggle gameType="password" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />
+            )}
             {isHost && (
               <button
                 className="btn btn-muted"

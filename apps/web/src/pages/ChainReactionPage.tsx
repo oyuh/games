@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FiEye, FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { InSessionModal } from "../components/shared/InSessionModal";
+import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
@@ -438,6 +439,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
           {inGame && (
             <div className="game-actions" style={{ marginTop: "0.75rem" }}>
+              {isHost && <LobbyVisibilityToggle gameType="chain_reaction" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />}
               {isHost ? (
                 <button className="btn btn-primary game-action-btn" disabled={game.players.length !== 2}
                   onClick={() => void zero.mutate(mutators.chainReaction.start({ gameId, hostId: sessionId }))}>

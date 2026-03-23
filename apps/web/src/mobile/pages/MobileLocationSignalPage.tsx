@@ -7,7 +7,8 @@ import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
 import { InSessionModal } from "../../components/shared/InSessionModal";
-import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
+import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
+import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
@@ -380,6 +381,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
         accent="var(--game-accent)"
       >
         {isSpectator && <MobileSpectatorBadge />}
+        {isHost && <MobileHostBadge />}
         {timeLeft != null && (
           <span className={`m-timer${timeLeft <= 10 ? " m-timer--danger" : " m-timer--warn"}`}>
             <FiClock size={14} /> {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
@@ -480,6 +482,11 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
 
           {inGame && (
             <div className="m-actions" style={{ marginTop: "0.5rem" }}>
+              {isHost && (
+                <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+                  <LobbyVisibilityToggle gameType="location_signal" gameId={game.id} sessionId={sessionId} isPublic={game.is_public} />
+                </div>
+              )}
               {isHost ? (
                 <button className="m-btn m-btn-primary" disabled={game.players.length < 2}
                   onClick={() => void zero.mutate(mutators.locationSignal.start({ gameId: game.id, hostId: sessionId })).server.catch((e: unknown) => showToast(e instanceof Error ? e.message : "Start failed", "error"))}>

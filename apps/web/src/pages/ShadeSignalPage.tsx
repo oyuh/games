@@ -3,11 +3,12 @@ import { useQuery, useZero } from "../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiCopy, FiCheck, FiSend, FiHelpCircle } from "react-icons/fi";
-import { PiCrownSimpleFill } from "react-icons/pi";
+
 import { ColorGrid, generateGridColor } from "../components/shade/ColorGrid";
 import { InSessionModal } from "../components/shared/InSessionModal";
+import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { RoundCountdown } from "../components/shared/RoundCountdown";
-import { SpectatorBadge } from "../components/shared/SpectatorBadge";
+import { SpectatorBadge, HostBadge } from "../components/shared/SpectatorBadge";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
@@ -428,11 +429,6 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
             </svg>
           </div>
           <h1 className="game-title">Shade Signal</h1>
-          {isHost && (
-            <span className="badge host-badge" data-tooltip="You created this game" data-tooltip-variant="info">
-              <PiCrownSimpleFill size={12} /> Host
-            </span>
-          )}
           <span className={`badge ${phaseVariants[phase]}`} data-tooltip={phase === "lobby" ? "Waiting for host to start" : phase === "clue1" ? "Leader gives their 1st clue" : phase === "guess1" ? "Guessers pick a cell (1st guess)" : phase === "clue2" ? "Leader gives a 2nd clue" : phase === "guess2" ? "Guessers pick again (2nd guess)" : phase === "reveal" ? "Showing the target & scores" : phase === "finished" ? "All rounds complete" : "Game ended"} data-tooltip-variant="info">
             {phaseLabels[phase]}
           </span>
@@ -449,6 +445,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
         </div>
         <div className="game-header-right">
           {isSpectator && <SpectatorBadge />}
+          {isHost && <HostBadge />}
           <button className="game-code-btn" onClick={copyCode} data-tooltip={copied ? "Copied!" : "Click to copy room code"} data-tooltip-variant="info">
             {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}
             <span>{game.code}</span>
@@ -526,6 +523,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
           </div>
 
           <div className="game-actions">
+            {isHost && <LobbyVisibilityToggle gameType="shade_signal" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />}
             {isHost && (
               <button
                 className="btn btn-primary game-action-btn"
