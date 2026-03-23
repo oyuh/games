@@ -1,5 +1,1 @@
-{
-  "node": {},
-  "edge": {},
-  "encryptionKey": "n9alI9cUhxtFTuq5LqJFbdoNXTq68qBT9PeiyvJIE3Q="
-}
+{"node":{"00884f4e8798c9ea6b0c603c18047a32cc81e47038":{"workers":{"app/(auth)/login/page":{"moduleId":"1506","async":false}},"layer":{"app/(auth)/login/page":"rsc"},"filename":"../C:\\Users\\Lawson\\Desktop\\DEV\\Source\\games-refac\\apps\\admin\\src\\app\\(auth)\\login\\page.tsx","exportedName":"$$RSC_SERVER_ACTION_0"},"00a327236ce33f41b357d66dc6931fea7321a8d102":{"workers":{"app/(dashboard)/bans/page":{"moduleId":"2541","async":false},"app/(dashboard)/page":{"moduleId":"2541","async":false},"app/(dashboard)/names/page":{"moduleId":"2541","async":false},"app/(dashboard)/broadcast/page":{"moduleId":"2541","async":false},"app/(dashboard)/clients/page":{"moduleId":"2541","async":false},"app/(dashboard)/games/page":{"moduleId":"2541","async":false}},"layer":{"app/(dashboard)/bans/page":"rsc","app/(dashboard)/page":"rsc","app/(dashboard)/names/page":"rsc","app/(dashboard)/broadcast/page":"rsc","app/(dashboard)/clients/page":"rsc","app/(dashboard)/games/page":"rsc"},"filename":"../C:\\Users\\Lawson\\Desktop\\DEV\\Source\\games-refac\\apps\\admin\\src\\app\\(dashboard)\\layout.tsx","exportedName":"$$RSC_SERVER_ACTION_0"}},"edge":{},"encryptionKey":"n9alI9cUhxtFTuq5LqJFbdoNXTq68qBT9PeiyvJIE3Q="}

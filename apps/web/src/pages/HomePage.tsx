@@ -3,12 +3,14 @@ import { useQuery, useZero } from "../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers, FiHelpCircle } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiSearch, FiUsers, FiHelpCircle, FiGlobe } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, RecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileHomePage } from "../mobile/pages/MobileHomePage";
 import { InSessionModal } from "../components/shared/InSessionModal";
+import { ActiveGameModal } from "../components/shared/ActiveGameBanner";
+import { PublicGamesList, usePublicGameCount } from "../components/shared/PublicGamesBrowser";
 import { ImposterDemo } from "../components/demos/ImposterDemo";
 import { PasswordDemo } from "../components/demos/PasswordDemo";
 import { ChainDemo } from "../components/demos/ChainDemo";
@@ -70,6 +72,20 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const [pendingJoinTarget, setPendingJoinTarget] = useState<{ gameType: SessionGameType; gameId: string; code: string; route: string } | null>(null);
+
+  // Per-card browse mode
+  const [imposterBrowsing, setImposterBrowsing] = useState(false);
+  const [passwordBrowsing, setPasswordBrowsing] = useState(false);
+  const [chainBrowsing, setChainBrowsing] = useState(false);
+  const [shadeBrowsing, setShadeBrowsing] = useState(false);
+  const [locationBrowsing, setLocationBrowsing] = useState(false);
+
+  // Public game counts
+  const imposterPublicCount = usePublicGameCount("imposter");
+  const passwordPublicCount = usePublicGameCount("password");
+  const chainPublicCount = usePublicGameCount("chain_reaction");
+  const shadePublicCount = usePublicGameCount("shade_signal");
+  const locationPublicCount = usePublicGameCount("location_signal");
 
   // Imposter config
   const [imposterExpanded, setImposterExpanded] = useState(false);
@@ -381,6 +397,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
   return (
     <>
+    <ActiveGameModal sessionId={sessionId} suppress={pendingAction !== null} />
     <div className="home-cards" ref={scrollRef}>
 
       {/* ── Card 1: Utils ──────────────────────────────────── */}
@@ -546,6 +563,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       <div className={`home-card home-card--imposter${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Imposter</h2>
+
+          {imposterBrowsing ? (
+            <PublicGamesList gameType="imposter" sessionId={sessionId} />
+          ) : (
+            <>
           <p className="hc-game-desc">Find the liar. Give clues. Vote them out.</p>
 
           <div className="hc-game-tags hc-game-tags--centered">
@@ -625,10 +647,22 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
             </div>
           )}
+            </>
+          )}
 
           <div className="hc-game-actions">
-            {!imposterExpanded ? (
+            {imposterBrowsing ? (
               <div className="hc-row">
+                <button className="btn btn-muted flex-1" onClick={() => setImposterBrowsing(false)}>
+                  Back
+                </button>
+              </div>
+            ) : !imposterExpanded ? (
+              <div className="hc-row">
+                <button className={`btn hc-browse-globe${imposterPublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setImposterExpanded(false); setImposterBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                  <FiGlobe size={18} />
+                  {imposterPublicCount > 0 && <span className="hc-globe-badge">{imposterPublicCount}</span>}
+                </button>
                 <button className="btn btn-primary flex-1" onClick={() => setImposterExpanded(true)}>
                   Create Game
                 </button>
@@ -658,6 +692,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       <div className={`home-card home-card--password${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Password</h2>
+
+          {passwordBrowsing ? (
+            <PublicGamesList gameType="password" sessionId={sessionId} />
+          ) : (
+            <>
           <p className="hc-game-desc">One-word clues. Team guessing. First to target wins.</p>
 
           <div className="hc-game-tags hc-game-tags--centered">
@@ -669,20 +708,24 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           {/* Gameplay preview (hidden when config expanded) */}
           {!passwordExpanded && (
             <div className="hc-coming-preview">
-              <div className="hc-mini-board">
-                <div className="hc-mini-board-header hc-mini-board-header--password">
-                  <span>🎯 OCEAN</span>
+              <div className="hc-pw-preview">
+                <div className="hc-pw-teams">
+                  <div className="hc-pw-team hc-pw-team--red">
+                    <span className="hc-pw-team-name">Red</span>
+                    <span className="hc-pw-team-score">2</span>
+                  </div>
+                  <span className="hc-pw-vs">vs</span>
+                  <div className="hc-pw-team hc-pw-team--blue">
+                    <span className="hc-pw-team-name">Blue</span>
+                    <span className="hc-pw-team-score">1</span>
+                  </div>
                 </div>
-                <div className="hc-mini-board-rows">
-                  <div className="hc-mini-row">
-                    <span className="hc-mini-avatar hc-mini-avatar--password">A</span>
-                    <span className="hc-mini-clue">Clue: "Waves"</span>
-                  </div>
-                  <div className="hc-mini-row">
-                    <span className="hc-mini-avatar hc-mini-avatar--password">B</span>
-                    <span className="hc-mini-clue">Guess: OCEAN</span>
-                    <span className="hc-mini-badge hc-mini-badge--correct">+3</span>
-                  </div>
+                <div className="hc-pw-word">? ? ? ? ?</div>
+                <div className="hc-pw-flow">
+                  <span className="hc-pw-flow-clue">"Waves"</span>
+                  <span className="hc-pw-flow-arrow">→</span>
+                  <span className="hc-pw-flow-guess">OCEAN</span>
+                  <span className="hc-pw-flow-result">✓</span>
                 </div>
               </div>
             </div>
@@ -733,10 +776,22 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
             </div>
           )}
+            </>
+          )}
 
           <div className="hc-game-actions">
-            {!passwordExpanded ? (
+            {passwordBrowsing ? (
               <div className="hc-row">
+                <button className="btn btn-muted flex-1" onClick={() => setPasswordBrowsing(false)}>
+                  Back
+                </button>
+              </div>
+            ) : !passwordExpanded ? (
+              <div className="hc-row">
+                <button className={`btn hc-browse-globe${passwordPublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setPasswordExpanded(false); setPasswordBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                  <FiGlobe size={18} />
+                  {passwordPublicCount > 0 && <span className="hc-globe-badge">{passwordPublicCount}</span>}
+                </button>
                 <button className="btn btn-primary flex-1" onClick={() => setPasswordExpanded(true)}>
                   Create Game
                 </button>
@@ -766,6 +821,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       <div className={`home-card home-card--chain${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Chain Reaction</h2>
+
+          {chainBrowsing ? (
+            <PublicGamesList gameType="chain_reaction" sessionId={sessionId} />
+          ) : (
+            <>
           <p className="hc-game-desc">Race to solve a chain of linked words. Every word connects to the next.</p>
 
           <div className="hc-game-tags hc-game-tags--centered">
@@ -843,10 +903,22 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
             </div>
           )}
+            </>
+          )}
 
           <div className="hc-game-actions">
-            {!chainExpanded ? (
+            {chainBrowsing ? (
               <div className="hc-row">
+                <button className="btn btn-muted flex-1" onClick={() => setChainBrowsing(false)}>
+                  Back
+                </button>
+              </div>
+            ) : !chainExpanded ? (
+              <div className="hc-row">
+                <button className={`btn hc-browse-globe${chainPublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setChainExpanded(false); setChainBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                  <FiGlobe size={18} />
+                  {chainPublicCount > 0 && <span className="hc-globe-badge">{chainPublicCount}</span>}
+                </button>
                 <button className="btn btn-primary flex-1" onClick={() => setChainExpanded(true)}>
                   Create Game
                 </button>
@@ -876,6 +948,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       <div className={`home-card home-card--shade${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Shade Signal</h2>
+
+          {shadeBrowsing ? (
+            <PublicGamesList gameType="shade_signal" sessionId={sessionId} />
+          ) : (
+            <>
           <p className="hc-game-desc">One leader, one color. Give clues and guess the target shade.</p>
 
           <div className="hc-game-tags hc-game-tags--centered">
@@ -938,10 +1015,22 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </label>
             </div>
           )}
+            </>
+          )}
 
           <div className="hc-game-actions">
-            {!shadeExpanded ? (
+            {shadeBrowsing ? (
               <div className="hc-row">
+                <button className="btn btn-muted flex-1" onClick={() => setShadeBrowsing(false)}>
+                  Back
+                </button>
+              </div>
+            ) : !shadeExpanded ? (
+              <div className="hc-row">
+                <button className={`btn hc-browse-globe${shadePublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setShadeExpanded(false); setShadeBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                  <FiGlobe size={18} />
+                  {shadePublicCount > 0 && <span className="hc-globe-badge">{shadePublicCount}</span>}
+                </button>
                 <button className="btn btn-primary flex-1" onClick={() => setShadeExpanded(true)}>
                   Create Game
                 </button>
@@ -971,6 +1060,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       <div className={`home-card home-card--location${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
           <h2 className="hc-game-title-lg">Location Signal</h2>
+
+          {locationBrowsing ? (
+            <PublicGamesList gameType="location_signal" sessionId={sessionId} />
+          ) : (
+            <>
           <p className="hc-game-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
 
           <div className="hc-game-tags hc-game-tags--centered">
@@ -981,22 +1075,17 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
           {/* Mini map preview */}
           {!locationExpanded && (
-            <div className="hc-coming-preview hc-location-preview">
-              <div className="hc-mini-board">
-                <div className="hc-mini-board-header hc-mini-board-header--location">
-                  <span>🌍 Clue: Ancient empire</span>
+            <div className="hc-coming-preview">
+              <div className="hc-loc-preview">
+                <div className="hc-loc-map">
+                  <div className="hc-loc-pin hc-loc-pin--guess" style={{ top: "25%", left: "30%" }} />
+                  <div className="hc-loc-pin hc-loc-pin--guess" style={{ top: "55%", left: "72%" }} />
+                  <div className="hc-loc-pin hc-loc-pin--close" style={{ top: "38%", left: "53%" }} />
+                  <div className="hc-loc-pin hc-loc-pin--target" style={{ top: "36%", left: "56%" }} />
                 </div>
-                <div className="hc-mini-board-rows">
-                  <div className="hc-mini-row">
-                    <span className="hc-mini-avatar hc-mini-avatar--location">A</span>
-                    <span className="hc-mini-clue">Athens • 600km</span>
-                    <span className="hc-mini-badge hc-mini-badge--ok">+3</span>
-                  </div>
-                  <div className="hc-mini-row hc-mini-row--location-hit">
-                    <span className="hc-mini-avatar hc-mini-avatar--location">Y</span>
-                    <span className="hc-mini-clue">Rome • Exact</span>
-                    <span className="hc-mini-badge hc-mini-badge--ok">+0</span>
-                  </div>
+                <div className="hc-loc-clue-row">
+                  <span className="hc-loc-clue-tag">Clue</span>
+                  <span className="hc-loc-clue-text">"Ancient empire"</span>
                 </div>
               </div>
             </div>
@@ -1033,10 +1122,22 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
             </div>
           )}
+            </>
+          )}
 
           <div className="hc-game-actions">
-            {!locationExpanded ? (
+            {locationBrowsing ? (
               <div className="hc-row">
+                <button className="btn btn-muted flex-1" onClick={() => setLocationBrowsing(false)}>
+                  Back
+                </button>
+              </div>
+            ) : !locationExpanded ? (
+              <div className="hc-row">
+                <button className={`btn hc-browse-globe${locationPublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setLocationExpanded(false); setLocationBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
+                  <FiGlobe size={18} />
+                  {locationPublicCount > 0 && <span className="hc-globe-badge">{locationPublicCount}</span>}
+                </button>
                 <button className="btn btn-primary flex-1" onClick={() => setLocationExpanded(true)}>
                   Create Game
                 </button>

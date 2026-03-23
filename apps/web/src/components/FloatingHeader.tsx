@@ -71,6 +71,7 @@ function useGameContext(): GameContext | null {
         type: "imposter",
         gameId: game.id,
         hostId: game.host_id,
+        isPublic: game.is_public,
         players: game.players,
         spectators: game.spectators ?? [],
       };
@@ -89,6 +90,7 @@ function useGameContext(): GameContext | null {
         type: "password",
         gameId: game.id,
         hostId: game.host_id,
+        isPublic: game.is_public,
         players: allPlayers,
         spectators: game.spectators ?? [],
       };
@@ -100,6 +102,7 @@ function useGameContext(): GameContext | null {
         type: "chain_reaction",
         gameId: game.id,
         hostId: game.host_id,
+        isPublic: game.is_public,
         players: game.players,
         spectators: game.spectators ?? [],
       };
@@ -111,6 +114,7 @@ function useGameContext(): GameContext | null {
         type: "shade_signal",
         gameId: game.id,
         hostId: game.host_id,
+        isPublic: game.is_public,
         players: game.players,
         spectators: game.spectators ?? [],
       };
@@ -122,6 +126,7 @@ function useGameContext(): GameContext | null {
         type: "location_signal",
         gameId: game.id,
         hostId: game.host_id,
+        isPublic: game.is_public,
         players: game.players,
         spectators: game.spectators ?? [],
       };
