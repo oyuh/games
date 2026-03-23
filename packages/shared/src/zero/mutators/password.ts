@@ -73,6 +73,7 @@ export const passwordMutators = {
         spectators: [],
         announcement: null,
         settings: { targetScore: args.targetScore ?? 10, roundDurationSec: 120, roundEndsAt: null, category: args.category ?? "animals" },
+        is_public: false,
         created_at: now(),
         updated_at: now()
       });
@@ -720,6 +721,20 @@ export const passwordMutators = {
         game_type: undefined,
         game_id: undefined,
         last_seen: now()
+      });
+    }
+  ),
+
+  setPublic: defineMutator(
+    z.object({ gameId: z.string(), hostId: z.string(), isPublic: z.boolean() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.password_games.where("id", args.gameId).one());
+      if (!game || game.host_id !== args.hostId) throw new Error("Only host can change visibility");
+      if (game.phase === "ended") throw new Error("Game has ended");
+      await tx.mutate.password_games.update({
+        id: game.id,
+        is_public: args.isPublic,
+        updated_at: now()
       });
     }
   )

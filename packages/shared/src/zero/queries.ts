@@ -25,6 +25,10 @@ export const queries = defineQueries({
     byCode: defineQuery(
       z.object({ code: z.string() }),
       ({ args }) => zql.imposter_games.where("code", args.code).limit(1)
+    ),
+    publicGames: defineQuery(
+      z.object({}),
+      () => zql.imposter_games.where("is_public", true).where("phase", "!=", "ended")
     )
   },
   password: {
@@ -35,6 +39,10 @@ export const queries = defineQueries({
     byCode: defineQuery(
       z.object({ code: z.string() }),
       ({ args }) => zql.password_games.where("code", args.code).limit(1)
+    ),
+    publicGames: defineQuery(
+      z.object({}),
+      () => zql.password_games.where("is_public", true).where("phase", "!=", "ended")
     )
   },
   chainReaction: {
@@ -45,6 +53,10 @@ export const queries = defineQueries({
     byCode: defineQuery(
       z.object({ code: z.string() }),
       ({ args }) => zql.chain_reaction_games.where("code", args.code).limit(1)
+    ),
+    publicGames: defineQuery(
+      z.object({}),
+      () => zql.chain_reaction_games.where("is_public", true).where("phase", "!=", "ended").where("phase", "!=", "finished")
     )
   },
   shadeSignal: {
@@ -55,6 +67,10 @@ export const queries = defineQueries({
     byCode: defineQuery(
       z.object({ code: z.string() }),
       ({ args }) => zql.shade_signal_games.where("code", args.code).limit(1)
+    ),
+    publicGames: defineQuery(
+      z.object({}),
+      () => zql.shade_signal_games.where("is_public", true).where("phase", "!=", "ended")
     )
   },
   locationSignal: {
@@ -65,6 +81,10 @@ export const queries = defineQueries({
     byCode: defineQuery(
       z.object({ code: z.string() }),
       ({ args }) => zql.location_signal_games.where("code", args.code).limit(1)
+    ),
+    publicGames: defineQuery(
+      z.object({}),
+      () => zql.location_signal_games.where("is_public", true).where("phase", "!=", "ended")
     )
   },
   chat: {

@@ -40,6 +40,7 @@ export const chainReactionMutators = {
           chainMode: args.chainMode ?? "premade",
           category: args.category ?? "animals"
         },
+        is_public: false,
         created_at: ts,
         updated_at: ts
       });
@@ -757,6 +758,20 @@ export const chainReactionMutators = {
         game_type: undefined,
         game_id: undefined,
         last_seen: now()
+      });
+    }
+  ),
+
+  setPublic: defineMutator(
+    z.object({ gameId: z.string(), hostId: z.string(), isPublic: z.boolean() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+      if (!game || game.host_id !== args.hostId) throw new Error("Only host can change visibility");
+      if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");
+      await tx.mutate.chain_reaction_games.update({
+        id: game.id,
+        is_public: args.isPublic,
+        updated_at: now()
       });
     }
   )

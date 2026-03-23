@@ -7,10 +7,10 @@
     "local:up": "powershell -ExecutionPolicy Bypass -File ./scripts/local-dev.ps1",
     "local:down": "powershell -ExecutionPolicy Bypass -File ./scripts/local-down.ps1",
     "local:reset": "powershell -ExecutionPolicy Bypass -File ./scripts/local-down.ps1 -SkipPorts && powershell -ExecutionPolicy Bypass -File ./scripts/local-dev.ps1",
-    "build": "turbo run build",
-    "test": "turbo run test",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
+    "build": "turbo run build --cache-dir=.turbo-cache",
+    "test": "turbo run test --cache-dir=.turbo-cache",
+    "lint": "turbo run lint --cache-dir=.turbo-cache",
+    "typecheck": "turbo run typecheck --cache-dir=.turbo-cache",
     "db:push": "pnpm --filter @games/shared db:push",
     "db:push:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/db-push-prod.ps1",
     "db:push:prod:linux": "bash ./scripts/db-push-prod.sh",
@@ -18,7 +18,7 @@
     "db:studio": "pnpm --filter @games/shared db:studio"
   },
   "devDependencies": {
-    "turbo": "^2.8.17",
+    "turbo": "^2.8.20",
     "typescript": "^5.9.3"
   },
   "pnpm": {

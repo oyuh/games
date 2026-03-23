@@ -38,6 +38,7 @@ export const imposterMutators = {
           votingDurationSec: 45,
           phaseEndsAt: null
         },
+        is_public: false,
         created_at: ts,
         updated_at: ts
       });
@@ -681,6 +682,20 @@ export const imposterMutators = {
           // If everyone voted skip, expire the timer immediately
           phaseEndsAt: allSkipped ? 1 : game.settings.phaseEndsAt
         },
+        updated_at: now()
+      });
+    }
+  ),
+
+  setPublic: defineMutator(
+    z.object({ gameId: z.string(), hostId: z.string(), isPublic: z.boolean() }),
+    async ({ args, tx }) => {
+      const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
+      if (!game || game.host_id !== args.hostId) throw new Error("Only host can change visibility");
+      if (game.phase === "ended") throw new Error("Game has ended");
+      await tx.mutate.imposter_games.update({
+        id: game.id,
+        is_public: args.isPublic,
         updated_at: now()
       });
     }

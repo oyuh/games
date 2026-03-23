@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiX, FiUserMinus, FiPower, FiMessageCircle, FiSend, FiEye } from "react-icons/fi";
+import { FiX, FiUserMinus, FiPower, FiMessageCircle, FiSend, FiEye, FiGlobe, FiLock } from "react-icons/fi";
 import { mutators } from "@games/shared";
 import { useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
 
 type GameContext =
-  | { type: "imposter"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "password"; gameId: string; hostId: string; players: Array<{ id: string; name: string }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "shade_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "chain_reaction"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "location_signal"; gameId: string; hostId: string; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
+  | { type: "imposter"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "password"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ id: string; name: string }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "shade_signal"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "chain_reaction"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
+  | { type: "location_signal"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
 
 export function HostControlsModal({
   game,
@@ -25,6 +25,7 @@ export function HostControlsModal({
   const navigate = useNavigate();
   const [announcement, setAnnouncement] = useState("");
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
 
   const kickablePlayersList =
     game.type === "password"
@@ -102,6 +103,29 @@ export function HostControlsModal({
     setAnnouncement("");
   };
 
+  const handleToggleVisibility = async () => {
+    const newValue = !game.isPublic;
+    setTogglingVisibility(true);
+    try {
+      if (game.type === "imposter") {
+        await zero.mutate(mutators.imposter.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+      } else if (game.type === "shade_signal") {
+        await zero.mutate(mutators.shadeSignal.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+      } else if (game.type === "chain_reaction") {
+        await zero.mutate(mutators.chainReaction.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+      } else if (game.type === "location_signal") {
+        await zero.mutate(mutators.locationSignal.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+      } else {
+        await zero.mutate(mutators.password.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+      }
+      showToast(newValue ? "Game is now public" : "Game is now private", "info");
+    } catch {
+      showToast("Couldn't change visibility", "error");
+    } finally {
+      setTogglingVisibility(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel modal-panel--wide" onClick={(e) => e.stopPropagation()}>
@@ -132,6 +156,27 @@ export function HostControlsModal({
                 <FiSend size={14} />
               </button>
             </div>
+          </section>
+
+          {/* Game Visibility */}
+          <section className="host-section">
+            <h3 className="host-section-title">{game.isPublic ? <FiGlobe size={14} /> : <FiLock size={14} />} Game Visibility</h3>
+            <p className="host-section-desc">
+              {game.isPublic
+                ? "This game is public — anyone can find and join it from the Browse Games section."
+                : "This game is private — players need the join code to enter."}
+            </p>
+            <button
+              className={`btn ${game.isPublic ? "btn-muted" : "btn-primary"} host-visibility-btn`}
+              onClick={() => void handleToggleVisibility()}
+              disabled={togglingVisibility}
+            >
+              {togglingVisibility
+                ? "Updating…"
+                : game.isPublic
+                  ? <><FiLock size={14} /> Make Private</>
+                  : <><FiGlobe size={14} /> Make Public</>}
+            </button>
           </section>
 
           {/* Kick Players */}
