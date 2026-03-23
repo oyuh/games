@@ -851,6 +851,9 @@
   font-size: 0.75rem;
   color: var(--secondary);
   margin-bottom: 0.5rem;
+  max-width: 28ch;
+  margin-inline: auto;
+  text-align: center;
 }
 
 .m-game-tags {
