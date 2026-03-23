@@ -1003,6 +1003,11 @@ body {
   position: relative;
   z-index: 1;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.home-card-body::-webkit-scrollbar {
+  display: none;
 }
 
 /* centered layout for game cards */
@@ -1792,23 +1797,20 @@ body {
 .hc-config {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.85rem;
-  margin-bottom: 0.85rem;
-  border-radius: 0.65rem;
-  background: color-mix(in srgb, var(--secondary) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--secondary) 18%, transparent);
+  gap: 0.65rem;
+  width: 100%;
 }
 
 .hc-config-row {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.5rem;
+  align-items: flex-end;
 }
 
 .hc-config-field {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.2rem;
 }
 
 .hc-config-label {
@@ -1816,10 +1818,58 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--muted-foreground);
+  color: color-mix(in srgb, var(--card-accent, var(--muted-foreground)) 70%, var(--muted-foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-config-label[data-tooltip] {
+  cursor: help;
+  text-decoration: underline dotted color-mix(in srgb, var(--muted-foreground) 40%, transparent);
+  text-underline-offset: 2px;
+}
+
+/* Compact selects inside card config */
+.hc-config .input {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.8rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+  color: var(--card-accent, var(--primary));
+}
+.hc-config .input:hover {
+  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 45%, transparent);
+}
+.hc-config .input:focus {
+  border-color: var(--card-accent, var(--primary));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--card-accent, var(--primary)) 15%, transparent);
+}
+
+/* Styled checkbox row for config toggles */
+.hc-config-check {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--secondary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 14%, transparent);
+  transition: background 0.15s, border-color 0.15s;
+}
+.hc-config-check:hover {
+  background: color-mix(in srgb, var(--secondary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--secondary) 25%, transparent);
+}
+.hc-config-check input[type="checkbox"] {
+  accent-color: var(--card-accent, var(--primary));
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
 }
 
 /* ── Game card actions ───────────────────────────────────────── */
@@ -2080,6 +2130,21 @@ body {
 }
 .spectator-indicator:hover {
   opacity: 0.85;
+}
+
+/* ── Host crown indicator (golden crown beside code) ── */
+.host-crown-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f59e0b;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.35));
+  cursor: default;
+  transition: filter 0.15s;
+  padding-right: 10px;
+}
+.host-crown-indicator:hover {
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.55));
 }
 
 /* ── Game sections ─────────────────────────────────── */
@@ -6560,7 +6625,7 @@ body {
   }
 
   .hc-config {
-    padding: 0.65rem;
+    /* no padding needed — lives inside card body */
   }
 
   .hc-config-row {
@@ -6949,8 +7014,8 @@ body {
 }
 .hc-globe-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: 2px;
+  right: 2px;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
@@ -6962,6 +7027,12 @@ body {
   line-height: 16px;
   text-align: center;
   pointer-events: none;
+  transition: top 0.15s ease, right 0.15s ease;
+}
+.hc-browse-globe:hover .hc-globe-badge,
+.m-browse-globe:hover .hc-globe-badge {
+  top: -5px;
+  right: -5px;
 }
 .hc-globe-empty {
   color: var(--muted-foreground);
@@ -7004,6 +7075,55 @@ body {
   color: var(--muted-foreground);
   opacity: 0.6;
   background: color-mix(in srgb, var(--muted-foreground) 8%, transparent);
+}
+
+/* ── Lobby Visibility Toggle ─────────────────────────────── */
+.lobby-vis-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.lobby-vis-toggle:hover:not(:disabled) {
+  background: var(--accent);
+}
+.lobby-vis-toggle:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.lobby-vis-toggle--public {
+  background: color-mix(in srgb, #22c55e 12%, transparent);
+  color: #22c55e;
+  border-color: color-mix(in srgb, #22c55e 30%, transparent);
+}
+.lobby-vis-toggle--public:hover:not(:disabled) {
+  background: color-mix(in srgb, #22c55e 20%, transparent);
+}
+
+/* ── Card content enter animation ──────────────────────── */
+@keyframes hc-card-content-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hc-card-anim {
+  animation: hc-card-content-in 0.2s ease-out;
+}
+
+/* Only center + expand when showing the config form */
+.hc-card-anim:has(> .hc-config) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
 }
 
 /* ── Public Games Inline List (per-card browse) ─────────── */

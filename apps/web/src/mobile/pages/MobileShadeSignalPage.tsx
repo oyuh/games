@@ -7,9 +7,10 @@ import { ColorGrid, generateGridColor } from "../../components/shade/ColorGrid";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { InSessionModal } from "../../components/shared/InSessionModal";
+import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
-import { MobileSpectatorBadge } from "../../components/shared/SpectatorBadge";
+import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
@@ -350,6 +351,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
         accent="var(--game-accent)"
       >
         {isSpectator && <MobileSpectatorBadge />}
+        {isHost && <MobileHostBadge />}
         {timeLeft != null && (() => {
           const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
           const ss = String(timeLeft % 60).padStart(2, "0");
@@ -421,6 +423,11 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
           {lobbyPreviewTarget && <MobileScoringLegend />}
 
           <div className="m-actions">
+            {isHost && (
+              <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+                <LobbyVisibilityToggle gameType="shade_signal" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />
+              </div>
+            )}
             {isHost && (
               <button className="m-btn m-btn-primary" disabled={game.players.length < 3}
                 onClick={() => void zero.mutate(mutators.shadeSignal.start({ gameId, hostId: sessionId }))}>

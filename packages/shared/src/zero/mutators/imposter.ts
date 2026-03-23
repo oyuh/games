@@ -338,9 +338,10 @@ export const imposterMutators = {
           p.sessionId === votedOutId ? { ...p, eliminated: true } : p
         );
 
-        // Move eliminated player to spectators
+        // Move eliminated player to spectators (unless they are the host — host
+        // stays in players so they keep host controls on the UI)
         const updatedSpectators = [...(game.spectators ?? [])];
-        if (votedOutPlayer) {
+        if (votedOutPlayer && votedOutPlayer.sessionId !== game.host_id) {
           updatedSpectators.push({ sessionId: votedOutPlayer.sessionId, name: votedOutPlayer.name });
         }
 
@@ -424,9 +425,10 @@ export const imposterMutators = {
         p.sessionId === votedOutId ? { ...p, eliminated: true } : p
       );
 
-      // Move eliminated player to spectators
+      // Move eliminated player to spectators (unless they are the host — host
+      // stays in players so they keep host controls on the UI)
       const updatedSpectators = [...(game.spectators ?? [])];
-      if (votedOutPlayer) {
+      if (votedOutPlayer && votedOutPlayer.sessionId !== game.host_id) {
         updatedSpectators.push({ sessionId: votedOutPlayer.sessionId, name: votedOutPlayer.name });
       }
 

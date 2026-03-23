@@ -891,12 +891,16 @@
 .m-config-label {
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--secondary);
+  color: color-mix(in srgb, var(--card-accent, var(--secondary)) 70%, var(--secondary));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .m-config-row {
   display: flex;
   gap: 0.5rem;
+  align-items: flex-end;
 }
 
 /* ── Recent Games Mobile ─────────────────────────────────── */
@@ -1738,20 +1742,29 @@
   gap: 0.5rem;
 }
 
+.m-game-card-config .m-input {
+  color: var(--card-accent, var(--primary));
+}
+
 .m-game-card--imposter {
   border-color: color-mix(in srgb, #7eb8ff 18%, var(--border));
+  --card-accent: #7eb8ff;
 }
 .m-game-card--password {
   border-color: color-mix(in srgb, #a78bfa 18%, var(--border));
+  --card-accent: #a78bfa;
 }
 .m-game-card--chain {
   border-color: color-mix(in srgb, #34d399 18%, var(--border));
+  --card-accent: #34d399;
 }
 .m-game-card--shade {
   border-color: color-mix(in srgb, #f472b6 18%, var(--border));
+  --card-accent: #f472b6;
 }
 .m-game-card--location {
   border-color: color-mix(in srgb, #f59e0b 18%, var(--border));
+  --card-accent: #f59e0b;
 }
 
 .m-game-card--imposter .m-game-card-info > svg { color: #7eb8ff; }
