@@ -478,6 +478,34 @@ pnpm db:push
 pnpm dev
 ```
 
+If you want one command that starts local Docker services, waits for Postgres, pushes the schema, refreshes the Zero replica, and then launches the dev servers:
+
+```bash
+# Windows
+pnpm local:up
+
+# macOS
+pnpm local:up:mac
+
+# Linux
+pnpm local:up:linux
+```
+
+These shell scripts use plain Docker commands, so Docker Desktop, OrbStack, Colima, or another Docker daemon must already be running.
+
+To stop the local stack and clear the Zero replica volume:
+
+```bash
+# Windows
+pnpm local:down
+
+# macOS
+pnpm local:down:mac
+
+# Linux
+pnpm local:down:linux
+```
+
 This runs the workspace `dev` scripts in parallel through Turbo.
 
 Expected local endpoints:
@@ -624,6 +652,9 @@ At the repository root:
 
 ```bash
 pnpm dev
+pnpm local:up
+pnpm local:up:mac
+pnpm local:up:linux
 pnpm build
 pnpm typecheck
 pnpm test

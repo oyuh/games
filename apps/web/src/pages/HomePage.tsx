@@ -3,7 +3,8 @@ import { useQuery, useZero } from "../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiChevronLeft, FiChevronRight, FiSearch, FiHelpCircle, FiGlobe } from "react-icons/fi";
+import type { IconType } from "react-icons";
+import { FiBookOpen, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiUserCheck, FiUsers } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, RecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -49,6 +50,31 @@ function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
     const next = e.deltaY < 0 ? Math.max(0, i - 1) : Math.min(opts.length - 1, i + 1);
     if (next !== i) set(opts[next]);
   };
+}
+
+type SummaryItem = { value: string; icon: IconType; label?: string; accent?: string };
+
+function ConfigSummary({ items }: { items: SummaryItem[] }) {
+  return (
+    <div className="hc-summary" aria-label="Selected options">
+      <div className="hc-summary-row">
+        {items.map((item, idx) => (
+          <span
+            key={`${item.value}-${idx}`}
+            className="hc-summary-pill"
+            title={item.label ?? item.value}
+            aria-label={item.label ?? item.value}
+            data-tooltip={item.label ?? item.value}
+            data-tooltip-variant="info"
+            style={item.accent ? { borderColor: item.accent, color: item.accent } : undefined}
+          >
+            <item.icon size={14} />
+            <span className="hc-summary-pill-value">{item.value}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function HomePageDesktop({ sessionId }: { sessionId: string }) {
@@ -659,6 +685,16 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
+          {imposterExpanded && !imposterBrowsing && (
+            <ConfigSummary
+              items={[
+                { value: imposterCategoryLabels[imposterCategory] ?? imposterCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
+                { value: `${imposterImposters}×`, icon: FiUserCheck, label: "Imposters" },
+                { value: `${imposterRounds}r`, icon: FiClock, label: "Rounds" }
+              ]}
+            />
+          )}
+
           <div className="hc-game-actions">
             {imposterBrowsing ? (
               <div className="hc-row">
@@ -685,9 +721,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   Back
                 </button>
                 <button
-                  className="btn btn-primary flex-1"
+                  className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createImposter()}
                   disabled={pendingAction !== null}
+                  data-creating={pendingAction === "create-imposter" ? "true" : "false"}
                 >
                   {pendingAction === "create-imposter" ? "Creating…" : "Go"}
                 </button>
@@ -785,6 +822,16 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
+          {passwordExpanded && !passwordBrowsing && (
+            <ConfigSummary
+              items={[
+                { value: passwordCategoryLabels[passwordCategory] ?? passwordCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
+                { value: `${passwordTeams}t`, icon: FiUsers, label: "Teams" },
+                { value: `${passwordTargetScore}pts`, icon: FiTarget, label: "Target score" }
+              ]}
+            />
+          )}
+
           <div className="hc-game-actions">
             {passwordBrowsing ? (
               <div className="hc-row">
@@ -811,9 +858,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   Back
                 </button>
                 <button
-                  className="btn btn-primary flex-1"
+                  className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createPassword()}
                   disabled={pendingAction !== null}
+                  data-creating={pendingAction === "create-password" ? "true" : "false"}
                 >
                   {pendingAction === "create-password" ? "Creating…" : "Go"}
                 </button>
@@ -910,6 +958,17 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
+          {chainExpanded && !chainBrowsing && (
+            <ConfigSummary
+              items={[
+                { value: chainCategoryLabels[chainCategory] ?? chainCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
+                { value: `${chainLength}w`, icon: FiList, label: "Chain length" },
+                { value: `${chainRounds}r`, icon: FiClock, label: "Rounds" },
+                { value: chainMode === "premade" ? "Rnd" : "Cstm", icon: FiSliders, label: "Mode" }
+              ]}
+            />
+          )}
+
           <div className="hc-game-actions">
             {chainBrowsing ? (
               <div className="hc-row">
@@ -936,9 +995,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   Back
                 </button>
                 <button
-                  className="btn btn-primary flex-1"
+                  className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createChainReaction()}
                   disabled={pendingAction !== null}
+                  data-creating={pendingAction === "create-chain" ? "true" : "false"}
                 >
                   {pendingAction === "create-chain" ? "Creating…" : "Go"}
                 </button>
@@ -1018,6 +1078,16 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
+          {shadeExpanded && !shadeBrowsing && (
+            <ConfigSummary
+              items={[
+                { value: shadeRoundsPerPlayer === 1 ? "Q" : shadeRoundsPerPlayer === 2 ? "Std" : "Long", icon: FiClock, label: `${shadeRoundsPerPlayer} turns each` },
+                { value: shadeHardMode ? "NoClr" : "Norm", icon: FiDroplet, label: "Clue rules" },
+                { value: shadeLeaderPick ? "Pick" : "Rand", icon: FiUserCheck, label: "Leader color" }
+              ]}
+            />
+          )}
+
           <div className="hc-game-actions">
             {shadeBrowsing ? (
               <div className="hc-row">
@@ -1044,9 +1114,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   Back
                 </button>
                 <button
-                  className="btn btn-primary flex-1"
+                  className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createShadeSignal()}
                   disabled={pendingAction !== null}
+                  data-creating={pendingAction === "create-shade" ? "true" : "false"}
                 >
                   {pendingAction === "create-shade" ? "Creating…" : "Go"}
                 </button>
@@ -1084,7 +1155,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                     </select>
                   </div>
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="Each player takes a turn as the location picker. This controls how many turns each person gets." data-tooltip-variant="info">Rounds / Player</label>
+                    <label className="hc-config-label" data-tooltip="How many rounds each player leads. More rounds means a longer session." data-tooltip-variant="info">Rounds/Player</label>
                     <select
                       className="input"
                       value={locRoundsPerPlayer}
@@ -1124,6 +1195,15 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
+          {locationExpanded && !locationBrowsing && (
+            <ConfigSummary
+              items={[
+                { value: `${locCluePairs}p`, icon: FiMapPin, label: "Clue pairs" },
+                { value: `${locRoundsPerPlayer}r`, icon: FiTarget, label: `${locRoundsPerPlayer === 1 ? "Quick" : locRoundsPerPlayer === 2 ? "Standard" : "Long"} session` }
+              ]}
+            />
+          )}
+
           <div className="hc-game-actions">
             {locationBrowsing ? (
               <div className="hc-row">
@@ -1150,9 +1230,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   Back
                 </button>
                 <button
-                  className="btn btn-primary flex-1"
+                  className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createLocationSignal()}
                   disabled={pendingAction !== null}
+                  data-creating={pendingAction === "create-location" ? "true" : "false"}
                 >
                   {pendingAction === "create-location" ? "Creating…" : "Go"}
                 </button>
