@@ -1544,6 +1544,23 @@ body {
   font-family: monospace;
 }
 
+/* compact horizontal chain layout */
+/* tight vertical chain (fewer gaps) */
+.hc-chain-example--tight {
+  gap: 0;
+}
+
+.hc-chain-example--tight .hc-chain-word {
+  font-size: 0.6rem;
+  padding: 0.12rem 0.5rem;
+}
+
+/* smaller game description variant */
+.hc-game-desc--sm {
+  font-size: 0.72rem;
+  margin-bottom: -0.15rem;
+}
+
 /* ── Shade grid preview ──────────────────────────────────────── */
 .hc-shade-grid {
   display: grid;
@@ -1622,6 +1639,22 @@ body {
 }
 .hc-text-btn:hover {
   opacity: 1;
+}
+
+/* ── Join input ready state ──────────────────────────────────── */
+.hc-join-input--ready {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 12%, var(--card));
+  color: var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  outline-offset: 0;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, outline 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.hc-join-input--ready::placeholder {
+  color: transparent;
 }
 
 /* ── Recent games ────────────────────────────────────────────── */
@@ -1879,17 +1912,14 @@ body {
 /* Live summary panel beneath config */
 
 .hc-summary {
-  margin: 0.2rem 0 0.05rem;
-  padding: 0.12rem 0.12rem;
-  border-radius: 6px;
-  background: transparent;
-  border: none;
+  margin: 0;
+  padding: 0 0.25rem 0.35rem;
 }
 
 .hc-summary-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
+  flex-wrap: nowrap;
+  gap: 0.6rem;
   align-items: center;
   justify-content: center;
 }
@@ -1897,15 +1927,15 @@ body {
 .hc-summary-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.26rem;
-  padding: 0.22rem 0.48rem;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--card-accent, var(--secondary)) 14%, transparent);
-  background: color-mix(in srgb, var(--secondary) 8%, transparent);
-  font-size: 0.7rem;
-  font-weight: 640;
-  color: color-mix(in srgb, var(--card-accent, var(--primary)) 65%, #e2e8f0 25%);
+  gap: 0.2rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
   white-space: nowrap;
+  opacity: 0.7;
 }
 
 .hc-summary-pill-value {
