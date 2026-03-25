@@ -448,7 +448,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           )}
           {/* Name section */}
           <section className="hc-section">
-            <h3 className="hc-label">Display Name</h3>
+            <h3 className="hc-label" data-tooltip="Your in-game identity — visible to other players" data-tooltip-variant="info">Display Name</h3>
             {savedName && (
               <p className="hc-sublabel">
                 Playing as <span className="text-primary font-semibold">{savedName}</span>
@@ -463,7 +463,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 placeholder="Enter name…"
                 maxLength={32}
               />
-              <button type="submit" className="btn btn-primary">Save</button>
+              <button type="submit" className="btn btn-primary" data-tooltip="Save your display name" data-tooltip-variant="info">Save</button>
             </form>
           </section>
 
@@ -471,28 +471,27 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
           {/* Join section */}
           <section className="hc-section">
-            <h3 className="hc-label">
+            <h3 className="hc-label" data-tooltip="Enter a 6-character room code to join a friend's game" data-tooltip-variant="info">
               <FiSearch size={14} style={{ opacity: 0.6 }} /> Join Game
             </h3>
-            <div className="hc-row">
+            <form
+              className="hc-row"
+              onSubmit={(e) => { e.preventDefault(); if (joinCode.length === 6 && pendingAction === null) void joinAny(); }}
+            >
               <input
-                className="input flex-1"
-                style={{ letterSpacing: "0.15em", fontWeight: 600 }}
+                className={`input flex-1 hc-join-input${joinCode.length === 6 ? " hc-join-input--ready" : ""}`}
+                style={{ letterSpacing: "0.15em", fontWeight: 600, cursor: joinCode.length === 6 ? "pointer" : undefined }}
                 value={joinCode}
                 onChange={(e) =>
                   setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
                 }
+                onClick={() => { if (joinCode.length === 6 && pendingAction === null) void joinAny(); }}
                 placeholder="ABCXYZ"
                 maxLength={6}
+                data-tooltip={joinCode.length === 6 ? "Click or press Enter to join!" : "Paste or type a 6-letter code"}
+                data-tooltip-variant={joinCode.length === 6 ? "success" : "info"}
               />
-              <button
-                className="btn btn-primary"
-                onClick={() => void joinAny()}
-                disabled={pendingAction !== null}
-              >
-                {pendingAction === "join" ? "…" : "Join"}
-              </button>
-            </div>
+            </form>
           </section>
 
           <div className="hc-divider" />
@@ -500,11 +499,13 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           {/* Recent games — always shown */}
           <section className="hc-section">
             <div className="flex items-center justify-between">
-              <h3 className="hc-label">Recent</h3>
+              <h3 className="hc-label" data-tooltip="Games you've recently played or joined" data-tooltip-variant="info">Recent</h3>
               {recentGames.length > 0 && (
                 <button
                   className="hc-text-btn"
                   onClick={() => { clearRecentGames(); setRecentGames([]); }}
+                  data-tooltip="Remove all recent games from this list"
+                  data-tooltip-variant="danger"
                 >
                   Clear
                 </button>
@@ -685,17 +686,16 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
-          {imposterExpanded && !imposterBrowsing && (
-            <ConfigSummary
-              items={[
-                { value: imposterCategoryLabels[imposterCategory] ?? imposterCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
-                { value: `${imposterImposters}×`, icon: FiUserCheck, label: "Imposters" },
-                { value: `${imposterRounds}r`, icon: FiClock, label: "Rounds" }
-              ]}
-            />
-          )}
-
           <div className="hc-game-actions">
+            {imposterExpanded && !imposterBrowsing && (
+              <ConfigSummary
+                items={[
+                  { value: imposterCategoryLabels[imposterCategory] ?? imposterCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
+                  { value: `${imposterImposters}×`, icon: FiUserCheck, label: "Imposters" },
+                  { value: `${imposterRounds}r`, icon: FiClock, label: "Rounds" }
+                ]}
+              />
+            )}
             {imposterBrowsing ? (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setImposterBrowsing(false)}>
@@ -822,17 +822,16 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
-          {passwordExpanded && !passwordBrowsing && (
-            <ConfigSummary
-              items={[
-                { value: passwordCategoryLabels[passwordCategory] ?? passwordCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
-                { value: `${passwordTeams}t`, icon: FiUsers, label: "Teams" },
-                { value: `${passwordTargetScore}pts`, icon: FiTarget, label: "Target score" }
-              ]}
-            />
-          )}
-
           <div className="hc-game-actions">
+            {passwordExpanded && !passwordBrowsing && (
+              <ConfigSummary
+                items={[
+                  { value: passwordCategoryLabels[passwordCategory] ?? passwordCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
+                  { value: `${passwordTeams}t`, icon: FiUsers, label: "Teams" },
+                  { value: `${passwordTargetScore}pts`, icon: FiTarget, label: "Target score" }
+                ]}
+              />
+            )}
             {passwordBrowsing ? (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setPasswordBrowsing(false)}>
@@ -940,16 +939,15 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           ) : (
             <div className="hc-card-anim" key="default">
-              <p className="hc-game-desc">Race to solve a chain of linked words. Every word connects to the next.</p>
+              <p className="hc-game-desc hc-game-desc--sm">Race to solve a chain of linked words.</p>
               <div className="hc-game-tags hc-game-tags--centered">
                 <span className="hc-tag">2 players</span>
                 <span className="hc-tag">Word chains</span>
                 <span className="hc-tag">Turns</span>
               </div>
               <div className="hc-coming-preview">
-                <div className="hc-chain-example">
+                <div className="hc-chain-example hc-chain-example--tight">
                   <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
-                  <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _ _</span>
                   <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
                   <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
                   <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
@@ -958,18 +956,17 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
-          {chainExpanded && !chainBrowsing && (
-            <ConfigSummary
-              items={[
-                { value: chainCategoryLabels[chainCategory] ?? chainCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
-                { value: `${chainLength}w`, icon: FiList, label: "Chain length" },
-                { value: `${chainRounds}r`, icon: FiClock, label: "Rounds" },
-                { value: chainMode === "premade" ? "Rnd" : "Cstm", icon: FiSliders, label: "Mode" }
-              ]}
-            />
-          )}
-
           <div className="hc-game-actions">
+            {chainExpanded && !chainBrowsing && (
+              <ConfigSummary
+                items={[
+                  { value: chainCategoryLabels[chainCategory] ?? chainCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
+                  { value: `${chainLength}w`, icon: FiList, label: "Chain length" },
+                  { value: `${chainRounds}r`, icon: FiClock, label: "Rounds" },
+                  { value: chainMode === "premade" ? "Rnd" : "Cstm", icon: FiSliders, label: "Mode" }
+                ]}
+              />
+            )}
             {chainBrowsing ? (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setChainBrowsing(false)}>
@@ -1078,17 +1075,16 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
-          {shadeExpanded && !shadeBrowsing && (
-            <ConfigSummary
-              items={[
-                { value: shadeRoundsPerPlayer === 1 ? "Q" : shadeRoundsPerPlayer === 2 ? "Std" : "Long", icon: FiClock, label: `${shadeRoundsPerPlayer} turns each` },
-                { value: shadeHardMode ? "NoClr" : "Norm", icon: FiDroplet, label: "Clue rules" },
-                { value: shadeLeaderPick ? "Pick" : "Rand", icon: FiUserCheck, label: "Leader color" }
-              ]}
-            />
-          )}
-
           <div className="hc-game-actions">
+            {shadeExpanded && !shadeBrowsing && (
+              <ConfigSummary
+                items={[
+                  { value: shadeRoundsPerPlayer === 1 ? "Q" : shadeRoundsPerPlayer === 2 ? "Std" : "Long", icon: FiClock, label: `${shadeRoundsPerPlayer} turns each` },
+                  { value: shadeHardMode ? "NoClr" : "Norm", icon: FiDroplet, label: "Clue rules" },
+                  { value: shadeLeaderPick ? "Pick" : "Rand", icon: FiUserCheck, label: "Leader color" }
+                ]}
+              />
+            )}
             {shadeBrowsing ? (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setShadeBrowsing(false)}>
@@ -1195,16 +1191,15 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
-          {locationExpanded && !locationBrowsing && (
-            <ConfigSummary
-              items={[
-                { value: `${locCluePairs}p`, icon: FiMapPin, label: "Clue pairs" },
-                { value: `${locRoundsPerPlayer}r`, icon: FiTarget, label: `${locRoundsPerPlayer === 1 ? "Quick" : locRoundsPerPlayer === 2 ? "Standard" : "Long"} session` }
-              ]}
-            />
-          )}
-
           <div className="hc-game-actions">
+            {locationExpanded && !locationBrowsing && (
+              <ConfigSummary
+                items={[
+                  { value: `${locCluePairs}p`, icon: FiMapPin, label: "Clue pairs" },
+                  { value: `${locRoundsPerPlayer}r`, icon: FiTarget, label: `${locRoundsPerPlayer === 1 ? "Quick" : locRoundsPerPlayer === 2 ? "Standard" : "Long"} session` }
+                ]}
+              />
+            )}
             {locationBrowsing ? (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setLocationBrowsing(false)}>
