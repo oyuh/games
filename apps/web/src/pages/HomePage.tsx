@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
-import { FiBookOpen, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiUserCheck, FiUsers } from "react-icons/fi";
+import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiUserCheck, FiUsers } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, RecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -48,7 +48,8 @@ function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
     const i = opts.indexOf(value);
     if (i < 0) return;
     const next = e.deltaY < 0 ? Math.max(0, i - 1) : Math.min(opts.length - 1, i + 1);
-    if (next !== i) set(opts[next]);
+    const nextVal = opts[next];
+    if (next !== i && nextVal !== undefined) set(nextVal);
   };
 }
 
@@ -151,6 +152,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const [locCluePairs, setLocCluePairs] = useState(2);
   const [locRoundsPerPlayer, setLocRoundsPerPlayer] = useState(1);
   const [activeDemo, setActiveDemo] = useState<string | null>(null);
+  const [recentCollapsed, setRecentCollapsed] = useState(true);
 
   // Mobile scroll dot tracking
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -446,28 +448,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               <p>Welcome! Set a display name to get started, or just skip and jump into a game.</p>
             </div>
           )}
-          {/* Name section */}
-          <section className="hc-section">
-            <h3 className="hc-label" data-tooltip="Your in-game identity — visible to other players" data-tooltip-variant="info">Display Name</h3>
-            {savedName && (
-              <p className="hc-sublabel">
-                Playing as <span className="text-primary font-semibold">{savedName}</span>
-              </p>
-            )}
-            <form className="hc-row" onSubmit={saveName}>
-              <input
-                className="input flex-1"
-                ref={nameInputRef}
-                value={name}
-                onChange={(e) => setName(e.target.value.replace(/\s/g, ""))}
-                placeholder="Enter name…"
-                maxLength={32}
-              />
-              <button type="submit" className="btn btn-primary" data-tooltip="Save your display name" data-tooltip-variant="info">Save</button>
-            </form>
-          </section>
 
-          <div className="hc-divider" />
 
           {/* Join section */}
           <section className="hc-section">
@@ -480,7 +461,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             >
               <input
                 className={`input flex-1 hc-join-input${joinCode.length === 6 ? " hc-join-input--ready" : ""}`}
-                style={{ letterSpacing: "0.15em", fontWeight: 600, cursor: joinCode.length === 6 ? "pointer" : undefined }}
                 value={joinCode}
                 onChange={(e) =>
                   setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
@@ -492,114 +472,142 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 data-tooltip-variant={joinCode.length === 6 ? "success" : "info"}
               />
             </form>
+            <div className="hc-divider" />
           </section>
-
-          <div className="hc-divider" />
-
-          {/* Recent games — always shown */}
+          {/* Name section — inline editable */}
           <section className="hc-section">
-            <div className="flex items-center justify-between">
-              <h3 className="hc-label" data-tooltip="Games you've recently played or joined" data-tooltip-variant="info">Recent</h3>
-              {recentGames.length > 0 && (
-                <button
-                  className="hc-text-btn"
-                  onClick={() => { clearRecentGames(); setRecentGames([]); }}
-                  data-tooltip="Remove all recent games from this list"
-                  data-tooltip-variant="danger"
-                >
-                  Clear
-                </button>
-              )}
+            <h3 className="hc-label" data-tooltip="Your in-game identity — visible to other players" data-tooltip-variant="info">Display Name</h3>
+            <div className="hc-name-display" title="Click to edit your name" data-tooltip-variant="info">
+              <input
+                className="hc-name-inline-input"
+                ref={nameInputRef}
+                value={name}
+                onChange={(e) => setName(e.target.value.replace(/\s/g, ""))}
+                onBlur={(e) => { void saveName({ preventDefault: () => {} } as FormEvent); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setName(savedName);
+                    e.currentTarget.blur();
+                  } else if (e.key === "Enter") {
+                    e.currentTarget.blur();
+                  }
+                }}
+                placeholder="Enter name…"
+                maxLength={32}
+              />
+              <FiEdit2 className="hc-name-edit-icon" size={14} />
             </div>
-            {recentGames.length > 0 ? (
-              <div className="hc-recent-list">
-                {recentGames.map((game) => (
-                  <RecentGameItem key={`${game.gameType}-${game.id}`} game={game} sessionId={sessionId} />
-                ))}
-              </div>
-            ) : (
-              <p className="hc-empty-text">No recent games yet</p>
-            )}
           </section>
 
-          {/* Dev-only: demo games */}
+          {/* Recent games — collapsible */}
+          {recentGames.length > 0 && (
+            <>
+              <div className="hc-divider" />
+              <section className="hc-section">
+                <button className="hc-collapse-toggle" onClick={() => setRecentCollapsed(!recentCollapsed)}>
+                  <span className="hc-label" data-tooltip="Games you've recently played or joined" data-tooltip-variant="info">Recent</span>
+                  <FiChevronDown size={14} className={`hc-collapse-icon${!recentCollapsed ? " hc-collapse-icon--open" : ""}`} />
+                </button>
+                {!recentCollapsed && (
+                  <>
+                    <div className="hc-recent-list">
+                      {recentGames.map((game) => (
+                        <RecentGameItem key={`${game.gameType}-${game.id}`} game={game} sessionId={sessionId} />
+                      ))}
+                    </div>
+                    <button
+                      className="hc-text-btn"
+                      style={{ alignSelf: "flex-end" }}
+                      onClick={() => { clearRecentGames(); setRecentGames([]); }}
+                      data-tooltip="Remove all recent games from this list"
+                      data-tooltip-variant="danger"
+                    >
+                      Clear
+                    </button>
+                  </>
+                )}
+              </section>
+            </>
+          )}
+
+          {/* Dev-only: demo games
           {isDev && (
             <>
               <div className="hc-divider" />
               <section className="hc-section">
                 <h3 className="hc-label">Dev: Demo Games</h3>
                 <div className="hc-demo-grid">
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoImposter("lobby")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoImposter("lobby")}>
                     Imp Lobby
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoImposter("playing")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoImposter("playing")}>
                     Imp Play
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoImposter("voting")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoImposter("voting")}>
                     Imp Vote
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoImposter("results")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoImposter("results")}>
                     Imp Results
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoPassword("lobby")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoPassword("lobby")}>
                     Pwd Lobby
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoPassword("playing")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoPassword("playing")}>
                     Pwd Play
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoPassword("results")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoPassword("results")}>
                     Pwd Results
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("lobby")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("lobby")}>
                     CR Lobby
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("submitting")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("submitting")}>
                     CR Submit
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("playing")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("playing")}>
                     CR Play
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("finished")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoChainReaction("finished")}>
                     CR Finish
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("lobby")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("lobby")}>
                     SS Lobby
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("clue1")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("clue1")}>
                     SS Clue
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("guess1")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("guess1")}>
                     SS Guess
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("reveal")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoShadeSignal("reveal")}>
                     SS Reveal
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("lobby")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("lobby")}>
                     LS Lobby
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("picking")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("picking")}>
                     LS Pick
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("clue1")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("clue1")}>
                     LS Clue
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("guess1")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("guess1")}>
                     LS Guess
                   </button>
-                  <button className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("reveal")}>
+                  <button disabled className="btn btn-muted hc-demo-btn" onClick={() => void createDemoLocationSignal("reveal")}>
                     LS Reveal
                   </button>
                 </div>
               </section>
             </>
-          )}
+          )} */}
         </div>
       </div>
 
       {/* ── Card 2: Imposter ───────────────────────────────── */}
       <div className={`home-card home-card--imposter${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
-          <h2 className="hc-game-title-lg">Imposter</h2>
+          <h2 className={`hc-game-title-lg${imposterExpanded || imposterBrowsing ? " hc-game-title-lg--compact" : ""}`}>Imposter</h2>
 
           {imposterBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -654,11 +662,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           ) : (
             <div className="hc-card-anim" key="default">
               <p className="hc-game-desc">Find the liar. Give clues. Vote them out.</p>
-              <div className="hc-game-tags hc-game-tags--centered">
-                <span className="hc-tag">3–10 players</span>
-                <span className="hc-tag">Deduction</span>
-                <span className="hc-tag">Timed rounds</span>
-              </div>
               <div className="hc-coming-preview">
                 <div className="hc-mini-board">
                   <div className="hc-mini-board-header hc-mini-board-header--imposter">
@@ -703,6 +706,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !imposterExpanded ? (
+              <>
               <div className="hc-row">
                 <button className={`btn hc-browse-globe${imposterPublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setImposterExpanded(false); setImposterBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                   <FiGlobe size={18} />
@@ -715,6 +719,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   <FiHelpCircle size={18} />
                 </button>
               </div>
+              </>
             ) : (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setImposterExpanded(false)}>
@@ -737,7 +742,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       {/* ── Card 3: Password ───────────────────────────────── */}
       <div className={`home-card home-card--password${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
-          <h2 className="hc-game-title-lg">Password</h2>
+          <h2 className={`hc-game-title-lg${passwordExpanded || passwordBrowsing ? " hc-game-title-lg--compact" : ""}`}>Password</h2>
 
           {passwordBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -792,11 +797,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           ) : (
             <div className="hc-card-anim" key="default">
               <p className="hc-game-desc">One-word clues. Team guessing. First to target wins.</p>
-              <div className="hc-game-tags hc-game-tags--centered">
-                <span className="hc-tag">Teams</span>
-                <span className="hc-tag">Word clues</span>
-                <span className="hc-tag">Timed</span>
-              </div>
               <div className="hc-coming-preview">
                 <div className="hc-pw-preview">
                   <div className="hc-pw-teams">
@@ -839,6 +839,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !passwordExpanded ? (
+              <>
               <div className="hc-row">
                 <button className={`btn hc-browse-globe${passwordPublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setPasswordExpanded(false); setPasswordBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                   <FiGlobe size={18} />
@@ -851,6 +852,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   <FiHelpCircle size={18} />
                 </button>
               </div>
+              </>
             ) : (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setPasswordExpanded(false)}>
@@ -873,7 +875,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       {/* ── Card 4: Chain Reaction ─────────────────────────── */}
       <div className={`home-card home-card--chain${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
-          <h2 className="hc-game-title-lg">Chain Reaction</h2>
+          <h2 className={`hc-game-title-lg${chainExpanded || chainBrowsing ? " hc-game-title-lg--compact" : ""}`}>Chain Reaction</h2>
 
           {chainBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -939,15 +941,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           ) : (
             <div className="hc-card-anim" key="default">
-              <p className="hc-game-desc hc-game-desc--sm">Race to solve a chain of linked words.</p>
-              <div className="hc-game-tags hc-game-tags--centered">
-                <span className="hc-tag">2 players</span>
-                <span className="hc-tag">Word chains</span>
-                <span className="hc-tag">Turns</span>
-              </div>
+              <p className="hc-game-desc">Race to solve a chain of linked words.</p>
               <div className="hc-coming-preview">
-                <div className="hc-chain-example hc-chain-example--tight">
+                <div className="hc-chain-example">
                   <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
+                  <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
                   <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
                   <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
                   <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
@@ -974,6 +972,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !chainExpanded ? (
+              <>
               <div className="hc-row">
                 <button className={`btn hc-browse-globe${chainPublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setChainExpanded(false); setChainBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                   <FiGlobe size={18} />
@@ -986,6 +985,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   <FiHelpCircle size={18} />
                 </button>
               </div>
+              </>
             ) : (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setChainExpanded(false)}>
@@ -1008,7 +1008,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       {/* ── Card 5: Shade Signal ──────────────────────────── */}
       <div className={`home-card home-card--shade${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
-          <h2 className="hc-game-title-lg">Shade Signal</h2>
+          <h2 className={`hc-game-title-lg${shadeExpanded || shadeBrowsing ? " hc-game-title-lg--compact" : ""}`}>Shade Signal</h2>
 
           {shadeBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -1056,11 +1056,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           ) : (
             <div className="hc-card-anim" key="default">
               <p className="hc-game-desc">One leader, one color. Give clues and guess the target shade.</p>
-              <div className="hc-game-tags hc-game-tags--centered">
-                <span className="hc-tag">3–10 players</span>
-                <span className="hc-tag">Color clues</span>
-                <span className="hc-tag">Proximity</span>
-              </div>
               <div className="hc-coming-preview">
                 <div className="hc-shade-grid">
                   {Array.from({ length: 20 }, (_, i) => (
@@ -1092,6 +1087,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !shadeExpanded ? (
+              <>
               <div className="hc-row">
                 <button className={`btn hc-browse-globe${shadePublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setShadeExpanded(false); setShadeBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                   <FiGlobe size={18} />
@@ -1104,6 +1100,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   <FiHelpCircle size={18} />
                 </button>
               </div>
+              </>
             ) : (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setShadeExpanded(false)}>
@@ -1126,7 +1123,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       {/* ── Card 6: Location Signal ──────────────────────────── */}
       <div className={`home-card home-card--location${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
         <div className="home-card-body hc-centered">
-          <h2 className="hc-game-title-lg">Location Signal</h2>
+          <h2 className={`hc-game-title-lg${locationExpanded || locationBrowsing ? " hc-game-title-lg--compact" : ""}`}>Location Signal</h2>
 
           {locationBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -1169,11 +1166,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           ) : (
             <div className="hc-card-anim" key="default">
               <p className="hc-game-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
-              <div className="hc-game-tags hc-game-tags--centered">
-                <span className="hc-tag">2–10 players</span>
-                <span className="hc-tag">Geography</span>
-                <span className="hc-tag">Distance Scoring</span>
-              </div>
               <div className="hc-coming-preview">
                 <div className="hc-loc-preview">
                   <div className="hc-loc-map">
@@ -1207,6 +1199,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !locationExpanded ? (
+              <>
               <div className="hc-row">
                 <button className={`btn hc-browse-globe${locationPublicCount === 0 ? " hc-globe-empty" : ""}`} onClick={() => { setLocationExpanded(false); setLocationBrowsing(true); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                   <FiGlobe size={18} />
@@ -1219,6 +1212,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   <FiHelpCircle size={18} />
                 </button>
               </div>
+              </>
             ) : (
               <div className="hc-row">
                 <button className="btn btn-muted flex-1" onClick={() => setLocationExpanded(false)}>
