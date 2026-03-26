@@ -1000,7 +1000,7 @@ body {
   flex: 1;
   display: grid;
   grid-template-rows: auto 1fr auto auto;
-  row-gap: 0.65rem;
+  row-gap: 0.35rem;
   position: relative;
   z-index: 1;
   overflow: hidden;
@@ -1195,8 +1195,13 @@ body {
 
 .hc-coming-preview {
   margin-top: auto;
-  padding-top: 1rem;
+  padding-top: 0.5rem;
   width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 80px; /* Ensures minimal space so grid renders properly */
 }
 
 /* ── Mini game board preview (Imposter / Password) ───────────── */
@@ -1343,10 +1348,10 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.4rem 1rem;
+  gap: 0.25rem;
+  padding: 0.5rem 1.2rem;
   border-radius: 0.5rem;
-  min-width: 64px;
+  min-width: 76px;
 }
 
 .hc-pw-team--red {
@@ -1370,7 +1375,7 @@ body {
 .hc-pw-team--blue .hc-pw-team-name { color: #60a5fa; }
 
 .hc-pw-team-score {
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--foreground);
 }
@@ -1434,7 +1439,7 @@ body {
 .hc-loc-map {
   position: relative;
   width: 100%;
-  max-width: 190px;
+  max-width: 230px;
   aspect-ratio: 1.6;
   border-radius: 0.6rem;
   border: 1px solid color-mix(in srgb, #f59e0b 20%, transparent);
@@ -1517,17 +1522,17 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.125rem;
+  gap: 0.3rem;
 }
 
 .hc-chain-word {
-  font-size: 0.7rem;
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.12em;
-  padding: 0.2rem 0.6rem;
+  padding: 0.35rem 0.85rem;
   border-radius: 0.35rem;
   width: 100%;
-  max-width: 120px;
+  max-width: 170px;
   text-align: center;
 }
 
@@ -1544,16 +1549,6 @@ body {
   font-family: monospace;
 }
 
-/* compact horizontal chain layout */
-/* tight vertical chain (fewer gaps) */
-.hc-chain-example--tight {
-  gap: 0;
-}
-
-.hc-chain-example--tight .hc-chain-word {
-  font-size: 0.6rem;
-  padding: 0.12rem 0.5rem;
-}
 
 /* smaller game description variant */
 .hc-game-desc--sm {
@@ -1565,10 +1560,11 @@ body {
 .hc-shade-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 3px;
+  gap: 4px;
   border-radius: 0.5rem;
   overflow: hidden;
-  max-width: 180px;
+  max-width: 220px;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -1606,6 +1602,56 @@ body {
   color: var(--secondary);
 }
 
+/* ── Inline-editable name display ────────────────────────────── */
+.hc-name-display {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font: inherit;
+  color: var(--foreground);
+  font-size: 0.88rem;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  width: 100%;
+}
+.hc-name-display:hover {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  transform: translateY(-1px);
+}
+.hc-name-display:active {
+  transform: translateY(0);
+}
+.hc-name-inline-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--primary);
+  flex: 1;
+  text-align: left;
+  padding: 0;
+  width: 100%;
+}
+.hc-name-inline-input::placeholder {
+  font-weight: 400;
+  color: color-mix(in srgb, var(--primary) 50%, transparent);
+}
+.hc-name-edit-icon {
+  color: var(--primary);
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.hc-name-display:focus-within .hc-name-edit-icon,
+.hc-name-display:hover .hc-name-edit-icon {
+  opacity: 1;
+}
+
 .hc-row {
   display: flex;
   align-items: center;
@@ -1641,16 +1687,37 @@ body {
   opacity: 1;
 }
 
-/* ── Join input ready state ──────────────────────────────────── */
+/* ── Join input styles ───────────────────────────────────────── */
+.hc-join-input {
+  text-align: center;
+  letter-spacing: 0.45em;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.hc-join-input::placeholder {
+  letter-spacing: 0.15em;
+  font-weight: 500;
+  font-size: 0.88rem;
+}
+
+/* ── Join input ready state (button-like) ────────────────────── */
 .hc-join-input--ready {
-  border-color: var(--primary) !important;
-  background: color-mix(in srgb, var(--primary) 12%, var(--card));
-  color: var(--primary);
-  outline: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
-  outline-offset: 0;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, outline 0.2s, box-shadow 0.2s;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 20%, transparent);
+  font-weight: 800;
+  border-radius: var(--radius);
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 25%, transparent);
+  outline: none;
+}
+
+.hc-join-input--ready:hover {
+  background: color-mix(in srgb, var(--primary) 85%, #fff);
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .hc-join-input--ready::placeholder {
@@ -1778,7 +1845,14 @@ body {
   font-weight: 800;
   letter-spacing: 0.06em;
   color: var(--foreground);
-  margin-top: 0.5rem;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.hc-game-title-lg--compact {
+  font-size: 1.1rem;
+  margin-top: 0;
+  margin-bottom: -0.15rem;
 }
 
 .hc-game-sub {
@@ -1790,8 +1864,8 @@ body {
 .hc-game-desc {
   font-size: 0.82rem;
   color: var(--secondary);
-  margin-top: 0.2rem;
-  margin-bottom: 0.25rem;
+  margin-top: -0.1rem;
+  margin-bottom: 0;
   width: 100%;
   max-width: 24ch;
   margin-inline: auto;
@@ -1806,28 +1880,28 @@ body {
   font-style: italic;
 }
 
-/* ── Tags ────────────────────────────────────────────────────── */
-.hc-game-tags {
+/* ── Collapsible section toggle ──────────────────────────────── */
+.hc-collapse-toggle {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
 }
 
-.hc-game-tags--centered {
-  justify-content: center;
-}
-
-.hc-tag {
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.2rem 0.55rem;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--secondary) 12%, transparent);
+.hc-collapse-icon {
   color: var(--muted-foreground);
-  border: 1px solid color-mix(in srgb, var(--secondary) 20%, transparent);
+  transition: transform 0.2s ease;
+  opacity: 0.6;
+}
+
+.hc-collapse-icon--open {
+  transform: rotate(180deg);
 }
 
 /* ── Config area (expandable) ────────────────────────────────── */
@@ -7279,6 +7353,8 @@ body {
   animation: hc-card-content-in 0.2s ease-out;
   align-self: stretch;
   width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Only center + expand when showing the config form */
