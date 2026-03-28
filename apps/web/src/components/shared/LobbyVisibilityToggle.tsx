@@ -43,7 +43,7 @@ export function LobbyVisibilityToggle({
 
   return (
     <button
-      className={`lobby-vis-toggle${isPublic ? " lobby-vis-toggle--public" : ""}`}
+      className={`btn lobby-vis-toggle${isPublic ? " lobby-vis-toggle--public" : ""}`}
       onClick={() => void handleToggle()}
       disabled={toggling}
       data-tooltip={isPublic ? "Anyone can find and join · Click to make private" : "Only players with code can join · Click to make public"}
