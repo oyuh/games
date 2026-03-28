@@ -271,24 +271,26 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
       markers.push({ lat: myRoundGuess.lat, lng: myRoundGuess.lng, color: guesserColorMap[sessionId] ?? "#06d6a0", label: "Your guess", size: 3, ring: true });
     }
 
-    // Non-leader: show my own previous round guesses as smaller dots during guess2+
-    if (!isLeader && isGuessPhase && currentGuessRound > 1) {
-      for (let r = 1; r < currentGuessRound; r++) {
+    // Non-leader: show my own previous guesses at all times (clue + guess phases)
+    if (!isLeader && isGameActive && phase !== "picking") {
+      const maxVisible = isGuessPhase ? currentGuessRound : (isCluePhase ? currentClueRound : cluePairs);
+      for (let r = 1; r <= maxVisible; r++) {
         const prev = game.guesses.find((g) => g.sessionId === sessionId && g.round === r);
-        if (prev) {
+        if (prev && !(isGuessPhase && r === currentGuessRound)) {
           markers.push({ lat: prev.lat, lng: prev.lng, color: guesserColorMap[sessionId] ?? "#06d6a0", label: `Your G${r}`, size: 1.5 });
         }
       }
     }
 
-    // Leader sees all guesses during clue phases (clue2+) to inform their next clue
-    if (isLeader && isCluePhase && currentClueRound > 1) {
-      const prevRound = currentClueRound - 1;
-      const prevGuesses = game.guesses.filter((g) => g.round === prevRound);
-      for (const g of prevGuesses) {
-        const name = playerName(g.sessionId);
-        const color = guesserColorMap[g.sessionId] ?? "#7ecbff";
-        markers.push({ lat: g.lat, lng: g.lng, color, label: `${name} (G${g.round})`, size: 2, ring: true });
+    // Leader sees all guesses during clue phases (all rounds so far)
+    if (isLeader && isCluePhase) {
+      for (let r = 1; r < currentClueRound; r++) {
+        const roundGuesses = game.guesses.filter((g) => g.round === r);
+        for (const g of roundGuesses) {
+          const name = playerName(g.sessionId);
+          const color = guesserColorMap[g.sessionId] ?? "#7ecbff";
+          markers.push({ lat: g.lat, lng: g.lng, color, label: `${name} (G${g.round})`, size: 2, ring: true });
+        }
       }
     }
 
@@ -337,7 +339,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   // Leader can always interact (pan/zoom) with map; guessers can click during guess phases; leader can click during picking
   const mapClickable = (phase === "picking" && isLeader) || (isGuessPhase && !isLeader && inGame);
-  const mapInteractive = mapClickable || (isLeader && isGameActive) || phase === "reveal";
+  const mapInteractive = true;
 
   const joinGame = () => {
     ensureName(zero, sessionId);
@@ -420,7 +422,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     <div className="game-section">
       <div className="locsig-map-wrap">
         <WorldMap
-          height={420}
+          height={520}
           {...(mapClickable ? { onClick: (coords: { lat: number; lng: number }) => setDraftMarker(coords) } : {})}
           interactive={mapInteractive}
           markers={buildMarkers()}
@@ -483,7 +485,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           <div className="game-section">
             <div className="locsig-map-wrap">
               <WorldMap
-                height={340}
+                height={520}
                 interactive
                 markers={draftMarker ? [{ lat: draftMarker.lat, lng: draftMarker.lng, color: "var(--primary)", label: "Preview", size: 2, ring: true }] : []}
                 onClick={(coords) => setDraftMarker(coords)}
