@@ -248,12 +248,6 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      <div className="game-section" style={{ textAlign: "center" }}>
-        <button className="demo-trigger-btn" onClick={() => setShowDemo(true)}>
-          <FiHelpCircle size={16} /> How to Play
-        </button>
-      </div>
-
       {showDemo && <PasswordDemo onClose={() => setShowDemo(false)} />}
 
       {showInSessionModal && activeGameType && (
