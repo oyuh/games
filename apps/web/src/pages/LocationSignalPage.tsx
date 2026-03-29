@@ -523,14 +523,6 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
               </button>
             </div>
           )}
-
-          {game.phase === "lobby" && (
-            <div className="game-section" style={{ textAlign: "center" }}>
-              <button className="demo-trigger-btn" onClick={() => setShowDemo(true)}>
-                <FiHelpCircle size={16} /> How to Play
-              </button>
-            </div>
-          )}
         </>
       )}
 
