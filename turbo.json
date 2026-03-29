@@ -13,6 +13,18 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "test:ci": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test:local": {
+      "cache": false,
+      "outputs": []
+    },
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
     "lint": {
       "outputs": []
     },

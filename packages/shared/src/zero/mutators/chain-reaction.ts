@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, pickChain, scoreForLetters, normalized, pickRandom } from "./helpers";
+import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText } from "./helpers";
 
 export const chainReactionMutators = {
   create: defineMutator(
@@ -57,7 +57,8 @@ export const chainReactionMutators = {
 
   join: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -113,7 +114,8 @@ export const chainReactionMutators = {
 
   leave: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) return;
 
@@ -176,7 +178,8 @@ export const chainReactionMutators = {
         category: z.string().optional()
       })
     }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can update settings");
@@ -192,7 +195,8 @@ export const chainReactionMutators = {
 
   kick: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can kick");
@@ -221,7 +225,8 @@ export const chainReactionMutators = {
       gameId: z.string(),
       hostId: z.string()
     }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can start");
@@ -277,7 +282,8 @@ export const chainReactionMutators = {
 
   submitChain: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), words: z.array(z.string().min(1).max(30)) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase !== "submitting") throw new Error("Not in submission phase");
@@ -334,7 +340,8 @@ export const chainReactionMutators = {
 
   revealLetter: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), wordIndex: z.number() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing") throw new Error("Game not in playing phase");
 
@@ -362,7 +369,8 @@ export const chainReactionMutators = {
 
   guess: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), wordIndex: z.number(), guess: z.string().min(1).max(40) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing") throw new Error("Game not in playing phase");
 
@@ -512,7 +520,8 @@ export const chainReactionMutators = {
 
   giveUp: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), wordIndex: z.number() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing") throw new Error("Game not in playing phase");
 
@@ -627,7 +636,8 @@ export const chainReactionMutators = {
 
   resetToLobby: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can reset");
@@ -658,7 +668,8 @@ export const chainReactionMutators = {
 
   endGame: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can end game");
@@ -685,7 +696,8 @@ export const chainReactionMutators = {
 
   joinAsSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -712,7 +724,8 @@ export const chainReactionMutators = {
 
   leaveSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) return;
       await tx.mutate.chain_reaction_games.update({
@@ -731,12 +744,15 @@ export const chainReactionMutators = {
 
   announce: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), text: z.string().min(1).max(120) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can announce");
+      const cleanText = sanitizeText(args.text);
+      if (!cleanText) throw new Error("Announcement cannot be empty");
       await tx.mutate.chain_reaction_games.update({
         id: game.id,
-        announcement: { text: args.text.trim(), ts: now() },
+        announcement: { text: cleanText, ts: now() },
         updated_at: now()
       });
     }
@@ -744,7 +760,8 @@ export const chainReactionMutators = {
 
   removeSpectator: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can remove spectators");
       await tx.mutate.chain_reaction_games.update({
@@ -764,7 +781,8 @@ export const chainReactionMutators = {
 
   setPublic: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), isPublic: z.boolean() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can change visibility");
       if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");

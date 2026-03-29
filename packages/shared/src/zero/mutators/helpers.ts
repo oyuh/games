@@ -5,6 +5,36 @@ export const now = () => Date.now();
 export const code = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
 export const PRESENCE_TIMEOUT_MS = 30_000;
 
+// ─── Input sanitization ─────────────────────────────────────
+const HTML_TAG_RE = /<[^>]*>/g;
+const CONTROL_CHAR_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
+
+/**
+ * Strips HTML tags and dangerous control characters from user-supplied text.
+ * Preserves normal whitespace (spaces, tabs, newlines).
+ * Always trims the result.
+ */
+export function sanitizeText(input: string): string {
+  return input
+    .replace(HTML_TAG_RE, "")
+    .replace(CONTROL_CHAR_RE, "")
+    .trim();
+}
+
+/** Max allowed length for IDs (sessionId, gameId, hostId, etc.) */
+const MAX_ID_LENGTH = 64;
+
+/**
+ * Validates and trims an ID string. Throws if empty or too long.
+ */
+export function sanitizeId(id: string): string {
+  const trimmed = id.trim();
+  if (!trimmed || trimmed.length > MAX_ID_LENGTH) {
+    throw new Error("Invalid ID");
+  }
+  return trimmed;
+}
+
 type GameSecretResolver = (gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal", gameId: string) => Promise<string>;
 type ServerContext = { userId?: string; resolveGameSecretKey?: GameSecretResolver };
 type TxLike = { location?: string };
