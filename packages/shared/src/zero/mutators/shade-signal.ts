@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, shuffle } from "./helpers";
+import { now, code, shuffle, assertCaller, assertHost, sanitizeText } from "./helpers";
 
 export const shadeSignalMutators = {
   create: defineMutator(
@@ -64,7 +64,8 @@ export const shadeSignalMutators = {
 
   join: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -117,7 +118,8 @@ export const shadeSignalMutators = {
 
   leave: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) return;
 
@@ -159,7 +161,8 @@ export const shadeSignalMutators = {
 
   kick: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can kick");
@@ -184,12 +187,15 @@ export const shadeSignalMutators = {
 
   announce: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), text: z.string().min(1).max(200) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can announce");
+      const cleanText = sanitizeText(args.text);
+      if (!cleanText) throw new Error("Announcement cannot be empty");
       await tx.mutate.shade_signal_games.update({
         id: game.id,
-        announcement: { text: args.text, ts: now() },
+        announcement: { text: cleanText, ts: now() },
         updated_at: now()
       });
     }
@@ -207,7 +213,8 @@ export const shadeSignalMutators = {
         roundsPerPlayer: z.number().optional(),
       })
     }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can update settings");
@@ -227,7 +234,8 @@ export const shadeSignalMutators = {
 
   start: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can start");
@@ -271,7 +279,8 @@ export const shadeSignalMutators = {
       row: z.number().min(0),
       col: z.number().min(0)
     }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase !== "picking") throw new Error("Not in picking phase");
@@ -297,12 +306,14 @@ export const shadeSignalMutators = {
       sessionId: z.string(),
       text: z.string().min(1).max(60)
     }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.leader_id !== args.sessionId) throw new Error("Only the leader can give clues");
 
-      const clueText = args.text.trim();
+      const clueText = sanitizeText(args.text);
+      if (!clueText) throw new Error("Clue cannot be empty");
 
       // Hard mode: reject color-family names
       if (game.settings.hardMode) {
@@ -359,7 +370,8 @@ export const shadeSignalMutators = {
       row: z.number().min(0),
       col: z.number().min(0)
     }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase !== "guess1" && game.phase !== "guess2") throw new Error("Not in a guessing phase");
@@ -554,7 +566,8 @@ export const shadeSignalMutators = {
 
   nextRound: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can advance");
@@ -604,7 +617,8 @@ export const shadeSignalMutators = {
 
   resetToLobby: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can reset");
@@ -636,7 +650,8 @@ export const shadeSignalMutators = {
 
   endGame: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can end game");
@@ -663,7 +678,8 @@ export const shadeSignalMutators = {
 
   joinAsSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -690,7 +706,8 @@ export const shadeSignalMutators = {
 
   leaveSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) return;
       await tx.mutate.shade_signal_games.update({
@@ -709,7 +726,8 @@ export const shadeSignalMutators = {
 
   removeSpectator: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can remove spectators");
       await tx.mutate.shade_signal_games.update({
@@ -729,7 +747,8 @@ export const shadeSignalMutators = {
 
   setPublic: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), isPublic: z.boolean() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can change visibility");
       if (game.phase === "ended") throw new Error("Game has ended");

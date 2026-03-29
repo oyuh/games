@@ -1,16 +1,17 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { assertCaller, now } from "./helpers";
+import { assertCaller, now, sanitizeText } from "./helpers";
 
 export const sessionMutators = {
   upsert: defineMutator(
     z.object({ id: z.string(), name: z.string().transform(s => s.replace(/\s/g, "")).nullable().optional() }),
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.id);
+      const cleanName = args.name ? sanitizeText(args.name).replace(/\s/g, "") : null;
       await tx.mutate.sessions.upsert({
         id: args.id,
-        name: args.name ?? null,
+        name: cleanName,
         created_at: now(),
         last_seen: now()
       });
@@ -20,9 +21,11 @@ export const sessionMutators = {
     z.object({ id: z.string(), name: z.string().transform(s => s.replace(/\s/g, "")).pipe(z.string().min(1).max(30)) }),
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.id);
+      const cleanName = sanitizeText(args.name).replace(/\s/g, "");
+      if (!cleanName) throw new Error("Name cannot be empty");
       await tx.mutate.sessions.update({
         id: args.id,
-        name: args.name,
+        name: cleanName,
         last_seen: now()
       });
     }

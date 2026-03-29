@@ -115,8 +115,8 @@ app.get("/api/maps/config", (c) => {
 
 app.get("/api/maps/geocode", async (c) => {
   const q = c.req.query("q")?.trim() ?? "";
-  if (!q) {
-    return c.json({ ok: false, error: "q is required" }, 400);
+  if (!q || q.length > 200) {
+    return c.json({ ok: false, error: "q is required (max 200 chars)" }, 400);
   }
 
   const endpoint = process.env.MAP_GEOCODE_URL ?? "https://nominatim.openstreetmap.org/search";
@@ -192,7 +192,7 @@ app.post("/api/presence/heartbeat", async (c) => {
     sessionId?: string;
   };
 
-  if (!sessionId) {
+  if (!sessionId || sessionId.length > MAX_ID_LEN) {
     return c.json({ error: "sessionId required" }, 400);
   }
 
@@ -226,7 +226,15 @@ function firstNonEmpty(values: Array<string | undefined>) {
 
 function getCallerUserId(c: { req: { header: (name: string) => string | undefined } }): string {
   const caller = c.req.header("x-zero-user-id")?.trim();
-  return caller && caller.length > 0 ? caller : "anon";
+  return caller && caller.length > 0 && caller.length <= 64 ? caller : "anon";
+}
+
+const MAX_ID_LEN = 64;
+
+function validId(v: unknown): string {
+  if (typeof v !== "string") return "";
+  const trimmed = v.trim();
+  return trimmed.length > 0 && trimmed.length <= MAX_ID_LEN ? trimmed : "";
 }
 
 function assertCallerValue(userId: string, claimed: unknown, field: string) {
@@ -404,8 +412,8 @@ app.post("/api/game-secret/init", async (c) => {
   } | null;
 
   const gameType = normalizeGameType(body?.gameType);
-  const gameId = typeof body?.gameId === "string" ? body.gameId.trim() : "";
-  const sessionId = typeof body?.sessionId === "string" ? body.sessionId.trim() : "";
+  const gameId = validId(body?.gameId);
+  const sessionId = validId(body?.sessionId);
   if (!gameType || !gameId || !sessionId) {
     return c.json({ error: "gameType, gameId, sessionId required" }, 400);
   }
@@ -496,8 +504,8 @@ app.post("/api/game-secret/pre-reveal", async (c) => {
   } | null;
 
   const gameType = normalizeGameType(body?.gameType);
-  const gameId = typeof body?.gameId === "string" ? body.gameId.trim() : "";
-  const sessionId = typeof body?.sessionId === "string" ? body.sessionId.trim() : "";
+  const gameId = validId(body?.gameId);
+  const sessionId = validId(body?.sessionId);
   if (!gameType || !gameId || !sessionId) {
     return c.json({ error: "gameType, gameId, sessionId required" }, 400);
   }
@@ -522,7 +530,15 @@ app.post("/api/game-secret/pre-reveal", async (c) => {
     if (!game.encryptedTarget) return c.json({ ok: true, alreadyPlain: true });
 
     const key = await getOrCreateGameKey(gameType, gameId);
-    const payload = JSON.parse(await decryptSecret(game.encryptedTarget, key)) as { row: number; col: number };
+    const decrypted = await decryptSecret(game.encryptedTarget, key);
+    let payload: { row: number; col: number };
+    try {
+      const parsed = JSON.parse(decrypted);
+      if (typeof parsed?.row !== "number" || typeof parsed?.col !== "number") throw new Error("bad payload");
+      payload = parsed;
+    } catch {
+      return c.json({ error: "Corrupted encrypted target" }, 500);
+    }
     await drizzleClient
       .update(shadeSignalGames)
       .set({ targetRow: payload.row, targetCol: payload.col, encryptedTarget: null, updatedAt: Date.now() })
@@ -540,7 +556,15 @@ app.post("/api/game-secret/pre-reveal", async (c) => {
   if (!game.encryptedTarget) return c.json({ ok: true, alreadyPlain: true });
 
   const key = await getOrCreateGameKey(gameType, gameId);
-  const payload = JSON.parse(await decryptSecret(game.encryptedTarget, key)) as { lat: number; lng: number };
+  const decrypted = await decryptSecret(game.encryptedTarget, key);
+  let payload: { lat: number; lng: number };
+  try {
+    const parsed = JSON.parse(decrypted);
+    if (typeof parsed?.lat !== "number" || typeof parsed?.lng !== "number") throw new Error("bad payload");
+    payload = parsed;
+  } catch {
+    return c.json({ error: "Corrupted encrypted target" }, 500);
+  }
   await drizzleClient
     .update(locationSignalGames)
     .set({ targetLat: payload.lat, targetLng: payload.lng, encryptedTarget: null, updatedAt: Date.now() })
@@ -556,8 +580,8 @@ app.post("/api/game-secret/key", async (c) => {
   } | null;
 
   const gameType = normalizeGameType(body?.gameType);
-  const gameId = typeof body?.gameId === "string" ? body.gameId.trim() : "";
-  const sessionId = typeof body?.sessionId === "string" ? body.sessionId.trim() : "";
+  const gameId = validId(body?.gameId);
+  const sessionId = validId(body?.sessionId);
 
   if (!gameType || !gameId || !sessionId) {
     return c.json({ error: "gameType, gameId, sessionId required" }, 400);

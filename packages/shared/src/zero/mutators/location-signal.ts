@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { code, now, shuffle } from "./helpers";
+import { code, now, shuffle, assertCaller, assertHost, sanitizeText } from "./helpers";
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -83,7 +83,8 @@ export const locationSignalMutators = {
 
   join: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const ts = now();
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
@@ -134,7 +135,8 @@ export const locationSignalMutators = {
 
   leave: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const ts = now();
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) return;
@@ -169,7 +171,8 @@ export const locationSignalMutators = {
 
   start: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const ts = now();
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -198,7 +201,8 @@ export const locationSignalMutators = {
 
   setTarget: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const ts = now();
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -218,13 +222,15 @@ export const locationSignalMutators = {
 
   submitClue: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), round: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]), text: z.string().min(1).max(80) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const ts = now();
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.leader_id !== args.sessionId) throw new Error("Only leader can submit clues");
 
-      const trimmed = args.text.trim();
+      const trimmed = sanitizeText(args.text);
+      if (!trimmed) throw new Error("Clue cannot be empty");
       const guessPhase = `guess${args.round}` as const;
       const clueField = `clue${args.round}` as "clue1" | "clue2" | "clue3" | "clue4";
       await tx.mutate.location_signal_games.update({
@@ -239,7 +245,8 @@ export const locationSignalMutators = {
 
   submitGuess: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), round: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const ts = now();
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -313,7 +320,8 @@ export const locationSignalMutators = {
 
   revealRound: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const ts = now();
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -396,7 +404,8 @@ export const locationSignalMutators = {
 
   nextRound: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const ts = now();
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -577,7 +586,8 @@ export const locationSignalMutators = {
 
   kick: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can kick");
@@ -601,14 +611,16 @@ export const locationSignalMutators = {
 
   announce: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), text: z.string().min(1).max(200) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can announce");
-
+      const cleanText = sanitizeText(args.text);
+      if (!cleanText) throw new Error("Announcement cannot be empty");
       await tx.mutate.location_signal_games.update({
         id: game.id,
-        announcement: { text: args.text.trim(), ts: now() },
+        announcement: { text: cleanText, ts: now() },
         updated_at: now(),
       });
     }
@@ -616,7 +628,8 @@ export const locationSignalMutators = {
 
   endGame: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can end game");
@@ -643,7 +656,8 @@ export const locationSignalMutators = {
 
   joinAsSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -670,7 +684,8 @@ export const locationSignalMutators = {
 
   leaveSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) return;
       await tx.mutate.location_signal_games.update({
@@ -689,7 +704,8 @@ export const locationSignalMutators = {
 
   removeSpectator: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can remove spectators");
@@ -710,7 +726,8 @@ export const locationSignalMutators = {
 
   resetToLobby: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can reset");
@@ -744,7 +761,8 @@ export const locationSignalMutators = {
 
   setPublic: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), isPublic: z.boolean() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can change visibility");
       if (game.phase === "ended") throw new Error("Game has ended");

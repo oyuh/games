@@ -1,10 +1,44 @@
+# Dependencies
 node_modules
 .pnpm-store
+
+# Build outputs
+**/dist
+**/out
+**/.next
+
+# Turbo
 .turbo
+.turbo-cache
+
+# Environment
 .env
 .env.*
 !.env.example
-**/dist
-**/.DS_Store
+
+# Test / coverage
 coverage
+
+# Zero
 zero-data
+
+# OS
+**/.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Next.js auto-generated
+**/next-env.d.ts
+
+# Vercel
+.vercel
+
+# Misc
+*.log
+*.tsbuildinfo

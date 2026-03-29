@@ -8,6 +8,7 @@ interface RateLimitOptions {
 
 // In-memory sliding window store: compositeKey → timestamps[]
 const store = new Map<string, number[]>();
+const MAX_BUCKETS = 50_000;
 
 // Periodic cleanup every 5 minutes
 setInterval(() => {
@@ -23,7 +24,9 @@ setInterval(() => {
 }, 5 * 60_000).unref();
 
 function getClientIP(c: { req: { header: (name: string) => string | undefined } }): string {
-  return c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const raw = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  // Cap length to prevent memory abuse from spoofed headers
+  return raw.length <= 45 ? raw : raw.slice(0, 45);
 }
 
 export function rateLimiter(options: RateLimitOptions): MiddlewareHandler {
@@ -51,6 +54,12 @@ export function rateLimiter(options: RateLimitOptions): MiddlewareHandler {
         },
         429
       );
+    }
+
+    // Prevent unbounded memory growth from many unique IPs
+    if (!store.has(bucketKey) && store.size >= MAX_BUCKETS) {
+      await next();
+      return;
     }
 
     timestamps.push(now);
