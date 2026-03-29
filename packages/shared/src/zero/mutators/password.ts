@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
-import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds } from "./helpers";
+import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds, assertCaller, assertHost, sanitizeText } from "./helpers";
 
 async function maybeEncryptPasswordWord(ctx: unknown, gameId: string, word: string | null) {
   if (!word) {
@@ -92,7 +92,8 @@ export const passwordMutators = {
 
   join: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -151,7 +152,8 @@ export const passwordMutators = {
 
   leave: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) return;
 
@@ -201,6 +203,7 @@ export const passwordMutators = {
   start: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
     async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can start");
@@ -245,6 +248,7 @@ export const passwordMutators = {
   submitClue: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), clue: z.string().min(1).max(80) }),
     async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing" || !game.active_rounds.length) {
         throw new Error("Game is not in active round");
@@ -264,14 +268,16 @@ export const passwordMutators = {
 
       const roundWord = await resolveActiveRoundWord(ctx, args.gameId, round);
       if (isServerTx(tx) && !roundWord) throw new Error("Word hasn't been set yet");
-      if (roundWord && isClueTooSimilar(args.clue, roundWord)) {
+      const cleanClue = sanitizeText(args.clue);
+      if (!cleanClue) throw new Error("Clue cannot be empty");
+      if (roundWord && isClueTooSimilar(cleanClue, roundWord)) {
         throw new Error("Clue is too similar to the word");
       }
       if (round.clues.some((c) => c.sessionId === args.sessionId)) {
         throw new Error("You already submitted a clue");
       }
 
-      const nextClues = [...round.clues, { sessionId: args.sessionId, text: args.clue.trim() }];
+      const nextClues = [...round.clues, { sessionId: args.sessionId, text: cleanClue }];
       const nextRounds = game.active_rounds.map((r, i) =>
         i === roundIdx ? { ...r, clues: nextClues } : r
       );
@@ -287,6 +293,7 @@ export const passwordMutators = {
   submitGuess: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), guess: z.string().min(1).max(80) }),
     async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing" || !game.active_rounds.length) {
         throw new Error("Round is not ready for guessing");
@@ -406,6 +413,7 @@ export const passwordMutators = {
   skipWord: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
     async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing" || !game.active_rounds.length) {
         throw new Error("Game is not in active round");
@@ -493,7 +501,8 @@ export const passwordMutators = {
 
   switchTeam: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), teamName: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase !== "lobby") throw new Error("Can only switch teams in lobby");
@@ -516,7 +525,8 @@ export const passwordMutators = {
 
   movePlayer: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), playerId: z.string(), teamName: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can move players");
@@ -539,7 +549,8 @@ export const passwordMutators = {
 
   lockTeams: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), locked: z.boolean() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can lock teams");
@@ -554,7 +565,8 @@ export const passwordMutators = {
 
   resetToLobby: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Not allowed");
 
@@ -587,12 +599,15 @@ export const passwordMutators = {
 
   announce: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), text: z.string().min(1).max(120) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can announce");
+      const cleanText = sanitizeText(args.text);
+      if (!cleanText) throw new Error("Announcement cannot be empty");
       await tx.mutate.password_games.update({
         id: game.id,
-        announcement: { text: args.text.trim(), ts: now() },
+        announcement: { text: cleanText, ts: now() },
         updated_at: now()
       });
     }
@@ -600,7 +615,8 @@ export const passwordMutators = {
 
   kick: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can kick");
       if (args.targetId === args.hostId) throw new Error("Cannot kick yourself");
@@ -624,7 +640,8 @@ export const passwordMutators = {
 
   endGame: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can end game");
 
@@ -660,7 +677,8 @@ export const passwordMutators = {
 
   joinAsSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -688,7 +706,8 @@ export const passwordMutators = {
 
   leaveSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) return;
       await tx.mutate.password_games.update({

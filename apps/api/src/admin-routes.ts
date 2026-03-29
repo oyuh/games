@@ -332,15 +332,15 @@ adminRoutes.post("/bans", async (c) => {
   const body = await c.req.json();
   const { type, value, reason } = body as { type: string; value: string; reason?: string };
 
-  if (!["session", "ip", "region"].includes(type) || !value) {
-    return c.json({ error: "Invalid ban: need type (session|ip|region) and value" }, 400);
+  if (!["session", "ip", "region"].includes(type) || !value || typeof value !== "string" || value.length > 200) {
+    return c.json({ error: "Invalid ban: need type (session|ip|region) and value (max 200 chars)" }, 400);
   }
 
   const ban: Ban = {
     id: genId("ban"),
     type: type as Ban["type"],
     value,
-    reason: reason || "",
+    reason: typeof reason === "string" ? reason.slice(0, 500) : "",
     createdAt: Date.now(),
   };
 
@@ -384,8 +384,8 @@ adminRoutes.post("/broadcast/toast", async (c) => {
     targetSessionId?: string;
   };
 
-  if (!message) {
-    return c.json({ error: "message is required" }, 400);
+  if (!message || typeof message !== "string" || message.length > 500) {
+    return c.json({ error: "message is required (max 500 chars)" }, 400);
   }
 
   broadcastToAll({
@@ -443,10 +443,20 @@ adminRoutes.post("/status", async (c) => {
     return c.json({ ok: true, status: null });
   }
 
+  if (typeof text !== "string" || text.length > 300) {
+    return c.json({ error: "Status text too long (max 300 chars)" }, 400);
+  }
+
+  // Validate link is http/https only
+  const safeLink = link && typeof link === "string" && /^https?:\/\//i.test(link) ? link.slice(0, 500) : null;
+
+  // Validate color is a safe CSS value (hex, named color, or rgb)
+  const safeColor = color && typeof color === "string" && /^[a-zA-Z0-9#(), .]+$/.test(color) && color.length <= 50 ? color : null;
+
   const payload: CustomStatusPayload = {
     text,
-    link: link || null,
-    color: color || null,
+    link: safeLink,
+    color: safeColor,
     flash: flash || false,
   };
   setCustomStatus(payload);

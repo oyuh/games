@@ -168,12 +168,18 @@ importers:
       '@types/node':
         specifier: ^22.13.10
         version: 22.19.13
+      '@types/pg':
+        specifier: ^8.15.5
+        version: 8.15.5
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
       drizzle-kit:
         specifier: ^0.30.5
         version: 0.30.6
+      pg:
+        specifier: ^8.19.0
+        version: 8.19.0
       typescript:
         specifier: ^5.8.2
         version: 5.9.3

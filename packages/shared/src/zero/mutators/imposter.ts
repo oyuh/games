@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, pickRandom, chooseRoles } from "./helpers";
+import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, sanitizeText } from "./helpers";
 import { imposterWordBank } from "./word-banks";
 
 export const imposterMutators = {
@@ -55,7 +55,8 @@ export const imposterMutators = {
 
   join: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game) {
@@ -135,7 +136,8 @@ export const imposterMutators = {
 
   leave: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game) return;
 
@@ -200,7 +202,8 @@ export const imposterMutators = {
 
   start: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can start");
@@ -227,7 +230,8 @@ export const imposterMutators = {
 
   submitClue: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string(), text: z.string().min(1).max(80) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing") {
         throw new Error("Game is not accepting clues");
@@ -237,8 +241,10 @@ export const imposterMutators = {
       if (!player) throw new Error("Player is not in game");
       if (player.eliminated) throw new Error("Eliminated players cannot submit clues");
 
+      const cleanText = sanitizeText(args.text);
+      if (!cleanText) throw new Error("Clue cannot be empty");
       const withoutCurrent = game.clues.filter((clue) => clue.sessionId !== args.sessionId);
-      const nextClues = [...withoutCurrent, { sessionId: args.sessionId, text: args.text.trim(), createdAt: now() }];
+      const nextClues = [...withoutCurrent, { sessionId: args.sessionId, text: cleanText, createdAt: now() }];
       const activePlayers = game.players.filter((p) => !p.eliminated);
       const allSubmitted = nextClues.length >= activePlayers.length;
 
@@ -256,7 +262,8 @@ export const imposterMutators = {
 
   submitVote: defineMutator(
     z.object({ gameId: z.string(), voterId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.voterId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.phase !== "voting") {
         throw new Error("Game is not in voting phase");
@@ -402,7 +409,8 @@ export const imposterMutators = {
 
   nextRound: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Not allowed");
 
@@ -487,7 +495,8 @@ export const imposterMutators = {
 
   resetToLobby: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Not allowed");
 
@@ -520,12 +529,15 @@ export const imposterMutators = {
 
   announce: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), text: z.string().min(1).max(120) }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can announce");
+      const cleanText = sanitizeText(args.text);
+      if (!cleanText) throw new Error("Announcement cannot be empty");
       await tx.mutate.imposter_games.update({
         id: game.id,
-        announcement: { text: args.text.trim(), ts: now() },
+        announcement: { text: cleanText, ts: now() },
         updated_at: now()
       });
     }
@@ -533,7 +545,8 @@ export const imposterMutators = {
 
   kick: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can kick");
       if (args.targetId === args.hostId) throw new Error("Cannot kick yourself");
@@ -559,7 +572,8 @@ export const imposterMutators = {
 
   endGame: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can end game");
 
@@ -594,7 +608,8 @@ export const imposterMutators = {
 
   joinAsSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
@@ -623,7 +638,8 @@ export const imposterMutators = {
 
   leaveSpectator: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game) return;
       await tx.mutate.imposter_games.update({
@@ -642,7 +658,8 @@ export const imposterMutators = {
 
   removeSpectator: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), targetId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can remove spectators");
       await tx.mutate.imposter_games.update({
@@ -662,7 +679,8 @@ export const imposterMutators = {
 
   voteSkipResults: defineMutator(
     z.object({ gameId: z.string(), sessionId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.sessionId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.phase !== "results") throw new Error("Not in results phase");
 
@@ -691,7 +709,8 @@ export const imposterMutators = {
 
   setPublic: defineMutator(
     z.object({ gameId: z.string(), hostId: z.string(), isPublic: z.boolean() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game || game.host_id !== args.hostId) throw new Error("Only host can change visibility");
       if (game.phase === "ended") throw new Error("Game has ended");

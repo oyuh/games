@@ -3,5 +3,6 @@
   "compilerOptions": {
     "rootDir": "."
   },
-  "include": ["src/**/*.ts", "drizzle.config.ts"]
+  "include": ["src/**/*.ts", "drizzle.config.ts"],
+  "exclude": ["src/__tests__/**"]
 }
