@@ -1,0 +1,1606 @@
+/* ── Home cards layout ───────────────────────────────────────── */
+.home-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  gap: 1.5rem;
+  width: 100%;
+  padding: 2rem 0;
+  min-height: calc(100vh - 6rem);
+}
+
+/* Break out of the .shell-main max-width constraint */
+.shell-main:has(.home-cards) {
+  max-width: 1100px;
+}
+
+.home-cards-dots {
+  display: none;
+  width: 100%;
+}
+
+.home-card {
+  width: 320px;
+  max-width: 340px;
+  height: 480px;
+  min-height: 480px;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
+  background: linear-gradient(to bottom right, #232323, #1a1a1a);
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* ── Icon pattern background for game cards ──────────────────── */
+.home-card--imposter::before,
+.home-card--password::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: 0;
+  opacity: 0.04;
+  filter: blur(2px);
+  pointer-events: none;
+  background-size: 48px 48px;
+  transform: rotate(-20deg);
+}
+
+.home-card--imposter::before {
+  /* eye icon pattern via SVG data URI */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%237eb8ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+}
+
+.home-card--password::before {
+  /* shield icon pattern via SVG data URI */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3C/svg%3E");
+}
+
+.home-card-body {
+  padding: 1.5rem;
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  row-gap: 0.35rem;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.home-card-body::-webkit-scrollbar {
+  display: none;
+}
+
+/* centered layout for game cards */
+.hc-centered {
+  align-items: center;
+  text-align: center;
+}
+
+/* ── Utils card ──────────────────────────────────────────────── */
+.home-card--utils {
+  background: linear-gradient(160deg, #1e2224 0%, #1a1a1a 100%);
+}
+
+/* ── Imposter card accent ────────────────────────────────────── */
+.home-card--imposter {
+  --card-accent: #7eb8ff;
+  background: linear-gradient(160deg, #1d2430 0%, #1a1a1a 100%);
+  border-color: color-mix(in srgb, #7eb8ff 18%, transparent);
+}
+.home-card--imposter:hover {
+  border-color: color-mix(in srgb, #7eb8ff 35%, transparent);
+}
+
+/* ── Password card accent ────────────────────────────────────── */
+.home-card--password {
+  --card-accent: #a78bfa;
+  background: linear-gradient(160deg, #21272e 0%, #1a1a1a 100%);
+  border-color: color-mix(in srgb, #a78bfa 18%, transparent);
+}
+.home-card--password:hover {
+  border-color: color-mix(in srgb, #a78bfa 35%, transparent);
+}
+
+/* ── Chain Reaction card accent ──────────────────────────────── */
+.home-card--chain {
+  --card-accent: #34d399;
+  background: linear-gradient(160deg, #1a2e26 0%, #1a1a1a 100%);
+  border-color: color-mix(in srgb, #34d399 18%, transparent);
+}
+.home-card--chain:hover {
+  border-color: color-mix(in srgb, #34d399 35%, transparent);
+}
+.home-card--chain::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: 0;
+  opacity: 0.04;
+  filter: blur(2px);
+  pointer-events: none;
+  background-size: 48px 48px;
+  transform: rotate(-20deg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%2334d399' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
+}
+
+/* ── Shade Signal card accent ────────────────────────────────── */
+.home-card--shade {
+  --card-accent: #f472b6;
+  background: linear-gradient(160deg, #2a1a2e 0%, #1a1a1a 100%);
+  border-color: color-mix(in srgb, #f472b6 18%, transparent);
+}
+.home-card--shade:hover {
+  border-color: color-mix(in srgb, #f472b6 35%, transparent);
+}
+.home-card--shade::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: 0;
+  opacity: 0.04;
+  filter: blur(2px);
+  pointer-events: none;
+  background-size: 48px 48px;
+  transform: rotate(-20deg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23f472b6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18.37 2.63a2.12 2.12 0 0 1 3 3L14 13l-4 1 1-4Z'/%3E%3Cpath d='M9 3.5a8 8 0 1 0 5.59 13.77'/%3E%3Cpath d='M14 13l1.07-1.07'/%3E%3C/svg%3E");
+}
+
+/* ── Location Signal card accent ────────────────────────────── */
+.home-card--location {
+  --card-accent: #f59e0b;
+  background: linear-gradient(160deg, #2e2418 0%, #1a1a1a 100%);
+  border-color: color-mix(in srgb, #f59e0b 18%, transparent);
+}
+.home-card--location:hover {
+  border-color: color-mix(in srgb, #f59e0b 35%, transparent);
+}
+.home-card--location::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: 0;
+  opacity: 0.04;
+  filter: blur(2px);
+  pointer-events: none;
+  background-size: 48px 48px;
+  transform: rotate(-20deg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23f59e0b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'/%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3C/svg%3E");
+}
+
+/* ── First-visit: glow on utils card ─────────────────────────── */
+.home-card--glow {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--primary) 14%, transparent),
+    0 0 32px color-mix(in srgb, var(--primary) 7%, transparent),
+    0 8px 36px rgba(0, 0, 0, 0.45);
+  animation: card-glow-pulse 3s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes card-glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 12px color-mix(in srgb, var(--primary) 14%, transparent),
+      0 0 32px color-mix(in srgb, var(--primary) 7%, transparent),
+      0 8px 36px rgba(0, 0, 0, 0.45);
+    border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 18px color-mix(in srgb, var(--primary) 22%, transparent),
+      0 0 44px color-mix(in srgb, var(--primary) 10%, transparent),
+      0 10px 40px rgba(0, 0, 0, 0.5);
+    border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  }
+}
+
+/* ── First-visit: dim other cards ────────────────────────────── */
+.home-card--dimmed {
+  opacity: 0.55;
+  filter: grayscale(0.3) brightness(0.85);
+  transition: opacity 0.4s, filter 0.4s;
+}
+
+/* ── Coming Soon badge ───────────────────────────────────────── */
+.hc-coming-soon-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  margin-bottom: 0.75rem;
+}
+
+/* ── First-visit hint banner ──────────────────────────────────── */
+.hc-first-visit-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  margin-bottom: 0.75rem;
+  animation: hint-fade-in 0.5s ease;
+}
+
+.hc-first-visit-hint-icon {
+  font-size: 1rem;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.hc-first-visit-hint p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-secondary, #b0b0b0);
+}
+
+@keyframes hint-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hc-coming-icon {
+  margin-bottom: 0.25rem;
+  opacity: 0.85;
+}
+
+.hc-coming-preview {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 80px; /* Ensures minimal space so grid renders properly */
+}
+
+/* ── Mini game board preview (Imposter / Password) ───────────── */
+.hc-mini-board {
+  border-radius: 0.6rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--secondary) 18%, transparent);
+  background: color-mix(in srgb, var(--secondary) 5%, transparent);
+}
+
+.hc-mini-board-header {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.hc-mini-board-header--imposter {
+  background: color-mix(in srgb, #7eb8ff 12%, transparent);
+  color: #7eb8ff;
+  border-bottom: 1px solid color-mix(in srgb, #7eb8ff 20%, transparent);
+}
+
+.hc-mini-board-header--password {
+  background: color-mix(in srgb, #a78bfa 12%, transparent);
+  color: #a78bfa;
+  border-bottom: 1px solid color-mix(in srgb, #a78bfa 20%, transparent);
+}
+
+.hc-mini-board-header--location {
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  color: #f59e0b;
+  border-bottom: 1px solid color-mix(in srgb, #f59e0b 20%, transparent);
+}
+
+.hc-mini-board-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hc-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.55rem;
+  background: color-mix(in srgb, var(--secondary) 3%, transparent);
+}
+
+.hc-mini-row--suspect {
+  background: color-mix(in srgb, #f87171 6%, transparent);
+}
+
+.hc-mini-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.hc-mini-avatar--imposter {
+  background: color-mix(in srgb, #7eb8ff 20%, transparent);
+  color: #7eb8ff;
+  border: 1px solid color-mix(in srgb, #7eb8ff 30%, transparent);
+}
+
+.hc-mini-avatar--suspect {
+  background: color-mix(in srgb, #f87171 20%, transparent);
+  color: #f87171;
+  border: 1px solid color-mix(in srgb, #f87171 30%, transparent);
+}
+
+.hc-mini-avatar--password {
+  background: color-mix(in srgb, #a78bfa 20%, transparent);
+  color: #a78bfa;
+  border: 1px solid color-mix(in srgb, #a78bfa 30%, transparent);
+}
+
+.hc-mini-avatar--location {
+  background: color-mix(in srgb, #f59e0b 20%, transparent);
+  color: #f59e0b;
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+}
+
+.hc-mini-clue {
+  font-size: 0.62rem;
+  color: var(--secondary);
+  flex: 1;
+  text-align: left;
+}
+
+.hc-mini-badge {
+  font-size: 0.52rem;
+  font-weight: 800;
+  padding: 0.08rem 0.3rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.hc-mini-badge--ok {
+  background: color-mix(in srgb, #4ade80 12%, transparent);
+  color: #4ade80;
+}
+
+.hc-mini-badge--caught {
+  background: color-mix(in srgb, #f87171 12%, transparent);
+  color: #f87171;
+}
+
+.hc-mini-badge--correct {
+  background: color-mix(in srgb, #4ade80 15%, transparent);
+  color: #4ade80;
+  border: 1px solid color-mix(in srgb, #4ade80 25%, transparent);
+}
+
+.hc-mini-row--location-hit {
+  background: color-mix(in srgb, #4ade80 6%, transparent);
+}
+
+/* ── Password team-vs preview ────────────────────────────────── */
+.hc-pw-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.hc-pw-teams {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.hc-pw-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: 0.5rem;
+  min-width: 76px;
+}
+
+.hc-pw-team--red {
+  background: color-mix(in srgb, #f87171 10%, transparent);
+  border: 1px solid color-mix(in srgb, #f87171 25%, transparent);
+}
+
+.hc-pw-team--blue {
+  background: color-mix(in srgb, #60a5fa 10%, transparent);
+  border: 1px solid color-mix(in srgb, #60a5fa 25%, transparent);
+}
+
+.hc-pw-team-name {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hc-pw-team--red .hc-pw-team-name { color: #f87171; }
+.hc-pw-team--blue .hc-pw-team-name { color: #60a5fa; }
+
+.hc-pw-team-score {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.hc-pw-vs {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.hc-pw-word {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--muted-foreground);
+  padding: 0.25rem 0.7rem;
+  border-radius: 0.35rem;
+  border: 1px dashed color-mix(in srgb, #a78bfa 30%, transparent);
+  background: color-mix(in srgb, #a78bfa 6%, transparent);
+}
+
+.hc-pw-flow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.hc-pw-flow-clue {
+  color: var(--secondary);
+  font-style: italic;
+}
+
+.hc-pw-flow-arrow {
+  color: var(--muted-foreground);
+  opacity: 0.5;
+}
+
+.hc-pw-flow-guess {
+  color: #a78bfa;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.hc-pw-flow-result {
+  color: #4ade80;
+  font-weight: 800;
+}
+
+/* ── Location map preview ────────────────────────────────────── */
+.hc-loc-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hc-loc-map {
+  position: relative;
+  width: 100%;
+  max-width: 230px;
+  aspect-ratio: 1.6;
+  border-radius: 0.6rem;
+  border: 1px solid color-mix(in srgb, #f59e0b 20%, transparent);
+  overflow: hidden;
+  /* ocean base */
+  background-color: color-mix(in srgb, #1e3a5f 15%, var(--card-bg, #1a1a2e));
+  /* stylized continent blobs */
+  background-image:
+    /* North America */
+    radial-gradient(ellipse 28% 30% at 22% 32%, color-mix(in srgb, #22c55e 14%, transparent) 0%, transparent 100%),
+    /* South America */
+    radial-gradient(ellipse 14% 28% at 30% 68%, color-mix(in srgb, #22c55e 12%, transparent) 0%, transparent 100%),
+    /* Europe */
+    radial-gradient(ellipse 16% 16% at 50% 26%, color-mix(in srgb, #a3e635 12%, transparent) 0%, transparent 100%),
+    /* Africa */
+    radial-gradient(ellipse 18% 30% at 52% 56%, color-mix(in srgb, #f59e0b 10%, transparent) 0%, transparent 100%),
+    /* Asia */
+    radial-gradient(ellipse 32% 26% at 70% 30%, color-mix(in srgb, #22c55e 12%, transparent) 0%, transparent 100%),
+    /* Australia */
+    radial-gradient(ellipse 14% 14% at 82% 68%, color-mix(in srgb, #f59e0b 12%, transparent) 0%, transparent 100%),
+    /* subtle grid lines */
+    repeating-linear-gradient(0deg, transparent, transparent 24%, color-mix(in srgb, #60a5fa 5%, transparent) 24%, color-mix(in srgb, #60a5fa 5%, transparent) 25%),
+    repeating-linear-gradient(90deg, transparent, transparent 19%, color-mix(in srgb, #60a5fa 5%, transparent) 19%, color-mix(in srgb, #60a5fa 5%, transparent) 20%);
+}
+
+.hc-loc-pin {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.hc-loc-pin--target {
+  width: 10px;
+  height: 10px;
+  background: #f59e0b;
+  box-shadow: 0 0 8px color-mix(in srgb, #f59e0b 60%, transparent), 0 0 16px color-mix(in srgb, #f59e0b 30%, transparent);
+  border: 2px solid color-mix(in srgb, #f59e0b 80%, transparent);
+}
+
+.hc-loc-pin--guess {
+  width: 6px;
+  height: 6px;
+  background: color-mix(in srgb, #7ecbff 70%, transparent);
+  border: 1px solid #7ecbff;
+}
+
+.hc-loc-pin--close {
+  width: 6px;
+  height: 6px;
+  background: color-mix(in srgb, #4ade80 70%, transparent);
+  border: 1px solid #4ade80;
+}
+
+.hc-loc-clue-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hc-loc-clue-tag {
+  font-size: 0.52rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #f59e0b;
+  padding: 0.12rem 0.35rem;
+  border-radius: 3px;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+}
+
+.hc-loc-clue-text {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--secondary);
+  font-style: italic;
+}
+
+/* ── Chain word example ──────────────────────────────────────── */
+.hc-chain-example {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.hc-chain-word {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.35rem;
+  width: 100%;
+  max-width: 170px;
+  text-align: center;
+}
+
+.hc-chain-word--revealed {
+  background: color-mix(in srgb, #34d399 15%, transparent);
+  color: #34d399;
+  border: 1px solid color-mix(in srgb, #34d399 30%, transparent);
+}
+
+.hc-chain-word--hidden {
+  background: color-mix(in srgb, var(--secondary) 8%, transparent);
+  color: var(--muted-foreground);
+  border: 1px dashed color-mix(in srgb, var(--secondary) 25%, transparent);
+  font-family: monospace;
+}
+
+
+/* smaller game description variant */
+.hc-game-desc--sm {
+  font-size: 0.72rem;
+  margin-bottom: -0.15rem;
+}
+
+/* ── Shade grid preview ──────────────────────────────────────── */
+.hc-shade-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  max-width: 220px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.hc-shade-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  opacity: 0.75;
+  transition: opacity 0.2s;
+}
+
+.home-card--shade:hover .hc-shade-cell {
+  opacity: 1;
+}
+
+/* ── Inner sections ──────────────────────────────────────────── */
+.hc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hc-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hc-sublabel {
+  font-size: 0.78rem;
+  color: var(--secondary);
+}
+
+/* ── Inline-editable name display ────────────────────────────── */
+.hc-name-display {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font: inherit;
+  color: var(--foreground);
+  font-size: 0.88rem;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  width: 100%;
+}
+.hc-name-display:hover {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  transform: translateY(-1px);
+}
+.hc-name-display:active {
+  transform: translateY(0);
+}
+.hc-name-inline-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--primary);
+  flex: 1;
+  text-align: left;
+  padding: 0;
+  width: 100%;
+}
+.hc-name-inline-input::placeholder {
+  font-weight: 400;
+  color: color-mix(in srgb, var(--primary) 50%, transparent);
+}
+.hc-name-edit-icon {
+  color: var(--primary);
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.hc-name-display:focus-within .hc-name-edit-icon,
+.hc-name-display:hover .hc-name-edit-icon {
+  opacity: 1;
+}
+
+.hc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hc-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.75rem 0;
+}
+
+.hc-error {
+  font-size: 0.78rem;
+  color: #f87171;
+  margin-top: 0.2rem;
+}
+
+.hc-text-btn {
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--secondary);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.hc-text-btn:hover {
+  opacity: 1;
+}
+
+/* ── Join input styles ───────────────────────────────────────── */
+.hc-join-input {
+  text-align: center;
+  letter-spacing: 0.45em;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.hc-join-input::placeholder {
+  letter-spacing: 0.15em;
+  font-weight: 500;
+  font-size: 0.88rem;
+}
+
+/* ── Join input ready state (button-like) ────────────────────── */
+.hc-join-input--ready {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+  cursor: pointer;
+  font-weight: 800;
+  border-radius: var(--radius);
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 25%, transparent);
+  outline: none;
+}
+
+.hc-join-input--ready:hover {
+  background: color-mix(in srgb, var(--primary) 85%, #fff);
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.hc-join-input--ready::placeholder {
+  color: transparent;
+}
+
+/* ── Recent games ────────────────────────────────────────────── */
+.hc-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hc-recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+.hc-recent-item:hover {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.hc-recent-type {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+.hc-recent-code {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--primary);
+}
+
+/* Deleted games — greyed out, no pointer */
+.hc-recent-item--deleted {
+  opacity: 0.4;
+  pointer-events: none;
+  border-color: var(--border);
+  background: var(--muted);
+}
+.hc-recent-item--deleted .hc-recent-code {
+  color: var(--secondary);
+}
+
+/* Ended games — subtle dim + tooltip cursor */
+.hc-recent-item--ended {
+  border-color: color-mix(in srgb, var(--secondary) 20%, transparent);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.hc-recent-item--ended .hc-recent-code {
+  color: var(--muted-foreground);
+}
+
+/* Phase / status badge */
+.hc-recent-badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.hc-recent-badge--ended {
+  background: color-mix(in srgb, var(--secondary) 15%, transparent);
+  color: var(--secondary);
+}
+.hc-recent-badge--deleted {
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+  color: var(--destructive);
+}
+
+/* ── Game card header ────────────────────────────────────────── */
+.hc-game-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.hc-game-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.hc-game-icon--imposter {
+  background: color-mix(in srgb, #7eb8ff 15%, transparent);
+  color: #7eb8ff;
+  border: 1px solid color-mix(in srgb, #7eb8ff 25%, transparent);
+}
+
+.hc-game-icon--password {
+  background: color-mix(in srgb, #a78bfa 15%, transparent);
+  color: #a78bfa;
+  border: 1px solid color-mix(in srgb, #a78bfa 25%, transparent);
+}
+
+.hc-game-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--foreground);
+}
+
+.hc-game-title-lg {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--foreground);
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.hc-game-title-lg--compact {
+  font-size: 1.1rem;
+  margin-top: 0;
+  margin-bottom: -0.15rem;
+}
+
+.hc-game-sub {
+  font-size: 0.78rem;
+  color: var(--secondary);
+  margin-top: 0.1rem;
+}
+
+.hc-game-desc {
+  font-size: 0.82rem;
+  color: var(--secondary);
+  margin-top: -0.1rem;
+  margin-bottom: 0;
+  width: 100%;
+  max-width: 24ch;
+  margin-inline: auto;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.hc-empty-text {
+  font-size: 0.78rem;
+  color: var(--secondary);
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* ── Collapsible section toggle ──────────────────────────────── */
+.hc-collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.hc-collapse-icon {
+  color: var(--muted-foreground);
+  transition: transform 0.2s ease;
+  opacity: 0.6;
+}
+
+.hc-collapse-icon--open {
+  transform: rotate(180deg);
+}
+
+/* ── Config area (expandable) ────────────────────────────────── */
+.hc-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.hc-config-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.hc-config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.hc-config-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--card-accent, var(--muted-foreground)) 70%, var(--muted-foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-config-label[data-tooltip] {
+  cursor: help;
+  text-decoration: underline dotted color-mix(in srgb, var(--muted-foreground) 40%, transparent);
+  text-underline-offset: 2px;
+}
+
+/* Compact selects inside card config */
+.hc-config .input {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.88rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+  color: var(--card-accent, var(--primary));
+}
+.hc-config .input:hover {
+  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 45%, transparent);
+}
+.hc-config .input:focus {
+  border-color: var(--card-accent, var(--primary));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--card-accent, var(--primary)) 15%, transparent);
+}
+
+/* Styled checkbox row for config toggles */
+.hc-config-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--secondary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 14%, transparent);
+  transition: background 0.15s, border-color 0.15s;
+}
+.hc-config-check:hover {
+  background: color-mix(in srgb, var(--secondary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--secondary) 25%, transparent);
+}
+.hc-config-check input[type="checkbox"] {
+  accent-color: var(--card-accent, var(--primary));
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* Live summary panel beneath config */
+
+.hc-summary {
+  margin: 0;
+  padding: 0 0.25rem 0.35rem;
+}
+
+.hc-summary-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.hc-summary-pill-value {
+  line-height: 1.1;
+}
+
+/* ── Game card actions ───────────────────────────────────────── */
+.hc-game-actions {
+  margin-top: auto;
+  padding-top: 0.65rem;
+}
+
+/* Theme-colored primary buttons inside game cards */
+.home-card .btn-primary {
+  background: var(--card-accent, var(--primary));
+  color: #111;
+}
+.home-card .btn-primary:hover {
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 85%, #fff);
+}
+.home-card .btn-primary:disabled {
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 40%, transparent);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+@keyframes hc-go-button-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--card-accent, var(--primary)) 20%, transparent);
+  }
+  35% {
+    transform: scale(1.045);
+    box-shadow: 0 16px 34px color-mix(in srgb, var(--card-accent, var(--primary)) 34%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--card-accent, var(--primary)) 22%, transparent);
+  }
+}
+
+@keyframes hc-go-button-core {
+  0% {
+    opacity: 0.18;
+    transform: scale(0.6);
+  }
+  55% {
+    opacity: 0.5;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 0.2;
+    transform: scale(1.45);
+  }
+}
+
+.hc-go-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transform: translateZ(0) scale(1);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--card-accent, var(--primary)) 20%, transparent);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, filter 0.22s ease, background 0.18s ease;
+}
+
+.hc-go-btn::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  opacity: 0;
+  transform: scale(0.55);
+  background: radial-gradient(circle, color-mix(in srgb, #fff 30%, var(--card-accent, var(--primary)) 70%) 0%, transparent 62%);
+  transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hc-go-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 18%, rgba(255, 255, 255, 0.08) 34%, rgba(255, 255, 255, 0.28) 49%, rgba(255, 255, 255, 0.08) 64%, transparent 82%);
+  transform: translateX(-135%) skewX(-18deg);
+  opacity: 0;
+  transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+}
+
+.hc-go-btn:hover:not(:disabled) {
+  transform: translateZ(0) scale(1.035);
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--card-accent, var(--primary)) 30%, transparent);
+  filter: saturate(1.08);
+}
+
+.hc-go-btn:hover:not(:disabled)::before {
+  opacity: 0.4;
+  transform: scale(1);
+}
+
+.hc-go-btn:hover:not(:disabled)::after {
+  opacity: 1;
+  transform: translateX(135%) skewX(-18deg);
+}
+
+.hc-go-btn:active:not(:disabled) {
+  transform: translateZ(0) scale(0.985);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--card-accent, var(--primary)) 20%, transparent);
+}
+
+.hc-go-btn[data-creating="true"] {
+  animation: hc-go-button-pulse 0.72s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.hc-go-btn[data-creating="true"]::before {
+  opacity: 0.48;
+  transform: scale(1);
+  animation: hc-go-button-core 0.88s ease-out infinite;
+}
+
+.hc-go-btn[data-creating="true"]::after {
+  opacity: 1;
+  transform: translateX(135%) skewX(-18deg);
+}
+
+/* ? help button */
+.hc-help-btn {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--card-accent, var(--secondary));
+  opacity: 0.5;
+  border-radius: 8px;
+}
+.hc-help-btn:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 12%, transparent);
+  color: var(--card-accent, var(--secondary));
+}
+
+/* ── Centered card: config stretch ───────────────────────────── */
+.hc-centered .hc-config {
+  width: 100%;
+}
+
+.hc-centered .hc-game-actions {
+  width: 100%;
+}
+
+/* ── Demo game grid (dev only) ───────────────────────────────── */
+.hc-demo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.hc-demo-btn {
+  font-size: 0.7rem !important;
+  padding: 0.35rem 0.5rem !important;
+}
+
+/* ── Mobile: horizontal snap scroll ──────────────────────────── */
+@media (max-width: 768px) {
+  .home-cards {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    gap: 0;
+    padding: 0;
+    min-height: calc(100vh - 8rem);
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .home-card {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 100%;
+    max-width: none;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    height: auto;
+    min-height: 100%;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .home-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 1.5rem;
+  }
+
+  .hc-game-actions {
+    margin-top: auto;
+    padding-top: 1rem;
+  }
+
+  .home-cards-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0 0.5rem;
+  }
+
+  .home-cards-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--secondary);
+    opacity: 0.35;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s, background 0.2s;
+  }
+
+  /* hide scrollbar */
+  .home-cards::-webkit-scrollbar {
+    display: none;
+  }
+  .home-cards {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GAME PAGES
+   ═══════════════════════════════════════════════════════════════ */
+
+.game-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  max-width: 56rem;
+  margin: auto;
+  width: 100%;
+  font-size: 1.12rem;
+}
+
+/* Scale up game page elements (~25%) */
+.game-page .btn {
+  padding: 0.8rem 1.6rem;
+  font-size: 1.1rem;
+}
+
+.game-page .input {
+  padding: 0.85rem 1.1rem;
+  font-size: 1.1rem;
+}
+
+.game-page .game-title {
+  font-size: 1.8rem;
+}
+
+.game-page .game-code-btn {
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem;
+}
+
+.game-page .game-section-label {
+  font-size: 0.95rem;
+}
+
+.game-page .game-section-count {
+  font-size: 0.82rem;
+  min-width: 24px;
+  height: 24px;
+}
+
+.game-page .game-player-chip {
+  padding: 0.6rem 1rem;
+  gap: 0.7rem;
+}
+
+.game-page .game-player-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 0.95rem;
+}
+
+.game-page .game-player-name {
+  font-size: 1.05rem;
+}
+
+.game-page .game-player-you {
+  font-size: 0.78rem;
+}
+
+.game-page .badge {
+  font-size: 0.88rem;
+  padding: 0.25rem 0.8rem;
+}
+
+.game-page .game-header-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.game-page .game-header-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ── Globe Browse Buttons ──────────────────────────────── */
+/* ── Globe Browse Button (desktop cards) ────────────────── */
+.hc-browse-globe {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--card-accent, var(--secondary));
+  opacity: 0.5;
+  border-radius: 8px;
+}
+.hc-browse-globe:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 12%, transparent);
+  color: var(--card-accent, var(--secondary));
+}
+.hc-browse-globe {
+  position: relative;
+}
+.hc-globe-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--card-accent, var(--primary));
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+  transition: top 0.15s ease, right 0.15s ease;
+}
+.hc-browse-globe:hover .hc-globe-badge,
+.m-browse-globe:hover .hc-globe-badge {
+  top: -5px;
+  right: -5px;
+}
+.hc-globe-empty {
+  color: var(--muted-foreground);
+  opacity: 0.35;
+}
+.hc-globe-empty:hover {
+  color: var(--muted-foreground);
+  opacity: 0.6;
+  background: color-mix(in srgb, var(--muted-foreground) 8%, transparent);
+}
+
+/* ── Globe Browse Button (mobile cards) ─────────────────── */
+.m-browse-globe {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--card-accent, var(--secondary));
+  opacity: 0.5;
+  border-radius: 8px;
+}
+.m-browse-globe:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 12%, transparent);
+  color: var(--card-accent, var(--secondary));
+}
+.m-browse-globe {
+  position: relative;
+}
+.m-globe-empty {
+  color: var(--muted-foreground);
+  opacity: 0.35;
+}
+.m-globe-empty:hover {
+  color: var(--muted-foreground);
+  opacity: 0.6;
+  background: color-mix(in srgb, var(--muted-foreground) 8%, transparent);
+}
+
+
+/* ── Card content enter animation + Public Games list ──── */
+/* ── Card content enter animation ──────────────────────── */
+@keyframes hc-card-content-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hc-card-anim {
+  animation: hc-card-content-in 0.2s ease-out;
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Only center + expand when showing the config form */
+.hc-card-anim:has(> .hc-config) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 0;
+}
+
+/* ── Public Games Inline List (per-card browse) ─────────── */
+.pgb-inline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+  width: 100%;
+}
+
+.pgb-inline-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.pgb-inline-card:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--primary);
+}
+.pgb-inline-card:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pgb-inline-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pgb-inline-phase {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.3rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted-foreground);
+}
+.pgb-inline-phase--lobby {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+}
+
+.pgb-inline-players {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.pgb-inline-host {
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+.pgb-inline-action {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: 0.1rem;
+}
+
+.pgb-empty-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 0.5rem;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+/* Ensure browse list fills width in centered card layout */
+.hc-centered .pgb-inline-list,
+.hc-centered .pgb-empty-inline {
+  align-self: stretch;
+}

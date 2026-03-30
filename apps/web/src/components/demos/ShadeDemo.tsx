@@ -3,6 +3,8 @@ import { FiSend } from "react-icons/fi";
 import { PiPaintBrushBold } from "react-icons/pi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { ColorGrid, generateGridColor } from "../shade/ColorGrid";
+import "../../styles/game-shared.css";
+import "../../styles/shade-signal.css";
 
 /* ── Fake data ──────────────────────────────────────────── */
 

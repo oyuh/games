@@ -1,5 +1,6 @@
 import { isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
+import "../styles/game-shared.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiHelpCircle } from "react-icons/fi";

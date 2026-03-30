@@ -1,0 +1,725 @@
+/* ─── Modal ─────────────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  animation: modal-fade-in 0.18s ease-out;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-panel {
+  width: 92vw;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  animation: modal-scale-in 0.2s ease-out;
+}
+
+.modal-panel--wide {
+  max-width: 520px;
+}
+
+@keyframes modal-scale-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.modal-close:hover {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.modal-body {
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+/* ─── Demo / How to Play Modal ──────────────────────────── */
+
+.demo-modal-panel {
+  max-width: 820px;
+  width: 96vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.demo-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.demo-modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.demo-modal-icon {
+  display: flex;
+}
+
+.demo-modal-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Step bar */
+.demo-step-bar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.demo-step-dot {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.demo-step-dot:hover {
+  border-color: var(--primary);
+  color: var(--foreground);
+}
+
+.demo-step-dot--active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.demo-step-dot--done {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.demo-step-num {
+  font-weight: 700;
+  font-size: 0.65rem;
+}
+
+.demo-step-name {
+  font-weight: 500;
+}
+
+/* Phase description */
+.demo-step-info {
+  padding: 0.75rem 1.25rem;
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+
+.demo-step-label {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--foreground);
+  border-left: 3px solid;
+  padding-left: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.demo-step-desc {
+  font-size: 0.78rem;
+  color: var(--secondary);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.demo-step-hint {
+  font-size: 0.72rem;
+  color: var(--primary);
+  margin: 0.35rem 0 0;
+  opacity: 0.9;
+}
+
+/* Game content area */
+.demo-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+}
+
+.demo-modal-body .game-page {
+  padding: 0;
+  min-height: auto;
+  background: transparent;
+}
+
+.demo-modal-body .game-header {
+  position: static;
+}
+
+/* Navigation bar */
+.demo-modal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+  gap: 0.75rem;
+}
+
+.demo-nav-btn {
+  font-size: 0.78rem;
+  gap: 0.25rem;
+}
+
+.demo-nav-counter {
+  font-size: 0.72rem;
+  color: var(--secondary);
+  font-weight: 500;
+}
+
+/* Glow highlight */
+.demo-glow {
+  position: relative;
+  border-radius: 0.75rem;
+  animation: demo-glow-pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+@keyframes demo-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent), 0 0 12px 2px color-mix(in srgb, var(--primary) 10%, transparent); }
+  50% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 50%, transparent), 0 0 20px 4px color-mix(in srgb, var(--primary) 20%, transparent); }
+}
+
+.demo-glow-label {
+  position: absolute;
+  top: -0.6rem;
+  left: 0.75rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--card);
+  padding: 0 0.4rem;
+  border-radius: 3px;
+  z-index: 1;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* "How to Play" trigger button */
+.demo-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.demo-trigger-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+/* Chain demo scoring info */
+.demo-scoring-info {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--secondary);
+}
+
+.demo-scoring-info strong {
+  display: block;
+  color: var(--foreground);
+  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+}
+
+.demo-scoring-grid {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.15rem 0.75rem;
+}
+
+/* ─── Options Modal ─────────────────────────────────────── */
+
+.option-group {
+  margin-bottom: 1.25rem;
+}
+
+.option-group:last-child {
+  margin-bottom: 0;
+}
+
+.option-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.6rem;
+}
+
+.option-toggle-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.option-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.option-toggle-btn:hover {
+  border-color: var(--primary);
+  color: var(--foreground);
+}
+
+.option-toggle-btn--active {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ─── Info Modal ────────────────────────────────────────── */
+
+.info-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.info-hero-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.info-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.info-hero-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.info-hero-sub {
+  font-size: 0.78rem;
+  color: var(--secondary);
+}
+
+.info-block {
+  margin-bottom: 1.25rem;
+}
+
+.info-block:last-child {
+  margin-bottom: 0;
+}
+
+.info-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.6rem;
+}
+
+.info-heading-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.info-text {
+  font-size: 0.88rem;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
+.info-meta {
+  font-size: 0.78rem;
+  color: var(--secondary);
+  margin-top: 0.35rem;
+}
+
+.info-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.1rem 0;
+}
+
+.info-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.info-tip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.84rem;
+  color: var(--muted-foreground);
+  line-height: 1.45;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.info-tip-icon {
+  flex-shrink: 0;
+  color: var(--primary);
+  font-size: 0.7rem;
+}
+
+/* ─── Info Session ID ───────────────────────────────────── */
+
+.info-session-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+}
+
+.info-session-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+.info-session-id {
+  font-family: "Geist Mono", monospace;
+  font-size: 0.75rem;
+  color: var(--foreground);
+  user-select: all;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.info-session-copy {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--secondary);
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.info-session-copy:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* ─── Welcome Modal ─────────────────────────────────────── */
+
+.welcome-panel {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem 1.75rem 1.25rem;
+  position: relative;
+}
+
+.welcome-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  background: none;
+  border: none;
+  color: var(--secondary);
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.welcome-close:hover {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.welcome-hero {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.welcome-icon {
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.welcome-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.welcome-subtitle {
+  font-size: 0.82rem;
+  color: var(--secondary);
+  line-height: 1.55;
+  margin-top: 0.25rem;
+}
+
+.welcome-games {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.welcome-game {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.welcome-game--imposter {
+  background: color-mix(in srgb, #7eb8ff 8%, var(--muted));
+  border-color: color-mix(in srgb, #7eb8ff 15%, transparent);
+}
+.welcome-game--password {
+  background: color-mix(in srgb, #a78bfa 8%, var(--muted));
+  border-color: color-mix(in srgb, #a78bfa 15%, transparent);
+}
+.welcome-game--chain {
+  background: color-mix(in srgb, #34d399 8%, var(--muted));
+  border-color: color-mix(in srgb, #34d399 15%, transparent);
+}
+.welcome-game--shade {
+  background: color-mix(in srgb, #f472b6 8%, var(--muted));
+  border-color: color-mix(in srgb, #f472b6 15%, transparent);
+}
+
+.welcome-game-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.welcome-game-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.welcome-game-name {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.welcome-game-soon {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #f472b6 15%, transparent);
+  color: #f472b6;
+}
+
+.welcome-game-desc {
+  font-size: 0.72rem;
+  color: var(--secondary);
+  line-height: 1.4;
+}
+
+.welcome-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.welcome-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.welcome-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.welcome-input {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.welcome-input:focus {
+  border-color: var(--primary);
+}
+
+.welcome-go {
+  padding: 0.55rem 1.1rem;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+
+.welcome-go:hover {
+  opacity: 0.85;
+}
+
+.welcome-skip {
+  background: none;
+  border: none;
+  color: var(--secondary);
+  font-size: 0.76rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.welcome-skip:hover {
+  color: var(--foreground);
+}
+
+.welcome-footer {
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--secondary);
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.welcome-heart {
+  font-size: 0.72rem;
+}
+

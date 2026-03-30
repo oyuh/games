@@ -4,6 +4,8 @@ import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { BorringAvatar } from "../shared/BorringAvatar";
 import { PasswordHeader } from "../password/PasswordHeader";
 import { WorldMap, type MapMarker } from "../location/WorldMap";
+import "../../styles/game-shared.css";
+import "../../styles/location-signal.css";
 
 /* ── Fake data ──────────────────────────────────────────── */
 

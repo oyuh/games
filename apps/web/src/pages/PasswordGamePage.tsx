@@ -1,5 +1,7 @@
 import { decryptSecret, isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
+import "../styles/game-shared.css";
+import "../styles/password.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { PasswordActiveRound } from "../components/password/PasswordActiveRound";

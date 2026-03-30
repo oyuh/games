@@ -1,0 +1,434 @@
+/* ─── Host Controls ─────────────────────────────────────── */
+
+.sidebar-host-icon {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.3));
+}
+
+.sidebar-chat-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sidebar-chat-badge {
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.675rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: #fff;
+  background: var(--destructive);
+  pointer-events: none;
+}
+
+.host-section {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.host-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.host-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 0.25rem;
+}
+
+.host-section-desc {
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.host-section--danger .host-section-title {
+  color: var(--destructive);
+}
+
+.host-announce-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.host-announce-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.host-announce-btn {
+  flex-shrink: 0;
+  padding: 0.5rem 0.75rem;
+}
+
+.host-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.host-player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.65rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.host-player-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.host-empty-text {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.host-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.host-confirm-text {
+  font-size: 0.75rem;
+  color: var(--destructive);
+  font-weight: 500;
+}
+
+.btn-danger {
+  background: var(--destructive);
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-danger:hover {
+  opacity: 0.85;
+}
+
+.btn-sm {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.55rem;
+}
+
+/* ─── Chat Window (In-game IRC) ─────────────────────────── */
+
+.chat-window {
+  position: fixed;
+  z-index: 850;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  animation: chat-pop-in 0.2s ease-out;
+}
+
+.chat-window--minimized {
+  height: auto !important;
+}
+
+@keyframes chat-pop-in {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.chat-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  border-bottom: 1px solid var(--border);
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.chat-titlebar:active {
+  cursor: grabbing;
+}
+
+.chat-titlebar-text {
+  flex: 1;
+}
+
+.chat-titlebar-count {
+  font-size: 0.65rem;
+  color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--secondary) 15%, transparent);
+  padding: 0.1rem 0.4rem;
+  border-radius: 99px;
+}
+
+.chat-titlebar-actions {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.chat-titlebar-actions button {
+  background: none;
+  border: none;
+  color: var(--secondary);
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s, background 0.12s;
+}
+
+.chat-titlebar-actions button:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--secondary) 15%, transparent);
+}
+
+/* Chat channel tabs (imposter private chat) */
+.chat-channel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.chat-channel-tab {
+  flex: 1;
+  padding: 0.4rem 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.chat-channel-tab:hover {
+  color: var(--foreground);
+}
+.chat-channel-tab--active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-height: 0;
+}
+
+.chat-empty {
+  text-align: center;
+  color: var(--secondary);
+  font-size: 0.78rem;
+  margin: auto;
+  padding: 2rem 0;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.5rem;
+  transition: background 0.1s;
+}
+
+.chat-msg:hover {
+  background: color-mix(in srgb, var(--secondary) 6%, transparent);
+}
+
+.chat-msg--me {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
+.chat-msg--me:hover {
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+}
+
+.chat-msg--grouped {
+  padding-top: 0;
+}
+
+.chat-msg-header {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.chat-msg-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+
+.chat-msg-name--me {
+  color: var(--primary);
+}
+
+.chat-msg-text {
+  font-size: 0.82rem;
+  color: var(--foreground);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.chat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 99px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: color-mix(in srgb, var(--secondary) 12%, transparent);
+  color: var(--muted-foreground);
+}
+
+.chat-badge--host {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.chat-badge--you {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+.chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.chat-input {
+  flex: 1;
+  min-width: 0;
+  background: color-mix(in srgb, var(--secondary) 8%, transparent);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.chat-input::placeholder {
+  color: var(--secondary);
+}
+
+.chat-input:focus {
+  border-color: var(--primary);
+}
+
+.chat-send-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+
+.chat-send-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.chat-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, color-mix(in srgb, var(--secondary) 30%, transparent) 50%);
+  border-radius: 0 0 0.85rem 0;
+}
+
+/* Light theme overrides */
+[data-theme="light"] .chat-window {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile: full-width chat */
+@media (max-width: 768px) {
+  .chat-window {
+    left: 0.5rem !important;
+    right: 0.5rem;
+    bottom: 4rem;
+    top: auto !important;
+    width: auto !important;
+    max-height: 50vh;
+  }
+
+  .chat-resize-handle {
+    display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHAIN REACTION GAME — 1v1 DUEL UI
+   ═══════════════════════════════════════════════════════ */
+
+
+/* ── Host Visibility Toggle ──────────────────────────── */
+/* ── Host Visibility Toggle ─────────────────────────────── */
+.host-visibility-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ── Globe Browse Button (desktop cards) ────────────────── */

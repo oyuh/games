@@ -1,0 +1,200 @@
+/* ── Utility classes ─────────────────────────────────────────── */
+.bg-main   { background: var(--bg); }
+.text-main { color: var(--text); }
+.text-primary   { color: var(--primary); }
+.text-secondary { color: var(--secondary); }
+.bg-card   { background: var(--card); }
+.border-primary   { border-color: var(--primary); }
+.border-secondary { border-color: var(--secondary); }
+
+/* ── Button base ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  border: none;
+  outline: none;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 85%, white);
+}
+.btn-ghost {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.btn-muted {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+}
+.btn-muted:hover:not(:disabled) {
+  background: var(--accent);
+}
+.btn:disabled {
+  background: var(--muted);
+  color: var(--secondary);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* ── Input base ──────────────────────────────────────────────── */
+.input {
+  width: 100%;
+  background: var(--card);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem 0.875rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s, outline 0.15s;
+}
+.input::placeholder {
+  color: var(--secondary);
+}
+.input:focus {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  outline-offset: 0;
+}
+
+/* ── Card base ───────────────────────────────────────────────── */
+.card {
+  background: linear-gradient(to bottom right, #232323, #181a1b);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Inner panel (sections inside cards) ────────────────────── */
+.panel {
+  background: color-mix(in srgb, var(--secondary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 30%, transparent);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+/* ── Badge ───────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.badge-muted {
+  background: color-mix(in srgb, var(--muted-foreground) 15%, transparent);
+  color: var(--muted-foreground);
+  border-color: color-mix(in srgb, var(--muted-foreground) 25%, transparent);
+}
+.badge-warn {
+  background: color-mix(in srgb, #f59e0b 20%, transparent);
+  color: #fbbf24;
+  border-color: color-mix(in srgb, #f59e0b 30%, transparent);
+}
+.badge-danger {
+  background: color-mix(in srgb, var(--destructive) 20%, transparent);
+  color: #f87171;
+  border-color: color-mix(in srgb, var(--destructive) 30%, transparent);
+}
+.badge-success {
+  background: color-mix(in srgb, #22c55e 20%, transparent);
+  color: #4ade80;
+  border-color: color-mix(in srgb, #22c55e 30%, transparent);
+}
+.badge-category {
+  background: color-mix(in srgb, #8b5cf6 15%, transparent);
+  color: #a78bfa;
+  border-color: color-mix(in srgb, #8b5cf6 25%, transparent);
+  gap: 0.3rem;
+  font-weight: 500;
+}
+
+/* ── Social link row ─────────────────────────────────────────── */
+.social-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  color: var(--primary);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.social-link:hover {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* ── Gradient heading animation ──────────────────────────────── */
+@keyframes gradient-sweep {
+  0%   { background-position: 0% center; }
+  100% { background-position: 400% center; }
+}
+.gradient-heading {
+  background: linear-gradient(to right, var(--primary), color-mix(in srgb, var(--primary) 55%, #fff), var(--primary));
+  background-size: 400% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: gradient-sweep 4s linear infinite;
+}
+
+/* ── Table ───────────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.data-table th {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+.data-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+}
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+.data-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
