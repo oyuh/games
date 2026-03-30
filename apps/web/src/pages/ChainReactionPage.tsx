@@ -1,5 +1,7 @@
 import { mutators, queries, chainCategoryLabels } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
+import "../styles/game-shared.css";
+import "../styles/chain-reaction.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiEye, FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle } from "react-icons/fi";
@@ -42,6 +44,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const [viewingId, setViewingId] = useState<string>(sessionId);
   // Give-up confirmation: index of slot awaiting second press
   const [giveUpConfirm, setGiveUpConfirm] = useState<number | null>(null);
+  const [flashSlot, setFlashSlot] = useState<{ idx: number; type: "correct" | "wrong" } | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
 
@@ -199,8 +202,14 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
     const idx = editingIndex;
     const currentGuess = guess.trim();
+    const slot = myChain[idx];
     setGuess("");
     setEditingIndex(null);
+
+    // Determine correct/wrong locally for flash animation
+    const isCorrect = slot && currentGuess.toLowerCase().trim() === slot.word.toLowerCase().trim();
+    setFlashSlot({ idx, type: isCorrect ? "correct" : "wrong" });
+    setTimeout(() => setFlashSlot((cur) => (cur?.idx === idx ? null : cur)), 600);
 
     try {
       await zero.mutate(mutators.chainReaction.guess({
@@ -318,7 +327,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
       {game.phase !== "lobby" && game.players.length === 2 && (
         <div className="cr-versus">
           <div
-            className={`cr-vs-player cr-vs-player--clickable${isViewingMine && game.phase === "playing" ? " cr-vs-player--active" : ""}${myDone ? " cr-vs-player--done" : ""}`}
+            className={`cr-vs-player cr-vs-player--clickable${isViewingMine && game.phase === "playing" ? " cr-vs-player--active" : ""}${myDone ? " cr-vs-player--done" : ""}${flashSlot?.type === "correct" ? " cr-vs-player--flash-green" : ""}${flashSlot?.type === "wrong" ? " cr-vs-player--flash-red" : ""}`}
             onClick={() => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); }}
           >
             <div className="cr-vs-avatar">
@@ -609,6 +618,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                         slot.solvedBy === sessionId ? "cr-word-slot--mine" : "",
                         slot.solvedBy && slot.solvedBy !== sessionId ? "cr-word-slot--theirs" : "",
                         slot.revealed && !slot.solvedBy && !isEdge ? "cr-word-slot--givenup" : "",
+                        flashSlot?.idx === i && flashSlot.type === "correct" ? "cr-word-slot--flash-green" : "",
+                        flashSlot?.idx === i && flashSlot.type === "wrong" ? "cr-word-slot--flash-red" : "",
                       ].filter(Boolean).join(" ")}
                       onClick={() => canClick && handleSlotClick(i)}
                     >

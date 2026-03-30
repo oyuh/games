@@ -1,0 +1,371 @@
+/* ── Location Signal ───────────────────────────────── */
+/* ── Location Signal Animations ───────────────── */
+
+@keyframes locsig-map-reveal {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes locsig-clue-pop {
+  0%   { opacity: 0; transform: scale(0.8) translateY(6px); }
+  70%  { transform: scale(1.06) translateY(-1px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes locsig-reveal-entrance {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.95); }
+  60%  { transform: translateY(-3px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes locsig-marker-drop {
+  0%   { opacity: 0; transform: scale(0.3); }
+  70%  { opacity: 1; transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+@keyframes locsig-winner-glow {
+  0%, 100% { box-shadow: none; }
+  50%      { box-shadow: 0 0 20px color-mix(in srgb, var(--locsig-accent) 30%, transparent); }
+}
+.locsig-page {
+  --locsig-accent: var(--game-accent, #f59e0b);
+}
+
+/* Marker styles (pigeon-maps overlays) */
+.locsig-marker-dot {
+  border-radius: 50%;
+  animation: locsig-marker-drop 0.5s ease-out both;
+}
+.locsig-marker-dot--pulse {
+  animation: locsig-pulse 1.5s ease-out infinite;
+}
+@keyframes locsig-pulse {
+  0%   { box-shadow: 0 0 0 0 currentColor; transform: scale(1); }
+  50%  { transform: scale(1.15); }
+  100% { box-shadow: 0 0 0 14px transparent; transform: scale(1); }
+}
+.locsig-marker-tooltip {
+  background: rgba(0, 0, 0, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fff;
+  pointer-events: none;
+}
+.locsig-marker-tooltip-coords {
+  font-size: 0.6rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Map outer wrapper */
+.locsig-map-outer [class*="pigeon-"] {
+  display: block !important;
+}
+
+.locsig-map-box {
+  background: #0b1a2e !important;
+}
+
+/* Coordinates overlay (bottom-left inside map) */
+.locsig-coords-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.35rem;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 20;
+  letter-spacing: 0.02em;
+}
+
+/* Clue display pill */
+.locsig-clue-display-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.locsig-clue-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--locsig-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--locsig-accent) 25%, transparent);
+  animation: locsig-clue-pop 0.4s ease-out both;
+}
+.locsig-clue-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--locsig-accent);
+  opacity: 0.7;
+}
+.locsig-clue-word {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--foreground);
+  letter-spacing: 0.02em;
+}
+
+/* Clue form */
+.locsig-clue-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: game-fade-in-up 0.35s ease-out both;
+}
+.locsig-clue-leader-info {
+  text-align: center;
+}
+.locsig-clue-leader-info h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+.locsig-clue-leader-info p {
+  font-size: 0.85rem;
+  color: var(--secondary);
+  margin: 0.25rem 0 0;
+}
+.locsig-clue-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.locsig-clue-input {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Guess section */
+.locsig-guess-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: game-fade-in-up 0.35s ease-out both;
+}
+.locsig-guess-prompt {
+  font-size: 0.85rem;
+  color: var(--secondary);
+  text-align: center;
+}
+.locsig-guess-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: center;
+}
+.locsig-guess-counter {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--secondary);
+}
+
+/* Waiting */
+.locsig-waiting-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: game-fade-in-up 0.3s ease-out both;
+}
+
+/* Reveal */
+.locsig-reveal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: locsig-reveal-entrance 0.5s ease-out both;
+}
+.locsig-reveal-title {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--locsig-accent);
+  animation: game-pop-in 0.45s ease-out both;
+}
+
+/* Score table */
+.locsig-score-table {
+  background: color-mix(in srgb, var(--secondary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 12%, transparent);
+  border-radius: 0.65rem;
+  padding: 0.75rem;
+}
+.locsig-score-table h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.locsig-score-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.locsig-score-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  animation: game-stagger-in 0.3s ease-out both;
+}
+
+.locsig-score-rows .locsig-score-row:nth-child(1) { animation-delay: 0.05s; }
+.locsig-score-rows .locsig-score-row:nth-child(2) { animation-delay: 0.1s; }
+.locsig-score-rows .locsig-score-row:nth-child(3) { animation-delay: 0.15s; }
+.locsig-score-rows .locsig-score-row:nth-child(4) { animation-delay: 0.2s; }
+.locsig-score-rows .locsig-score-row:nth-child(5) { animation-delay: 0.25s; }
+.locsig-score-rows .locsig-score-row:nth-child(6) { animation-delay: 0.3s; }
+.locsig-score-row--leader {
+  background: color-mix(in srgb, var(--locsig-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--locsig-accent) 20%, transparent);
+}
+.locsig-score-name {
+  flex: 1;
+  font-weight: 600;
+}
+.locsig-score-dist {
+  color: var(--secondary);
+  font-size: 0.78rem;
+}
+.locsig-score-pts {
+  font-weight: 700;
+  min-width: 2.5rem;
+  text-align: right;
+}
+.locsig-score-pts--great {
+  color: #34d399;
+}
+.locsig-score-pts--ok {
+  color: var(--locsig-accent);
+}
+
+/* Finished */
+.locsig-finished-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: center;
+  animation: locsig-reveal-entrance 0.5s ease-out both;
+}
+.locsig-finished-title {
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+}
+.locsig-final-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 380px;
+}
+.locsig-final-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--secondary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 12%, transparent);
+  animation: game-stagger-in 0.35s ease-out both;
+}
+
+.locsig-final-scores .locsig-final-row:nth-child(1) { animation-delay: 0.1s; }
+.locsig-final-scores .locsig-final-row:nth-child(2) { animation-delay: 0.2s; }
+.locsig-final-scores .locsig-final-row:nth-child(3) { animation-delay: 0.3s; }
+.locsig-final-scores .locsig-final-row:nth-child(4) { animation-delay: 0.4s; }
+.locsig-final-scores .locsig-final-row:nth-child(5) { animation-delay: 0.5s; }
+.locsig-final-row--winner {
+  background: color-mix(in srgb, var(--locsig-accent) 15%, transparent);
+  border-color: color-mix(in srgb, var(--locsig-accent) 30%, transparent);
+  animation: game-stagger-in 0.35s ease-out both, locsig-winner-glow 2s ease-in-out 0.5s infinite;
+}
+.locsig-final-rank {
+  min-width: 2rem;
+  text-align: center;
+  font-size: 1.1rem;
+}
+.locsig-final-name {
+  flex: 1;
+  font-weight: 600;
+}
+.locsig-final-pts {
+  font-weight: 700;
+  color: var(--locsig-accent);
+}
+
+/* Map wrapper consistent styling */
+.locsig-map-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  animation: locsig-map-reveal 0.5s ease-out both;
+}
+
+/* Search bar */
+.locsig-search-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Auto-advance countdown */
+.locsig-auto-advance {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--locsig-accent) 10%, transparent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .locsig-final-scores {
+    max-width: 100%;
+  }
+}
+
+.cr-lobby-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--secondary);
+  padding: 0 0.6rem;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.cr-lobby-kick {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}

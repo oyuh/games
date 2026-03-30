@@ -1,0 +1,961 @@
+/* ── Chain Reaction Animations ────────────────────────── */
+
+/* Flash green on correct guess */
+@keyframes cr-flash-green {
+  0%   { background: color-mix(in srgb, #22c55e 35%, transparent); box-shadow: 0 0 18px color-mix(in srgb, #22c55e 40%, transparent); }
+  100% { background: color-mix(in srgb, var(--primary) 8%, transparent); box-shadow: none; }
+}
+
+/* Flash red + shake on wrong guess */
+@keyframes cr-flash-red {
+  0%   { background: color-mix(in srgb, #ef4444 30%, transparent); box-shadow: 0 0 16px color-mix(in srgb, #ef4444 35%, transparent); }
+  100% { background: color-mix(in srgb, var(--foreground) 4%, transparent); box-shadow: none; }
+}
+
+@keyframes cr-shake {
+  0%, 100% { transform: translateX(0); }
+  15%      { transform: translateX(-5px); }
+  30%      { transform: translateX(5px); }
+  45%      { transform: translateX(-4px); }
+  60%      { transform: translateX(4px); }
+  75%      { transform: translateX(-2px); }
+  90%      { transform: translateX(2px); }
+}
+
+/* Score bump animation */
+@keyframes cr-score-bump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); color: #22c55e; }
+  100% { transform: scale(1); }
+}
+
+/* Slot entrance stagger */
+@keyframes cr-slot-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Winner card pop-in */
+@keyframes cr-winner-pop {
+  0%   { opacity: 0; transform: scale(0.85) translateY(12px); }
+  60%  { transform: scale(1.04) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Winner glow */
+@keyframes cr-winner-glow {
+  0%, 100% { box-shadow: 0 0 8px color-mix(in srgb, #22c55e 15%, transparent); }
+  50%      { box-shadow: 0 0 24px color-mix(in srgb, #22c55e 40%, transparent); }
+}
+
+.cr-word-slot--flash-green {
+  animation: cr-flash-green 0.5s ease-out both;
+}
+
+.cr-word-slot--flash-red {
+  animation: cr-flash-red 0.5s ease-out both, cr-shake 0.4s ease-out both;
+}
+
+/* VS player card flash on correct/wrong */
+.cr-vs-player--flash-green {
+  animation: cr-flash-green 0.5s ease-out both;
+}
+
+.cr-vs-player--flash-red {
+  animation: cr-flash-red 0.4s ease-out both, cr-shake 0.3s ease-out both;
+}
+
+/* VS Scoreboard ───────────────────────────────────── */
+.cr-versus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface-1);
+  border-radius: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.cr-vs-player {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.75rem;
+  border: 2px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cr-vs-player--clickable {
+  cursor: pointer;
+}
+
+.cr-vs-player--clickable:hover {
+  border-color: color-mix(in srgb, var(--foreground) 15%, transparent);
+}
+
+.cr-vs-player--right {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.cr-vs-player--active {
+  border-color: var(--primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 25%, transparent);
+  animation: game-glow 2s ease-in-out infinite;
+}
+
+.cr-vs-player--done {
+  opacity: 0.7;
+}
+
+.cr-vs-done-badge {
+  font-size: 0.75rem;
+  color: #22c55e;
+  font-weight: 800;
+}
+
+.cr-vs-progress {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--secondary);
+  opacity: 0.7;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.cr-vs-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1rem;
+  background: var(--primary);
+  color: var(--background);
+  flex-shrink: 0;
+}
+
+.cr-vs-avatar--opp {
+  background: var(--secondary);
+}
+
+.cr-vs-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cr-vs-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cr-vs-score {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--primary);
+  line-height: 1;
+  font-family: "JetBrains Mono", monospace;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.cr-vs-player--active .cr-vs-score {
+  animation: cr-score-bump 0.45s ease-out;
+}
+
+.cr-vs-player--right .cr-vs-score {
+  text-align: right;
+}
+
+.cr-vs-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.cr-vs-badge {
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--secondary);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  padding: 0.15rem 0.55rem;
+  border-radius: 0.4rem;
+}
+
+.cr-vs-round {
+  font-size: 0.65rem;
+  color: var(--secondary);
+  opacity: 0.7;
+}
+
+/* ── View Indicator ──────────────────────────────────── */
+.cr-view-indicator {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.cr-view-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.cr-view-label--spectate {
+  color: var(--secondary);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.cr-view-label--done {
+  color: #22c55e;
+  background: color-mix(in srgb, #22c55e 8%, transparent);
+  border-color: color-mix(in srgb, #22c55e 18%, transparent);
+}
+
+/* ── Done / Waiting ──────────────────────────────────── */
+.cr-done-waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--secondary);
+}
+
+/* ── Chain Mode Toggle ───────────────────────────────── */
+.cr-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.cr-mode-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+}
+
+.cr-mode-options {
+  display: flex;
+  gap: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+.cr-mode-btn {
+  background: transparent;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cr-mode-btn:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.cr-mode-btn--active {
+  background: var(--primary);
+  color: var(--background);
+}
+
+.cr-mode-btn--active:hover {
+  background: var(--primary);
+}
+
+.cr-mode-info {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--secondary);
+  margin-top: 0.5rem;
+}
+
+/* ── Round History (dual chains) ─────────────────────── */
+.cr-round-chains {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.cr-round-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  align-items: center;
+}
+
+.cr-round-chain-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--secondary);
+  opacity: 0.7;
+  min-width: 2.5rem;
+}
+
+/* ── Chain Container ─────────────────────────────────── */
+.cr-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.75rem;
+  background: var(--surface-1);
+  border-radius: 1rem;
+  margin: 0.5rem 0;
+  position: relative;
+}
+
+/* ── Slot Outer (column: row + connector) ────────────────────── */
+.cr-slot-outer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  animation: cr-slot-in 0.3s ease-out both;
+}
+
+.cr-slot-outer:nth-child(1) { animation-delay: 0.03s; }
+.cr-slot-outer:nth-child(2) { animation-delay: 0.06s; }
+.cr-slot-outer:nth-child(3) { animation-delay: 0.09s; }
+.cr-slot-outer:nth-child(4) { animation-delay: 0.12s; }
+.cr-slot-outer:nth-child(5) { animation-delay: 0.15s; }
+.cr-slot-outer:nth-child(6) { animation-delay: 0.18s; }
+.cr-slot-outer:nth-child(7) { animation-delay: 0.21s; }
+.cr-slot-outer:nth-child(8) { animation-delay: 0.24s; }
+.cr-slot-outer:nth-child(9) { animation-delay: 0.27s; }
+.cr-slot-outer:nth-child(10) { animation-delay: 0.30s; }
+
+/* ── Slot Wrapper (slot + action buttons on sides) ───────────── */
+.cr-slot-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Spacer to keep slots aligned when no button */
+.cr-action-spacer {
+  width: 40px;
+  flex-shrink: 0;
+}
+
+/* ── Hint / Give-up action buttons (flanking the slot) ───────── */
+.cr-slot-actions {
+  display: none;
+}
+
+.cr-action-hint,
+.cr-action-giveup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+.cr-action-hint {
+  color: var(--secondary);
+}
+.cr-action-hint:hover:not(:disabled) {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.cr-action-hint:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.cr-action-giveup {
+  color: var(--secondary);
+}
+.cr-action-giveup:hover {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+}
+.cr-action-giveup--confirm {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 14%, transparent);
+  animation: cr-giveup-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes cr-giveup-pulse {
+  0%, 100% { box-shadow: 0 0 5px color-mix(in srgb, var(--destructive) 20%, transparent); }
+  50% { box-shadow: 0 0 12px color-mix(in srgb, var(--destructive) 45%, transparent); }
+}
+
+/* Given-up word slot styling */
+.cr-word-slot--givenup {
+  background: color-mix(in srgb, var(--destructive) 5%, transparent);
+  border-color: color-mix(in srgb, var(--destructive) 12%, transparent);
+  opacity: 0.7;
+}
+
+.cr-solver-tag--skip {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+
+.cr-chain-connector {
+  width: 2px;
+  height: 0.65rem;
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+/* ── Word Slots ──────────────────────────────────────── */
+.cr-word-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 2px solid transparent;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  min-height: 2.8rem;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.cr-word-slot--revealed {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.cr-word-slot--hidden {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.cr-word-slot--clickable {
+  cursor: pointer;
+}
+
+.cr-word-slot--clickable:hover {
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.cr-word-slot--editing {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.cr-word-slot--mine {
+  border-left: 3px solid var(--primary);
+}
+
+.cr-word-slot--theirs {
+  border-left: 3px solid var(--secondary);
+}
+
+/* Slot number */
+.cr-slot-idx {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--secondary);
+  opacity: 0.6;
+  min-width: 1rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Slot body (holds text or inline input) */
+.cr-slot-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Word text */
+.cr-word-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  font-family: "JetBrains Mono", monospace;
+}
+
+.cr-word-text--partial {
+  color: var(--secondary);
+}
+
+/* Inline guess form: input + ↵ button inside slot */
+.cr-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cr-inline-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--primary);
+  caret-color: var(--primary);
+  padding: 0;
+}
+
+.cr-inline-input::placeholder {
+  color: var(--secondary);
+  opacity: 0.4;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.cr-inline-go {
+  background: var(--primary);
+  color: var(--background);
+  border: none;
+  border-radius: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+
+.cr-inline-go:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ── Tags / Badges ───────────────────────────────────── */
+.cr-slot-tag {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.cr-solver-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--secondary);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.3rem;
+  flex-shrink: 0;
+}
+
+.cr-solver-tag--me {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* ── Submit Phase ────────────────────────────────────── */
+.cr-submit-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  animation: game-fade-in-up 0.35s ease-out both;
+}
+
+.cr-submit-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  position: relative;
+}
+
+.cr-slot-num {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--secondary);
+  opacity: 0.6;
+  min-width: 1.2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cr-submit-input {
+  flex: 1;
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--foreground);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.cr-submit-input:focus {
+  border-color: var(--primary);
+}
+
+.cr-submit-input::placeholder {
+  text-transform: none;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+/* ── Winner Card ─────────────────────────────────────── */
+.cr-winner-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.2rem 1.4rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  border: 2px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  margin-bottom: 0.75rem;
+  animation: cr-winner-pop 0.5s ease-out both;
+}
+
+.cr-winner-card--win {
+  background: color-mix(in srgb, #22c55e 10%, transparent);
+  border-color: color-mix(in srgb, #22c55e 30%, transparent);
+  animation: cr-winner-pop 0.5s ease-out both, cr-winner-glow 2s ease-in-out 0.5s infinite;
+}
+
+.cr-winner-card--lose {
+  background: color-mix(in srgb, #ef4444 8%, transparent);
+  border-color: color-mix(in srgb, #ef4444 20%, transparent);
+}
+
+.cr-winner-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.cr-winner-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.cr-winner-sub {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--secondary);
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* ── Round History ───────────────────────────────────── */
+.cr-round-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cr-round-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  animation: game-stagger-in 0.3s ease-out both;
+}
+
+.cr-round-list .cr-round-row:nth-child(1) { animation-delay: 0.05s; }
+.cr-round-list .cr-round-row:nth-child(2) { animation-delay: 0.1s; }
+.cr-round-list .cr-round-row:nth-child(3) { animation-delay: 0.15s; }
+.cr-round-list .cr-round-row:nth-child(4) { animation-delay: 0.2s; }
+.cr-round-list .cr-round-row:nth-child(5) { animation-delay: 0.25s; }
+
+.cr-round-num {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--secondary);
+  min-width: 2rem;
+  text-transform: uppercase;
+}
+
+.cr-round-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.cr-round-word {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  color: var(--secondary);
+}
+
+.cr-round-word--me {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+}
+
+.cr-round-word--opp {
+  background: color-mix(in srgb, var(--secondary) 12%, transparent);
+  color: var(--foreground);
+}
+
+.cr-round-scores {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--foreground);
+  font-family: "JetBrains Mono", monospace;
+  flex-shrink: 0;
+}
+
+.cr-round-dash {
+  opacity: 0.3;
+}
+
+/* ── Lobby Duel Matchup ──────────────────────────────── */
+.cr-lobby-duel {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  justify-content: center;
+}
+
+.cr-lobby-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.4rem 1rem;
+  border-radius: 1rem;
+  position: relative;
+  max-width: 12rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  animation: game-fade-in-up 0.4s ease-out both;
+}
+
+.cr-lobby-duel .cr-lobby-slot:nth-child(1) { animation-delay: 0.05s; }
+.cr-lobby-duel .cr-lobby-slot:nth-child(2) { animation-delay: 0.15s; }
+.cr-lobby-duel .cr-lobby-slot:nth-child(3) { animation-delay: 0.25s; }
+
+.cr-lobby-slot--filled {
+  background: var(--surface-1);
+  border: 2px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.cr-lobby-slot--me {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.cr-lobby-slot--empty {
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+.cr-lobby-slot--join {
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--primary) 25%, transparent);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cr-lobby-slot--join:hover {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-color: var(--primary);
+}
+
+.cr-lobby-avatar {
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  background: var(--primary);
+  color: var(--background);
+}
+
+.cr-lobby-avatar--opp {
+  background: var(--secondary);
+}
+
+.cr-lobby-avatar--empty {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--secondary);
+  font-size: 1.1rem;
+}
+
+.cr-lobby-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--foreground);
+  text-align: center;
+}
+
+.cr-lobby-you {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  opacity: 0.8;
+}
+
+.cr-lobby-empty-text {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  opacity: 0.6;
+}
+
+.cr-lobby-join-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* ── Submit Done / Chain Preview / Opponent Status ───── */
+/* ── Submit Done / Chain Preview ─────────────────────── */
+.cr-submit-done-banner {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, #22c55e 10%, transparent);
+  color: #22c55e;
+  border: 1px solid color-mix(in srgb, #22c55e 20%, transparent);
+  margin-bottom: 0.5rem;
+}
+
+.cr-chain-preview {
+  background: var(--surface-1);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.cr-preview-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+  margin: 0 0 0.4rem 0;
+}
+
+.cr-preview-words {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cr-preview-word {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.cr-preview-word--edge {
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+.cr-preview-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--foreground);
+}
+
+/* Opponent status */
+.cr-opponent-status {
+  margin-top: 0.5rem;
+}
+
+.cr-status-text {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  text-align: center;
+}
+
+.cr-status-text--done {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.cr-status-writing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ── Letter Progress Count ───────────────────────────── */
+.cr-letters-count {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--secondary);
+  opacity: 0.6;
+  font-family: "JetBrains Mono", monospace;
+  flex-shrink: 0;
+}

@@ -1,5 +1,6 @@
 import { FiX, FiAlertCircle, FiCheckCircle, FiInfo } from "react-icons/fi";
 import { useToasts, dismissToast } from "../../lib/toast";
+import "../../styles/toast.css";
 
 const icons = {
   error: <FiAlertCircle size={16} />,

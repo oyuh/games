@@ -1,5 +1,8 @@
 import { Outlet } from "react-router-dom";
 import { queries } from "@games/shared";
+import "../styles/layout.css";
+import "../styles/modals.css";
+import "../styles/host-chat.css";
 import { useQuery } from "@rocicorp/zero/react";
 import { ConnectionDebugPanel } from "./shared/ConnectionDebugPanel";
 import { ChatWindow } from "./shared/ChatWindow";

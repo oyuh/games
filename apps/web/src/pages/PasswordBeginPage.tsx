@@ -1,5 +1,7 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
+import "../styles/game-shared.css";
+import "../styles/password.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock, FiHelpCircle } from "react-icons/fi";

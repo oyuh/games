@@ -2,6 +2,8 @@ import { useState } from "react";
 import { FiLink, FiHelpCircle, FiXCircle } from "react-icons/fi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { PasswordHeader } from "../password/PasswordHeader";
+import "../../styles/game-shared.css";
+import "../../styles/chain-reaction.css";
 
 /* ── Fake data ──────────────────────────────────────────── */
 

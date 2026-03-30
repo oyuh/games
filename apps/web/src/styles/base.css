@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+/* ── Custom Fonts ────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+/* ── Design tokens ───────────────────────────────────────────── */
+:root {
+  --background: #181a1b;
+  --foreground: #f5f5f5;
+  --card: #232323;
+  --card-foreground: #f5f5f5;
+  --primary: #7ecbff;
+  --primary-foreground: #181a1b;
+  --secondary: #888;
+  --secondary-foreground: #f5f5f5;
+  --muted: #2d2d2d;
+  --muted-foreground: #bdbdbd;
+  --accent: #444;
+  --destructive: #b00020;
+  --border: #333;
+  --input: #232323;
+  --ring: #666;
+  --bg: #181a1b;
+  --text: #f5f5f5;
+  --radius: 0.625rem;
+}
+
+/* ── Game page theming — per-game --primary overrides ────────── */
+[data-game-theme="imposter"] {
+  --primary: #7eb8ff;
+  --primary-foreground: #181a1b;
+  --game-accent: #7eb8ff;
+  --game-bg: #1d2430;
+}
+[data-game-theme="password"] {
+  --primary: #a78bfa;
+  --primary-foreground: #181a1b;
+  --game-accent: #a78bfa;
+  --game-bg: #21272e;
+}
+[data-game-theme="chain"] {
+  --primary: #34d399;
+  --primary-foreground: #181a1b;
+  --game-accent: #34d399;
+  --game-bg: #1a2e26;
+}
+[data-game-theme="shade"] {
+  --primary: #f472b6;
+  --primary-foreground: #181a1b;
+  --game-accent: #f472b6;
+  --game-bg: #2a1a2e;
+}
+[data-game-theme="location"] {
+  --primary: #f59e0b;
+  --primary-foreground: #181a1b;
+  --game-accent: #f59e0b;
+  --game-bg: #2e2418;
+}
+
+/* ── Base ────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Dynamic viewport scaling ────────────────────────────────── */
+@media (min-width: 1200px) {
+  html { font-size: 16.5px; }
+  .shell-main { max-width: 68rem; }
+  .game-page  { max-width: 52rem; }
+}
+@media (min-width: 1440px) {
+  html { font-size: 17px; }
+  .shell-main { max-width: 72rem; }
+  .game-page  { max-width: 56rem; }
+}
+@media (min-width: 1800px) {
+  html { font-size: 17.5px; }
+  .shell-main { max-width: 78rem; }
+  .game-page  { max-width: 60rem; }
+}
+@media (min-width: 2200px) {
+  html { font-size: 18px; }
+  .shell-main { max-width: 84rem; }
+  .game-page  { max-width: 64rem; }
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Axiforma", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Selection ───────────────────────────────────────────────── */
+::selection {
+  background: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover,
+*:active,
+*:focus-within {
+  scrollbar-color: color-mix(in srgb, var(--primary) 30%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.3s;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+*:hover::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+

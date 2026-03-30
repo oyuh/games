@@ -1,0 +1,113 @@
+/* ─── Light Theme ───────────────────────────────────────── */
+
+[data-theme="light"] {
+  --background: #e8e6e3;
+  --foreground: #1a1a1a;
+  --card: #f0eeeb;
+  --card-foreground: #1a1a1a;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #6b7280;
+  --secondary-foreground: #1a1a1a;
+  --muted: #d9d7d4;
+  --muted-foreground: #64748b;
+  --accent: #cbc8c4;
+  --destructive: #dc2626;
+  --border: #c8c5c1;
+  --input: #f0eeeb;
+  --ring: #a1a1aa;
+  --bg: #e8e6e3;
+  --text: #1a1a1a;
+}
+
+[data-theme="light"] body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+[data-theme="light"] .sidebar {
+  background: rgba(240, 238, 235, 0.85);
+  border-color: var(--border);
+}
+
+[data-theme="light"] .modal-panel {
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .toast {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .modal-overlay {
+  background: rgba(200, 197, 193, 0.4);
+}
+
+[data-theme="light"] .home-card {
+  background: rgba(240, 238, 235, 0.75);
+  border-color: var(--border);
+}
+
+[data-theme="light"] .home-icon-layer {
+  opacity: 0.06;
+}
+
+/* ─── Sidebar Position: Right ───────────────────────────── */
+
+[data-sidebar="right"] .sidebar {
+  left: auto;
+  right: 0.75rem;
+}
+
+/* ─── Sidebar Position: Top ─────────────────────────────── */
+
+[data-sidebar="top"] .sidebar {
+  left: 50%;
+  top: 0.75rem;
+  bottom: auto;
+  transform: translateX(-50%);
+  flex-direction: row;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  gap: 0.25rem;
+  width: auto;
+}
+
+[data-sidebar="top"] .sidebar-toggle {
+  display: none;
+}
+
+[data-sidebar="top"] .sidebar-nav {
+  flex-direction: row;
+  gap: 0.15rem;
+}
+
+@media (max-width: 768px) {
+  [data-sidebar="top"] .sidebar {
+    top: 0.5rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  [data-sidebar="right"] .sidebar {
+    right: 0.5rem;
+    left: auto;
+  }
+}
+
+/* ── Light Theme – game-specific overrides ────────────── */
+
+[data-theme='light'][data-game-theme='imposter'] {
+  --game-bg: #e0f0ff;
+}
+[data-theme='light'][data-game-theme='password'] {
+  --game-bg: #f3e8ff;
+}
+[data-theme='light'][data-game-theme='chain'] {
+  --game-bg: #d1fae5;
+}
+[data-theme='light'][data-game-theme='shade'] {
+  --game-bg: #fce7f3;
+}
+[data-theme='light'][data-game-theme='location'] {
+  --game-bg: #fef3c7;
+}
+

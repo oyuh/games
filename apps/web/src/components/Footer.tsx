@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useConnectionDebug } from "../lib/connection-debug";
+import "../styles/footer.css";
 import { getCustomStatus, subscribeCustomStatus } from "../hooks/useAdminBroadcast";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
