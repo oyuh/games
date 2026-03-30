@@ -1770,9 +1770,9 @@
 
 /* ── Globe Browse Button (mobile cards) ─────────────────── */
 .m-browse-globe {
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -1782,6 +1782,10 @@
   color: var(--card-accent, var(--secondary));
   opacity: 0.5;
   border-radius: 8px;
+}
+.m-browse-globe svg {
+  width: 22px;
+  height: 22px;
 }
 .m-browse-globe:hover {
   opacity: 1;

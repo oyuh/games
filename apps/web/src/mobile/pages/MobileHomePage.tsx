@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare, FiGlobe } from "react-icons/fi";
+import { FiSearch, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGrid, FiZap } from "react-icons/fi";
 import { PiPaintBrushBold } from "react-icons/pi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
@@ -752,6 +752,36 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           </div>
           )
         )}
+      </div>
+
+      {/* ── Solo / Singleplayer Games ──────────────────── */}
+      <h3 className="m-home-games-heading" style={{ marginTop: "0.5rem" }}>Singleplayer</h3>
+
+      <Link to="/shikaku" className="m-solo-card m-solo-card--shikaku">
+        <div className="m-solo-card-icon"><FiGrid size={20} /></div>
+        <div className="m-solo-card-body">
+          <h3 className="m-solo-card-title">Shikaku</h3>
+          <p className="m-solo-card-desc">Divide the grid into rectangles</p>
+        </div>
+        <span className="m-solo-card-play">Play</span>
+      </Link>
+
+      <div className="m-solo-card m-solo-card--disabled">
+        <div className="m-solo-card-icon"><FiZap size={20} /></div>
+        <div className="m-solo-card-body">
+          <h3 className="m-solo-card-title">Pips</h3>
+          <p className="m-solo-card-desc">Fill the board with dominoes</p>
+        </div>
+        <span className="m-solo-card-soon">Soon</span>
+      </div>
+
+      <div className="m-solo-card m-solo-card--disabled">
+        <div className="m-solo-card-icon"><FiZap size={20} /></div>
+        <div className="m-solo-card-body">
+          <h3 className="m-solo-card-title">Nexus</h3>
+          <p className="m-solo-card-desc">Connect nodes to complete the circuit</p>
+        </div>
+        <span className="m-solo-card-soon">Soon</span>
       </div>
 
       {showInSessionModal && pendingJoinTarget && (
