@@ -59,6 +59,7 @@ export function ShikakuPage() {
 
   const [phase, setPhase] = useState<GamePhase>("menu");
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
+  const [lbDifficulty, setLbDifficulty] = useState<Difficulty>("easy");
   const [countdownNum, setCountdownNum] = useState(3);
 
   // Game state
@@ -415,7 +416,7 @@ export function ShikakuPage() {
   useEffect(() => {
     const handler = () => {
       setShowLeaderboard((v) => {
-        if (!v) fetchLeaderboard(difficulty);
+        if (!v) { setLbDifficulty(difficulty); fetchLeaderboard(difficulty); }
         return !v;
       });
     };
@@ -566,9 +567,9 @@ export function ShikakuPage() {
             <ShikakuLeaderboard
               entries={leaderboard}
               loading={leaderboardLoading}
-              difficulty={difficulty}
+              difficulty={lbDifficulty}
               personalBest={personalBest}
-              onDiffChange={(d) => { setDifficulty(d); fetchLeaderboard(d); }}
+              onDiffChange={(d) => { setLbDifficulty(d); fetchLeaderboard(d); }}
               onClose={() => setShowLeaderboard(false)}
               formatTime={formatTime}
             />
@@ -665,7 +666,7 @@ export function ShikakuPage() {
               {!infiniteMode && (
                 <button
                   className="btn btn-muted"
-                  onClick={() => { setShowLeaderboard(true); fetchLeaderboard(difficulty); }}
+                  onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty); }}
                   title="View top scores"
                 >
                   <FiAward size={16} /> Leaderboard
@@ -677,9 +678,9 @@ export function ShikakuPage() {
               <ShikakuLeaderboard
                 entries={leaderboard}
                 loading={leaderboardLoading}
-                difficulty={difficulty}
+                difficulty={lbDifficulty}
                 personalBest={personalBest}
-                onDiffChange={(d) => { setDifficulty(d); fetchLeaderboard(d); }}
+                onDiffChange={(d) => { setLbDifficulty(d); fetchLeaderboard(d); }}
                 onClose={() => setShowLeaderboard(false)}
                 formatTime={formatTime}
               />
@@ -768,7 +769,7 @@ export function ShikakuPage() {
             </button>
             <button
               className="shikaku-icon-btn shikaku-icon-btn--danger"
-              onClick={() => { setShowLeaderboard(true); fetchLeaderboard(difficulty); }}
+              onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty); }}
               data-tooltip="Leaderboard"
             >
               <FiAward size={16} />
@@ -787,9 +788,9 @@ export function ShikakuPage() {
           <ShikakuLeaderboard
             entries={leaderboard}
             loading={leaderboardLoading}
-            difficulty={difficulty}
+            difficulty={lbDifficulty}
             personalBest={personalBest}
-            onDiffChange={(d) => { setDifficulty(d); fetchLeaderboard(d); }}
+            onDiffChange={(d) => { setLbDifficulty(d); fetchLeaderboard(d); }}
             onClose={() => setShowLeaderboard(false)}
             formatTime={formatTime}
           />
