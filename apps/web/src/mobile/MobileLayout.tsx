@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useState } from "react";
-import { FiHome, FiMessageCircle, FiInfo, FiSettings, FiX } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import { FiHome, FiMessageCircle, FiInfo, FiSettings, FiX, FiAward } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { useChatContext } from "../lib/chat-context";
 import { MobileHostProvider, useMobileHost } from "../lib/mobile-host-context";
@@ -27,7 +27,23 @@ function MobileLayoutInner() {
   const { hostGame } = useMobileHost();
   const [sheet, setSheet] = useState<"chat" | "info" | "options" | "host" | null>(null);
   const isHome = location.pathname === "/";
+  const isShikaku = /^\/shikaku(\/|$)/.test(location.pathname);
   const sessionId = getOrCreateSessionId();
+
+  // Track Shikaku infinite mode state
+  const [infiniteEnabled, setInfiniteEnabled] = useState(false);
+  const [infiniteCanToggle, setInfiniteCanToggle] = useState(true);
+
+  useEffect(() => {
+    if (!isShikaku) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { enabled: boolean; canToggle: boolean };
+      setInfiniteEnabled(detail.enabled);
+      setInfiniteCanToggle(detail.canToggle);
+    };
+    window.addEventListener("shikaku-infinite-state", handler);
+    return () => window.removeEventListener("shikaku-infinite-state", handler);
+  }, [isShikaku]);
 
   return (
     <div className="m-shell">
@@ -70,6 +86,27 @@ function MobileLayoutInner() {
           >
             <PiCrownSimpleFill size={20} />
             <span>Host</span>
+          </button>
+        )}
+
+        {isShikaku && (
+          <button
+            className={`m-nav-item m-nav-shikaku-inf${infiniteEnabled ? " m-nav-shikaku-inf--active" : ""}${!infiniteCanToggle ? " m-nav-item--disabled" : ""}`}
+            onClick={() => window.dispatchEvent(new CustomEvent("shikaku-toggle-infinite"))}
+            disabled={!infiniteCanToggle}
+          >
+            <span style={{ fontSize: 20, lineHeight: 1, fontWeight: 700 }}>∞</span>
+            <span>Infinite</span>
+          </button>
+        )}
+
+        {isShikaku && (
+          <button
+            className="m-nav-item"
+            onClick={() => window.dispatchEvent(new CustomEvent("shikaku-toggle-leaderboard"))}
+          >
+            <FiAward size={20} />
+            <span>Scores</span>
           </button>
         )}
 

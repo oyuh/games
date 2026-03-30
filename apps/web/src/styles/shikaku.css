@@ -275,6 +275,7 @@
   overflow: hidden;
   user-select: none;
   background: var(--card);
+  touch-action: none;
 }
 /* Scale grid size by difficulty */
 .shikaku-page[data-difficulty="hard"] .shikaku-grid {
@@ -468,6 +469,9 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 0.5rem;
   width: 100%;
+}
+.shikaku-stats--infinite {
+  grid-template-columns: repeat(2, 1fr);
 }
 .shikaku-stat {
   display: flex;
@@ -765,4 +769,147 @@
 @keyframes shikaku-fade-in {
   0% { opacity: 0; }
   100% { opacity: 1; }
+}
+
+/* ── Infinite mode sidebar button ──────────────────────────── */
+.shikaku-infinite-btn {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  transition: color 0.15s, background 0.15s, opacity 0.2s;
+}
+.shikaku-infinite-btn:hover:not(:disabled) {
+  color: #34d399;
+  background: color-mix(in srgb, #34d399 12%, transparent);
+}
+.shikaku-infinite-btn--active {
+  color: #34d399 !important;
+  background: color-mix(in srgb, #34d399 16%, transparent) !important;
+  box-shadow: inset 0 0 12px color-mix(in srgb, #34d399 20%, transparent);
+}
+.shikaku-infinite-btn--active::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 8px;
+  border: 1.5px solid color-mix(in srgb, #34d399 40%, transparent);
+  animation: shikaku-inf-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes shikaku-inf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.shikaku-infinite-btn--disabled {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+.shikaku-infinite-btn--disabled:hover {
+  color: var(--secondary) !important;
+  background: transparent !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Mobile — Shikaku responsive overrides
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .shikaku-page.game-page {
+    height: calc(100dvh - 6.5rem);
+    padding: 0.5rem 0.5rem;
+  }
+
+  /* Menu */
+  .shikaku-title {
+    font-size: 1.5rem;
+  }
+  .shikaku-subtitle {
+    font-size: 0.75rem;
+  }
+  .shikaku-diff-grid {
+    gap: 0.5rem;
+    max-width: 100%;
+  }
+  .shikaku-diff-btn {
+    padding: 1.1rem 0.6rem;
+  }
+  .shikaku-diff-label {
+    font-size: 1.15rem;
+  }
+
+  /* Grid — larger touch target, use full width */
+  .shikaku-grid {
+    max-width: min(500px, 94vw, calc(100dvh - 16rem));
+  }
+
+  /* Hard/Expert — scrollable grid wrapper on mobile */
+  .shikaku-page[data-difficulty="hard"] .shikaku-grid-wrap,
+  .shikaku-page[data-difficulty="expert"] .shikaku-grid-wrap {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: calc(100dvh - 16rem);
+    max-width: 96vw;
+    border-radius: 0.5rem;
+    border: 1.5px solid color-mix(in srgb, #34d399 20%, var(--border));
+  }
+  .shikaku-page[data-difficulty="hard"] .shikaku-grid {
+    max-width: none;
+    width: max(96vw, 520px);
+    border-radius: 0;
+    border: none;
+  }
+  .shikaku-page[data-difficulty="expert"] .shikaku-grid {
+    max-width: none;
+    width: max(96vw, 640px);
+    border-radius: 0;
+    border: none;
+  }
+
+  .shikaku-cell {
+    cursor: default;
+  }
+  .shikaku-cell:hover {
+    background: transparent;
+  }
+
+  /* Playing footer — compact */
+  .shikaku-hint {
+    display: none;
+  }
+  .shikaku-playing-footer {
+    justify-content: center;
+  }
+
+  /* Countdown */
+  .shikaku-countdown {
+    min-height: 40vh;
+  }
+  .shikaku-countdown-number {
+    font-size: 4rem;
+  }
+
+  /* Finished screen */
+  .shikaku-finished {
+    padding: 0 0.5rem;
+    max-width: 100%;
+  }
+  .shikaku-stat-value {
+    font-size: 1rem;
+  }
+  .shikaku-stat {
+    padding: 0.5rem 0.35rem;
+  }
+
+  /* Leaderboard overlay */
+  .shikaku-leaderboard {
+    max-width: 100%;
+    max-height: 85vh;
+    width: 100%;
+    margin: 0 0.5rem;
+  }
+
+  /* Give-up dialog */
+  .shikaku-giveup-dialog {
+    max-width: 92vw;
+  }
 }

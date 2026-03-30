@@ -190,6 +190,22 @@ export function Sidebar() {
   const chat = useChatContext();
 
   const isInGame = /^\/(imposter|password|chain|shade|location)\/|^\/shikaku(\/|$)/.test(location.pathname);
+  const isShikaku = /^\/shikaku(\/|$)/.test(location.pathname);
+
+  // Track infinite mode state from ShikakuPage
+  const [infiniteEnabled, setInfiniteEnabled] = useState(false);
+  const [infiniteCanToggle, setInfiniteCanToggle] = useState(true);
+
+  useEffect(() => {
+    if (!isShikaku) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { enabled: boolean; canToggle: boolean };
+      setInfiniteEnabled(detail.enabled);
+      setInfiniteCanToggle(detail.canToggle);
+    };
+    window.addEventListener("shikaku-infinite-state", handler);
+    return () => window.removeEventListener("shikaku-infinite-state", handler);
+  }, [isShikaku]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -274,14 +290,29 @@ export function Sidebar() {
           />
         )}
         {/^\/shikaku(\/|$)/.test(location.pathname) && (
-          <SidebarButton
-            icon={<FiAward size={20} />}
-            label="Leaderboard"
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent("shikaku-toggle-leaderboard"));
-              setMobileOpen(false);
-            }}
-          />
+          <>
+            <button
+              className={`sidebar-link shikaku-infinite-btn${infiniteEnabled ? " shikaku-infinite-btn--active" : ""}${!infiniteCanToggle ? " shikaku-infinite-btn--disabled" : ""}`}
+              data-tooltip={infiniteCanToggle ? (infiniteEnabled ? "Infinite Mode: ON" : "Infinite Mode: OFF") : "Infinite Mode (lobby only)"}
+              data-tooltip-pos="right"
+              disabled={!infiniteCanToggle}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("shikaku-toggle-infinite"));
+                setMobileOpen(false);
+              }}
+            >
+              <span style={{ fontSize: 22, lineHeight: 1, fontWeight: 700 }}>∞</span>
+              <span className="sidebar-link-label">Infinite</span>
+            </button>
+            <SidebarButton
+              icon={<FiAward size={20} />}
+              label="Leaderboard"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("shikaku-toggle-leaderboard"));
+                setMobileOpen(false);
+              }}
+            />
+          </>
         )}
         <SidebarButton icon={<FiInfo size={20} />} label="Info" onClick={() => { setModal("info"); setMobileOpen(false); }} />
         <SidebarButton icon={<FiSettings size={20} />} label="Options" onClick={() => { setModal("options"); setMobileOpen(false); }} />
