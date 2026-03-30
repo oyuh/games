@@ -56,7 +56,7 @@ It is written as a setup runbook so you can wire everything once and then get au
 - **Build Command**
   - (empty)
 - **Start Command**
-  - `pnpm dlx @rocicorp/zero@0.25.13 zero-cache --port "$PORT"`
+  - `pnpm dlx @rocicorp/zero@1.0.0 zero-cache --port "$PORT"`
 
 > Important: do **not** set `ZERO_PORT` in Railway variables. Railway does not shell-expand env values, so `ZERO_PORT="$PORT"` is treated as a literal string and crashes with `Invalid input for ZERO_PORT: "$PORT"`.
 
