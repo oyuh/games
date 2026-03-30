@@ -383,9 +383,12 @@ export function ShikakuPage() {
     runSeed: number, diff: Difficulty, score: number, timeMs: number
   ) => {
     try {
-      await fetch(`${API_BASE}/api/shikaku/score`, {
+      const res = await fetch(`${API_BASE}/api/shikaku/score`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-zero-user-id": sessionId,
+        },
         body: JSON.stringify({
           sessionId,
           name: playerName,
@@ -396,10 +399,20 @@ export function ShikakuPage() {
           puzzleCount: PUZZLES_PER_RUN,
         }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null) as { error?: string } | null;
+        if (res.status === 409) {
+          showToast("Score already submitted for this run", "info");
+        } else if (data?.error === "Score rejected") {
+          showToast("Score could not be verified", "error");
+        }
+      }
     } catch {
       // silent — score still shows locally
     }
-  }, [sessionId, playerName]);
+    // Fetch leaderboard after submission so rank/scores show on the finished screen
+    fetchLeaderboard(diff);
+  }, [sessionId, playerName, fetchLeaderboard]);
 
   /* ── Format time ────────────────────────────────────────── */
   const formatTime = (ms: number) => {
@@ -529,6 +542,12 @@ export function ShikakuPage() {
                 <span className="shikaku-stat-label">Difficulty</span>
                 <span className="shikaku-stat-value" style={{ textTransform: "capitalize" }}>{difficulty}</span>
               </div>
+              {personalBest && (
+                <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.55s" }}>
+                  <span className="shikaku-stat-label">Rank</span>
+                  <span className="shikaku-stat-value">#{personalBest.rank}</span>
+                </div>
+              )}
             </div>
 
             {puzzleTimes.length > 0 && (
@@ -537,6 +556,22 @@ export function ShikakuPage() {
                   <div key={i} className="shikaku-puzzle-time">
                     <span>Puzzle {i + 1}{gavUp && i === puzzleTimes.length - 1 ? " (incomplete)" : ""}</span>
                     <span>{formatTime(t)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Inline top scores from DB */}
+            {leaderboard.length > 0 && (
+              <div className="shikaku-puzzle-times" style={{ marginTop: "0.5rem" }}>
+                <div className="shikaku-puzzle-time" style={{ opacity: 0.6, fontWeight: 700, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <span><FiAward size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Top Scores</span>
+                  <span>Time</span>
+                </div>
+                {leaderboard.slice(0, 5).map((entry, i) => (
+                  <div key={entry.id} className={`shikaku-puzzle-time${entry.isOwn ? " shikaku-lb-row--self" : ""}`}>
+                    <span>#{i + 1} {entry.name} — {entry.score.toLocaleString()}</span>
+                    <span>{formatTime(entry.timeMs)}</span>
                   </div>
                 ))}
               </div>
