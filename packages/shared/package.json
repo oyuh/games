@@ -17,7 +17,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@rocicorp/zero": "0.25.13",
+    "@rocicorp/zero": "1.0.0",
     "drizzle-orm": "^0.41.0",
     "nanoid": "^5.1.5",
     "zod": "^3.24.2"
