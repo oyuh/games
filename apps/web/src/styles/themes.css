@@ -47,6 +47,21 @@
   border-color: var(--border);
 }
 
+[data-theme="light"] .solo-card {
+  background: var(--card);
+  border-color: color-mix(in srgb, var(--solo-accent, var(--primary)) 25%, var(--border));
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .solo-card:hover {
+  border-color: color-mix(in srgb, var(--solo-accent, var(--primary)) 45%, var(--border));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .solo-card-play {
+  color: #fff;
+}
+
 [data-theme="light"] .home-icon-layer {
   opacity: 0.06;
 }
@@ -110,4 +125,3 @@
 [data-theme='light'][data-game-theme='location'] {
   --game-bg: #fef3c7;
 }
-

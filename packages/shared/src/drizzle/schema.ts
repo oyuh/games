@@ -351,6 +351,26 @@ export const adminNameOverrides = pgTable(
   }
 );
 
+export const shikakuScores = pgTable(
+  "shikaku_scores",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    name: text("name").notNull(),
+    seed: integer("seed").notNull(),
+    difficulty: text("difficulty").notNull(),
+    score: integer("score").notNull(),
+    timeMs: integer("time_ms").notNull(),
+    puzzleCount: integer("puzzle_count").notNull().default(5),
+    replayData: jsonb("replay_data"),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  },
+  (table) => ({
+    difficultyScoreIdx: index("shikaku_scores_difficulty_score_idx").on(table.difficulty),
+    sessionIdx: index("shikaku_scores_session_idx").on(table.sessionId),
+  })
+);
+
 export type DrizzleSchema = {
   sessions: typeof sessions;
   statusTable: typeof statusTable;
@@ -364,4 +384,5 @@ export type DrizzleSchema = {
   adminBans: typeof adminBans;
   adminRestrictedNames: typeof adminRestrictedNames;
   adminNameOverrides: typeof adminNameOverrides;
+  shikakuScores: typeof shikakuScores;
 };

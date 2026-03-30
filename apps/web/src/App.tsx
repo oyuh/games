@@ -25,6 +25,7 @@ import { PasswordResultsPage } from "./pages/PasswordResultsPage";
 import { ChainReactionPage } from "./pages/ChainReactionPage";
 import { ShadeSignalPage } from "./pages/ShadeSignalPage";
 import { LocationSignalPage } from "./pages/LocationSignalPage";
+import { ShikakuPage } from "./pages/ShikakuPage";
 
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -279,6 +280,7 @@ export function App() {
               <Route path="/chain/:id" element={<ChainReactionPage sessionId={sessionId} />} />
               <Route path="/shade/:id" element={<ShadeSignalPage sessionId={sessionId} />} />
               <Route path="/location/:id" element={<LocationSignalPage sessionId={sessionId} />} />
+              <Route path="/shikaku" element={<ShikakuPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
