@@ -677,12 +677,40 @@ async function probeDatabaseStatus(): Promise<DatabaseProbe> {
 
 // ─── Shikaku solo game endpoints ─────────────────────────────
 
+// Server-side score calculation (mirrors the client formula exactly)
+const SHIKAKU_DIFF_MULT: Record<string, number> = { easy: 1, medium: 1.5, hard: 2.2, expert: 3 };
+const SHIKAKU_PAR_MS: Record<string, number> = { easy: 30_000, medium: 60_000, hard: 90_000, expert: 120_000 };
+const SHIKAKU_PUZZLES = 5;
+const SHIKAKU_MIN_TIME_MS: Record<string, number> = {
+  easy: 15_000,   // 3 s per puzzle
+  medium: 25_000, // 5 s per puzzle
+  hard: 40_000,   // 8 s per puzzle
+  expert: 60_000, // 12 s per puzzle
+};
+
+function shikakuMaxScore(timeMs: number, difficulty: string): number {
+  const totalParMs = (SHIKAKU_PAR_MS[difficulty] ?? 30_000) * SHIKAKU_PUZZLES;
+  const timeBonus = Math.max(0.1, 2 - timeMs / totalParMs);
+  const basePoints = 1000 * SHIKAKU_PUZZLES;
+  return Math.max(0, Math.round(basePoints * (SHIKAKU_DIFF_MULT[difficulty] ?? 1) * timeBonus));
+}
+
 app.use(
   "/api/shikaku/*",
   rateLimiter({
     windowMs: 60_000,
     maxRequests: 30,
     scope: "shikaku"
+  })
+);
+
+// Tighter limit specifically for score submissions
+app.use(
+  "/api/shikaku/score",
+  rateLimiter({
+    windowMs: 60_000,
+    maxRequests: 6,
+    scope: "shikaku_score"
   })
 );
 
@@ -723,10 +751,10 @@ app.get("/api/shikaku/leaderboard", async (c) => {
     if (pb) {
       // Count how many scores are better to determine rank
       const [countResult] = await drizzleClient
-        .select({ count: sql<number>`count(*)` })
+        .select({ count: sql<number>`count(*)::int` })
         .from(shikakuScores)
         .where(and(eq(shikakuScores.difficulty, difficulty), gt(shikakuScores.score, pb.score)));
-      personalBest = { score: pb.score, timeMs: pb.timeMs, rank: (countResult?.count ?? 0) + 1 };
+      personalBest = { score: pb.score, timeMs: pb.timeMs, rank: Number(countResult?.count ?? 0) + 1 };
     }
   }
 
@@ -759,6 +787,7 @@ app.post("/api/shikaku/score", async (c) => {
 
   const { sessionId, name, seed, difficulty, score, timeMs, puzzleCount } = body;
 
+  // ── Input validation ──────────────────────────────────────
   if (!sessionId || typeof sessionId !== "string" || sessionId.length > 64) {
     return c.json({ error: "Invalid sessionId" }, 400);
   }
@@ -782,12 +811,48 @@ app.post("/api/shikaku/score", async (c) => {
     return c.json({ error: "Invalid puzzleCount" }, 400);
   }
 
-  // Basic anti-cheat: minimum plausible time per puzzle
-  const minTimePerPuzzle = 2000; // 2 seconds absolute minimum
-  if (timeMs < minTimePerPuzzle * puzzleCount) {
+  // ── Ban check ─────────────────────────────────────────────
+  const callerIp = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
+  const callerRegion = c.req.header("x-vercel-ip-country") ?? "";
+  if (isBanned(sessionId, callerIp, callerRegion)) {
+    return c.json({ error: "Score rejected" }, 403);
+  }
+
+  // ── Session verification ──────────────────────────────────
+  const [session] = await drizzleClient
+    .select({ id: sessions.id, name: sessions.name })
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .limit(1);
+  if (!session) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+
+  // ── Per-difficulty minimum time ───────────────────────────
+  const minTime = SHIKAKU_MIN_TIME_MS[difficulty] ?? 15_000;
+  if (timeMs < minTime) {
     return c.json({ error: "Score rejected" }, 400);
   }
 
+  // ── Server-side score cap ─────────────────────────────────
+  // Recalculate the maximum legitimate score for the claimed time.
+  // Give-ups produce lower scores, so submitted score must be ≤ max.
+  const maxLegitScore = shikakuMaxScore(timeMs, difficulty);
+  if (score > maxLegitScore) {
+    return c.json({ error: "Score rejected" }, 400);
+  }
+
+  // ── Duplicate seed+session protection ─────────────────────
+  const [existing] = await drizzleClient
+    .select({ id: shikakuScores.id })
+    .from(shikakuScores)
+    .where(and(eq(shikakuScores.sessionId, sessionId), eq(shikakuScores.seed, seed)))
+    .limit(1);
+  if (existing) {
+    return c.json({ error: "Score already submitted for this run" }, 409);
+  }
+
+  // ── Insert ────────────────────────────────────────────────
   const id = crypto.randomUUID();
   await drizzleClient.insert(shikakuScores).values({
     id,
@@ -877,27 +942,40 @@ app.post("/api/zero/query", async (c) => {
 app.post("/api/zero/mutate", async (c) => {
   const request = c.req.raw;
   const callerUserId = getCallerUserId(c);
-  const result = await handleMutateRequest(
-    dbProvider,
-    (transact) =>
-      transact((tx, name, args) => {
-        enforceMutatorCaller(callerUserId, name, args);
-        if (name.startsWith("demo.") && process.env.NODE_ENV === "production") {
-          throw new Error("Demo mutators are disabled in production");
-        }
-        const mutator = mustGetMutator(mutators, name);
-        return mutator.fn({
-          args,
-          tx,
-          ctx: {
-            userId: callerUserId,
-            resolveGameSecretKey: (gameType: GameType, gameId: string) => getOrCreateGameKey(gameType, gameId),
+  try {
+    const result = await handleMutateRequest(
+      dbProvider,
+      (transact) =>
+        transact((tx, name, args) => {
+          enforceMutatorCaller(callerUserId, name, args);
+          if (name.startsWith("demo.") && process.env.NODE_ENV === "production") {
+            throw new Error("Demo mutators are disabled in production");
           }
-        });
-      }),
-    request
-  );
-  return c.json(result);
+          const mutator = mustGetMutator(mutators, name);
+          return mutator.fn({
+            args,
+            tx,
+            ctx: {
+              userId: callerUserId,
+              resolveGameSecretKey: (gameType: GameType, gameId: string) => getOrCreateGameKey(gameType, gameId),
+            }
+          });
+        }),
+      request
+    );
+    return c.json(result);
+  } catch (err) {
+    // Mutation ID conflicts happen when the client's IndexedDB cache gets
+    // evicted (mobile storage pressure, clearing data, etc.) — the client
+    // resets to mutation 0 but the server still expects a higher ID.
+    // Return an empty success so the client doesn't endlessly retry.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("already processed")) {
+      console.warn("[zero/mutate] stale mutation ignored:", msg);
+      return c.json({});
+    }
+    throw err;
+  }
 });
 
 // ─── Stale game cleanup ────────────────────────────────────

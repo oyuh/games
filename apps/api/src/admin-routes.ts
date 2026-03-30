@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, ne, and, gt } from "drizzle-orm";
+import { eq, ne, and, gt, desc, sql } from "drizzle-orm";
 import {
   sessions,
   imposterGames,
@@ -11,6 +11,7 @@ import {
   adminRestrictedNames,
   adminNameOverrides,
   statusTable,
+  shikakuScores,
 } from "@games/shared";
 import { drizzleClient } from "./db-provider";
 import {
@@ -694,6 +695,67 @@ export function getRestrictedNamesRoute() {
 
   return publicRoutes;
 }
+
+// ─── Shikaku leaderboard management ─────────────────────────
+const VALID_DIFFICULTIES = ["easy", "medium", "hard", "expert"];
+
+adminRoutes.get("/shikaku/scores", async (c) => {
+  const difficulty = c.req.query("difficulty");
+  const limit = Math.min(Number(c.req.query("limit") || 100), 500);
+
+  let query = drizzleClient
+    .select()
+    .from(shikakuScores)
+    .orderBy(desc(shikakuScores.score))
+    .limit(limit);
+
+  if (difficulty && VALID_DIFFICULTIES.includes(difficulty)) {
+    query = query.where(eq(shikakuScores.difficulty, difficulty)) as typeof query;
+  }
+
+  const scores = await query;
+  return c.json({ ok: true, scores, total: scores.length });
+});
+
+adminRoutes.patch("/shikaku/scores/:id", async (c) => {
+  const { id } = c.req.param();
+  const body = await c.req.json<{ name?: string; score?: number; timeMs?: number }>();
+
+  const [existing] = await drizzleClient.select().from(shikakuScores).where(eq(shikakuScores.id, id));
+  if (!existing) return c.json({ error: "Score not found" }, 404);
+
+  const updates: Record<string, unknown> = {};
+  if (typeof body.name === "string" && body.name.trim()) updates.name = body.name.trim().slice(0, 20);
+  if (typeof body.score === "number" && body.score >= 0) updates.score = Math.floor(body.score);
+  if (typeof body.timeMs === "number" && body.timeMs >= 0) updates.timeMs = Math.floor(body.timeMs);
+
+  if (Object.keys(updates).length === 0) return c.json({ error: "No valid fields to update" }, 400);
+
+  await drizzleClient.update(shikakuScores).set(updates).where(eq(shikakuScores.id, id));
+  return c.json({ ok: true, updated: { id, ...updates } });
+});
+
+adminRoutes.delete("/shikaku/scores/:id", async (c) => {
+  const { id } = c.req.param();
+  const [existing] = await drizzleClient.select({ id: shikakuScores.id }).from(shikakuScores).where(eq(shikakuScores.id, id));
+  if (!existing) return c.json({ error: "Score not found" }, 404);
+
+  await drizzleClient.delete(shikakuScores).where(eq(shikakuScores.id, id));
+  return c.json({ ok: true, deleted: id });
+});
+
+adminRoutes.delete("/shikaku/scores", async (c) => {
+  const body = await c.req.json<{ difficulty?: string }>();
+
+  if (body.difficulty && VALID_DIFFICULTIES.includes(body.difficulty)) {
+    const result = await drizzleClient.delete(shikakuScores).where(eq(shikakuScores.difficulty, body.difficulty));
+    return c.json({ ok: true, cleared: body.difficulty });
+  }
+
+  // wipe all
+  await drizzleClient.delete(shikakuScores);
+  return c.json({ ok: true, cleared: "all" });
+});
 
 // ─── Load persisted custom status from DB on startup ────────
 export async function loadPersistedStatus() {

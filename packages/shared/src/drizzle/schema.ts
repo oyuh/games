@@ -368,6 +368,7 @@ export const shikakuScores = pgTable(
   (table) => ({
     difficultyScoreIdx: index("shikaku_scores_difficulty_score_idx").on(table.difficulty),
     sessionIdx: index("shikaku_scores_session_idx").on(table.sessionId),
+    sessionSeedIdx: index("shikaku_scores_session_seed_idx").on(table.sessionId, table.seed),
   })
 );
 
