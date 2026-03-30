@@ -1,5 +1,7 @@
 import { mutators, queries, gameCategoryLabels } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
+import "../styles/game-shared.css";
+import "../styles/password.css";
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiAward, FiTag } from "react-icons/fi";

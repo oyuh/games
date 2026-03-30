@@ -1,5 +1,7 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
+import "../styles/game-shared.css";
+import "../styles/shade-signal.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiCopy, FiCheck, FiSend, FiHelpCircle } from "react-icons/fi";
