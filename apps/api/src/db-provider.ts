@@ -1,5 +1,5 @@
 import { schema as zeroSchema } from "@games/shared";
-import { chainReactionGames, gameEncryptionKeys, imposterGames, passwordGames, shadeSignalGames, locationSignalGames, sessions, statusTable } from "@games/shared";
+import { chainReactionGames, gameEncryptionKeys, imposterGames, passwordGames, shadeSignalGames, locationSignalGames, sessions, statusTable, shikakuScores } from "@games/shared";
 import { zeroDrizzle } from "@rocicorp/zero/server/adapters/drizzle";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,7 +73,8 @@ export const drizzleClient = drizzle(pool, {
     chainReactionGames,
     shadeSignalGames,
     locationSignalGames,
-    gameEncryptionKeys
+    gameEncryptionKeys,
+    shikakuScores
   }
 });
 
