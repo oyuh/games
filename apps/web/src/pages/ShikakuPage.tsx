@@ -5,7 +5,9 @@ import {
   calculateScore,
   Difficulty,
   DIFFICULTY_CONFIG,
+  generatePuzzle,
   generateRun,
+  mulberry32,
   PlacedRect,
   PUZZLES_PER_RUN,
   Rect,
@@ -98,6 +100,11 @@ export function ShikakuPage() {
   // Completion animation
   const [showPuzzleSolvedAnim, setShowPuzzleSolvedAnim] = useState(false);
 
+  // Infinite mode
+  const [infiniteMode, setInfiniteMode] = useState(false);
+  const [infiniteSolved, setInfiniteSolved] = useState(0);
+  const infiniteRng = useRef<(() => number) | null>(null);
+
   // Timer
   useEffect(() => {
     if (phase !== "playing") return;
@@ -125,9 +132,7 @@ export function ShikakuPage() {
   /* ── Start a new run ────────────────────────────────────── */
   const startRun = useCallback((diff: Difficulty) => {
     const newSeed = Math.floor(Math.random() * 2147483647);
-    const generated = generateRun(newSeed, diff);
     setSeed(newSeed);
-    setPuzzles(generated);
     setCurrentPuzzleIdx(0);
     setPlacedRects([]);
     setColorCounter(0);
@@ -137,8 +142,22 @@ export function ShikakuPage() {
     setUndoStack([]);
     setDifficulty(diff);
     setCountdownNum(3);
+
+    if (infiniteMode) {
+      const rng = mulberry32(newSeed);
+      infiniteRng.current = rng;
+      const { rows, cols } = DIFFICULTY_CONFIG[diff];
+      const firstPuzzle = generatePuzzle(rows, cols, rng);
+      setPuzzles([firstPuzzle]);
+      setInfiniteSolved(0);
+    } else {
+      infiniteRng.current = null;
+      const generated = generateRun(newSeed, diff);
+      setPuzzles(generated);
+    }
+
     setPhase("countdown");
-  }, []);
+  }, [infiniteMode]);
 
   /* ── Check if a placed rect is "valid" (exactly 1 number, area matches) ── */
   const isRectValid = useCallback((rect: Rect): boolean => {
@@ -190,7 +209,23 @@ export function ShikakuPage() {
 
     setShowPuzzleSolvedAnim(true);
 
-    if (currentPuzzleIdx < PUZZLES_PER_RUN - 1) {
+    if (infiniteMode) {
+      // Infinite mode: always generate next puzzle
+      setPuzzleTimes((prev) => [...prev, puzzleTime]);
+      setInfiniteSolved((n) => n + 1);
+      setTimeout(() => {
+        setShowPuzzleSolvedAnim(false);
+        const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
+        const nextPuzzle = generatePuzzle(rows, cols, infiniteRng.current!);
+        setPuzzles([nextPuzzle]);
+        setCurrentPuzzleIdx(0);
+        setPlacedRects([]);
+        setColorCounter(0);
+        setFlashingRects(new Set());
+        setUndoStack([]);
+        setPuzzleStartTime(Date.now());
+      }, 1200);
+    } else if (currentPuzzleIdx < PUZZLES_PER_RUN - 1) {
       // Show solve animation, then next puzzle
       setPuzzleTimes((prev) => [...prev, puzzleTime]);
       setTimeout(() => {
@@ -218,7 +253,7 @@ export function ShikakuPage() {
         submitScore(seed, difficulty, score, totalTime);
       }, 1200);
     }
-  }, [currentPuzzleIdx, puzzleStartTime, startTime, difficulty, seed]);
+  }, [currentPuzzleIdx, puzzleStartTime, startTime, difficulty, seed, infiniteMode]);
 
   /* ── Remove a rectangle by index ─────────────────────────── */
   const removeRect = useCallback((index: number) => {
@@ -334,20 +369,30 @@ export function ShikakuPage() {
     setConfirmGiveUp(false);
     const now = Date.now();
     const totalTime = now - startTime;
-    // Calculate partial score (penalized)
-    const completedPuzzles = puzzleTimes.length;
-    const partialMultiplier = completedPuzzles / PUZZLES_PER_RUN;
-    const rawScore = calculateScore(totalTime, difficulty);
-    const score = Math.round(rawScore * partialMultiplier * 0.5); // 50% penalty on top of partial
-    setFinalScore(score);
-    setFinalTimeMs(totalTime);
-    // Add current puzzle time
     const puzzleTime = now - puzzleStartTime;
     setPuzzleTimes((prev) => [...prev, puzzleTime]);
-    setPhase("finished");
 
-    submitScore(seed, difficulty, score, totalTime);
-  }, [startTime, puzzleTimes, difficulty, seed, puzzleStartTime]);
+    if (infiniteMode) {
+      // Infinite mode: show stats but don't submit
+      const solved = infiniteSolved;
+      // Simple score: 500 pts per puzzle solved × difficulty multiplier
+      const DIFF_MULT: Record<Difficulty, number> = { easy: 1, medium: 1.5, hard: 2.2, expert: 3 };
+      const score = Math.round(solved * 500 * DIFF_MULT[difficulty]);
+      setFinalScore(score);
+      setFinalTimeMs(totalTime);
+      setPhase("finished");
+    } else {
+      // Calculate partial score (penalized)
+      const completedPuzzles = puzzleTimes.length;
+      const partialMultiplier = completedPuzzles / PUZZLES_PER_RUN;
+      const rawScore = calculateScore(totalTime, difficulty);
+      const score = Math.round(rawScore * partialMultiplier * 0.5); // 50% penalty on top of partial
+      setFinalScore(score);
+      setFinalTimeMs(totalTime);
+      setPhase("finished");
+      submitScore(seed, difficulty, score, totalTime);
+    }
+  }, [startTime, puzzleTimes, difficulty, seed, puzzleStartTime, infiniteMode, infiniteSolved]);
 
   /* ── Leaderboard fetch ──────────────────────────────────── */
   const fetchLeaderboard = useCallback(async (diff: Difficulty) => {
@@ -377,6 +422,24 @@ export function ShikakuPage() {
     window.addEventListener("shikaku-toggle-leaderboard", handler);
     return () => window.removeEventListener("shikaku-toggle-leaderboard", handler);
   }, [difficulty, fetchLeaderboard]);
+
+  // Listen for sidebar infinite mode toggle
+  useEffect(() => {
+    const handler = () => {
+      if (phase === "menu") {
+        setInfiniteMode((v) => !v);
+      }
+    };
+    window.addEventListener("shikaku-toggle-infinite", handler);
+    return () => window.removeEventListener("shikaku-toggle-infinite", handler);
+  }, [phase]);
+
+  // Broadcast infinite mode + phase state so sidebar knows button state
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("shikaku-infinite-state", {
+      detail: { enabled: infiniteMode, canToggle: phase === "menu" },
+    }));
+  }, [infiniteMode, phase]);
 
   /* ── Score submission ───────────────────────────────────── */
   const submitScore = useCallback(async (
@@ -448,7 +511,7 @@ export function ShikakuPage() {
               {countdownNum > 0 ? countdownNum : "GO!"}
             </div>
             <p className="shikaku-countdown-label">
-              {difficulty} — {PUZZLES_PER_RUN} puzzles
+              {difficulty} — {infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
             </p>
           </div>
         </div>
@@ -489,7 +552,11 @@ export function ShikakuPage() {
               ))}
             </div>
 
-            <p className="shikaku-menu-hint">{PUZZLES_PER_RUN} puzzles per run — click selected to start</p>
+            <p className="shikaku-menu-hint">
+              {infiniteMode
+                ? "∞ Infinite mode — play endlessly, no score submission"
+                : `${PUZZLES_PER_RUN} puzzles per run — click selected to start`}
+            </p>
             <button className="btn btn-muted shikaku-info-btn" onClick={() => setShowDemo(true)}>
               <FiHelpCircle size={16} /> How to Play
             </button>
@@ -515,34 +582,45 @@ export function ShikakuPage() {
   // Finished
   if (phase === "finished") {
     const completedCount = puzzleTimes.length;
-    const gavUp = completedCount < PUZZLES_PER_RUN;
+    const gavUp = infiniteMode ? true : completedCount < PUZZLES_PER_RUN;
     return (
       <div className="game-page shikaku-page" data-game-theme="shikaku">
         <div className="shikaku-container">
           <div className="shikaku-finished shikaku-finished-enter">
-            <div className={`game-reveal-card ${gavUp ? "game-reveal-card--fail" : "game-reveal-card--success"}`}>
+            <div className={`game-reveal-card ${gavUp && !infiniteMode ? "game-reveal-card--fail" : "game-reveal-card--success"}`}>
               <p className="game-reveal-title">
-                {gavUp ? "Run Over" : "Run Complete!"}
+                {infiniteMode ? "∞ Run Over" : gavUp ? "Run Over" : "Run Complete!"}
               </p>
               <p className="game-reveal-sub">
-                {gavUp ? `Completed ${completedCount - 1} of ${PUZZLES_PER_RUN} puzzles` : `All ${PUZZLES_PER_RUN} puzzles solved!`}
+                {infiniteMode
+                  ? `Solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} in infinite mode`
+                  : gavUp ? `Completed ${completedCount - 1} of ${PUZZLES_PER_RUN} puzzles` : `All ${PUZZLES_PER_RUN} puzzles solved!`}
               </p>
             </div>
 
-            <div className="shikaku-stats">
+            <div className={`shikaku-stats${infiniteMode ? " shikaku-stats--infinite" : ""}`}>
               <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.1s" }}>
                 <span className="shikaku-stat-label">Time</span>
                 <span className="shikaku-stat-value">{formatTime(finalTimeMs)}</span>
               </div>
+              {infiniteMode && (
+                <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.2s" }}>
+                  <span className="shikaku-stat-label">Puzzles Solved</span>
+                  <span className="shikaku-stat-value">{infiniteSolved}</span>
+                </div>
+              )}
               <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.25s" }}>
                 <span className="shikaku-stat-label">Score</span>
-                <span className="shikaku-stat-value">{finalScore.toLocaleString()}</span>
+                <span className="shikaku-stat-value">
+                  {finalScore.toLocaleString()}
+                  {infiniteMode && <span style={{ fontSize: "0.6em", opacity: 0.5, marginLeft: 4 }}>(unranked)</span>}
+                </span>
               </div>
               <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.4s" }}>
                 <span className="shikaku-stat-label">Difficulty</span>
                 <span className="shikaku-stat-value" style={{ textTransform: "capitalize" }}>{difficulty}</span>
               </div>
-              {personalBest && (
+              {personalBest && !infiniteMode && (
                 <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.55s" }}>
                   <span className="shikaku-stat-label">Rank</span>
                   <span className="shikaku-stat-value">#{personalBest.rank}</span>
@@ -562,7 +640,7 @@ export function ShikakuPage() {
             )}
 
             {/* Inline top scores from DB */}
-            {leaderboard.length > 0 && (
+            {leaderboard.length > 0 && !infiniteMode && (
               <div className="shikaku-puzzle-times" style={{ marginTop: "0.5rem" }}>
                 <div className="shikaku-puzzle-time" style={{ opacity: 0.6, fontWeight: 700, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   <span><FiAward size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Top Scores</span>
@@ -584,13 +662,15 @@ export function ShikakuPage() {
               <button className="btn btn-muted" onClick={() => setPhase("menu")} title="Back to difficulty select">
                 Menu
               </button>
-              <button
-                className="btn btn-muted"
-                onClick={() => { setShowLeaderboard(true); fetchLeaderboard(difficulty); }}
-                title="View top scores"
-              >
-                <FiAward size={16} /> Leaderboard
-              </button>
+              {!infiniteMode && (
+                <button
+                  className="btn btn-muted"
+                  onClick={() => { setShowLeaderboard(true); fetchLeaderboard(difficulty); }}
+                  title="View top scores"
+                >
+                  <FiAward size={16} /> Leaderboard
+                </button>
+              )}
             </div>
 
             {showLeaderboard && (
@@ -620,8 +700,8 @@ export function ShikakuPage() {
               <FiGrid size={20} />
             </div>
             <h1 className="game-title">Shikaku</h1>
-            <span className="badge badge-warn" data-tooltip={`Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN}`} data-tooltip-variant="info">
-              {currentPuzzleIdx + 1} / {PUZZLES_PER_RUN}
+            <span className="badge badge-warn" data-tooltip={infiniteMode ? `${infiniteSolved} solved — ∞ mode` : `Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN}`} data-tooltip-variant="info">
+              {infiniteMode ? <>{infiniteSolved} solved <span style={{ opacity: 0.5 }}>∞</span></> : `${currentPuzzleIdx + 1} / ${PUZZLES_PER_RUN}`}
             </span>
             <span className="badge" data-tooltip="Elapsed time" data-tooltip-variant="info" style={{ fontVariantNumeric: "tabular-nums" }}>
               <FiClock size={12} /> {formatTime(elapsedMs)}
@@ -650,6 +730,7 @@ export function ShikakuPage() {
               onCellMouseDown={handleCellMouseDown}
               onCellMouseEnter={handleCellMouseEnter}
               onCellRightClick={handleCellRightClick}
+              onMouseUp={handleMouseUp}
             />
           )}
 
@@ -718,9 +799,11 @@ export function ShikakuPage() {
           <div className="shikaku-giveup-overlay" onClick={(e) => { if (e.target === e.currentTarget) cancelGiveUp(); }}>
             <div className="shikaku-giveup-modal">
               <div className="shikaku-giveup-icon"><FiFlag /></div>
-              <p className="shikaku-giveup-title">Give Up?</p>
+              <p className="shikaku-giveup-title">{infiniteMode ? "End Run?" : "Give Up?"}</p>
               <p className="shikaku-giveup-sub">
-                You&apos;ve completed {puzzleTimes.length} of {PUZZLES_PER_RUN} puzzles. Your score will be penalized.
+                {infiniteMode
+                  ? `You've solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} so far. End and see your results?`
+                  : <>You&apos;ve completed {puzzleTimes.length} of {PUZZLES_PER_RUN} puzzles. Your score will be penalized.</>}
               </p>
               <div className="shikaku-giveup-btns">
                 <button className="btn btn-primary" style={{ background: "#f87171", borderColor: "#f87171" }} onClick={giveUp}>Give Up</button>
@@ -746,6 +829,7 @@ function ShikakuGrid({
   onCellMouseDown,
   onCellMouseEnter,
   onCellRightClick,
+  onMouseUp,
 }: {
   puzzle: ShikakuPuzzle;
   placedRects: PlacedRect[];
@@ -755,8 +839,54 @@ function ShikakuGrid({
   onCellMouseDown: (r: number, c: number) => void;
   onCellMouseEnter: (r: number, c: number) => void;
   onCellRightClick?: (r: number, c: number) => void;
+  onMouseUp?: () => void;
 }) {
   const { rows, cols } = puzzle;
+  const gridRef = useRef<HTMLDivElement>(null);
+  const lastTouchCell = useRef<string>("");
+
+  const getCellFromTouch = useCallback((touch: React.Touch | Touch): { r: number; c: number } | null => {
+    const el = gridRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) return null;
+    const c = Math.floor((x / rect.width) * cols);
+    const r = Math.floor((y / rect.height) * rows);
+    return { r: Math.max(0, Math.min(rows - 1, r)), c: Math.max(0, Math.min(cols - 1, c)) };
+  }, [rows, cols]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length > 1) return; // allow two-finger scroll/zoom
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (!touch) return;
+    const cell = getCellFromTouch(touch);
+    if (!cell) return;
+    lastTouchCell.current = `${cell.r},${cell.c}`;
+    onCellMouseDown(cell.r, cell.c);
+  }, [getCellFromTouch, onCellMouseDown]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length > 1) return; // allow two-finger scroll/zoom
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (!touch) return;
+    const cell = getCellFromTouch(touch);
+    if (!cell) return;
+    const key = `${cell.r},${cell.c}`;
+    if (key !== lastTouchCell.current) {
+      lastTouchCell.current = key;
+      onCellMouseEnter(cell.r, cell.c);
+    }
+  }, [getCellFromTouch, onCellMouseEnter]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    lastTouchCell.current = "";
+    onMouseUp?.();
+  }, [onMouseUp]);
 
   // Build a cell→rect lookup
   const cellRectMap = useMemo(() => {
@@ -786,12 +916,16 @@ function ShikakuGrid({
 
   return (
     <div
+      ref={gridRef}
       className="shikaku-grid"
       style={{
         gridTemplateRows: `repeat(${rows}, 1fr)`,
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
       }}
       onContextMenu={(e) => e.preventDefault()}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {Array.from({ length: rows }, (_, r) =>
         Array.from({ length: cols }, (_, c) => {
