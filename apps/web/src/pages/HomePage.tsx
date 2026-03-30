@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
-import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiUserCheck, FiUsers } from "react-icons/fi";
+import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiUserCheck, FiUsers, FiZap, FiGrid } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, RecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -18,8 +18,82 @@ import { PasswordDemo } from "../components/demos/PasswordDemo";
 import { ChainDemo } from "../components/demos/ChainDemo";
 import { ShadeDemo } from "../components/demos/ShadeDemo";
 import { LocationDemo } from "../components/demos/LocationDemo";
+import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 
 const isDev = import.meta.env.DEV;
+
+/* ── Solo game definitions ────────────────────────────────────── */
+const SOLO_GAMES: SoloGameDef[] = [
+  {
+    id: "shikaku", title: "Shikaku",
+    description: "Divide the grid into rectangles.",
+    icon: FiGrid, accent: "#34d399",
+    bgGradient: "linear-gradient(160deg, #1a2e26 0%, #1a1a1a 100%)",
+    href: "/shikaku",
+    preview: (
+      <div className="solo-preview-shikaku">
+        {/* 4×4 grid with number hints and filled rectangles */}
+        <div className="solo-shikaku-cell solo-shikaku-cell--filled-a" />
+        <div className="solo-shikaku-cell solo-shikaku-cell--filled-a" />
+        <div className="solo-shikaku-cell solo-shikaku-num">4</div>
+        <div className="solo-shikaku-cell solo-shikaku-cell--filled-b" />
+        <div className="solo-shikaku-cell solo-shikaku-cell--filled-a" />
+        <div className="solo-shikaku-cell solo-shikaku-cell--filled-a" />
+        <div className="solo-shikaku-cell" />
+        <div className="solo-shikaku-cell solo-shikaku-cell--filled-b" />
+        <div className="solo-shikaku-cell solo-shikaku-num">6</div>
+        <div className="solo-shikaku-cell" />
+        <div className="solo-shikaku-cell" />
+        <div className="solo-shikaku-cell solo-shikaku-cell--filled-b" />
+        <div className="solo-shikaku-cell" />
+        <div className="solo-shikaku-cell" />
+        <div className="solo-shikaku-cell solo-shikaku-num">2</div>
+        <div className="solo-shikaku-cell solo-shikaku-cell--filled-b" />
+      </div>
+    ),
+  },
+  {
+    id: "pips", title: "Pips",
+    description: "Fill the board with dominoes. No duplicates.",
+    icon: FiZap, accent: "#fb923c",
+    bgGradient: "linear-gradient(160deg, #2e2218 0%, #1a1a1a 100%)",
+    preview: (
+      <div className="solo-preview-pips">
+        <div className="solo-pips-domino solo-pips-domino--placed">
+          <span className="solo-pips-half">●●</span>
+          <span className="solo-pips-half">●●●</span>
+        </div>
+        <div className="solo-pips-domino solo-pips-domino--placed">
+          <span className="solo-pips-half">●</span>
+          <span className="solo-pips-half">●●●●</span>
+        </div>
+        <div className="solo-pips-domino">
+          <span className="solo-pips-half">●●●</span>
+          <span className="solo-pips-half">●●●●●</span>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "nexus", title: "Nexus",
+    description: "Connect nodes to complete the circuit.",
+    icon: FiZap, accent: "#38bdf8",
+    bgGradient: "linear-gradient(160deg, #182530 0%, #1a1a1a 100%)",
+    preview: (
+      <div className="solo-preview-nexus">
+        <div className="solo-nexus-node solo-nexus-node--lit" />
+        <div className="solo-nexus-edge" />
+        <div className="solo-nexus-node" />
+        <div className="solo-nexus-edge solo-nexus-edge--v" />
+        <div />
+        <div className="solo-nexus-edge solo-nexus-edge--v" />
+        <div className="solo-nexus-node" />
+        <div className="solo-nexus-edge" />
+        <div className="solo-nexus-node solo-nexus-node--lit" />
+      </div>
+    ),
+  },
+];
 
 /* ── Word bank for random names ──────────────────────── */
 const adjectives = [
@@ -438,6 +512,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     <>
     <ActiveGameModal sessionId={sessionId} suppress={pendingAction !== null} />
     <div className="home-cards" ref={scrollRef}>
+      <div className="home-layout">
+
+      {/* ── Multiplayer section ─────────────────────────────── */}
+      <div className="home-section-multi">
 
       {/* ── Card 1: Utils ──────────────────────────────────── */}
       <div className={`home-card home-card--utils${firstVisit ? " home-card--glow" : ""}`} onClick={dismissFirstVisit}>
@@ -1233,6 +1311,27 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
+      </div>{/* end home-section-multi */}
+
+      {/* ── Separator ──────────────────────────────────────── */}
+      <div className="home-section-separator">
+        <div className="home-sep-col">
+          <span className="home-sep-label">Multiplayer</span>
+        </div>
+        <div className="home-sep-line" />
+        <div className="home-sep-col">
+          <span className="home-sep-label">Singleplayer</span>
+        </div>
+      </div>
+
+      {/* ── Solo section ───────────────────────────────────── */}
+      <div className="home-section-solo">
+        {SOLO_GAMES.map((game) => (
+          <SoloGameCard key={game.id} game={game} />
+        ))}
+      </div>
+
+      </div>{/* end home-layout */}
     </div>
 
     {showInSessionModal && pendingJoinTarget && (

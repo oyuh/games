@@ -1,18 +1,330 @@
 /* ── Home cards layout ───────────────────────────────────────── */
 .home-cards {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  align-content: center;
-  gap: 1.5rem;
+  align-items: flex-start;
   width: 100%;
   padding: 2rem 0;
   min-height: calc(100vh - 6rem);
 }
 
+.home-layout {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
 /* Break out of the .shell-main max-width constraint */
 .shell-main:has(.home-cards) {
-  max-width: 1100px;
+  max-width: 1480px;
+}
+
+/* ── Multiplayer / Solo split layout ─────────────────────────── */
+.home-section-multi {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  gap: 1.5rem;
+  flex: 0 0 auto;
+  width: calc(3 * 320px + 2 * 1.5rem);
+}
+
+.home-section-separator {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+  user-select: none;
+  flex-shrink: 0;
+  width: 5rem;
+}
+
+.home-sep-col {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-sep-label {
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--muted-foreground);
+  opacity: 0.45;
+  white-space: nowrap;
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  padding: 0 0.25rem;
+}
+
+.home-sep-col:last-child .home-sep-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.home-sep-line {
+  flex: 0 0 1px;
+  width: 1px;
+  align-self: stretch;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--secondary) 25%, transparent) 10%,
+    color-mix(in srgb, var(--secondary) 25%, transparent) 90%,
+    transparent
+  );
+}
+
+.home-section-solo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 0 0 240px;
+}
+
+/* ── Solo game cards ─────────────────────────────────────────── */
+.solo-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--solo-accent, var(--primary)) 18%, transparent);
+  background: var(--solo-bg, linear-gradient(160deg, #232323 0%, #1a1a1a 100%));
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.solo-card:hover {
+  border-color: color-mix(in srgb, var(--solo-accent, var(--primary)) 35%, transparent);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+}
+
+.solo-card-body {
+  padding: 1rem 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.solo-card-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.solo-card-desc {
+  font-size: 0.72rem;
+  color: var(--secondary);
+  margin: 0;
+  line-height: 1.3;
+  max-width: 22ch;
+}
+
+.solo-card-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  padding: 0.35rem 0;
+}
+
+.solo-card-play {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.65rem 1.2rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border-radius: 0.65rem;
+  background: var(--solo-accent, var(--primary));
+  color: #111;
+  border: none;
+  cursor: pointer;
+  margin-top: auto;
+  transition: filter 0.2s, transform 0.15s;
+}
+
+.solo-card-play:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.solo-card-play:active {
+  transform: translateY(0);
+}
+
+/* ── Shikaku preview ─────────────────────────────────────────── */
+.solo-preview-shikaku {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  width: 100%;
+  max-width: 140px;
+}
+
+.solo-shikaku-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--secondary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 16%, transparent);
+  color: var(--muted-foreground);
+}
+
+.solo-shikaku-num {
+  color: var(--solo-accent);
+  font-weight: 900;
+  font-size: 0.65rem;
+}
+
+.solo-shikaku-cell--filled-a {
+  background: color-mix(in srgb, var(--solo-accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--solo-accent) 35%, transparent);
+}
+
+.solo-shikaku-cell--filled-b {
+  background: color-mix(in srgb, #38bdf8 14%, transparent);
+  border-color: color-mix(in srgb, #38bdf8 28%, transparent);
+}
+
+/* ── Pips preview ────────────────────────────────────────────── */
+.solo-preview-pips {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+.solo-pips-domino {
+  display: flex;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px dashed color-mix(in srgb, var(--secondary) 25%, transparent);
+  width: fit-content;
+}
+
+.solo-pips-domino--placed {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--solo-accent) 35%, transparent);
+}
+
+.solo-pips-half {
+  padding: 0.2rem 0.4rem;
+  font-size: 0.45rem;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  text-align: center;
+}
+
+.solo-pips-domino--placed .solo-pips-half {
+  background: color-mix(in srgb, var(--solo-accent) 12%, transparent);
+  color: var(--solo-accent);
+}
+
+.solo-pips-half + .solo-pips-half {
+  border-left: 1px solid color-mix(in srgb, var(--secondary) 18%, transparent);
+}
+
+.solo-pips-domino--placed .solo-pips-half + .solo-pips-half {
+  border-color: color-mix(in srgb, var(--solo-accent) 25%, transparent);
+}
+
+/* ── Crossword mini preview ──────────────────────────────────── */
+.solo-preview-crossword {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  width: 100%;
+  max-width: 140px;
+}
+
+.solo-xw-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--secondary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 16%, transparent);
+  color: var(--muted-foreground);
+}
+
+.solo-xw-cell--black {
+  background: transparent;
+  border-color: transparent;
+}
+
+.solo-xw-cell--filled {
+  background: color-mix(in srgb, var(--solo-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--solo-accent) 28%, transparent);
+  color: var(--solo-accent);
+}
+
+/* ── Nexus preview ───────────────────────────────────────────── */
+.solo-preview-nexus {
+  display: grid;
+  grid-template-columns: 2rem 1.5rem 2rem;
+  grid-template-rows: 2rem 1.5rem 2rem;
+  gap: 0;
+  align-items: center;
+  justify-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 140px;
+}
+.solo-nexus-node {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--solo-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--solo-accent) 8%, transparent);
+}
+.solo-nexus-node--lit {
+  background: color-mix(in srgb, var(--solo-accent) 25%, transparent);
+  border-color: var(--solo-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--solo-accent) 30%, transparent);
+}
+.solo-nexus-edge {
+  width: 100%;
+  height: 2px;
+  background: color-mix(in srgb, var(--solo-accent) 25%, transparent);
+  border-radius: 1px;
+}
+.solo-nexus-edge--v {
+  width: 2px;
+  height: 100%;
+  background: color-mix(in srgb, var(--solo-accent) 25%, transparent);
+  border-radius: 1px;
 }
 
 .home-cards-dots {
@@ -1257,6 +1569,13 @@
     min-height: calc(100vh - 8rem);
     align-items: stretch;
     width: 100%;
+  }
+
+  /* Hide split layout on mobile — handled by MobileHomePage */
+  .home-section-multi,
+  .home-section-separator,
+  .home-section-solo {
+    display: none;
   }
 
   .home-card {

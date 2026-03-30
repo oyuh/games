@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle } from "react-icons/fi";
+import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
@@ -189,7 +189,7 @@ export function Sidebar() {
   const sessionId = getOrCreateSessionId();
   const chat = useChatContext();
 
-  const isInGame = /^\/(imposter|password|chain|shade|location)\//.test(location.pathname);
+  const isInGame = /^\/(imposter|password|chain|shade|location)\/|^\/shikaku(\/|$)/.test(location.pathname);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -271,6 +271,16 @@ export function Sidebar() {
             }
             label="Chat"
             onClick={() => { chat.toggle(); setMobileOpen(false); }}
+          />
+        )}
+        {/^\/shikaku(\/|$)/.test(location.pathname) && (
+          <SidebarButton
+            icon={<FiAward size={20} />}
+            label="Leaderboard"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("shikaku-toggle-leaderboard"));
+              setMobileOpen(false);
+            }}
           />
         )}
         <SidebarButton icon={<FiInfo size={20} />} label="Info" onClick={() => { setModal("info"); setMobileOpen(false); }} />

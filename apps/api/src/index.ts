@@ -1,10 +1,10 @@
 import { mutators, queries, schema } from "@games/shared";
-import { chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, statusTable } from "@games/shared";
+import { chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, statusTable } from "@games/shared";
 import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
-import { lt, and, ne, eq, count } from "drizzle-orm";
+import { lt, and, ne, eq, count, desc, gt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
@@ -674,6 +674,135 @@ async function probeDatabaseStatus(): Promise<DatabaseProbe> {
     };
   }
 }
+
+// ─── Shikaku solo game endpoints ─────────────────────────────
+
+app.use(
+  "/api/shikaku/*",
+  rateLimiter({
+    windowMs: 60_000,
+    maxRequests: 30,
+    scope: "shikaku"
+  })
+);
+
+app.get("/api/shikaku/leaderboard", async (c) => {
+  const difficulty = c.req.query("difficulty")?.trim() ?? "easy";
+  const validDiffs = ["easy", "medium", "hard", "expert"];
+  if (!validDiffs.includes(difficulty)) {
+    return c.json({ error: "Invalid difficulty" }, 400);
+  }
+  const limitParam = parseInt(c.req.query("limit") ?? "10", 10);
+  const limit = Math.min(Math.max(1, limitParam), 50);
+  const sessionIdParam = c.req.query("sessionId")?.trim() ?? null;
+
+  const rows = await drizzleClient
+    .select({
+      id: shikakuScores.id,
+      name: shikakuScores.name,
+      score: shikakuScores.score,
+      timeMs: shikakuScores.timeMs,
+      difficulty: shikakuScores.difficulty,
+      createdAt: shikakuScores.createdAt,
+      sessionId: shikakuScores.sessionId,
+    })
+    .from(shikakuScores)
+    .where(eq(shikakuScores.difficulty, difficulty))
+    .orderBy(desc(shikakuScores.score))
+    .limit(limit);
+
+  // Fetch personal best for the given session
+  let personalBest: { score: number; timeMs: number; rank: number } | null = null;
+  if (sessionIdParam && sessionIdParam.length <= 64) {
+    const [pb] = await drizzleClient
+      .select({ score: shikakuScores.score, timeMs: shikakuScores.timeMs })
+      .from(shikakuScores)
+      .where(and(eq(shikakuScores.difficulty, difficulty), eq(shikakuScores.sessionId, sessionIdParam)))
+      .orderBy(desc(shikakuScores.score))
+      .limit(1);
+    if (pb) {
+      // Count how many scores are better to determine rank
+      const [countResult] = await drizzleClient
+        .select({ count: sql<number>`count(*)` })
+        .from(shikakuScores)
+        .where(and(eq(shikakuScores.difficulty, difficulty), gt(shikakuScores.score, pb.score)));
+      personalBest = { score: pb.score, timeMs: pb.timeMs, rank: (countResult?.count ?? 0) + 1 };
+    }
+  }
+
+  return c.json({
+    entries: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      score: r.score,
+      timeMs: r.timeMs,
+      difficulty: r.difficulty,
+      createdAt: r.createdAt,
+      isOwn: sessionIdParam ? r.sessionId === sessionIdParam : false,
+    })),
+    personalBest,
+  });
+});
+
+app.post("/api/shikaku/score", async (c) => {
+  const body = await c.req.json().catch(() => null) as {
+    sessionId?: string;
+    name?: string;
+    seed?: number;
+    difficulty?: string;
+    score?: number;
+    timeMs?: number;
+    puzzleCount?: number;
+  } | null;
+
+  if (!body) return c.json({ error: "Invalid body" }, 400);
+
+  const { sessionId, name, seed, difficulty, score, timeMs, puzzleCount } = body;
+
+  if (!sessionId || typeof sessionId !== "string" || sessionId.length > 64) {
+    return c.json({ error: "Invalid sessionId" }, 400);
+  }
+  if (!name || typeof name !== "string" || name.length > 50) {
+    return c.json({ error: "Invalid name" }, 400);
+  }
+  if (typeof seed !== "number" || !Number.isInteger(seed)) {
+    return c.json({ error: "Invalid seed" }, 400);
+  }
+  const validDiffs = ["easy", "medium", "hard", "expert"];
+  if (!difficulty || !validDiffs.includes(difficulty)) {
+    return c.json({ error: "Invalid difficulty" }, 400);
+  }
+  if (typeof score !== "number" || score < 0 || score > 100000) {
+    return c.json({ error: "Invalid score" }, 400);
+  }
+  if (typeof timeMs !== "number" || timeMs < 0 || timeMs > 3600000) {
+    return c.json({ error: "Invalid timeMs" }, 400);
+  }
+  if (typeof puzzleCount !== "number" || puzzleCount < 1 || puzzleCount > 20) {
+    return c.json({ error: "Invalid puzzleCount" }, 400);
+  }
+
+  // Basic anti-cheat: minimum plausible time per puzzle
+  const minTimePerPuzzle = 2000; // 2 seconds absolute minimum
+  if (timeMs < minTimePerPuzzle * puzzleCount) {
+    return c.json({ error: "Score rejected" }, 400);
+  }
+
+  const id = crypto.randomUUID();
+  await drizzleClient.insert(shikakuScores).values({
+    id,
+    sessionId,
+    name: name.slice(0, 50),
+    seed,
+    difficulty,
+    score,
+    timeMs,
+    puzzleCount,
+    createdAt: Date.now(),
+  });
+
+  return c.json({ ok: true, id });
+});
 
 app.get("/health", (c) => c.json({ ok: true }));
 
