@@ -1,5 +1,8 @@
 import { signIn } from "@/auth";
 
+const isDev = process.env.NODE_ENV !== "production";
+const hasDevSecret = !!process.env.ADMIN_DEV_SECRET;
+
 export default function LoginPage() {
   return (
     <div
@@ -13,17 +16,18 @@ export default function LoginPage() {
     >
       <div
         style={{
-          background: "var(--card)",
-          border: "1px solid var(--border)",
+          background: "linear-gradient(to bottom right, #232323, #181a1b)",
+          border: "1px solid color-mix(in srgb, #7ecbff 20%, transparent)",
           borderRadius: "1rem",
           padding: "2.5rem",
           textAlign: "center",
           maxWidth: "380px",
           width: "100%",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
         }}
       >
         <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text)", marginBottom: "0.5rem" }}>
-          🎮 Games Admin
+          Games Admin
         </h1>
         <p style={{ fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "2rem" }}>
           Sign in with your authorized GitHub account to continue.
@@ -58,6 +62,45 @@ export default function LoginPage() {
             Sign in with GitHub
           </button>
         </form>
+        {isDev && hasDevSecret && (
+          <>
+            <div style={{ margin: "1.5rem 0 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+              <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>DEV</span>
+              <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+            </div>
+            <form
+              action={async () => {
+                "use server";
+                await signIn("dev-login", {
+                  secret: process.env.ADMIN_DEV_SECRET!,
+                  redirectTo: "/",
+                });
+              }}
+            >
+              <button
+                type="submit"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.625rem 1.5rem",
+                  background: "color-mix(in srgb, #7ecbff 15%, transparent)",
+                  color: "#7ecbff",
+                  border: "1px solid color-mix(in srgb, #7ecbff 35%, transparent)",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  width: "100%",
+                  justifyContent: "center",
+                }}
+              >
+                Dev Login (Local Only)
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );

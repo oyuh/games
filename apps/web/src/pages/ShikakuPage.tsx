@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiAward, FiCheck, FiClock, FiCornerUpLeft, FiFlag, FiGrid, FiHelpCircle, FiRepeat, FiTrash2, FiX } from "react-icons/fi";
+import { FiAward, FiCheck, FiClock, FiCornerUpLeft, FiFlag, FiGrid, FiHelpCircle, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
 import {
   calculateScore,
   Difficulty,
@@ -21,6 +21,14 @@ import "../styles/shikaku.css";
 import { ShikakuDemo } from "../components/demos/ShikakuDemo";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+
+/* ── Max play time: 1hr base + 30min per difficulty tier ──── */
+const MAX_TIME_MS: Record<Difficulty, number> = {
+  easy:   3_600_000,
+  medium: 3_600_000 + 1_800_000,
+  hard:   3_600_000 + 3_600_000,
+  expert: 3_600_000 + 5_400_000,
+};
 
 /* ── Palette for rectangles ───────────────────────────────── */
 const RECT_COLORS = [
@@ -98,6 +106,11 @@ export function ShikakuPage() {
   const [finalScore, setFinalScore] = useState(0);
   const [finalTimeMs, setFinalTimeMs] = useState(0);
 
+  // Score submission state
+  const [scoreSubmitted, setScoreSubmitted] = useState(false);
+  const [submittingScore, setSubmittingScore] = useState(false);
+  const lastSubmitTime = useRef(0);
+
   // Completion animation
   const [showPuzzleSolvedAnim, setShowPuzzleSolvedAnim] = useState(false);
 
@@ -106,14 +119,55 @@ export function ShikakuPage() {
   const [infiniteSolved, setInfiniteSolved] = useState(0);
   const infiniteRng = useRef<(() => number) | null>(null);
 
+  /* ── Leaderboard fetch ──────────────────────────────────── */
+  const fetchLeaderboard = useCallback(async (diff: Difficulty) => {
+    setLeaderboardLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/shikaku/leaderboard?difficulty=${encodeURIComponent(diff)}&limit=10&sessionId=${encodeURIComponent(sessionId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLeaderboard(data.entries ?? []);
+        setPersonalBest(data.personalBest ?? null);
+      }
+    } catch {
+      // silent
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, [sessionId]);
+
   // Timer
   useEffect(() => {
     if (phase !== "playing") return;
     const iv = setInterval(() => {
-      setElapsedMs(Date.now() - startTime);
+      const elapsed = Date.now() - startTime;
+      setElapsedMs(elapsed);
+      // Auto-end run if max play time exceeded
+      const maxMs = MAX_TIME_MS[difficulty];
+      if (elapsed >= maxMs) {
+        clearInterval(iv);
+        showToast("Time limit reached — run ended", "info");
+        // Force-end via giveUp-like logic
+        const totalTime = maxMs;
+        const puzzleTime = Date.now() - puzzleStartTime;
+        setPuzzleTimes((prev) => [...prev, puzzleTime]);
+        if (infiniteMode) {
+          const DIFF_MULT: Record<Difficulty, number> = { easy: 1, medium: 1.5, hard: 2.2, expert: 3 };
+          setFinalScore(Math.round(infiniteSolved * 500 * DIFF_MULT[difficulty]));
+        } else {
+          const completedPuzzles = puzzleTimes.length;
+          const partialMultiplier = completedPuzzles / PUZZLES_PER_RUN;
+          const rawScore = calculateScore(totalTime, difficulty);
+          setFinalScore(Math.round(rawScore * partialMultiplier * 0.5));
+        }
+        setFinalTimeMs(totalTime);
+        setPhase("finished");
+        setScoreSubmitted(false);
+        fetchLeaderboard(difficulty);
+      }
     }, 50);
     return () => clearInterval(iv);
-  }, [phase, startTime]);
+  }, [phase, startTime, difficulty, puzzleStartTime, infiniteMode, infiniteSolved, puzzleTimes, fetchLeaderboard]);
 
   const currentPuzzle = puzzles[currentPuzzleIdx] ?? null;
 
@@ -143,6 +197,8 @@ export function ShikakuPage() {
     setUndoStack([]);
     setDifficulty(diff);
     setCountdownNum(3);
+    setScoreSubmitted(false);
+    setSubmittingScore(false);
 
     if (infiniteMode) {
       const rng = mulberry32(newSeed);
@@ -249,12 +305,13 @@ export function ShikakuPage() {
       setTimeout(() => {
         setShowPuzzleSolvedAnim(false);
         setPhase("finished");
+        setScoreSubmitted(false);
 
-        // Submit score
-        submitScore(seed, difficulty, score, totalTime);
+        // Fetch leaderboard for finished screen
+        fetchLeaderboard(difficulty);
       }, 1200);
     }
-  }, [currentPuzzleIdx, puzzleStartTime, startTime, difficulty, seed, infiniteMode]);
+  }, [currentPuzzleIdx, puzzleStartTime, startTime, difficulty, seed, infiniteMode, fetchLeaderboard]);
 
   /* ── Remove a rectangle by index ─────────────────────────── */
   const removeRect = useCallback((index: number) => {
@@ -391,26 +448,10 @@ export function ShikakuPage() {
       setFinalScore(score);
       setFinalTimeMs(totalTime);
       setPhase("finished");
-      submitScore(seed, difficulty, score, totalTime);
+      setScoreSubmitted(false);
+      fetchLeaderboard(difficulty);
     }
-  }, [startTime, puzzleTimes, difficulty, seed, puzzleStartTime, infiniteMode, infiniteSolved]);
-
-  /* ── Leaderboard fetch ──────────────────────────────────── */
-  const fetchLeaderboard = useCallback(async (diff: Difficulty) => {
-    setLeaderboardLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/shikaku/leaderboard?difficulty=${encodeURIComponent(diff)}&limit=10&sessionId=${encodeURIComponent(sessionId)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setLeaderboard(data.entries ?? []);
-        setPersonalBest(data.personalBest ?? null);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLeaderboardLoading(false);
-    }
-  }, [sessionId]);
+  }, [startTime, puzzleTimes, difficulty, seed, puzzleStartTime, infiniteMode, infiniteSolved, fetchLeaderboard]);
 
   // Listen for sidebar leaderboard toggle
   useEffect(() => {
@@ -446,6 +487,17 @@ export function ShikakuPage() {
   const submitScore = useCallback(async (
     runSeed: number, diff: Difficulty, score: number, timeMs: number
   ) => {
+    // Anti-spam: 5s cooldown between submissions
+    const now = Date.now();
+    if (now - lastSubmitTime.current < 5_000) {
+      showToast("Please wait before submitting again", "info");
+      return;
+    }
+    if (submittingScore || scoreSubmitted) return;
+
+    lastSubmitTime.current = now;
+    setSubmittingScore(true);
+
     try {
       const res = await fetch(`${API_BASE}/api/shikaku/score`, {
         method: "POST",
@@ -463,20 +515,33 @@ export function ShikakuPage() {
           puzzleCount: PUZZLES_PER_RUN,
         }),
       });
-      if (!res.ok) {
+      if (res.ok) {
+        setScoreSubmitted(true);
+        showToast("Score submitted!", "success");
+      } else {
         const data = await res.json().catch(() => null) as { error?: string } | null;
         if (res.status === 409) {
+          setScoreSubmitted(true);
           showToast("Score already submitted for this run", "info");
+        } else if (res.status === 403) {
+          setScoreSubmitted(true);
+          showToast("Score submission not allowed", "error");
+        } else if (res.status === 429) {
+          showToast("Too many requests — try again in a moment", "info");
         } else if (data?.error === "Score rejected") {
           showToast("Score could not be verified", "error");
+        } else {
+          showToast("Failed to submit score", "error");
         }
       }
     } catch {
-      // silent — score still shows locally
+      showToast("Network error — score not submitted", "error");
+    } finally {
+      setSubmittingScore(false);
     }
-    // Fetch leaderboard after submission so rank/scores show on the finished screen
+    // Refresh leaderboard
     fetchLeaderboard(diff);
-  }, [sessionId, playerName, fetchLeaderboard]);
+  }, [sessionId, playerName, fetchLeaderboard, submittingScore, scoreSubmitted]);
 
   /* ── Format time ────────────────────────────────────────── */
   const formatTime = (ms: number) => {
@@ -584,79 +649,114 @@ export function ShikakuPage() {
   if (phase === "finished") {
     const completedCount = puzzleTimes.length;
     const gavUp = infiniteMode ? true : completedCount < PUZZLES_PER_RUN;
+    const hasLeaderboard = leaderboard.length > 0 && !infiniteMode;
+    const hasPuzzleTimes = puzzleTimes.length > 0;
     return (
       <div className="game-page shikaku-page" data-game-theme="shikaku">
-        <div className="shikaku-container">
+        <div className="shikaku-end-wrap">
           <div className="shikaku-finished shikaku-finished-enter">
-            <div className={`game-reveal-card ${gavUp && !infiniteMode ? "game-reveal-card--fail" : "game-reveal-card--success"}`}>
-              <p className="game-reveal-title">
+            {/* ── Header tile ── */}
+            <div className={`shikaku-end-header ${gavUp && !infiniteMode ? "shikaku-end-header--fail" : "shikaku-end-header--success"}`}>
+              <p className="shikaku-end-title">
                 {infiniteMode ? "∞ Run Over" : gavUp ? "Run Over" : "Run Complete!"}
               </p>
-              <p className="game-reveal-sub">
+              <p className="shikaku-end-sub">
                 {infiniteMode
                   ? `Solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} in infinite mode`
                   : gavUp ? `Completed ${completedCount - 1} of ${PUZZLES_PER_RUN} puzzles` : `All ${PUZZLES_PER_RUN} puzzles solved!`}
               </p>
             </div>
 
-            <div className={`shikaku-stats${infiniteMode ? " shikaku-stats--infinite" : ""}`}>
-              <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.1s" }}>
-                <span className="shikaku-stat-label">Time</span>
-                <span className="shikaku-stat-value">{formatTime(finalTimeMs)}</span>
-              </div>
-              {infiniteMode && (
-                <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.2s" }}>
-                  <span className="shikaku-stat-label">Puzzles Solved</span>
-                  <span className="shikaku-stat-value">{infiniteSolved}</span>
+            {/* ── Grid tile area ── */}
+            <div className={`shikaku-end-grid${hasPuzzleTimes || hasLeaderboard ? "" : " shikaku-end-grid--stats-only"}`}>
+              {/* Left column: stat tiles */}
+              <div className={`shikaku-end-stats${infiniteMode ? " shikaku-end-stats--infinite" : ""}`}>
+                <div className="shikaku-end-tile shikaku-stat-pop" style={{ animationDelay: "0.1s" }}>
+                  <span className="shikaku-end-tile-label">Time</span>
+                  <span className="shikaku-end-tile-value">{formatTime(finalTimeMs)}</span>
                 </div>
-              )}
-              <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.25s" }}>
-                <span className="shikaku-stat-label">Score</span>
-                <span className="shikaku-stat-value">
-                  {finalScore.toLocaleString()}
-                  {infiniteMode && <span style={{ fontSize: "0.6em", opacity: 0.5, marginLeft: 4 }}>(unranked)</span>}
-                </span>
+                <div className="shikaku-end-tile shikaku-stat-pop" style={{ animationDelay: "0.2s" }}>
+                  <span className="shikaku-end-tile-label">Score</span>
+                  <span className="shikaku-end-tile-value">
+                    {finalScore.toLocaleString()}
+                    {infiniteMode && <span style={{ fontSize: "0.6em", opacity: 0.5, marginLeft: 4 }}>(unranked)</span>}
+                  </span>
+                </div>
+                <div className="shikaku-end-tile shikaku-stat-pop" style={{ animationDelay: "0.3s" }}>
+                  <span className="shikaku-end-tile-label">Difficulty</span>
+                  <span className="shikaku-end-tile-value" style={{ textTransform: "capitalize" }}>{difficulty}</span>
+                </div>
+                {infiniteMode && (
+                  <div className="shikaku-end-tile shikaku-stat-pop" style={{ animationDelay: "0.35s" }}>
+                    <span className="shikaku-end-tile-label">Puzzles</span>
+                    <span className="shikaku-end-tile-value">{infiniteSolved}</span>
+                  </div>
+                )}
+                {personalBest && !infiniteMode && (
+                  <div className="shikaku-end-tile shikaku-end-tile--accent shikaku-stat-pop" style={{ animationDelay: "0.4s" }}>
+                    <span className="shikaku-end-tile-label">Rank</span>
+                    <span className="shikaku-end-tile-value">#{personalBest.rank}</span>
+                  </div>
+                )}
               </div>
-              <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.4s" }}>
-                <span className="shikaku-stat-label">Difficulty</span>
-                <span className="shikaku-stat-value" style={{ textTransform: "capitalize" }}>{difficulty}</span>
-              </div>
-              {personalBest && !infiniteMode && (
-                <div className="shikaku-stat shikaku-stat-pop" style={{ animationDelay: "0.55s" }}>
-                  <span className="shikaku-stat-label">Rank</span>
-                  <span className="shikaku-stat-value">#{personalBest.rank}</span>
+
+              {/* Right column: puzzle times + leaderboard */}
+              {(hasPuzzleTimes || hasLeaderboard) && (
+                <div className="shikaku-end-lists">
+                  {hasPuzzleTimes && (
+                    <div className="shikaku-end-list-tile">
+                      <div className="shikaku-end-list-header">
+                        <span>Puzzle Times</span>
+                      </div>
+                      <div className="shikaku-end-list-body">
+                        {puzzleTimes.map((t, i) => (
+                          <div key={i} className="shikaku-end-list-row">
+                            <span>Puzzle {i + 1}{gavUp && i === puzzleTimes.length - 1 ? " (incomplete)" : ""}</span>
+                            <span>{formatTime(t)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {hasLeaderboard && (
+                    <div className="shikaku-end-list-tile">
+                      <div className="shikaku-end-list-header">
+                        <span><FiAward size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Top Scores</span>
+                        <span>Time</span>
+                      </div>
+                      <div className="shikaku-end-list-body">
+                        {leaderboard.slice(0, 5).map((entry, i) => (
+                          <div key={entry.id} className={`shikaku-end-list-row${entry.isOwn ? " shikaku-end-list-row--self" : ""}`}>
+                            <span>#{i + 1} {entry.name} — {entry.score.toLocaleString()}</span>
+                            <span>{formatTime(entry.timeMs)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {puzzleTimes.length > 0 && (
-              <div className="shikaku-puzzle-times">
-                {puzzleTimes.map((t, i) => (
-                  <div key={i} className="shikaku-puzzle-time">
-                    <span>Puzzle {i + 1}{gavUp && i === puzzleTimes.length - 1 ? " (incomplete)" : ""}</span>
-                    <span>{formatTime(t)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Inline top scores from DB */}
-            {leaderboard.length > 0 && !infiniteMode && (
-              <div className="shikaku-puzzle-times" style={{ marginTop: "0.5rem" }}>
-                <div className="shikaku-puzzle-time" style={{ opacity: 0.6, fontWeight: 700, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  <span><FiAward size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Top Scores</span>
-                  <span>Time</span>
-                </div>
-                {leaderboard.slice(0, 5).map((entry, i) => (
-                  <div key={entry.id} className={`shikaku-puzzle-time${entry.isOwn ? " shikaku-lb-row--self" : ""}`}>
-                    <span>#{i + 1} {entry.name} — {entry.score.toLocaleString()}</span>
-                    <span>{formatTime(entry.timeMs)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="game-actions" style={{ justifyContent: "center", width: "100%" }}>
+            {/* ── Action bar ── */}
+            <div className="shikaku-end-actions">
+              {!infiniteMode && (
+                <button
+                  className={`btn ${scoreSubmitted ? "btn-muted" : "btn-primary"} game-action-btn`}
+                  onClick={() => submitScore(seed, difficulty, finalScore, finalTimeMs)}
+                  disabled={scoreSubmitted || submittingScore}
+                  title={scoreSubmitted ? "Score already submitted" : "Submit your score to the leaderboard"}
+                >
+                  {submittingScore ? (
+                    <>Submitting...</>
+                  ) : scoreSubmitted ? (
+                    <><FiCheck size={16} /> Submitted</>
+                  ) : (
+                    <><FiUploadCloud size={16} /> Submit Score</>
+                  )}
+                </button>
+              )}
               <button className="btn btn-primary game-action-btn" onClick={() => startRun(difficulty)} title="Start a new run">
                 <FiRepeat size={16} /> Play Again
               </button>

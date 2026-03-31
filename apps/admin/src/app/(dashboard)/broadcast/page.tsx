@@ -51,7 +51,7 @@ export default function BroadcastPage() {
 
       {/* Global Toast */}
       <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <div style={{ fontSize: "0.9375rem", fontWeight: 600 }}>📢 Send Global Toast</div>
+        <div style={{ fontSize: "0.9375rem", fontWeight: 600 }}>Send Global Toast</div>
         <p style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>
           Send a toast notification to every connected client.
         </p>
@@ -74,7 +74,7 @@ export default function BroadcastPage() {
 
       {/* Update Warning */}
       <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <div style={{ fontSize: "0.9375rem", fontWeight: 600 }}>⚠️ API Update Warning</div>
+        <div style={{ fontSize: "0.9375rem", fontWeight: 600 }}>API Update Warning</div>
         <p style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>
           Warn all clients that the site will refresh after a countdown. This sends toast warnings
           at the start, at 1 minute remaining, and at 10 seconds, then force-refreshes everyone.
@@ -95,7 +95,7 @@ export default function BroadcastPage() {
 
       {/* Force Refresh */}
       <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <div style={{ fontSize: "0.9375rem", fontWeight: 600 }}>🔄 Force Refresh</div>
+        <div style={{ fontSize: "0.9375rem", fontWeight: 600 }}>Force Refresh</div>
         <p style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>
           Immediately refresh all connected clients. No warning.
         </p>
@@ -106,7 +106,7 @@ export default function BroadcastPage() {
 
       {/* Nuclear option */}
       <div className="card danger-zone" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--danger)" }}>🛑 End All Games + Refresh</div>
+        <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--danger)" }}>End All Games + Refresh</div>
         <p style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>
           End every active game, then send a 5-minute refresh countdown to all clients.
           Use this before deploying a major update.
