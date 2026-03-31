@@ -828,6 +828,41 @@
   font-size: 0.78rem;
 }
 
+/* ── Leaderboard pagination ──────────────────────────────────── */
+.shikaku-lb-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0 0.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  margin-top: 0.25rem;
+}
+.shikaku-lb-page-btn {
+  background: color-mix(in srgb, var(--secondary) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  color: var(--foreground);
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.shikaku-lb-page-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+.shikaku-lb-page-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.shikaku-lb-page-info {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Give-up confirmation modal ─────────────────────────────── */
 .shikaku-giveup-overlay {
   position: fixed;

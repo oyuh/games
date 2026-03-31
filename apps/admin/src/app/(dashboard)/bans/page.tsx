@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { useToast } from "@/components/Toast";
+import { Pagination } from "@/components/Pagination";
 
 type Ban = {
   id: string;
@@ -20,16 +21,23 @@ export default function BansPage() {
   const [newType, setNewType] = useState<"session" | "ip" | "region">("ip");
   const [newValue, setNewValue] = useState("");
   const [newReason, setNewReason] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const refresh = async () => {
+  const refresh = async (p = page, ps = pageSize) => {
     try {
-      const data = await api("/bans");
+      const params = new URLSearchParams({ page: String(p), pageSize: String(ps) });
+      const data = await api(`/bans?${params}`);
       setBans(data.bans ?? []);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
     } catch (e: any) { show(e.message, "error"); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh(page, pageSize); }, [page, pageSize]);
 
   const addBan = async () => {
     if (!newValue.trim()) return;
@@ -39,7 +47,7 @@ export default function BansPage() {
       setShowAdd(false);
       setNewValue("");
       setNewReason("");
-      refresh();
+      refresh(page, pageSize);
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -48,7 +56,7 @@ export default function BansPage() {
     try {
       await api(`/bans/${id}`, { method: "DELETE" });
       show("Ban removed", "success");
-      refresh();
+      refresh(page, pageSize);
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -63,7 +71,7 @@ export default function BansPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 className="section-title" style={{ margin: 0 }}>Bans ({bans.length})</h2>
+        <h2 className="section-title" style={{ margin: 0 }}>Bans ({total})</h2>
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Add Ban</button>
       </div>
 
@@ -136,6 +144,15 @@ export default function BansPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={(p) => setPage(p)}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+      />
 
       <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
         Note: Bans are stored in-memory on the API server. They will reset when the API restarts.

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, ne, and, gt, desc, sql } from "drizzle-orm";
+import { eq, ne, and, gt, desc, sql, count } from "drizzle-orm";
 import {
   sessions,
   imposterGames,
@@ -83,13 +83,33 @@ export const adminRoutes = new Hono();
 
 adminRoutes.use("*", adminAuth);
 
+// ─── Pagination helper ──────────────────────────────────────
+function parsePagination(c: any, defaultPageSize = 50, maxPageSize = 200) {
+  const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
+  const pageSize = Math.min(Math.max(1, parseInt(c.req.query("pageSize") ?? String(defaultPageSize), 10) || defaultPageSize), maxPageSize);
+  const offset = (page - 1) * pageSize;
+  return { page, pageSize, offset };
+}
+
 // ─── Connected clients (from sessions table) ───────────────
 adminRoutes.get("/clients", async (c) => {
+  const { page, pageSize, offset } = parsePagination(c);
   const recentCutoff = Date.now() - 5 * 60 * 1000; // active in last 5 min
-  const allSessions = await drizzleClient
-    .select()
-    .from(sessions)
-    .where(gt(sessions.lastSeen, recentCutoff));
+
+  const [allSessions, countResult] = await Promise.all([
+    drizzleClient
+      .select()
+      .from(sessions)
+      .where(gt(sessions.lastSeen, recentCutoff))
+      .orderBy(desc(sessions.lastSeen))
+      .limit(pageSize)
+      .offset(offset),
+    drizzleClient
+      .select({ total: count() })
+      .from(sessions)
+      .where(gt(sessions.lastSeen, recentCutoff)),
+  ]);
+  const totalCount = countResult[0]?.total ?? 0;
 
   const clients = allSessions.map((s) => ({
     sessionId: s.id,
@@ -103,7 +123,7 @@ adminRoutes.get("/clients", async (c) => {
     gameId: s.gameId,
     gameType: s.gameType,
   }));
-  return c.json({ ok: true, clients, total: clients.length });
+  return c.json({ ok: true, clients, total: totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) });
 });
 
 // ─── Active games list ──────────────────────────────────────
@@ -327,7 +347,10 @@ adminRoutes.post("/games/:type/:id/kick/:sessionId", async (c) => {
 
 // ─── Bans ───────────────────────────────────────────────────
 adminRoutes.get("/bans", (c) => {
-  return c.json({ ok: true, bans: bansCache });
+  const { page, pageSize, offset } = parsePagination(c, 50, 200);
+  const total = bansCache.length;
+  const paged = bansCache.slice(offset, offset + pageSize);
+  return c.json({ ok: true, bans: paged, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
 });
 
 adminRoutes.post("/bans", async (c) => {
@@ -631,15 +654,25 @@ adminRoutes.delete("/clients/:sessionId/name", async (c) => {
 
 // Get all name overrides
 adminRoutes.get("/names/overrides", async (c) => {
-  const overrides = await drizzleClient.select().from(adminNameOverrides);
-  return c.json({ ok: true, overrides });
+  const { page, pageSize, offset } = parsePagination(c);
+  const [overrides, countResult] = await Promise.all([
+    drizzleClient.select().from(adminNameOverrides).limit(pageSize).offset(offset),
+    drizzleClient.select({ total: count() }).from(adminNameOverrides),
+  ]);
+  const totalCount = countResult[0]?.total ?? 0;
+  return c.json({ ok: true, overrides, total: totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) });
 });
 
 // ─── Restricted Names ───────────────────────────────────────
 
 adminRoutes.get("/names/restricted", async (c) => {
-  const restricted = await drizzleClient.select().from(adminRestrictedNames);
-  return c.json({ ok: true, restricted });
+  const { page, pageSize, offset } = parsePagination(c);
+  const [restricted, countResult] = await Promise.all([
+    drizzleClient.select().from(adminRestrictedNames).limit(pageSize).offset(offset),
+    drizzleClient.select({ total: count() }).from(adminRestrictedNames),
+  ]);
+  const totalCount = countResult[0]?.total ?? 0;
+  return c.json({ ok: true, restricted, total: totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) });
 });
 
 adminRoutes.post("/names/restricted", async (c) => {
@@ -702,20 +735,23 @@ const VALID_DIFFICULTIES = ["easy", "medium", "hard", "expert"];
 
 adminRoutes.get("/shikaku/scores", async (c) => {
   const difficulty = c.req.query("difficulty");
-  const limit = Math.min(Number(c.req.query("limit") || 100), 500);
+  const { page, pageSize, offset } = parsePagination(c, 50, 200);
 
-  let query = drizzleClient
-    .select()
-    .from(shikakuScores)
-    .orderBy(desc(shikakuScores.score))
-    .limit(limit);
+  const diffFilter = difficulty && VALID_DIFFICULTIES.includes(difficulty)
+    ? eq(shikakuScores.difficulty, difficulty)
+    : undefined;
 
-  if (difficulty && VALID_DIFFICULTIES.includes(difficulty)) {
-    query = query.where(eq(shikakuScores.difficulty, difficulty)) as typeof query;
-  }
+  const [scores, countResult] = await Promise.all([
+    diffFilter
+      ? drizzleClient.select().from(shikakuScores).where(diffFilter).orderBy(desc(shikakuScores.score)).limit(pageSize).offset(offset)
+      : drizzleClient.select().from(shikakuScores).orderBy(desc(shikakuScores.score)).limit(pageSize).offset(offset),
+    diffFilter
+      ? drizzleClient.select({ total: count() }).from(shikakuScores).where(diffFilter)
+      : drizzleClient.select({ total: count() }).from(shikakuScores),
+  ]);
+  const totalCount = countResult[0]?.total ?? 0;
 
-  const scores = await query;
-  return c.json({ ok: true, scores, total: scores.length });
+  return c.json({ ok: true, scores, total: totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) });
 });
 
 adminRoutes.patch("/shikaku/scores/:id", async (c) => {
