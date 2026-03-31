@@ -872,22 +872,32 @@ app.get("/api/shikaku/leaderboard", async (c) => {
   }
   const limitParam = parseInt(c.req.query("limit") ?? "10", 10);
   const limit = Math.min(Math.max(1, limitParam), 50);
+  const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
+  const offset = (page - 1) * limit;
   const sessionIdParam = c.req.query("sessionId")?.trim() ?? null;
 
-  const rows = await drizzleClient
-    .select({
-      id: shikakuScores.id,
-      name: shikakuScores.name,
-      score: shikakuScores.score,
-      timeMs: shikakuScores.timeMs,
-      difficulty: shikakuScores.difficulty,
-      createdAt: shikakuScores.createdAt,
-      sessionId: shikakuScores.sessionId,
-    })
-    .from(shikakuScores)
-    .where(eq(shikakuScores.difficulty, difficulty))
-    .orderBy(desc(shikakuScores.score))
-    .limit(limit);
+  const [rows, totalResult] = await Promise.all([
+    drizzleClient
+      .select({
+        id: shikakuScores.id,
+        name: shikakuScores.name,
+        score: shikakuScores.score,
+        timeMs: shikakuScores.timeMs,
+        difficulty: shikakuScores.difficulty,
+        createdAt: shikakuScores.createdAt,
+        sessionId: shikakuScores.sessionId,
+      })
+      .from(shikakuScores)
+      .where(eq(shikakuScores.difficulty, difficulty))
+      .orderBy(desc(shikakuScores.score))
+      .limit(limit)
+      .offset(offset),
+    drizzleClient
+      .select({ total: sql<number>`count(*)::int` })
+      .from(shikakuScores)
+      .where(eq(shikakuScores.difficulty, difficulty)),
+  ]);
+  const totalCount = totalResult[0]?.total ?? 0;
 
   // Fetch personal best for the given session
   let personalBest: { score: number; timeMs: number; rank: number } | null = null;
@@ -919,6 +929,10 @@ app.get("/api/shikaku/leaderboard", async (c) => {
       isOwn: sessionIdParam ? r.sessionId === sessionIdParam : false,
     })),
     personalBest,
+    page,
+    pageSize: limit,
+    total: totalCount,
+    totalPages: Math.ceil(totalCount / limit),
   });
 });
 

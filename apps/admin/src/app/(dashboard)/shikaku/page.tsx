@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { useToast } from "@/components/Toast";
+import { Pagination } from "@/components/Pagination";
 
 type Score = {
   id: string;
@@ -32,12 +33,19 @@ export default function ShikakuPage() {
   const [difficulty, setDifficulty] = useState<string>("all");
   const [editing, setEditing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ name: string; score: string; timeMs: string }>({ name: "", score: "", timeMs: "" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const refresh = async () => {
+  const refresh = async (p = page, ps = pageSize) => {
     try {
-      const params = difficulty !== "all" ? `?difficulty=${difficulty}` : "";
-      const data = await api(`/shikaku/scores${params}`);
+      const params = new URLSearchParams({ page: String(p), pageSize: String(ps) });
+      if (difficulty !== "all") params.set("difficulty", difficulty);
+      const data = await api(`/shikaku/scores?${params}`);
       setScores(data.scores ?? []);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
     } catch (e: any) {
       show(e.message, "error");
     } finally {
@@ -47,8 +55,13 @@ export default function ShikakuPage() {
 
   useEffect(() => {
     setLoading(true);
-    refresh();
+    setPage(1);
+    refresh(1, pageSize);
   }, [difficulty]);
+
+  useEffect(() => {
+    refresh(page, pageSize);
+  }, [page, pageSize]);
 
   const startEdit = (s: Score) => {
     setEditing(s.id);
@@ -73,7 +86,7 @@ export default function ShikakuPage() {
       await api(`/shikaku/scores/${id}`, { method: "PATCH", body });
       show("Score updated", "success");
       setEditing(null);
-      refresh();
+      refresh(page, pageSize);
     } catch (e: any) {
       show(e.message, "error");
     }
@@ -84,7 +97,7 @@ export default function ShikakuPage() {
     try {
       await api(`/shikaku/scores/${id}`, { method: "DELETE" });
       show("Score deleted", "success");
-      refresh();
+      refresh(page, pageSize);
     } catch (e: any) {
       show(e.message, "error");
     }
@@ -99,7 +112,8 @@ export default function ShikakuPage() {
         body: difficulty === "all" ? {} : { difficulty },
       });
       show(`Cleared ${label}`, "success");
-      refresh();
+      setPage(1);
+      refresh(1, pageSize);
     } catch (e: any) {
       show(e.message, "error");
     }
@@ -118,7 +132,7 @@ export default function ShikakuPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
-        <h2 className="section-title" style={{ margin: 0 }}>Shikaku Leaderboard ({scores.length})</h2>
+        <h2 className="section-title" style={{ margin: 0 }}>Shikaku Leaderboard ({total})</h2>
         <button className="btn btn-danger" onClick={clearDifficulty}>
           Clear {difficulty === "all" ? "All" : difficulty} Scores
         </button>
@@ -161,7 +175,7 @@ export default function ShikakuPage() {
             )}
             {scores.map((s, i) => (
               <tr key={s.id}>
-                <td style={{ fontWeight: 600, color: "var(--muted)" }}>{i + 1}</td>
+                <td style={{ fontWeight: 600, color: "var(--muted)" }}>{(page - 1) * pageSize + i + 1}</td>
 
                 {editing === s.id ? (
                   <>
@@ -252,6 +266,15 @@ export default function ShikakuPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={(p) => setPage(p)}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+      />
 
       <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
         Scores are stored in the database. Edits and deletions are permanent.

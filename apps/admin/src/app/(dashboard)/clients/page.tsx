@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { useToast } from "@/components/Toast";
+import { Pagination } from "@/components/Pagination";
 
 type Client = {
   sessionId: string | null;
@@ -29,16 +30,23 @@ export default function ClientsPage() {
   const [restrictReason, setRestrictReason] = useState("");
   const [nameTarget, setNameTarget] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const refresh = async () => {
+  const refresh = async (p = page, ps = pageSize) => {
     try {
-      const data = await api("/clients");
+      const params = new URLSearchParams({ page: String(p), pageSize: String(ps) });
+      const data = await api(`/clients?${params}`);
       setClients(data.clients ?? []);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
     } catch (e: any) { show(e.message, "error"); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { refresh(); const t = setInterval(refresh, 5_000); return () => clearInterval(t); }, []);
+  useEffect(() => { refresh(page, pageSize); const t = setInterval(() => refresh(page, pageSize), 5_000); return () => clearInterval(t); }, [page, pageSize]);
 
   const sendToast = async (sessionId: string) => {
     if (!toastMsg.trim()) return;
@@ -56,7 +64,7 @@ export default function ClientsPage() {
       show(`Client restricted (${restrictType})`, "success");
       setRestrictTarget(null);
       setRestrictReason("");
-      refresh();
+      refresh(page, pageSize);
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -77,7 +85,7 @@ export default function ClientsPage() {
       show("Name changed", "success");
       setNameTarget(null);
       setNameInput("");
-      refresh();
+      refresh(page, pageSize);
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -93,9 +101,9 @@ export default function ClientsPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 className="section-title" style={{ margin: 0 }}>Connected Clients ({clients.length})</h2>
+        <h2 className="section-title" style={{ margin: 0 }}>Connected Clients ({total})</h2>
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button className="btn btn-ghost" onClick={refresh}>Refresh</button>
+          <button className="btn btn-ghost" onClick={() => refresh(page, pageSize)}>Refresh</button>
           <button className="btn btn-primary" onClick={() => { setToastTarget("__global__"); setToastMsg(""); }}>
             Global Toast
           </button>
@@ -262,6 +270,15 @@ export default function ClientsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={(p) => setPage(p)}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+      />
     </div>
   );
 }

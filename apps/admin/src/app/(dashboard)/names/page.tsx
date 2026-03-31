@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { useToast } from "@/components/Toast";
+import { Pagination } from "@/components/Pagination";
 
 type RestrictedName = {
   id: string;
@@ -25,15 +26,29 @@ export default function NamesPage() {
   const [loading, setLoading] = useState(true);
   const [newPattern, setNewPattern] = useState("");
   const [newReason, setNewReason] = useState("");
+  const [rnPage, setRnPage] = useState(1);
+  const [rnPageSize, setRnPageSize] = useState(50);
+  const [rnTotal, setRnTotal] = useState(0);
+  const [rnTotalPages, setRnTotalPages] = useState(1);
+  const [ovPage, setOvPage] = useState(1);
+  const [ovPageSize, setOvPageSize] = useState(50);
+  const [ovTotal, setOvTotal] = useState(0);
+  const [ovTotalPages, setOvTotalPages] = useState(1);
 
-  const refresh = async () => {
+  const refresh = async (rp = rnPage, rps = rnPageSize, op = ovPage, ops = ovPageSize) => {
     try {
+      const rnParams = new URLSearchParams({ page: String(rp), pageSize: String(rps) });
+      const ovParams = new URLSearchParams({ page: String(op), pageSize: String(ops) });
       const [r, o] = await Promise.all([
-        api("/names/restricted"),
-        api("/names/overrides"),
+        api(`/names/restricted?${rnParams}`),
+        api(`/names/overrides?${ovParams}`),
       ]);
       setRestricted(r.restricted ?? []);
+      setRnTotal(r.total ?? 0);
+      setRnTotalPages(r.totalPages ?? 1);
       setOverrides(o.overrides ?? []);
+      setOvTotal(o.total ?? 0);
+      setOvTotalPages(o.totalPages ?? 1);
     } catch (e: any) {
       show(e.message, "error");
     } finally {
@@ -41,7 +56,7 @@ export default function NamesPage() {
     }
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh(rnPage, rnPageSize, ovPage, ovPageSize); }, [rnPage, rnPageSize, ovPage, ovPageSize]);
 
   const addRestricted = async () => {
     if (!newPattern.trim()) return;
@@ -50,7 +65,7 @@ export default function NamesPage() {
       show("Restricted name pattern added", "success");
       setNewPattern("");
       setNewReason("");
-      refresh();
+      refresh(rnPage, rnPageSize, ovPage, ovPageSize);
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -58,7 +73,7 @@ export default function NamesPage() {
     try {
       await api(`/names/restricted/${id}`, { method: "DELETE" });
       show("Restricted name pattern removed", "success");
-      refresh();
+      refresh(rnPage, rnPageSize, ovPage, ovPageSize);
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -66,7 +81,7 @@ export default function NamesPage() {
     try {
       await api(`/clients/${sessionId}/name`, { method: "DELETE" });
       show("Name override removed", "success");
-      refresh();
+      refresh(rnPage, rnPageSize, ovPage, ovPageSize);
     } catch (e: any) { show(e.message, "error"); }
   };
 
@@ -142,9 +157,17 @@ export default function NamesPage() {
             </table>
           </div>
         )}
-        {restricted.length === 0 && (
+        {restricted.length === 0 && rnTotal === 0 && (
           <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.5rem" }}>No restricted name patterns.</p>
         )}
+        <Pagination
+          page={rnPage}
+          totalPages={rnTotalPages}
+          total={rnTotal}
+          pageSize={rnPageSize}
+          onPageChange={(p) => setRnPage(p)}
+          onPageSizeChange={(s) => { setRnPageSize(s); setRnPage(1); }}
+        />
       </div>
 
       {/* Active Name Overrides */}
@@ -183,9 +206,17 @@ export default function NamesPage() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : ovTotal === 0 ? (
           <p style={{ color: "var(--muted)", fontSize: "0.875rem" }}>No active name overrides.</p>
-        )}
+        ) : null}
+        <Pagination
+          page={ovPage}
+          totalPages={ovTotalPages}
+          total={ovTotal}
+          pageSize={ovPageSize}
+          onPageChange={(p) => setOvPage(p)}
+          onPageSizeChange={(s) => { setOvPageSize(s); setOvPage(1); }}
+        />
       </div>
     </div>
   );
