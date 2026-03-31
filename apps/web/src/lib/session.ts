@@ -140,6 +140,18 @@ export function addRecentGame(entry: Omit<RecentGame, "lastPlayedAt">) {
   localStorage.setItem(RECENT_GAMES_KEY, JSON.stringify(next));
 }
 
+export function removeRecentGame(id: string, gameType: string) {
+  const existing = getRecentGames();
+  const filtered = existing.filter(
+    (game) => !(game.id === id && game.gameType === gameType)
+  );
+  if (filtered.length === 0) {
+    localStorage.removeItem(RECENT_GAMES_KEY);
+  } else {
+    localStorage.setItem(RECENT_GAMES_KEY, JSON.stringify(filtered));
+  }
+}
+
 export function clearRecentGames() {
   localStorage.removeItem(RECENT_GAMES_KEY);
 }

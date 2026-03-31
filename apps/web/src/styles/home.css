@@ -1108,10 +1108,77 @@
 }
 
 /* ── Recent games ────────────────────────────────────────────── */
+.hc-recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .hc-recent-list {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.hc-recent-list--scrollable {
+  max-height: 12rem;
+  overflow-y: auto;
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* IE/Edge */
+}
+.hc-recent-list--scrollable::-webkit-scrollbar {
+  display: none;                  /* Chrome/Safari */
+}
+
+/* Red edge delete zone on recent items */
+.hc-recent-edge {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 0.45rem;
+  padding: 0;
+  border: none;
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: color-mix(in srgb, var(--destructive) 0%, transparent);
+  cursor: pointer;
+  transition: width 0.15s, background 0.15s;
+}
+.hc-recent-item:hover .hc-recent-edge {
+  background: color-mix(in srgb, var(--destructive) 45%, transparent);
+}
+.hc-recent-edge:hover {
+  width: 0.7rem;
+  background: var(--destructive) !important;
+}
+
+/* Trash icon clear button next to "Recent" */
+.hc-clear-trash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  border-radius: 0.35rem;
+  color: var(--secondary);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: color 0.15s, opacity 0.15s;
+}
+.hc-clear-trash:hover {
+  opacity: 1;
+  color: var(--destructive);
+}
+.hc-clear-trash--confirming {
+  opacity: 1;
+  color: var(--destructive);
+  animation: hc-trash-pulse 0.6s ease infinite alternate;
+}
+@keyframes hc-trash-pulse {
+  from { opacity: 0.7; }
+  to   { opacity: 1; }
 }
 
 .hc-recent-item {
@@ -1125,6 +1192,8 @@
   text-decoration: none;
   color: inherit;
   transition: background 0.15s;
+  position: relative;
+  overflow: hidden;
 }
 .hc-recent-item:hover {
   background: color-mix(in srgb, var(--primary) 14%, transparent);
@@ -1145,10 +1214,10 @@
   color: var(--primary);
 }
 
-/* Deleted games — greyed out, no pointer */
+/* Deleted games — greyed out but still dismissable */
 .hc-recent-item--deleted {
   opacity: 0.4;
-  pointer-events: none;
+  cursor: default;
   border-color: var(--border);
   background: var(--muted);
 }
@@ -1554,6 +1623,67 @@
 .hc-demo-btn {
   font-size: 0.7rem !important;
   padding: 0.35rem 0.5rem !important;
+}
+
+/* ── Vertical desktop monitors (portrait, non-mobile) ────────── */
+@media (orientation: portrait) and (min-width: 769px) {
+  .home-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .home-section-multi {
+    width: auto;
+    max-width: calc(3 * 320px + 2 * 1.5rem);
+  }
+
+  /* Flip separator to horizontal */
+  .home-section-separator {
+    flex-direction: row;
+    width: 100%;
+    max-width: calc(3 * 320px + 2 * 1.5rem);
+    height: auto;
+    padding: 0.75rem 0;
+  }
+
+  .home-sep-label {
+    writing-mode: horizontal-tb;
+    text-orientation: initial;
+    transform: none;
+  }
+
+  .home-sep-col:last-child .home-sep-label {
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+
+  .home-sep-line {
+    width: auto;
+    height: 1px;
+    flex: 1;
+    align-self: center;
+    background: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in srgb, var(--secondary) 25%, transparent) 10%,
+      color-mix(in srgb, var(--secondary) 25%, transparent) 90%,
+      transparent
+    );
+  }
+
+  /* Solo section: row-based (horizontal) */
+  .home-section-solo {
+    flex-direction: row;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: calc(3 * 320px + 2 * 1.5rem);
+    gap: 1rem;
+  }
+
+  .solo-card {
+    flex: 1 1 0;
+    min-width: 0;
+  }
 }
 
 /* ── Mobile: horizontal snap scroll ──────────────────────────── */

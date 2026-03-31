@@ -5,8 +5,8 @@ import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
-import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiUserCheck, FiUsers, FiZap, FiGrid } from "react-icons/fi";
-import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, RecentGame, SessionGameType, setStoredName } from "../lib/session";
+import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiZap, FiGrid } from "react-icons/fi";
+import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileHomePage } from "../mobile/pages/MobileHomePage";
@@ -583,27 +583,29 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             <>
               <div className="hc-divider" />
               <section className="hc-section">
-                <button className="hc-collapse-toggle" onClick={() => setRecentCollapsed(!recentCollapsed)}>
-                  <span className="hc-label" data-tooltip="Games you've recently played or joined" data-tooltip-variant="info">Recent</span>
-                  <FiChevronDown size={14} className={`hc-collapse-icon${!recentCollapsed ? " hc-collapse-icon--open" : ""}`} />
-                </button>
+                <div className="hc-recent-header">
+                  <button className="hc-collapse-toggle" onClick={() => setRecentCollapsed(!recentCollapsed)}>
+                    <span className="hc-label" data-tooltip="Games you've recently played or joined" data-tooltip-variant="info">Recent</span>
+                    <FiChevronDown size={14} className={`hc-collapse-icon${!recentCollapsed ? " hc-collapse-icon--open" : ""}`} />
+                  </button>
+                  {!recentCollapsed && (
+                    <ClearRecentButton onClear={() => { clearRecentGames(); setRecentGames([]); }} />
+                  )}
+                </div>
                 {!recentCollapsed && (
-                  <>
-                    <div className="hc-recent-list">
-                      {recentGames.map((game) => (
-                        <RecentGameItem key={`${game.gameType}-${game.id}`} game={game} sessionId={sessionId} />
-                      ))}
-                    </div>
-                    <button
-                      className="hc-text-btn"
-                      style={{ alignSelf: "flex-end" }}
-                      onClick={() => { clearRecentGames(); setRecentGames([]); }}
-                      data-tooltip="Remove all recent games from this list"
-                      data-tooltip-variant="danger"
-                    >
-                      Clear
-                    </button>
-                  </>
+                  <div className="hc-recent-list hc-recent-list--scrollable">
+                    {recentGames.map((game) => (
+                      <RecentGameItem
+                        key={`${game.gameType}-${game.id}`}
+                        game={game}
+                        sessionId={sessionId}
+                        onRemove={() => {
+                          removeRecentGame(game.id, game.gameType);
+                          setRecentGames(getRecentGames());
+                        }}
+                      />
+                    ))}
+                  </div>
                 )}
               </section>
             </>
@@ -1661,9 +1663,40 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   }
 }
 
+/* ── Inline-confirm clear button ──────────────────────────────── */
+
+function ClearRecentButton({ onClear }: { onClear: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handleClick = () => {
+    if (confirming) {
+      clearTimeout(timerRef.current);
+      setConfirming(false);
+      onClear();
+    } else {
+      setConfirming(true);
+      timerRef.current = setTimeout(() => setConfirming(false), 3000);
+    }
+  };
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  return (
+    <button
+      className={`hc-clear-trash${confirming ? " hc-clear-trash--confirming" : ""}`}
+      onClick={handleClick}
+      data-tooltip={confirming ? "Click again to clear all" : "Clear all recent games"}
+      data-tooltip-variant={confirming ? "danger" : "info"}
+    >
+      <FiTrash2 size={13} />
+    </button>
+  );
+}
+
 /* ── Recent game item with deleted check + hover results ───── */
 
-function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: string }) {
+function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessionId: string; onRemove: () => void }) {
   const [imposterResults] = useQuery(game.gameType === "imposter" ? queries.imposter.byId({ id: game.id }) : queries.imposter.byId({ id: "__none__" }));
   const [passwordResults] = useQuery(game.gameType === "password" ? queries.password.byId({ id: game.id }) : queries.password.byId({ id: "__none__" }));
   const [chainResults] = useQuery(game.gameType === "chain_reaction" ? queries.chainReaction.byId({ id: game.id }) : queries.chainReaction.byId({ id: "__none__" }));
@@ -1750,6 +1783,7 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
         <span className="hc-recent-type">{typeLabel}</span>
         <span className="hc-recent-code">{game.code}</span>
         <span className="hc-recent-badge hc-recent-badge--deleted">deleted</span>
+        <button className="hc-recent-edge" onClick={onRemove} aria-label="Remove from list" />
       </div>
     );
   }
@@ -1760,6 +1794,7 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
         <span className="hc-recent-type">{typeLabel}</span>
         <span className="hc-recent-code">{game.code}</span>
         <span className="hc-recent-badge hc-recent-badge--ended">{gameData.phase}</span>
+        <button className="hc-recent-edge" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }} aria-label="Remove from list" />
       </Link>
     );
   }
@@ -1769,6 +1804,7 @@ function RecentGameItem({ game, sessionId }: { game: RecentGame; sessionId: stri
       <span className="hc-recent-type">{typeLabel}</span>
       <span className="hc-recent-code">{game.code}</span>
       <span className="hc-recent-badge">{gameData.phase}</span>
+      <button className="hc-recent-edge" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }} aria-label="Remove from list" />
     </Link>
   );
 }
