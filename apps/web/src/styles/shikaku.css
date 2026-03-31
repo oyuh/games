@@ -30,7 +30,8 @@
   overflow: hidden;
   box-sizing: border-box;
 }
-/* Allow scroll for hard/expert puzzles but hide the scrollbar visually */
+/* On desktop, large puzzles may still overflow the page — allow scroll.
+   On mobile, the grid-wrap handles its own scroll; the page stays locked. */
 .shikaku-page.game-page[data-difficulty="hard"],
 .shikaku-page.game-page[data-difficulty="expert"] {
   overflow-y: auto;
@@ -330,6 +331,18 @@
   border: 0.5px solid color-mix(in srgb, var(--secondary) 35%, transparent);
   cursor: crosshair;
   transition: background 0.1s;
+  isolation: isolate;
+  overflow: hidden;
+}
+.shikaku-cell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: transparent;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 .shikaku-cell:hover {
   background: color-mix(in srgb, #34d399 6%, transparent);
@@ -337,13 +350,15 @@
 
 /* Placed rectangle cell — crosshair so you can drag through */
 .shikaku-cell--filled {
-  background: color-mix(in srgb, var(--rect-color, #34d399) 32%, transparent);
-  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--rect-color, #34d399) 18%, transparent);
   cursor: crosshair;
-  z-index: 1; /* ensure filled cells always paint above default cells */
+  transition: none; /* instant fill — avoids mobile repaint/compositor bugs */
 }
-.shikaku-cell--filled:hover {
-  background: color-mix(in srgb, var(--rect-color, #34d399) 42%, transparent);
+.shikaku-cell--filled::before {
+  background: var(--rect-fill, rgba(52, 211, 153, 0.38));
+  box-shadow: inset 0 0 0 0.5px var(--rect-stroke, rgba(52, 211, 153, 0.22));
+}
+.shikaku-cell--filled:hover::before {
+  background: var(--rect-fill-strong, rgba(52, 211, 153, 0.48));
 }
 
 /* Rectangle border edges — thicker to show rect outline */
@@ -357,18 +372,21 @@
   animation: shikaku-flash 0.6s ease-in-out infinite alternate;
 }
 @keyframes shikaku-flash {
-  0%   { background: color-mix(in srgb, var(--rect-color, #34d399) 32%, transparent); }
-  100% { background: color-mix(in srgb, var(--rect-color, #34d399) 8%, transparent); }
+  0%   { background: var(--rect-fill, rgba(52, 211, 153, 0.38)); }
+  100% { background: var(--rect-fill-flash, rgba(52, 211, 153, 0.1)); }
+}
+.shikaku-cell--flash::before {
+  animation: shikaku-flash 0.6s ease-in-out infinite alternate;
 }
 
 /* Preview (dragging) — only tint empty cells; keep filled cells with their rect color */
-.shikaku-cell--preview:not(.shikaku-cell--filled) {
-  background: color-mix(in srgb, #34d399 14%, transparent);
+.shikaku-cell--preview:not(.shikaku-cell--filled)::before {
+  background: rgba(52, 211, 153, 0.14);
 }
-.shikaku-cell--filled.shikaku-cell--preview {
+.shikaku-cell--filled.shikaku-cell--preview::before {
   /* Keep the filled rect's color — slightly brighter to hint at overlap */
-  background: color-mix(in srgb, var(--rect-color, #34d399) 40%, transparent);
-  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--rect-color, #34d399) 22%, transparent);
+  background: var(--rect-fill-strong, rgba(52, 211, 153, 0.48));
+  box-shadow: inset 0 0 0 0.5px var(--rect-stroke-strong, rgba(52, 211, 153, 0.28));
 }
 
 /* Number display */
@@ -571,6 +589,7 @@
 /* When the last tile is alone on its row, span both columns at full width */
 .shikaku-end-stats > .shikaku-end-tile:last-child:nth-child(odd) {
   grid-column: 1 / -1;
+  width: 100%;
 }
 .shikaku-end-stats--infinite {
   grid-template-columns: 1fr 1fr;
@@ -1020,6 +1039,11 @@
     height: calc(100dvh - 6.5rem);
     padding: 0.5rem 0.5rem;
   }
+  /* On mobile, page-level scrolling is OFF — the grid-wrap handles its own scroll */
+  .shikaku-page.game-page[data-difficulty="hard"],
+  .shikaku-page.game-page[data-difficulty="expert"] {
+    overflow: hidden;
+  }
 
   /* Menu */
   .shikaku-title {
@@ -1044,40 +1068,54 @@
     max-width: min(500px, 94vw, calc(100dvh - 16rem));
   }
 
-  /* Hard + Expert — scrollable grid wrappers on mobile */
+  /* ── Hard + Expert: flex layout pins header/footer, grid fills remaining space ── */
+  .shikaku-page[data-difficulty="hard"] .shikaku-container,
+  .shikaku-page[data-difficulty="expert"] .shikaku-container {
+    flex: 1;
+    min-height: 0;      /* allow flex child to shrink below content size */
+    max-width: 100%;
+    margin: 0;          /* override margin:auto centering — fill height instead */
+  }
   .shikaku-page[data-difficulty="hard"] .shikaku-grid-outer,
   .shikaku-page[data-difficulty="expert"] .shikaku-grid-outer {
-    width: fit-content;
-    max-width: 92vw;
+    flex: 1;
+    min-height: 0;      /* allow flex child to shrink */
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   .shikaku-page[data-difficulty="hard"] .shikaku-grid-wrap,
   .shikaku-page[data-difficulty="expert"] .shikaku-grid-wrap {
+    flex: 1;
+    min-height: 0;      /* crucial: shrink to fit available space */
     overflow: auto;
     -webkit-overflow-scrolling: touch;
-    max-height: calc(100dvh - 14rem);
-    max-width: 92vw;
+    max-width: 94vw;
     scrollbar-width: none;
     -ms-overflow-style: none;
     touch-action: pan-x pan-y;
-    /* Override flex centering — centered children push content left of scrollLeft:0
-       making the left edge unreachable. flex-start ensures scroll starts at the true left edge. */
+    /* flex-start prevents centered children from being pushed left of scrollLeft:0 */
     align-items: flex-start;
+    justify-content: flex-start;
   }
   .shikaku-page[data-difficulty="hard"] .shikaku-grid-wrap::-webkit-scrollbar,
   .shikaku-page[data-difficulty="expert"] .shikaku-grid-wrap::-webkit-scrollbar {
     display: none;
   }
-  /* Hard: bigger than viewport so it's comfortable, uses scroll */
+  /* Hard: grid larger than viewport — enables scroll in both axes */
   .shikaku-page[data-difficulty="hard"] .shikaku-grid {
     max-width: none;
-    width: max(92vw, 480px);
+    width: max(94vw, 480px);
+    flex-shrink: 0;  /* don't compress the grid — let the wrapper scroll */
     border-radius: 0;
     border: none;
   }
   /* Expert: even larger */
   .shikaku-page[data-difficulty="expert"] .shikaku-grid {
     max-width: none;
-    width: max(92vw, 520px);
+    width: max(94vw, 540px);
+    flex-shrink: 0;
     border-radius: 0;
     border: none;
   }
@@ -1089,12 +1127,17 @@
     background: transparent;
   }
 
-  /* Playing footer — compact */
+  /* Playing footer — compact, never allowed to be pushed offscreen */
   .shikaku-hint {
     display: none;
   }
   .shikaku-playing-footer {
     justify-content: center;
+    flex-shrink: 0;     /* footer never shrinks */
+  }
+  /* Header pinned at top — never shrinks */
+  .shikaku-page .game-header {
+    flex-shrink: 0;
   }
 
   /* Countdown */

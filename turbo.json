@@ -3,7 +3,8 @@
   "tasks": {
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": ["VITE_EXPOSE_HOST"]
     },
     "build": {
       "dependsOn": ["^build"],

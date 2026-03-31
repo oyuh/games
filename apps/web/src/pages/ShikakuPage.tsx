@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { FiAward, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiClock, FiCornerUpLeft, FiFlag, FiGrid, FiHelpCircle, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
 import {
@@ -37,6 +38,17 @@ const RECT_COLORS = [
   "#2dd4bf", "#fbbf24", "#818cf8", "#e879f9", "#22d3ee",
   "#a3e635", "#fb7185", "#fdba74", "#86efac", "#93c5fd",
 ];
+
+function withAlpha(hex: string, alpha: number): string {
+  const normalized = hex.replace("#", "");
+  const fullHex = normalized.length === 3
+    ? normalized.split("").map((char) => char + char).join("")
+    : normalized;
+  const red = Number.parseInt(fullHex.slice(0, 2), 16);
+  const green = Number.parseInt(fullHex.slice(2, 4), 16);
+  const blue = Number.parseInt(fullHex.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
 
 type GamePhase = "menu" | "countdown" | "playing" | "puzzle-complete" | "finished";
 
@@ -85,6 +97,11 @@ export function ShikakuPage() {
   const [dragStart, setDragStart] = useState<{ r: number; c: number } | null>(null);
   const [dragEnd, setDragEnd] = useState<{ r: number; c: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // Refs mirror drag state synchronously so native touch handlers always see current values
+  // (React may not re-render between touchstart→touchmove→touchend)
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ r: number; c: number } | null>(null);
+  const dragEndRef = useRef<{ r: number; c: number } | null>(null);
 
   // Flash invalid rects
   const [flashingRects, setFlashingRects] = useState<Set<number>>(new Set());
@@ -234,7 +251,8 @@ export function ShikakuPage() {
     const nums = currentPuzzle.numbers.filter(
       (n) => n.r >= rect.r && n.r < rect.r + rect.h && n.c >= rect.c && n.c < rect.c + rect.w
     );
-    return nums.length === 1 && nums[0].value === rect.w * rect.h;
+    const targetNumber = nums[0];
+    return nums.length === 1 && targetNumber !== undefined && targetNumber.value === rect.w * rect.h;
   }, [currentPuzzle]);
 
   /* ── Place a rectangle (with overlap override) ──────────── */
@@ -339,7 +357,8 @@ export function ShikakuPage() {
   /* ── Undo last action ───────────────────────────────────── */
   const undo = useCallback(() => {
     if (undoStack.length === 0) return;
-    const prev = undoStack[undoStack.length - 1];
+    const prev = undoStack.at(-1);
+    if (!prev) return;
     setUndoStack((s) => s.slice(0, -1));
     setPlacedRects(prev);
     // Recompute flashing
@@ -364,17 +383,34 @@ export function ShikakuPage() {
     pressedRectIdx.current = existingIdx;
     setDragStart({ r, c });
     setDragEnd({ r, c });
+    // Sync refs immediately — native touch events may fire before React re-renders
+    dragStartRef.current = { r, c };
+    dragEndRef.current = { r, c };
+    isDraggingRef.current = true;
     setIsDragging(true);
   }, [placedRects, showPuzzleSolvedAnim]);
 
   const handleCellMouseEnter = useCallback((r: number, c: number) => {
-    if (!isDragging) return;
+    // Read from ref, not closure — touchmove may fire before React commits the isDragging state
+    if (!isDraggingRef.current) return;
     didDrag.current = true;
     setDragEnd({ r, c });
-  }, [isDragging]);
+    dragEndRef.current = { r, c };
+  }, []);
 
   const handleMouseUp = useCallback(() => {
-    if (!isDragging || !dragStart || !dragEnd) {
+    // Read ALL drag state from refs to avoid stale closures on touch devices
+    // (touchend fires before React commits state updates from touchstart/touchmove)
+    const currentDragStart = dragStartRef.current;
+    const currentDragEnd = dragEndRef.current;
+    const wasDragging = isDraggingRef.current;
+
+    // Always clear refs synchronously
+    isDraggingRef.current = false;
+    dragStartRef.current = null;
+    dragEndRef.current = null;
+
+    if (!wasDragging || !currentDragStart || !currentDragEnd) {
       setIsDragging(false);
       setDragStart(null);
       setDragEnd(null);
@@ -391,10 +427,10 @@ export function ShikakuPage() {
       return;
     }
 
-    const r1 = Math.min(dragStart.r, dragEnd.r);
-    const c1 = Math.min(dragStart.c, dragEnd.c);
-    const r2 = Math.max(dragStart.r, dragEnd.r);
-    const c2 = Math.max(dragStart.c, dragEnd.c);
+    const r1 = Math.min(currentDragStart.r, currentDragEnd.r);
+    const c1 = Math.min(currentDragStart.c, currentDragEnd.c);
+    const r2 = Math.max(currentDragStart.r, currentDragEnd.r);
+    const c2 = Math.max(currentDragStart.c, currentDragEnd.c);
 
     placeRect({ r: r1, c: c1, w: c2 - c1 + 1, h: r2 - r1 + 1 });
 
@@ -402,7 +438,7 @@ export function ShikakuPage() {
     setDragStart(null);
     setDragEnd(null);
     pressedRectIdx.current = -1;
-  }, [isDragging, dragStart, dragEnd, placeRect, removeRect]);
+  }, [placeRect, removeRect]);
 
   /* ── Right-click to remove rect ─────────────────────────── */
   const handleCellRightClick = useCallback((r: number, c: number) => {
@@ -1193,9 +1229,34 @@ function ShikakuGrid({
 
     const handleTouchEnd = (e: TouchEvent) => {
       if (e.cancelable) e.preventDefault();
-      lastTouchCell.current = "";
       stopAutoScroll();
-      onMouseUpRef.current?.();
+
+      // The finger may have moved to a new cell between the last touchmove
+      // and touchend — changedTouches has the final lift position
+      const touch = e.changedTouches[0];
+      if (touch) {
+        const cell = getCellFromTouchRef.current(touch);
+        if (cell) {
+          const key = `${cell.r},${cell.c}`;
+          if (key !== lastTouchCell.current) {
+            onCellMouseEnterRef.current(cell.r, cell.c);
+          }
+        }
+      }
+
+      lastTouchCell.current = "";
+      flushSync(() => {
+        onMouseUpRef.current?.();
+      });
+
+      // Force browser repaint — mobile compositors sometimes skip painting
+      // updated cells after a touch sequence ends
+      requestAnimationFrame(() => {
+        const g = gridRef.current;
+        if (g) {
+          void g.offsetHeight; // triggers synchronous reflow → forces repaint
+        }
+      });
     };
 
     el.addEventListener("touchstart", handleTouchStart, { passive: false });
@@ -1251,17 +1312,26 @@ function ShikakuGrid({
           const num = numberMap.get(key);
           const rectIdx = cellRectMap.get(key);
           const inPreview = previewCells.has(key);
-          const rectColor = rectIdx !== undefined ? RECT_COLORS[placedRects[rectIdx].colorIndex] : undefined;
+          const placedRect = rectIdx !== undefined ? placedRects[rectIdx] : undefined;
+          const rectColor = placedRect ? RECT_COLORS[placedRect.colorIndex] : undefined;
           const isFlashing = rectIdx !== undefined && flashingRects.has(rectIdx);
+          const cellStyle = rectColor ? {
+            "--rect-color": rectColor,
+            "--rect-fill": withAlpha(rectColor, 0.38),
+            "--rect-fill-strong": withAlpha(rectColor, 0.48),
+            "--rect-fill-soft": withAlpha(rectColor, 0.14),
+            "--rect-fill-flash": withAlpha(rectColor, 0.1),
+            "--rect-stroke": withAlpha(rectColor, 0.22),
+            "--rect-stroke-strong": withAlpha(rectColor, 0.28),
+          } as React.CSSProperties : undefined;
 
           // Determine border edges
           let borderClass = "";
-          if (rectIdx !== undefined) {
-            const pr = placedRects[rectIdx];
-            if (r === pr.r) borderClass += " shikaku-cell--top";
-            if (r === pr.r + pr.h - 1) borderClass += " shikaku-cell--bottom";
-            if (c === pr.c) borderClass += " shikaku-cell--left";
-            if (c === pr.c + pr.w - 1) borderClass += " shikaku-cell--right";
+          if (placedRect) {
+            if (r === placedRect.r) borderClass += " shikaku-cell--top";
+            if (r === placedRect.r + placedRect.h - 1) borderClass += " shikaku-cell--bottom";
+            if (c === placedRect.c) borderClass += " shikaku-cell--left";
+            if (c === placedRect.c + placedRect.w - 1) borderClass += " shikaku-cell--right";
           }
 
           return (
@@ -1275,7 +1345,7 @@ function ShikakuGrid({
                 num !== undefined && "shikaku-cell--has-num",
                 isFlashing && "shikaku-cell--flash",
               ].filter(Boolean).join(" ")}
-              style={rectColor ? { "--rect-color": rectColor } as React.CSSProperties : undefined}
+              style={cellStyle}
               onMouseDown={(e) => { e.preventDefault(); onCellMouseDown(r, c); }}
               onMouseEnter={() => { onCellMouseEnter(r, c); }}
               onContextMenu={(e) => { e.preventDefault(); if (onCellRightClick) onCellRightClick(r, c); }}

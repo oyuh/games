@@ -11,6 +11,7 @@
     "local:down:mac": "bash ./scripts/local-down.sh",
     "local:reset:mac": "bash ./scripts/local-down.sh --skip-ports && bash ./scripts/local-dev.sh",
     "local:up:linux": "bash ./scripts/local-dev.sh",
+    "local:up:linux:host": "bash ./scripts/local-dev.sh --host",
     "local:down:linux": "bash ./scripts/local-down.sh",
     "local:reset:linux": "bash ./scripts/local-down.sh --skip-ports && bash ./scripts/local-dev.sh",
     "build": "turbo run build --cache-dir=.turbo-cache",
