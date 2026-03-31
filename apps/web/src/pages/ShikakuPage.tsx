@@ -120,14 +120,22 @@ export function ShikakuPage() {
   const infiniteRng = useRef<(() => number) | null>(null);
 
   /* ── Leaderboard fetch ──────────────────────────────────── */
-  const fetchLeaderboard = useCallback(async (diff: Difficulty) => {
+  const [lbPage, setLbPage] = useState(1);
+  const [lbTotalPages, setLbTotalPages] = useState(1);
+  const [lbTotal, setLbTotal] = useState(0);
+  const LB_PAGE_SIZE = 10;
+
+  const fetchLeaderboard = useCallback(async (diff: Difficulty, pg = 1) => {
     setLeaderboardLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/shikaku/leaderboard?difficulty=${encodeURIComponent(diff)}&limit=10&sessionId=${encodeURIComponent(sessionId)}`);
+      const res = await fetch(`${API_BASE}/api/shikaku/leaderboard?difficulty=${encodeURIComponent(diff)}&limit=${LB_PAGE_SIZE}&page=${pg}&sessionId=${encodeURIComponent(sessionId)}`);
       if (res.ok) {
         const data = await res.json();
         setLeaderboard(data.entries ?? []);
         setPersonalBest(data.personalBest ?? null);
+        setLbPage(data.page ?? 1);
+        setLbTotalPages(data.totalPages ?? 1);
+        setLbTotal(data.total ?? 0);
       }
     } catch {
       // silent
@@ -634,9 +642,13 @@ export function ShikakuPage() {
               loading={leaderboardLoading}
               difficulty={lbDifficulty}
               personalBest={personalBest}
-              onDiffChange={(d) => { setLbDifficulty(d); fetchLeaderboard(d); }}
+              onDiffChange={(d) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1); }}
               onClose={() => setShowLeaderboard(false)}
               formatTime={formatTime}
+              page={lbPage}
+              totalPages={lbTotalPages}
+              total={lbTotal}
+              onPageChange={(p) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p); }}
             />
           )}
           {showDemo && <ShikakuDemo onClose={() => setShowDemo(false)} />}
@@ -780,9 +792,13 @@ export function ShikakuPage() {
                 loading={leaderboardLoading}
                 difficulty={lbDifficulty}
                 personalBest={personalBest}
-                onDiffChange={(d) => { setLbDifficulty(d); fetchLeaderboard(d); }}
+                onDiffChange={(d) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1); }}
                 onClose={() => setShowLeaderboard(false)}
                 formatTime={formatTime}
+                page={lbPage}
+                totalPages={lbTotalPages}
+                total={lbTotal}
+                onPageChange={(p) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p); }}
               />
             )}
           </div>
@@ -890,9 +906,13 @@ export function ShikakuPage() {
             loading={leaderboardLoading}
             difficulty={lbDifficulty}
             personalBest={personalBest}
-            onDiffChange={(d) => { setLbDifficulty(d); fetchLeaderboard(d); }}
+            onDiffChange={(d) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1); }}
             onClose={() => setShowLeaderboard(false)}
             formatTime={formatTime}
+            page={lbPage}
+            totalPages={lbTotalPages}
+            total={lbTotal}
+            onPageChange={(p) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p); }}
           />
         )}
 
@@ -1083,6 +1103,10 @@ function ShikakuLeaderboard({
   onDiffChange,
   onClose,
   formatTime,
+  page,
+  totalPages,
+  total,
+  onPageChange,
 }: {
   entries: LeaderboardEntry[];
   loading: boolean;
@@ -1091,7 +1115,12 @@ function ShikakuLeaderboard({
   onDiffChange: (d: Difficulty) => void;
   onClose: () => void;
   formatTime: (ms: number) => string;
+  page: number;
+  totalPages: number;
+  total: number;
+  onPageChange: (page: number) => void;
 }) {
+  const pageSize = 10;
   return (
     <div className="shikaku-leaderboard-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="shikaku-leaderboard">
@@ -1138,16 +1167,41 @@ function ShikakuLeaderboard({
               <span data-tooltip="Points earned">Score</span>
               <span data-tooltip="Completion time">Time</span>
             </div>
-            {entries.map((entry, i) => (
-              <div key={entry.id} className={`shikaku-lb-row${i < 3 ? ` shikaku-lb-row--top${i + 1}` : ""}${entry.isOwn ? " shikaku-lb-row--self" : ""}`}
-                data-tooltip={entry.isOwn ? "Your score" : undefined}
-              >
-                <span className="shikaku-lb-rank">#{i + 1}</span>
-                <span className="shikaku-lb-name">{entry.name}</span>
-                <span className="shikaku-lb-score">{entry.score.toLocaleString()}</span>
-                <span className="shikaku-lb-time">{formatTime(entry.timeMs)}</span>
-              </div>
-            ))}
+            {entries.map((entry, i) => {
+              const rank = (page - 1) * pageSize + i + 1;
+              return (
+                <div key={entry.id} className={`shikaku-lb-row${rank <= 3 ? ` shikaku-lb-row--top${rank}` : ""}${entry.isOwn ? " shikaku-lb-row--self" : ""}`}
+                  data-tooltip={entry.isOwn ? "Your score" : undefined}
+                >
+                  <span className="shikaku-lb-rank">#{rank}</span>
+                  <span className="shikaku-lb-name">{entry.name}</span>
+                  <span className="shikaku-lb-score">{entry.score.toLocaleString()}</span>
+                  <span className="shikaku-lb-time">{formatTime(entry.timeMs)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="shikaku-lb-pagination">
+            <button
+              className="shikaku-lb-page-btn"
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 1 || loading}
+            >
+              ←
+            </button>
+            <span className="shikaku-lb-page-info">
+              Page {page} of {totalPages} ({total} scores)
+            </span>
+            <button
+              className="shikaku-lb-page-btn"
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages || loading}
+            >
+              →
+            </button>
           </div>
         )}
       </div>
