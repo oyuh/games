@@ -30,7 +30,7 @@
   overflow: hidden;
   box-sizing: border-box;
 }
-/* Allow scroll for large puzzles but hide the scrollbar visually */
+/* Allow scroll for hard/expert puzzles but hide the scrollbar visually */
 .shikaku-page.game-page[data-difficulty="hard"],
 .shikaku-page.game-page[data-difficulty="expert"] {
   overflow-y: auto;
@@ -266,6 +266,41 @@
   white-space: nowrap;
 }
 
+/* ── Scroll navigation — integrated into footer for expert on mobile ── */
+.shikaku-grid-outer {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* Scroll pair: 2 stacked directional buttons flanking the game buttons */
+.shikaku-scroll-pair {
+  display: none; /* shown only on mobile via media query */
+  flex-direction: column;
+  gap: 0.15rem;
+}
+/* Scroll-variant of icon-btn — slightly smaller, accent-tinted border */
+.shikaku-icon-btn--scroll {
+  width: 2rem;
+  height: 1.6rem;
+  border-radius: 0.4rem;
+  border-color: color-mix(in srgb, #34d399 30%, var(--secondary));
+  color: color-mix(in srgb, #34d399 50%, var(--muted-foreground));
+  opacity: 0.3;
+  transition: opacity 0.15s, background 0.12s, color 0.12s, border-color 0.12s;
+}
+.shikaku-icon-btn--scroll-active {
+  opacity: 1;
+  border-color: color-mix(in srgb, #34d399 60%, var(--secondary));
+  color: #34d399;
+}
+.shikaku-icon-btn--scroll:active {
+  transform: scale(0.9);
+  background: color-mix(in srgb, #34d399 14%, var(--card));
+  border-color: #34d399;
+}
+
 /* ── Grid ──────────────────────────────────────────────────── */
 .shikaku-grid {
   display: grid;
@@ -302,11 +337,13 @@
 
 /* Placed rectangle cell — crosshair so you can drag through */
 .shikaku-cell--filled {
-  background: color-mix(in srgb, var(--rect-color, #34d399) 22%, transparent);
+  background: color-mix(in srgb, var(--rect-color, #34d399) 32%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--rect-color, #34d399) 18%, transparent);
   cursor: crosshair;
+  z-index: 1; /* ensure filled cells always paint above default cells */
 }
 .shikaku-cell--filled:hover {
-  background: color-mix(in srgb, var(--rect-color, #34d399) 32%, transparent);
+  background: color-mix(in srgb, var(--rect-color, #34d399) 42%, transparent);
 }
 
 /* Rectangle border edges — thicker to show rect outline */
@@ -320,13 +357,18 @@
   animation: shikaku-flash 0.6s ease-in-out infinite alternate;
 }
 @keyframes shikaku-flash {
-  0%   { background: color-mix(in srgb, var(--rect-color, #34d399) 22%, transparent); }
-  100% { background: color-mix(in srgb, var(--rect-color, #34d399) 6%, transparent); opacity: 0.6; }
+  0%   { background: color-mix(in srgb, var(--rect-color, #34d399) 32%, transparent); }
+  100% { background: color-mix(in srgb, var(--rect-color, #34d399) 8%, transparent); }
 }
 
-/* Preview (dragging) */
-.shikaku-cell--preview {
+/* Preview (dragging) — only tint empty cells; keep filled cells with their rect color */
+.shikaku-cell--preview:not(.shikaku-cell--filled) {
   background: color-mix(in srgb, #34d399 14%, transparent);
+}
+.shikaku-cell--filled.shikaku-cell--preview {
+  /* Keep the filled rect's color — slightly brighter to hint at overlap */
+  background: color-mix(in srgb, var(--rect-color, #34d399) 40%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--rect-color, #34d399) 22%, transparent);
 }
 
 /* Number display */
@@ -506,7 +548,7 @@
   color: var(--muted-foreground);
 }
 
-/* ── Grid tile area — 2 columns ── */
+/* ── Grid tile area — 2 columns, balanced ── */
 .shikaku-end-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -526,6 +568,10 @@
   gap: 0.5rem;
   align-content: start;
 }
+/* When the last tile is alone on its row, span both columns at full width */
+.shikaku-end-stats > .shikaku-end-tile:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
 .shikaku-end-stats--infinite {
   grid-template-columns: 1fr 1fr;
 }
@@ -538,6 +584,7 @@
   justify-content: center;
   gap: 0.2rem;
   padding: 0.75rem 0.5rem;
+  min-height: 4.5rem;
   border-radius: 0.75rem;
   background: var(--card);
   border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
@@ -610,11 +657,21 @@
 .shikaku-end-list-row {
   display: flex;
   justify-content: space-between;
+  gap: 0.5rem;
   font-size: 0.76rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
   padding: 0.3rem 0.75rem;
   transition: background 0.12s;
+}
+.shikaku-end-list-row > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.shikaku-end-list-row > span:last-child {
+  flex-shrink: 0;
 }
 .shikaku-end-list-row:hover {
   background: color-mix(in srgb, var(--secondary) 10%, transparent);
@@ -987,25 +1044,40 @@
     max-width: min(500px, 94vw, calc(100dvh - 16rem));
   }
 
-  /* Hard/Expert — scrollable grid wrapper on mobile */
+  /* Hard + Expert — scrollable grid wrappers on mobile */
+  .shikaku-page[data-difficulty="hard"] .shikaku-grid-outer,
+  .shikaku-page[data-difficulty="expert"] .shikaku-grid-outer {
+    width: fit-content;
+    max-width: 92vw;
+  }
   .shikaku-page[data-difficulty="hard"] .shikaku-grid-wrap,
   .shikaku-page[data-difficulty="expert"] .shikaku-grid-wrap {
     overflow: auto;
     -webkit-overflow-scrolling: touch;
-    max-height: calc(100dvh - 16rem);
-    max-width: 96vw;
-    border-radius: 0.5rem;
-    border: 1.5px solid color-mix(in srgb, #34d399 20%, var(--border));
+    max-height: calc(100dvh - 14rem);
+    max-width: 92vw;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    touch-action: pan-x pan-y;
+    /* Override flex centering — centered children push content left of scrollLeft:0
+       making the left edge unreachable. flex-start ensures scroll starts at the true left edge. */
+    align-items: flex-start;
   }
+  .shikaku-page[data-difficulty="hard"] .shikaku-grid-wrap::-webkit-scrollbar,
+  .shikaku-page[data-difficulty="expert"] .shikaku-grid-wrap::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hard: bigger than viewport so it's comfortable, uses scroll */
   .shikaku-page[data-difficulty="hard"] .shikaku-grid {
     max-width: none;
-    width: max(96vw, 520px);
+    width: max(92vw, 480px);
     border-radius: 0;
     border: none;
   }
+  /* Expert: even larger */
   .shikaku-page[data-difficulty="expert"] .shikaku-grid {
     max-width: none;
-    width: max(96vw, 640px);
+    width: max(92vw, 520px);
     border-radius: 0;
     border: none;
   }
@@ -1049,6 +1121,7 @@
   }
   .shikaku-end-tile {
     padding: 0.5rem 0.35rem;
+    min-height: 3.5rem;
   }
 
   /* Leaderboard overlay */
@@ -1062,5 +1135,27 @@
   /* Give-up dialog */
   .shikaku-giveup-dialog {
     max-width: 92vw;
+  }
+
+  /* Scroll pairs visible on mobile for hard + expert */
+  .shikaku-page[data-difficulty="hard"] .shikaku-scroll-pair,
+  .shikaku-page[data-difficulty="expert"] .shikaku-scroll-pair {
+    display: flex;
+  }
+
+  /* End-game tiles — equal columns on mobile, prevent imbalance */
+  .shikaku-end-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .shikaku-end-tile-label {
+    font-size: 0.55rem;
+  }
+  .shikaku-end-list-row {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+  }
+  .shikaku-end-list-header {
+    font-size: 0.6rem;
+    padding: 0.4rem 0.6rem;
   }
 }
