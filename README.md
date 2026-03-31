@@ -15,15 +15,19 @@
 
 This is a complete refactor/rewrite of a similar website I created. Here's the repo: https://github.com/oyuh/games-arch
 
-Games is a TypeScript monorepo for browser-based multiplayer party games. The frontend is a React 19 + Vite single-page app, the backend is a Hono-powered Node service, realtime state replication is handled through Rocicorp Zero, admin broadcasts and targeted messages flow through Pusher Channels, presence is tracked via periodic HTTP heartbeats, and persistent state lives in Postgres via Drizzle schema definitions.
+Games is a TypeScript monorepo for browser-based party games. The frontend is a React 19 + Vite single-page app, the backend is a Hono-powered Node service, realtime state replication is handled through Rocicorp Zero, admin broadcasts and targeted messages flow through Pusher Channels, presence is tracked via periodic HTTP heartbeats, and persistent state lives in Postgres via Drizzle schema definitions.
 
-This repository currently contains four implemented game flows at the data/model level:
+This repository contains six implemented game flows:
 
-- Imposter
-- Password
-- Chain Reaction
-- Shade Signal
-- Location Signal
+**Multiplayer (Zero-synced):**
+- Imposter — social deduction
+- Password — team word guessing
+- Chain Reaction — competitive word-chain puzzle
+- Shade Signal — color-guessing party game
+- Location Signal — GeoGuessr-style map guessing
+
+**Single-player:**
+- Shikaku — timed grid logic puzzle with leaderboard
 
 ## Table of Contents
 
@@ -39,6 +43,7 @@ This repository currently contains four implemented game flows at the data/model
 - [Operational Notes](#operational-notes)
 - [Known Constraints](#known-constraints)
 - [Mobile UI](#mobile-ui)
+- [Admin Dashboard](#admin-dashboard)
 - [Reference Docs](#reference-docs)
 
 ## Project Summary
@@ -105,6 +110,11 @@ Important responsibilities in the API app:
 - Handle `GET|POST /api/cleanup` with bearer auth
 - Handle `POST /api/pusher/auth` for Pusher channel authentication
 - Handle `POST /api/presence/heartbeat` for session liveness
+- Handle `POST /api/presence/heartbeat` for session liveness
+- Handle `GET /api/shikaku/leaderboard` for single-player scores
+- Handle `POST /api/shikaku/score` for score submission with server-side validation
+- Handle `GET /api/maps/config` and `GET /api/maps/geocode` for Location Signal map tiles
+- Handle `POST /api/game-secret/init|pre-reveal|key` for game secret encryption
 - Trigger Pusher events for admin broadcasts (toasts, kicks, status, name restrictions)
 - Run scheduled stale-session / stale-game cleanup
 
@@ -128,16 +138,17 @@ The Zero mutators live in `packages/shared/src/zero/mutators/` and are split by 
 
 ```text
 packages/shared/src/zero/mutators/
-├─ index.ts            # Barrel — composes defineMutators, re-exports public symbols
-├─ word-banks.ts       # Word banks and category data (imposter, chain reaction, password)
-├─ helpers.ts          # Shared utility functions (now, code, shuffle, pickRandom, etc.)
-├─ sessions.ts         # Session mutators (upsert, setName, attachGame, touchPresence)
-├─ imposter.ts         # Imposter game mutators (12 mutators)
-├─ password.ts         # Password game mutators (15 mutators)
-├─ chat.ts             # Chat mutators (send, clearForGame)
-├─ chain-reaction.ts   # Chain Reaction game mutators (12 mutators)
-├─ shade-signal.ts     # Shade Signal game mutators (15 mutators)
-└─ demo.ts             # Dev-only demo seeders (4 seeders)
+├─ index.ts              # Barrel — composes defineMutators, re-exports public symbols
+├─ word-banks.ts         # Word banks and category data (imposter, chain reaction, password)
+├─ helpers.ts            # Shared utility functions (now, code, shuffle, pickRandom, etc.)
+├─ sessions.ts           # Session mutators (upsert, setName, attachGame, touchPresence)
+├─ imposter.ts           # Imposter game mutators (12 mutators)
+├─ password.ts           # Password game mutators (15 mutators)
+├─ chat.ts               # Chat mutators (send, clearForGame)
+├─ chain-reaction.ts     # Chain Reaction game mutators (12 mutators)
+├─ shade-signal.ts       # Shade Signal game mutators (15 mutators)
+├─ location-signal.ts    # Location Signal game mutators
+└─ demo.ts               # Dev-only demo seeders (4 seeders)
 ```
 
 The barrel `index.ts` imports all domain-specific mutator objects and composes them into a single `mutators` export via `defineMutators()`. Consumers still import everything from `@games/shared` — the split is internal to the shared package.
@@ -217,6 +228,8 @@ The frontend is a single-page application using browser routing. The major route
 - `/password/:id/results` for Password results
 - `/chain/:id` for Chain Reaction
 - `/shade/:id` for Shade Signal
+- `/location/:id` for Location Signal
+- `/shikaku` for the single-player Shikaku puzzle
 
 Because this is an SPA, production hosting requires a rewrite rule that sends unknown paths back to `index.html`. That is already configured in [vercel.json](vercel.json).
 
@@ -387,6 +400,40 @@ Stores Shade Signal game state, including:
 - kicked players
 - settings (hard mode, leader pick, durations, rounds per player)
 
+### location_signal_games
+
+Stores Location Signal game state, including:
+
+- players (with cumulative penalty scores)
+- leader rotation order
+- encrypted target coordinates and map scope
+- clues (up to 4 per round)
+- guess coordinates per player per round
+- round history with distance scoring
+- kicked players
+- settings (rounds, guess timer, clue timer, map scope)
+
+### shikaku_scores
+
+Stores Shikaku leaderboard entries, including:
+
+- session ID and player name
+- seed, difficulty, score, time in ms
+- puzzle count and replay data
+- server-side validated (minimum time, max score cap, duplicate seed protection, ban check)
+
+### game_encryption_keys
+
+Stores server-side encryption keys used for game secrets (imposter secret words, shade signal targets, location signal coordinates).
+
+### admin_bans
+
+Stores session, IP, and region-based bans managed through the admin dashboard.
+
+### admin_restricted_names / admin_name_overrides
+
+Stores blocked name patterns and per-session forced name overrides.
+
 ### chat_messages
 
 Stores per-game chat history keyed by game type and game ID.
@@ -401,6 +448,7 @@ Shared query definitions cover:
 - Password by ID and join code
 - Chain Reaction by ID and join code
 - Shade Signal by ID and join code
+- Location Signal by ID and join code
 - chat messages by game
 
 Because these definitions live in the shared package, the browser and server reference the same query names and argument contracts.
@@ -417,7 +465,9 @@ Shared mutators cover:
 
 The mutators are the real source of game-state transitions. If you are changing behavior, this is usually the first place to inspect.
 
-Mutators are organized into separate files by game domain under `packages/shared/src/zero/mutators/`. Each game has its own file (e.g. `imposter.ts`, `password.ts`, `chain-reaction.ts`, `shade-signal.ts`), with shared utilities in `helpers.ts` and word bank data in `word-banks.ts`. The barrel `index.ts` composes them all via `defineMutators()`.
+Mutators are organized into separate files by game domain under `packages/shared/src/zero/mutators/`. Each game has its own file (e.g. `imposter.ts`, `password.ts`, `chain-reaction.ts`, `shade-signal.ts`, `location-signal.ts`), with shared utilities in `helpers.ts` and word bank data in `word-banks.ts`. The barrel `index.ts` composes them all via `defineMutators()`.
+
+Note: Shikaku does not have Zero mutators — it uses REST API endpoints for leaderboard and score submission, with all game logic running client-side.
 
 ## Local Development
 
@@ -891,11 +941,13 @@ Requirements regardless of provider:
 3. Create a Password room.
 4. Create a Chain Reaction room.
 5. Create a Shade Signal room.
-6. Join from a second browser tab or second device.
-7. Verify that player presence updates.
-8. Verify that game actions propagate in near realtime.
-9. Verify `/health` and `/debug/build-info` on the API.
-10. Verify the Zero service is reachable and not returning 502s.
+6. Create a Location Signal room.
+7. Play a Shikaku run and verify leaderboard submission.
+8. Join from a second browser tab or second device.
+9. Verify that player presence updates.
+10. Verify that game actions propagate in near realtime.
+11. Verify `/health` and `/debug/build-info` on the API.
+12. Verify the Zero service is reachable and not returning 502s.
 
 ### Rollback approach
 
@@ -940,6 +992,8 @@ If you extend reconnect tolerance, you will likely also want to revisit those cl
 - Game state is heavily JSON-column based, which is pragmatic for mutable party-game state but less ideal for analytical querying.
 - The Railway config currently starts the API through `tsx src/index.ts` instead of `node dist/index.js`.
 - Shade Signal is fully implemented with desktop and mobile UI, including leader picking, hard mode, and auto-advance timers.
+- Location Signal is fully implemented with desktop and mobile UI, including interactive map, distance scoring, and geocode proxy.
+- Shikaku is a single-player puzzle with no multiplayer sync — it uses REST endpoints for leaderboard only.
 
 ## Mobile UI
 
@@ -971,7 +1025,8 @@ apps/web/src/mobile/
    ├─ MobilePasswordGamePage.tsx  # Password active rounds
    ├─ MobilePasswordResultsPage.tsx # Password results
    ├─ MobileChainReactionPage.tsx # Chain Reaction (all phases)
-   └─ MobileShadeSignalPage.tsx   # Shade Signal (all phases)
+   ├─ MobileShadeSignalPage.tsx   # Shade Signal (all phases)
+   └─ MobileLocationSignalPage.tsx # Location Signal (all phases)
 ```
 
 ### Development Guidelines
@@ -979,15 +1034,49 @@ apps/web/src/mobile/
 - **Never** modify desktop components to accommodate mobile. Mobile gets its own components.
 - All mobile class names use the `m-` prefix to avoid collisions with desktop CSS.
 - When adding a new game, create a corresponding `Mobile<Game>Page.tsx` in the mobile pages directory.
+- Shikaku is currently desktop-only and does not have a mobile page.
 - Use the dev demo buttons in the mobile Options sheet (visible in `DEV` mode only) to quickly test any game phase on mobile.
 - Run `npx vite build` to verify both desktop and mobile code compile cleanly.
 
+## Admin Dashboard
+
+The admin app lives in `apps/admin/` and is a Next.js application with authentication.
+
+### Pages
+
+| Route | Purpose |
+|-------|--------|
+| `/login` | Admin authentication |
+| `/` | Dashboard home |
+| `/clients` | Connected clients / active sessions |
+| `/games` | Active games management (view, end, kick) |
+| `/bans` | Session / IP / region ban management |
+| `/broadcast` | Global toast, force refresh, custom status, update warnings |
+| `/names` | Name overrides + restricted name patterns |
+| `/shikaku` | Shikaku leaderboard management (view, edit, delete scores) |
+
+### Capabilities
+
+- View all connected sessions and their current game associations
+- End individual games or all games at once
+- Kick players from games
+- Ban by session ID, IP address, or region
+- Broadcast toast messages globally or to specific users
+- Force browser refresh across all clients
+- Set a custom status banner shown site-wide
+- Send timed update warnings
+- Override player display names
+- Block name patterns via regex
+- Manage Shikaku leaderboard entries (edit scores, delete entries, wipe by difficulty)
+
 ## Reference Docs
 
-- [docs/deployment-vercel-railway.md](docs/deployment-vercel-railway.md)
+- [docs/game-imposter.md](docs/game-imposter.md)
+- [docs/game-password.md](docs/game-password.md)
 - [docs/game-chain-reaction.md](docs/game-chain-reaction.md)
-- [docs/game-location-signal.md](docs/game-location-signal.md)
 - [docs/game-shade-signal.md](docs/game-shade-signal.md)
+- [docs/game-location-signal.md](docs/game-location-signal.md)
+- [docs/game-shikaku.md](docs/game-shikaku.md)
 
 ## Quick Start
 

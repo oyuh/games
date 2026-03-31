@@ -1,6 +1,6 @@
 # Shade Signal — Game Design Document
 
-> **Status:** Coming Soon
+> **Status:** Implemented
 > **Players:** 3–10
 > **Type:** Cooperative/competitive color-guessing party game
 
