@@ -125,7 +125,7 @@ export default function NamesPage() {
                 {restricted.map((r) => (
                   <tr key={r.id}>
                     <td style={{ fontFamily: "monospace", fontWeight: 500 }}>{r.pattern}</td>
-                    <td style={{ color: "var(--muted)" }}>{r.reason || "—"}</td>
+                    <td style={{ color: "var(--muted)" }}>{r.reason || "--"}</td>
                     <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{ago(r.createdAt)}</td>
                     <td>
                       <button
@@ -167,7 +167,7 @@ export default function NamesPage() {
                   <tr key={o.sessionId}>
                     <td style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{o.sessionId.slice(0, 12)}...</td>
                     <td style={{ fontWeight: 500 }}>{o.forcedName}</td>
-                    <td style={{ color: "var(--muted)" }}>{o.reason || "—"}</td>
+                    <td style={{ color: "var(--muted)" }}>{o.reason || "--"}</td>
                     <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{ago(o.updatedAt)}</td>
                     <td>
                       <button

@@ -25,6 +25,10 @@ export const sessions = pgTable(
     name: text("name"),
     gameType: gameTypeEnum("game_type"),
     gameId: text("game_id"),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    region: text("region"),
+    fingerprint: text("fingerprint"),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     lastSeen: bigint("last_seen", { mode: "number" }).notNull()
   },
@@ -372,6 +376,18 @@ export const shikakuScores = pgTable(
   })
 );
 
+// ─── Shikaku auto-ban table (abuse detection) ───────────────
+
+export const shikakuBannedSessions = pgTable(
+  "shikaku_banned_sessions",
+  {
+    sessionId: text("session_id").primaryKey(),
+    reason: text("reason").notNull(),
+    violations: integer("violations").notNull().default(1),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  }
+);
+
 export type DrizzleSchema = {
   sessions: typeof sessions;
   statusTable: typeof statusTable;
@@ -386,4 +402,5 @@ export type DrizzleSchema = {
   adminRestrictedNames: typeof adminRestrictedNames;
   adminNameOverrides: typeof adminNameOverrides;
   shikakuScores: typeof shikakuScores;
+  shikakuBannedSessions: typeof shikakuBannedSessions;
 };

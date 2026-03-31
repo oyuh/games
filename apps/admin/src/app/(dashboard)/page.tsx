@@ -181,7 +181,7 @@ export default function DashboardPage() {
               />
               {colorInput && (
                 <button className="btn btn-ghost" style={{ padding: "0.25rem 0.5rem", fontSize: "0.7rem" }} onClick={() => setColorInput("")}>
-                  ✕
+                  Clear
                 </button>
               )}
             </div>
@@ -208,13 +208,13 @@ export default function DashboardPage() {
         <h2 className="section-title">Danger Zone</h2>
         <div className="card" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           <button className="btn btn-warning" onClick={sendUpdateWarning}>
-            ⚠️ Send 5-min Update Warning
+            Send 5-min Update Warning
           </button>
           <button className="btn btn-danger" onClick={refreshAll}>
-            🔄 Force Refresh All Clients
+            Force Refresh All Clients
           </button>
           <button className="btn btn-danger" onClick={endAllGames}>
-            🛑 End All Games
+            End All Games
           </button>
         </div>
       </div>

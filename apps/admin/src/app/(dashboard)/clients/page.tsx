@@ -10,6 +10,7 @@ type Client = {
   ip: string | null;
   userAgent: string | null;
   region: string | null;
+  fingerprint: string | null;
   connectedAt: number | null;
   lastSeen: number;
   gameId: string | null;
@@ -96,7 +97,7 @@ export default function ClientsPage() {
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button className="btn btn-ghost" onClick={refresh}>Refresh</button>
           <button className="btn btn-primary" onClick={() => { setToastTarget("__global__"); setToastMsg(""); }}>
-            📢 Global Toast
+            Global Toast
           </button>
         </div>
       </div>
@@ -186,6 +187,8 @@ export default function ClientsPage() {
               <th>Name</th>
               <th>IP</th>
               <th>Region</th>
+              <th>Fingerprint</th>
+              <th>User Agent</th>
               <th>Game</th>
               <th>Connected</th>
               <th>Last Seen</th>
@@ -194,23 +197,29 @@ export default function ClientsPage() {
           </thead>
           <tbody>
             {clients.length === 0 && (
-              <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--muted)" }}>No clients connected</td></tr>
+              <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--muted)" }}>No clients connected</td></tr>
             )}
             {clients.map((c, i) => (
               <tr key={i}>
                 <td style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
-                  {c.sessionId?.slice(0, 12) ?? "—"}
+                  {c.sessionId?.slice(0, 12) ?? "--"}
                 </td>
                 <td style={{ fontWeight: 500 }}>
                   {c.name || <span style={{ color: "var(--muted)" }}>Anonymous</span>}
                 </td>
-                <td style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{c.ip || <span style={{ color: "var(--muted)" }}>—</span>}</td>
+                <td style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{c.ip || <span style={{ color: "var(--muted)" }}>--</span>}</td>
                 <td>
                   {c.region && c.region !== "unknown" ? (
                     <span className="badge badge-gray">{c.region}</span>
                   ) : (
-                    <span style={{ color: "var(--muted)" }}>—</span>
+                    <span style={{ color: "var(--muted)" }}>--</span>
                   )}
+                </td>
+                <td style={{ fontFamily: "monospace", fontSize: "0.7rem" }}>
+                  {c.fingerprint ? c.fingerprint.slice(0, 12) : <span style={{ color: "var(--muted)" }}>--</span>}
+                </td>
+                <td style={{ fontSize: "0.7rem", maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {c.userAgent ? c.userAgent.slice(0, 60) : <span style={{ color: "var(--muted)" }}>--</span>}
                 </td>
                 <td>
                   {c.gameType ? (
@@ -219,7 +228,7 @@ export default function ClientsPage() {
                     <span style={{ color: "var(--muted)" }}>—</span>
                   )}
                 </td>
-                <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{c.connectedAt ? ago(c.connectedAt) : "—"}</td>
+                <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{c.connectedAt ? ago(c.connectedAt) : "--"}</td>
                 <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{ago(c.lastSeen)}</td>
                 <td>
                   {c.sessionId && (

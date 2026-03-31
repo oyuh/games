@@ -118,7 +118,7 @@ export default function BansPage() {
               <tr key={b.id}>
                 <td><span className={`badge ${typeColor(b.type)}`}>{b.type}</span></td>
                 <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{b.value}</td>
-                <td>{b.reason || "—"}</td>
+                <td>{b.reason || "--"}</td>
                 <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
                   {new Date(b.createdAt).toLocaleString()}
                 </td>

@@ -105,7 +105,7 @@ export default function GamesPage() {
               <span className={`badge ${phaseColor(detail.game?.phase)}`} style={{ marginRight: "0.5rem" }}>
                 {detail.game?.phase}
               </span>
-              <strong>{detail.game?.type}</strong> — Code: <code>{detail.game?.code}</code>
+              <strong>{detail.game?.type}</strong> <span style={{ color: "var(--muted)", margin: "0 0.25rem" }}>|</span> Code: <code>{detail.game?.code}</code>
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <button className="btn btn-danger" onClick={() => endGame(detail.game.type, detail.game.id)}>
@@ -121,7 +121,7 @@ export default function GamesPage() {
             {detail.game?.players?.map((p: any, i: number) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.375rem 0", borderBottom: "1px solid var(--border)" }}>
                 <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{p.sessionId?.slice(0, 12)}</span>
-                <span>{p.name || "—"}</span>
+                <span>{p.name || "--"}</span>
                 {p.role && <span className="badge badge-yellow">{p.role}</span>}
                 {p.eliminated && <span className="badge badge-red">eliminated</span>}
                 <button
@@ -176,7 +176,7 @@ export default function GamesPage() {
           </thead>
           <tbody>
             {games.length === 0 && (
-              <tr><td colSpan={6} style={{ textAlign: "center", color: "#888" }}>No active games</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)" }}>No active games</td></tr>
             )}
             {games.map((g) => (
               <tr key={g.id}>
