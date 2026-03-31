@@ -1,5 +1,5 @@
 import { mutators, queries, schema } from "@games/shared";
-import { chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, statusTable } from "@games/shared";
+import { chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
 import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -94,6 +94,14 @@ app.use(
 );
 
 // ─── Admin routes ──────────────────────────────────────────
+app.use(
+  "/api/admin/*",
+  rateLimiter({
+    windowMs: 60_000,
+    maxRequests: 60,
+    scope: "admin"
+  })
+);
 app.route("/api/admin", adminRoutes);
 
 // ─── Public endpoints (no auth) ─────────────────────────────
@@ -149,6 +157,51 @@ app.get("/api/maps/geocode", async (c) => {
   }
 });
 
+// ─── Client info extraction helpers ─────────────────────────
+function getClientInfo(c: { req: { header: (name: string) => string | undefined } }) {
+  const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const region = c.req.header("cf-ipcountry") || c.req.header("x-vercel-ip-country") || "unknown";
+  const userAgent = (c.req.header("user-agent") || "unknown").slice(0, 500);
+  return { ip: ip.slice(0, 45), region: region.slice(0, 10), userAgent };
+}
+
+/** Simple hash of IP+UA to detect session migration between different clients */
+function computeFingerprint(ip: string, userAgent: string): string {
+  // Quick deterministic hash — not crypto, just identity binding
+  let hash = 0;
+  const str = `${ip}::${userAgent}`;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(36);
+}
+
+// ── Session fingerprint anomaly tracker ─────────────────────
+// Maps sessionId → Set of fingerprints seen. If a session has too many
+// distinct fingerprints it's likely being shared/spoofed.
+const sessionFingerprints = new Map<string, Set<string>>();
+const MAX_FINGERPRINTS_PER_SESSION = 5;
+
+function checkFingerprintAnomaly(sessionId: string, fingerprint: string): boolean {
+  let fps = sessionFingerprints.get(sessionId);
+  if (!fps) {
+    fps = new Set();
+    sessionFingerprints.set(sessionId, fps);
+  }
+  fps.add(fingerprint);
+  return fps.size > MAX_FINGERPRINTS_PER_SESSION;
+}
+
+/** Persist IP/geo/UA/fingerprint onto a session row (fire-and-forget) */
+function updateSessionTracking(sessionId: string, ip: string, region: string, userAgent: string, fingerprint: string) {
+  drizzleClient
+    .update(sessions)
+    .set({ ip, region, userAgent, fingerprint, lastSeen: Date.now() })
+    .where(eq(sessions.id, sessionId))
+    .then(() => {})
+    .catch(() => {});
+}
+
 // ─── Pusher auth endpoint ───────────────────────────────────
 app.post("/api/pusher/auth", async (c) => {
   const body = await c.req.parseBody();
@@ -162,8 +215,7 @@ app.post("/api/pusher/auth", async (c) => {
 
   // Ban check on auth — banned users can't subscribe
   if (sessionId) {
-    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const region = c.req.header("cf-ipcountry") || c.req.header("x-vercel-ip-country") || "unknown";
+    const { ip, region, userAgent } = getClientInfo(c);
     const checker = getBanChecker();
     if (checker) {
       const ban = checker(sessionId, ip, region);
@@ -171,6 +223,10 @@ app.post("/api/pusher/auth", async (c) => {
         return c.json({ error: "Banned" }, 403);
       }
     }
+
+    // Track session client info on every auth
+    const fp = computeFingerprint(ip, userAgent);
+    updateSessionTracking(sessionId, ip, region, userAgent, fp);
   }
 
   // Only allow private-user-{sessionId} channels where sessionId matches
@@ -196,14 +252,24 @@ app.post("/api/presence/heartbeat", async (c) => {
     return c.json({ error: "sessionId required" }, 400);
   }
 
+  const { ip, region, userAgent } = getClientInfo(c);
+  const fingerprint = computeFingerprint(ip, userAgent);
+
+  // Check for session ID being used from too many different clients
+  const anomaly = checkFingerprintAnomaly(sessionId, fingerprint);
+
   await drizzleClient
     .update(sessions)
     .set({
+      ip,
+      region,
+      userAgent,
+      fingerprint,
       lastSeen: Date.now(),
     })
     .where(eq(sessions.id, sessionId));
 
-  return c.json({ ok: true });
+  return c.json({ ok: true, ...(anomaly ? { warning: "fingerprint_anomaly" } : {}) });
 });
 
 // ─── Custom status in build-info ───────────────────────────
@@ -250,12 +316,28 @@ function assertCallerValue(userId: string, claimed: unknown, field: string) {
 }
 
 function enforceMutatorCaller(userId: string, name: string, args: unknown) {
-  if (userId === "anon" || args == null || typeof args !== "object") {
+  if (args == null || typeof args !== "object") {
     return;
   }
 
   const payload = args as Record<string, unknown>;
   const [namespace] = name.split(".");
+
+  // Anon users (no x-zero-user-id header) are only allowed to target
+  // session-creation mutators; they must not impersonate existing sessions
+  // in identity-sensitive fields.  We skip enforcement only for sessions.create
+  // since it establishes a new identity.
+  if (userId === "anon") {
+    if (namespace === "sessions" && name === "sessions.create") {
+      return; // allow anon to create a new session
+    }
+    if (namespace === "sessions" && name === "sessions.setName") {
+      return; // allow anon to set their own name (client-side session)
+    }
+    // For all other mutations, anon callers still go through identity checks
+    // below — they'll fail if the payload includes an identity field, which
+    // is the correct behaviour (prevents spoofing).
+  }
 
   if (namespace === "sessions") {
     assertCallerValue(userId, payload.id, "id");
@@ -695,6 +777,74 @@ function shikakuMaxScore(timeMs: number, difficulty: string): number {
   return Math.max(0, Math.round(basePoints * (SHIKAKU_DIFF_MULT[difficulty] ?? 1) * timeBonus));
 }
 
+// ── Max play time per difficulty ────────────────────────────
+// Base: 1 hour, +30 min per difficulty tier
+const SHIKAKU_MAX_TIME_MS: Record<string, number> = {
+  easy:   3_600_000,                // 1 hr
+  medium: 3_600_000 + 1_800_000,    // 1.5 hr
+  hard:   3_600_000 + 3_600_000,    // 2 hr
+  expert: 3_600_000 + 5_400_000,    // 2.5 hr
+};
+
+const SHIKAKU_MAX_SCORES_PER_SESSION = 20;
+
+// ── Shikaku auto-ban cache ──────────────────────────────────
+const shikakuBanCache = new Set<string>();
+
+async function loadShikakuBans() {
+  try {
+    const rows = await drizzleClient
+      .select({ sessionId: shikakuBannedSessions.sessionId })
+      .from(shikakuBannedSessions);
+    for (const r of rows) shikakuBanCache.add(r.sessionId);
+  } catch {
+    // table may not exist yet
+  }
+}
+loadShikakuBans().catch(console.error);
+
+// ── In-memory abuse tracker ─────────────────────────────────
+// Tracks suspicious activity per session: rapid submissions, impossible
+// scores, tampered times, etc.  3 strikes → auto-ban.
+const abuseStrikes = new Map<string, { count: number; reasons: string[]; firstAt: number }>();
+const ABUSE_STRIKE_LIMIT = 3;
+const ABUSE_WINDOW_MS = 30 * 60 * 1000; // 30 min window
+
+function recordStrike(sessionId: string, reason: string): boolean {
+  const now = Date.now();
+  let entry = abuseStrikes.get(sessionId);
+  if (!entry || now - entry.firstAt > ABUSE_WINDOW_MS) {
+    entry = { count: 0, reasons: [], firstAt: now };
+  }
+  entry.count++;
+  entry.reasons.push(reason);
+  abuseStrikes.set(sessionId, entry);
+  return entry.count >= ABUSE_STRIKE_LIMIT;
+}
+
+async function autoBanSession(sessionId: string, reasons: string[]) {
+  const reason = `Auto-ban: ${reasons.join("; ")}`;
+  shikakuBanCache.add(sessionId);
+  try {
+    await drizzleClient
+      .insert(shikakuBannedSessions)
+      .values({ sessionId, reason, violations: reasons.length, createdAt: Date.now() })
+      .onConflictDoUpdate({
+        target: shikakuBannedSessions.sessionId,
+        set: {
+          reason,
+          violations: sql`${shikakuBannedSessions.violations} + ${reasons.length}`,
+        },
+      });
+  } catch {
+    // DB write failed, in-memory ban still active
+  }
+}
+
+function isShikakuBanned(sessionId: string): boolean {
+  return shikakuBanCache.has(sessionId);
+}
+
 app.use(
   "/api/shikaku/*",
   rateLimiter({
@@ -804,18 +954,33 @@ app.post("/api/shikaku/score", async (c) => {
   if (typeof score !== "number" || score < 0 || score > 100000) {
     return c.json({ error: "Invalid score" }, 400);
   }
-  if (typeof timeMs !== "number" || timeMs < 0 || timeMs > 3600000) {
+  if (typeof timeMs !== "number" || timeMs < 0 || timeMs > 9_000_000) {
     return c.json({ error: "Invalid timeMs" }, 400);
   }
   if (typeof puzzleCount !== "number" || puzzleCount < 1 || puzzleCount > 20) {
     return c.json({ error: "Invalid puzzleCount" }, 400);
   }
 
-  // ── Ban check ─────────────────────────────────────────────
-  const callerIp = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
-  const callerRegion = c.req.header("x-vercel-ip-country") ?? "";
+  // ── Shikaku-specific auto-ban check ───────────────────────
+  if (isShikakuBanned(sessionId)) {
+    return c.json({ error: "Score rejected" }, 403);
+  }
+
+  // ── Global admin ban check ────────────────────────────────
+  const { ip: callerIp, region: callerRegion, userAgent: callerUA } = getClientInfo(c);
   if (isBanned(sessionId, callerIp, callerRegion)) {
     return c.json({ error: "Score rejected" }, 403);
+  }
+
+  // ── Fingerprint anomaly check ─────────────────────────────
+  const fp = computeFingerprint(callerIp, callerUA);
+  const fpAnomaly = checkFingerprintAnomaly(sessionId, fp);
+  if (fpAnomaly) {
+    const shouldBan = recordStrike(sessionId, "fingerprint anomaly: too many distinct clients");
+    if (shouldBan) {
+      const entry = abuseStrikes.get(sessionId);
+      await autoBanSession(sessionId, entry?.reasons ?? ["fingerprint abuse"]);
+    }
   }
 
   // ── Session verification ──────────────────────────────────
@@ -831,14 +996,34 @@ app.post("/api/shikaku/score", async (c) => {
   // ── Per-difficulty minimum time ───────────────────────────
   const minTime = SHIKAKU_MIN_TIME_MS[difficulty] ?? 15_000;
   if (timeMs < minTime) {
+    const shouldBan = recordStrike(sessionId, `impossibly fast: ${timeMs}ms on ${difficulty}`);
+    if (shouldBan) {
+      const entry = abuseStrikes.get(sessionId);
+      await autoBanSession(sessionId, entry?.reasons ?? ["speed abuse"]);
+    }
+    return c.json({ error: "Score rejected" }, 400);
+  }
+
+  // ── Max play time per difficulty ──────────────────────────
+  // base 1hr + 30min per difficulty tier
+  const maxTime = SHIKAKU_MAX_TIME_MS[difficulty] ?? 3_600_000;
+  if (timeMs > maxTime) {
+    const shouldBan = recordStrike(sessionId, `exceeded max time: ${timeMs}ms on ${difficulty} (max ${maxTime}ms)`);
+    if (shouldBan) {
+      const entry = abuseStrikes.get(sessionId);
+      await autoBanSession(sessionId, entry?.reasons ?? ["time abuse"]);
+    }
     return c.json({ error: "Score rejected" }, 400);
   }
 
   // ── Server-side score cap ─────────────────────────────────
-  // Recalculate the maximum legitimate score for the claimed time.
-  // Give-ups produce lower scores, so submitted score must be ≤ max.
   const maxLegitScore = shikakuMaxScore(timeMs, difficulty);
   if (score > maxLegitScore) {
+    const shouldBan = recordStrike(sessionId, `inflated score: ${score} > max ${maxLegitScore}`);
+    if (shouldBan) {
+      const entry = abuseStrikes.get(sessionId);
+      await autoBanSession(sessionId, entry?.reasons ?? ["score manipulation"]);
+    }
     return c.json({ error: "Score rejected" }, 400);
   }
 
@@ -850,6 +1035,28 @@ app.post("/api/shikaku/score", async (c) => {
     .limit(1);
   if (existing) {
     return c.json({ error: "Score already submitted for this run" }, 409);
+  }
+
+  // ── 20-score limit per session — replace lowest if at cap ─
+  const sessionScores = await drizzleClient
+    .select({ id: shikakuScores.id, score: shikakuScores.score })
+    .from(shikakuScores)
+    .where(eq(shikakuScores.sessionId, sessionId))
+    .orderBy(desc(shikakuScores.score));
+
+  if (sessionScores.length >= SHIKAKU_MAX_SCORES_PER_SESSION) {
+    // Find the lowest score for this session
+    const lowest = sessionScores[sessionScores.length - 1];
+    if (lowest && score <= lowest.score) {
+      // New score isn't better than worst existing — silently accept but don't store
+      return c.json({ ok: true, id: null, replaced: false, reason: "Score not high enough to enter top 20" });
+    }
+    // Delete the lowest to make room
+    if (lowest) {
+      await drizzleClient
+        .delete(shikakuScores)
+        .where(eq(shikakuScores.id, lowest.id));
+    }
   }
 
   // ── Insert ────────────────────────────────────────────────
@@ -866,7 +1073,8 @@ app.post("/api/shikaku/score", async (c) => {
     createdAt: Date.now(),
   });
 
-  return c.json({ ok: true, id });
+  const replaced = sessionScores.length >= SHIKAKU_MAX_SCORES_PER_SESSION;
+  return c.json({ ok: true, id, replaced });
 });
 
 app.get("/health", (c) => c.json({ ok: true }));

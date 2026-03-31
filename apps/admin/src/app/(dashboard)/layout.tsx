@@ -25,7 +25,7 @@ export default async function RootLayout({
         <ToastProvider>
           <nav className="admin-nav">
             <div className="admin-nav__left">
-              <a href="/" className="admin-nav__brand">🎮 Games Admin</a>
+              <a href="/" className="admin-nav__brand">Games Admin</a>
               <div className="admin-nav__links">
                 <a href="/" className="admin-nav__link">Dashboard</a>
                 <a href="/clients" className="admin-nav__link">Clients</a>
