@@ -997,7 +997,7 @@ function ShikakuLeaderboard({
       <div className="shikaku-leaderboard">
         <div className="shikaku-lb-header">
           <h2><FiAward size={18} /> Leaderboard</h2>
-          <button className="shikaku-icon-btn" onClick={onClose} aria-label="Close" title="Close leaderboard">
+          <button className="shikaku-icon-btn" onClick={onClose} aria-label="Close" data-tooltip="Close">
             <FiX size={18} />
           </button>
         </div>
@@ -1008,7 +1008,7 @@ function ShikakuLeaderboard({
               key={d}
               className={`shikaku-lb-tab ${d === difficulty ? "shikaku-lb-tab--active" : ""}`}
               onClick={() => onDiffChange(d)}
-              title={`${DIFFICULTY_CONFIG[d].label} grid`}
+              data-tooltip={`${DIFFICULTY_CONFIG[d].label} grid`}
             >
               {d}
             </button>
@@ -1018,7 +1018,7 @@ function ShikakuLeaderboard({
         <div className="shikaku-lb-personal-best">
           {personalBest ? (
             <>
-              <span className="shikaku-lb-pb-label">Your Best — #{personalBest.rank}</span>
+              <span className="shikaku-lb-pb-label" data-tooltip="Your highest score on this difficulty">Your Best — #{personalBest.rank}</span>
               <span className="shikaku-lb-pb-value">{personalBest.score.toLocaleString()} — {formatTime(personalBest.timeMs)}</span>
             </>
           ) : (
@@ -1032,8 +1032,16 @@ function ShikakuLeaderboard({
           <p className="shikaku-lb-empty">No scores yet — be the first!</p>
         ) : (
           <div className="shikaku-lb-list">
+            <div className="shikaku-lb-col-header">
+              <span data-tooltip="Player ranking">#</span>
+              <span data-tooltip="Player name">Player</span>
+              <span data-tooltip="Points earned">Score</span>
+              <span data-tooltip="Completion time">Time</span>
+            </div>
             {entries.map((entry, i) => (
-              <div key={entry.id} className={`shikaku-lb-row${i < 3 ? ` shikaku-lb-row--top${i + 1}` : ""}${entry.isOwn ? " shikaku-lb-row--self" : ""}`}>
+              <div key={entry.id} className={`shikaku-lb-row${i < 3 ? ` shikaku-lb-row--top${i + 1}` : ""}${entry.isOwn ? " shikaku-lb-row--self" : ""}`}
+                data-tooltip={entry.isOwn ? "Your score" : undefined}
+              >
                 <span className="shikaku-lb-rank">#{i + 1}</span>
                 <span className="shikaku-lb-name">{entry.name}</span>
                 <span className="shikaku-lb-score">{entry.score.toLocaleString()}</span>

@@ -1,5 +1,8 @@
 /* ── Shikaku page theme ────────────────────────────────────── */
 .game-page[data-game-theme="shikaku"] {
+  --primary: #34d399;
+  --primary-foreground: #181a1b;
+  --game-accent: #34d399;
   --game-bg: rgba(52, 211, 153, 0.08);
 }
 .game-page[data-game-theme="shikaku"]::after {
@@ -513,7 +516,13 @@
   border: 1px solid color-mix(in srgb, var(--secondary) 40%, transparent);
   border-radius: 0.65rem;
   padding: 0.6rem 0.8rem;
+  max-height: 240px;
+  overflow-y: auto;
 }
+/* Puzzle times scrollbar */
+.shikaku-puzzle-times::-webkit-scrollbar { width: 4px; }
+.shikaku-puzzle-times::-webkit-scrollbar-track { background: transparent; }
+.shikaku-puzzle-times::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--secondary) 50%, transparent); border-radius: 4px; }
 .shikaku-puzzle-time {
   display: flex;
   justify-content: space-between;
@@ -541,8 +550,8 @@
   backdrop-filter: blur(6px);
 }
 .shikaku-leaderboard {
-  background: var(--card);
-  border: 1px solid color-mix(in srgb, var(--secondary) 60%, transparent);
+  background: linear-gradient(to bottom right, #232323, #181a1b);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
   border-radius: 1rem;
   padding: 0;
   width: 100%;
@@ -551,7 +560,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(52, 211, 153, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent);
   animation: shikaku-fade-up 0.25s ease-out both;
 }
 
@@ -560,12 +569,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.25rem 0.5rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--secondary) 30%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
 }
 .shikaku-lb-header h2 {
   font-size: 1rem;
   font-weight: 800;
-  color: #34d399;
+  color: var(--primary);
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -575,7 +584,7 @@
   display: flex;
   gap: 0;
   padding: 0.5rem 1.25rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--secondary) 20%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
 }
 .shikaku-lb-tab {
   flex: 1;
@@ -596,8 +605,8 @@
   color: var(--foreground);
 }
 .shikaku-lb-tab--active {
-  background: color-mix(in srgb, #34d399 15%, var(--card));
-  color: #34d399;
+  background: color-mix(in srgb, var(--primary) 15%, var(--card));
+  color: var(--primary);
 }
 
 /* Personal best banner */
@@ -606,8 +615,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 1.25rem;
-  background: color-mix(in srgb, #34d399 6%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--secondary) 20%, transparent);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
   font-size: 0.78rem;
 }
 .shikaku-lb-pb-label {
@@ -616,7 +625,7 @@
 }
 .shikaku-lb-pb-value {
   font-weight: 800;
-  color: #34d399;
+  color: var(--primary);
   font-variant-numeric: tabular-nums;
 }
 .shikaku-lb-pb-none {
@@ -680,7 +689,7 @@
 .shikaku-lb-row--top3 { background: color-mix(in srgb, #cd7f32 5%, transparent); }
 /* Highlight the user's own row */
 .shikaku-lb-row--self {
-  background: color-mix(in srgb, #34d399 8%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .shikaku-lb-rank {
@@ -704,7 +713,7 @@
 }
 .shikaku-lb-score {
   font-weight: 800;
-  color: #34d399;
+  color: var(--primary);
   min-width: 3rem;
   text-align: right;
   font-size: 0.82rem;
