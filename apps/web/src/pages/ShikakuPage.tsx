@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiAward, FiCheck, FiClock, FiCornerUpLeft, FiFlag, FiGrid, FiHelpCircle, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
+import { FiAward, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiClock, FiCornerUpLeft, FiFlag, FiGrid, FiHelpCircle, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
 import {
   calculateScore,
   Difficulty,
@@ -94,6 +94,10 @@ export function ShikakuPage() {
 
   // Give-up confirmation
   const [confirmGiveUp, setConfirmGiveUp] = useState(false);
+
+  // Scroll API from grid wrapper (for expert scroll buttons in footer)
+  const [scrollApi, setScrollApi] = useState<ScrollApi | null>(null);
+  const handleScrollApi = useCallback((api: ScrollApi) => setScrollApi(api), []);
 
   // Leaderboard
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -836,38 +840,34 @@ export function ShikakuPage() {
           </div>
         )}
 
-        <div className="shikaku-grid-wrap">
-          {currentPuzzle && (
-            <ShikakuGrid
-              puzzle={currentPuzzle}
-              placedRects={placedRects}
-              previewRect={previewRect}
-              numberMap={numberMap}
-              flashingRects={flashingRects}
-              onCellMouseDown={handleCellMouseDown}
-              onCellMouseEnter={handleCellMouseEnter}
-              onCellRightClick={handleCellRightClick}
-              onMouseUp={handleMouseUp}
-            />
-          )}
-
-          {/* Drag dimension counter — positioned at the preview rect */}
-          {previewRect && currentPuzzle && (
-            <div
-              className="shikaku-dim-counter"
-              style={{
-                top: `${((previewRect.r + previewRect.h / 2) / currentPuzzle.rows) * 100}%`,
-                left: `${((previewRect.c + previewRect.w / 2) / currentPuzzle.cols) * 100}%`,
-              }}
-            >
-              {previewRect.w}×{previewRect.h}
-            </div>
-          )}
-        </div>
+        <ShikakuGridWrapper
+          difficulty={difficulty}
+          currentPuzzle={currentPuzzle}
+          placedRects={placedRects}
+          previewRect={previewRect}
+          numberMap={numberMap}
+          flashingRects={flashingRects}
+          onCellMouseDown={handleCellMouseDown}
+          onCellMouseEnter={handleCellMouseEnter}
+          onCellRightClick={handleCellRightClick}
+          onMouseUp={handleMouseUp}
+          onScrollApi={handleScrollApi}
+        />
 
         <div className="shikaku-playing-footer">
           <p className="shikaku-hint">Drag to draw — click to remove — right-click to remove</p>
           <div className="shikaku-footer-btns">
+            {/* Scroll left / down — shown on mobile for expert */}
+            {scrollApi?.isLarge && (
+              <div className="shikaku-scroll-pair">
+                <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.left ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(-160, 0)} aria-label="Scroll left">
+                  <FiChevronLeft size={16} />
+                </button>
+                <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.down ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(0, 160)} aria-label="Scroll down">
+                  <FiChevronDown size={16} />
+                </button>
+              </div>
+            )}
             <button
               className="shikaku-icon-btn"
               onClick={undo}
@@ -897,6 +897,17 @@ export function ShikakuPage() {
             >
               <FiFlag size={16} />
             </button>
+            {/* Scroll up / right — shown on mobile for expert */}
+            {scrollApi?.isLarge && (
+              <div className="shikaku-scroll-pair">
+                <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.up ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(0, -160)} aria-label="Scroll up">
+                  <FiChevronUp size={16} />
+                </button>
+                <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.right ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(160, 0)} aria-label="Scroll right">
+                  <FiChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -939,6 +950,120 @@ export function ShikakuPage() {
 }
 
 /* ═══════════════════════════════════════════════════════════ */
+/*  Grid wrapper — scroll buttons for large puzzles on mobile  */
+/* ═══════════════════════════════════════════════════════════ */
+interface ScrollApi {
+  canScroll: { up: boolean; down: boolean; left: boolean; right: boolean };
+  doScroll: (dx: number, dy: number) => void;
+  isLarge: boolean;
+}
+
+function ShikakuGridWrapper({
+  difficulty,
+  currentPuzzle,
+  placedRects,
+  previewRect,
+  numberMap,
+  flashingRects,
+  onCellMouseDown,
+  onCellMouseEnter,
+  onCellRightClick,
+  onMouseUp,
+  onScrollApi,
+}: {
+  difficulty: Difficulty;
+  currentPuzzle: ShikakuPuzzle | null;
+  placedRects: PlacedRect[];
+  previewRect: Rect | null;
+  numberMap: Map<string, number>;
+  flashingRects: Set<number>;
+  onCellMouseDown: (r: number, c: number) => void;
+  onCellMouseEnter: (r: number, c: number) => void;
+  onCellRightClick: (r: number, c: number) => void;
+  onMouseUp: () => void;
+  onScrollApi?: (api: ScrollApi) => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [canScroll, setCanScroll] = useState({ up: false, down: false, left: false, right: false });
+  const isLarge = difficulty === "expert" || difficulty === "hard";
+
+  const updateScrollState = useCallback(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const threshold = 2;
+    setCanScroll({
+      up: el.scrollTop > threshold,
+      down: el.scrollTop + el.clientHeight < el.scrollHeight - threshold,
+      left: el.scrollLeft > threshold,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - threshold,
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || !isLarge) return;
+    updateScrollState();
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", updateScrollState); ro.disconnect(); };
+  }, [isLarge, updateScrollState]);
+
+  const doScroll = useCallback((dx: number, dy: number) => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const maxLeft = el.scrollWidth - el.clientWidth;
+    const maxTop = el.scrollHeight - el.clientHeight;
+    // Compute the exact target — clamp to 0/max so we always reach the edge
+    const targetLeft = Math.round(Math.min(Math.max(el.scrollLeft + dx, 0), maxLeft));
+    const targetTop = Math.round(Math.min(Math.max(el.scrollTop + dy, 0), maxTop));
+    if (targetLeft !== Math.round(el.scrollLeft) || targetTop !== Math.round(el.scrollTop)) {
+      el.scrollTo({ left: targetLeft, top: targetTop, behavior: "smooth" });
+    }
+  }, []);
+
+  // Expose scroll API to parent for footer buttons
+  useEffect(() => {
+    onScrollApi?.({ canScroll, doScroll, isLarge });
+  }, [canScroll, doScroll, isLarge, onScrollApi]);
+
+  return (
+    <div className="shikaku-grid-outer">
+      <div className="shikaku-grid-wrap" ref={wrapRef}>
+        {currentPuzzle && (
+          <ShikakuGrid
+            puzzle={currentPuzzle}
+            placedRects={placedRects}
+            previewRect={previewRect}
+            numberMap={numberMap}
+            flashingRects={flashingRects}
+            onCellMouseDown={onCellMouseDown}
+            onCellMouseEnter={onCellMouseEnter}
+            onCellRightClick={onCellRightClick}
+            onMouseUp={onMouseUp}
+            scrollContainerRef={isLarge ? wrapRef : null}
+          />
+        )}
+
+        {/* Drag dimension counter — positioned at the preview rect */}
+        {previewRect && currentPuzzle && (
+          <div
+            className="shikaku-dim-counter"
+            style={{
+              top: `${((previewRect.r + previewRect.h / 2) / currentPuzzle.rows) * 100}%`,
+              left: `${((previewRect.c + previewRect.w / 2) / currentPuzzle.cols) * 100}%`,
+            }}
+          >
+            {previewRect.w}×{previewRect.h}
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════ */
 /*  Grid component                                             */
 /* ═══════════════════════════════════════════════════════════ */
 function ShikakuGrid({
@@ -951,6 +1076,7 @@ function ShikakuGrid({
   onCellMouseEnter,
   onCellRightClick,
   onMouseUp,
+  scrollContainerRef,
 }: {
   puzzle: ShikakuPuzzle;
   placedRects: PlacedRect[];
@@ -961,6 +1087,7 @@ function ShikakuGrid({
   onCellMouseEnter: (r: number, c: number) => void;
   onCellRightClick?: (r: number, c: number) => void;
   onMouseUp?: () => void;
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null> | null;
 }) {
   const { rows, cols } = puzzle;
   const gridRef = useRef<HTMLDivElement>(null);
@@ -978,36 +1105,109 @@ function ShikakuGrid({
     return { r: Math.max(0, Math.min(rows - 1, r)), c: Math.max(0, Math.min(cols - 1, c)) };
   }, [rows, cols]);
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length > 1) return; // allow two-finger scroll/zoom
-    e.preventDefault();
-    const touch = e.touches[0];
-    if (!touch) return;
-    const cell = getCellFromTouch(touch);
-    if (!cell) return;
-    lastTouchCell.current = `${cell.r},${cell.c}`;
-    onCellMouseDown(cell.r, cell.c);
-  }, [getCellFromTouch, onCellMouseDown]);
+  // Use refs to keep callbacks fresh without re-attaching listeners
+  const onCellMouseDownRef = useRef(onCellMouseDown);
+  const onCellMouseEnterRef = useRef(onCellMouseEnter);
+  const onMouseUpRef = useRef(onMouseUp);
+  const getCellFromTouchRef = useRef(getCellFromTouch);
+  const scrollContainerRefRef = useRef(scrollContainerRef);
+  onCellMouseDownRef.current = onCellMouseDown;
+  onCellMouseEnterRef.current = onCellMouseEnter;
+  onMouseUpRef.current = onMouseUp;
+  getCellFromTouchRef.current = getCellFromTouch;
+  scrollContainerRefRef.current = scrollContainerRef;
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length > 1) return; // allow two-finger scroll/zoom
-    e.preventDefault();
-    const touch = e.touches[0];
-    if (!touch) return;
-    const cell = getCellFromTouch(touch);
-    if (!cell) return;
-    const key = `${cell.r},${cell.c}`;
-    if (key !== lastTouchCell.current) {
-      lastTouchCell.current = key;
-      onCellMouseEnter(cell.r, cell.c);
+  // Auto-scroll state for dragging near edges
+  const autoScrollRaf = useRef<number>(0);
+  const autoScrollDir = useRef({ dx: 0, dy: 0 });
+
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollRaf.current) {
+      cancelAnimationFrame(autoScrollRaf.current);
+      autoScrollRaf.current = 0;
     }
-  }, [getCellFromTouch, onCellMouseEnter]);
+    autoScrollDir.current = { dx: 0, dy: 0 };
+  }, []);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    lastTouchCell.current = "";
-    onMouseUp?.();
-  }, [onMouseUp]);
+  const startAutoScroll = useCallback((dx: number, dy: number) => {
+    if (autoScrollDir.current.dx === dx && autoScrollDir.current.dy === dy && autoScrollRaf.current) return;
+    stopAutoScroll();
+    if (!dx && !dy) return;
+    autoScrollDir.current = { dx, dy };
+    const tick = () => {
+      const el = scrollContainerRefRef.current?.current;
+      if (el) el.scrollBy(dx, dy);
+      autoScrollRaf.current = requestAnimationFrame(tick);
+    };
+    autoScrollRaf.current = requestAnimationFrame(tick);
+  }, [stopAutoScroll]);
+
+  // Attach touch handlers natively with { passive: false } so preventDefault works
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 1) return; // allow two-finger scroll/zoom
+      e.preventDefault();
+      const touch = e.touches[0];
+      if (!touch) return;
+      const cell = getCellFromTouchRef.current(touch);
+      if (!cell) return;
+      lastTouchCell.current = `${cell.r},${cell.c}`;
+      onCellMouseDownRef.current(cell.r, cell.c);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 1) return; // allow two-finger scroll/zoom
+      e.preventDefault();
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      // Auto-scroll when dragging near edge of scroll container
+      const scrollEl = scrollContainerRefRef.current?.current;
+      if (scrollEl) {
+        const wrapRect = scrollEl.getBoundingClientRect();
+        const edgeZone = 40;
+        const scrollSpeed = 4;
+        let dx = 0, dy = 0;
+        if (touch.clientX < wrapRect.left + edgeZone) dx = -scrollSpeed;
+        else if (touch.clientX > wrapRect.right - edgeZone) dx = scrollSpeed;
+        if (touch.clientY < wrapRect.top + edgeZone) dy = -scrollSpeed;
+        else if (touch.clientY > wrapRect.bottom - edgeZone) dy = scrollSpeed;
+        if (dx || dy) {
+          startAutoScroll(dx, dy);
+        } else {
+          stopAutoScroll();
+        }
+      }
+
+      const cell = getCellFromTouchRef.current(touch);
+      if (!cell) return;
+      const key = `${cell.r},${cell.c}`;
+      if (key !== lastTouchCell.current) {
+        lastTouchCell.current = key;
+        onCellMouseEnterRef.current(cell.r, cell.c);
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.cancelable) e.preventDefault();
+      lastTouchCell.current = "";
+      stopAutoScroll();
+      onMouseUpRef.current?.();
+    };
+
+    el.addEventListener("touchstart", handleTouchStart, { passive: false });
+    el.addEventListener("touchmove", handleTouchMove, { passive: false });
+    el.addEventListener("touchend", handleTouchEnd, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", handleTouchStart);
+      el.removeEventListener("touchmove", handleTouchMove);
+      el.removeEventListener("touchend", handleTouchEnd);
+      stopAutoScroll();
+    };
+  }, [startAutoScroll, stopAutoScroll]);
 
   // Build a cell→rect lookup
   const cellRectMap = useMemo(() => {
@@ -1044,9 +1244,6 @@ function ShikakuGrid({
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
       }}
       onContextMenu={(e) => e.preventDefault()}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {Array.from({ length: rows }, (_, r) =>
         Array.from({ length: cols }, (_, c) => {
