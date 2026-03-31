@@ -11,6 +11,7 @@ zero_volume_name="games-zero-data"
 skip_docker=false
 skip_db_push=false
 skip_dev=false
+use_host=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -22,6 +23,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-dev)
       skip_dev=true
+      ;;
+    --host)
+      use_host=true
       ;;
     *)
       echo "Unknown argument: $1" >&2
@@ -169,6 +173,11 @@ if [[ "$skip_docker" == false ]]; then
 fi
 
 if [[ "$skip_dev" == false ]]; then
-  echo "Starting local dev servers..."
+  if [[ "$use_host" == true ]]; then
+    echo "Starting local dev servers (exposed on network)..."
+    export VITE_EXPOSE_HOST=1
+  else
+    echo "Starting local dev servers..."
+  fi
   exec pnpm dev
 fi
