@@ -12,6 +12,7 @@ import { PasswordDemo } from "./demos/PasswordDemo";
 import { ChainDemo } from "./demos/ChainDemo";
 import { ShadeDemo } from "./demos/ShadeDemo";
 import { LocationDemo } from "./demos/LocationDemo";
+import { ShikakuDemo } from "./demos/ShikakuDemo";
 import { useSettings } from "../lib/settings";
 import { getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
@@ -143,19 +144,21 @@ const CHAIN_STEP: Record<string, number> = { lobby: 0, submitting: 1, playing: 2
 const SHADE_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, guess1: 2, clue2: 3, guess2: 3, reveal: 4, finished: 4 };
 const LOCATION_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, guess1: 2, clue2: 3, guess2: 3, clue3: 3, guess3: 3, clue4: 3, guess4: 3, reveal: 4, finished: 4 };
 
-function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "shade" | "location" | null; step: number } {
+function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | null; step: number } {
   const location = useLocation();
   const imposterMatch = location.pathname.match(/^\/imposter\/([^/]+)/);
   const passwordMatch = location.pathname.match(/^\/password\/([^/]+)/);
   const chainMatch = location.pathname.match(/^\/chain\/([^/]+)/);
   const shadeMatch = location.pathname.match(/^\/shade\/([^/]+)/);
   const locationMatch = location.pathname.match(/^\/location\/([^/]+)/);
+  const shikakuMatch = /^\/shikaku(\/|$)/.test(location.pathname);
 
   const detected = imposterMatch ? "imposter" as const
     : passwordMatch ? "password" as const
     : chainMatch ? "chain" as const
     : shadeMatch ? "shade" as const
     : locationMatch ? "location" as const
+    : shikakuMatch ? "shikaku" as const
     : null;
 
   const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch?.[1] ?? shadeMatch?.[1] ?? locationMatch?.[1] ?? "";
@@ -172,6 +175,7 @@ function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "sha
     if (detected === "chain") return { gameType: "chain", step: CHAIN_STEP[chr[0]?.phase ?? "lobby"] ?? 0 };
     if (detected === "shade") return { gameType: "shade", step: SHADE_STEP[shd[0]?.phase ?? "lobby"] ?? 0 };
     if (detected === "location") return { gameType: "location", step: LOCATION_STEP[loc[0]?.phase ?? "lobby"] ?? 0 };
+    if (detected === "shikaku") return { gameType: "shikaku", step: 0 };
     return { gameType: null, step: 0 };
   }, [detected, imp, pwd, chr, shd, loc]);
 }
@@ -325,6 +329,7 @@ export function Sidebar() {
       {modal === "info" && demoInfo.gameType === "chain" && <ChainDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
       {modal === "info" && demoInfo.gameType === "shade" && <ShadeDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
       {modal === "info" && demoInfo.gameType === "location" && <LocationDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
+      {modal === "info" && demoInfo.gameType === "shikaku" && <ShikakuDemo onClose={() => setModal(null)} />}
       {modal === "info" && !demoInfo.gameType && <InfoModal onClose={() => setModal(null)} />}
       {modal === "host" && gameContext && (
         <HostControlsModal game={gameContext} sessionId={sessionId} onClose={() => setModal(null)} />
