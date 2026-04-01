@@ -99,7 +99,7 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
       >
         <DialogContent
           showCloseButton={false}
-          className="max-w-[min(460px,calc(100vw-2rem))] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]"
+          className="[--dialog-content-width:29rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]"
         >
           <DialogHeader>
             <div className="flex items-start gap-4">
@@ -118,7 +118,7 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
           </DialogHeader>
 
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button variant="outline" className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/[0.06]" onClick={() => close(false)}>
+            <Button variant="outline" className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6" onClick={() => close(false)}>
               {options?.cancelLabel}
             </Button>
             <Button

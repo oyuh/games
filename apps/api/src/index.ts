@@ -27,6 +27,7 @@ import {
   ZERO_SESSION_PROOF_HEADER,
   type SessionIdentityCandidate,
 } from "./session-identity";
+import { getClientInfo } from "./client-info";
 
 config({ path: "../../.env" });
 
@@ -174,14 +175,6 @@ app.get("/api/maps/geocode", async (c) => {
   }
 });
 
-// ─── Client info extraction helpers ─────────────────────────
-function getClientInfo(c: { req: { header: (name: string) => string | undefined } }) {
-  const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const region = c.req.header("cf-ipcountry") || c.req.header("x-vercel-ip-country") || "unknown";
-  const userAgent = (c.req.header("user-agent") || "unknown").slice(0, 500);
-  return { ip: ip.slice(0, 45), region: region.slice(0, 10), userAgent };
-}
-
 /** Simple hash of IP+UA to detect session migration between different clients */
 function computeFingerprint(ip: string, userAgent: string): string {
   // Quick deterministic hash — not crypto, just identity binding
@@ -252,7 +245,7 @@ async function resolveSessionIdentity(
     allowCreate: boolean;
   }
 ): Promise<ResolvedSessionIdentity | null> {
-  const { ip, region, userAgent } = getClientInfo(c);
+  const { ip, region, userAgent } = await getClientInfo(c.req);
   const fingerprint = computeFingerprint(ip, userAgent);
   const normalizedClaimedId = normalizeSessionId(claimedSessionId);
   const cookieSessionId = readSignedSessionCookie(c.req.header("cookie"), SESSION_COOKIE_SECRET);
@@ -386,7 +379,7 @@ app.post("/api/pusher/auth", async (c) => {
 
   // Ban check on auth — banned users can't subscribe
   if (sessionId) {
-    const { ip, region, userAgent } = getClientInfo(c);
+    const { ip, region, userAgent } = await getClientInfo(c.req);
     const checker = getBanChecker();
     if (checker) {
       const ban = checker(sessionId, ip, region);
@@ -462,7 +455,7 @@ app.post("/api/presence/heartbeat", async (c) => {
 
   const sessionId = resolvedIdentity.sessionId;
 
-  const { ip, region, userAgent } = getClientInfo(c);
+  const { ip, region, userAgent } = await getClientInfo(c.req);
   const fingerprint = computeFingerprint(ip, userAgent);
 
   // Check for session ID being used from too many different clients
@@ -1337,7 +1330,7 @@ async function buildShikakuScoreCandidate(
     };
   }
 
-  const { ip: callerIp, region: callerRegion, userAgent: callerUA } = getClientInfo(c);
+  const { ip: callerIp, region: callerRegion, userAgent: callerUA } = await getClientInfo(c.req);
 
   return {
     ok: true,

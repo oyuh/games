@@ -503,7 +503,7 @@ export default function ShikakuPage() {
       </Surface>
 
       <Dialog open={Boolean(selectedScore && draft)} onOpenChange={(open) => !open && closeEditor()}>
-        <DialogContent className="max-w-[min(860px,95vw)] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
+        <DialogContent className="[--dialog-content-width:66rem] 2xl:[--dialog-content-width:72rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
           <DialogHeader>
             <DialogTitle className="text-xl text-white">Edit Shikaku entry</DialogTitle>
             <DialogDescription className="text-slate-300/74">
