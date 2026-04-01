@@ -712,6 +712,59 @@
   flex-wrap: wrap;
 }
 
+.shikaku-end-status {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--secondary) 24%, transparent);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  text-align: left;
+}
+
+.shikaku-end-status--info {
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+}
+
+.shikaku-end-status--success {
+  border-color: color-mix(in srgb, #4ade80 28%, transparent);
+  background: color-mix(in srgb, #4ade80 9%, var(--card));
+}
+
+.shikaku-end-status--error {
+  border-color: color-mix(in srgb, #f87171 28%, transparent);
+  background: color-mix(in srgb, #f87171 9%, var(--card));
+}
+
+.shikaku-end-status--pending {
+  animation: shikaku-status-pulse 1.25s ease-in-out infinite;
+}
+
+@keyframes shikaku-status-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 8%, transparent); }
+}
+
+.shikaku-end-status-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.shikaku-end-status-message {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--foreground);
+}
+
 
 
 /* ── Leaderboard overlay ───────────────────────────────────── */
@@ -810,6 +863,52 @@
   font-style: italic;
 }
 
+.shikaku-lb-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+}
+
+.shikaku-lb-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--secondary) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 24%, transparent);
+}
+
+.shikaku-lb-view-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.4rem 0.8rem;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.shikaku-lb-view-btn:hover {
+  color: var(--foreground);
+}
+
+.shikaku-lb-view-btn--active {
+  background: color-mix(in srgb, var(--primary) 18%, var(--card));
+  color: var(--primary);
+}
+
+.shikaku-lb-count {
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .shikaku-lb-loading,
 .shikaku-lb-empty {
   text-align: center;
@@ -880,13 +979,30 @@
 .shikaku-lb-row--top3 .shikaku-lb-rank { color: #cd7f32; font-size: 0.85rem; }
 
 .shikaku-lb-name {
-  flex: 1;
   font-weight: 600;
   color: var(--foreground);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.82rem;
+}
+.shikaku-lb-player {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.shikaku-lb-badge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .shikaku-lb-score {
   font-weight: 800;
@@ -1200,5 +1316,18 @@
   .shikaku-end-list-header {
     font-size: 0.6rem;
     padding: 0.4rem 0.6rem;
+  }
+  .shikaku-lb-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .shikaku-lb-view-toggle {
+    width: 100%;
+  }
+  .shikaku-lb-view-btn {
+    flex: 1;
+  }
+  .shikaku-lb-count {
+    text-align: center;
   }
 }

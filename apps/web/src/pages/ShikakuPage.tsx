@@ -15,7 +15,7 @@ import {
   ShikakuPuzzle,
   validateSolution,
 } from "../lib/shikaku-engine";
-import { getOrCreateSessionId, getStoredName } from "../lib/session";
+import { getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { showToast } from "../lib/toast";
 import "../styles/game-shared.css";
 import "../styles/shikaku.css";
@@ -69,17 +69,33 @@ interface PersonalBest {
   rank: number;
 }
 
+type LeaderboardView = "all" | "mine";
+type ScoreStatusTone = "info" | "success" | "error";
+
+interface ScoreSubmissionStatus {
+  canSubmit: boolean;
+  pending: boolean;
+  tone: ScoreStatusTone;
+  message: string;
+}
+
+interface ScoreEligibilityResponse {
+  canSubmit?: boolean;
+  code?: string;
+  reason?: string;
+  willReplace?: boolean;
+}
+
 /* ═══════════════════════════════════════════════════════════ */
 /*  ShikakuPage                                               */
 /* ═══════════════════════════════════════════════════════════ */
 export function ShikakuPage() {
   const navigate = useNavigate();
-  const sessionId = getOrCreateSessionId();
-  const playerName = getStoredName() || "Anonymous";
 
   const [phase, setPhase] = useState<GamePhase>("menu");
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [lbDifficulty, setLbDifficulty] = useState<Difficulty>("easy");
+  const [lbView, setLbView] = useState<LeaderboardView>("all");
   const [countdownNum, setCountdownNum] = useState(3);
 
   // Game state
@@ -130,6 +146,7 @@ export function ShikakuPage() {
   // Score submission state
   const [scoreSubmitted, setScoreSubmitted] = useState(false);
   const [submittingScore, setSubmittingScore] = useState(false);
+  const [scoreSubmissionStatus, setScoreSubmissionStatus] = useState<ScoreSubmissionStatus | null>(null);
   const lastSubmitTime = useRef(0);
 
   // Completion animation
@@ -146,10 +163,22 @@ export function ShikakuPage() {
   const [lbTotal, setLbTotal] = useState(0);
   const LB_PAGE_SIZE = 10;
 
-  const fetchLeaderboard = useCallback(async (diff: Difficulty, pg = 1) => {
+  const fetchLeaderboard = useCallback(async (diff: Difficulty, pg = 1, view: LeaderboardView = lbView) => {
     setLeaderboardLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/shikaku/leaderboard?difficulty=${encodeURIComponent(diff)}&limit=${LB_PAGE_SIZE}&page=${pg}&sessionId=${encodeURIComponent(sessionId)}`);
+      const activeSessionId = getOrCreateSessionId();
+      const params = new URLSearchParams({
+        difficulty: diff,
+        limit: String(LB_PAGE_SIZE),
+        page: String(pg),
+        sessionId: activeSessionId,
+      });
+      if (view === "mine") {
+        params.set("mineOnly", "1");
+      }
+      const res = await fetch(`${API_BASE}/api/shikaku/leaderboard?${params.toString()}`, {
+        credentials: "include",
+      });
       if (res.ok) {
         const data = await res.json();
         setLeaderboard(data.entries ?? []);
@@ -163,7 +192,65 @@ export function ShikakuPage() {
     } finally {
       setLeaderboardLoading(false);
     }
-  }, [sessionId]);
+  }, [lbView]);
+
+  const resolveScoreEligibility = useCallback(async (
+    runSeed: number,
+    diff: Difficulty,
+    score: number,
+    timeMs: number,
+  ): Promise<ScoreSubmissionStatus> => {
+    try {
+      const identity = await syncSessionIdentity(API_BASE, { allowCreate: true, reason: "shikaku-eligibility" });
+      const activeSessionId = identity.sessionId;
+      const activeName = identity.name || "Anonymous";
+
+      const res = await fetch(`${API_BASE}/api/shikaku/score/eligibility`, {
+        method: "POST",
+        credentials: "include",
+        headers: getSessionRequestHeaders(activeSessionId, {
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({
+          sessionId: activeSessionId,
+          name: activeName,
+          seed: runSeed,
+          difficulty: diff,
+          score,
+          timeMs,
+          puzzleCount: PUZZLES_PER_RUN,
+        }),
+      });
+
+      const data = await res.json().catch(() => null) as ScoreEligibilityResponse | null;
+      const canSubmit = Boolean(data?.canSubmit);
+      const code = data?.code ?? "unknown";
+      const message = typeof data?.reason === "string" && data.reason.trim()
+        ? data.reason
+        : canSubmit
+          ? "This score is verified and ready to submit."
+          : "This score cannot be submitted right now.";
+      const tone: ScoreStatusTone = canSubmit
+        ? "info"
+        : code === "duplicate" || code === "not-ranked"
+          ? "info"
+          : "error";
+
+      return {
+        canSubmit,
+        pending: false,
+        tone,
+        message,
+      };
+    } catch {
+      return {
+        canSubmit: false,
+        pending: false,
+        tone: "error",
+        message: "We couldn't verify leaderboard eligibility right now. Check your connection and try again.",
+      };
+    }
+  }, []);
 
   // Timer
   useEffect(() => {
@@ -192,11 +279,13 @@ export function ShikakuPage() {
         setFinalTimeMs(totalTime);
         setPhase("finished");
         setScoreSubmitted(false);
-        fetchLeaderboard(difficulty);
+        setSubmittingScore(false);
+        setScoreSubmissionStatus(null);
+        fetchLeaderboard(difficulty, 1, lbView);
       }
     }, 50);
     return () => clearInterval(iv);
-  }, [phase, startTime, difficulty, puzzleStartTime, infiniteMode, infiniteSolved, puzzleTimes, fetchLeaderboard]);
+  }, [phase, startTime, difficulty, puzzleStartTime, infiniteMode, infiniteSolved, puzzleTimes, fetchLeaderboard, lbView]);
 
   const currentPuzzle = puzzles[currentPuzzleIdx] ?? null;
 
@@ -228,6 +317,8 @@ export function ShikakuPage() {
     setCountdownNum(3);
     setScoreSubmitted(false);
     setSubmittingScore(false);
+    setScoreSubmissionStatus(null);
+    lastSubmitTime.current = 0;
 
     if (infiniteMode) {
       const rng = mulberry32(newSeed);
@@ -336,12 +427,14 @@ export function ShikakuPage() {
         setShowPuzzleSolvedAnim(false);
         setPhase("finished");
         setScoreSubmitted(false);
+        setSubmittingScore(false);
+        setScoreSubmissionStatus(null);
 
         // Fetch leaderboard for finished screen
-        fetchLeaderboard(difficulty);
+        fetchLeaderboard(difficulty, 1, lbView);
       }, 1200);
     }
-  }, [currentPuzzleIdx, puzzleStartTime, startTime, difficulty, seed, infiniteMode, fetchLeaderboard]);
+  }, [currentPuzzleIdx, puzzleStartTime, startTime, difficulty, infiniteMode, fetchLeaderboard, lbView]);
 
   /* ── Remove a rectangle by index ─────────────────────────── */
   const removeRect = useCallback((index: number) => {
@@ -487,6 +580,9 @@ export function ShikakuPage() {
       setFinalScore(score);
       setFinalTimeMs(totalTime);
       setPhase("finished");
+      setScoreSubmitted(false);
+      setSubmittingScore(false);
+      setScoreSubmissionStatus(null);
     } else {
       // Calculate partial score (penalized)
       const completedPuzzles = puzzleTimes.length;
@@ -497,21 +593,23 @@ export function ShikakuPage() {
       setFinalTimeMs(totalTime);
       setPhase("finished");
       setScoreSubmitted(false);
-      fetchLeaderboard(difficulty);
+      setSubmittingScore(false);
+      setScoreSubmissionStatus(null);
+      fetchLeaderboard(difficulty, 1, lbView);
     }
-  }, [startTime, puzzleTimes, difficulty, seed, puzzleStartTime, infiniteMode, infiniteSolved, fetchLeaderboard]);
+  }, [startTime, puzzleTimes, difficulty, puzzleStartTime, infiniteMode, infiniteSolved, fetchLeaderboard, lbView]);
 
   // Listen for sidebar leaderboard toggle
   useEffect(() => {
     const handler = () => {
       setShowLeaderboard((v) => {
-        if (!v) { setLbDifficulty(difficulty); fetchLeaderboard(difficulty); }
+        if (!v) { setLbDifficulty(difficulty); fetchLeaderboard(difficulty, 1, lbView); }
         return !v;
       });
     };
     window.addEventListener("shikaku-toggle-leaderboard", handler);
     return () => window.removeEventListener("shikaku-toggle-leaderboard", handler);
-  }, [difficulty, fetchLeaderboard]);
+  }, [difficulty, fetchLeaderboard, lbView]);
 
   // Listen for sidebar infinite mode toggle
   useEffect(() => {
@@ -531,6 +629,51 @@ export function ShikakuPage() {
     }));
   }, [infiniteMode, phase]);
 
+  useEffect(() => {
+    if (phase !== "finished" || scoreSubmitted) {
+      return;
+    }
+
+    const completedCount = puzzleTimes.length;
+    if (infiniteMode) {
+      setScoreSubmissionStatus({
+        canSubmit: false,
+        pending: false,
+        tone: "info",
+        message: "Infinite mode scores are unranked and cannot be submitted.",
+      });
+      return;
+    }
+
+    if (completedCount < PUZZLES_PER_RUN) {
+      setScoreSubmissionStatus({
+        canSubmit: false,
+        pending: false,
+        tone: "info",
+        message: "Only fully completed runs can be submitted to the leaderboard.",
+      });
+      return;
+    }
+
+    let cancelled = false;
+    setScoreSubmissionStatus({
+      canSubmit: false,
+      pending: true,
+      tone: "info",
+      message: "Checking leaderboard eligibility...",
+    });
+
+    void resolveScoreEligibility(seed, difficulty, finalScore, finalTimeMs).then((status) => {
+      if (!cancelled) {
+        setScoreSubmissionStatus(status);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, scoreSubmitted, puzzleTimes.length, infiniteMode, seed, difficulty, finalScore, finalTimeMs, resolveScoreEligibility]);
+
   /* ── Score submission ───────────────────────────────────── */
   const submitScore = useCallback(async (
     runSeed: number, diff: Difficulty, score: number, timeMs: number
@@ -538,24 +681,38 @@ export function ShikakuPage() {
     // Anti-spam: 5s cooldown between submissions
     const now = Date.now();
     if (now - lastSubmitTime.current < 5_000) {
-      showToast("Please wait before submitting again", "info");
+      setScoreSubmissionStatus({
+        canSubmit: true,
+        pending: false,
+        tone: "info",
+        message: "Please wait a moment before trying to submit again.",
+      });
       return;
     }
-    if (submittingScore || scoreSubmitted) return;
+    if (submittingScore || scoreSubmitted || !scoreSubmissionStatus?.canSubmit) return;
 
-    lastSubmitTime.current = now;
     setSubmittingScore(true);
+    setScoreSubmissionStatus({
+      canSubmit: false,
+      pending: true,
+      tone: "info",
+      message: "Submitting verified score...",
+    });
 
     try {
+      const identity = await syncSessionIdentity(API_BASE, { allowCreate: true, reason: "shikaku-submit" });
+      const activeSessionId = identity.sessionId;
+      const activeName = identity.name || "Anonymous";
+
       const res = await fetch(`${API_BASE}/api/shikaku/score`, {
         method: "POST",
-        headers: {
+        credentials: "include",
+        headers: getSessionRequestHeaders(activeSessionId, {
           "Content-Type": "application/json",
-          "x-zero-user-id": sessionId,
-        },
+        }),
         body: JSON.stringify({
-          sessionId,
-          name: playerName,
+          sessionId: activeSessionId,
+          name: activeName,
           seed: runSeed,
           difficulty: diff,
           score,
@@ -564,32 +721,74 @@ export function ShikakuPage() {
         }),
       });
       if (res.ok) {
+        const data = await res.json().catch(() => null) as { id?: string | null; reason?: string } | null;
+        lastSubmitTime.current = now;
         setScoreSubmitted(true);
-        showToast("Score submitted!", "success");
+        if (data?.id === null) {
+          setScoreSubmissionStatus({
+            canSubmit: false,
+            pending: false,
+            tone: "info",
+            message: data.reason || "This score was verified, but it did not enter your saved leaderboard scores.",
+          });
+        } else {
+          setScoreSubmissionStatus({
+            canSubmit: false,
+            pending: false,
+            tone: "success",
+            message: "Score submitted to the leaderboard.",
+          });
+        }
       } else {
         const data = await res.json().catch(() => null) as { error?: string } | null;
         if (res.status === 409) {
+          lastSubmitTime.current = now;
           setScoreSubmitted(true);
-          showToast("Score already submitted for this run", "info");
+          setScoreSubmissionStatus({
+            canSubmit: false,
+            pending: false,
+            tone: "info",
+            message: "This run has already been submitted to the leaderboard.",
+          });
         } else if (res.status === 403) {
-          setScoreSubmitted(true);
-          showToast("Score submission not allowed", "error");
+          const nextStatus = await resolveScoreEligibility(runSeed, diff, score, timeMs);
+          setScoreSubmissionStatus(nextStatus);
         } else if (res.status === 429) {
-          showToast("Too many requests — try again in a moment", "info");
+          setScoreSubmissionStatus({
+            canSubmit: true,
+            pending: false,
+            tone: "info",
+            message: "Too many requests — try again in a moment.",
+          });
         } else if (data?.error === "Score rejected") {
-          showToast("Score could not be verified", "error");
+          setScoreSubmissionStatus({
+            canSubmit: false,
+            pending: false,
+            tone: "error",
+            message: "This run could not be verified by the server.",
+          });
         } else {
-          showToast("Failed to submit score", "error");
+          setScoreSubmissionStatus({
+            canSubmit: true,
+            pending: false,
+            tone: "error",
+            message: data?.error || "Failed to submit score.",
+          });
         }
       }
     } catch {
-      showToast("Network error — score not submitted", "error");
+      setScoreSubmissionStatus({
+        canSubmit: true,
+        pending: false,
+        tone: "error",
+        message: "Network error — this score was not submitted.",
+      });
     } finally {
       setSubmittingScore(false);
     }
     // Refresh leaderboard
-    fetchLeaderboard(diff);
-  }, [sessionId, playerName, fetchLeaderboard, submittingScore, scoreSubmitted]);
+    fetchLeaderboard(diff, 1, lbView);
+  }, [fetchLeaderboard, lbView, resolveScoreEligibility, scoreSubmissionStatus?.canSubmit, submittingScore, scoreSubmitted]);
 
   /* ── Format time ────────────────────────────────────────── */
   const formatTime = (ms: number) => {
@@ -681,14 +880,16 @@ export function ShikakuPage() {
               entries={leaderboard}
               loading={leaderboardLoading}
               difficulty={lbDifficulty}
+              view={lbView}
               personalBest={personalBest}
-              onDiffChange={(d) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1); }}
+              onDiffChange={(d) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1, lbView); }}
+              onViewChange={(view) => { setLbView(view); setLbPage(1); fetchLeaderboard(lbDifficulty, 1, view); }}
               onClose={() => setShowLeaderboard(false)}
               formatTime={formatTime}
               page={lbPage}
               totalPages={lbTotalPages}
               total={lbTotal}
-              onPageChange={(p) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p); }}
+              onPageChange={(p) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p, lbView); }}
             />
           )}
           {showDemo && <ShikakuDemo onClose={() => setShowDemo(false)} />}
@@ -703,6 +904,14 @@ export function ShikakuPage() {
     const gavUp = infiniteMode ? true : completedCount < PUZZLES_PER_RUN;
     const hasLeaderboard = leaderboard.length > 0 && !infiniteMode;
     const hasPuzzleTimes = puzzleTimes.length > 0;
+    const showSubmitButton = !infiniteMode && (scoreSubmitted || submittingScore || Boolean(scoreSubmissionStatus?.canSubmit));
+    const statusLabel = scoreSubmissionStatus?.pending
+      ? (submittingScore ? "Submitting" : "Checking")
+      : scoreSubmitted && scoreSubmissionStatus?.tone === "success"
+        ? "Submitted"
+        : scoreSubmissionStatus?.canSubmit
+          ? "Ready"
+          : "Submission";
     return (
       <div className="game-page shikaku-page" data-game-theme="shikaku">
         <div className="shikaku-end-wrap">
@@ -793,11 +1002,11 @@ export function ShikakuPage() {
 
             {/* ── Action bar ── */}
             <div className="shikaku-end-actions">
-              {!infiniteMode && (
+              {showSubmitButton && (
                 <button
                   className={`btn ${scoreSubmitted ? "btn-muted" : "btn-primary"} game-action-btn`}
                   onClick={() => submitScore(seed, difficulty, finalScore, finalTimeMs)}
-                  disabled={scoreSubmitted || submittingScore}
+                  disabled={scoreSubmitted || submittingScore || scoreSubmissionStatus?.pending}
                   title={scoreSubmitted ? "Score already submitted" : "Submit your score to the leaderboard"}
                 >
                   {submittingScore ? (
@@ -818,7 +1027,7 @@ export function ShikakuPage() {
               {!infiniteMode && (
                 <button
                   className="btn btn-muted"
-                  onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty); }}
+                  onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView); }}
                   title="View top scores"
                 >
                   <FiAward size={16} /> Leaderboard
@@ -826,19 +1035,28 @@ export function ShikakuPage() {
               )}
             </div>
 
+            {scoreSubmissionStatus && (
+              <div className={`shikaku-end-status shikaku-end-status--${scoreSubmissionStatus.tone}${scoreSubmissionStatus.pending ? " shikaku-end-status--pending" : ""}`}>
+                <span className="shikaku-end-status-label">{statusLabel}</span>
+                <p className="shikaku-end-status-message">{scoreSubmissionStatus.message}</p>
+              </div>
+            )}
+
             {showLeaderboard && (
               <ShikakuLeaderboard
                 entries={leaderboard}
                 loading={leaderboardLoading}
                 difficulty={lbDifficulty}
+                view={lbView}
                 personalBest={personalBest}
-                onDiffChange={(d) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1); }}
+                onDiffChange={(d) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1, lbView); }}
+                onViewChange={(view) => { setLbView(view); setLbPage(1); fetchLeaderboard(lbDifficulty, 1, view); }}
                 onClose={() => setShowLeaderboard(false)}
                 formatTime={formatTime}
                 page={lbPage}
                 totalPages={lbTotalPages}
                 total={lbTotal}
-                onPageChange={(p) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p); }}
+                onPageChange={(p) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p, lbView); }}
               />
             )}
           </div>
@@ -921,7 +1139,7 @@ export function ShikakuPage() {
             </button>
             <button
               className="shikaku-icon-btn shikaku-icon-btn--danger"
-              onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty); }}
+              onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView); }}
               data-tooltip="Leaderboard"
             >
               <FiAward size={16} />
@@ -952,14 +1170,16 @@ export function ShikakuPage() {
             entries={leaderboard}
             loading={leaderboardLoading}
             difficulty={lbDifficulty}
+            view={lbView}
             personalBest={personalBest}
-            onDiffChange={(d) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1); }}
+            onDiffChange={(d) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1, lbView); }}
+            onViewChange={(view) => { setLbView(view); setLbPage(1); fetchLeaderboard(lbDifficulty, 1, view); }}
             onClose={() => setShowLeaderboard(false)}
             formatTime={formatTime}
             page={lbPage}
             totalPages={lbTotalPages}
             total={lbTotal}
-            onPageChange={(p) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p); }}
+            onPageChange={(p) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p, lbView); }}
           />
         )}
 
@@ -1366,8 +1586,10 @@ function ShikakuLeaderboard({
   entries,
   loading,
   difficulty,
+  view,
   personalBest,
   onDiffChange,
+  onViewChange,
   onClose,
   formatTime,
   page,
@@ -1378,8 +1600,10 @@ function ShikakuLeaderboard({
   entries: LeaderboardEntry[];
   loading: boolean;
   difficulty: Difficulty;
+  view: LeaderboardView;
   personalBest: PersonalBest | null;
   onDiffChange: (d: Difficulty) => void;
+  onViewChange: (view: LeaderboardView) => void;
   onClose: () => void;
   formatTime: (ms: number) => string;
   page: number;
@@ -1422,10 +1646,28 @@ function ShikakuLeaderboard({
           )}
         </div>
 
+        <div className="shikaku-lb-toolbar">
+          <div className="shikaku-lb-view-toggle" role="tablist" aria-label="Leaderboard view filter">
+            <button
+              className={`shikaku-lb-view-btn ${view === "all" ? "shikaku-lb-view-btn--active" : ""}`}
+              onClick={() => onViewChange("all")}
+            >
+              All Scores
+            </button>
+            <button
+              className={`shikaku-lb-view-btn ${view === "mine" ? "shikaku-lb-view-btn--active" : ""}`}
+              onClick={() => onViewChange("mine")}
+            >
+              My Scores
+            </button>
+          </div>
+          <span className="shikaku-lb-count">{total} {total === 1 ? "score" : "scores"}</span>
+        </div>
+
         {loading ? (
           <p className="shikaku-lb-loading">Loading...</p>
         ) : entries.length === 0 ? (
-          <p className="shikaku-lb-empty">No scores yet — be the first!</p>
+          <p className="shikaku-lb-empty">{view === "mine" ? "You have no saved scores on this difficulty yet." : "No scores yet — be the first!"}</p>
         ) : (
           <div className="shikaku-lb-list">
             <div className="shikaku-lb-col-header">
@@ -1441,7 +1683,10 @@ function ShikakuLeaderboard({
                   data-tooltip={entry.isOwn ? "Your score" : undefined}
                 >
                   <span className="shikaku-lb-rank">#{rank}</span>
-                  <span className="shikaku-lb-name">{entry.name}</span>
+                  <div className="shikaku-lb-player">
+                    <span className="shikaku-lb-name">{entry.name}</span>
+                    {entry.isOwn && <span className="shikaku-lb-badge">You</span>}
+                  </div>
                   <span className="shikaku-lb-score">{entry.score.toLocaleString()}</span>
                   <span className="shikaku-lb-time">{formatTime(entry.timeMs)}</span>
                 </div>

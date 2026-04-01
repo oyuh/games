@@ -8,6 +8,7 @@
  * here and test it to ensure the validation rules hold.
  */
 import { describe, it, expect } from "vitest";
+import { createSignedSessionProofValue, readSignedSessionProof } from "../session-identity";
 
 // ─── Re-implementations of private API helpers for testing ──
 // These match the exact logic from apps/api/src/index.ts
@@ -23,6 +24,24 @@ function validId(v: unknown): string {
 function getCallerUserId(headers: Record<string, string | undefined>): string {
   const caller = headers["x-zero-user-id"]?.trim();
   return caller && caller.length > 0 && caller.length <= 64 ? caller : "anon";
+}
+
+const SESSION_SECRET = "session-proof-test-secret";
+
+function getVerifiedClaimedSessionId(headers: Record<string, string | undefined>, claimed: unknown): string | null {
+  const headerUserId = getCallerUserId(headers);
+  const proofUserId = readSignedSessionProof(headers["x-zero-session-proof"], SESSION_SECRET);
+  const normalizedClaimedId = validId(claimed);
+
+  if (headerUserId !== "anon" && (!proofUserId || headerUserId !== proofUserId)) {
+    return null;
+  }
+
+  if (proofUserId && normalizedClaimedId && proofUserId !== normalizedClaimedId) {
+    return null;
+  }
+
+  return proofUserId ?? normalizedClaimedId;
 }
 
 type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
@@ -120,6 +139,38 @@ describe("getCallerUserId", () => {
 
   it("trims whitespace", () => {
     expect(getCallerUserId({ "x-zero-user-id": "  user1  " })).toBe("user1");
+  });
+});
+
+describe("getVerifiedClaimedSessionId", () => {
+  it("accepts matching header, proof, and claimed session", () => {
+    const proof = createSignedSessionProofValue("user123", SESSION_SECRET);
+
+    expect(getVerifiedClaimedSessionId({
+      "x-zero-user-id": "user123",
+      "x-zero-session-proof": proof,
+    }, "user123")).toBe("user123");
+  });
+
+  it("rejects a direct caller header without a valid proof", () => {
+    expect(getVerifiedClaimedSessionId({ "x-zero-user-id": "user123" }, "user123")).toBeNull();
+  });
+
+  it("rejects mismatched header and proof identities", () => {
+    const proof = createSignedSessionProofValue("real-user", SESSION_SECRET);
+
+    expect(getVerifiedClaimedSessionId({
+      "x-zero-user-id": "fake-user",
+      "x-zero-session-proof": proof,
+    }, "fake-user")).toBeNull();
+  });
+
+  it("rejects a claimed session that does not match the signed proof", () => {
+    const proof = createSignedSessionProofValue("real-user", SESSION_SECRET);
+
+    expect(getVerifiedClaimedSessionId({
+      "x-zero-session-proof": proof,
+    }, "fake-user")).toBeNull();
   });
 });
 

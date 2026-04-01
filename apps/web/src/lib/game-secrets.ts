@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { decryptSecret, isEncrypted } from "@games/shared";
+import { getSessionRequestHeaders } from "./session";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
@@ -57,10 +58,10 @@ export function useGameSecret({ gameType, gameId, sessionId, enabled = true }: U
 
     const keyFetchPromise = fetch(`${API_BASE}/api/game-secret/key`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-zero-user-id": sessionId
-      },
+      credentials: "include",
+      headers: getSessionRequestHeaders(sessionId, {
+        "Content-Type": "application/json"
+      }),
       body: JSON.stringify({ gameType, gameId, sessionId })
     })
       .then(async (res) => {
@@ -111,7 +112,8 @@ export async function callGameSecretInit(
   try {
     const res = await fetch(`${API_BASE}/api/game-secret/init`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-zero-user-id": sessionId },
+      credentials: "include",
+      headers: getSessionRequestHeaders(sessionId, { "Content-Type": "application/json" }),
       body: JSON.stringify({ gameId, gameType, sessionId })
     });
     if (!res.ok) {
@@ -136,7 +138,8 @@ export async function callGameSecretPreReveal(
   try {
     const res = await fetch(`${API_BASE}/api/game-secret/pre-reveal`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-zero-user-id": sessionId },
+      credentials: "include",
+      headers: getSessionRequestHeaders(sessionId, { "Content-Type": "application/json" }),
       body: JSON.stringify({ gameId, gameType, sessionId })
     });
     if (!res.ok) {
