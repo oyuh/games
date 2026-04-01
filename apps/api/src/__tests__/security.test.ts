@@ -126,10 +126,16 @@ const SHIKAKU_DIFF_MULT: Record<string, number> = { easy: 1, medium: 1.5, hard: 
 const SHIKAKU_PAR_MS: Record<string, number> = { easy: 30_000, medium: 60_000, hard: 90_000, expert: 120_000 };
 const SHIKAKU_PUZZLES = 5;
 const SHIKAKU_MIN_TIME_MS: Record<string, number> = {
-  easy: 15_000,
-  medium: 25_000,
-  hard: 40_000,
-  expert: 60_000,
+  easy: 10_000,
+  medium: 20_000,
+  hard: 30_000,
+  expert: 40_000,
+};
+const SHIKAKU_AUTO_BAN_MIN_TIME_MS: Record<string, number> = {
+  easy: 5_000,
+  medium: 10_000,
+  hard: 15_000,
+  expert: 20_000,
 };
 const SHIKAKU_MAX_TIME_MS: Record<string, number> = {
   easy: 3_600_000,
@@ -455,26 +461,31 @@ describe("shikaku score validation", () => {
   });
 
   describe("minimum time enforcement", () => {
-    it("easy min time is 15 seconds", () => {
-      expect(SHIKAKU_MIN_TIME_MS.easy).toBe(15_000);
+    it("easy min time is 10 seconds", () => {
+      expect(SHIKAKU_MIN_TIME_MS.easy).toBe(10_000);
     });
 
-    it("medium min time is 25 seconds", () => {
-      expect(SHIKAKU_MIN_TIME_MS.medium).toBe(25_000);
+    it("medium min time is 20 seconds", () => {
+      expect(SHIKAKU_MIN_TIME_MS.medium).toBe(20_000);
     });
 
-    it("hard min time is 40 seconds", () => {
-      expect(SHIKAKU_MIN_TIME_MS.hard).toBe(40_000);
+    it("hard min time is 30 seconds", () => {
+      expect(SHIKAKU_MIN_TIME_MS.hard).toBe(30_000);
     });
 
-    it("expert min time is 60 seconds", () => {
-      expect(SHIKAKU_MIN_TIME_MS.expert).toBe(60_000);
+    it("expert min time is 40 seconds", () => {
+      expect(SHIKAKU_MIN_TIME_MS.expert).toBe(40_000);
     });
 
     it("attacker submitting 1ms time is below all minimums", () => {
       for (const [diff, minTime] of Object.entries(SHIKAKU_MIN_TIME_MS)) {
         expect(1).toBeLessThan(minTime);
       }
+    });
+
+    it("borderline fast runs stay above the auto-ban floor", () => {
+      expect(29_000).toBeGreaterThan(SHIKAKU_AUTO_BAN_MIN_TIME_MS.hard);
+      expect(29_000).toBeLessThan(SHIKAKU_MIN_TIME_MS.hard);
     });
   });
 
@@ -711,7 +722,7 @@ describe("combined attack scenarios", () => {
     const { recordStrike } = makeStrikeTracker();
     const now = Date.now();
 
-    // Bot submits scores with impossibly fast times
+    // Bot submits scores that are far below the auto-ban floor
     const strike1 = recordStrike("bot-session", "impossibly fast: 100ms on expert");
     expect(strike1).toBe(false);
 

@@ -1084,10 +1084,16 @@ const SHIKAKU_DIFF_MULT: Record<string, number> = { easy: 1, medium: 1.5, hard: 
 const SHIKAKU_PAR_MS: Record<string, number> = { easy: 30_000, medium: 60_000, hard: 90_000, expert: 120_000 };
 const SHIKAKU_PUZZLES = 5;
 const SHIKAKU_MIN_TIME_MS: Record<string, number> = {
-  easy: 15_000,   // 3 s per puzzle
-  medium: 25_000, // 5 s per puzzle
-  hard: 40_000,   // 8 s per puzzle
-  expert: 60_000, // 12 s per puzzle
+  easy: 10_000,   // 2 s per puzzle
+  medium: 20_000, // 4 s per puzzle
+  hard: 30_000,   // 6 s per puzzle
+  expert: 40_000, // 8 s per puzzle
+};
+const SHIKAKU_AUTO_BAN_MIN_TIME_MS: Record<string, number> = {
+  easy: 5_000,
+  medium: 10_000,
+  hard: 15_000,
+  expert: 20_000,
 };
 
 function shikakuMaxScore(timeMs: number, difficulty: string): number {
@@ -1644,19 +1650,13 @@ app.post("/api/shikaku/score", async (c) => {
   const assessment = await assessShikakuScoreCandidate(candidate);
   if (assessment.kind === "error") {
     if (assessment.code === "too-fast") {
-      const shouldBan = recordStrike(candidate.effectiveSessionId, `impossibly fast: ${candidate.timeMs}ms on ${candidate.difficulty}`);
-      if (shouldBan) {
-        const entry = abuseStrikes.get(candidate.effectiveSessionId);
-        await autoBanSession(candidate.effectiveSessionId, entry?.reasons ?? ["speed abuse"]);
-      }
-    }
-
-    if (assessment.code === "too-slow") {
-      const maxTime = SHIKAKU_MAX_TIME_MS[candidate.difficulty] ?? 3_600_000;
-      const shouldBan = recordStrike(candidate.effectiveSessionId, `exceeded max time: ${candidate.timeMs}ms on ${candidate.difficulty} (max ${maxTime}ms)`);
-      if (shouldBan) {
-        const entry = abuseStrikes.get(candidate.effectiveSessionId);
-        await autoBanSession(candidate.effectiveSessionId, entry?.reasons ?? ["time abuse"]);
+      const autoBanThreshold = SHIKAKU_AUTO_BAN_MIN_TIME_MS[candidate.difficulty] ?? 5_000;
+      if (candidate.timeMs < autoBanThreshold) {
+        const shouldBan = recordStrike(candidate.effectiveSessionId, `impossibly fast: ${candidate.timeMs}ms on ${candidate.difficulty}`);
+        if (shouldBan) {
+          const entry = abuseStrikes.get(candidate.effectiveSessionId);
+          await autoBanSession(candidate.effectiveSessionId, entry?.reasons ?? ["speed abuse"]);
+        }
       }
     }
 

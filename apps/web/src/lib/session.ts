@@ -9,6 +9,8 @@ const RECENT_GAMES_KEY = "games:recent-games";
 const VISITED_KEY = "games:has-visited";
 const MAX_RECENT_GAMES = 6;
 const SESSION_SYNC_TIMEOUT_MS = 4000;
+const BOOT_SESSION_SYNC_ATTEMPTS = 3;
+const BOOT_SESSION_SYNC_RETRY_DELAY_MS = 1000;
 
 let cachedSessionId: string | null = null;
 let cachedSessionProof: string | null | undefined;
@@ -216,15 +218,29 @@ export type SyncedSessionIdentity = {
   source: "cookie" | "claimed" | "fingerprint" | "created" | "fallback";
 };
 
+export type VerifiedSessionIdentity = SyncedSessionIdentity & {
+  zeroSessionProof: string;
+  source: "cookie" | "claimed" | "fingerprint" | "created";
+};
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 export async function syncSessionIdentity(
   apiBase: string,
-  options?: { allowCreate?: boolean; reason?: string }
+  options?: { allowCreate?: boolean; reason?: string; timeoutMs?: number }
 ): Promise<SyncedSessionIdentity> {
   const fallbackSessionId = getOrCreateSessionId();
   const fallbackName = getStoredName() || null;
   const fallbackZeroSessionProof = getStoredSessionProof();
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), SESSION_SYNC_TIMEOUT_MS);
+  const timeout = window.setTimeout(
+    () => controller.abort(),
+    Math.max(1000, options?.timeoutMs ?? SESSION_SYNC_TIMEOUT_MS)
+  );
 
   try {
     const response = await fetch(`${apiBase}/api/session/sync`, {
@@ -283,6 +299,41 @@ export async function syncSessionIdentity(
   } finally {
     window.clearTimeout(timeout);
   }
+}
+
+export async function syncSessionIdentityForBoot(
+  apiBase: string,
+  options?: { attempts?: number; retryDelayMs?: number; timeoutMs?: number }
+): Promise<VerifiedSessionIdentity> {
+  const attempts = Math.max(1, Math.floor(options?.attempts ?? BOOT_SESSION_SYNC_ATTEMPTS));
+  const retryDelayMs = Math.max(0, options?.retryDelayMs ?? BOOT_SESSION_SYNC_RETRY_DELAY_MS);
+  let lastSynced: SyncedSessionIdentity | null = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const syncOptions: { allowCreate: boolean; reason: string; timeoutMs?: number } = {
+      allowCreate: true,
+      reason: "app-boot",
+    };
+    if (options?.timeoutMs !== undefined) {
+      syncOptions.timeoutMs = options.timeoutMs;
+    }
+
+    lastSynced = await syncSessionIdentity(apiBase, syncOptions);
+
+    if (lastSynced.source !== "fallback" && lastSynced.zeroSessionProof) {
+      return lastSynced as VerifiedSessionIdentity;
+    }
+
+    if (attempt < attempts - 1 && retryDelayMs > 0) {
+      await sleep(retryDelayMs * (attempt + 1));
+    }
+  }
+
+  throw new Error(
+    lastSynced?.zeroSessionProof
+      ? "Unable to verify session identity with the server."
+      : "Unable to get a verified session from the server."
+  );
 }
 
 export function getPlayerProfile() {
