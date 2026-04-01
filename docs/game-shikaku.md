@@ -17,7 +17,7 @@ Shikaku is a grid-based logic puzzle. The board has numbered cells — each numb
 ## How to Play
 
 1. **Pick a difficulty** — Choose from Easy (5×5), Medium (9×9), Hard (15×15), or Expert (22×22).
-2. **Solve puzzles** — Click and drag on the grid to place rectangles. Each rectangle must contain exactly one number, and the rectangle's area must equal that number.
+2. **Solve puzzles** — Click and drag on the grid to place rectangles. Each rectangle must contain exactly one number, and the rectangle's area must equal that number. Cells with a `1` clue are auto-filled as locked `1×1` rectangles when the puzzle starts.
 3. **Complete the run** — Solve all 5 puzzles as fast as possible. Your score is based on speed and difficulty.
 4. **Check the leaderboard** — Your score is submitted automatically and ranked against other players per difficulty.
 

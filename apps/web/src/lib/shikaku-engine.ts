@@ -54,6 +54,13 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, { rows: number; cols: number;
 
 export const PUZZLES_PER_RUN = 5;
 
+export function getAutoFilledRects(puzzle: ShikakuPuzzle): Rect[] {
+  return puzzle.solution
+    .filter((rect) => rect.w === 1 && rect.h === 1)
+    .sort((a, b) => a.r - b.r || a.c - b.c)
+    .map((rect) => ({ ...rect }));
+}
+
 /* ── Puzzle generator ──────────────────────────────────────── */
 
 /**
