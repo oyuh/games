@@ -6,6 +6,7 @@ import {
   calculateScore,
   Difficulty,
   DIFFICULTY_CONFIG,
+  getAutoFilledRects,
   generatePuzzle,
   generateRun,
   mulberry32,
@@ -288,6 +289,28 @@ export function ShikakuPage() {
   }, [phase, startTime, difficulty, puzzleStartTime, infiniteMode, infiniteSolved, puzzleTimes, fetchLeaderboard, lbView]);
 
   const currentPuzzle = puzzles[currentPuzzleIdx] ?? null;
+  const autoFilledRects = useMemo<PlacedRect[]>(() => {
+    if (!currentPuzzle) return [];
+    return getAutoFilledRects(currentPuzzle).map((rect, index) => ({
+      ...rect,
+      colorIndex: index % RECT_COLORS.length,
+    }));
+  }, [currentPuzzle]);
+  const autoFilledCellKeys = useMemo(
+    () => new Set(autoFilledRects.map((rect) => `${rect.r},${rect.c}`)),
+    [autoFilledRects],
+  );
+
+  const isAutoFilledRect = useCallback((rect: Rect): boolean => {
+    return rect.w === 1 && rect.h === 1 && autoFilledCellKeys.has(`${rect.r},${rect.c}`);
+  }, [autoFilledCellKeys]);
+
+  useEffect(() => {
+    setPlacedRects(autoFilledRects);
+    setColorCounter(autoFilledRects.length);
+    setFlashingRects(new Set());
+    setUndoStack([]);
+  }, [autoFilledRects]);
 
   /* ── Countdown logic ────────────────────────────────────── */
   useEffect(() => {
@@ -352,9 +375,10 @@ export function ShikakuPage() {
 
     // Validate bounds
     if (rect.r < 0 || rect.c < 0 || rect.r + rect.h > currentPuzzle.rows || rect.c + rect.w > currentPuzzle.cols) return;
+    if (autoFilledRects.some((lockedRect) => rectsOverlap(rect, lockedRect))) return;
 
     // Remove any overlapping existing rects (override behavior)
-    const surviving = placedRects.filter((pr) => !rectsOverlap(rect, pr));
+    const surviving = placedRects.filter((pr) => isAutoFilledRect(pr) || !rectsOverlap(rect, pr));
 
     const newColor = colorCounter % RECT_COLORS.length;
     const placed: PlacedRect = { ...rect, colorIndex: newColor };
@@ -378,7 +402,7 @@ export function ShikakuPage() {
     if (validateSolution(currentPuzzle, justRects)) {
       handlePuzzleSolved(newRects);
     }
-  }, [currentPuzzle, placedRects, colorCounter, currentPuzzleIdx, startTime, isRectValid]);
+  }, [autoFilledRects, colorCounter, currentPuzzle, isAutoFilledRect, isRectValid, placedRects]);
 
   /* ── Puzzle solved handler ──────────────────────────────── */
   const handlePuzzleSolved = useCallback((rects: PlacedRect[]) => {
@@ -438,6 +462,9 @@ export function ShikakuPage() {
 
   /* ── Remove a rectangle by index ─────────────────────────── */
   const removeRect = useCallback((index: number) => {
+    const targetRect = placedRects[index];
+    if (!targetRect || isAutoFilledRect(targetRect)) return;
+
     setUndoStack((prev) => [...prev, placedRects]);
     const newRects = placedRects.filter((_, i) => i !== index);
     setPlacedRects(newRects);
@@ -445,7 +472,7 @@ export function ShikakuPage() {
     const nextFlashing = new Set<number>();
     newRects.forEach((pr, i) => { if (!isRectValid(pr)) nextFlashing.add(i); });
     setFlashingRects(nextFlashing);
-  }, [placedRects, currentPuzzleIdx, startTime, isRectValid]);
+  }, [isAutoFilledRect, isRectValid, placedRects]);
 
   /* ── Undo last action ───────────────────────────────────── */
   const undo = useCallback(() => {
@@ -473,6 +500,13 @@ export function ShikakuPage() {
     const existingIdx = placedRects.findIndex(
       (pr) => r >= pr.r && r < pr.r + pr.h && c >= pr.c && c < pr.c + pr.w
     );
+    if (existingIdx !== -1) {
+      const existingRect = placedRects[existingIdx];
+      if (existingRect && isAutoFilledRect(existingRect)) {
+        pressedRectIdx.current = -1;
+        return;
+      }
+    }
     pressedRectIdx.current = existingIdx;
     setDragStart({ r, c });
     setDragEnd({ r, c });
@@ -481,7 +515,7 @@ export function ShikakuPage() {
     dragEndRef.current = { r, c };
     isDraggingRef.current = true;
     setIsDragging(true);
-  }, [placedRects, showPuzzleSolvedAnim]);
+  }, [isAutoFilledRect, placedRects, showPuzzleSolvedAnim]);
 
   const handleCellMouseEnter = useCallback((r: number, c: number) => {
     // Read from ref, not closure — touchmove may fire before React commits the isDragging state
@@ -1132,7 +1166,12 @@ export function ShikakuPage() {
             </button>
             <button
               className="shikaku-icon-btn"
-              onClick={() => { setUndoStack((s) => [...s, placedRects]); setPlacedRects([]); setFlashingRects(new Set()); }}
+              onClick={() => {
+                setUndoStack((s) => [...s, placedRects]);
+                setPlacedRects(autoFilledRects);
+                setColorCounter(autoFilledRects.length);
+                setFlashingRects(new Set());
+              }}
               data-tooltip="Clear all"
             >
               <FiTrash2 size={16} />

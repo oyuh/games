@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import {
   mulberry32,
+  getAutoFilledRects,
   generatePuzzle,
   generateRun,
   validateSolution,
@@ -270,6 +271,41 @@ describe("generateRun", () => {
     const b = generateRun(2, "easy");
     // Compare first puzzle numbers — extremely unlikely to match
     expect(a[0]!.numbers).not.toEqual(b[0]!.numbers);
+  });
+});
+
+describe("getAutoFilledRects", () => {
+  it("returns only 1×1 solution rectangles in row-major order", () => {
+    const puzzle: ShikakuPuzzle = {
+      rows: 3,
+      cols: 3,
+      numbers: [
+        { r: 2, c: 2, value: 1 },
+        { r: 1, c: 0, value: 2 },
+        { r: 0, c: 2, value: 1 },
+      ],
+      solution: [
+        { r: 2, c: 2, w: 1, h: 1 },
+        { r: 1, c: 0, w: 2, h: 1 },
+        { r: 0, c: 2, w: 1, h: 1 },
+      ],
+    };
+
+    expect(getAutoFilledRects(puzzle)).toEqual([
+      { r: 0, c: 2, w: 1, h: 1 },
+      { r: 2, c: 2, w: 1, h: 1 },
+    ]);
+  });
+
+  it("returns an empty list when there are no 1×1 regions", () => {
+    const puzzle: ShikakuPuzzle = {
+      rows: 2,
+      cols: 2,
+      numbers: [{ r: 0, c: 0, value: 4 }],
+      solution: [{ r: 0, c: 0, w: 2, h: 2 }],
+    };
+
+    expect(getAutoFilledRects(puzzle)).toEqual([]);
   });
 });
 
