@@ -152,6 +152,20 @@ export function readSignedSessionProof(proofHeader: string | undefined, secret: 
   return readSignedValue(proofHeader, secret, "proof");
 }
 
+export function readBearerToken(authorizationHeader: string | undefined): string | null {
+  if (!authorizationHeader) {
+    return null;
+  }
+
+  const [scheme, ...tokenParts] = authorizationHeader.trim().split(/\s+/);
+  if (!scheme || scheme.toLowerCase() !== "bearer") {
+    return null;
+  }
+
+  const token = tokenParts.join(" ").trim();
+  return token || null;
+}
+
 export function serializeSessionCookie(cookieValue: string, secure: boolean): string {
   const base = `${SESSION_COOKIE_NAME}=${encodeURIComponent(cookieValue)}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax`;
   return secure ? `${base}; Secure` : base;

@@ -64,19 +64,12 @@ const apiBaseURL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 const apiInfoURL = `${apiBaseURL}/debug/build-info`;
 
 function createZero(sessionId: string, sessionProof: string | null) {
-  const mutateHeaders: Record<string, string> = {
-    "x-zero-user-id": sessionId,
-  };
-  if (sessionProof) {
-    mutateHeaders["x-zero-session-proof"] = sessionProof;
-  }
-
   return new Zero({
+    auth: sessionProof ?? undefined,
     userID: sessionId,
     cacheURL: zeroCacheURL,
     schema,
     mutators,
-    mutateHeaders,
   });
 }
 
