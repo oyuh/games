@@ -4,6 +4,7 @@ import {
   createSignedSessionCookieValue,
   createSignedSessionProofValue,
   normalizeSessionId,
+  readBearerToken,
   readSignedSessionCookie,
   readSignedSessionProof,
   sanitizeSessionName,
@@ -39,6 +40,12 @@ describe("session identity helpers", () => {
     const secret = "proof-secret";
     const proof = createSignedSessionProofValue("session-2", secret);
     expect(readSignedSessionProof(proof, secret)).toBe("session-2");
+  });
+
+  it("extracts bearer tokens for Zero auth transport", () => {
+    expect(readBearerToken("Bearer signed-proof-token")).toBe("signed-proof-token");
+    expect(readBearerToken("bearer signed-proof-token")).toBe("signed-proof-token");
+    expect(readBearerToken("Basic abc123")).toBeNull();
   });
 
   it("rejects tampered Zero session proofs", () => {

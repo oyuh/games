@@ -904,13 +904,12 @@ ZERO_UPSTREAM_DB=<postgres_url>
 ZERO_QUERY_URL=https://<api-domain>/api/zero/query
 ZERO_MUTATE_URL=https://<api-domain>/api/zero/mutate
 ZERO_ADMIN_PASSWORD=<strong_secret>
-ZERO_MUTATE_ALLOWED_CLIENT_HEADERS=x-zero-user-id,x-zero-session-proof
 ```
 
 Optional variables:
 
-- `ZERO_MUTATE_ALLOWED_CLIENT_HEADERS=x-zero-user-id,x-zero-session-proof`
-  Required when using the signed session-proof flow in this repo, otherwise zero-cache strips `x-zero-session-proof` before forwarding mutations to the API and all authenticated Zero mutations fail.
+- `ZERO_MUTATE_ALLOWED_CLIENT_HEADERS=...`
+  Only needed if you intentionally rely on custom client-provided mutate headers. The current session-proof flow uses Zero's auth token path for mutations, so this is no longer required for normal production setup.
 
 ```bash
 ZERO_CVR_DB=<postgres_url>

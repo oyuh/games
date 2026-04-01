@@ -17,6 +17,7 @@ import {
   createSignedSessionCookieValue,
   createSignedSessionProofValue,
   normalizeSessionId,
+  readBearerToken,
   readSignedSessionCookie,
   readSignedSessionProof,
   sanitizeSessionName,
@@ -506,8 +507,22 @@ function getCallerUserId(c: { req: { header: (name: string) => string | undefine
   return caller && caller.length > 0 && caller.length <= 64 ? caller : "anon";
 }
 
+function getCallerProofFromRequest(c: { req: { header: (name: string) => string | undefined } }): string | null {
+  const headerProofUserId = readSignedSessionProof(c.req.header(ZERO_SESSION_PROOF_HEADER), SESSION_COOKIE_SECRET);
+  if (headerProofUserId) {
+    return headerProofUserId;
+  }
+
+  const bearerToken = readBearerToken(c.req.header("authorization"));
+  if (!bearerToken) {
+    return null;
+  }
+
+  return readSignedSessionProof(bearerToken, SESSION_COOKIE_SECRET);
+}
+
 function getCallerProofUserId(c: { req: { header: (name: string) => string | undefined } }): string | null {
-  return readSignedSessionProof(c.req.header(ZERO_SESSION_PROOF_HEADER), SESSION_COOKIE_SECRET);
+  return getCallerProofFromRequest(c);
 }
 
 function getVerifiedClaimedSessionId(
@@ -1756,7 +1771,7 @@ app.get("/debug/build-info", async (c) => {
 
 app.post("/api/zero/query", async (c) => {
   const request = c.req.raw;
-  const callerUserId = getCallerUserId(c);
+  const callerUserId = getCallerProofUserId(c) ?? getCallerUserId(c);
   const result = await handleQueryRequest(
     (name, args) => {
       const query = mustGetQuery(queries, name);
@@ -1771,7 +1786,7 @@ app.post("/api/zero/query", async (c) => {
 app.post("/api/zero/mutate", async (c) => {
   const request = c.req.raw;
   const rawCallerUserId = getCallerUserId(c);
-  const proofUserId = readSignedSessionProof(c.req.header(ZERO_SESSION_PROOF_HEADER), SESSION_COOKIE_SECRET);
+  const proofUserId = getCallerProofFromRequest(c);
   try {
     const result = await handleMutateRequest(
       dbProvider,
