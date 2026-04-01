@@ -2,10 +2,64 @@ import { nanoid } from "nanoid";
 import { mutators } from "@games/shared";
 
 const SESSION_KEY = "games:user-id";
+const SESSION_PROOF_KEY = "games:session-proof";
+const SESSION_PROOF_HEADER = "x-zero-session-proof";
 const NAME_KEY = "games:user-name";
 const RECENT_GAMES_KEY = "games:recent-games";
 const VISITED_KEY = "games:has-visited";
 const MAX_RECENT_GAMES = 6;
+const SESSION_SYNC_TIMEOUT_MS = 4000;
+
+let cachedSessionId: string | null = null;
+let cachedSessionProof: string | null | undefined;
+let cachedName: string | null | undefined;
+
+function sanitizeStoredNameValue(value: string | null | undefined) {
+  return (value ?? "").replace(/\s/g, "");
+}
+
+function ensureSessionIdCache() {
+  if (cachedSessionId && cachedSessionId.trim()) {
+    return cachedSessionId;
+  }
+
+  const existing = localStorage.getItem(SESSION_KEY)?.trim() ?? "";
+  if (existing) {
+    cachedSessionId = existing;
+    return existing;
+  }
+
+  const id = nanoid();
+  cachedSessionId = id;
+  localStorage.setItem(SESSION_KEY, id);
+  return id;
+}
+
+function ensureNameCache() {
+  if (cachedName !== undefined) {
+    return cachedName;
+  }
+
+  const stored = sanitizeStoredNameValue(localStorage.getItem(NAME_KEY));
+  cachedName = stored || null;
+  return cachedName;
+}
+
+function ensureSessionProofCache() {
+  if (cachedSessionProof !== undefined) {
+    return cachedSessionProof;
+  }
+
+  const stored = localStorage.getItem(SESSION_PROOF_KEY)?.trim() ?? "";
+  cachedSessionProof = stored || null;
+  return cachedSessionProof;
+}
+
+export function resetStoredIdentityForTests() {
+  cachedSessionId = null;
+  cachedSessionProof = undefined;
+  cachedName = undefined;
+}
 
 /* ── Word bank for random names ──────────────────────── */
 const adjectives = [
@@ -75,27 +129,160 @@ export type RecentGame = {
 };
 
 export function getOrCreateSessionId() {
-  const existing = localStorage.getItem(SESSION_KEY);
-  if (existing) {
-    return existing;
-  }
-  const id = nanoid();
-  localStorage.setItem(SESSION_KEY, id);
-  return id;
+  return ensureSessionIdCache();
 }
 
 export function getStoredName() {
-  return localStorage.getItem(NAME_KEY)?.replace(/\s/g, "") ?? "";
+  return ensureNameCache() ?? "";
+}
+
+export function getStoredSessionProof() {
+  return ensureSessionProofCache();
+}
+
+export function getSessionRequestHeaders(sessionId?: string, headers?: Record<string, string>) {
+  const nextHeaders: Record<string, string> = { ...(headers ?? {}) };
+  const resolvedSessionId = sessionId?.trim() || getOrCreateSessionId();
+  if (resolvedSessionId) {
+    nextHeaders["x-zero-user-id"] = resolvedSessionId;
+  }
+
+  const sessionProof = getStoredSessionProof();
+  if (sessionProof) {
+    nextHeaders[SESSION_PROOF_HEADER] = sessionProof;
+  }
+
+  return nextHeaders;
 }
 
 export function setStoredName(name: string) {
-  const sanitized = name.replace(/\s/g, "");
+  const sanitized = sanitizeStoredNameValue(name);
+  cachedName = sanitized || null;
   if (!sanitized) {
     localStorage.removeItem(NAME_KEY);
   } else {
     localStorage.setItem(NAME_KEY, sanitized);
   }
   window.dispatchEvent(new CustomEvent("games:name-changed", { detail: sanitized }));
+}
+
+function setStoredSessionId(sessionId: string) {
+  const sanitized = sessionId.trim();
+  cachedSessionId = sanitized || null;
+  if (!sanitized) {
+    localStorage.removeItem(SESSION_KEY);
+  } else {
+    localStorage.setItem(SESSION_KEY, sanitized);
+  }
+  window.dispatchEvent(new CustomEvent("games:session-changed", { detail: sanitized }));
+}
+
+function setStoredSessionProof(proof: string | null | undefined) {
+  const sanitized = typeof proof === "string" ? proof.trim() : "";
+  cachedSessionProof = sanitized || null;
+  if (!sanitized) {
+    localStorage.removeItem(SESSION_PROOF_KEY);
+  } else {
+    localStorage.setItem(SESSION_PROOF_KEY, sanitized);
+  }
+}
+
+export function syncStoredIdentity(identity: { sessionId: string; name: string | null }) {
+  const previousSessionId = ensureSessionIdCache();
+  const previousName = getStoredName();
+  const nextSessionId = identity.sessionId.trim();
+  const nextName = sanitizeStoredNameValue(identity.name);
+
+  if (nextSessionId && nextSessionId !== previousSessionId) {
+    setStoredSessionId(nextSessionId);
+  }
+
+  if (nextName !== previousName) {
+    setStoredName(nextName);
+  }
+
+  return {
+    sessionChanged: Boolean(nextSessionId && nextSessionId !== previousSessionId),
+    nameChanged: nextName !== previousName,
+  };
+}
+
+export type SyncedSessionIdentity = {
+  sessionId: string;
+  name: string | null;
+  zeroSessionProof: string | null;
+  resetRequired: boolean;
+  created: boolean;
+  source: "cookie" | "claimed" | "fingerprint" | "created" | "fallback";
+};
+
+export async function syncSessionIdentity(
+  apiBase: string,
+  options?: { allowCreate?: boolean; reason?: string }
+): Promise<SyncedSessionIdentity> {
+  const fallbackSessionId = getOrCreateSessionId();
+  const fallbackName = getStoredName() || null;
+  const fallbackZeroSessionProof = getStoredSessionProof();
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), SESSION_SYNC_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${apiBase}/api/session/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      signal: controller.signal,
+      body: JSON.stringify({
+        sessionId: fallbackSessionId,
+        name: fallbackName,
+        allowCreate: options?.allowCreate !== false,
+        reason: options?.reason ?? "app",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`status ${response.status}`);
+    }
+
+    const data = await response.json() as {
+      sessionId?: string;
+      name?: string | null;
+      zeroSessionProof?: string | null;
+      resetRequired?: boolean;
+      created?: boolean;
+      source?: "cookie" | "claimed" | "fingerprint" | "created";
+    };
+
+    const sessionId = typeof data.sessionId === "string" && data.sessionId.trim()
+      ? data.sessionId.trim()
+      : fallbackSessionId;
+    const name = typeof data.name === "string" ? data.name : data.name === null ? null : fallbackName;
+    const synced = syncStoredIdentity({ sessionId, name });
+    if (typeof data.zeroSessionProof === "string" || data.zeroSessionProof === null) {
+      setStoredSessionProof(data.zeroSessionProof);
+    }
+    const zeroSessionProof = getStoredSessionProof();
+
+    return {
+      sessionId,
+      name,
+      zeroSessionProof,
+      resetRequired: Boolean(data.resetRequired || synced.sessionChanged || synced.nameChanged),
+      created: Boolean(data.created),
+      source: data.source ?? "fallback",
+    };
+  } catch {
+    return {
+      sessionId: fallbackSessionId,
+      name: fallbackName,
+      zeroSessionProof: fallbackZeroSessionProof,
+      resetRequired: false,
+      created: false,
+      source: "fallback",
+    };
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 export function getPlayerProfile() {

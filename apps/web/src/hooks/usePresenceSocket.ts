@@ -42,11 +42,20 @@ export function usePresenceSocket({
         const res = await fetch(`${apiBase}/api/presence/heartbeat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ sessionId, gameId, gameType }),
         });
         const rtt = Math.round(performance.now() - start);
+        const payload = await res.json().catch(() => null) as {
+          sessionId?: string;
+          resetRequired?: boolean;
+        } | null;
 
         if (res.ok) {
+          if (payload?.resetRequired || (payload?.sessionId && payload.sessionId !== sessionId)) {
+            window.location.reload();
+            return;
+          }
           setPresenceConnectionState({ state: "connected" });
           setPresenceConnectLatency(rtt);
           setApiConnectionProbe({
@@ -55,6 +64,10 @@ export function usePresenceSocket({
             checkedAt: new Date().toISOString()
           });
         } else {
+          if (res.status === 403) {
+            window.location.reload();
+            return;
+          }
           setPresenceConnectionState({ state: "error", reason: `status ${res.status}` });
         }
       } catch {

@@ -2,7 +2,7 @@ import { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
-import { Component, useEffect } from "react";
+import { Component, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import {
@@ -14,7 +14,7 @@ import {
   setZeroConnectionState,
   startGlobalConnectionDebugCapture
 } from "./lib/connection-debug";
-import { getOrCreateSessionId, getStoredName } from "./lib/session";
+import { getStoredName, syncSessionIdentity } from "./lib/session";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { HomePage } from "./pages/HomePage";
 import { HomePageStylePreview } from "./pages/HomePageStylePreview";
@@ -57,27 +57,28 @@ class ErrorBoundary extends Component<
   }
 }
 
-const sessionId = getOrCreateSessionId();
 const API_METADATA_POLL_MS = 30_000;
 
 const zeroCacheURL = import.meta.env.VITE_ZERO_CACHE_URL ?? "http://localhost:4848";
 const apiBaseURL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 const apiInfoURL = `${apiBaseURL}/debug/build-info`;
 
-/**
- * Module-level Zero singleton — created exactly once per page load.
- * Never recreating it prevents ZeroProvider from resetting the mutation
- * counter, which would cause "Expected: N, got 0" push-processor errors.
- */
-const zero = new Zero({
-  userID: sessionId,
-  cacheURL: zeroCacheURL,
-  schema,
-  mutators,
-  mutateHeaders: {
+function createZero(sessionId: string, sessionProof: string | null) {
+  const mutateHeaders: Record<string, string> = {
     "x-zero-user-id": sessionId,
-  },
-});
+  };
+  if (sessionProof) {
+    mutateHeaders["x-zero-session-proof"] = sessionProof;
+  }
+
+  return new Zero({
+    userID: sessionId,
+    cacheURL: zeroCacheURL,
+    schema,
+    mutators,
+    mutateHeaders,
+  });
+}
 
 function stringifyError(error: unknown) {
   if (error instanceof Error) {
@@ -86,20 +87,58 @@ function stringifyError(error: unknown) {
   return String(error);
 }
 
-export function App() {
+export function App({ initialSessionId, initialSessionProof }: { initialSessionId: string; initialSessionProof: string | null }) {
   const styleOnly = import.meta.env.VITE_STYLE_ONLY === "true";
+  const [zero] = useState(() => createZero(initialSessionId, initialSessionProof));
 
   // Global admin broadcast listener (toasts, refresh, custom status, kick)
   useAdminBroadcast();
 
   useEffect(() => {
+    if (styleOnly || !initialSessionProof) {
+      return;
+    }
+
     const storedName = getStoredName();
-    void zero.mutate(mutators.sessions.upsert({ id: sessionId, name: storedName || null }));
-  }, []);
+    void zero.mutate(mutators.sessions.upsert({ id: initialSessionId, name: storedName || null }));
+  }, [initialSessionId, initialSessionProof, styleOnly, zero]);
+
+  useEffect(() => {
+    if (styleOnly) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const verifyIdentity = async () => {
+      const synced = await syncSessionIdentity(apiBaseURL, { allowCreate: true, reason: "app-verify" });
+      if (!cancelled && (synced.sessionId !== initialSessionId || synced.zeroSessionProof !== initialSessionProof)) {
+        window.location.reload();
+      }
+    };
+
+    const timer = window.setInterval(() => {
+      void verifyIdentity();
+    }, 60_000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void verifyIdentity();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [initialSessionId, initialSessionProof, styleOnly]);
 
   useEffect(() => {
     initConnectionDebug({
-      sessionId,
+      sessionId: initialSessionId,
       zeroCacheURL,
       apiBaseURL,
       apiInfoURL
@@ -112,7 +151,7 @@ export function App() {
     });
 
     return startGlobalConnectionDebugCapture();
-  }, []);
+  }, [initialSessionId]);
 
   useEffect(() => {
     if (styleOnly) {
@@ -252,7 +291,7 @@ export function App() {
       unsubscribeConnection();
       unsubscribeOnline();
     };
-  }, []);
+  }, [zero]);
 
   if (styleOnly) {
     return (
@@ -272,14 +311,14 @@ export function App() {
         <BrowserRouter>
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="/" element={<HomePage sessionId={sessionId} />} />
-              <Route path="/imposter/:id" element={<ImposterPage sessionId={sessionId} />} />
-              <Route path="/password/:id/begin" element={<PasswordBeginPage sessionId={sessionId} />} />
-              <Route path="/password/:id" element={<PasswordGamePage sessionId={sessionId} />} />
-              <Route path="/password/:id/results" element={<PasswordResultsPage sessionId={sessionId} />} />
-              <Route path="/chain/:id" element={<ChainReactionPage sessionId={sessionId} />} />
-              <Route path="/shade/:id" element={<ShadeSignalPage sessionId={sessionId} />} />
-              <Route path="/location/:id" element={<LocationSignalPage sessionId={sessionId} />} />
+              <Route path="/" element={<HomePage sessionId={initialSessionId} />} />
+              <Route path="/imposter/:id" element={<ImposterPage sessionId={initialSessionId} />} />
+              <Route path="/password/:id/begin" element={<PasswordBeginPage sessionId={initialSessionId} />} />
+              <Route path="/password/:id" element={<PasswordGamePage sessionId={initialSessionId} />} />
+              <Route path="/password/:id/results" element={<PasswordResultsPage sessionId={initialSessionId} />} />
+              <Route path="/chain/:id" element={<ChainReactionPage sessionId={initialSessionId} />} />
+              <Route path="/shade/:id" element={<ShadeSignalPage sessionId={initialSessionId} />} />
+              <Route path="/location/:id" element={<LocationSignalPage sessionId={initialSessionId} />} />
               <Route path="/shikaku" element={<ShikakuPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

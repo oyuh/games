@@ -11,6 +11,7 @@ import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { useGameSecret } from "../../lib/game-secrets";
+import { getSessionRequestHeaders } from "../../lib/session";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
@@ -91,10 +92,10 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     void fetch(`${apiBase}/api/game-secret/key`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-zero-user-id": sessionId
-      },
+      credentials: "include",
+      headers: getSessionRequestHeaders(sessionId, {
+        "Content-Type": "application/json"
+      }),
       body: JSON.stringify({ gameType: "password", gameId, sessionId })
     })
       .then(async (res) => {
