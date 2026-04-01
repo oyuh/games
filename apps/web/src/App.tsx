@@ -14,7 +14,7 @@ import {
   setZeroConnectionState,
   startGlobalConnectionDebugCapture
 } from "./lib/connection-debug";
-import { getStoredName, syncSessionIdentity } from "./lib/session";
+import { syncSessionIdentity } from "./lib/session";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { HomePage } from "./pages/HomePage";
 import { HomePageStylePreview } from "./pages/HomePageStylePreview";
@@ -93,15 +93,6 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
 
   // Global admin broadcast listener (toasts, refresh, custom status, kick)
   useAdminBroadcast();
-
-  useEffect(() => {
-    if (styleOnly || !initialSessionProof) {
-      return;
-    }
-
-    const storedName = getStoredName();
-    void zero.mutate(mutators.sessions.upsert({ id: initialSessionId, name: storedName || null }));
-  }, [initialSessionId, initialSessionProof, styleOnly, zero]);
 
   useEffect(() => {
     if (styleOnly) {

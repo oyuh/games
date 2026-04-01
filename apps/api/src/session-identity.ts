@@ -168,6 +168,7 @@ export function shouldUseSecureCookie(forwardedProto: string | undefined, origin
 export function chooseCanonicalSession(input: SessionResolutionInput): SessionResolutionDecision | null {
   const claimedSessionId = normalizeSessionId(input.claimedSessionId);
   const claimedName = sanitizeSessionName(input.claimedName);
+  const claimedNameWasProvided = input.claimedName !== undefined;
   const forcedName = sanitizeSessionName(input.forcedName ?? null);
 
   let sessionId = "";
@@ -213,7 +214,7 @@ export function chooseCanonicalSession(input: SessionResolutionInput): SessionRe
     canonicalName,
     shouldCreate: source === "created",
     shouldResetSession: sessionId !== claimedSessionId,
-    shouldResetName: canonicalName !== claimedName,
+    shouldResetName: claimedNameWasProvided && canonicalName !== claimedName,
     source,
   };
 }
