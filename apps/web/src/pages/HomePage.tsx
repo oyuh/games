@@ -8,6 +8,7 @@ import type { IconType } from "react-icons";
 import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiZap, FiGrid } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { isNameRestricted } from "../hooks/useAdminBroadcast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileHomePage } from "../mobile/pages/MobileHomePage";
 import { InSessionModal } from "../components/shared/InSessionModal";
@@ -286,12 +287,21 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     event.preventDefault();
     dismissFirstVisit();
     const sanitizedName = name.replace(/\s/g, "");
-    setStoredName(sanitizedName);
-    setSavedName(sanitizedName);
-    if (sanitizedName) {
-      await zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })).server;
-    } else {
-      await zero.mutate(mutators.sessions.upsert({ id: sessionId, name: null })).server;
+    if (sanitizedName && isNameRestricted(sanitizedName)) {
+      showToast("That name is restricted by admin. Pick another one.", "error");
+      return;
+    }
+
+    try {
+      if (sanitizedName) {
+        await zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })).server;
+      } else {
+        await zero.mutate(mutators.sessions.upsert({ id: sessionId, name: null })).server;
+      }
+      setStoredName(sanitizedName);
+      setSavedName(sanitizedName);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Unable to save name.", "error");
     }
   };
 

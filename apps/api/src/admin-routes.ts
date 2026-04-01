@@ -1,11 +1,12 @@
 import { Hono } from "hono";
-import { eq, ne, and, gt, desc, sql, count } from "drizzle-orm";
+import { eq, ne, and, gt, desc, sql, count, isNotNull } from "drizzle-orm";
 import {
   sessions,
   imposterGames,
   passwordGames,
   chainReactionGames,
   shadeSignalGames,
+  locationSignalGames,
   chatMessages,
   adminBans,
   adminRestrictedNames,
@@ -22,6 +23,11 @@ import {
   setCustomStatus,
   type CustomStatusPayload,
 } from "./broadcast-server";
+import {
+  isRestrictedName,
+  loadRestrictedNamePatterns,
+  primeRestrictedNamePatternCache,
+} from "./name-rules";
 
 function genId(prefix: string) {
   return `${prefix}_${crypto.randomUUID().slice(0, 12)}`;
@@ -91,44 +97,98 @@ function parsePagination(c: any, defaultPageSize = 50, maxPageSize = 200) {
   return { page, pageSize, offset };
 }
 
-// ─── Connected clients (from sessions table) ───────────────
-adminRoutes.get("/clients", async (c) => {
-  const { page, pageSize, offset } = parsePagination(c);
-  const recentCutoff = Date.now() - 5 * 60 * 1000; // active in last 5 min
+type SessionRow = typeof sessions.$inferSelect;
+type AdminGameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 
-  const [allSessions, countResult] = await Promise.all([
-    drizzleClient
-      .select()
-      .from(sessions)
-      .where(gt(sessions.lastSeen, recentCutoff))
-      .orderBy(desc(sessions.lastSeen))
-      .limit(pageSize)
-      .offset(offset),
-    drizzleClient
-      .select({ total: count() })
-      .from(sessions)
-      .where(gt(sessions.lastSeen, recentCutoff)),
-  ]);
-  const totalCount = countResult[0]?.total ?? 0;
+type AdminGameListItem = {
+  id: string;
+  code: string;
+  hostId: string;
+  phase: string;
+  type: AdminGameType;
+  createdAt: number;
+  updatedAt: number;
+  players?: unknown[] | null;
+  teams?: Array<{ members?: string[] }> | null;
+  spectators?: unknown[] | null;
+  rounds?: unknown[] | null;
+  roundHistory?: unknown[] | null;
+};
 
-  const clients = allSessions.map((s) => ({
-    sessionId: s.id,
-    name: s.name,
-    ip: s.ip ?? null,
-    userAgent: s.userAgent ?? null,
-    region: s.region ?? null,
-    fingerprint: s.fingerprint ?? null,
-    connectedAt: s.createdAt,
-    lastSeen: s.lastSeen,
-    gameId: s.gameId,
-    gameType: s.gameType,
-  }));
-  return c.json({ ok: true, clients, total: totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) });
-});
+function normalizeAdminText(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
 
-// ─── Active games list ──────────────────────────────────────
-adminRoutes.get("/games", async (c) => {
-  const [imposter, password, chain, shade] = await Promise.all([
+function getGamePlayerCount(game: Pick<AdminGameListItem, "players" | "teams">) {
+  if (Array.isArray(game.players)) {
+    return game.players.length;
+  }
+  if (Array.isArray(game.teams)) {
+    return game.teams.reduce((sum, team) => sum + (Array.isArray(team.members) ? team.members.length : 0), 0);
+  }
+  return 0;
+}
+
+function getGameSpectatorCount(game: Pick<AdminGameListItem, "spectators">) {
+  return Array.isArray(game.spectators) ? game.spectators.length : 0;
+}
+
+function getGameRoundCount(game: Pick<AdminGameListItem, "roundHistory" | "rounds">) {
+  if (Array.isArray(game.roundHistory)) {
+    return game.roundHistory.length;
+  }
+  if (Array.isArray(game.rounds)) {
+    return game.rounds.length;
+  }
+  return 0;
+}
+
+function withGameMetrics<T extends AdminGameListItem>(game: T) {
+  return {
+    ...game,
+    playerCount: getGamePlayerCount(game),
+    spectatorCount: getGameSpectatorCount(game),
+    roundCount: getGameRoundCount(game),
+  };
+}
+
+function mapSessionToClient(session: SessionRow) {
+  return {
+    sessionId: session.id,
+    name: session.name,
+    ip: session.ip ?? null,
+    userAgent: session.userAgent ?? null,
+    region: session.region ?? null,
+    fingerprint: session.fingerprint ?? null,
+    connectedAt: session.createdAt,
+    lastSeen: session.lastSeen,
+    gameId: session.gameId,
+    gameType: session.gameType,
+  };
+}
+
+function matchesClientSearch(session: SessionRow, query: string) {
+  const normalizedQuery = normalizeAdminText(query);
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  const searchableValues = [
+    session.id,
+    session.name,
+    session.ip,
+    session.userAgent,
+    session.region,
+    session.fingerprint,
+    session.gameId,
+    session.gameType,
+  ];
+
+  return searchableValues.some((value) => normalizeAdminText(value).includes(normalizedQuery));
+}
+
+async function selectActiveGames() {
+  const [imposter, password, chain, shade, location] = await Promise.all([
     drizzleClient
       .select({
         id: imposterGames.id,
@@ -136,6 +196,8 @@ adminRoutes.get("/games", async (c) => {
         hostId: imposterGames.hostId,
         phase: imposterGames.phase,
         players: imposterGames.players,
+        spectators: imposterGames.spectators,
+        roundHistory: imposterGames.roundHistory,
         createdAt: imposterGames.createdAt,
         updatedAt: imposterGames.updatedAt,
       })
@@ -148,6 +210,8 @@ adminRoutes.get("/games", async (c) => {
         hostId: passwordGames.hostId,
         phase: passwordGames.phase,
         teams: passwordGames.teams,
+        spectators: passwordGames.spectators,
+        rounds: passwordGames.rounds,
         createdAt: passwordGames.createdAt,
         updatedAt: passwordGames.updatedAt,
       })
@@ -160,6 +224,8 @@ adminRoutes.get("/games", async (c) => {
         hostId: chainReactionGames.hostId,
         phase: chainReactionGames.phase,
         players: chainReactionGames.players,
+        spectators: chainReactionGames.spectators,
+        roundHistory: chainReactionGames.roundHistory,
         createdAt: chainReactionGames.createdAt,
         updatedAt: chainReactionGames.updatedAt,
       })
@@ -172,28 +238,256 @@ adminRoutes.get("/games", async (c) => {
         hostId: shadeSignalGames.hostId,
         phase: shadeSignalGames.phase,
         players: shadeSignalGames.players,
+        spectators: shadeSignalGames.spectators,
+        roundHistory: shadeSignalGames.roundHistory,
         createdAt: shadeSignalGames.createdAt,
         updatedAt: shadeSignalGames.updatedAt,
       })
       .from(shadeSignalGames)
       .where(ne(shadeSignalGames.phase, "ended")),
+    drizzleClient
+      .select({
+        id: locationSignalGames.id,
+        code: locationSignalGames.code,
+        hostId: locationSignalGames.hostId,
+        phase: locationSignalGames.phase,
+        players: locationSignalGames.players,
+        spectators: locationSignalGames.spectators,
+        roundHistory: locationSignalGames.roundHistory,
+        createdAt: locationSignalGames.createdAt,
+        updatedAt: locationSignalGames.updatedAt,
+      })
+      .from(locationSignalGames)
+      .where(ne(locationSignalGames.phase, "ended")),
   ]);
+
+  return {
+    imposter: imposter.map((game) => withGameMetrics({ ...game, type: "imposter" as const })),
+    password: password.map((game) => withGameMetrics({ ...game, type: "password" as const })),
+    chain_reaction: chain.map((game) => withGameMetrics({ ...game, type: "chain_reaction" as const })),
+    shade_signal: shade.map((game) => withGameMetrics({ ...game, type: "shade_signal" as const })),
+    location_signal: location.map((game) => withGameMetrics({ ...game, type: "location_signal" as const })),
+  };
+}
+
+function flattenActiveGames(games: Awaited<ReturnType<typeof selectActiveGames>>) {
+  return [
+    ...games.imposter,
+    ...games.password,
+    ...games.chain_reaction,
+    ...games.shade_signal,
+    ...games.location_signal,
+  ];
+}
+
+// ─── Connected clients (from sessions table) ───────────────
+adminRoutes.get("/clients", async (c) => {
+  const { page, pageSize, offset } = parsePagination(c);
+  const recentCutoff = Date.now() - 5 * 60 * 1000; // active in last 5 min
+
+  const query = c.req.query("q") ?? "";
+  const gameType = c.req.query("gameType") ?? "all";
+  const activity = c.req.query("activity") ?? "all";
+  const region = normalizeAdminText(c.req.query("region") ?? "all");
+
+  const allSessions = await drizzleClient
+    .select()
+    .from(sessions)
+    .where(gt(sessions.lastSeen, recentCutoff))
+    .orderBy(desc(sessions.lastSeen));
+
+  const filtered = allSessions.filter((session) => {
+    if (!matchesClientSearch(session, query)) {
+      return false;
+    }
+    if (gameType !== "all" && session.gameType !== gameType) {
+      return false;
+    }
+    if (activity === "in-game" && !session.gameId) {
+      return false;
+    }
+    if (activity === "idle" && session.gameId) {
+      return false;
+    }
+    if (activity === "named" && !session.name) {
+      return false;
+    }
+    if (activity === "anonymous" && !!session.name) {
+      return false;
+    }
+
+    const sessionRegion = normalizeAdminText(session.region) || "unknown";
+    if (region !== "all" && sessionRegion !== region) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const totalCount = filtered.length;
+  const clients = filtered.slice(offset, offset + pageSize).map(mapSessionToClient);
+  const regions = Array.from(
+    new Set(allSessions.map((session) => normalizeAdminText(session.region) || "unknown"))
+  ).sort();
 
   return c.json({
     ok: true,
-    games: {
-      imposter: imposter.map((g) => ({ ...g, type: "imposter" })),
-      password: password.map((g) => ({ ...g, type: "password" })),
-      chain_reaction: chain.map((g) => ({ ...g, type: "chain_reaction" })),
-      shade_signal: shade.map((g) => ({ ...g, type: "shade_signal" })),
+    clients,
+    total: totalCount,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
+    filters: {
+      regions,
     },
+  });
+});
+
+adminRoutes.get("/clients/:sessionId", async (c) => {
+  const { sessionId } = c.req.param();
+
+  const [client, nameOverride] = await Promise.all([
+    drizzleClient
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .then((rows) => rows[0] ?? null),
+    drizzleClient
+      .select()
+      .from(adminNameOverrides)
+      .where(eq(adminNameOverrides.sessionId, sessionId))
+      .then((rows) => rows[0] ?? null),
+  ]);
+
+  if (!client) {
+    return c.json({ error: "Client not found" }, 404);
+  }
+
+  const matchedBans = bansCache
+    .filter((ban) => {
+      if (ban.type === "session") {
+        return ban.value === client.id;
+      }
+      if (ban.type === "ip") {
+        return !!client.ip && ban.value === client.ip;
+      }
+      if (ban.type === "region") {
+        return !!client.region && ban.value.toLowerCase() === client.region.toLowerCase();
+      }
+      return false;
+    })
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  return c.json({
+    ok: true,
+    client: mapSessionToClient(client),
+    nameOverride,
+    matchedBans,
+  });
+});
+
+// ─── Active games list ──────────────────────────────────────
+adminRoutes.get("/games", async (c) => {
+  const games = await selectActiveGames();
+
+  return c.json({
+    ok: true,
+    games,
     totals: {
-      imposter: imposter.length,
-      password: password.length,
-      chain_reaction: chain.length,
-      shade_signal: shade.length,
-      total: imposter.length + password.length + chain.length + shade.length,
+      imposter: games.imposter.length,
+      password: games.password.length,
+      chain_reaction: games.chain_reaction.length,
+      shade_signal: games.shade_signal.length,
+      location_signal: games.location_signal.length,
+      total:
+        games.imposter.length +
+        games.password.length +
+        games.chain_reaction.length +
+        games.shade_signal.length +
+        games.location_signal.length,
     },
+  });
+});
+
+adminRoutes.get("/dashboard/summary", async (c) => {
+  const recentCutoff = Date.now() - 5 * 60 * 1000;
+
+  const [activeSessions, activeGames, restrictedPreview, restrictedCountResult, overridePreview, overrideCountResult] = await Promise.all([
+    drizzleClient
+      .select()
+      .from(sessions)
+      .where(gt(sessions.lastSeen, recentCutoff))
+      .orderBy(desc(sessions.lastSeen)),
+    selectActiveGames(),
+    drizzleClient.select().from(adminRestrictedNames).orderBy(desc(adminRestrictedNames.createdAt)).limit(6),
+    drizzleClient.select({ total: count() }).from(adminRestrictedNames),
+    drizzleClient.select().from(adminNameOverrides).orderBy(desc(adminNameOverrides.updatedAt)).limit(6),
+    drizzleClient.select({ total: count() }).from(adminNameOverrides),
+  ]);
+
+  const clients = activeSessions.map(mapSessionToClient);
+  const allGames = flattenActiveGames(activeGames).sort((a, b) => b.updatedAt - a.updatedAt);
+  const bansByType = {
+    session: bansCache.filter((ban) => ban.type === "session").length,
+    ip: bansCache.filter((ban) => ban.type === "ip").length,
+    region: bansCache.filter((ban) => ban.type === "region").length,
+  };
+
+  const topRegions = Array.from(
+    clients.reduce((map, client) => {
+      const region = normalizeAdminText(client.region) || "unknown";
+      map.set(region, (map.get(region) ?? 0) + 1);
+      return map;
+    }, new Map<string, number>())
+  )
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 5)
+    .map(([region, total]) => ({ region, total }));
+
+  return c.json({
+    ok: true,
+    summary: {
+      clients: {
+        total: clients.length,
+        inGame: clients.filter((client) => Boolean(client.gameId && client.gameType)).length,
+        named: clients.filter((client) => Boolean(client.name)).length,
+        anonymous: clients.filter((client) => !client.name).length,
+        byGameType: {
+          imposter: clients.filter((client) => client.gameType === "imposter").length,
+          password: clients.filter((client) => client.gameType === "password").length,
+          chain_reaction: clients.filter((client) => client.gameType === "chain_reaction").length,
+          shade_signal: clients.filter((client) => client.gameType === "shade_signal").length,
+          location_signal: clients.filter((client) => client.gameType === "location_signal").length,
+        },
+        topRegions,
+      },
+      games: {
+        total: allGames.length,
+        activePlayers: allGames.reduce((sum, game) => sum + game.playerCount, 0),
+        activeSpectators: allGames.reduce((sum, game) => sum + game.spectatorCount, 0),
+        byType: {
+          imposter: activeGames.imposter.length,
+          password: activeGames.password.length,
+          chain_reaction: activeGames.chain_reaction.length,
+          shade_signal: activeGames.shade_signal.length,
+          location_signal: activeGames.location_signal.length,
+        },
+      },
+      moderation: {
+        totalBans: bansCache.length,
+        sessionBans: bansByType.session,
+        ipBans: bansByType.ip,
+        regionBans: bansByType.region,
+        restrictedNames: restrictedCountResult[0]?.total ?? 0,
+        nameOverrides: overrideCountResult[0]?.total ?? 0,
+      },
+      footerStatus: getCustomStatus(),
+    },
+    recentClients: clients.slice(0, 8),
+    recentGames: allGames.slice(0, 8),
+    recentBans: [...bansCache].sort((a, b) => b.createdAt - a.createdAt).slice(0, 6),
+    nameRules: restrictedPreview,
+    nameOverrides: overridePreview,
   });
 });
 
@@ -213,6 +507,9 @@ adminRoutes.get("/games/:type/:id", async (c) => {
     game = row;
   } else if (type === "shade_signal") {
     const [row] = await drizzleClient.select().from(shadeSignalGames).where(eq(shadeSignalGames.id, id));
+    game = row;
+  } else if (type === "location_signal") {
+    const [row] = await drizzleClient.select().from(locationSignalGames).where(eq(locationSignalGames.id, id));
     game = row;
   } else {
     return c.json({ error: "Invalid game type" }, 400);
@@ -245,6 +542,8 @@ adminRoutes.post("/games/:type/:id/end", async (c) => {
     await drizzleClient.update(chainReactionGames).set({ phase: "ended", updatedAt: now }).where(eq(chainReactionGames.id, id));
   } else if (type === "shade_signal") {
     await drizzleClient.update(shadeSignalGames).set({ phase: "ended", updatedAt: now }).where(eq(shadeSignalGames.id, id));
+  } else if (type === "location_signal") {
+    await drizzleClient.update(locationSignalGames).set({ phase: "ended", updatedAt: now }).where(eq(locationSignalGames.id, id));
   } else {
     return c.json({ error: "Invalid game type" }, 400);
   }
@@ -269,7 +568,7 @@ adminRoutes.post("/games/:type/:id/end", async (c) => {
 adminRoutes.post("/games/end-all", async (c) => {
   const now = Date.now();
 
-  const [i, p, cr, ss] = await Promise.all([
+  const [i, p, cr, ss, ls] = await Promise.all([
     drizzleClient
       .update(imposterGames)
       .set({ phase: "ended", updatedAt: now })
@@ -290,11 +589,33 @@ adminRoutes.post("/games/end-all", async (c) => {
       .set({ phase: "ended", updatedAt: now })
       .where(ne(shadeSignalGames.phase, "ended"))
       .returning({ id: shadeSignalGames.id }),
+    drizzleClient
+      .update(locationSignalGames)
+      .set({ phase: "ended", updatedAt: now })
+      .where(ne(locationSignalGames.phase, "ended"))
+      .returning({ id: locationSignalGames.id }),
   ]);
 
-  const total = i.length + p.length + cr.length + ss.length;
+  const detachedSessions = await drizzleClient
+    .update(sessions)
+    .set({ gameType: null, gameId: null, lastSeen: now })
+    .where(isNotNull(sessions.gameId))
+    .returning({ id: sessions.id });
 
-  return c.json({ ok: true, ended: { imposter: i.length, password: p.length, chain_reaction: cr.length, shade_signal: ss.length, total } });
+  const total = i.length + p.length + cr.length + ss.length + ls.length;
+
+  return c.json({
+    ok: true,
+    ended: {
+      imposter: i.length,
+      password: p.length,
+      chain_reaction: cr.length,
+      shade_signal: ss.length,
+      location_signal: ls.length,
+      total,
+    },
+    sessionsDetached: detachedSessions.length,
+  });
 });
 
 // ─── Kick player from game ──────────────────────────────────
@@ -336,6 +657,13 @@ adminRoutes.post("/games/:type/:id/kick/:sessionId", async (c) => {
       const kicked = [...(game.kicked || []), sessionId];
       const players = (game.players || []).filter((p: any) => p.sessionId !== sessionId);
       await drizzleClient.update(shadeSignalGames).set({ kicked, players, updatedAt: now }).where(eq(shadeSignalGames.id, id));
+    }
+  } else if (type === "location_signal") {
+    const [game] = await drizzleClient.select({ kicked: locationSignalGames.kicked, players: locationSignalGames.players }).from(locationSignalGames).where(eq(locationSignalGames.id, id));
+    if (game) {
+      const kicked = [...(game.kicked || []), sessionId];
+      const players = (game.players || []).filter((p: any) => p.sessionId !== sessionId);
+      await drizzleClient.update(locationSignalGames).set({ kicked, players, updatedAt: now }).where(eq(locationSignalGames.id, id));
     }
   }
 
@@ -692,11 +1020,39 @@ adminRoutes.post("/names/restricted", async (c) => {
 
   await drizzleClient.insert(adminRestrictedNames).values(entry);
 
-  // Broadcast updated restrictions to all clients
-  const allRestricted = await drizzleClient.select({ pattern: adminRestrictedNames.pattern }).from(adminRestrictedNames);
-  broadcastToAll({ type: "admin:name-restricted", patterns: allRestricted.map((r) => r.pattern) });
+  const allRestricted = await loadRestrictedNamePatterns({ force: true });
+  primeRestrictedNamePatternCache(allRestricted);
+  broadcastToAll({ type: "admin:name-restricted", patterns: allRestricted });
 
-  return c.json({ ok: true, entry });
+  const [overrideRows, sessionRows] = await Promise.all([
+    drizzleClient.select({ sessionId: adminNameOverrides.sessionId }).from(adminNameOverrides),
+    drizzleClient.select({ id: sessions.id, name: sessions.name }).from(sessions),
+  ]);
+
+  const overrideIds = new Set(overrideRows.map((override) => override.sessionId));
+  const clearedSessionIds: string[] = [];
+
+  for (const session of sessionRows) {
+    if (overrideIds.has(session.id)) {
+      continue;
+    }
+    if (!isRestrictedName(session.name, allRestricted)) {
+      continue;
+    }
+
+    await drizzleClient
+      .update(sessions)
+      .set({ name: null })
+      .where(eq(sessions.id, session.id));
+    clearedSessionIds.push(session.id);
+    broadcastToSession(session.id, {
+      type: "admin:name-changed",
+      sessionId: session.id,
+      name: "",
+    });
+  }
+
+  return c.json({ ok: true, entry, clearedSessionIds });
 });
 
 adminRoutes.delete("/names/restricted/:id", async (c) => {
@@ -709,9 +1065,9 @@ adminRoutes.delete("/names/restricted/:id", async (c) => {
 
   await drizzleClient.delete(adminRestrictedNames).where(eq(adminRestrictedNames.id, id));
 
-  // Broadcast updated restrictions
-  const allRestricted = await drizzleClient.select({ pattern: adminRestrictedNames.pattern }).from(adminRestrictedNames);
-  broadcastToAll({ type: "admin:name-restricted", patterns: allRestricted.map((r) => r.pattern) });
+  const allRestricted = await loadRestrictedNamePatterns({ force: true });
+  primeRestrictedNamePatternCache(allRestricted);
+  broadcastToAll({ type: "admin:name-restricted", patterns: allRestricted });
 
   return c.json({ ok: true, removed: existing });
 });
@@ -756,15 +1112,51 @@ adminRoutes.get("/shikaku/scores", async (c) => {
 
 adminRoutes.patch("/shikaku/scores/:id", async (c) => {
   const { id } = c.req.param();
-  const body = await c.req.json<{ name?: string; score?: number; timeMs?: number }>();
+  const body = await c.req.json<{
+    sessionId?: string;
+    name?: string;
+    seed?: number;
+    difficulty?: string;
+    score?: number;
+    timeMs?: number;
+    puzzleCount?: number;
+    createdAt?: number;
+  }>();
 
   const [existing] = await drizzleClient.select().from(shikakuScores).where(eq(shikakuScores.id, id));
   if (!existing) return c.json({ error: "Score not found" }, 404);
 
   const updates: Record<string, unknown> = {};
-  if (typeof body.name === "string" && body.name.trim()) updates.name = body.name.trim().slice(0, 20);
-  if (typeof body.score === "number" && body.score >= 0) updates.score = Math.floor(body.score);
-  if (typeof body.timeMs === "number" && body.timeMs >= 0) updates.timeMs = Math.floor(body.timeMs);
+  if (typeof body.sessionId === "string") {
+    const sessionId = body.sessionId.trim();
+    if (sessionId && sessionId.length <= 64) {
+      updates.sessionId = sessionId;
+    }
+  }
+  if (typeof body.name === "string") {
+    const name = body.name.trim().slice(0, 50);
+    if (name) {
+      updates.name = name;
+    }
+  }
+  if (typeof body.seed === "number" && Number.isInteger(body.seed) && body.seed >= 0) {
+    updates.seed = body.seed;
+  }
+  if (typeof body.difficulty === "string" && VALID_DIFFICULTIES.includes(body.difficulty)) {
+    updates.difficulty = body.difficulty;
+  }
+  if (typeof body.score === "number" && Number.isFinite(body.score) && body.score >= 0) {
+    updates.score = Math.floor(body.score);
+  }
+  if (typeof body.timeMs === "number" && Number.isFinite(body.timeMs) && body.timeMs >= 0) {
+    updates.timeMs = Math.floor(body.timeMs);
+  }
+  if (typeof body.puzzleCount === "number" && Number.isInteger(body.puzzleCount) && body.puzzleCount >= 0) {
+    updates.puzzleCount = body.puzzleCount;
+  }
+  if (typeof body.createdAt === "number" && Number.isFinite(body.createdAt) && body.createdAt > 0) {
+    updates.createdAt = Math.floor(body.createdAt);
+  }
 
   if (Object.keys(updates).length === 0) return c.json({ error: "No valid fields to update" }, 400);
 

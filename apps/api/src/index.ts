@@ -11,6 +11,7 @@ import { dbProvider } from "./db-provider";
 import { drizzleClient } from "./db-provider";
 import { pusher, getCustomStatus, setBanChecker, getBanChecker } from "./broadcast-server";
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
+import { allowUnrestrictedSessionName, findRestrictedNameMatch } from "./name-rules";
 import { rateLimiter } from "./rate-limit";
 import {
   chooseCanonicalSession,
@@ -290,7 +291,8 @@ async function resolveSessionIdentity(
     .where(eq(adminNameOverrides.sessionId, decision.sessionId))
     .limit(1);
 
-  const canonicalName = sanitizeSessionName(override?.forcedName ?? decision.canonicalName);
+  const forcedName = sanitizeSessionName(override?.forcedName ?? null);
+  const canonicalName = forcedName ?? await allowUnrestrictedSessionName(decision.canonicalName);
   const now = Date.now();
 
   if (decision.shouldCreate) {
@@ -309,7 +311,7 @@ async function resolveSessionIdentity(
       .onConflictDoUpdate({
         target: sessions.id,
         set: {
-          ...(canonicalName ? { name: canonicalName } : {}),
+          name: canonicalName,
           ip,
           region,
           userAgent,
@@ -325,11 +327,12 @@ async function resolveSessionIdentity(
         : fingerprintSession?.id === decision.sessionId
           ? fingerprintSession.name
           : null;
+    const normalizedExistingName = sanitizeSessionName(existingName);
 
     await drizzleClient
       .update(sessions)
       .set({
-        ...(canonicalName && canonicalName !== existingName ? { name: canonicalName } : {}),
+        ...(canonicalName !== normalizedExistingName ? { name: canonicalName } : {}),
         ip,
         region,
         userAgent,
@@ -664,6 +667,25 @@ function enforceMutatorCaller(userId: string, name: string, args: unknown) {
   }
   if ("voterId" in payload) {
     assertCallerValue(userId, payload.voterId, "voterId");
+  }
+}
+
+async function assertAllowedSessionNameMutation(name: string, args: unknown) {
+  if (name !== "sessions.setName" && name !== "sessions.upsert") {
+    return;
+  }
+  if (args == null || typeof args !== "object") {
+    return;
+  }
+
+  const payload = args as { name?: unknown };
+  if (typeof payload.name !== "string") {
+    return;
+  }
+
+  const restrictedMatch = await findRestrictedNameMatch(payload.name);
+  if (restrictedMatch) {
+    throw new Error("That name is restricted by admin");
   }
 }
 
@@ -1249,7 +1271,7 @@ async function buildShikakuScoreCandidate(
   }
 
   const effectiveSessionId = resolvedIdentity.sessionId;
-  const effectiveName = sanitizeSessionName(resolvedIdentity.name ?? name) ?? "Anonymous";
+  const effectiveName = sanitizeSessionName(resolvedIdentity.name) ?? "Anonymous";
 
   if (!effectiveSessionId || effectiveSessionId.length > 64) {
     return {
@@ -1792,9 +1814,11 @@ app.post("/api/zero/mutate", async (c) => {
       dbProvider,
       (transact) =>
         transact((tx, name, args) => {
+          return Promise.resolve().then(async () => {
           const callerUserId = resolveZeroMutatorCaller(rawCallerUserId, name, args, proofUserId);
           const normalizedArgs = applyCanonicalMutatorCaller(callerUserId, name, args);
           enforceMutatorCaller(callerUserId, name, normalizedArgs);
+          await assertAllowedSessionNameMutation(name, normalizedArgs);
           if (name.startsWith("demo.") && process.env.NODE_ENV === "production") {
             throw new Error("Demo mutators are disabled in production");
           }
@@ -1806,6 +1830,7 @@ app.post("/api/zero/mutate", async (c) => {
               userId: callerUserId,
               resolveGameSecretKey: (gameType: GameType, gameId: string) => getOrCreateGameKey(gameType, gameId),
             }
+          });
           });
         }),
       request
