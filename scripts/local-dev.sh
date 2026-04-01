@@ -134,7 +134,6 @@ start_zero_container() {
     -e ZERO_ADMIN_PASSWORD=dev-password \
     -e ZERO_QUERY_URL=http://host.docker.internal:3001/api/zero/query \
     -e ZERO_MUTATE_URL=http://host.docker.internal:3001/api/zero/mutate \
-    -e ZERO_MUTATE_ALLOWED_CLIENT_HEADERS=x-zero-user-id,x-zero-session-proof \
     -v "$zero_volume_name":/data \
     rocicorp/zero:0.25.13 >/dev/null
 }
