@@ -34,6 +34,9 @@ import {
   randomName,
   getOrCreateSessionId,
   getStoredName,
+  getStoredSessionProof,
+  getSessionRequestHeaders,
+  syncStoredIdentity,
   setStoredName,
   getPlayerProfile,
   getRecentGames,
@@ -42,10 +45,12 @@ import {
   clearRecentGames,
   hasVisited,
   markVisited,
+  resetStoredIdentityForTests,
   type RecentGame,
 } from "../lib/session";
 
 beforeEach(() => {
+  resetStoredIdentityForTests();
   localStorageMock.clear();
   localStorageMock.getItem.mockClear();
   localStorageMock.setItem.mockClear();
@@ -94,6 +99,13 @@ describe("getOrCreateSessionId", () => {
     const id2 = getOrCreateSessionId();
     expect(id1).toBe(id2);
   });
+
+  it("keeps the canonical session id even if localStorage is tampered with directly", () => {
+    const canonicalId = getOrCreateSessionId();
+    store["games:user-id"] = "forged-session";
+
+    expect(getOrCreateSessionId()).toBe(canonicalId);
+  });
 });
 
 // ─── getStoredName / setStoredName ──────────────────────────
@@ -122,6 +134,39 @@ describe("getStoredName / setStoredName", () => {
     setStoredName("NewName");
     expect(dispatchMock).toHaveBeenCalled();
   });
+
+  it("keeps the canonical name even if localStorage is tampered with directly", () => {
+    setStoredName("RealName");
+    store["games:user-name"] = "ForgedName";
+
+    expect(getStoredName()).toBe("RealName");
+  });
+
+  it("syncStoredIdentity updates the canonical session and name together", () => {
+    const originalId = getOrCreateSessionId();
+
+    const result = syncStoredIdentity({ sessionId: "server-session", name: "Server Name" });
+
+    expect(originalId).not.toBe("server-session");
+    expect(result).toEqual({ sessionChanged: true, nameChanged: true });
+    expect(getOrCreateSessionId()).toBe("server-session");
+    expect(getStoredName()).toBe("ServerName");
+  });
+
+  it("getSessionRequestHeaders includes the canonical session and signed proof", () => {
+    const result = syncStoredIdentity({ sessionId: "server-session", name: "Server Name" });
+    expect(result.sessionChanged).toBe(true);
+    localStorageMock.setItem("games:session-proof", "proof-token");
+
+    const headers = getSessionRequestHeaders(undefined, { "Content-Type": "application/json" });
+
+    expect(getStoredSessionProof()).toBe("proof-token");
+    expect(headers).toEqual({
+      "Content-Type": "application/json",
+      "x-zero-user-id": "server-session",
+      "x-zero-session-proof": "proof-token",
+    });
+  });
 });
 
 // ─── getPlayerProfile ───────────────────────────────────────
@@ -144,11 +189,12 @@ describe("getRecentGames / addRecentGame / removeRecentGame / clearRecentGames",
   it("adds and retrieves a recent game", () => {
     addRecentGame({ id: "g1", code: "abcd", gameType: "imposter" });
     const games = getRecentGames();
+    const game = games[0]!;
     expect(games).toHaveLength(1);
-    expect(games[0].id).toBe("g1");
-    expect(games[0].code).toBe("ABCD"); // uppercased
-    expect(games[0].gameType).toBe("imposter");
-    expect(games[0].lastPlayedAt).toBeGreaterThan(0);
+    expect(game.id).toBe("g1");
+    expect(game.code).toBe("ABCD"); // uppercased
+    expect(game.gameType).toBe("imposter");
+    expect(game.lastPlayedAt).toBeGreaterThan(0);
   });
 
   it("deduplicates by id + gameType", () => {
@@ -174,7 +220,7 @@ describe("getRecentGames / addRecentGame / removeRecentGame / clearRecentGames",
     addRecentGame({ id: "old", code: "old1", gameType: "imposter" });
     addRecentGame({ id: "new", code: "new1", gameType: "imposter" });
     const games = getRecentGames();
-    expect(games[0].id).toBe("new");
+    expect(games[0]!.id).toBe("new");
   });
 
   it("removes a specific game", () => {
@@ -183,7 +229,7 @@ describe("getRecentGames / addRecentGame / removeRecentGame / clearRecentGames",
     removeRecentGame("g1", "imposter");
     const games = getRecentGames();
     expect(games).toHaveLength(1);
-    expect(games[0].id).toBe("g2");
+    expect(games[0]!.id).toBe("g2");
   });
 
   it("clearRecentGames removes all", () => {

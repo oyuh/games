@@ -25,6 +25,7 @@ services:
       ZERO_ADMIN_PASSWORD: dev-password
       ZERO_QUERY_URL: http://host.docker.internal:3001/api/zero/query
       ZERO_MUTATE_URL: http://host.docker.internal:3001/api/zero/mutate
+      ZERO_MUTATE_ALLOWED_CLIENT_HEADERS: x-zero-user-id,x-zero-session-proof
     volumes:
       - zero-data:/data
 

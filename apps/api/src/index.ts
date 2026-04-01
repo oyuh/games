@@ -1,10 +1,10 @@
 import { mutators, queries, schema } from "@games/shared";
-import { chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
+import { adminNameOverrides, chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
 import { serve } from "@hono/node-server";
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
-import { lt, and, ne, eq, count, desc, gt, sql } from "drizzle-orm";
+import { lt, and, asc, count, desc, eq, gt, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
@@ -12,18 +12,32 @@ import { drizzleClient } from "./db-provider";
 import { pusher, getCustomStatus, setBanChecker, getBanChecker } from "./broadcast-server";
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 import { rateLimiter } from "./rate-limit";
+import {
+  chooseCanonicalSession,
+  createSignedSessionCookieValue,
+  createSignedSessionProofValue,
+  normalizeSessionId,
+  readSignedSessionCookie,
+  readSignedSessionProof,
+  sanitizeSessionName,
+  serializeSessionCookie,
+  shouldUseSecureCookie,
+  ZERO_SESSION_PROOF_HEADER,
+  type SessionIdentityCandidate,
+} from "./session-identity";
 
 config({ path: "../../.env" });
 
 const app = new Hono();
 const DB_STATUS_KEY = process.env.DB_STATUS_KEY?.trim() || "footer";
 const DB_STATUS_EXPECTED_VALUE = process.env.DB_STATUS_EXPECTED_VALUE?.trim() || "ok";
+const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || process.env.PUSHER_SECRET?.trim() || "games-dev-session-secret";
 
 app.use(
   "*",
   cors({
     origin: (origin) => {
-      if (!origin) return "*";
+      if (!origin) return "https://games.lawsonhart.me";
       if (
         origin.endsWith(".lawsonhart.me") ||
         origin === "https://games.lawsonhart.me" ||
@@ -34,7 +48,8 @@ app.use(
       return "https://games.lawsonhart.me";
     },
     allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "x-zero-user-id"],
+    allowHeaders: ["Content-Type", "Authorization", "x-zero-user-id", ZERO_SESSION_PROOF_HEADER],
+    credentials: true,
     maxAge: 86400
   })
 );
@@ -202,16 +217,168 @@ function updateSessionTracking(sessionId: string, ip: string, region: string, us
     .catch(() => {});
 }
 
+type ResolvedSessionIdentity = {
+  sessionId: string;
+  name: string | null;
+  resetRequired: boolean;
+  created: boolean;
+  source: "cookie" | "claimed" | "fingerprint" | "created";
+};
+
+async function loadSessionCandidate(id: string | null) {
+  if (!id) {
+    return null;
+  }
+  const [row] = await drizzleClient
+    .select({ id: sessions.id, name: sessions.name, fingerprint: sessions.fingerprint, lastSeen: sessions.lastSeen })
+    .from(sessions)
+    .where(eq(sessions.id, id))
+    .limit(1);
+
+  return (row ?? null) as SessionIdentityCandidate | null;
+}
+
+async function resolveSessionIdentity(
+  c: { req: { header: (name: string) => string | undefined }; header: (name: string, value: string) => void },
+  {
+    claimedSessionId,
+    claimedName,
+    allowCreate,
+  }: {
+    claimedSessionId: unknown;
+    claimedName?: unknown;
+    allowCreate: boolean;
+  }
+): Promise<ResolvedSessionIdentity | null> {
+  const { ip, region, userAgent } = getClientInfo(c);
+  const fingerprint = computeFingerprint(ip, userAgent);
+  const normalizedClaimedId = normalizeSessionId(claimedSessionId);
+  const cookieSessionId = readSignedSessionCookie(c.req.header("cookie"), SESSION_COOKIE_SECRET);
+
+  const [claimedSession, cookieSession, fingerprintSession] = await Promise.all([
+    loadSessionCandidate(normalizedClaimedId || null),
+    loadSessionCandidate(cookieSessionId),
+    drizzleClient
+      .select({ id: sessions.id, name: sessions.name, fingerprint: sessions.fingerprint, lastSeen: sessions.lastSeen })
+      .from(sessions)
+      .where(eq(sessions.fingerprint, fingerprint))
+      .orderBy(desc(sessions.lastSeen))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+  ]);
+
+  const decision = chooseCanonicalSession({
+    cookieSessionId,
+    claimedSessionId: normalizedClaimedId,
+    claimedName,
+    fingerprint,
+    cookieSession,
+    claimedSession,
+    fingerprintSession,
+    allowCreate,
+    newSessionId: crypto.randomUUID(),
+  });
+
+  if (!decision) {
+    return null;
+  }
+
+  const [override] = await drizzleClient
+    .select({ forcedName: adminNameOverrides.forcedName })
+    .from(adminNameOverrides)
+    .where(eq(adminNameOverrides.sessionId, decision.sessionId))
+    .limit(1);
+
+  const canonicalName = sanitizeSessionName(override?.forcedName ?? decision.canonicalName);
+  const now = Date.now();
+
+  if (decision.shouldCreate) {
+    await drizzleClient
+      .insert(sessions)
+      .values({
+        id: decision.sessionId,
+        name: canonicalName,
+        ip,
+        region,
+        userAgent,
+        fingerprint,
+        createdAt: now,
+        lastSeen: now,
+      })
+      .onConflictDoUpdate({
+        target: sessions.id,
+        set: {
+          ...(canonicalName ? { name: canonicalName } : {}),
+          ip,
+          region,
+          userAgent,
+          fingerprint,
+          lastSeen: now,
+        },
+      });
+  } else {
+    const existingName = cookieSession?.id === decision.sessionId
+      ? cookieSession.name
+      : claimedSession?.id === decision.sessionId
+        ? claimedSession.name
+        : fingerprintSession?.id === decision.sessionId
+          ? fingerprintSession.name
+          : null;
+
+    await drizzleClient
+      .update(sessions)
+      .set({
+        ...(canonicalName && canonicalName !== existingName ? { name: canonicalName } : {}),
+        ip,
+        region,
+        userAgent,
+        fingerprint,
+        lastSeen: now,
+      })
+      .where(eq(sessions.id, decision.sessionId));
+  }
+
+  const cookieValue = createSignedSessionCookieValue(decision.sessionId, SESSION_COOKIE_SECRET);
+  if (cookieValue) {
+    c.header(
+      "Set-Cookie",
+      serializeSessionCookie(
+        cookieValue,
+        shouldUseSecureCookie(c.req.header("x-forwarded-proto"), c.req.header("origin"))
+      )
+    );
+  }
+
+  return {
+    sessionId: decision.sessionId,
+    name: canonicalName,
+    resetRequired: decision.shouldResetSession || decision.shouldResetName,
+    created: decision.shouldCreate,
+    source: decision.source,
+  };
+}
+
 // ─── Pusher auth endpoint ───────────────────────────────────
 app.post("/api/pusher/auth", async (c) => {
   const body = await c.req.parseBody();
   const socketId = body["socket_id"] as string;
   const channelName = body["channel_name"] as string;
-  const sessionId = (body["session_id"] as string) || "";
+  const claimedSessionId = (body["session_id"] as string) || "";
 
   if (!socketId || !channelName) {
     return c.json({ error: "Missing socket_id or channel_name" }, 400);
   }
+
+  const resolvedIdentity = await resolveSessionIdentity(c, {
+    claimedSessionId,
+    allowCreate: false,
+  });
+
+  if (!resolvedIdentity) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+
+  const sessionId = resolvedIdentity.sessionId;
 
   // Ban check on auth — banned users can't subscribe
   if (sessionId) {
@@ -241,16 +408,55 @@ app.post("/api/pusher/auth", async (c) => {
   return c.json(authResponse);
 });
 
+app.post("/api/session/sync", async (c) => {
+  const body = await c.req.json().catch(() => null) as {
+    sessionId?: unknown;
+    name?: unknown;
+    allowCreate?: boolean;
+  } | null;
+
+  const resolved = await resolveSessionIdentity(c, {
+    claimedSessionId: body?.sessionId,
+    claimedName: body?.name,
+    allowCreate: body?.allowCreate !== false,
+  });
+
+  if (!resolved) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+
+  return c.json({
+    ok: true,
+    sessionId: resolved.sessionId,
+    name: resolved.name,
+    zeroSessionProof: createSignedSessionProofValue(resolved.sessionId, SESSION_COOKIE_SECRET),
+    resetRequired: resolved.resetRequired,
+    created: resolved.created,
+    source: resolved.source,
+  });
+});
+
 // ─── Presence heartbeat (replaces WebSocket presence) ───────
 app.post("/api/presence/heartbeat", async (c) => {
-  const body = await c.req.json();
-  const { sessionId } = body as {
+  const body = await c.req.json().catch(() => null) as {
     sessionId?: string;
-  };
+  } | null;
+  const claimedSessionId = body?.sessionId ?? "";
 
-  if (!sessionId || sessionId.length > MAX_ID_LEN) {
+  if (!claimedSessionId || claimedSessionId.length > MAX_ID_LEN) {
     return c.json({ error: "sessionId required" }, 400);
   }
+
+  const resolvedIdentity = await resolveSessionIdentity(c, {
+    claimedSessionId,
+    allowCreate: false,
+  });
+
+  if (!resolvedIdentity) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+
+  const sessionId = resolvedIdentity.sessionId;
 
   const { ip, region, userAgent } = getClientInfo(c);
   const fingerprint = computeFingerprint(ip, userAgent);
@@ -269,7 +475,12 @@ app.post("/api/presence/heartbeat", async (c) => {
     })
     .where(eq(sessions.id, sessionId));
 
-  return c.json({ ok: true, ...(anomaly ? { warning: "fingerprint_anomaly" } : {}) });
+  return c.json({
+    ok: true,
+    sessionId,
+    resetRequired: resolvedIdentity.resetRequired,
+    ...(anomaly ? { warning: "fingerprint_anomaly" } : {}),
+  });
 });
 
 // ─── Custom status in build-info ───────────────────────────
@@ -295,6 +506,29 @@ function getCallerUserId(c: { req: { header: (name: string) => string | undefine
   return caller && caller.length > 0 && caller.length <= 64 ? caller : "anon";
 }
 
+function getCallerProofUserId(c: { req: { header: (name: string) => string | undefined } }): string | null {
+  return readSignedSessionProof(c.req.header(ZERO_SESSION_PROOF_HEADER), SESSION_COOKIE_SECRET);
+}
+
+function getVerifiedClaimedSessionId(
+  c: { req: { header: (name: string) => string | undefined } },
+  claimedSessionId: unknown
+) {
+  const headerUserId = getCallerUserId(c);
+  const proofUserId = getCallerProofUserId(c);
+  const normalizedClaimedId = normalizeSessionId(claimedSessionId);
+
+  if (headerUserId !== "anon" && (!proofUserId || headerUserId !== proofUserId)) {
+    return null;
+  }
+
+  if (proofUserId && normalizedClaimedId && proofUserId !== normalizedClaimedId) {
+    return null;
+  }
+
+  return proofUserId ?? normalizedClaimedId;
+}
+
 const MAX_ID_LEN = 64;
 
 function validId(v: unknown): string {
@@ -313,6 +547,66 @@ function assertCallerValue(userId: string, claimed: unknown, field: string) {
   if (claimed !== userId) {
     throw new Error("Not allowed");
   }
+}
+
+function requiresMutatorSessionProof(name: string, args: unknown) {
+  if (name.startsWith("demo.") && process.env.NODE_ENV !== "production") {
+    return false;
+  }
+  if (args == null || typeof args !== "object") {
+    return false;
+  }
+
+  const payload = args as Record<string, unknown>;
+  const [namespace] = name.split(".");
+  return namespace === "sessions"
+    || "sessionId" in payload
+    || "hostId" in payload
+    || "senderId" in payload
+    || "voterId" in payload;
+}
+
+function applyCanonicalMutatorCaller<T>(userId: string, name: string, args: T): T {
+  if (userId === "anon" || args == null || typeof args !== "object") {
+    return args;
+  }
+
+  const payload = { ...(args as Record<string, unknown>) };
+  const [namespace] = name.split(".");
+
+  if (namespace === "sessions") {
+    payload.id = userId;
+    return payload as T;
+  }
+
+  if ("sessionId" in payload) {
+    payload.sessionId = userId;
+  }
+  if ("hostId" in payload) {
+    payload.hostId = userId;
+  }
+  if ("senderId" in payload) {
+    payload.senderId = userId;
+  }
+  if ("voterId" in payload) {
+    payload.voterId = userId;
+  }
+
+  return payload as T;
+}
+
+function resolveZeroMutatorCaller(userId: string, name: string, args: unknown, proofUserId: string | null) {
+  if (!requiresMutatorSessionProof(name, args)) {
+    return proofUserId ?? userId;
+  }
+  if (!proofUserId) {
+    throw new Error(
+      process.env.NODE_ENV === "production"
+        ? "Invalid session proof"
+        : "Invalid session proof: zero-cache must forward x-zero-session-proof via ZERO_MUTATE_ALLOWED_CLIENT_HEADERS"
+    );
+  }
+  return proofUserId;
 }
 
 function enforceMutatorCaller(userId: string, name: string, args: unknown) {
@@ -495,18 +789,27 @@ app.post("/api/game-secret/init", async (c) => {
 
   const gameType = normalizeGameType(body?.gameType);
   const gameId = validId(body?.gameId);
-  const sessionId = validId(body?.sessionId);
-  if (!gameType || !gameId || !sessionId) {
+  const claimedSessionId = validId(body?.sessionId);
+  if (!gameType || !gameId || !claimedSessionId) {
     return c.json({ error: "gameType, gameId, sessionId required" }, 400);
   }
 
-  if (gameType !== "imposter" && gameType !== "shade_signal" && gameType !== "location_signal") {
-    return c.json({ error: "Unsupported gameType" }, 400);
+  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, claimedSessionId);
+  if (!verifiedClaimedSessionId) {
+    return c.json({ error: "Forbidden" }, 403);
   }
 
-  const headerUserId = getCallerUserId(c);
-  if (headerUserId !== "anon" && headerUserId !== sessionId) {
-    return c.json({ error: "Forbidden" }, 403);
+  const resolvedIdentity = await resolveSessionIdentity(c, {
+    claimedSessionId: verifiedClaimedSessionId,
+    allowCreate: false,
+  });
+  if (!resolvedIdentity) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+  const sessionId = resolvedIdentity.sessionId;
+
+  if (gameType !== "imposter" && gameType !== "shade_signal" && gameType !== "location_signal") {
+    return c.json({ error: "Unsupported gameType" }, 400);
   }
 
   if (gameType === "imposter") {
@@ -587,18 +890,27 @@ app.post("/api/game-secret/pre-reveal", async (c) => {
 
   const gameType = normalizeGameType(body?.gameType);
   const gameId = validId(body?.gameId);
-  const sessionId = validId(body?.sessionId);
-  if (!gameType || !gameId || !sessionId) {
+  const claimedSessionId = validId(body?.sessionId);
+  if (!gameType || !gameId || !claimedSessionId) {
     return c.json({ error: "gameType, gameId, sessionId required" }, 400);
   }
 
-  if (gameType !== "shade_signal" && gameType !== "location_signal") {
-    return c.json({ error: "Unsupported gameType" }, 400);
+  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, claimedSessionId);
+  if (!verifiedClaimedSessionId) {
+    return c.json({ error: "Forbidden" }, 403);
   }
 
-  const headerUserId = getCallerUserId(c);
-  if (headerUserId !== "anon" && headerUserId !== sessionId) {
-    return c.json({ error: "Forbidden" }, 403);
+  const resolvedIdentity = await resolveSessionIdentity(c, {
+    claimedSessionId: verifiedClaimedSessionId,
+    allowCreate: false,
+  });
+  if (!resolvedIdentity) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+  const sessionId = resolvedIdentity.sessionId;
+
+  if (gameType !== "shade_signal" && gameType !== "location_signal") {
+    return c.json({ error: "Unsupported gameType" }, 400);
   }
 
   if (gameType === "shade_signal") {
@@ -663,16 +975,24 @@ app.post("/api/game-secret/key", async (c) => {
 
   const gameType = normalizeGameType(body?.gameType);
   const gameId = validId(body?.gameId);
-  const sessionId = validId(body?.sessionId);
-
-  if (!gameType || !gameId || !sessionId) {
+  const claimedSessionId = validId(body?.sessionId);
+  if (!gameType || !gameId || !claimedSessionId) {
     return c.json({ error: "gameType, gameId, sessionId required" }, 400);
   }
 
-  const headerUserId = getCallerUserId(c);
-  if (headerUserId !== "anon" && headerUserId !== sessionId) {
+  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, claimedSessionId);
+  if (!verifiedClaimedSessionId) {
     return c.json({ error: "Forbidden" }, 403);
   }
+
+  const resolvedIdentity = await resolveSessionIdentity(c, {
+    claimedSessionId: verifiedClaimedSessionId,
+    allowCreate: false,
+  });
+  if (!resolvedIdentity) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+  const sessionId = resolvedIdentity.sessionId;
 
   const access = await canAccessGameSecret(gameType, gameId, sessionId);
   if (!access.allowed) {
@@ -787,6 +1107,313 @@ const SHIKAKU_MAX_TIME_MS: Record<string, number> = {
 };
 
 const SHIKAKU_MAX_SCORES_PER_SESSION = 20;
+const SHIKAKU_VALID_DIFFS = ["easy", "medium", "hard", "expert"] as const;
+
+type ShikakuDifficulty = (typeof SHIKAKU_VALID_DIFFS)[number];
+
+type ShikakuScoreRequestBody = {
+  sessionId?: string;
+  name?: string;
+  seed?: number;
+  difficulty?: string;
+  score?: number;
+  timeMs?: number;
+  puzzleCount?: number;
+};
+
+type ShikakuScoreCandidate = {
+  effectiveSessionId: string;
+  effectiveName: string;
+  seed: number;
+  difficulty: ShikakuDifficulty;
+  score: number;
+  timeMs: number;
+  puzzleCount: number;
+  callerIp: string;
+  callerRegion: string;
+  callerUA: string;
+};
+
+type ShikakuScoreErrorCode =
+  | "invalid-body"
+  | "invalid-session"
+  | "invalid-session-id"
+  | "invalid-name"
+  | "invalid-seed"
+  | "invalid-difficulty"
+  | "invalid-score"
+  | "invalid-time"
+  | "invalid-puzzle-count"
+  | "banned"
+  | "too-fast"
+  | "too-slow"
+  | "inflated-score"
+  | "duplicate";
+
+type ShikakuScoreValidationResult =
+  | {
+      ok: false;
+      status: number;
+      error: string;
+      reason: string;
+      code: ShikakuScoreErrorCode;
+    }
+  | {
+      ok: true;
+      candidate: ShikakuScoreCandidate;
+    };
+
+type ShikakuScoreAssessment =
+  | {
+      kind: "error";
+      status: number;
+      error: string;
+      reason: string;
+      code: Extract<ShikakuScoreErrorCode, "banned" | "too-fast" | "too-slow" | "inflated-score" | "duplicate">;
+    }
+  | {
+      kind: "accepted-no-store";
+      reason: string;
+    }
+  | {
+      kind: "eligible";
+      willReplace: boolean;
+      lowestScoreId: string | null;
+    };
+
+function isShikakuDifficulty(value: unknown): value is ShikakuDifficulty {
+  return typeof value === "string" && SHIKAKU_VALID_DIFFS.includes(value as ShikakuDifficulty);
+}
+
+async function buildShikakuScoreCandidate(
+  c: { req: { header: (name: string) => string | undefined }; header: (name: string, value: string) => void },
+  body: ShikakuScoreRequestBody | null
+): Promise<ShikakuScoreValidationResult> {
+  if (!body) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid body",
+      reason: "This run could not be verified because the score payload was invalid.",
+      code: "invalid-body",
+    };
+  }
+
+  const { sessionId, name, seed, difficulty, score, timeMs, puzzleCount } = body;
+  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, sessionId);
+  if (!verifiedClaimedSessionId) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Invalid session",
+      reason: "Your session could not be verified for this run.",
+      code: "invalid-session",
+    };
+  }
+
+  const resolvedIdentity = await resolveSessionIdentity(c, {
+    claimedSessionId: verifiedClaimedSessionId,
+    claimedName: name,
+    allowCreate: false,
+  });
+
+  if (!resolvedIdentity) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Invalid session",
+      reason: "Your session could not be verified for this run.",
+      code: "invalid-session",
+    };
+  }
+
+  const effectiveSessionId = resolvedIdentity.sessionId;
+  const effectiveName = sanitizeSessionName(resolvedIdentity.name ?? name) ?? "Anonymous";
+
+  if (!effectiveSessionId || effectiveSessionId.length > 64) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid sessionId",
+      reason: "This run could not be verified because the session ID was invalid.",
+      code: "invalid-session-id",
+    };
+  }
+  if (typeof name === "string" && name.length > 50) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid name",
+      reason: "Your player name is too long to submit.",
+      code: "invalid-name",
+    };
+  }
+  if (typeof seed !== "number" || !Number.isInteger(seed)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid seed",
+      reason: "This run could not be verified because the puzzle seed was invalid.",
+      code: "invalid-seed",
+    };
+  }
+  if (!isShikakuDifficulty(difficulty)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid difficulty",
+      reason: "This run could not be verified because the difficulty was invalid.",
+      code: "invalid-difficulty",
+    };
+  }
+  if (typeof score !== "number" || score < 0 || score > 100000) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid score",
+      reason: "This run could not be verified because the score was invalid.",
+      code: "invalid-score",
+    };
+  }
+  if (typeof timeMs !== "number" || timeMs < 0 || timeMs > 9_000_000) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid timeMs",
+      reason: "This run could not be verified because the recorded time was invalid.",
+      code: "invalid-time",
+    };
+  }
+  if (typeof puzzleCount !== "number" || puzzleCount < 1 || puzzleCount > 20) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid puzzleCount",
+      reason: "This run could not be verified because the puzzle count was invalid.",
+      code: "invalid-puzzle-count",
+    };
+  }
+
+  const { ip: callerIp, region: callerRegion, userAgent: callerUA } = getClientInfo(c);
+
+  return {
+    ok: true,
+    candidate: {
+      effectiveSessionId,
+      effectiveName,
+      seed,
+      difficulty,
+      score,
+      timeMs,
+      puzzleCount,
+      callerIp,
+      callerRegion,
+      callerUA,
+    },
+  };
+}
+
+async function assessShikakuScoreCandidate(candidate: ShikakuScoreCandidate): Promise<ShikakuScoreAssessment> {
+  if (isShikakuBanned(candidate.effectiveSessionId)) {
+    return {
+      kind: "error",
+      status: 403,
+      error: "Score rejected",
+      reason: "This session is not allowed to submit Shikaku scores.",
+      code: "banned",
+    };
+  }
+
+  if (isBanned(candidate.effectiveSessionId, candidate.callerIp, candidate.callerRegion)) {
+    return {
+      kind: "error",
+      status: 403,
+      error: "Score rejected",
+      reason: "This session is not allowed to submit Shikaku scores.",
+      code: "banned",
+    };
+  }
+
+  const minTime = SHIKAKU_MIN_TIME_MS[candidate.difficulty] ?? 15_000;
+  if (candidate.timeMs < minTime) {
+    return {
+      kind: "error",
+      status: 400,
+      error: "Score rejected",
+      reason: `This run was faster than the minimum verifiable time for ${candidate.difficulty}.`,
+      code: "too-fast",
+    };
+  }
+
+  const maxTime = SHIKAKU_MAX_TIME_MS[candidate.difficulty] ?? 3_600_000;
+  if (candidate.timeMs > maxTime) {
+    return {
+      kind: "error",
+      status: 400,
+      error: "Score rejected",
+      reason: `This run exceeded the maximum allowed time for ${candidate.difficulty}.`,
+      code: "too-slow",
+    };
+  }
+
+  const maxLegitScore = shikakuMaxScore(candidate.timeMs, candidate.difficulty);
+  if (candidate.score > maxLegitScore) {
+    return {
+      kind: "error",
+      status: 400,
+      error: "Score rejected",
+      reason: "This score is higher than the maximum verified score for the recorded time.",
+      code: "inflated-score",
+    };
+  }
+
+  const [existing] = await drizzleClient
+    .select({ id: shikakuScores.id })
+    .from(shikakuScores)
+    .where(and(
+      eq(shikakuScores.sessionId, candidate.effectiveSessionId),
+      eq(shikakuScores.seed, candidate.seed),
+      eq(shikakuScores.difficulty, candidate.difficulty)
+    ))
+    .limit(1);
+  if (existing) {
+    return {
+      kind: "error",
+      status: 409,
+      error: "Score already submitted for this run",
+      reason: "This run has already been submitted to the leaderboard.",
+      code: "duplicate",
+    };
+  }
+
+  const sessionScores = await drizzleClient
+    .select({ id: shikakuScores.id, score: shikakuScores.score })
+    .from(shikakuScores)
+    .where(eq(shikakuScores.sessionId, candidate.effectiveSessionId))
+    .orderBy(desc(shikakuScores.score));
+
+  if (sessionScores.length >= SHIKAKU_MAX_SCORES_PER_SESSION) {
+    const lowest = sessionScores[sessionScores.length - 1] ?? null;
+    if (lowest && candidate.score <= lowest.score) {
+      return {
+        kind: "accepted-no-store",
+        reason: "This score was verified, but it is not high enough to enter your saved top 20.",
+      };
+    }
+
+    return {
+      kind: "eligible",
+      willReplace: Boolean(lowest),
+      lowestScoreId: lowest?.id ?? null,
+    };
+  }
+
+  return {
+    kind: "eligible",
+    willReplace: false,
+    lowestScoreId: null,
+  };
+}
 
 // ── Shikaku auto-ban cache ──────────────────────────────────
 const shikakuBanCache = new Set<string>();
@@ -866,15 +1493,27 @@ app.use(
 
 app.get("/api/shikaku/leaderboard", async (c) => {
   const difficulty = c.req.query("difficulty")?.trim() ?? "easy";
-  const validDiffs = ["easy", "medium", "hard", "expert"];
-  if (!validDiffs.includes(difficulty)) {
+  if (!isShikakuDifficulty(difficulty)) {
     return c.json({ error: "Invalid difficulty" }, 400);
   }
   const limitParam = parseInt(c.req.query("limit") ?? "10", 10);
   const limit = Math.min(Math.max(1, limitParam), 50);
   const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
   const offset = (page - 1) * limit;
-  const sessionIdParam = c.req.query("sessionId")?.trim() ?? null;
+  const mineOnly = ["1", "true", "yes"].includes((c.req.query("mineOnly") ?? "").toLowerCase());
+  const requestedSessionId = c.req.query("sessionId")?.trim() ?? null;
+  const resolvedIdentity = requestedSessionId
+    ? await resolveSessionIdentity(c, { claimedSessionId: requestedSessionId, allowCreate: false })
+    : null;
+  const sessionIdParam = resolvedIdentity?.sessionId ?? (normalizeSessionId(requestedSessionId) || null);
+  const filters = [eq(shikakuScores.difficulty, difficulty)];
+
+  if (mineOnly) {
+    if (!sessionIdParam) {
+      return c.json({ entries: [], personalBest: null, page: 1, pageSize: limit, total: 0, totalPages: 1 });
+    }
+    filters.push(eq(shikakuScores.sessionId, sessionIdParam));
+  }
 
   const [rows, totalResult] = await Promise.all([
     drizzleClient
@@ -888,32 +1527,36 @@ app.get("/api/shikaku/leaderboard", async (c) => {
         sessionId: shikakuScores.sessionId,
       })
       .from(shikakuScores)
-      .where(eq(shikakuScores.difficulty, difficulty))
-      .orderBy(desc(shikakuScores.score))
+      .where(and(...filters))
+      .orderBy(desc(shikakuScores.score), asc(shikakuScores.timeMs), asc(shikakuScores.createdAt))
       .limit(limit)
       .offset(offset),
     drizzleClient
       .select({ total: sql<number>`count(*)::int` })
       .from(shikakuScores)
-      .where(eq(shikakuScores.difficulty, difficulty)),
+      .where(and(...filters)),
   ]);
   const totalCount = totalResult[0]?.total ?? 0;
 
-  // Fetch personal best for the given session
   let personalBest: { score: number; timeMs: number; rank: number } | null = null;
   if (sessionIdParam && sessionIdParam.length <= 64) {
     const [pb] = await drizzleClient
       .select({ score: shikakuScores.score, timeMs: shikakuScores.timeMs })
       .from(shikakuScores)
       .where(and(eq(shikakuScores.difficulty, difficulty), eq(shikakuScores.sessionId, sessionIdParam)))
-      .orderBy(desc(shikakuScores.score))
+      .orderBy(desc(shikakuScores.score), asc(shikakuScores.timeMs), asc(shikakuScores.createdAt))
       .limit(1);
     if (pb) {
-      // Count how many scores are better to determine rank
       const [countResult] = await drizzleClient
         .select({ count: sql<number>`count(*)::int` })
         .from(shikakuScores)
-        .where(and(eq(shikakuScores.difficulty, difficulty), gt(shikakuScores.score, pb.score)));
+        .where(and(
+          eq(shikakuScores.difficulty, difficulty),
+          or(
+            gt(shikakuScores.score, pb.score),
+            and(eq(shikakuScores.score, pb.score), lt(shikakuScores.timeMs, pb.timeMs))
+          )
+        ));
       personalBest = { score: pb.score, timeMs: pb.timeMs, rank: Number(countResult?.count ?? 0) + 1 };
     }
   }
@@ -936,159 +1579,123 @@ app.get("/api/shikaku/leaderboard", async (c) => {
   });
 });
 
+app.post("/api/shikaku/score/eligibility", async (c) => {
+  const body = await c.req.json().catch(() => null) as ShikakuScoreRequestBody | null;
+  const validation = await buildShikakuScoreCandidate(c, body);
+
+  if (!validation.ok) {
+    return c.json({
+      ok: true,
+      canSubmit: false,
+      code: validation.code,
+      reason: validation.reason,
+    });
+  }
+
+  const assessment = await assessShikakuScoreCandidate(validation.candidate);
+  if (assessment.kind === "eligible") {
+    return c.json({
+      ok: true,
+      canSubmit: true,
+      code: "eligible",
+      reason: assessment.willReplace
+        ? "This score is verified and will replace your current lowest saved score."
+        : "This score is verified and ready to submit.",
+      willReplace: assessment.willReplace,
+    });
+  }
+
+  if (assessment.kind === "accepted-no-store") {
+    return c.json({
+      ok: true,
+      canSubmit: false,
+      code: "not-ranked",
+      reason: assessment.reason,
+    });
+  }
+
+  return c.json({
+    ok: true,
+    canSubmit: false,
+    code: assessment.code,
+    reason: assessment.reason,
+  });
+});
+
 app.post("/api/shikaku/score", async (c) => {
-  const body = await c.req.json().catch(() => null) as {
-    sessionId?: string;
-    name?: string;
-    seed?: number;
-    difficulty?: string;
-    score?: number;
-    timeMs?: number;
-    puzzleCount?: number;
-  } | null;
-
-  if (!body) return c.json({ error: "Invalid body" }, 400);
-
-  const { sessionId, name, seed, difficulty, score, timeMs, puzzleCount } = body;
-
-  // ── Input validation ──────────────────────────────────────
-  if (!sessionId || typeof sessionId !== "string" || sessionId.length > 64) {
-    return c.json({ error: "Invalid sessionId" }, 400);
-  }
-  if (!name || typeof name !== "string" || name.length > 50) {
-    return c.json({ error: "Invalid name" }, 400);
-  }
-  if (typeof seed !== "number" || !Number.isInteger(seed)) {
-    return c.json({ error: "Invalid seed" }, 400);
-  }
-  const validDiffs = ["easy", "medium", "hard", "expert"];
-  if (!difficulty || !validDiffs.includes(difficulty)) {
-    return c.json({ error: "Invalid difficulty" }, 400);
-  }
-  if (typeof score !== "number" || score < 0 || score > 100000) {
-    return c.json({ error: "Invalid score" }, 400);
-  }
-  if (typeof timeMs !== "number" || timeMs < 0 || timeMs > 9_000_000) {
-    return c.json({ error: "Invalid timeMs" }, 400);
-  }
-  if (typeof puzzleCount !== "number" || puzzleCount < 1 || puzzleCount > 20) {
-    return c.json({ error: "Invalid puzzleCount" }, 400);
+  const body = await c.req.json().catch(() => null) as ShikakuScoreRequestBody | null;
+  const validation = await buildShikakuScoreCandidate(c, body);
+  if (!validation.ok) {
+    return c.json({ error: validation.error }, { status: validation.status as 400 | 403 | 409 });
   }
 
-  // ── Shikaku-specific auto-ban check ───────────────────────
-  if (isShikakuBanned(sessionId)) {
-    return c.json({ error: "Score rejected" }, 403);
-  }
+  const { candidate } = validation;
 
-  // ── Global admin ban check ────────────────────────────────
-  const { ip: callerIp, region: callerRegion, userAgent: callerUA } = getClientInfo(c);
-  if (isBanned(sessionId, callerIp, callerRegion)) {
-    return c.json({ error: "Score rejected" }, 403);
-  }
-
-  // ── Fingerprint anomaly check ─────────────────────────────
-  const fp = computeFingerprint(callerIp, callerUA);
-  const fpAnomaly = checkFingerprintAnomaly(sessionId, fp);
+  const fp = computeFingerprint(candidate.callerIp, candidate.callerUA);
+  const fpAnomaly = checkFingerprintAnomaly(candidate.effectiveSessionId, fp);
   if (fpAnomaly) {
-    const shouldBan = recordStrike(sessionId, "fingerprint anomaly: too many distinct clients");
+    const shouldBan = recordStrike(candidate.effectiveSessionId, "fingerprint anomaly: too many distinct clients");
     if (shouldBan) {
-      const entry = abuseStrikes.get(sessionId);
-      await autoBanSession(sessionId, entry?.reasons ?? ["fingerprint abuse"]);
+      const entry = abuseStrikes.get(candidate.effectiveSessionId);
+      await autoBanSession(candidate.effectiveSessionId, entry?.reasons ?? ["fingerprint abuse"]);
     }
   }
 
-  // ── Session verification ──────────────────────────────────
-  const [session] = await drizzleClient
-    .select({ id: sessions.id, name: sessions.name })
-    .from(sessions)
-    .where(eq(sessions.id, sessionId))
-    .limit(1);
-  if (!session) {
-    return c.json({ error: "Invalid session" }, 403);
-  }
-
-  // ── Per-difficulty minimum time ───────────────────────────
-  const minTime = SHIKAKU_MIN_TIME_MS[difficulty] ?? 15_000;
-  if (timeMs < minTime) {
-    const shouldBan = recordStrike(sessionId, `impossibly fast: ${timeMs}ms on ${difficulty}`);
-    if (shouldBan) {
-      const entry = abuseStrikes.get(sessionId);
-      await autoBanSession(sessionId, entry?.reasons ?? ["speed abuse"]);
+  const assessment = await assessShikakuScoreCandidate(candidate);
+  if (assessment.kind === "error") {
+    if (assessment.code === "too-fast") {
+      const shouldBan = recordStrike(candidate.effectiveSessionId, `impossibly fast: ${candidate.timeMs}ms on ${candidate.difficulty}`);
+      if (shouldBan) {
+        const entry = abuseStrikes.get(candidate.effectiveSessionId);
+        await autoBanSession(candidate.effectiveSessionId, entry?.reasons ?? ["speed abuse"]);
+      }
     }
-    return c.json({ error: "Score rejected" }, 400);
-  }
 
-  // ── Max play time per difficulty ──────────────────────────
-  // base 1hr + 30min per difficulty tier
-  const maxTime = SHIKAKU_MAX_TIME_MS[difficulty] ?? 3_600_000;
-  if (timeMs > maxTime) {
-    const shouldBan = recordStrike(sessionId, `exceeded max time: ${timeMs}ms on ${difficulty} (max ${maxTime}ms)`);
-    if (shouldBan) {
-      const entry = abuseStrikes.get(sessionId);
-      await autoBanSession(sessionId, entry?.reasons ?? ["time abuse"]);
+    if (assessment.code === "too-slow") {
+      const maxTime = SHIKAKU_MAX_TIME_MS[candidate.difficulty] ?? 3_600_000;
+      const shouldBan = recordStrike(candidate.effectiveSessionId, `exceeded max time: ${candidate.timeMs}ms on ${candidate.difficulty} (max ${maxTime}ms)`);
+      if (shouldBan) {
+        const entry = abuseStrikes.get(candidate.effectiveSessionId);
+        await autoBanSession(candidate.effectiveSessionId, entry?.reasons ?? ["time abuse"]);
+      }
     }
-    return c.json({ error: "Score rejected" }, 400);
-  }
 
-  // ── Server-side score cap ─────────────────────────────────
-  const maxLegitScore = shikakuMaxScore(timeMs, difficulty);
-  if (score > maxLegitScore) {
-    const shouldBan = recordStrike(sessionId, `inflated score: ${score} > max ${maxLegitScore}`);
-    if (shouldBan) {
-      const entry = abuseStrikes.get(sessionId);
-      await autoBanSession(sessionId, entry?.reasons ?? ["score manipulation"]);
+    if (assessment.code === "inflated-score") {
+      const maxLegitScore = shikakuMaxScore(candidate.timeMs, candidate.difficulty);
+      const shouldBan = recordStrike(candidate.effectiveSessionId, `inflated score: ${candidate.score} > max ${maxLegitScore}`);
+      if (shouldBan) {
+        const entry = abuseStrikes.get(candidate.effectiveSessionId);
+        await autoBanSession(candidate.effectiveSessionId, entry?.reasons ?? ["score manipulation"]);
+      }
     }
-    return c.json({ error: "Score rejected" }, 400);
+
+    return c.json({ error: assessment.error }, { status: assessment.status as 400 | 403 | 409 });
   }
 
-  // ── Duplicate seed+session protection ─────────────────────
-  const [existing] = await drizzleClient
-    .select({ id: shikakuScores.id })
-    .from(shikakuScores)
-    .where(and(eq(shikakuScores.sessionId, sessionId), eq(shikakuScores.seed, seed)))
-    .limit(1);
-  if (existing) {
-    return c.json({ error: "Score already submitted for this run" }, 409);
+  if (assessment.kind === "accepted-no-store") {
+    return c.json({ ok: true, id: null, replaced: false, reason: assessment.reason });
   }
 
-  // ── 20-score limit per session — replace lowest if at cap ─
-  const sessionScores = await drizzleClient
-    .select({ id: shikakuScores.id, score: shikakuScores.score })
-    .from(shikakuScores)
-    .where(eq(shikakuScores.sessionId, sessionId))
-    .orderBy(desc(shikakuScores.score));
-
-  if (sessionScores.length >= SHIKAKU_MAX_SCORES_PER_SESSION) {
-    // Find the lowest score for this session
-    const lowest = sessionScores[sessionScores.length - 1];
-    if (lowest && score <= lowest.score) {
-      // New score isn't better than worst existing — silently accept but don't store
-      return c.json({ ok: true, id: null, replaced: false, reason: "Score not high enough to enter top 20" });
-    }
-    // Delete the lowest to make room
-    if (lowest) {
-      await drizzleClient
-        .delete(shikakuScores)
-        .where(eq(shikakuScores.id, lowest.id));
-    }
+  if (assessment.willReplace && assessment.lowestScoreId) {
+    await drizzleClient
+      .delete(shikakuScores)
+      .where(eq(shikakuScores.id, assessment.lowestScoreId));
   }
 
-  // ── Insert ────────────────────────────────────────────────
   const id = crypto.randomUUID();
   await drizzleClient.insert(shikakuScores).values({
     id,
-    sessionId,
-    name: name.slice(0, 50),
-    seed,
-    difficulty,
-    score,
-    timeMs,
-    puzzleCount,
+    sessionId: candidate.effectiveSessionId,
+    name: candidate.effectiveName.slice(0, 50),
+    seed: candidate.seed,
+    difficulty: candidate.difficulty,
+    score: candidate.score,
+    timeMs: candidate.timeMs,
+    puzzleCount: candidate.puzzleCount,
     createdAt: Date.now(),
   });
 
-  const replaced = sessionScores.length >= SHIKAKU_MAX_SCORES_PER_SESSION;
-  return c.json({ ok: true, id, replaced });
+  return c.json({ ok: true, id, replaced: assessment.willReplace });
 });
 
 app.get("/health", (c) => c.json({ ok: true }));
@@ -1163,19 +1770,22 @@ app.post("/api/zero/query", async (c) => {
 
 app.post("/api/zero/mutate", async (c) => {
   const request = c.req.raw;
-  const callerUserId = getCallerUserId(c);
+  const rawCallerUserId = getCallerUserId(c);
+  const proofUserId = readSignedSessionProof(c.req.header(ZERO_SESSION_PROOF_HEADER), SESSION_COOKIE_SECRET);
   try {
     const result = await handleMutateRequest(
       dbProvider,
       (transact) =>
         transact((tx, name, args) => {
-          enforceMutatorCaller(callerUserId, name, args);
+          const callerUserId = resolveZeroMutatorCaller(rawCallerUserId, name, args, proofUserId);
+          const normalizedArgs = applyCanonicalMutatorCaller(callerUserId, name, args);
+          enforceMutatorCaller(callerUserId, name, normalizedArgs);
           if (name.startsWith("demo.") && process.env.NODE_ENV === "production") {
             throw new Error("Demo mutators are disabled in production");
           }
           const mutator = mustGetMutator(mutators, name);
           return mutator.fn({
-            args,
+            args: normalizedArgs,
             tx,
             ctx: {
               userId: callerUserId,

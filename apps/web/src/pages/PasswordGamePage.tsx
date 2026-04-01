@@ -14,6 +14,7 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordGamePage } from "../mobile/pages/MobilePasswordGamePage";
 import { useGameSecret } from "../lib/game-secrets";
+import { getSessionRequestHeaders } from "../lib/session";
 
 function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
 
@@ -78,10 +79,10 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     void fetch(`${apiBase}/api/game-secret/key`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-zero-user-id": sessionId
-      },
+      credentials: "include",
+      headers: getSessionRequestHeaders(sessionId, {
+        "Content-Type": "application/json"
+      }),
       body: JSON.stringify({ gameType: "password", gameId, sessionId })
     })
       .then(async (res) => {

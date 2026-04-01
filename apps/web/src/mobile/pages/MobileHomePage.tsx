@@ -34,7 +34,7 @@ function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
     const i = opts.indexOf(value);
     if (i < 0) return;
     const next = e.deltaY < 0 ? Math.max(0, i - 1) : Math.min(opts.length - 1, i + 1);
-    if (next !== i) set(opts[next]);
+    if (next !== i) set(opts[next]!);
   };
 }
 

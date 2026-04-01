@@ -65,7 +65,7 @@ describe("updateSettings", () => {
       "games-settings",
       expect.any(String),
     );
-    const stored = JSON.parse(store["games-settings"]);
+    const stored = JSON.parse(store["games-settings"]!);
     expect(stored.theme).toBe("light");
   });
 

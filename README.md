@@ -592,6 +592,7 @@ PUSHER_APP_ID=<your_pusher_app_id>
 PUSHER_KEY=<your_pusher_key>
 PUSHER_SECRET=<your_pusher_secret>
 PUSHER_CLUSTER=<your_pusher_cluster>
+SESSION_COOKIE_SECRET=<long_random_session_secret>
 ```
 
 ## Environment Variables
@@ -668,6 +669,13 @@ The frontend only exposes Vite-prefixed variables to browser code.
 #### `PUSHER_CLUSTER`
 
 - Pusher Channels cluster (e.g. `us2`, `eu`, `ap1`)
+
+#### `SESSION_COOKIE_SECRET`
+
+- Recommended for production
+- Secret used to sign the session cookie and `x-zero-session-proof` header
+- If omitted, the API falls back to `PUSHER_SECRET`
+- Use a separate long random value if you want the session signing key decoupled from Pusher
 
 #### `DB_STATUS_KEY`
 
@@ -867,6 +875,7 @@ PUSHER_APP_ID=<pusher_app_id>
 PUSHER_KEY=<pusher_key>
 PUSHER_SECRET=<pusher_secret>
 PUSHER_CLUSTER=<pusher_cluster>
+SESSION_COOKIE_SECRET=<long_random_session_secret>
 ```
 
 #### API service validation checklist
@@ -895,9 +904,13 @@ ZERO_UPSTREAM_DB=<postgres_url>
 ZERO_QUERY_URL=https://<api-domain>/api/zero/query
 ZERO_MUTATE_URL=https://<api-domain>/api/zero/mutate
 ZERO_ADMIN_PASSWORD=<strong_secret>
+ZERO_MUTATE_ALLOWED_CLIENT_HEADERS=x-zero-user-id,x-zero-session-proof
 ```
 
 Optional variables:
+
+- `ZERO_MUTATE_ALLOWED_CLIENT_HEADERS=x-zero-user-id,x-zero-session-proof`
+  Required when using the signed session-proof flow in this repo, otherwise zero-cache strips `x-zero-session-proof` before forwarding mutations to the API and all authenticated Zero mutations fail.
 
 ```bash
 ZERO_CVR_DB=<postgres_url>

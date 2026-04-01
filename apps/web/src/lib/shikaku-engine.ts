@@ -106,11 +106,13 @@ function tryGeneratePuzzle(rows: number, cols: number, rng: () => number, maxAre
   // Shuffle cell order
   for (let i = cellOrder.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [cellOrder[i], cellOrder[j]] = [cellOrder[j], cellOrder[i]];
+    const current = cellOrder[i]!;
+    cellOrder[i] = cellOrder[j]!;
+    cellOrder[j] = current;
   }
 
   for (const [r, c] of cellOrder) {
-    if (grid[r][c] !== -1) continue;
+    if (grid[r]![c] !== -1) continue;
 
     // Try to place a rectangle starting at (r, c)
     const candidates = getRectCandidates(r, c, rows, cols, grid, maxArea);
@@ -121,12 +123,12 @@ function tryGeneratePuzzle(rows: number, cols: number, rng: () => number, maxAre
     // Sort by area descending, then pick from top few
     candidates.sort((a, b) => (b.w * b.h) - (a.w * a.h));
     const pickIdx = Math.floor(rng() * Math.min(3, candidates.length));
-    const rect = candidates[pickIdx];
+    const rect = candidates[pickIdx]!;
 
     // Place rectangle
     for (let dr = 0; dr < rect.h; dr++) {
       for (let dc = 0; dc < rect.w; dc++) {
-        grid[rect.r + dr][rect.c + dc] = rectId;
+        grid[rect.r + dr]![rect.c + dc] = rectId;
       }
     }
     rects.push(rect);
@@ -136,8 +138,8 @@ function tryGeneratePuzzle(rows: number, cols: number, rng: () => number, maxAre
   // Fill any remaining uncovered cells as 1×1
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      if (grid[r][c] === -1) {
-        grid[r][c] = rectId;
+      if (grid[r]![c] === -1) {
+        grid[r]![c] = rectId;
         rects.push({ r, c, w: 1, h: 1 });
         rectId++;
       }
@@ -147,7 +149,7 @@ function tryGeneratePuzzle(rows: number, cols: number, rng: () => number, maxAre
   // Place numbers: one number per rectangle, at a random cell within it
   const numbers: NumberCell[] = [];
   for (let i = 0; i < rects.length; i++) {
-    const rect = rects[i];
+    const rect = rects[i]!;
     const area = rect.w * rect.h;
     // Pick random position within rect
     const dr = Math.floor(rng() * rect.h);
@@ -173,7 +175,7 @@ function getRectCandidates(startR: number, startC: number, rows: number, cols: n
       let valid = true;
       for (let dr = 0; dr < h && valid; dr++) {
         for (let dc = 0; dc < w && valid; dc++) {
-          if (grid[startR + dr][startC + dc] !== -1) valid = false;
+          if (grid[startR + dr]![startC + dc] !== -1) valid = false;
         }
       }
       if (valid) {
@@ -188,7 +190,9 @@ function getRectCandidates(startR: number, startC: number, rows: number, cols: n
 function shuffleArray<T>(arr: T[], rng: () => number) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    const current = arr[i]!;
+    arr[i] = arr[j]!;
+    arr[j] = current;
   }
 }
 
@@ -220,7 +224,7 @@ export function validateSolution(puzzle: ShikakuPuzzle, rects: Rect[]): boolean 
   const grid = Array.from({ length: rows }, () => new Int8Array(cols).fill(-1));
 
   for (let i = 0; i < rects.length; i++) {
-    const rect = rects[i];
+    const rect = rects[i]!;
     // Bounds check
     if (rect.r < 0 || rect.c < 0 || rect.r + rect.h > rows || rect.c + rect.w > cols) return false;
 
@@ -228,8 +232,8 @@ export function validateSolution(puzzle: ShikakuPuzzle, rects: Rect[]): boolean 
       for (let dc = 0; dc < rect.w; dc++) {
         const gr = rect.r + dr;
         const gc = rect.c + dc;
-        if (grid[gr][gc] !== -1) return false; // overlap
-        grid[gr][gc] = i;
+        if (grid[gr]![gc] !== -1) return false; // overlap
+        grid[gr]![gc] = i;
       }
     }
   }
@@ -237,19 +241,19 @@ export function validateSolution(puzzle: ShikakuPuzzle, rects: Rect[]): boolean 
   // All cells must be covered
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      if (grid[r][c] === -1) return false;
+      if (grid[r]![c] === -1) return false;
     }
   }
 
   // Each rectangle must contain exactly one number, and the area must match
   for (let i = 0; i < rects.length; i++) {
-    const rect = rects[i];
+    const rect = rects[i]!;
     const area = rect.w * rect.h;
     const containedNumbers = numbers.filter(
       (n) => n.r >= rect.r && n.r < rect.r + rect.h && n.c >= rect.c && n.c < rect.c + rect.w
     );
     if (containedNumbers.length !== 1) return false;
-    if (containedNumbers[0].value !== area) return false;
+    if (containedNumbers[0]!.value !== area) return false;
   }
 
   return true;
@@ -322,7 +326,7 @@ function countSolutions(puzzle: ShikakuPuzzle, maxCount: number, iterBudget: num
   }
 
   function getOptions(ni: number): Rect[] {
-    const n = numbers[ni];
+    const n = numbers[ni]!;
     const area = n.value;
     const rects: Rect[] = [];
     for (let h = 1; h <= Math.min(area, rows); h++) {
@@ -336,7 +340,7 @@ function countSolutions(puzzle: ShikakuPuzzle, maxCount: number, iterBudget: num
           let conflict = false;
           for (let oi = 0; oi < numbers.length; oi++) {
             if (oi === ni || assigned[oi]) continue;
-            const o = numbers[oi];
+            const o = numbers[oi]!;
             if (o.r >= r && o.r < r + h && o.c >= c && o.c < c + w) {
               conflict = true;
               break;
@@ -371,7 +375,7 @@ function countSolutions(puzzle: ShikakuPuzzle, maxCount: number, iterBudget: num
     if (bestNi === -1) {
       // All numbers assigned — check full coverage
       for (let i = 0; i < rows * cols; i++)
-        if (!grid[i]) return;
+        if (!grid[i]!) return;
       solutions++;
       return;
     }

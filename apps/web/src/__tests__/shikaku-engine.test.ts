@@ -93,7 +93,7 @@ describe("DIFFICULTY_CONFIG", () => {
       (d) => DIFFICULTY_CONFIG[d].rows * DIFFICULTY_CONFIG[d].cols,
     );
     for (let i = 1; i < sizes.length; i++) {
-      expect(sizes[i]).toBeGreaterThan(sizes[i - 1]);
+      expect(sizes[i]!).toBeGreaterThan(sizes[i - 1]!);
     }
   });
 
@@ -133,13 +133,13 @@ describe("generatePuzzle", () => {
     for (const rect of puzzle.solution) {
       for (let dr = 0; dr < rect.h; dr++) {
         for (let dc = 0; dc < rect.w; dc++) {
-          covered[rect.r + dr][rect.c + dc] = true;
+          covered[rect.r + dr]![rect.c + dc] = true;
         }
       }
     }
     for (let r = 0; r < 5; r++) {
       for (let c = 0; c < 5; c++) {
-        expect(covered[r][c]).toBe(true);
+        expect(covered[r]![c]).toBe(true);
       }
     }
   });
@@ -149,11 +149,11 @@ describe("generatePuzzle", () => {
     const puzzle = generatePuzzle(5, 5, rng);
     const grid = Array.from({ length: 5 }, () => new Array(5).fill(-1));
     for (let i = 0; i < puzzle.solution.length; i++) {
-      const rect = puzzle.solution[i];
+      const rect = puzzle.solution[i]!;
       for (let dr = 0; dr < rect.h; dr++) {
         for (let dc = 0; dc < rect.w; dc++) {
-          expect(grid[rect.r + dr][rect.c + dc]).toBe(-1);
-          grid[rect.r + dr][rect.c + dc] = i;
+          expect(grid[rect.r + dr]![rect.c + dc]).toBe(-1);
+          grid[rect.r + dr]![rect.c + dc] = i;
         }
       }
     }
@@ -269,7 +269,7 @@ describe("generateRun", () => {
     const a = generateRun(1, "easy");
     const b = generateRun(2, "easy");
     // Compare first puzzle numbers — extremely unlikely to match
-    expect(a[0].numbers).not.toEqual(b[0].numbers);
+    expect(a[0]!.numbers).not.toEqual(b[0]!.numbers);
   });
 });
 
