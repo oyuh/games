@@ -1,214 +1,409 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api } from "@/lib/client-api";
-import { useToast } from "@/components/Toast";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { Activity, BarChart3, Layers3, RefreshCcw, Search, Users } from "lucide-react";
 
-type Game = {
-  id: string;
-  code: string;
-  hostId: string;
-  phase: string;
-  type: string;
-  players?: any[];
-  teams?: any[];
-  createdAt: number;
-  updatedAt: number;
+import { api } from "@/lib/client-api";
+import {
+  formatGameType,
+  formatRelativeTime,
+  GAME_TYPE_OPTIONS,
+  GameSummary,
+} from "@/lib/admin";
+import { useToast } from "@/components/Toast";
+import { GameStateDialog } from "@/components/admin/game-state-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+function Surface({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <section className={`rounded-[24px] border border-white/8 bg-[#0f1826] p-5 ${className}`}>{children}</section>;
+}
+
+function GamesPageSkeleton() {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="space-y-4">
+        <Surface>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_180px_180px] xl:flex-1">
+              <Skeleton className="h-10 bg-white/6 sm:col-span-3 xl:col-span-1" />
+              <Skeleton className="h-10 bg-white/6" />
+              <Skeleton className="h-10 bg-white/6" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-24 bg-white/6" />
+              <Skeleton className="h-10 w-28 bg-white/6" />
+            </div>
+          </div>
+        </Surface>
+
+        <Surface className="overflow-hidden">
+          <div className="space-y-3">
+            <Skeleton className="h-12 bg-white/6" />
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} className="h-14 bg-white/5" />
+            ))}
+          </div>
+        </Surface>
+      </div>
+
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Surface key={index} className="bg-[#111b2a]">
+            <Skeleton className="h-4 w-28 bg-white/6" />
+            <div className="mt-4 space-y-3">
+              {Array.from({ length: 4 }).map((__, itemIndex) => (
+                <Skeleton key={itemIndex} className="h-14 bg-white/5" />
+              ))}
+            </div>
+          </Surface>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type GamesResponse = {
+  games: Record<string, GameSummary[]>;
+  totals: Record<string, number>;
 };
 
 export default function GamesPage() {
   const { show } = useToast();
-  const [games, setGames] = useState<Game[]>([]);
+  const confirm = useConfirmDialog();
+  const [response, setResponse] = useState<GamesResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [detail, setDetail] = useState<any>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const [gameType, setGameType] = useState<"all" | any>("all");
+  const [phase, setPhase] = useState("all");
+  const [selectedGame, setSelectedGame] = useState<{ id: string; type: any } | null>(null);
 
-  const refresh = async () => {
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await api("/games");
+        if (!cancelled) {
+          setResponse(data as GamesResponse);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          show(error instanceof Error ? error.message : "Unable to load games.", "error");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void load();
+    const interval = window.setInterval(() => {
+      void load();
+    }, 8000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [refreshKey, show]);
+
+  const games = useMemo(() => {
+    if (!response?.games) {
+      return [] as GameSummary[];
+    }
+
+    return Object.values(response.games)
+      .flat()
+      .sort((left, right) => right.updatedAt - left.updatedAt);
+  }, [response]);
+
+  const filteredGames = useMemo(() => {
+    return games.filter((game) => {
+      if (gameType !== "all" && game.type !== gameType) {
+        return false;
+      }
+      if (phase !== "all" && game.phase !== phase) {
+        return false;
+      }
+      if (!deferredSearch.trim()) {
+        return true;
+      }
+
+      const query = deferredSearch.trim().toLowerCase();
+      return [game.code, game.id, game.hostId, game.phase, game.type].some((value) => value.toLowerCase().includes(query));
+    });
+  }, [deferredSearch, gameType, games, phase]);
+
+  const phaseOptions = useMemo(() => Array.from(new Set(games.map((game) => game.phase))).sort(), [games]);
+
+  const phaseCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const game of filteredGames) {
+      counts.set(game.phase, (counts.get(game.phase) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).sort((left, right) => right[1] - left[1]);
+  }, [filteredGames]);
+
+  const visiblePlayers = useMemo(() => filteredGames.reduce((sum, game) => sum + game.playerCount, 0), [filteredGames]);
+  const visibleSpectators = useMemo(() => filteredGames.reduce((sum, game) => sum + game.spectatorCount, 0), [filteredGames]);
+  const maxTypeTotal = useMemo(() => {
+    const totals = GAME_TYPE_OPTIONS.filter((option) => option.value !== "all").map((option) => response?.totals?.[option.value] ?? 0);
+    return Math.max(1, ...totals);
+  }, [response]);
+
+  const endGame = async (game: GameSummary) => {
+    const confirmed = await confirm({
+      title: "End live game?",
+      description: `End ${formatGameType(game.type)} room ${game.code} immediately for everyone currently attached.`,
+      confirmLabel: "End game",
+      tone: "destructive",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     try {
-      const data = await api("/games");
-      const all: Game[] = [
-        ...(data.games?.imposter ?? []),
-        ...(data.games?.password ?? []),
-        ...(data.games?.chain_reaction ?? []),
-        ...(data.games?.shade_signal ?? []),
-      ];
-      all.sort((a, b) => b.updatedAt - a.updatedAt);
-      setGames(all);
-    } catch (e: any) { show(e.message, "error"); }
-    finally { setLoading(false); }
+      await api(`/games/${game.type}/${game.id}/end`, { method: "POST" });
+      show("Game ended.", "success");
+      setRefreshKey((value) => value + 1);
+    } catch (error) {
+      show(error instanceof Error ? error.message : "Unable to end game.", "error");
+    }
   };
 
-  useEffect(() => { refresh(); const t = setInterval(refresh, 10_000); return () => clearInterval(t); }, []);
-
-  const endGame = async (type: string, id: string) => {
-    if (!confirm(`End this ${type} game?`)) return;
-    try {
-      await api(`/games/${type}/${id}/end`, { method: "POST" });
-      show("Game ended", "success");
-      setDetail(null);
-      refresh();
-    } catch (e: any) { show(e.message, "error"); }
-  };
-
-  const viewDetail = async (type: string, id: string) => {
-    setDetailLoading(true);
-    try {
-      const data = await api(`/games/${type}/${id}`);
-      setDetail(data);
-    } catch (e: any) { show(e.message, "error"); }
-    finally { setDetailLoading(false); }
-  };
-
-  const kickPlayer = async (type: string, gameId: string, sessionId: string) => {
-    if (!confirm("Kick this player?")) return;
-    try {
-      await api(`/games/${type}/${gameId}/kick/${sessionId}`, { method: "POST" });
-      show("Player kicked", "success");
-      viewDetail(type, gameId);
-      refresh();
-    } catch (e: any) { show(e.message, "error"); }
-  };
-
-  const playerCount = (g: Game) => {
-    if (g.players) return g.players.length;
-    if (g.teams) return g.teams.reduce((sum: number, t: any) => sum + (t.members?.length ?? 0), 0);
-    return 0;
-  };
-
-  const ago = (ts: number) => {
-    const diff = Math.floor((Date.now() - ts) / 1000);
-    if (diff < 60) return `${diff}s`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-    return `${Math.floor(diff / 3600)}h`;
-  };
-
-  const phaseColor = (phase: string) => {
-    if (phase === "lobby") return "badge-gray";
-    if (phase === "ended" || phase === "finished") return "badge-red";
-    return "badge-green";
-  };
-
-  if (loading) return <p style={{ color: "var(--muted)" }}>Loading...</p>;
+  if (loading && !response) {
+    return <GamesPageSkeleton />;
+  }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 className="section-title" style={{ margin: 0 }}>Active Games ({games.length})</h2>
-        <button className="btn btn-ghost" onClick={refresh}>Refresh</button>
-      </div>
+    <>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
+          <Surface>
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_180px_180px] xl:flex-1">
+                <div className="relative sm:col-span-3 xl:col-span-1">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search by code, host, id, type, or phase"
+                    className="border-white/8 bg-[#0d1624] pl-11 text-slate-50"
+                  />
+                </div>
 
-      {/* Game detail panel */}
-      {detail && (
-        <div className="card" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <span className={`badge ${phaseColor(detail.game?.phase)}`} style={{ marginRight: "0.5rem" }}>
-                {detail.game?.phase}
-              </span>
-              <strong>{detail.game?.type}</strong> <span style={{ color: "var(--muted)", margin: "0 0.25rem" }}>|</span> Code: <code>{detail.game?.code}</code>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button className="btn btn-danger" onClick={() => endGame(detail.game.type, detail.game.id)}>
-                End Game
-              </button>
-              <button className="btn btn-ghost" onClick={() => setDetail(null)}>Close</button>
-            </div>
-          </div>
-
-          {/* Players */}
-          <div>
-            <div style={{ fontSize: "0.8125rem", fontWeight: 600, marginBottom: "0.5rem", color: "var(--text-secondary)" }}>Players</div>
-            {detail.game?.players?.map((p: any, i: number) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.375rem 0", borderBottom: "1px solid var(--border)" }}>
-                <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{p.sessionId?.slice(0, 12)}</span>
-                <span>{p.name || "--"}</span>
-                {p.role && <span className="badge badge-yellow">{p.role}</span>}
-                {p.eliminated && <span className="badge badge-red">eliminated</span>}
-                <button
-                  className="btn btn-danger"
-                  style={{ padding: "0.125rem 0.5rem", fontSize: "0.7rem", marginLeft: "auto" }}
-                  onClick={() => kickPlayer(detail.game.type, detail.game.id, p.sessionId)}
+                <select
+                  value={gameType}
+                  onChange={(event) => setGameType(event.target.value as any)}
+                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-slate-50 outline-none"
                 >
-                  Kick
-                </button>
-              </div>
-            ))}
-            {detail.game?.teams?.map((t: any, ti: number) => (
-              <div key={ti} style={{ marginBottom: "0.5rem" }}>
-                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--primary)" }}>{t.name}</div>
-                {t.members?.map((mId: string) => (
-                  <div key={mId} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.25rem 0" }}>
-                    <span style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{mId.slice(0, 12)}</span>
-                    <button
-                      className="btn btn-danger"
-                      style={{ padding: "0.125rem 0.5rem", fontSize: "0.7rem", marginLeft: "auto" }}
-                      onClick={() => kickPlayer(detail.game.type, detail.game.id, mId)}
-                    >
-                      Kick
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+                  {GAME_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
 
-          {/* Raw JSON (collapsed) */}
-          <details style={{ fontSize: "0.75rem" }}>
-            <summary>Raw game state</summary>
-            <pre>
-              {JSON.stringify(detail.game, null, 2)}
-            </pre>
-          </details>
+                <select
+                  value={phase}
+                  onChange={(event) => setPhase(event.target.value)}
+                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-slate-50 outline-none"
+                >
+                  <option value="all">All phases</option>
+                  {phaseOptions.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="border-white/8 bg-white/3 text-slate-200">
+                  {filteredGames.length} visible
+                </Badge>
+                <Button
+                  variant="outline"
+                  className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"
+                  onClick={() => setRefreshKey((value) => value + 1)}
+                >
+                  <RefreshCcw className="size-4" />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </Surface>
+
+          <Surface className="overflow-hidden">
+            <div className="mb-4 flex flex-col gap-3 border-b border-white/8 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Room List</div>
+                <div className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">Active game sessions</div>
+              </div>
+              <div className="text-sm text-slate-400">Open any room to inspect live state and attached people.</div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow className="border-white/8 hover:bg-transparent">
+                  <TableHead className="text-slate-400">Game</TableHead>
+                  <TableHead className="text-slate-400">Players</TableHead>
+                  <TableHead className="text-slate-400">Spectators</TableHead>
+                  <TableHead className="text-slate-400">Phase</TableHead>
+                  <TableHead className="text-slate-400">Updated</TableHead>
+                  <TableHead className="text-slate-400">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredGames.length === 0 ? (
+                  <TableRow className="border-white/8 hover:bg-transparent">
+                    <TableCell colSpan={6} className="px-4 py-16 text-center text-sm text-slate-500">
+                      No active games match the current search.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredGames.map((game) => (
+                    <TableRow key={game.id} className="border-white/8 hover:bg-[#142033]">
+                      <TableCell>
+                        <div className="font-medium text-white">{game.code}</div>
+                        <div className="mt-1 text-sm text-slate-400">{formatGameType(game.type)}</div>
+                      </TableCell>
+                      <TableCell className="text-slate-200">{game.playerCount}</TableCell>
+                      <TableCell className="text-slate-200">{game.spectatorCount}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="border-white/8 bg-[#0d1624] text-slate-200">
+                          {game.phase}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-400">{formatRelativeTime(game.updatedAt)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"
+                            onClick={() => setSelectedGame({ id: game.id, type: game.type })}
+                          >
+                            <Activity className="size-4" />
+                            View
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
+                            onClick={() => void endGame(game)}
+                          >
+                            End
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Surface>
         </div>
-      )}
 
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Code</th>
-              <th>Phase</th>
-              <th>Players</th>
-              <th>Updated</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {games.length === 0 && (
-              <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)" }}>No active games</td></tr>
-            )}
-            {games.map((g) => (
-              <tr key={g.id}>
-                <td><span className="badge badge-blue">{g.type}</span></td>
-                <td><code style={{ fontSize: "0.8125rem" }}>{g.code}</code></td>
-                <td><span className={`badge ${phaseColor(g.phase)}`}>{g.phase}</span></td>
-                <td>{playerCount(g)}</td>
-                <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{ago(g.updatedAt)} ago</td>
-                <td>
-                  <div style={{ display: "flex", gap: "0.375rem" }}>
-                    <button
-                      className="btn btn-ghost"
-                      style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                      onClick={() => viewDetail(g.type, g.id)}
-                      disabled={detailLoading}
-                    >
-                      View
-                    </button>
-                    <button
-                      className="btn btn-danger"
-                      style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                      onClick={() => endGame(g.type, g.id)}
-                    >
-                      End
-                    </button>
+        <div className="space-y-4">
+          <Surface className="bg-[#111b2a]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Room Snapshot</div>
+            <div className="mt-4 space-y-3">
+              {[
+                { label: "Visible rooms", value: filteredGames.length.toLocaleString(), icon: Layers3 },
+                { label: "Visible players", value: visiblePlayers.toLocaleString(), icon: Users },
+                { label: "Visible spectators", value: visibleSpectators.toLocaleString(), icon: Activity },
+                { label: "Active phases", value: phaseCounts.length.toLocaleString(), icon: BarChart3 },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-[14px] border border-white/8 bg-[#18253a] text-slate-100">
+                      <Icon className="size-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.26em] text-slate-500">{label}</div>
+                      <div className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white">{value}</div>
+                    </div>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              ))}
+            </div>
+          </Surface>
+
+          <Surface className="bg-[#111b2a]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Type Distribution</div>
+            <div className="mt-4 space-y-3">
+              {GAME_TYPE_OPTIONS.filter((option) => option.value !== "all").map((option) => {
+                const total = response?.totals?.[option.value] ?? 0;
+
+                return (
+                  <div key={option.value}>
+                    <div className="mb-1.5 flex items-center justify-between gap-3 text-sm text-slate-300">
+                      <span>{option.label}</span>
+                      <span className="text-slate-400">{total}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-[#0c1420]">
+                      <div className="h-2 rounded-full bg-[#4f7cff]" style={{ width: `${(total / maxTypeTotal) * 100}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Surface>
+
+          <Surface className="bg-[#111b2a]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Phase Mix</div>
+            <div className="mt-4 space-y-2">
+              {phaseCounts.length === 0 ? (
+                <div className="rounded-[18px] border border-dashed border-white/8 px-4 py-5 text-sm text-slate-500">
+                  Phase distribution appears once live rooms load.
+                </div>
+              ) : (
+                phaseCounts.map(([phaseName, total]) => (
+                  <div key={phaseName} className="flex items-center justify-between rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-3 text-sm">
+                    <span className="text-slate-200">{phaseName}</span>
+                    <span className="text-slate-400">{total}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </Surface>
+        </div>
       </div>
-    </div>
+
+      <GameStateDialog
+        target={selectedGame}
+        open={Boolean(selectedGame)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setSelectedGame(null);
+          }
+        }}
+        onChanged={() => setRefreshKey((value) => value + 1)}
+      />
+    </>
   );
 }
