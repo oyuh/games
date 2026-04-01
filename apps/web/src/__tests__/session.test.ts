@@ -6,6 +6,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const originalFetch = globalThis.fetch;
+
 // Mock localStorage
 const store: Record<string, string> = {};
 const localStorageMock = {
@@ -21,7 +23,12 @@ Object.defineProperty(globalThis, "localStorage", { value: localStorageMock, wri
 // Mock window.dispatchEvent
 const dispatchMock = vi.fn();
 Object.defineProperty(globalThis, "window", {
-  value: { dispatchEvent: dispatchMock, CustomEvent: class CE { detail: unknown; type: string; constructor(type: string, opts?: { detail?: unknown }) { this.type = type; this.detail = opts?.detail; } } },
+  value: {
+    dispatchEvent: dispatchMock,
+    setTimeout,
+    clearTimeout,
+    CustomEvent: class CE { detail: unknown; type: string; constructor(type: string, opts?: { detail?: unknown }) { this.type = type; this.detail = opts?.detail; } }
+  },
   writable: true,
 });
 Object.defineProperty(globalThis, "CustomEvent", {
@@ -36,6 +43,7 @@ import {
   getStoredName,
   getStoredSessionProof,
   getSessionRequestHeaders,
+  syncSessionIdentityForBoot,
   syncStoredIdentity,
   setStoredName,
   getPlayerProfile,
@@ -58,6 +66,12 @@ beforeEach(() => {
   dispatchMock.mockClear();
   // Reset the store
   for (const k of Object.keys(store)) delete store[k];
+  vi.restoreAllMocks();
+  if (originalFetch) {
+    Object.defineProperty(globalThis, "fetch", { value: originalFetch, writable: true, configurable: true });
+  } else {
+    Reflect.deleteProperty(globalThis, "fetch");
+  }
 });
 
 // ─── randomName ─────────────────────────────────────────────
@@ -177,6 +191,57 @@ describe("getPlayerProfile", () => {
     expect(profile).toHaveProperty("name");
     expect(typeof profile.id).toBe("string");
     expect(typeof profile.name).toBe("string");
+  });
+});
+
+describe("syncSessionIdentityForBoot", () => {
+  it("retries until it gets a verified proof", async () => {
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new Error("cold start"))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          sessionId: "server-session",
+          name: "Server Name",
+          zeroSessionProof: "fresh-proof",
+          resetRequired: true,
+          created: false,
+          source: "claimed",
+        }),
+      });
+
+    Object.defineProperty(globalThis, "fetch", { value: fetchMock, writable: true, configurable: true });
+
+    const result = await syncSessionIdentityForBoot("https://api.example.com", {
+      attempts: 2,
+      retryDelayMs: 0,
+      timeoutMs: 2000,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({
+      sessionId: "server-session",
+      name: "Server Name",
+      zeroSessionProof: "fresh-proof",
+      source: "claimed",
+    });
+    expect(getStoredSessionProof()).toBe("fresh-proof");
+  });
+
+  it("throws if boot cannot get a verified proof", async () => {
+    Object.defineProperty(globalThis, "fetch", {
+      value: vi.fn().mockRejectedValue(new Error("offline")),
+      writable: true,
+      configurable: true,
+    });
+
+    await expect(
+      syncSessionIdentityForBoot("https://api.example.com", {
+        attempts: 2,
+        retryDelayMs: 0,
+        timeoutMs: 2000,
+      })
+    ).rejects.toThrow("verified session");
   });
 });
 

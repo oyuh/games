@@ -106,4 +106,25 @@ describe("session identity helpers", () => {
       shouldResetSession: true,
     });
   });
+
+  it("does not force a name reset when the caller omitted claimedName", () => {
+    const decision = chooseCanonicalSession({
+      cookieSessionId: null,
+      claimedSessionId: "real-session",
+      claimedName: undefined,
+      fingerprint: "fp-1",
+      cookieSession: null,
+      claimedSession: { id: "real-session", name: "Lawson", fingerprint: "fp-1", lastSeen: 20 },
+      fingerprintSession: { id: "real-session", name: "Lawson", fingerprint: "fp-1", lastSeen: 20 },
+      allowCreate: false,
+      newSessionId: "new-session",
+    });
+
+    expect(decision).toMatchObject({
+      sessionId: "real-session",
+      shouldResetSession: false,
+      shouldResetName: false,
+      source: "claimed",
+    });
+  });
 });
