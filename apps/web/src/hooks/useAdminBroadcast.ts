@@ -107,9 +107,13 @@ function handleMessage(msg: AdminBroadcastMessage) {
       break;
 
     case "admin:name-changed":
-      if (msg.sessionId === sessionId && msg.name) {
-        setStoredName(msg.name);
-        showToast(`Your name has been changed to "${msg.name}" by an admin.`, "info");
+      if (msg.sessionId === sessionId) {
+        setStoredName(msg.name ?? "");
+        if (msg.name) {
+          showToast(`Your name has been changed to "${msg.name}" by an admin.`, "info");
+        } else {
+          showToast("Your name was cleared by an admin. Choose a new one to keep playing.", "info");
+        }
       }
       break;
 

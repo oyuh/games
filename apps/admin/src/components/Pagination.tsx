@@ -1,5 +1,8 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
 export function Pagination({
   page,
   totalPages,
@@ -35,53 +38,58 @@ export function Pagination({
   if (totalPages > 1) pages.push(totalPages);
 
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", fontSize: "0.8125rem" }}>
-      <span style={{ color: "var(--muted)" }}>
+    <div className="flex flex-col gap-3 rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-200 sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-slate-400">
         {startItem}–{endItem} of {total.toLocaleString()}
       </span>
 
-      <div style={{ display: "flex", gap: "0.25rem", alignItems: "center" }}>
-        <button
-          className="btn btn-ghost"
-          style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full border-white/10 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08]"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
         >
-          ← Prev
-        </button>
+          <ChevronLeft className="size-4" />
+          Prev
+        </Button>
 
         {pages.map((p, i) =>
           p === "..." ? (
-            <span key={`dots-${i}`} style={{ padding: "0.25rem 0.25rem", color: "var(--muted)" }}>…</span>
+            <span key={`dots-${i}`} className="px-1 text-slate-500">…</span>
           ) : (
-            <button
+            <Button
               key={p}
-              className={`btn ${p === page ? "btn-primary" : "btn-ghost"}`}
-              style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", minWidth: "2rem" }}
+              variant={p === page ? "default" : "outline"}
+              size="sm"
+              className={p === page ? "min-w-9 rounded-full bg-white text-slate-900 hover:bg-white/90" : "min-w-9 rounded-full border-white/10 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08]"}
               onClick={() => onPageChange(p)}
             >
               {p}
-            </button>
+            </Button>
           )
         )}
 
-        <button
-          className="btn btn-ghost"
-          style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full border-white/10 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08]"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
         >
-          Next →
-        </button>
+          Next
+          <ChevronRight className="size-4" />
+        </Button>
       </div>
 
       {onPageSizeChange && (
-        <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
-          <span style={{ color: "var(--muted)" }}>Per page:</span>
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <span>Per page:</span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            style={{ width: "auto", padding: "0.2rem 0.4rem", fontSize: "0.75rem" }}
+            className="h-9 rounded-full border border-white/10 bg-white/[0.03] px-3 text-sm text-slate-50 outline-none"
           >
             {pageSizeOptions.map((size) => (
               <option key={size} value={size}>{size}</option>
