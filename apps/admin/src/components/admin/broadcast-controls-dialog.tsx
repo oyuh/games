@@ -122,7 +122,7 @@ export function BroadcastControlsDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[min(980px,95vw)] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
+      <DialogContent className="[--dialog-content-width:74rem] 2xl:[--dialog-content-width:78rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
         <DialogHeader>
           <DialogTitle className="text-xl text-white">Broadcast controls</DialogTitle>
           <DialogDescription className="text-slate-300/74">

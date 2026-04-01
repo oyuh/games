@@ -133,7 +133,7 @@ export function ClientDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(980px,95vw)] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
+      <DialogContent className="[--dialog-content-width:80rem] 2xl:[--dialog-content-width:86rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
         <DialogHeader>
           <DialogTitle className="text-xl text-white">Client controls</DialogTitle>
           <DialogDescription className="text-slate-300/74">
@@ -142,7 +142,7 @@ export function ClientDetailDialog({
         </DialogHeader>
 
         {!activeClient ? null : (
-          <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+          <div className="grid gap-5 xl:grid-cols-[minmax(23rem,0.9fr)_minmax(30rem,1.1fr)] xl:items-start 2xl:grid-cols-[minmax(25rem,0.86fr)_minmax(34rem,1.14fr)]">
             <Surface>
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -428,7 +428,7 @@ export function ClientDetailDialog({
         )}
 
         {loading && !detail ? (
-          <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+          <div className="grid gap-5 xl:grid-cols-[minmax(23rem,0.9fr)_minmax(30rem,1.1fr)] xl:items-start 2xl:grid-cols-[minmax(25rem,0.86fr)_minmax(34rem,1.14fr)]">
             <div className="space-y-4">
               <Skeleton className="h-28 bg-white/5" />
               <Skeleton className="h-28 bg-white/5" />
