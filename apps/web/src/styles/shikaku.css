@@ -266,17 +266,9 @@
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
-/* Floating variant for large puzzles — stays visible outside scroll container */
+/* Floating variant for large puzzles on mobile — hidden on desktop */
 .shikaku-dim-counter--floating {
-  position: absolute;
-  top: 0.5rem;
-  left: 50%;
-  transform: translate(-50%, 0);
-  z-index: 10;
-  font-size: 1.05rem;
-  padding: 0.3rem 0.75rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  display: none;
 }
 
 /* ── Scroll navigation — integrated into footer for expert on mobile ── */
@@ -1230,6 +1222,24 @@
   .shikaku-page[data-difficulty="hard"] .shikaku-grid-wrap::-webkit-scrollbar,
   .shikaku-page[data-difficulty="expert"] .shikaku-grid-wrap::-webkit-scrollbar {
     display: none;
+  }
+  /* On mobile large puzzles: hide in-grid counter, show floating one */
+  .shikaku-page[data-difficulty="hard"] .shikaku-grid-wrap > .shikaku-dim-counter,
+  .shikaku-page[data-difficulty="expert"] .shikaku-grid-wrap > .shikaku-dim-counter {
+    display: none;
+  }
+  .shikaku-page[data-difficulty="hard"] .shikaku-dim-counter--floating,
+  .shikaku-page[data-difficulty="expert"] .shikaku-dim-counter--floating {
+    display: block;
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translate(-50%, 0);
+    z-index: 10;
+    font-size: 1.05rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
   }
   /* Hard: grid larger than viewport — enables scroll in both axes */
   .shikaku-page[data-difficulty="hard"] .shikaku-grid {
