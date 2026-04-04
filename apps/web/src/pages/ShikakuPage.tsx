@@ -1340,8 +1340,8 @@ function ShikakuGridWrapper({
           />
         )}
 
-        {/* Drag dimension counter — positioned at the preview rect */}
-        {previewRect && currentPuzzle && (
+        {/* Drag dimension counter — positioned at the preview rect (non-large only) */}
+        {previewRect && currentPuzzle && !isLarge && (
           <div
             className="shikaku-dim-counter"
             style={{
@@ -1354,6 +1354,12 @@ function ShikakuGridWrapper({
         )}
       </div>
 
+      {/* Floating dim counter for large puzzles — stays visible during scroll */}
+      {previewRect && currentPuzzle && isLarge && (
+        <div className="shikaku-dim-counter shikaku-dim-counter--floating">
+          {previewRect.w}×{previewRect.h}
+        </div>
+      )}
     </div>
   );
 }
