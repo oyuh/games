@@ -951,6 +951,7 @@
 .shikaku-lb-col-header span:nth-child(2) { flex: 1; }
 .shikaku-lb-col-header span:nth-child(3) { min-width: 3.5rem; text-align: right; }
 .shikaku-lb-col-header span:nth-child(4) { min-width: 4rem; text-align: right; }
+.shikaku-lb-col-header span:nth-child(5) { min-width: 2rem; text-align: center; }
 
 .shikaku-lb-row {
   display: flex;
@@ -1352,4 +1353,77 @@
   .shikaku-lb-count {
     text-align: center;
   }
+}
+
+/* ── Copy seed button in leaderboard ─────────────────────────── */
+.shikaku-lb-copy-seed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.2rem 0.35rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 0.15s ease, opacity 0.15s ease;
+  opacity: 0.35;
+}
+.shikaku-lb-copy-seed:hover {
+  opacity: 0.8;
+  color: var(--foreground);
+}
+
+/* ── Custom seed input on menu ───────────────────────────────── */
+.shikaku-custom-seed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 280px;
+  width: 100%;
+}
+.shikaku-custom-seed-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+.shikaku-custom-seed-input {
+  flex: 1;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  padding: 0.55rem 0.875rem;
+  height: 2.25rem;
+  box-sizing: border-box;
+}
+.shikaku-custom-seed-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.shikaku-custom-seed-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.shikaku-custom-seed-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.shikaku-custom-seed-note {
+  font-size: 0.65rem;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  font-style: italic;
 }

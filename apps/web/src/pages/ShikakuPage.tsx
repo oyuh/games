@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { FiAward, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiClock, FiCornerUpLeft, FiFlag, FiGrid, FiHelpCircle, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
+import { FiArrowRight, FiAward, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiClipboard, FiClock, FiCopy, FiCornerUpLeft, FiFlag, FiGrid, FiHash, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
 import {
   calculateScore,
   Difficulty,
@@ -61,6 +61,7 @@ interface LeaderboardEntry {
   timeMs: number;
   difficulty: Difficulty;
   createdAt: number;
+  seed: number;
   isOwn: boolean;
 }
 
@@ -157,6 +158,10 @@ export function ShikakuPage() {
   const [infiniteMode, setInfiniteMode] = useState(false);
   const [infiniteSolved, setInfiniteSolved] = useState(0);
   const infiniteRng = useRef<(() => number) | null>(null);
+
+  // Custom seed mode
+  const [customMode, setCustomMode] = useState(false);
+  const [customSeedInput, setCustomSeedInput] = useState("");
 
   /* ── Leaderboard fetch ──────────────────────────────────── */
   const [lbPage, setLbPage] = useState(1);
@@ -342,6 +347,7 @@ export function ShikakuPage() {
     setSubmittingScore(false);
     setScoreSubmissionStatus(null);
     lastSubmitTime.current = 0;
+    setCustomMode(false);
 
     if (infiniteMode) {
       const rng = mulberry32(newSeed);
@@ -358,6 +364,31 @@ export function ShikakuPage() {
 
     setPhase("countdown");
   }, [infiniteMode]);
+
+  /* ── Start a custom seed run ─────────────────────────────── */
+  const startCustomRun = useCallback((diff: Difficulty, customSeed: number) => {
+    setSeed(customSeed);
+    setCurrentPuzzleIdx(0);
+    setPlacedRects([]);
+    setColorCounter(0);
+    setElapsedMs(0);
+    setPuzzleTimes([]);
+    setFlashingRects(new Set());
+    setUndoStack([]);
+    setDifficulty(diff);
+    setCountdownNum(3);
+    setScoreSubmitted(false);
+    setSubmittingScore(false);
+    setScoreSubmissionStatus(null);
+    lastSubmitTime.current = 0;
+    setCustomMode(true);
+
+    infiniteRng.current = null;
+    const generated = generateRun(customSeed, diff);
+    setPuzzles(generated);
+
+    setPhase("countdown");
+  }, []);
 
   /* ── Check if a placed rect is "valid" (exactly 1 number, area matches) ── */
   const isRectValid = useCallback((rect: Rect): boolean => {
@@ -679,6 +710,16 @@ export function ShikakuPage() {
       return;
     }
 
+    if (customMode) {
+      setScoreSubmissionStatus({
+        canSubmit: false,
+        pending: false,
+        tone: "info",
+        message: "Custom seed scores are unranked and cannot be submitted.",
+      });
+      return;
+    }
+
     if (completedCount < PUZZLES_PER_RUN) {
       setScoreSubmissionStatus({
         canSubmit: false,
@@ -706,7 +747,7 @@ export function ShikakuPage() {
     return () => {
       cancelled = true;
     };
-  }, [phase, scoreSubmitted, puzzleTimes.length, infiniteMode, seed, difficulty, finalScore, finalTimeMs, resolveScoreEligibility]);
+  }, [phase, scoreSubmitted, puzzleTimes.length, infiniteMode, customMode, seed, difficulty, finalScore, finalTimeMs, resolveScoreEligibility]);
 
   /* ── Score submission ───────────────────────────────────── */
   const submitScore = useCallback(async (
@@ -858,7 +899,7 @@ export function ShikakuPage() {
               {countdownNum > 0 ? countdownNum : "GO!"}
             </div>
             <p className="shikaku-countdown-label">
-              {difficulty} — {infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
+              {difficulty} — {customMode ? "custom seed" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
             </p>
           </div>
         </div>
@@ -904,9 +945,60 @@ export function ShikakuPage() {
                 ? "∞ Infinite mode — play endlessly, no score submission"
                 : `${PUZZLES_PER_RUN} puzzles per run — click selected to start`}
             </p>
-            <button className="btn btn-muted shikaku-info-btn" onClick={() => setShowDemo(true)}>
-              <FiHelpCircle size={16} /> How to Play
-            </button>
+
+            {/* Custom seed input */}
+            <div className="shikaku-custom-seed">
+              <div className="shikaku-custom-seed-row">
+                <button
+                  className="shikaku-custom-seed-btn"
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText();
+                      const cleaned = text.replace(/[^0-9]/g, "").slice(0, 10);
+                      if (cleaned) setCustomSeedInput(cleaned);
+                    } catch { /* clipboard not available */ }
+                  }}
+                  title="Paste from clipboard"
+                >
+                  <FiClipboard size={14} />
+                </button>
+                <input
+                  type="text"
+                  className="input shikaku-custom-seed-input"
+                  placeholder="Enter custom seed"
+                  value={customSeedInput}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    setCustomSeedInput(val);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const parsed = parseInt(customSeedInput, 10);
+                      if (!isNaN(parsed) && parsed > 0) {
+                        startCustomRun(difficulty, parsed);
+                        setCustomSeedInput("");
+                      }
+                    }
+                  }}
+                  maxLength={10}
+                />
+                <button
+                  className="shikaku-custom-seed-btn"
+                  onClick={() => {
+                    const parsed = parseInt(customSeedInput, 10);
+                    if (!isNaN(parsed) && parsed > 0) {
+                      startCustomRun(difficulty, parsed);
+                      setCustomSeedInput("");
+                    }
+                  }}
+                  disabled={!customSeedInput || isNaN(parseInt(customSeedInput, 10)) || parseInt(customSeedInput, 10) <= 0}
+                  title="Play custom seed"
+                >
+                  <FiArrowRight size={14} />
+                </button>
+              </div>
+              <p className="shikaku-custom-seed-note">Custom seed runs are unranked</p>
+            </div>
           </div>
 
           {showLeaderboard && (
@@ -936,9 +1028,9 @@ export function ShikakuPage() {
   if (phase === "finished") {
     const completedCount = puzzleTimes.length;
     const gavUp = infiniteMode ? true : completedCount < PUZZLES_PER_RUN;
-    const hasLeaderboard = leaderboard.length > 0 && !infiniteMode;
+    const hasLeaderboard = leaderboard.length > 0 && !infiniteMode && !customMode;
     const hasPuzzleTimes = puzzleTimes.length > 0;
-    const showSubmitButton = !infiniteMode && (scoreSubmitted || submittingScore || Boolean(scoreSubmissionStatus?.canSubmit));
+    const showSubmitButton = !infiniteMode && !customMode && (scoreSubmitted || submittingScore || Boolean(scoreSubmissionStatus?.canSubmit));
     const statusLabel = scoreSubmissionStatus?.pending
       ? (submittingScore ? "Submitting" : "Checking")
       : scoreSubmitted && scoreSubmissionStatus?.tone === "success"
@@ -951,12 +1043,14 @@ export function ShikakuPage() {
         <div className="shikaku-end-wrap">
           <div className="shikaku-finished shikaku-finished-enter">
             {/* ── Header tile ── */}
-            <div className={`shikaku-end-header ${gavUp && !infiniteMode ? "shikaku-end-header--fail" : "shikaku-end-header--success"}`}>
+            <div className={`shikaku-end-header ${gavUp && !infiniteMode && !customMode ? "shikaku-end-header--fail" : "shikaku-end-header--success"}`}>
               <p className="shikaku-end-title">
-                {infiniteMode ? "∞ Run Over" : gavUp ? "Run Over" : "Run Complete!"}
+                {customMode ? "Custom Run Over" : infiniteMode ? "∞ Run Over" : gavUp ? "Run Over" : "Run Complete!"}
               </p>
               <p className="shikaku-end-sub">
-                {infiniteMode
+                {customMode
+                  ? `Custom seed ${seed} — ${gavUp ? `completed ${completedCount - 1} of ${PUZZLES_PER_RUN} puzzles` : `all ${PUZZLES_PER_RUN} puzzles solved!`}`
+                  : infiniteMode
                   ? `Solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} in infinite mode`
                   : gavUp ? `Completed ${completedCount - 1} of ${PUZZLES_PER_RUN} puzzles` : `All ${PUZZLES_PER_RUN} puzzles solved!`}
               </p>
@@ -974,7 +1068,7 @@ export function ShikakuPage() {
                   <span className="shikaku-end-tile-label">Score</span>
                   <span className="shikaku-end-tile-value">
                     {finalScore.toLocaleString()}
-                    {infiniteMode && <span style={{ fontSize: "0.6em", opacity: 0.5, marginLeft: 4 }}>(unranked)</span>}
+                    {(infiniteMode || customMode) && <span style={{ fontSize: "0.6em", opacity: 0.5, marginLeft: 4 }}>(unranked)</span>}
                   </span>
                 </div>
                 <div className="shikaku-end-tile shikaku-stat-pop" style={{ animationDelay: "0.3s" }}>
@@ -1058,7 +1152,7 @@ export function ShikakuPage() {
               <button className="btn btn-muted" onClick={() => setPhase("menu")} title="Back to difficulty select">
                 Menu
               </button>
-              {!infiniteMode && (
+              {!infiniteMode && !customMode && (
                 <button
                   className="btn btn-muted"
                   onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView); }}
@@ -1117,6 +1211,18 @@ export function ShikakuPage() {
             </span>
             <span className="badge badge-success" data-tooltip="Difficulty level" data-tooltip-variant="info">
               {difficulty}
+            </span>
+            {customMode && (
+              <span className="badge" data-tooltip="Custom seed (unranked)" data-tooltip-variant="info" style={{ opacity: 0.7 }}>
+                custom
+              </span>
+            )}
+            <span className="badge" data-tooltip={`Seed: ${seed} — click to copy`} data-tooltip-variant="info" style={{ cursor: "pointer", fontVariantNumeric: "tabular-nums" }}
+              onClick={() => {
+                navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
+              }}
+            >
+              <FiHash size={12} /> {seed}
             </span>
           </div>
         </div>
@@ -1720,6 +1826,7 @@ function ShikakuLeaderboard({
               <span data-tooltip="Player name">Player</span>
               <span data-tooltip="Points earned">Score</span>
               <span data-tooltip="Completion time">Time</span>
+              <span data-tooltip="Copy seed">Seed</span>
             </div>
             {entries.map((entry, i) => {
               const rank = (page - 1) * pageSize + i + 1;
@@ -1734,6 +1841,16 @@ function ShikakuLeaderboard({
                   </div>
                   <span className="shikaku-lb-score">{entry.score.toLocaleString()}</span>
                   <span className="shikaku-lb-time">{formatTime(entry.timeMs)}</span>
+                  <button
+                    className="shikaku-lb-copy-seed"
+                    title={`Copy seed: ${entry.seed}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(String(entry.seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
+                    }}
+                  >
+                    <FiCopy size={12} />
+                  </button>
                 </div>
               );
             })}
