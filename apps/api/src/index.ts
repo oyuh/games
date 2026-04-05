@@ -1561,6 +1561,7 @@ app.get("/api/shikaku/leaderboard", async (c) => {
         difficulty: shikakuScores.difficulty,
         createdAt: shikakuScores.createdAt,
         sessionId: shikakuScores.sessionId,
+        seed: shikakuScores.seed,
       })
       .from(shikakuScores)
       .where(and(...filters))
@@ -1605,6 +1606,7 @@ app.get("/api/shikaku/leaderboard", async (c) => {
       timeMs: r.timeMs,
       difficulty: r.difficulty,
       createdAt: r.createdAt,
+      seed: r.seed,
       isOwn: sessionIdParam ? r.sessionId === sessionIdParam : false,
     })),
     personalBest,
