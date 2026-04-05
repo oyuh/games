@@ -210,6 +210,44 @@
   margin-top: 0.2rem;
 }
 
+/* ── Generating ────────────────────────────────────────────── */
+.shikaku-generating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  min-height: 50vh;
+  animation: shikaku-fade-in 0.25s ease-out both;
+}
+@keyframes shikaku-fade-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+.shikaku-generating-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid color-mix(in srgb, #34d399 15%, transparent);
+  border-top-color: #34d399;
+  border-radius: 50%;
+  animation: shikaku-spin 0.8s linear infinite;
+}
+@keyframes shikaku-spin {
+  to { transform: rotate(360deg); }
+}
+.shikaku-generating-label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.shikaku-generating-sub {
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
 /* ── Countdown ─────────────────────────────────────────────── */
 .shikaku-countdown {
   display: flex;
@@ -576,6 +614,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   width: 100%;
+  align-items: stretch;
 }
 .shikaku-end-grid--stats-only {
   grid-template-columns: 1fr;
@@ -588,7 +627,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
-  align-content: start;
+  align-content: stretch;
 }
 /* When the last tile is alone on its row, span both columns at full width */
 .shikaku-end-stats > .shikaku-end-tile:last-child:nth-child(odd) {
@@ -612,6 +651,33 @@
   background: var(--card);
   border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
   transition: border-color 0.2s, background 0.2s;
+}
+
+/* Seed tile with copy button */
+.shikaku-end-tile--seed {
+  position: relative;
+  cursor: default;
+}
+.shikaku-seed-copy-btn {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--secondary) 20%, transparent);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+.shikaku-seed-copy-btn:hover {
+  background: color-mix(in srgb, #34d399 18%, transparent);
+  color: #34d399;
 }
 .shikaku-end-tile:hover {
   border-color: color-mix(in srgb, #34d399 30%, transparent);
@@ -642,20 +708,60 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── List tiles — right column ── */
-.shikaku-end-lists {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
+/* ── List tile — right column ── */
 .shikaku-end-list-tile {
   background: var(--card);
   border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
   border-radius: 0.75rem;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
+
+/* Tab bar */
+.shikaku-end-tab-bar {
+  display: flex;
+  background: color-mix(in srgb, var(--secondary) 8%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--secondary) 20%, transparent);
+}
+.shikaku-end-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.5rem;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  position: relative;
+}
+.shikaku-end-tab:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--secondary) 10%, transparent);
+}
+.shikaku-end-tab--active {
+  color: #34d399;
+}
+.shikaku-end-tab--active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: #34d399;
+  border-radius: 2px;
+}
+
 .shikaku-end-list-header {
   display: flex;
   justify-content: space-between;
@@ -671,8 +777,9 @@
 .shikaku-end-list-body {
   display: flex;
   flex-direction: column;
-  max-height: 180px;
   overflow-y: auto;
+  flex: 1 1 0;
+  min-height: 0;
 }
 .shikaku-end-list-body::-webkit-scrollbar { width: 4px; }
 .shikaku-end-list-body::-webkit-scrollbar-track { background: transparent; }
@@ -704,6 +811,15 @@
 }
 .shikaku-end-list-row--self {
   background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.shikaku-end-list-separator {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  padding: 0.15rem 0;
+  letter-spacing: 0.2em;
+  border-top: 1px solid color-mix(in srgb, var(--secondary) 15%, transparent);
 }
 
 /* ── Action bar ── */

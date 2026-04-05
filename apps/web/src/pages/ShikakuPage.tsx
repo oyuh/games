@@ -51,7 +51,7 @@ function withAlpha(hex: string, alpha: number): string {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
-type GamePhase = "menu" | "countdown" | "playing" | "puzzle-complete" | "finished";
+type GamePhase = "menu" | "generating" | "countdown" | "playing" | "puzzle-complete" | "finished";
 
 /* ── Leaderboard entry type ───────────────────────────────── */
 interface LeaderboardEntry {
@@ -140,6 +140,7 @@ export function ShikakuPage() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
   const [personalBest, setPersonalBest] = useState<PersonalBest | null>(null);
+  const [endListTab, setEndListTab] = useState<"times" | "scores">("times");
 
   // Final score
   const [finalScore, setFinalScore] = useState(0);
@@ -331,6 +332,8 @@ export function ShikakuPage() {
   }, [phase, countdownNum]);
 
   /* ── Start a new run ────────────────────────────────────── */
+  const pendingGenRef = useRef<{ diff: Difficulty; newSeed: number; custom: boolean } | null>(null);
+
   const startRun = useCallback((diff: Difficulty) => {
     const newSeed = Math.floor(Math.random() * 2147483647);
     setSeed(newSeed);
@@ -349,21 +352,9 @@ export function ShikakuPage() {
     lastSubmitTime.current = 0;
     setCustomMode(false);
 
-    if (infiniteMode) {
-      const rng = mulberry32(newSeed);
-      infiniteRng.current = rng;
-      const { rows, cols } = DIFFICULTY_CONFIG[diff];
-      const firstPuzzle = generatePuzzle(rows, cols, rng);
-      setPuzzles([firstPuzzle]);
-      setInfiniteSolved(0);
-    } else {
-      infiniteRng.current = null;
-      const generated = generateRun(newSeed, diff);
-      setPuzzles(generated);
-    }
-
-    setPhase("countdown");
-  }, [infiniteMode]);
+    pendingGenRef.current = { diff, newSeed, custom: false };
+    setPhase("generating");
+  }, []);
 
   /* ── Start a custom seed run ─────────────────────────────── */
   const startCustomRun = useCallback((diff: Difficulty, customSeed: number) => {
@@ -383,12 +374,37 @@ export function ShikakuPage() {
     lastSubmitTime.current = 0;
     setCustomMode(true);
 
-    infiniteRng.current = null;
-    const generated = generateRun(customSeed, diff);
-    setPuzzles(generated);
-
-    setPhase("countdown");
+    pendingGenRef.current = { diff, newSeed: customSeed, custom: true };
+    setPhase("generating");
   }, []);
+
+  /* ── Deferred puzzle generation (lets animation paint first) ── */
+  useEffect(() => {
+    if (phase !== "generating") return;
+    const gen = pendingGenRef.current;
+    if (!gen) return;
+
+    const raf = requestAnimationFrame(() => {
+      const timer = setTimeout(() => {
+        if (infiniteMode && !gen.custom) {
+          const rng = mulberry32(gen.newSeed);
+          infiniteRng.current = rng;
+          const { rows, cols } = DIFFICULTY_CONFIG[gen.diff];
+          const firstPuzzle = generatePuzzle(rows, cols, rng);
+          setPuzzles([firstPuzzle]);
+          setInfiniteSolved(0);
+        } else {
+          infiniteRng.current = null;
+          const generated = generateRun(gen.newSeed, gen.diff);
+          setPuzzles(generated);
+        }
+        pendingGenRef.current = null;
+        setPhase("countdown");
+      }, 0);
+      return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [phase, infiniteMode]);
 
   /* ── Check if a placed rect is "valid" (exactly 1 number, area matches) ── */
   const isRectValid = useCallback((rect: Rect): boolean => {
@@ -889,6 +905,23 @@ export function ShikakuPage() {
    *  RENDER
    * ═══════════════════════════════════════════════════════════ */
 
+  // Generating
+  if (phase === "generating") {
+    return (
+      <div className="game-page shikaku-page" data-game-theme="shikaku">
+        <div className="shikaku-container">
+          <div className="shikaku-generating">
+            <div className="shikaku-generating-spinner" />
+            <p className="shikaku-generating-label">Generating puzzles…</p>
+            <p className="shikaku-generating-sub">
+              {difficulty} — {customMode ? "custom seed" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Countdown
   if (phase === "countdown") {
     return (
@@ -1087,43 +1120,102 @@ export function ShikakuPage() {
                     <span className="shikaku-end-tile-value">#{personalBest.rank}</span>
                   </div>
                 )}
+                <div className="shikaku-end-tile shikaku-end-tile--seed shikaku-stat-pop" style={{ animationDelay: "0.45s" }}>
+                  <button
+                    className="shikaku-seed-copy-btn"
+                    title="Copy seed"
+                    onClick={() => { navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {}); }}
+                  >
+                    <FiCopy size={12} />
+                  </button>
+                  <span className="shikaku-end-tile-label">Seed</span>
+                  <span className="shikaku-end-tile-value">{seed}</span>
+                </div>
               </div>
 
-              {/* Right column: puzzle times + leaderboard */}
+              {/* Right column: tabbed puzzle times / leaderboard */}
               {(hasPuzzleTimes || hasLeaderboard) && (
-                <div className="shikaku-end-lists">
-                  {hasPuzzleTimes && (
-                    <div className="shikaku-end-list-tile">
-                      <div className="shikaku-end-list-header">
-                        <span>Puzzle Times</span>
-                      </div>
-                      <div className="shikaku-end-list-body">
+                <div className="shikaku-end-list-tile">
+                  {/* Tab bar — only show tabs when both views exist */}
+                  {hasPuzzleTimes && hasLeaderboard ? (
+                    <div className="shikaku-end-tab-bar">
+                      <button
+                        className={`shikaku-end-tab${endListTab === "times" ? " shikaku-end-tab--active" : ""}`}
+                        onClick={() => setEndListTab("times")}
+                      >
+                        <FiClock size={12} /> Puzzle Times
+                      </button>
+                      <button
+                        className={`shikaku-end-tab${endListTab === "scores" ? " shikaku-end-tab--active" : ""}`}
+                        onClick={() => setEndListTab("scores")}
+                      >
+                        <FiAward size={12} /> Top Scores
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="shikaku-end-list-header">
+                      <span>{hasLeaderboard ? <><FiAward size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Top Scores</> : "Puzzle Times"}</span>
+                      <span>{hasLeaderboard ? "Time" : ""}</span>
+                    </div>
+                  )}
+
+                  <div className="shikaku-end-list-body">
+                    {/* Puzzle Times view */}
+                    {(endListTab === "times" || !hasLeaderboard) && hasPuzzleTimes && (
+                      <>
                         {puzzleTimes.map((t, i) => (
                           <div key={i} className="shikaku-end-list-row">
                             <span>Puzzle {i + 1}{gavUp && i === puzzleTimes.length - 1 ? " (incomplete)" : ""}</span>
                             <span>{formatTime(t)}</span>
                           </div>
                         ))}
-                      </div>
-                    </div>
-                  )}
+                      </>
+                    )}
 
-                  {hasLeaderboard && (
-                    <div className="shikaku-end-list-tile">
-                      <div className="shikaku-end-list-header">
-                        <span><FiAward size={12} style={{ marginRight: 4, verticalAlign: -1 }} />Top Scores</span>
-                        <span>Time</span>
-                      </div>
-                      <div className="shikaku-end-list-body">
-                        {leaderboard.slice(0, 5).map((entry, i) => (
-                          <div key={entry.id} className={`shikaku-end-list-row${entry.isOwn ? " shikaku-end-list-row--self" : ""}`}>
-                            <span>#{i + 1} {entry.name} — {entry.score.toLocaleString()}</span>
-                            <span>{formatTime(entry.timeMs)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    {/* Top Scores view */}
+                    {endListTab === "scores" && hasLeaderboard && (() => {
+                      const top3 = leaderboard.slice(0, 3);
+                      const ownRank = personalBest?.rank ?? -1;
+                      const contextEntries: { entry: LeaderboardEntry; rank: number }[] = [];
+                      let showSeparator = false;
+
+                      if (ownRank > 3) {
+                        const nearbyEntries = leaderboard
+                          .map((e, idx) => ({ entry: e, rank: idx + 1 }))
+                          .filter(({ rank }) => rank > 3 && Math.abs(rank - ownRank) <= 5);
+
+                        if (nearbyEntries.length > 0) {
+                          showSeparator = true;
+                          contextEntries.push(...nearbyEntries);
+                        } else if (leaderboard.some(e => e.isOwn)) {
+                          showSeparator = true;
+                          leaderboard.forEach((e, idx) => {
+                            if (e.isOwn) contextEntries.push({ entry: e, rank: idx + 1 });
+                          });
+                        }
+                      }
+
+                      return (
+                        <>
+                          {top3.map((entry, i) => (
+                            <div key={entry.id} className={`shikaku-end-list-row${entry.isOwn ? " shikaku-end-list-row--self" : ""}`}>
+                              <span>#{i + 1} {entry.name} — {entry.score.toLocaleString()}</span>
+                              <span>{formatTime(entry.timeMs)}</span>
+                            </div>
+                          ))}
+                          {showSeparator && (
+                            <div className="shikaku-end-list-separator">···</div>
+                          )}
+                          {contextEntries.map(({ entry, rank }) => (
+                            <div key={entry.id} className={`shikaku-end-list-row${entry.isOwn ? " shikaku-end-list-row--self" : ""}`}>
+                              <span>#{rank} {entry.name} — {entry.score.toLocaleString()}</span>
+                              <span>{formatTime(entry.timeMs)}</span>
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               )}
             </div>
