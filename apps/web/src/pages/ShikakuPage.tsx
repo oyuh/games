@@ -1476,13 +1476,15 @@ export function ShikakuPage() {
                 custom
               </span>
             )}
-            <span className="badge" data-tooltip={`Seed: ${seed} — click to copy`} data-tooltip-variant="info" style={{ cursor: "pointer", fontVariantNumeric: "tabular-nums" }}
-              onClick={() => {
-                navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
-              }}
-            >
-              <FiHash size={12} /> {seed}
-            </span>
+            {(infiniteMode || customMode) && (
+              <span className="badge" data-tooltip={`Seed: ${seed} — click to copy`} data-tooltip-variant="info" style={{ cursor: "pointer", fontVariantNumeric: "tabular-nums" }}
+                onClick={() => {
+                  navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
+                }}
+              >
+                <FiHash size={12} /> {seed}
+              </span>
+            )}
           </div>
         </div>
 
