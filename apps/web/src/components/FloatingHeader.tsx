@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward } from "react-icons/fi";
+import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiGrid, FiHash, FiRepeat } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
@@ -16,6 +16,7 @@ import { ShikakuDemo } from "./demos/ShikakuDemo";
 import { useSettings } from "../lib/settings";
 import { getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
+import { showToast } from "../lib/toast";
 
 type GameContext = Parameters<typeof HostControlsModal>[0]["game"];
 
@@ -200,6 +201,12 @@ export function Sidebar() {
   const [infiniteEnabled, setInfiniteEnabled] = useState(false);
   const [infiniteCanToggle, setInfiniteCanToggle] = useState(true);
 
+  // Track full game state for game-mode indicator
+  const [shikakuState, setShikakuState] = useState<{
+    phase: string; infiniteMode: boolean; customMode: boolean;
+    showSeedInput: boolean; difficulty: string; seed: number | null;
+  }>({ phase: "menu", infiniteMode: false, customMode: false, showSeedInput: false, difficulty: "easy", seed: null });
+
   useEffect(() => {
     if (!isShikaku) return;
     const handler = (e: Event) => {
@@ -207,8 +214,15 @@ export function Sidebar() {
       setInfiniteEnabled(detail.enabled);
       setInfiniteCanToggle(detail.canToggle);
     };
+    const stateHandler = (e: Event) => {
+      setShikakuState((e as CustomEvent).detail);
+    };
     window.addEventListener("shikaku-infinite-state", handler);
-    return () => window.removeEventListener("shikaku-infinite-state", handler);
+    window.addEventListener("shikaku-game-state", stateHandler);
+    return () => {
+      window.removeEventListener("shikaku-infinite-state", handler);
+      window.removeEventListener("shikaku-game-state", stateHandler);
+    };
   }, [isShikaku]);
 
   useEffect(() => {
@@ -251,7 +265,7 @@ export function Sidebar() {
         aria-label="Toggle menu"
         className="sidebar-mobile-toggle"
       >
-        {mobileOpen ? <FiX size={22} /> : <FiMenu size={22} />}
+        {mobileOpen ? <FiX size={26} /> : <FiMenu size={26} />}
       </button>
 
       {/* Mobile backdrop */}
@@ -269,12 +283,12 @@ export function Sidebar() {
           data-tooltip-variant={confirmLeave ? "danger" : undefined}
           onClick={handleHomeClick}
         >
-          <FiHome size={20} />
+          <FiHome size={24} />
           <span className="sidebar-link-label">{confirmLeave ? "Leave?" : "Home"}</span>
         </Link>
         {gameContext && (
           <SidebarButton
-            icon={<PiCrownSimpleFill size={20} className="sidebar-host-icon" />}
+            icon={<PiCrownSimpleFill size={24} className="sidebar-host-icon" />}
             label="Host"
             onClick={() => { setModal("host"); setMobileOpen(false); }}
           />
@@ -283,7 +297,7 @@ export function Sidebar() {
           <SidebarButton
             icon={
               <span className="sidebar-chat-icon-wrap">
-                <FiMessageCircle size={20} />
+                <FiMessageCircle size={24} />
                 {chat.unread > 0 && (
                   <span className="sidebar-chat-badge">{chat.unread > 99 ? "99+" : chat.unread}</span>
                 )}
@@ -296,20 +310,40 @@ export function Sidebar() {
         {/^\/shikaku(\/|$)/.test(location.pathname) && (
           <>
             <button
-              className={`sidebar-link shikaku-infinite-btn${infiniteEnabled ? " shikaku-infinite-btn--active" : ""}${!infiniteCanToggle ? " shikaku-infinite-btn--disabled" : ""}`}
-              data-tooltip={infiniteCanToggle ? (infiniteEnabled ? "Infinite Mode: ON" : "Infinite Mode: OFF") : "Infinite Mode (lobby only)"}
+              className={`sidebar-link shikaku-mode-indicator${shikakuState.phase !== "menu" ? " shikaku-mode-indicator--active" : ""}`}
+              data-tooltip={
+                shikakuState.customMode
+                  ? `Seeded — ${shikakuState.difficulty} — seed ${shikakuState.seed}`
+                  : shikakuState.infiniteMode
+                    ? `Infinite — ${shikakuState.difficulty}`
+                    : `Regular — ${shikakuState.difficulty}`
+              }
               data-tooltip-pos="right"
-              disabled={!infiniteCanToggle}
               onClick={() => {
-                window.dispatchEvent(new CustomEvent("shikaku-toggle-infinite"));
+                const mode = shikakuState.customMode ? "Seeded" : shikakuState.infiniteMode ? "Infinite" : "Regular";
+                const diff = shikakuState.difficulty.charAt(0).toUpperCase() + shikakuState.difficulty.slice(1);
+                const phase = shikakuState.phase.charAt(0).toUpperCase() + shikakuState.phase.slice(1);
+                const parts = [`${mode} — ${diff}`, `Phase: ${phase}`];
+                if (shikakuState.seed) parts.push(`Seed: ${shikakuState.seed}`);
+                if (shikakuState.customMode) parts.push("Unranked");
+                else if (shikakuState.infiniteMode) parts.push("Unranked");
+                else parts.push("Ranked");
+                showToast(parts.join(" — "), "info");
                 setMobileOpen(false);
               }}
             >
-              <span style={{ fontSize: 22, lineHeight: 1, fontWeight: 700 }}>∞</span>
-              <span className="sidebar-link-label">Infinite</span>
+              {shikakuState.customMode || shikakuState.showSeedInput
+                ? <FiHash size={24} />
+                : shikakuState.infiniteMode
+                  ? <FiRepeat size={24} />
+                  : <FiGrid size={24} />
+              }
+              <span className="sidebar-link-label">
+                {shikakuState.customMode || shikakuState.showSeedInput ? "Seed" : shikakuState.infiniteMode ? "Infinite" : "Regular"}
+              </span>
             </button>
             <SidebarButton
-              icon={<FiAward size={20} />}
+              icon={<FiAward size={24} />}
               label="Leaderboard"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("shikaku-toggle-leaderboard"));
@@ -318,8 +352,8 @@ export function Sidebar() {
             />
           </>
         )}
-        <SidebarButton icon={<FiInfo size={20} />} label="Info" onClick={() => { setModal("info"); setMobileOpen(false); }} />
-        <SidebarButton icon={<FiSettings size={20} />} label="Options" onClick={() => { setModal("options"); setMobileOpen(false); }} />
+        <SidebarButton icon={<FiInfo size={24} />} label="Info" onClick={() => { setModal("info"); setMobileOpen(false); }} />
+        <SidebarButton icon={<FiSettings size={24} />} label="Options" onClick={() => { setModal("options"); setMobileOpen(false); }} />
       </nav>
 
       {/* Modals */}

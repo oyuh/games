@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { FiHome, FiMessageCircle, FiInfo, FiSettings, FiX, FiAward } from "react-icons/fi";
+import { FiHome, FiMessageCircle, FiInfo, FiSettings, FiX, FiAward, FiGrid, FiHash, FiRepeat } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { useChatContext } from "../lib/chat-context";
 import { MobileHostProvider, useMobileHost } from "../lib/mobile-host-context";
@@ -12,6 +12,7 @@ import { MobileInfoSheet } from "./components/MobileInfoSheet";
 import { MobileHostControlsSheet } from "./components/MobileHostControlsSheet";
 import { ToastContainer } from "../components/shared/ToastContainer";
 import { ConnectionDebugPanel } from "../components/shared/ConnectionDebugPanel";
+import { showToast } from "../lib/toast";
 
 export function MobileLayout() {
   return (
@@ -34,6 +35,12 @@ function MobileLayoutInner() {
   const [infiniteEnabled, setInfiniteEnabled] = useState(false);
   const [infiniteCanToggle, setInfiniteCanToggle] = useState(true);
 
+  // Track full game state for game-mode indicator
+  const [shikakuState, setShikakuState] = useState<{
+    phase: string; infiniteMode: boolean; customMode: boolean;
+    showSeedInput: boolean; difficulty: string; seed: number | null;
+  }>({ phase: "menu", infiniteMode: false, customMode: false, showSeedInput: false, difficulty: "easy", seed: null });
+
   useEffect(() => {
     if (!isShikaku) return;
     const handler = (e: Event) => {
@@ -41,8 +48,15 @@ function MobileLayoutInner() {
       setInfiniteEnabled(detail.enabled);
       setInfiniteCanToggle(detail.canToggle);
     };
+    const stateHandler = (e: Event) => {
+      setShikakuState((e as CustomEvent).detail);
+    };
     window.addEventListener("shikaku-infinite-state", handler);
-    return () => window.removeEventListener("shikaku-infinite-state", handler);
+    window.addEventListener("shikaku-game-state", stateHandler);
+    return () => {
+      window.removeEventListener("shikaku-infinite-state", handler);
+      window.removeEventListener("shikaku-game-state", stateHandler);
+    };
   }, [isShikaku]);
 
   return (
@@ -91,12 +105,24 @@ function MobileLayoutInner() {
 
         {isShikaku && (
           <button
-            className={`m-nav-item m-nav-shikaku-inf${infiniteEnabled ? " m-nav-shikaku-inf--active" : ""}${!infiniteCanToggle ? " m-nav-item--disabled" : ""}`}
-            onClick={() => window.dispatchEvent(new CustomEvent("shikaku-toggle-infinite"))}
-            disabled={!infiniteCanToggle}
+            className={`m-nav-item${shikakuState.phase !== "menu" ? " m-nav-item--active" : ""}`}
+            onClick={() => {
+              const mode = shikakuState.customMode ? "Seeded" : shikakuState.infiniteMode ? "Infinite" : "Regular";
+              const diff = shikakuState.difficulty.charAt(0).toUpperCase() + shikakuState.difficulty.slice(1);
+              const phase = shikakuState.phase.charAt(0).toUpperCase() + shikakuState.phase.slice(1);
+              const parts = [`${mode} — ${diff}`, `Phase: ${phase}`];
+              if (shikakuState.seed) parts.push(`Seed: ${shikakuState.seed}`);
+              parts.push(shikakuState.customMode || shikakuState.infiniteMode ? "Unranked" : "Ranked");
+              showToast(parts.join(" — "), "info");
+            }}
           >
-            <span style={{ fontSize: 20, lineHeight: 1, fontWeight: 700 }}>∞</span>
-            <span>Infinite</span>
+            {shikakuState.customMode || shikakuState.showSeedInput
+              ? <FiHash size={20} />
+              : shikakuState.infiniteMode
+                ? <FiRepeat size={20} />
+                : <FiGrid size={20} />
+            }
+            <span>{shikakuState.customMode || shikakuState.showSeedInput ? "Seed" : shikakuState.infiniteMode ? "Infinite" : "Regular"}</span>
           </button>
         )}
 
