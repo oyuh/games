@@ -164,6 +164,10 @@ export function ShikakuPage() {
   const [customMode, setCustomMode] = useState(false);
   const [customSeedInput, setCustomSeedInput] = useState("");
 
+  // Pause tracking — freeze timer during solved animation (non-abusable, system-controlled only)
+  const pausedMsRef = useRef(0);
+  const pauseStartRef = useRef<number | null>(null);
+
   /* ── Leaderboard fetch ──────────────────────────────────── */
   const [lbPage, setLbPage] = useState(1);
   const [lbTotalPages, setLbTotalPages] = useState(1);
@@ -259,11 +263,13 @@ export function ShikakuPage() {
     }
   }, []);
 
-  // Timer
+  // Timer — pauses automatically during solved animation (system-controlled, non-abusable)
   useEffect(() => {
     if (phase !== "playing") return;
     const iv = setInterval(() => {
-      const elapsed = Date.now() - startTime;
+      // Freeze timer while solved overlay is visible
+      if (pauseStartRef.current !== null) return;
+      const elapsed = Date.now() - startTime - pausedMsRef.current;
       setElapsedMs(elapsed);
       // Auto-end run if max play time exceeded
       const maxMs = MAX_TIME_MS[difficulty];
@@ -351,6 +357,8 @@ export function ShikakuPage() {
     setScoreSubmissionStatus(null);
     lastSubmitTime.current = 0;
     setCustomMode(false);
+    pausedMsRef.current = 0;
+    pauseStartRef.current = null;
 
     pendingGenRef.current = { diff, newSeed, custom: false };
     setPhase("generating");
@@ -373,6 +381,8 @@ export function ShikakuPage() {
     setScoreSubmissionStatus(null);
     lastSubmitTime.current = 0;
     setCustomMode(true);
+    pausedMsRef.current = 0;
+    pauseStartRef.current = null;
 
     pendingGenRef.current = { diff, newSeed: customSeed, custom: true };
     setPhase("generating");
@@ -457,12 +467,19 @@ export function ShikakuPage() {
     const puzzleTime = now - puzzleStartTime;
 
     setShowPuzzleSolvedAnim(true);
+    // Pause timer during solved animation
+    pauseStartRef.current = now;
 
     if (infiniteMode) {
       // Infinite mode: always generate next puzzle
       setPuzzleTimes((prev) => [...prev, puzzleTime]);
       setInfiniteSolved((n) => n + 1);
       setTimeout(() => {
+        // Resume timer — accumulate paused duration
+        if (pauseStartRef.current !== null) {
+          pausedMsRef.current += Date.now() - pauseStartRef.current;
+          pauseStartRef.current = null;
+        }
         setShowPuzzleSolvedAnim(false);
         const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
         const nextPuzzle = generatePuzzle(rows, cols, infiniteRng.current!);
@@ -478,6 +495,11 @@ export function ShikakuPage() {
       // Show solve animation, then next puzzle
       setPuzzleTimes((prev) => [...prev, puzzleTime]);
       setTimeout(() => {
+        // Resume timer — accumulate paused duration
+        if (pauseStartRef.current !== null) {
+          pausedMsRef.current += Date.now() - pauseStartRef.current;
+          pauseStartRef.current = null;
+        }
         setShowPuzzleSolvedAnim(false);
         setCurrentPuzzleIdx((i) => i + 1);
         setPlacedRects([]);
@@ -488,7 +510,7 @@ export function ShikakuPage() {
       }, 1200);
     } else {
       // Run complete!
-      const totalTime = now - startTime;
+      const totalTime = now - startTime - pausedMsRef.current;
       const score = calculateScore(totalTime, difficulty);
       setFinalScore(score);
       setFinalTimeMs(totalTime);
@@ -648,7 +670,8 @@ export function ShikakuPage() {
   const giveUp = useCallback(() => {
     setConfirmGiveUp(false);
     const now = Date.now();
-    const totalTime = now - startTime;
+    const currentPause = pauseStartRef.current ? now - pauseStartRef.current : 0;
+    const totalTime = now - startTime - pausedMsRef.current - currentPause;
     const puzzleTime = now - puzzleStartTime;
     setPuzzleTimes((prev) => [...prev, puzzleTime]);
 
@@ -958,7 +981,9 @@ export function ShikakuPage() {
                   key={d}
                   className={`shikaku-diff-btn ${d === difficulty ? "shikaku-diff-btn--active" : ""}`}
                   data-diff={d}
-                  title={`${d.charAt(0).toUpperCase() + d.slice(1)} — ${DIFFICULTY_CONFIG[d].label} grid`}
+                  data-tooltip={d === difficulty
+                    ? `Press again to start ${d} — ${DIFFICULTY_CONFIG[d].label} grid`
+                    : `${d.charAt(0).toUpperCase() + d.slice(1)} — ${DIFFICULTY_CONFIG[d].label} grid`}
                   onClick={() => {
                     if (d === difficulty) {
                       startRun(d);
@@ -968,22 +993,16 @@ export function ShikakuPage() {
                   }}
                 >
                   <span className="shikaku-diff-label">{DIFFICULTY_CONFIG[d].label}</span>
-                  <span className="shikaku-diff-name">{d}</span>
+                  <span className="shikaku-diff-name">{d === difficulty ? "press to start" : d}</span>
                 </button>
               ))}
             </div>
 
-            <p className="shikaku-menu-hint">
-              {infiniteMode
-                ? "∞ Infinite mode — play endlessly, no score submission"
-                : `${PUZZLES_PER_RUN} puzzles per run — click selected to start`}
-            </p>
-
-            {/* Custom seed input */}
+            {/* Custom seed input — spans full grid width below difficulty buttons */}
             <div className="shikaku-custom-seed">
               <div className="shikaku-custom-seed-row">
                 <button
-                  className="shikaku-custom-seed-btn"
+                  className="shikaku-custom-seed-btn shikaku-custom-seed-btn--side"
                   onClick={async () => {
                     try {
                       const text = await navigator.clipboard.readText();
@@ -991,47 +1010,67 @@ export function ShikakuPage() {
                       if (cleaned) setCustomSeedInput(cleaned);
                     } catch { /* clipboard not available */ }
                   }}
-                  title="Paste from clipboard"
+                  data-tooltip="Paste from clipboard"
                 >
                   <FiClipboard size={14} />
                 </button>
-                <input
-                  type="text"
-                  className="input shikaku-custom-seed-input"
-                  placeholder="Enter custom seed"
-                  value={customSeedInput}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, "");
-                    setCustomSeedInput(val);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                <div className="shikaku-custom-seed-field">
+                  <input
+                    type="text"
+                    className="input shikaku-custom-seed-input"
+                    placeholder="Custom seed"
+                    value={customSeedInput}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, "");
+                      setCustomSeedInput(val);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const parsed = parseInt(customSeedInput, 10);
+                        if (!isNaN(parsed) && parsed > 0) {
+                          startCustomRun(difficulty, parsed);
+                          setCustomSeedInput("");
+                        }
+                      }
+                    }}
+                    maxLength={10}
+                  />
+                  <button
+                    className="shikaku-custom-seed-go"
+                    onClick={() => {
                       const parsed = parseInt(customSeedInput, 10);
                       if (!isNaN(parsed) && parsed > 0) {
                         startCustomRun(difficulty, parsed);
                         setCustomSeedInput("");
                       }
-                    }
-                  }}
-                  maxLength={10}
-                />
+                    }}
+                    disabled={!customSeedInput || isNaN(parseInt(customSeedInput, 10)) || parseInt(customSeedInput, 10) <= 0}
+                    data-tooltip={`Play custom seed on ${difficulty}`}
+                  >
+                    <FiArrowRight size={14} />
+                  </button>
+                </div>
                 <button
-                  className="shikaku-custom-seed-btn"
-                  onClick={() => {
-                    const parsed = parseInt(customSeedInput, 10);
-                    if (!isNaN(parsed) && parsed > 0) {
-                      startCustomRun(difficulty, parsed);
-                      setCustomSeedInput("");
-                    }
-                  }}
-                  disabled={!customSeedInput || isNaN(parseInt(customSeedInput, 10)) || parseInt(customSeedInput, 10) <= 0}
-                  title="Play custom seed"
+                  className="shikaku-custom-seed-btn shikaku-custom-seed-btn--side"
+                  onClick={() => setCustomSeedInput("")}
+                  disabled={!customSeedInput}
+                  data-tooltip="Clear seed"
                 >
-                  <FiArrowRight size={14} />
+                  <FiX size={14} />
                 </button>
               </div>
-              <p className="shikaku-custom-seed-note">Custom seed runs are unranked</p>
+              {customSeedInput && (
+                <p className="shikaku-custom-seed-note">
+                  Starts <strong>{difficulty}</strong> ({DIFFICULTY_CONFIG[difficulty].label}) with seed <strong>{customSeedInput}</strong> — unranked
+                </p>
+              )}
             </div>
+
+            <p className="shikaku-menu-hint">
+              {infiniteMode
+                ? `∞ Infinite ${difficulty} (${DIFFICULTY_CONFIG[difficulty].label}) — play endlessly, unranked`
+                : `${PUZZLES_PER_RUN} puzzles · ${difficulty} · ${DIFFICULTY_CONFIG[difficulty].label} — ${customSeedInput ? "enter seed or " : ""}click selected to start`}
+            </p>
           </div>
 
           {showLeaderboard && (
@@ -1123,7 +1162,7 @@ export function ShikakuPage() {
                 <div className="shikaku-end-tile shikaku-end-tile--seed shikaku-stat-pop" style={{ animationDelay: "0.45s" }}>
                   <button
                     className="shikaku-seed-copy-btn"
-                    title="Copy seed"
+                    data-tooltip="Copy seed"
                     onClick={() => { navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {}); }}
                   >
                     <FiCopy size={12} />
@@ -1227,7 +1266,7 @@ export function ShikakuPage() {
                   className={`btn ${scoreSubmitted ? "btn-muted" : "btn-primary"} game-action-btn`}
                   onClick={() => submitScore(seed, difficulty, finalScore, finalTimeMs)}
                   disabled={scoreSubmitted || submittingScore || scoreSubmissionStatus?.pending}
-                  title={scoreSubmitted ? "Score already submitted" : "Submit your score to the leaderboard"}
+                  data-tooltip={scoreSubmitted ? "Score already submitted" : "Submit your score to the leaderboard"}
                 >
                   {submittingScore ? (
                     <>Submitting...</>
@@ -1238,17 +1277,17 @@ export function ShikakuPage() {
                   )}
                 </button>
               )}
-              <button className="btn btn-primary game-action-btn" onClick={() => startRun(difficulty)} title="Start a new run">
+              <button className="btn btn-primary game-action-btn" onClick={() => startRun(difficulty)} data-tooltip="Start a new run">
                 <FiRepeat size={16} /> Play Again
               </button>
-              <button className="btn btn-muted" onClick={() => setPhase("menu")} title="Back to difficulty select">
+              <button className="btn btn-muted" onClick={() => setPhase("menu")} data-tooltip="Back to difficulty select">
                 Menu
               </button>
               {!infiniteMode && !customMode && (
                 <button
                   className="btn btn-muted"
                   onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView); }}
-                  title="View top scores"
+                  data-tooltip="View top scores"
                 >
                   <FiAward size={16} /> Leaderboard
                 </button>
@@ -1380,6 +1419,14 @@ export function ShikakuPage() {
               data-tooltip="Leaderboard"
             >
               <FiAward size={16} />
+            </button>
+            <button
+              className="shikaku-icon-btn shikaku-icon-btn--restart"
+              onClick={() => startRun(difficulty)}
+              disabled={showPuzzleSolvedAnim}
+              data-tooltip="Restart"
+            >
+              <FiRepeat size={16} />
             </button>
             <button
               className="shikaku-icon-btn shikaku-icon-btn--danger"
@@ -1935,7 +1982,7 @@ function ShikakuLeaderboard({
                   <span className="shikaku-lb-time">{formatTime(entry.timeMs)}</span>
                   <button
                     className="shikaku-lb-copy-seed"
-                    title={`Copy seed: ${entry.seed}`}
+                    data-tooltip={`Copy seed: ${entry.seed}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       navigator.clipboard.writeText(String(entry.seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
