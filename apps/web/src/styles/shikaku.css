@@ -62,13 +62,13 @@
 .shikaku-diff-btn[data-diff="hard"]   { --diff-color: #f59e0b; }
 .shikaku-diff-btn[data-diff="expert"] { --diff-color: #f87171; }
 
-/* ── Menu — centered hero + 2×2 grid ──────────────────────── */
+/* ── Menu ─────────────────────────────────────────────────── */
 .shikaku-menu {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.6rem;
   width: 100%;
   flex: 1;
 }
@@ -76,152 +76,328 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.35rem;
+  gap: 0.5rem;
 }
 .shikaku-title {
-  font-size: 2rem;
+  font-size: 3.2rem;
   font-weight: 900;
   color: #34d399;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
   line-height: 1;
-}
-.shikaku-title svg {
-  flex-shrink: 0;
-  width: 1em;
-  height: 1em;
+  letter-spacing: -0.02em;
 }
 .shikaku-subtitle {
-  font-size: 0.82rem;
+  font-size: 1rem;
   color: var(--muted-foreground);
   text-align: center;
-  max-width: 360px;
-  line-height: 1.45;
-}
-.shikaku-scoring-hint {
-  font-size: 0.72rem;
+  max-width: 440px;
+  line-height: 1.4;
   opacity: 0.7;
-  margin-top: -0.1rem;
 }
 
-/* Difficulty grid — 2×2, fills available space */
-.shikaku-diff-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
+/* ── Mode bar — tabs + seed toggle in one row ─────────────── */
+.shikaku-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   width: 100%;
-  max-width: 480px;
+  max-width: 560px;
 }
-.shikaku-diff-btn {
+.shikaku-tabs {
+  display: flex;
+  flex: 1;
+  gap: 0.3rem;
+  padding: 0.25rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--foreground) 5%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.shikaku-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.shikaku-tab:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+.shikaku-tab--active {
+  color: #34d399;
+  background: var(--card);
+  border-color: color-mix(in srgb, #34d399 30%, transparent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+.shikaku-tab--active:hover {
+  color: #34d399;
+}
+
+/* Seed toggle — icon-only square button, aligned with tab height */
+.shikaku-seed-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  font: inherit;
+  color: var(--muted-foreground);
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 0.65rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.shikaku-seed-toggle:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--foreground) 25%, transparent);
+  background: var(--accent);
+}
+.shikaku-seed-toggle--on {
+  color: #34d399;
+  background: color-mix(in srgb, #34d399 10%, var(--card));
+  border-color: color-mix(in srgb, #34d399 40%, transparent);
+}
+.shikaku-seed-toggle--on:hover {
+  background: color-mix(in srgb, #34d399 16%, var(--card));
+  border-color: #34d399;
+  color: #34d399;
+}
+
+/* ── Difficulty cards — 4-column ──────────────────────────── */
+.shikaku-diff-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 560px;
+}
+.shikaku-diff-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.2rem;
-  padding: 1.6rem 1rem;
-  border-radius: 0.85rem;
-  border: 1.5px solid color-mix(in srgb, var(--diff-color, var(--secondary)) 30%, transparent);
+  padding: 1.4rem 0.5rem 1.15rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid color-mix(in srgb, var(--diff-color, var(--border)) 25%, transparent);
   background: color-mix(in srgb, var(--diff-color) 4%, var(--card));
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.3s, transform 0.15s;
   cursor: pointer;
   font: inherit;
   color: inherit;
   position: relative;
   overflow: hidden;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.25s, transform 0.15s;
 }
-.shikaku-diff-btn::before {
+.shikaku-diff-card::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   opacity: 0;
-  background: radial-gradient(circle at 50% 50%, var(--diff-color), transparent 70%);
-  transition: opacity 0.3s;
+  background: radial-gradient(circle at 50% 40%, var(--diff-color), transparent 70%);
+  transition: opacity 0.25s;
+  pointer-events: none;
 }
-.shikaku-diff-btn:hover {
-  border-color: var(--diff-color);
+.shikaku-diff-card:hover {
+  border-color: color-mix(in srgb, var(--diff-color) 60%, transparent);
+  background: color-mix(in srgb, var(--diff-color) 8%, var(--card));
   transform: translateY(-2px);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--diff-color) 20%, transparent);
 }
-.shikaku-diff-btn:hover::before { opacity: 0.06; }
+.shikaku-diff-card:hover::before { opacity: 0.08; }
+.shikaku-diff-card:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
 
-/* ── Active (selected) difficulty — glowing pulse so user knows to press again ── */
-.shikaku-diff-btn--active {
+/* Selected state (when custom seed is on) */
+.shikaku-diff-card--selected {
   border-color: var(--diff-color);
   background: color-mix(in srgb, var(--diff-color) 12%, var(--card));
-  box-shadow: 0 0 18px color-mix(in srgb, var(--diff-color) 35%, transparent),
-              0 0 40px color-mix(in srgb, var(--diff-color) 15%, transparent);
-  transform: translateY(-2px);
-  animation: shikaku-diff-pulse 1.8s ease-in-out infinite;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--diff-color) 30%, transparent);
 }
-@keyframes shikaku-diff-pulse {
-  0%, 100% {
-    box-shadow: 0 0 18px color-mix(in srgb, var(--diff-color) 35%, transparent),
-                0 0 40px color-mix(in srgb, var(--diff-color) 15%, transparent);
-    border-color: var(--diff-color);
-  }
-  50% {
-    box-shadow: 0 0 28px color-mix(in srgb, var(--diff-color) 50%, transparent),
-                0 0 56px color-mix(in srgb, var(--diff-color) 22%, transparent);
-    border-color: color-mix(in srgb, var(--diff-color) 80%, white);
-  }
+.shikaku-diff-card--selected::before { opacity: 0.12; }
+.shikaku-diff-card--selected .shikaku-diff-card-size { color: var(--diff-color); }
+.shikaku-diff-card--selected .shikaku-diff-card-name {
+  color: color-mix(in srgb, var(--diff-color) 85%, var(--foreground));
 }
-.shikaku-diff-btn--active::before { opacity: 0.12; }
-.shikaku-diff-label {
-  font-size: 1.4rem;
+
+.shikaku-diff-card-size {
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--foreground);
   transition: color 0.2s;
+  position: relative;
 }
-.shikaku-diff-btn--active .shikaku-diff-label {
-  color: var(--diff-color);
-}
-.shikaku-diff-name {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted-foreground);
-  font-weight: 600;
-}
-.shikaku-diff-btn--active .shikaku-diff-name {
-  color: color-mix(in srgb, var(--diff-color) 80%, var(--foreground));
-}
-.shikaku-diff-size {
-  font-size: 0.7rem;
+.shikaku-diff-card-name {
+  font-size: 0.75rem;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  position: relative;
+}
+/* Play icon on hover (only shown when no seed mode) */
+.shikaku-diff-card-play {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
   color: var(--diff-color);
-  opacity: 0.65;
-  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
 }
-.shikaku-diff-btn--active .shikaku-diff-size {
-  opacity: 1;
-}
-.shikaku-diff-btn--active .shikaku-diff-name {
-  color: var(--diff-color);
-  animation: shikaku-hint-fade 1.8s ease-in-out infinite;
-}
-@keyframes shikaku-hint-fade {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+.shikaku-diff-card:hover .shikaku-diff-card-play { opacity: 0.7; }
+
+/* Per-difficulty accent */
+.shikaku-diff-card[data-diff="easy"]   { --diff-color: #34d399; }
+.shikaku-diff-card[data-diff="medium"] { --diff-color: #60a5fa; }
+.shikaku-diff-card[data-diff="hard"]   { --diff-color: #f59e0b; }
+.shikaku-diff-card[data-diff="expert"] { --diff-color: #f87171; }
+
+/* ── Hint text ────────────────────────────────────────────── */
+.shikaku-menu-hint {
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+  opacity: 0.5;
 }
 
-/* Menu footer hint */
-.shikaku-menu-hint {
-  font-size: 0.68rem;
-  color: var(--muted-foreground);
-  opacity: 0.6;
+/* ── Custom seed section ──────────────────────────────────── */
+.shikaku-seed-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 560px;
+  animation: shikaku-fade-in 0.15s ease-out;
 }
-.shikaku-info-btn {
-  display: inline-flex;
+.shikaku-seed-row {
+  display: flex;
+  gap: 0.35rem;
+}
+.shikaku-seed-field {
+  flex: 1;
+  display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 0.4rem 1rem;
-  border-radius: 0.5rem;
+  min-width: 0;
+  padding: 0 0.75rem;
+  height: 2.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  transition: border-color 0.15s;
+}
+.shikaku-seed-field:focus-within {
+  border-color: #34d399;
+}
+.shikaku-seed-icon {
   color: var(--muted-foreground);
-  margin-top: 0.2rem;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+.shikaku-seed-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--foreground);
+}
+.shikaku-seed-input::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.45;
+}
+.shikaku-seed-paste {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: none;
+  border-radius: 0.3rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.shikaku-seed-paste:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.shikaku-seed-go {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 1rem;
+  height: 2.75rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  border-radius: 0.5rem;
+  background: #34d399;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.shikaku-seed-go:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+.shikaku-seed-go:active:not(:disabled) {
+  transform: translateY(0);
+}
+.shikaku-seed-go:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+.shikaku-seed-note {
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+  opacity: 0.6;
+  text-align: center;
+}
+
+/* ── Bottom links ─────────────────────────────────────────── */
+.shikaku-menu-links {
+  display: flex;
+  gap: 1rem;
+}
+.shikaku-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  opacity: 0.65;
+  transition: opacity 0.12s, color 0.12s;
+}
+.shikaku-menu-link:hover {
+  opacity: 1;
+  color: var(--foreground);
 }
 
 /* ── Generating ────────────────────────────────────────────── */
@@ -1248,43 +1424,28 @@
   100% { opacity: 1; }
 }
 
-/* ── Infinite mode sidebar button ──────────────────────────── */
-.shikaku-infinite-btn {
+/* ── Game-mode sidebar indicator ───────────────────────────── */
+.shikaku-mode-indicator {
   border: none;
   cursor: pointer;
   font: inherit;
-  transition: color 0.15s, background 0.15s, opacity 0.2s;
+  transition: color 0.15s, background 0.15s;
 }
-.shikaku-infinite-btn:hover:not(:disabled) {
+.shikaku-mode-indicator:hover {
   color: #34d399;
   background: color-mix(in srgb, #34d399 12%, transparent);
 }
-.shikaku-infinite-btn--active {
+.shikaku-mode-indicator--active {
   color: #34d399 !important;
-  background: color-mix(in srgb, #34d399 16%, transparent) !important;
-  box-shadow: inset 0 0 12px color-mix(in srgb, #34d399 20%, transparent);
+  background: color-mix(in srgb, #34d399 10%, transparent) !important;
 }
-.shikaku-infinite-btn--active::after {
+.shikaku-mode-indicator--active::after {
   content: "";
   position: absolute;
   inset: 4px;
   border-radius: 8px;
-  border: 1.5px solid color-mix(in srgb, #34d399 40%, transparent);
-  animation: shikaku-inf-pulse 2s ease-in-out infinite;
+  border: 1.5px solid color-mix(in srgb, #34d399 35%, transparent);
   pointer-events: none;
-}
-@keyframes shikaku-inf-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-.shikaku-infinite-btn--disabled {
-  opacity: 0.3 !important;
-  cursor: not-allowed !important;
-  pointer-events: none;
-}
-.shikaku-infinite-btn--disabled:hover {
-  color: var(--secondary) !important;
-  background: transparent !important;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1510,100 +1671,4 @@
   color: var(--foreground);
 }
 
-/* ── Custom seed input on menu ───────────────────────────────── */
-.shikaku-custom-seed {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  max-width: 480px;
-  width: 100%;
-}
-.shikaku-custom-seed-row {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  width: 100%;
-}
-/* Input + go button grouped together */
-.shikaku-custom-seed-field {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-  border-radius: 0.55rem;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--card);
-  transition: border-color 0.15s;
-}
-.shikaku-custom-seed-field:focus-within {
-  border-color: #34d399;
-}
-.shikaku-custom-seed-input {
-  flex: 1;
-  min-width: 0;
-  font-variant-numeric: tabular-nums;
-  padding: 0.55rem 0.875rem;
-  height: 2.25rem;
-  box-sizing: border-box;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  outline: none;
-}
-/* Go button attached to end of input */
-.shikaku-custom-seed-go {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.25rem;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  background: color-mix(in srgb, #34d399 12%, transparent);
-  border: none;
-  border-left: 1px solid var(--border);
-  color: #34d399;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.shikaku-custom-seed-go:hover:not(:disabled) {
-  background: color-mix(in srgb, #34d399 22%, transparent);
-  color: #34d399;
-}
-.shikaku-custom-seed-go:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
-/* Side buttons (paste / clear) */
-.shikaku-custom-seed-btn--side {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  background: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.shikaku-custom-seed-btn--side:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--foreground);
-}
-.shikaku-custom-seed-btn--side:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-.shikaku-custom-seed-note {
-  font-size: 0.68rem;
-  color: var(--muted-foreground);
-  opacity: 0.7;
-  text-align: center;
-  line-height: 1.4;
-}
+/* (Old custom-seed styles removed — replaced by .shikaku-seed-* above) */
