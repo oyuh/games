@@ -169,6 +169,37 @@ export function ShikakuPage() {
   const pausedMsRef = useRef(0);
   const pauseStartRef = useRef<number | null>(null);
 
+  // Debug mode — enable via browser console: window.shikakuDebug(true)
+  const debugRef = useRef(false);
+  useEffect(() => {
+    const dbg = (enabled?: boolean) => {
+      if (typeof enabled === "undefined") {
+        debugRef.current = !debugRef.current;
+      } else {
+        debugRef.current = !!enabled;
+      }
+      console.log(
+        `%c[Shikaku Debug] ${debugRef.current ? "ENABLED" : "DISABLED"}`,
+        `color: ${debugRef.current ? "#34d399" : "#f87171"}; font-weight: bold;`,
+      );
+      if (debugRef.current) {
+        console.log(
+          "%c[Shikaku Debug] Debug logs will appear here. Auto-disabled for ranked runs.",
+          "color: #60a5fa;",
+        );
+      }
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).shikakuDebug = dbg;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return () => { delete (window as any).shikakuDebug; };
+  }, []);
+  const debugLog = useCallback((...args: unknown[]) => {
+    if (debugRef.current) {
+      console.log("%c[Shikaku]", "color: #a78bfa; font-weight: bold;", ...args);
+    }
+  }, []);
+
   /* ── Leaderboard fetch ──────────────────────────────────── */
   const [lbPage, setLbPage] = useState(1);
   const [lbTotalPages, setLbTotalPages] = useState(1);
@@ -318,12 +349,28 @@ export function ShikakuPage() {
     return rect.w === 1 && rect.h === 1 && autoFilledCellKeys.has(`${rect.r},${rect.c}`);
   }, [autoFilledCellKeys]);
 
+  const autoCompleteCheckedRef = useRef<string>("");
+  // Ref to latest handlePuzzleSolved to avoid TDZ (it's declared later)
+  const handlePuzzleSolvedRef = useRef<(rects: PlacedRect[]) => void>(() => {});
   useEffect(() => {
     setPlacedRects(autoFilledRects);
     setColorCounter(autoFilledRects.length);
     setFlashingRects(new Set());
     setUndoStack([]);
   }, [autoFilledRects]);
+
+  // Auto-advance trivially solved puzzles (e.g. all-1×1 fallback puzzles)
+  useEffect(() => {
+    if (phase !== "playing" || !currentPuzzle || showPuzzleSolvedAnim) return;
+    const puzzleKey = `${seed}-${currentPuzzleIdx}`;
+    if (autoCompleteCheckedRef.current === puzzleKey) return;
+    autoCompleteCheckedRef.current = puzzleKey;
+    const rects = autoFilledRects.map(({ r, c, w, h }) => ({ r, c, w, h }));
+    if (rects.length > 0 && validateSolution(currentPuzzle, rects)) {
+      debugLog("auto-advancing trivially solved puzzle", { puzzleKey });
+      handlePuzzleSolvedRef.current(autoFilledRects);
+    }
+  }, [phase, currentPuzzle, autoFilledRects, showPuzzleSolvedAnim, seed, currentPuzzleIdx, debugLog]);
 
   /* ── Countdown logic ────────────────────────────────────── */
   useEffect(() => {
@@ -342,6 +389,11 @@ export function ShikakuPage() {
   const pendingGenRef = useRef<{ diff: Difficulty; newSeed: number; custom: boolean } | null>(null);
 
   const startRun = useCallback((diff: Difficulty) => {
+    // Auto-disable debug for ranked runs
+    if (!infiniteMode && debugRef.current) {
+      debugRef.current = false;
+      console.log("%c[Shikaku Debug] Auto-disabled for ranked run", "color: #f87171; font-weight: bold;");
+    }
     const newSeed = Math.floor(Math.random() * 2147483647);
     setSeed(newSeed);
     setCurrentPuzzleIdx(0);
@@ -363,7 +415,8 @@ export function ShikakuPage() {
 
     pendingGenRef.current = { diff, newSeed, custom: false };
     setPhase("generating");
-  }, []);
+    debugLog("startRun", { diff, seed: newSeed, infiniteMode });
+  }, [infiniteMode, debugLog]);
 
   /* ── Start a custom seed run ─────────────────────────────── */
   const startCustomRun = useCallback((diff: Difficulty, customSeed: number) => {
@@ -387,7 +440,8 @@ export function ShikakuPage() {
 
     pendingGenRef.current = { diff, newSeed: customSeed, custom: true };
     setPhase("generating");
-  }, []);
+    debugLog("startCustomRun", { diff, seed: customSeed, infiniteMode });
+  }, [infiniteMode, debugLog]);
 
   /* ── Deferred puzzle generation (lets animation paint first) ── */
   useEffect(() => {
@@ -397,17 +451,19 @@ export function ShikakuPage() {
 
     const raf = requestAnimationFrame(() => {
       const timer = setTimeout(() => {
-        if (infiniteMode && !gen.custom) {
+        if (infiniteMode) {
           const rng = mulberry32(gen.newSeed);
           infiniteRng.current = rng;
           const { rows, cols } = DIFFICULTY_CONFIG[gen.diff];
           const firstPuzzle = generatePuzzle(rows, cols, rng);
           setPuzzles([firstPuzzle]);
           setInfiniteSolved(0);
+          debugLog("generated infinite first puzzle", { seed: gen.newSeed, diff: gen.diff, custom: gen.custom, autoFilled: getAutoFilledRects(firstPuzzle).length, totalRects: firstPuzzle.solution.length });
         } else {
           infiniteRng.current = null;
           const generated = generateRun(gen.newSeed, gen.diff);
           setPuzzles(generated);
+          debugLog("generated run", { seed: gen.newSeed, diff: gen.diff, puzzles: generated.length, custom: gen.custom });
         }
         pendingGenRef.current = null;
         setPhase("countdown");
@@ -415,7 +471,7 @@ export function ShikakuPage() {
       return () => clearTimeout(timer);
     });
     return () => cancelAnimationFrame(raf);
-  }, [phase, infiniteMode]);
+  }, [phase, infiniteMode, debugLog]);
 
   /* ── Check if a placed rect is "valid" (exactly 1 number, area matches) ── */
   const isRectValid = useCallback((rect: Rect): boolean => {
@@ -458,9 +514,10 @@ export function ShikakuPage() {
     // Check if puzzle is solved
     const justRects = newRects.map(({ r, c, w, h }) => ({ r, c, w, h }));
     if (validateSolution(currentPuzzle, justRects)) {
+      debugLog("puzzle solved via placeRect", { rectCount: newRects.length });
       handlePuzzleSolved(newRects);
     }
-  }, [autoFilledRects, colorCounter, currentPuzzle, isAutoFilledRect, isRectValid, placedRects]);
+  }, [autoFilledRects, colorCounter, currentPuzzle, isAutoFilledRect, isRectValid, placedRects, debugLog]);
 
   /* ── Puzzle solved handler ──────────────────────────────── */
   const handlePuzzleSolved = useCallback((rects: PlacedRect[]) => {
@@ -475,6 +532,7 @@ export function ShikakuPage() {
       // Infinite mode: always generate next puzzle
       setPuzzleTimes((prev) => [...prev, puzzleTime]);
       setInfiniteSolved((n) => n + 1);
+      debugLog("puzzle solved (infinite)", { puzzleTime, solved: infiniteSolved + 1 });
       setTimeout(() => {
         // Resume timer — accumulate paused duration
         if (pauseStartRef.current !== null) {
@@ -483,7 +541,12 @@ export function ShikakuPage() {
         }
         setShowPuzzleSolvedAnim(false);
         const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
-        const nextPuzzle = generatePuzzle(rows, cols, infiniteRng.current!);
+        if (!infiniteRng.current) {
+          debugLog("ERROR: infiniteRng is null — cannot generate next puzzle");
+          return;
+        }
+        const nextPuzzle = generatePuzzle(rows, cols, infiniteRng.current);
+        debugLog("generated next infinite puzzle", { autoFilled: getAutoFilledRects(nextPuzzle).length, totalRects: nextPuzzle.solution.length });
         setPuzzles([nextPuzzle]);
         setCurrentPuzzleIdx(0);
         setPlacedRects([]);
@@ -528,7 +591,8 @@ export function ShikakuPage() {
         fetchLeaderboard(difficulty, 1, lbView);
       }, 1200);
     }
-  }, [currentPuzzleIdx, puzzleStartTime, startTime, difficulty, infiniteMode, fetchLeaderboard, lbView]);
+  }, [currentPuzzleIdx, puzzleStartTime, startTime, difficulty, infiniteMode, fetchLeaderboard, lbView, debugLog, infiniteSolved]);
+  handlePuzzleSolvedRef.current = handlePuzzleSolved;
 
   /* ── Remove a rectangle by index ─────────────────────────── */
   const removeRect = useCallback((index: number) => {
@@ -1179,10 +1243,12 @@ export function ShikakuPage() {
             {/* ── Header tile ── */}
             <div className={`shikaku-end-header ${gavUp && !infiniteMode && !customMode ? "shikaku-end-header--fail" : "shikaku-end-header--success"}`}>
               <p className="shikaku-end-title">
-                {customMode ? "Custom Run Over" : infiniteMode ? "∞ Run Over" : gavUp ? "Run Over" : "Run Complete!"}
+                {customMode && infiniteMode ? "∞ Custom Run Over" : customMode ? "Custom Run Over" : infiniteMode ? "∞ Run Over" : gavUp ? "Run Over" : "Run Complete!"}
               </p>
               <p className="shikaku-end-sub">
-                {customMode
+                {customMode && infiniteMode
+                  ? `Seed ${seed} — solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} in infinite mode`
+                  : customMode
                   ? `Custom seed ${seed} — ${gavUp ? `completed ${completedCount - 1} of ${PUZZLES_PER_RUN} puzzles` : `all ${PUZZLES_PER_RUN} puzzles solved!`}`
                   : infiniteMode
                   ? `Solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} in infinite mode`
