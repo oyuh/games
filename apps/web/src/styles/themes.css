@@ -125,3 +125,6 @@
 [data-theme='light'][data-game-theme='location'] {
   --game-bg: #fef3c7;
 }
+[data-theme='light'][data-game-theme='shikaku'] {
+  --game-bg: #d1fae5;
+}

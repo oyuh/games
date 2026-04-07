@@ -1453,8 +1453,9 @@
    ══════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .shikaku-page.game-page {
-    height: calc(100dvh - 6.5rem);
+    height: calc(100dvh - 6.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     padding: 0.5rem 0.5rem;
+    padding-top: calc(0.5rem + env(safe-area-inset-top, 0px));
   }
   /* On mobile, page-level scrolling is OFF — the grid-wrap handles its own scroll */
   .shikaku-page.game-page[data-difficulty="hard"],
@@ -1482,7 +1483,7 @@
 
   /* Grid — larger touch target, use full width */
   .shikaku-grid {
-    max-width: min(500px, 94vw, calc(100dvh - 16rem));
+    max-width: min(500px, 94vw, calc(100dvh - 16rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
   }
 
   /* ── Hard + Expert: flex layout pins header/footer, grid fills remaining space ── */
@@ -1586,10 +1587,15 @@
   /* Finished screen */
   .shikaku-end-wrap {
     max-width: 100%;
-    padding: 0 0.25rem;
+    padding: 0 0.5rem;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: calc(100dvh - 6.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
   .shikaku-end-grid {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
   .shikaku-end-stats {
     grid-template-columns: 1fr 1fr;
@@ -1598,16 +1604,22 @@
     font-size: 1rem;
   }
   .shikaku-end-tile {
-    padding: 0.5rem 0.35rem;
+    padding: 0.55rem 0.4rem;
     min-height: 3.5rem;
+    border-radius: 0.65rem;
+  }
+  .shikaku-end-list-tile {
+    max-height: 14rem;
+    min-height: 8rem;
   }
 
   /* Leaderboard overlay */
   .shikaku-leaderboard {
     max-width: 100%;
-    max-height: 85vh;
+    max-height: calc(85vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     width: 100%;
     margin: 0 0.5rem;
+    border-radius: 0.85rem;
   }
 
   /* Give-up dialog */
@@ -1628,13 +1640,26 @@
   .shikaku-end-tile-label {
     font-size: 0.55rem;
   }
+  .shikaku-end-tab-bar {
+    border-bottom-width: 1px;
+  }
+  .shikaku-end-tab {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.68rem;
+    min-height: 2.5rem;
+  }
   .shikaku-end-list-row {
-    font-size: 0.7rem;
-    padding: 0.25rem 0.6rem;
+    font-size: 0.72rem;
+    padding: 0.35rem 0.65rem;
+    min-height: 1.8rem;
   }
   .shikaku-end-list-header {
     font-size: 0.6rem;
     padding: 0.4rem 0.6rem;
+  }
+  .shikaku-end-actions {
+    gap: 0.4rem;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .shikaku-lb-toolbar {
     flex-direction: column;
@@ -1669,6 +1694,143 @@
 .shikaku-lb-copy-seed:hover {
   opacity: 0.8;
   color: var(--foreground);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Light Theme — Shikaku overrides
+   ══════════════════════════════════════════════════════════════ */
+
+/* Leaderboard modal */
+[data-theme="light"] .shikaku-leaderboard {
+  background: linear-gradient(to bottom right, var(--card), var(--background));
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+[data-theme="light"] .shikaku-leaderboard-overlay {
+  background: rgba(200, 197, 193, 0.5);
+}
+
+/* Leaderboard header / tabs / toolbar */
+[data-theme="light"] .shikaku-lb-header {
+  border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
+}
+[data-theme="light"] .shikaku-lb-tabs {
+  border-color: color-mix(in srgb, var(--primary) 12%, var(--border));
+}
+[data-theme="light"] .shikaku-lb-tab--active {
+  background: var(--background);
+}
+[data-theme="light"] .shikaku-lb-personal-best {
+  background: color-mix(in srgb, var(--primary) 4%, var(--card));
+  border-color: color-mix(in srgb, var(--primary) 10%, var(--border));
+}
+[data-theme="light"] .shikaku-lb-toolbar {
+  background: var(--card);
+  border-color: color-mix(in srgb, var(--primary) 8%, var(--border));
+}
+[data-theme="light"] .shikaku-lb-view-toggle {
+  background: color-mix(in srgb, var(--muted) 60%, transparent);
+  border-color: var(--border);
+}
+[data-theme="light"] .shikaku-lb-view-btn--active {
+  background: var(--background);
+  color: var(--primary);
+}
+
+/* Leaderboard row highlights */
+[data-theme="light"] .shikaku-lb-row--top1 { background: color-mix(in srgb, #facc15 10%, transparent); }
+[data-theme="light"] .shikaku-lb-row--top2 { background: color-mix(in srgb, #94a3b8 8%, transparent); }
+[data-theme="light"] .shikaku-lb-row--top3 { background: color-mix(in srgb, #cd7f32 8%, transparent); }
+[data-theme="light"] .shikaku-lb-row--self { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+[data-theme="light"] .shikaku-lb-row:hover { background: color-mix(in srgb, var(--muted) 50%, transparent); }
+[data-theme="light"] .shikaku-lb-name { color: var(--foreground); }
+
+/* Leaderboard pagination */
+[data-theme="light"] .shikaku-lb-pagination {
+  border-color: var(--border);
+}
+[data-theme="light"] .shikaku-lb-page-btn {
+  background: var(--muted);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+[data-theme="light"] .shikaku-lb-page-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Leaderboard scrollbar (light) */
+[data-theme="light"] .shikaku-lb-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted-foreground) 30%, transparent);
+}
+
+/* End-screen tiles light mode */
+[data-theme="light"] .shikaku-end-tile {
+  background: var(--card);
+  border-color: var(--border);
+}
+[data-theme="light"] .shikaku-end-tile:hover {
+  border-color: color-mix(in srgb, #34d399 40%, var(--border));
+  background: color-mix(in srgb, #34d399 4%, var(--card));
+}
+[data-theme="light"] .shikaku-end-list-tile {
+  background: var(--card);
+  border-color: var(--border);
+}
+[data-theme="light"] .shikaku-end-tab-bar {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  border-color: var(--border);
+}
+[data-theme="light"] .shikaku-end-list-header {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  border-color: var(--border);
+}
+[data-theme="light"] .shikaku-end-list-row + .shikaku-end-list-row {
+  border-color: color-mix(in srgb, var(--border) 60%, transparent);
+}
+[data-theme="light"] .shikaku-end-list-row:hover {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+[data-theme="light"] .shikaku-end-status {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+/* Dim counter light mode */
+[data-theme="light"] .shikaku-dim-counter {
+  background: rgba(255, 255, 255, 0.85);
+  color: #059669;
+  text-shadow: none;
+}
+
+/* Solved overlay light mode */
+[data-theme="light"] .shikaku-solved-text {
+  background: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
+}
+
+/* Give-up modal light mode */
+[data-theme="light"] .shikaku-giveup-overlay {
+  background: rgba(200, 197, 193, 0.5);
+}
+
+/* Grid cells light mode */
+[data-theme="light"] .shikaku-num {
+  text-shadow: none;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Safe-area insets — iOS Dynamic Island & notch support
+   ══════════════════════════════════════════════════════════════ */
+
+/* Leaderboard overlay — respect safe areas on mobile */
+.shikaku-leaderboard-overlay {
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) calc(1rem + env(safe-area-inset-right, 0px)) calc(1rem + env(safe-area-inset-bottom, 0px)) calc(1rem + env(safe-area-inset-left, 0px));
+}
+
+/* Give-up overlay — respect safe areas */
+.shikaku-giveup-overlay {
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) calc(1rem + env(safe-area-inset-right, 0px)) calc(1rem + env(safe-area-inset-bottom, 0px)) calc(1rem + env(safe-area-inset-left, 0px));
 }
 
 /* (Old custom-seed styles removed — replaced by .shikaku-seed-* above) */
