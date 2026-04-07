@@ -1,10 +1,10 @@
 import { mutators, queries, schema } from "@games/shared";
-import { adminNameOverrides, chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
+import { adminNameOverrides, chatMessages, chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
-import { lt, and, asc, count, desc, eq, gt, ne, or, sql } from "drizzle-orm";
+import { lt, and, asc, count, desc, eq, gt, inArray, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { dbProvider } from "./db-provider";
@@ -1854,67 +1854,38 @@ async function runCleanup() {
   const staleCutoff = now - STALE_MS;
   const deleteCutoff = now - DELETE_MS;
 
-  // 1) End stale imposter games (not already ended)
+  // ── 1) End stale games (idle > 20min) ──────────────────────
   const endedImposter = await drizzleClient
     .update(imposterGames)
     .set({ phase: "ended", updatedAt: now })
-    .where(
-      and(
-        lt(imposterGames.updatedAt, staleCutoff),
-        ne(imposterGames.phase, "ended")
-      )
-    )
+    .where(and(lt(imposterGames.updatedAt, staleCutoff), ne(imposterGames.phase, "ended")))
     .returning({ id: imposterGames.id });
 
-  // 2) End stale password games (not already ended)
   const endedPassword = await drizzleClient
     .update(passwordGames)
     .set({ phase: "ended", updatedAt: now })
-    .where(
-      and(
-        lt(passwordGames.updatedAt, staleCutoff),
-        ne(passwordGames.phase, "ended")
-      )
-    )
+    .where(and(lt(passwordGames.updatedAt, staleCutoff), ne(passwordGames.phase, "ended")))
     .returning({ id: passwordGames.id });
 
-  // 2b) End stale chain reaction games (not already ended)
   const endedChain = await drizzleClient
     .update(chainReactionGames)
     .set({ phase: "ended", updatedAt: now })
-    .where(
-      and(
-        lt(chainReactionGames.updatedAt, staleCutoff),
-        ne(chainReactionGames.phase, "ended")
-      )
-    )
+    .where(and(lt(chainReactionGames.updatedAt, staleCutoff), ne(chainReactionGames.phase, "ended")))
     .returning({ id: chainReactionGames.id });
 
-  // 2c) End stale shade signal games (not already ended)
   const endedShade = await drizzleClient
     .update(shadeSignalGames)
     .set({ phase: "ended", updatedAt: now })
-    .where(
-      and(
-        lt(shadeSignalGames.updatedAt, staleCutoff),
-        ne(shadeSignalGames.phase, "ended")
-      )
-    )
+    .where(and(lt(shadeSignalGames.updatedAt, staleCutoff), ne(shadeSignalGames.phase, "ended")))
     .returning({ id: shadeSignalGames.id });
 
-  // 2d) End stale location signal games (not already ended)
   const endedLocation = await drizzleClient
     .update(locationSignalGames)
     .set({ phase: "ended", updatedAt: now })
-    .where(
-      and(
-        lt(locationSignalGames.updatedAt, staleCutoff),
-        ne(locationSignalGames.phase, "ended")
-      )
-    )
+    .where(and(lt(locationSignalGames.updatedAt, staleCutoff), ne(locationSignalGames.phase, "ended")))
     .returning({ id: locationSignalGames.id });
 
-  // 3) Detach sessions that were in those ended games
+  // ── 2) Detach sessions from ended games ────────────────────
   const endedGameIds = new Set([
     ...endedImposter.map((g) => g.id),
     ...endedPassword.map((g) => g.id),
@@ -1937,85 +1908,186 @@ async function runCleanup() {
     }
   }
 
-  // 4) Hard-delete old ended games (1hr+)
+  // ── 3) Hard-delete old ended games (1hr+) ──────────────────
   const deletedImposter = await drizzleClient
     .delete(imposterGames)
-    .where(
-      and(
-        eq(imposterGames.phase, "ended"),
-        lt(imposterGames.updatedAt, deleteCutoff)
-      )
-    )
+    .where(and(eq(imposterGames.phase, "ended"), lt(imposterGames.updatedAt, deleteCutoff)))
     .returning({ id: imposterGames.id });
 
   const deletedPassword = await drizzleClient
     .delete(passwordGames)
-    .where(
-      and(
-        eq(passwordGames.phase, "ended"),
-        lt(passwordGames.updatedAt, deleteCutoff)
-      )
-    )
+    .where(and(eq(passwordGames.phase, "ended"), lt(passwordGames.updatedAt, deleteCutoff)))
     .returning({ id: passwordGames.id });
 
   const deletedChain = await drizzleClient
     .delete(chainReactionGames)
-    .where(
-      and(
-        eq(chainReactionGames.phase, "ended"),
-        lt(chainReactionGames.updatedAt, deleteCutoff)
-      )
-    )
+    .where(and(eq(chainReactionGames.phase, "ended"), lt(chainReactionGames.updatedAt, deleteCutoff)))
     .returning({ id: chainReactionGames.id });
 
   const deletedShade = await drizzleClient
     .delete(shadeSignalGames)
-    .where(
-      and(
-        eq(shadeSignalGames.phase, "ended"),
-        lt(shadeSignalGames.updatedAt, deleteCutoff)
-      )
-    )
+    .where(and(eq(shadeSignalGames.phase, "ended"), lt(shadeSignalGames.updatedAt, deleteCutoff)))
     .returning({ id: shadeSignalGames.id });
 
   const deletedLocation = await drizzleClient
     .delete(locationSignalGames)
-    .where(
-      and(
-        eq(locationSignalGames.phase, "ended"),
-        lt(locationSignalGames.updatedAt, deleteCutoff)
-      )
-    )
+    .where(and(eq(locationSignalGames.phase, "ended"), lt(locationSignalGames.updatedAt, deleteCutoff)))
     .returning({ id: locationSignalGames.id });
 
-  // 5) Delete stale sessions (1hr+)
+  const allDeletedGameIds = [
+    ...deletedImposter.map((g) => g.id),
+    ...deletedPassword.map((g) => g.id),
+    ...deletedChain.map((g) => g.id),
+    ...deletedShade.map((g) => g.id),
+    ...deletedLocation.map((g) => g.id),
+  ];
+
+  // ── 4) Clean up encryption keys for deleted games ──────────
+  let deletedEncryptionKeys = 0;
+  if (allDeletedGameIds.length > 0) {
+    const deletedKeys = await drizzleClient
+      .delete(gameEncryptionKeys)
+      .where(inArray(gameEncryptionKeys.gameId, allDeletedGameIds))
+      .returning({ id: gameEncryptionKeys.id });
+    deletedEncryptionKeys = deletedKeys.length;
+  }
+  // Also clean any orphaned keys whose game no longer exists
+  const orphanedKeys = await drizzleClient.execute(sql`
+    DELETE FROM game_encryption_keys
+    WHERE game_id NOT IN (
+      SELECT id FROM imposter_games
+      UNION SELECT id FROM password_games
+      UNION SELECT id FROM chain_reaction_games
+      UNION SELECT id FROM shade_signal_games
+      UNION SELECT id FROM location_signal_games
+    )
+    RETURNING id
+  `);
+  const orphanedKeysDeleted = Array.isArray(orphanedKeys) ? orphanedKeys.length : (orphanedKeys.rowCount ?? 0);
+  deletedEncryptionKeys += Number(orphanedKeysDeleted);
+
+  // ── 5) Clean up chat messages for deleted games ────────────
+  let deletedChatMessages = 0;
+  if (allDeletedGameIds.length > 0) {
+    const deletedChats = await drizzleClient
+      .delete(chatMessages)
+      .where(inArray(chatMessages.gameId, allDeletedGameIds))
+      .returning({ id: chatMessages.id });
+    deletedChatMessages = deletedChats.length;
+  }
+
+  // ── 6) Delete stale sessions (1hr+) ────────────────────────
   const deletedSessions = await drizzleClient
     .delete(sessions)
     .where(lt(sessions.lastSeen, deleteCutoff))
     .returning({ id: sessions.id });
 
-  // 6) Counts for diagnostics
+  // ── 7) Shikaku: enforce max 20 scores per session per difficulty ─
+  // Each player can keep up to 20 scores for each difficulty (easy/medium/hard/expert)
+  let shikakuScoresTrimmed = 0;
+  const overLimitGroups = await drizzleClient.execute(sql`
+    SELECT session_id, difficulty, COUNT(*) as cnt
+    FROM shikaku_scores
+    GROUP BY session_id, difficulty
+    HAVING COUNT(*) > ${SHIKAKU_MAX_SCORES_PER_SESSION}
+  `);
+  const groupsToTrim = Array.isArray(overLimitGroups) ? overLimitGroups : (overLimitGroups.rows ?? []);
+  for (const row of groupsToTrim) {
+    const { session_id: sid, difficulty: diff } = row as { session_id: string; difficulty: string };
+    // Keep the top 20 highest scores for this session+difficulty, delete the rest
+    const allScores = await drizzleClient
+      .select({ id: shikakuScores.id })
+      .from(shikakuScores)
+      .where(and(eq(shikakuScores.sessionId, sid), eq(shikakuScores.difficulty, diff)))
+      .orderBy(desc(shikakuScores.score))
+      .limit(10000);
+    const idsToDelete = allScores.slice(SHIKAKU_MAX_SCORES_PER_SESSION).map((s) => s.id);
+    if (idsToDelete.length > 0) {
+      await drizzleClient
+        .delete(shikakuScores)
+        .where(inArray(shikakuScores.id, idsToDelete));
+      shikakuScoresTrimmed += idsToDelete.length;
+    }
+  }
+
+  // ── 8) Shikaku: detect and remove suspicious scores ───────
+  // Flag scores that exceed the max possible for their time/difficulty
+  let shikakuSuspiciousRemoved = 0;
+  const allShikakuScoresRaw = await drizzleClient
+    .select({
+      id: shikakuScores.id,
+      sessionId: shikakuScores.sessionId,
+      score: shikakuScores.score,
+      timeMs: shikakuScores.timeMs,
+      difficulty: shikakuScores.difficulty,
+      name: shikakuScores.name,
+    })
+    .from(shikakuScores);
+
+  const suspiciousIds: string[] = [];
+  const suspiciousSessions = new Set<string>();
+  for (const s of allShikakuScoresRaw) {
+    const maxAllowed = shikakuMaxScore(s.timeMs, s.difficulty);
+    const minTime = SHIKAKU_MIN_TIME_MS[s.difficulty] ?? 10_000;
+    const maxTime = SHIKAKU_MAX_TIME_MS[s.difficulty] ?? 3_600_000;
+    // Score exceeds theoretical max (with 5% tolerance for rounding)
+    const isInflated = s.score > maxAllowed * 1.05;
+    // Impossibly fast
+    const isTooFast = s.timeMs < minTime;
+    // Unreasonably slow (beyond max allowed time)
+    const isTooSlow = s.timeMs > maxTime;
+    // Negative/zero score or time
+    const isInvalid = s.score <= 0 || s.timeMs <= 0;
+
+    if (isInflated || isTooFast || isTooSlow || isInvalid) {
+      suspiciousIds.push(s.id);
+      suspiciousSessions.add(s.sessionId);
+    }
+  }
+  if (suspiciousIds.length > 0) {
+    await drizzleClient
+      .delete(shikakuScores)
+      .where(inArray(shikakuScores.id, suspiciousIds));
+    shikakuSuspiciousRemoved = suspiciousIds.length;
+  }
+
+  // ── 9) Counts for diagnostics ─────────────────────────────
   const [imposterCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames);
   const [passwordCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames);
   const [chainCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chainReactionGames);
   const [shadeCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shadeSignalGames);
   const [locationCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(locationSignalGames);
   const [sessionCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(sessions);
+  const [shikakuCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shikakuScores);
+  const [encKeyCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(gameEncryptionKeys);
 
   return {
-    imposterGamesEnded: endedImposter.length,
-    passwordGamesEnded: endedPassword.length,
-    chainReactionGamesEnded: endedChain.length,
-    shadeSignalGamesEnded: endedShade.length,
-    locationSignalGamesEnded: endedLocation.length,
-    imposterGamesDeleted: deletedImposter.length,
-    passwordGamesDeleted: deletedPassword.length,
-    chainReactionGamesDeleted: deletedChain.length,
-    shadeSignalGamesDeleted: deletedShade.length,
-    locationSignalGamesDeleted: deletedLocation.length,
-    sessionsDeleted: deletedSessions.length,
-    staleCutoff: new Date(staleCutoff).toISOString(),
-    deleteCutoff: new Date(deleteCutoff).toISOString(),
+    ended: {
+      imposter: endedImposter.length,
+      password: endedPassword.length,
+      chainReaction: endedChain.length,
+      shadeSignal: endedShade.length,
+      locationSignal: endedLocation.length,
+    },
+    deleted: {
+      imposter: deletedImposter.length,
+      password: deletedPassword.length,
+      chainReaction: deletedChain.length,
+      shadeSignal: deletedShade.length,
+      locationSignal: deletedLocation.length,
+      sessions: deletedSessions.length,
+      encryptionKeys: deletedEncryptionKeys,
+      chatMessages: deletedChatMessages,
+    },
+    shikaku: {
+      scoresTrimmed: shikakuScoresTrimmed,
+      suspiciousRemoved: shikakuSuspiciousRemoved,
+      suspiciousSessions: suspiciousSessions.size,
+    },
+    cutoffs: {
+      stale: new Date(staleCutoff).toISOString(),
+      delete: new Date(deleteCutoff).toISOString(),
+    },
     totals: {
       imposterGames: imposterCount.total,
       passwordGames: passwordCount.total,
@@ -2023,8 +2095,146 @@ async function runCleanup() {
       shadeSignalGames: shadeCount.total,
       locationSignalGames: locationCount.total,
       sessions: sessionCount.total,
+      shikakuScores: shikakuCount.total,
+      encryptionKeys: encKeyCount.total,
     },
   };
+}
+
+function formatCleanupLog(summary: Awaited<ReturnType<typeof runCleanup>>, trigger: string) {
+  const { ended, deleted, shikaku, cutoffs, totals } = summary;
+  const endedTotal = ended.imposter + ended.password + ended.chainReaction + ended.shadeSignal + ended.locationSignal;
+  const deletedGames = deleted.imposter + deleted.password + deleted.chainReaction + deleted.shadeSignal + deleted.locationSignal;
+
+  const lines = [
+    ``,
+    `╔══════════════════════════════════════════════════════╗`,
+    `║         🧹 CLEANUP REPORT (${trigger.padEnd(12)})           ║`,
+    `╠══════════════════════════════════════════════════════╣`,
+    `║  Stale cutoff:  ${cutoffs.stale.padEnd(35)}║`,
+    `║  Delete cutoff: ${cutoffs.delete.padEnd(35)}║`,
+    `╠══════════════════════════════════════════════════════╣`,
+    `║  GAMES ENDED (idle > 20min):  ${String(endedTotal).padStart(4)}                 ║`,
+  ];
+  if (endedTotal > 0) {
+    if (ended.imposter) lines.push(`║    Imposter:        ${String(ended.imposter).padStart(4)}                         ║`);
+    if (ended.password) lines.push(`║    Password:        ${String(ended.password).padStart(4)}                         ║`);
+    if (ended.chainReaction) lines.push(`║    Chain Reaction:  ${String(ended.chainReaction).padStart(4)}                         ║`);
+    if (ended.shadeSignal) lines.push(`║    Shade Signal:    ${String(ended.shadeSignal).padStart(4)}                         ║`);
+    if (ended.locationSignal) lines.push(`║    Location Signal: ${String(ended.locationSignal).padStart(4)}                         ║`);
+  }
+  lines.push(
+    `╠══════════════════════════════════════════════════════╣`,
+    `║  DELETED (ended > 1hr):                              ║`,
+    `║    Games:           ${String(deletedGames).padStart(4)}                         ║`,
+    `║    Sessions:        ${String(deleted.sessions).padStart(4)}                         ║`,
+    `║    Encryption keys: ${String(deleted.encryptionKeys).padStart(4)}                         ║`,
+    `║    Chat messages:   ${String(deleted.chatMessages).padStart(4)}                         ║`,
+    `╠══════════════════════════════════════════════════════╣`,
+    `║  SHIKAKU AUDIT:                                      ║`,
+    `║    Scores trimmed (>20/session): ${String(shikaku.scoresTrimmed).padStart(4)}               ║`,
+    `║    Suspicious removed:           ${String(shikaku.suspiciousRemoved).padStart(4)}               ║`,
+    `║    Flagged sessions:             ${String(shikaku.suspiciousSessions).padStart(4)}               ║`,
+    `╠══════════════════════════════════════════════════════╣`,
+    `║  CURRENT TOTALS:                                     ║`,
+    `║    Imposter:        ${String(totals.imposterGames).padStart(4)}     Sessions:    ${String(totals.sessions).padStart(5)}   ║`,
+    `║    Password:        ${String(totals.passwordGames).padStart(4)}     Shikaku:     ${String(totals.shikakuScores).padStart(5)}   ║`,
+    `║    Chain Reaction:  ${String(totals.chainReactionGames).padStart(4)}     Enc. Keys:   ${String(totals.encryptionKeys).padStart(5)}   ║`,
+    `║    Shade Signal:    ${String(totals.shadeSignalGames).padStart(4)}                          ║`,
+    `║    Location Signal: ${String(totals.locationSignalGames).padStart(4)}                          ║`,
+    `╚══════════════════════════════════════════════════════╝`,
+    ``,
+  );
+  return lines.join("\n");
+}
+
+// ─── Activity report (general stats snapshot) ──────────────
+async function runActivityReport() {
+  const now = Date.now();
+  const fiveMinAgo = now - 5 * 60 * 1000;
+  const oneHourAgo = now - 60 * 60 * 1000;
+
+  // Active sessions (seen in last 5 min)
+  const [activeSessions = { total: 0 }] = await drizzleClient
+    .select({ total: count() })
+    .from(sessions)
+    .where(gt(sessions.lastSeen, fiveMinAgo));
+
+  // Total sessions
+  const [totalSessions = { total: 0 }] = await drizzleClient
+    .select({ total: count() })
+    .from(sessions);
+
+  // Active games by type (not ended)
+  const [activeImposter = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames).where(ne(imposterGames.phase, "ended"));
+  const [activePassword = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames).where(ne(passwordGames.phase, "ended"));
+  const [activeChain = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chainReactionGames).where(ne(chainReactionGames.phase, "ended"));
+  const [activeShade = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shadeSignalGames).where(ne(shadeSignalGames.phase, "ended"));
+  const [activeLocation = { total: 0 }] = await drizzleClient.select({ total: count() }).from(locationSignalGames).where(ne(locationSignalGames.phase, "ended"));
+
+  // Total games (all states)
+  const [totalImposter = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames);
+  const [totalPassword = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames);
+  const [totalChain = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chainReactionGames);
+  const [totalShade = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shadeSignalGames);
+  const [totalLocation = { total: 0 }] = await drizzleClient.select({ total: count() }).from(locationSignalGames);
+
+  // Shikaku stats
+  const [shikakuTotal = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shikakuScores);
+  const [shikakuRecent = { total: 0 }] = await drizzleClient
+    .select({ total: count() })
+    .from(shikakuScores)
+    .where(gt(shikakuScores.createdAt, oneHourAgo));
+  const [bannedSessions = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shikakuBannedSessions);
+
+  // Unique shikaku players (distinct session_id)
+  const [shikakuPlayers = { total: 0 }] = await drizzleClient
+    .select({ total: sql<number>`COUNT(DISTINCT ${shikakuScores.sessionId})` })
+    .from(shikakuScores);
+
+  // Encryption keys & chat messages
+  const [encKeys = { total: 0 }] = await drizzleClient.select({ total: count() }).from(gameEncryptionKeys);
+  const [chatMsgs = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chatMessages);
+
+  // Admin bans
+  const adminBansResult = await drizzleClient.execute(sql`SELECT COUNT(*) as total FROM admin_bans`);
+  const adminBanCount = Number(Array.isArray(adminBansResult) ? (adminBansResult[0] as any)?.total ?? 0 : (adminBansResult.rows?.[0] as any)?.total ?? 0);
+
+  const totalActiveGames = activeImposter.total + activePassword.total + activeChain.total + activeShade.total + activeLocation.total;
+  const totalGames = totalImposter.total + totalPassword.total + totalChain.total + totalShade.total + totalLocation.total;
+
+  const lines = [
+    ``,
+    `╔══════════════════════════════════════════════════════╗`,
+    `║         📊 ACTIVITY REPORT                           ║`,
+    `║         ${new Date(now).toISOString().padEnd(43)}║`,
+    `╠══════════════════════════════════════════════════════╣`,
+    `║  SESSIONS:                                           ║`,
+    `║    Active (5min):   ${String(activeSessions.total).padStart(5)}                        ║`,
+    `║    Total:           ${String(totalSessions.total).padStart(5)}                        ║`,
+    `╠══════════════════════════════════════════════════════╣`,
+    `║  ACTIVE GAMES:       ${String(totalActiveGames).padStart(4)}  (${String(totalGames).padStart(4)} total)            ║`,
+    `║    Imposter:        ${String(activeImposter.total).padStart(4)} / ${String(totalImposter.total).padStart(4)}                      ║`,
+    `║    Password:        ${String(activePassword.total).padStart(4)} / ${String(totalPassword.total).padStart(4)}                      ║`,
+    `║    Chain Reaction:  ${String(activeChain.total).padStart(4)} / ${String(totalChain.total).padStart(4)}                      ║`,
+    `║    Shade Signal:    ${String(activeShade.total).padStart(4)} / ${String(totalShade.total).padStart(4)}                      ║`,
+    `║    Location Signal: ${String(activeLocation.total).padStart(4)} / ${String(totalLocation.total).padStart(4)}                      ║`,
+    `╠══════════════════════════════════════════════════════╣`,
+    `║  SHIKAKU:                                            ║`,
+    `║    Total scores:    ${String(shikakuTotal.total).padStart(5)}                        ║`,
+    `║    Unique players:  ${String(shikakuPlayers.total).padStart(5)}                        ║`,
+    `║    Scores (1hr):    ${String(shikakuRecent.total).padStart(5)}                        ║`,
+    `║    Banned sessions: ${String(bannedSessions.total).padStart(5)}                        ║`,
+    `╠══════════════════════════════════════════════════════╣`,
+    `║  OTHER:                                              ║`,
+    `║    Encryption keys: ${String(encKeys.total).padStart(5)}                        ║`,
+    `║    Chat messages:   ${String(chatMsgs.total).padStart(5)}                        ║`,
+    `║    Admin bans:      ${String(adminBanCount).padStart(5)}                        ║`,
+    `╚══════════════════════════════════════════════════════╝`,
+    ``,
+  ];
+
+  return lines.join("\n");
 }
 
 // Accept both GET and POST so any cron service works
@@ -2036,8 +2246,21 @@ app.on(["GET", "POST"], "/api/cleanup", async (c) => {
   }
 
   const summary = await runCleanup();
-  console.log("[cleanup] via endpoint", summary);
+  console.log(formatCleanupLog(summary, "endpoint"));
   return c.json({ ok: true, ...summary });
+});
+
+// Activity report endpoint (same auth as cleanup)
+app.on(["GET", "POST"], "/api/activity", async (c) => {
+  const authHeader = c.req.header("Authorization");
+  const expectedToken = process.env.CLEANUP_SECRET ?? "cleanup-local";
+  if (authHeader !== `Bearer ${expectedToken}`) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const report = await runActivityReport();
+  console.log(report);
+  return c.json({ ok: true, report });
 });
 
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
@@ -2054,11 +2277,24 @@ console.log("Pusher broadcast configured (no WebSocket servers)");
 async function scheduledCleanup() {
   try {
     const summary = await runCleanup();
-    console.log("[cleanup] scheduled", summary);
+    console.log(formatCleanupLog(summary, "scheduled"));
   } catch (err) {
     console.error("[cleanup] error:", err);
   }
 }
 
+// ─── Activity report: run every 30 minutes ─────────────────
+async function scheduledActivityReport() {
+  try {
+    const report = await runActivityReport();
+    console.log(report);
+  } catch (err) {
+    console.error("[activity] error:", err);
+  }
+}
+
 setTimeout(scheduledCleanup, 10_000);
 setInterval(scheduledCleanup, 15 * 60 * 1000);
+
+setTimeout(scheduledActivityReport, 20_000);
+setInterval(scheduledActivityReport, 30 * 60 * 1000);
