@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FiAward, FiCopy } from "react-icons/fi";
 import { Difficulty, DIFFICULTY_CONFIG } from "../../lib/shikaku-engine";
 import { getOrCreateSessionId } from "../../lib/session";
@@ -7,6 +7,7 @@ import { BottomSheet } from "./BottomSheet";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 const PAGE_SIZE = 10;
+const CACHE_TTL = 30_000; // 30 seconds
 
 interface LeaderboardEntry {
   id: string;
@@ -44,8 +45,21 @@ export function MobileLeaderboardSheet({ onClose }: { onClose: () => void }) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const cacheRef = useRef<Map<string, { data: any; ts: number }>>(new Map());
 
   const fetchLeaderboard = useCallback(async (diff: Difficulty, pg: number, v: LeaderboardView) => {
+    const cacheKey = `${diff}:${pg}:${v}`;
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      const data = cached.data;
+      setEntries(data.entries ?? []);
+      setPersonalBest(data.personalBest ?? null);
+      setPage(data.page ?? 1);
+      setTotalPages(data.totalPages ?? 1);
+      setTotal(data.total ?? 0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const sessionId = getOrCreateSessionId();
@@ -62,6 +76,7 @@ export function MobileLeaderboardSheet({ onClose }: { onClose: () => void }) {
       });
       if (res.ok) {
         const data = await res.json();
+        cacheRef.current.set(cacheKey, { data, ts: Date.now() });
         setEntries(data.entries ?? []);
         setPersonalBest(data.personalBest ?? null);
         setPage(data.page ?? 1);
@@ -145,11 +160,14 @@ export function MobileLeaderboardSheet({ onClose }: { onClose: () => void }) {
 
         {/* Content */}
         {loading ? (
-          <p className="m-lb-empty">Loading...</p>
+          <div className="m-lb-spinner-wrap">
+            <div className="m-lb-spinner" />
+            <span className="m-lb-spinner-text">Loading scores…</span>
+          </div>
         ) : entries.length === 0 ? (
-          <p className="m-lb-empty">
+          <div className="m-lb-empty-stable">
             {view === "mine" ? "No scores on this difficulty yet." : "No scores yet — be the first!"}
-          </p>
+          </div>
         ) : (
           <div className="m-lb-list">
             {entries.map((entry, i) => {
