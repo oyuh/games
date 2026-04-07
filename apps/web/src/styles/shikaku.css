@@ -725,24 +725,6 @@
   color: #34d399;
   border-color: #34d399;
 }
-/* Tooltip on hover */
-.shikaku-icon-btn[data-tooltip]:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.65rem;
-  font-weight: 600;
-  white-space: nowrap;
-  padding: 0.2rem 0.45rem;
-  border-radius: 0.3rem;
-  background: var(--card);
-  color: var(--foreground);
-  border: 1px solid var(--secondary);
-  pointer-events: none;
-  z-index: 10;
-}
 
 /* ── Finished screen ───────────────────────────────────────── */
 /* ── End screen — wide wrapper ─────────────────────────────── */
@@ -1086,7 +1068,7 @@
 .shikaku-leaderboard-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 150;
   background: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: center;
@@ -1342,9 +1324,10 @@
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  padding: 0.75rem 0 0.25rem;
+  padding: 0.75rem 0 0.75rem;
   border-top: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
   margin-top: 0.25rem;
+  flex-shrink: 0;
 }
 .shikaku-lb-page-btn {
   background: color-mix(in srgb, var(--secondary) 60%, transparent);
@@ -1375,7 +1358,7 @@
 .shikaku-giveup-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 150;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
