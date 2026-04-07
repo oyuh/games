@@ -26,7 +26,6 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
   const touchStartTime = useRef(0);
   const currentOffsetY = useRef(0);
   const isDragging = useRef(false);
-  const bodyScrollTop = useRef(0);
 
   /* Lock body scroll while open */
   useEffect(() => {
@@ -39,7 +38,6 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
     if (closingRef.current) return;
     closingRef.current = true;
     setClosing(true);
-    /* Wait for the CSS closing animation to finish, then unmount */
     const duration = 250;
     setTimeout(() => onClose(), duration);
   }, [onClose]);
@@ -50,34 +48,31 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
   }, [animateClose]);
 
   /* ── apply transform during gesture (no React state — direct DOM) ── */
-  const applyTransform = (offsetY: number) => {
+  const applyTransform = useCallback((offsetY: number) => {
     const sheet = sheetRef.current;
     const backdrop = backdropRef.current;
     if (!sheet) return;
 
     if (offsetY <= 0) {
-      /* Rubber-band upward: diminishing return */
       const clamped = -Math.min(-offsetY, RUBBER_MAX);
       const rubber = clamped * 0.35;
       sheet.style.transform = `translateY(${rubber}px)`;
       if (backdrop) backdrop.style.opacity = "";
     } else {
       sheet.style.transform = `translateY(${offsetY}px)`;
-      /* Fade backdrop proportionally */
       if (backdrop) {
         const progress = Math.min(offsetY / 300, 1);
         backdrop.style.opacity = String(1 - progress * 0.6);
       }
     }
-  };
+  }, []);
 
-  const resetTransform = () => {
+  const resetTransform = useCallback(() => {
     const sheet = sheetRef.current;
     const backdrop = backdropRef.current;
     if (sheet) {
       sheet.style.transition = "transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)";
       sheet.style.transform = "";
-      /* Remove inline transition after it settles */
       const cleanup = () => { sheet.style.transition = ""; sheet.removeEventListener("transitionend", cleanup); };
       sheet.addEventListener("transitionend", cleanup);
     }
@@ -87,92 +82,105 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
       const cleanup = () => { backdrop.style.transition = ""; backdrop.removeEventListener("transitionend", cleanup); };
       backdrop.addEventListener("transitionend", cleanup);
     }
-  };
-
-  /* ── touch handlers ── */
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (closingRef.current) return;
-    const touch = e.touches[0];
-    touchStartY.current = touch.clientY;
-    touchStartTime.current = Date.now();
-    currentOffsetY.current = 0;
-    bodyScrollTop.current = bodyRef.current?.scrollTop ?? 0;
-    isDragging.current = false;
   }, []);
 
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (closingRef.current) return;
-    const touch = e.touches[0];
-    const deltaY = touch.clientY - touchStartY.current;
+  /*
+   * ── Native touch listeners (non-passive) ──
+   * React's synthetic onTouchMove is passive by default in modern browsers,
+   * which means e.preventDefault() is silently ignored and the page scrolls
+   * behind the sheet. We attach native listeners with { passive: false }
+   * so we can actually prevent scroll during the drag gesture.
+   */
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
 
-    /* If the body is scrolled down and user is swiping up, let native scroll handle it */
-    const bodyEl = bodyRef.current;
-    if (bodyEl && bodyEl.scrollTop > 0 && deltaY < 0 && !isDragging.current) {
-      return;
-    }
+    const onCloseRef = onClose; // capture for touchEnd
 
-    /*
-     * Only start dragging if:
-     * 1. Swiping down AND body is at scroll top, OR
-     * 2. Already dragging
-     */
-    if (!isDragging.current) {
-      if (deltaY > 4 && (bodyEl ? bodyEl.scrollTop <= 0 : true)) {
-        isDragging.current = true;
-      } else if (deltaY < -4) {
-        /* Swiping up — allow rubber-band only from handle/header area */
-        const target = e.target as HTMLElement;
-        const isHandleArea = target.closest(".m-sheet-handle") || target.closest(".m-sheet-header");
-        if (isHandleArea) {
-          isDragging.current = true;
-        } else {
-          return; /* let body scroll normally */
-        }
-      } else {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (closingRef.current) return;
+      const touch = e.touches[0];
+      touchStartY.current = touch.clientY;
+      touchStartTime.current = Date.now();
+      currentOffsetY.current = 0;
+      isDragging.current = false;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (closingRef.current) return;
+      const touch = e.touches[0];
+      const deltaY = touch.clientY - touchStartY.current;
+      const bodyEl = bodyRef.current;
+
+      /* If body is scrolled and swiping up, let native scroll handle it */
+      if (bodyEl && bodyEl.scrollTop > 0 && deltaY < 0 && !isDragging.current) {
         return;
       }
-    }
 
-    /* Prevent native scroll while we're gesture-dragging */
-    e.preventDefault();
+      if (!isDragging.current) {
+        if (deltaY > 6 && (bodyEl ? bodyEl.scrollTop <= 0 : true)) {
+          isDragging.current = true;
+        } else if (deltaY < -6) {
+          const target = e.target as HTMLElement;
+          const isHandleArea = target.closest(".m-sheet-handle") || target.closest(".m-sheet-header");
+          if (isHandleArea) {
+            isDragging.current = true;
+          } else {
+            return;
+          }
+        } else {
+          return;
+        }
+      }
 
-    currentOffsetY.current = deltaY;
-    applyTransform(deltaY);
-  }, []);
+      /* THIS is the key fix — actually prevent the page from scrolling */
+      e.preventDefault();
 
-  const onTouchEnd = useCallback(() => {
-    if (!isDragging.current || closingRef.current) {
+      currentOffsetY.current = deltaY;
+      applyTransform(deltaY);
+    };
+
+    const handleTouchEnd = () => {
+      if (!isDragging.current || closingRef.current) {
+        isDragging.current = false;
+        return;
+      }
       isDragging.current = false;
-      return;
-    }
-    isDragging.current = false;
 
-    const offset = currentOffsetY.current;
-    const elapsed = Date.now() - touchStartTime.current;
-    const velocity = offset / Math.max(elapsed, 1); /* px/ms */
+      const offset = currentOffsetY.current;
+      const elapsed = Date.now() - touchStartTime.current;
+      const velocity = offset / Math.max(elapsed, 1);
 
-    /* Dismiss if dragged past threshold OR flicked down fast enough */
-    if (offset > DISMISS_THRESHOLD || (offset > 30 && velocity > 0.4)) {
-      /* Animate out from current position */
-      const sheet = sheetRef.current;
-      const backdrop = backdropRef.current;
-      if (sheet) {
-        sheet.style.transition = "transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)";
-        sheet.style.transform = "translateY(100%)";
+      if (offset > DISMISS_THRESHOLD || (offset > 30 && velocity > 0.4)) {
+        const s = sheetRef.current;
+        const b = backdropRef.current;
+        if (s) {
+          s.style.transition = "transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)";
+          s.style.transform = "translateY(100%)";
+        }
+        if (b) {
+          b.style.transition = "opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1)";
+          b.style.opacity = "0";
+        }
+        closingRef.current = true;
+        setTimeout(() => onCloseRef(), 250);
+      } else {
+        resetTransform();
       }
-      if (backdrop) {
-        backdrop.style.transition = "opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1)";
-        backdrop.style.opacity = "0";
-      }
-      closingRef.current = true;
-      setTimeout(() => onClose(), 250);
-    } else {
-      /* Snap back */
-      resetTransform();
-    }
+      currentOffsetY.current = 0;
+    };
 
-    currentOffsetY.current = 0;
-  }, [onClose]);
+    /* { passive: false } is critical — it lets preventDefault() work */
+    sheet.addEventListener("touchstart", handleTouchStart, { passive: true });
+    sheet.addEventListener("touchmove", handleTouchMove, { passive: false });
+    sheet.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      sheet.removeEventListener("touchstart", handleTouchStart);
+      sheet.removeEventListener("touchmove", handleTouchMove);
+      sheet.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [onClose, applyTransform, resetTransform]);
 
   return (
     <div
@@ -183,9 +191,6 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
       <div
         className={`m-sheet${closing ? " m-sheet--closing" : ""}`}
         ref={sheetRef}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
       >
         <div className="m-sheet-handle" />
         <div className="m-sheet-header">
