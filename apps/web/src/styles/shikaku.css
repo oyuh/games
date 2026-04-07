@@ -1114,54 +1114,61 @@
 .shikaku-lb-tabs {
   display: flex;
   gap: 0;
-  padding: 0.5rem 1.25rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
+  padding: 0 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
 .shikaku-lb-tab {
   flex: 1;
-  padding: 0.45rem 0.5rem;
+  padding: 0.55rem 0.5rem;
   border: none;
-  border-radius: 0.4rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: 0;
   background: transparent;
   color: var(--muted-foreground);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition: color 0.15s, border-color 0.15s;
 }
 .shikaku-lb-tab:hover {
-  background: color-mix(in srgb, var(--secondary) 30%, transparent);
   color: var(--foreground);
 }
 .shikaku-lb-tab--active {
-  background: color-mix(in srgb, var(--primary) 15%, var(--card));
   color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 
-/* Personal best banner */
+/* Personal best card */
 .shikaku-lb-personal-best {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 1.25rem;
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  padding: 0.55rem 0.85rem;
+  margin: 0.6rem 1rem 0.5rem;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
+  border-radius: 0.5rem;
   font-size: 0.78rem;
 }
 .shikaku-lb-pb-label {
-  color: var(--muted-foreground);
-  font-weight: 600;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.76rem;
 }
 .shikaku-lb-pb-value {
-  font-weight: 800;
-  color: var(--primary);
+  font-weight: 600;
+  color: var(--foreground);
   font-variant-numeric: tabular-nums;
+  font-size: 0.76rem;
 }
 .shikaku-lb-pb-none {
   color: var(--muted-foreground);
-  font-style: italic;
+  text-align: center;
+  width: 100%;
+  font-size: 0.76rem;
 }
 
 .shikaku-lb-toolbar {
@@ -1169,18 +1176,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.75rem 1.25rem 0.55rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
-  background: color-mix(in srgb, var(--card) 94%, transparent);
+  padding: 0.55rem 1.1rem;
 }
 
 .shikaku-lb-view-toggle {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--secondary) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--secondary) 24%, transparent);
+  display: flex;
+  gap: 0;
+  border-radius: 0.4rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
 
 .shikaku-lb-view-btn {
@@ -1188,11 +1192,11 @@
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;
-  border-radius: 999px;
+  border-radius: 0;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.4rem 0.8rem;
-  transition: background 0.12s ease, color 0.12s ease;
+  padding: 0.35rem 0.8rem;
+  transition: background 0.15s, color 0.15s;
 }
 
 .shikaku-lb-view-btn:hover {
@@ -1200,8 +1204,8 @@
 }
 
 .shikaku-lb-view-btn--active {
-  background: color-mix(in srgb, var(--primary) 18%, var(--card));
-  color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .shikaku-lb-count {
@@ -1218,6 +1222,13 @@
   padding: 2.5rem 1rem;
 }
 
+/* Container that holds either the list, loading, or empty state — fixed height so pagination doesn't jump */
+.shikaku-lb-content {
+  min-height: 26rem;
+  display: flex;
+  flex-direction: column;
+}
+
 .shikaku-lb-list {
   display: flex;
   flex-direction: column;
@@ -1225,9 +1236,50 @@
   overflow-y: auto;
   padding: 0.5rem 0;
   max-height: 50vh;
+  min-height: 26rem;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
+}
+
+/* Loading spinner */
+.shikaku-lb-spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 26rem;
+  color: var(--muted-foreground);
+}
+
+.shikaku-lb-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2.5px solid color-mix(in srgb, var(--muted-foreground) 25%, transparent);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: shikaku-spin 0.7s linear infinite;
+}
+
+.shikaku-lb-spinner-text {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+@keyframes shikaku-spin {
+  to { transform: rotate(360deg); }
+}
+
+.shikaku-lb-empty-stable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26rem;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  padding: 2.5rem 1rem;
 }
 /* Scrollbar */
 .shikaku-lb-list::-webkit-scrollbar { width: 4px; }
@@ -1257,8 +1309,9 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1.25rem;
+  padding: 0.55rem 1.1rem;
   font-size: 0.8rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
   transition: background 0.12s;
 }
 .shikaku-lb-row:hover {
@@ -1301,10 +1354,10 @@
 .shikaku-lb-badge {
   flex-shrink: 0;
   border-radius: 999px;
-  padding: 0.15rem 0.45rem;
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
-  color: var(--primary);
-  font-size: 0.62rem;
+  padding: 0.1rem 0.4rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.58rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1337,19 +1390,22 @@
   flex-shrink: 0;
 }
 .shikaku-lb-page-btn {
-  background: color-mix(in srgb, var(--secondary) 60%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  background: var(--muted);
+  border: none;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 700;
   color: var(--foreground);
-  border-radius: 6px;
-  padding: 0.3rem 0.65rem;
-  font-size: 0.8rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
 }
 .shikaku-lb-page-btn:hover:not(:disabled) {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border-color: var(--primary);
+  background: var(--border);
 }
 .shikaku-lb-page-btn:disabled {
   opacity: 0.3;
@@ -1357,6 +1413,7 @@
 }
 .shikaku-lb-page-info {
   font-size: 0.75rem;
+  font-weight: 600;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
@@ -1708,26 +1765,25 @@
   border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
 }
 [data-theme="light"] .shikaku-lb-tabs {
-  border-color: color-mix(in srgb, var(--primary) 12%, var(--border));
+  border-color: var(--border);
 }
 [data-theme="light"] .shikaku-lb-tab--active {
-  background: var(--background);
+  color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 [data-theme="light"] .shikaku-lb-personal-best {
-  background: color-mix(in srgb, var(--primary) 4%, var(--card));
-  border-color: color-mix(in srgb, var(--primary) 10%, var(--border));
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+  border-color: color-mix(in srgb, var(--primary) 14%, var(--border));
 }
 [data-theme="light"] .shikaku-lb-toolbar {
-  background: var(--card);
-  border-color: color-mix(in srgb, var(--primary) 8%, var(--border));
+  background: transparent;
 }
 [data-theme="light"] .shikaku-lb-view-toggle {
-  background: color-mix(in srgb, var(--muted) 60%, transparent);
   border-color: var(--border);
 }
 [data-theme="light"] .shikaku-lb-view-btn--active {
-  background: var(--background);
-  color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 /* Leaderboard row highlights */
@@ -1744,12 +1800,10 @@
 }
 [data-theme="light"] .shikaku-lb-page-btn {
   background: var(--muted);
-  border-color: var(--border);
   color: var(--foreground);
 }
 [data-theme="light"] .shikaku-lb-page-btn:hover:not(:disabled) {
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--border);
 }
 
 /* Leaderboard scrollbar (light) */
