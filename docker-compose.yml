@@ -12,7 +12,7 @@ services:
       - pg-data:/var/lib/postgresql/data
 
   zero-cache:
-    image: rocicorp/zero:1.0.0
+    image: rocicorp/zero:1.2.0
     depends_on:
       - postgres
     ports:

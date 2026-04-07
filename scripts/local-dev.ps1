@@ -46,7 +46,7 @@ if (-not $SkipDocker) {
   Assert-CommandAvailable -CommandName "docker"
 }
 if ((-not $SkipDbPush) -or (-not $SkipDev)) {
-  Assert-CommandAvailable -CommandName "pnpm"
+  Assert-CommandAvailable -CommandName "bun"
 }
 
 if (-not $SkipDocker) {
@@ -60,7 +60,7 @@ if (-not $SkipDocker) {
 
 if (-not $SkipDbPush) {
   Write-Host "Pushing database schema..." -ForegroundColor Cyan
-  pnpm db:push
+  bun db:push
 }
 
 if (-not $SkipDocker) {
@@ -87,5 +87,5 @@ if (-not $SkipDocker) {
 
 if (-not $SkipDev) {
   Write-Host "Starting local dev servers..." -ForegroundColor Green
-  pnpm dev
+  bun dev
 }

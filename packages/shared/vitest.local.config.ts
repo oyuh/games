@@ -3,7 +3,7 @@ import path from "path";
 
 /**
  * Local-only tests that may connect to the local dev database.
- * Run with: pnpm run test:local (from packages/shared)
+ * Run with: bun run test:local (from packages/shared)
  */
 export default defineConfig({
   resolve: {
