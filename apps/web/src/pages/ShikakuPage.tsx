@@ -18,6 +18,7 @@ import {
 } from "../lib/shikaku-engine";
 import { getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useIsMobile } from "../hooks/useIsMobile";
 import "../styles/game-shared.css";
 import "../styles/shikaku.css";
 import { ShikakuDemo } from "../components/demos/ShikakuDemo";
@@ -93,6 +94,7 @@ interface ScoreEligibilityResponse {
 /* ═══════════════════════════════════════════════════════════ */
 export function ShikakuPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [phase, setPhase] = useState<GamePhase>("menu");
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
@@ -1199,7 +1201,7 @@ export function ShikakuPage() {
             </div>
           </div>
 
-          {showLeaderboard && (
+          {showLeaderboard && !isMobile && (
             <ShikakuLeaderboard
               entries={leaderboard}
               loading={leaderboardLoading}
@@ -1429,7 +1431,7 @@ export function ShikakuPage() {
               </div>
             )}
 
-            {showLeaderboard && (
+            {showLeaderboard && !isMobile && (
               <ShikakuLeaderboard
                 entries={leaderboard}
                 loading={leaderboardLoading}
@@ -1579,7 +1581,7 @@ export function ShikakuPage() {
           </div>
         </div>
 
-        {showLeaderboard && (
+        {showLeaderboard && !isMobile && (
           <ShikakuLeaderboard
             entries={leaderboard}
             loading={leaderboardLoading}

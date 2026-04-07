@@ -10,6 +10,7 @@ import { MobileChatSheet } from "./components/MobileChatSheet";
 import { MobileOptionsSheet } from "./components/MobileOptionsSheet";
 import { MobileInfoSheet } from "./components/MobileInfoSheet";
 import { MobileHostControlsSheet } from "./components/MobileHostControlsSheet";
+import { MobileLeaderboardSheet } from "./components/MobileLeaderboardSheet";
 import { ToastContainer } from "../components/shared/ToastContainer";
 import { ConnectionDebugPanel } from "../components/shared/ConnectionDebugPanel";
 import { showToast } from "../lib/toast";
@@ -26,7 +27,7 @@ function MobileLayoutInner() {
   const location = useLocation();
   const chat = useChatContext();
   const { hostGame } = useMobileHost();
-  const [sheet, setSheet] = useState<"chat" | "info" | "options" | "host" | null>(null);
+  const [sheet, setSheet] = useState<"chat" | "info" | "options" | "host" | "leaderboard" | null>(null);
   const isHome = location.pathname === "/";
   const isShikaku = /^\/shikaku(\/|$)/.test(location.pathname);
   const sessionId = getOrCreateSessionId();
@@ -128,8 +129,8 @@ function MobileLayoutInner() {
 
         {isShikaku && (
           <button
-            className="m-nav-item"
-            onClick={() => window.dispatchEvent(new CustomEvent("shikaku-toggle-leaderboard"))}
+            className={`m-nav-item${sheet === "leaderboard" ? " m-nav-item--active" : ""}`}
+            onClick={() => setSheet(sheet === "leaderboard" ? null : "leaderboard")}
           >
             <FiAward size={20} />
             <span>Scores</span>
@@ -169,6 +170,9 @@ function MobileLayoutInner() {
       )}
       {sheet === "options" && (
         <MobileOptionsSheet onClose={() => setSheet(null)} />
+      )}
+      {sheet === "leaderboard" && (
+        <MobileLeaderboardSheet onClose={() => setSheet(null)} />
       )}
 
       <ToastContainer />
