@@ -2733,7 +2733,10 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 200;
-  animation: m-fade-in 0.2s ease;
+  animation: m-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.m-sheet-backdrop--closing {
+  animation: m-fade-out 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 .m-sheet {
@@ -2750,17 +2753,32 @@
   max-height: 85dvh;
   display: flex;
   flex-direction: column;
-  animation: m-slide-up 0.25s ease;
+  animation: m-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  will-change: transform;
+  /* Prevent overscroll bounce from interfering with swipe gesture */
+  overscroll-behavior: contain;
+}
+.m-sheet--closing {
+  animation: m-slide-down 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 .m-sheet-handle {
-  width: 2rem;
-  height: 0.25rem;
+  width: 2.25rem;
+  height: 0.3rem;
   border-radius: 99px;
   background: var(--accent);
   margin: 0.5rem auto 0.35rem;
   flex-shrink: 0;
+  opacity: 0.6;
+  /* Larger invisible touch area for handle dragging */
+  padding: 0.5rem 2rem;
+  background-clip: content-box;
+  cursor: grab;
+}
+.m-sheet-handle:active {
+  cursor: grabbing;
+  opacity: 0.9;
 }
 
 .m-sheet-header {
@@ -2804,9 +2822,19 @@
   to { transform: translateY(0); }
 }
 
+@keyframes m-slide-down {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
 @keyframes m-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes m-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 /* ── Host Controls Sheet ─────────────────────────────────── */
