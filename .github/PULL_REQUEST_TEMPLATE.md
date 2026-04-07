@@ -23,7 +23,7 @@
 
 ## Checklist
 
-- [ ] TypeScript compiles (`pnpm tsc --noEmit`)
+- [ ] TypeScript compiles (`bun typecheck`)
 - [ ] Tested locally in browser
 - [ ] Schema changes pushed (if applicable)
 - [ ] No console errors or warnings added

@@ -1,7 +1,7 @@
 {
   "name": "games-refac",
   "private": true,
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "bun@1.3.11",
   "scripts": {
     "dev": "turbo run dev --parallel",
     "local:up": "powershell -ExecutionPolicy Bypass -File ./scripts/local-dev.ps1",
@@ -17,23 +17,22 @@
     "build": "turbo run build --cache-dir=.turbo-cache",
     "test": "turbo run test --cache-dir=.turbo-cache",
     "test:ci": "turbo run test:ci --cache-dir=.turbo-cache",
-    "test:local": "pnpm --filter @games/shared test:local",
-    "test:watch": "pnpm --filter @games/shared test:watch",
+    "test:local": "bun --filter @games/shared test:local",
+    "test:watch": "bun --filter @games/shared test:watch",
     "lint": "turbo run lint --cache-dir=.turbo-cache",
     "typecheck": "turbo run typecheck --cache-dir=.turbo-cache",
-    "db:push": "pnpm --filter @games/shared db:push",
+    "db:push": "bun --filter @games/shared db:push",
     "db:push:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/db-push-prod.ps1",
     "db:push:prod:linux": "bash ./scripts/db-push-prod.sh",
-    "db:generate": "pnpm --filter @games/shared db:generate",
-    "db:studio": "pnpm --filter @games/shared db:studio"
+    "db:generate": "bun --filter @games/shared db:generate",
+    "db:studio": "bun --filter @games/shared db:studio"
   },
   "devDependencies": {
     "turbo": "^2.8.20",
     "typescript": "^5.9.3"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp"
-    ]
-  }
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }

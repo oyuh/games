@@ -1,6 +1,6 @@
 import { mutators, queries, schema } from "@games/shared";
 import { adminNameOverrides, chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
-import { serve } from "@hono/node-server";
+
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
@@ -2041,15 +2041,11 @@ app.on(["GET", "POST"], "/api/cleanup", async (c) => {
 });
 
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
-const server = serve(
-  {
-    fetch: app.fetch,
-    port
-  },
-  () => {
-    console.log(`API listening on http://localhost:${port}`);
-  }
-);
+const server = Bun.serve({
+  fetch: app.fetch,
+  port,
+});
+console.log(`API listening on http://localhost:${server.port}`);
 
 setBanChecker(isBanned);
 console.log("Pusher broadcast configured (no WebSocket servers)");

@@ -135,7 +135,7 @@ start_zero_container() {
     -e ZERO_QUERY_URL=http://host.docker.internal:3001/api/zero/query \
     -e ZERO_MUTATE_URL=http://host.docker.internal:3001/api/zero/mutate \
     -v "$zero_volume_name":/data \
-    rocicorp/zero:0.25.13 >/dev/null
+    rocicorp/zero:1.2.0 >/dev/null
 }
 
 echo "Checking required tools..."
@@ -144,7 +144,7 @@ if [[ "$skip_docker" == false ]]; then
   assert_docker_running
 fi
 if [[ "$skip_db_push" == false || "$skip_dev" == false ]]; then
-  assert_command_available pnpm
+  assert_command_available bun
 fi
 assert_command_available nc
 
@@ -158,7 +158,7 @@ fi
 
 if [[ "$skip_db_push" == false ]]; then
   echo "Pushing database schema..."
-  pnpm db:push
+  bun db:push
 fi
 
 if [[ "$skip_docker" == false ]]; then
@@ -179,5 +179,5 @@ if [[ "$skip_dev" == false ]]; then
   else
     echo "Starting local dev servers..."
   fi
-  exec pnpm dev
+  exec bun dev
 fi
