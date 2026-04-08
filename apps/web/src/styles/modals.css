@@ -351,6 +351,96 @@
   color: var(--primary);
 }
 
+/* ─── Sound Customize Dropdown ─────────────────────────── */
+
+.sound-customize {
+  margin-top: 0.65rem;
+}
+
+.sound-customize-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  color: var(--secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  transition: color 0.15s;
+}
+
+.sound-customize-toggle:hover {
+  color: var(--foreground);
+}
+
+.sound-customize-chevron {
+  transition: transform 0.2s;
+}
+
+.sound-customize-chevron--open {
+  transform: rotate(180deg);
+}
+
+.sound-customize-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+
+.sound-pref-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.sound-pref-label {
+  font-size: 0.82rem;
+  color: var(--foreground);
+  font-weight: 450;
+}
+
+.sound-pref-switch {
+  position: relative;
+  width: 2.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sound-pref-switch--on {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.sound-pref-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+
+.sound-pref-switch--on .sound-pref-switch-knob {
+  transform: translateX(1rem);
+}
+
 /* ─── Info Modal ────────────────────────────────────────── */
 
 .info-hero {
@@ -722,4 +812,3 @@
 .welcome-heart {
   font-size: 0.72rem;
 }
-

@@ -1,6 +1,7 @@
-import { FiX, FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX } from "react-icons/fi";
+import { useState } from "react";
+import { FiX, FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX, FiChevronDown } from "react-icons/fi";
 import { useSettings, updateSettings } from "../../lib/settings";
-import type { SidebarPosition, Theme } from "../../lib/settings";
+import type { SidebarPosition, Theme, SoundPreferences } from "../../lib/settings";
 import { playPress } from "../../lib/sounds";
 
 const positionIcons: Record<SidebarPosition, React.ReactNode> = {
@@ -11,6 +12,7 @@ const positionIcons: Record<SidebarPosition, React.ReactNode> = {
 
 export function OptionsModal({ onClose }: { onClose: () => void }) {
   const settings = useSettings();
+  const [soundCustomizeOpen, setSoundCustomizeOpen] = useState(false);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -79,6 +81,27 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
                 <FiVolume2 size={14} /> On
               </button>
             </div>
+
+            {settings.soundEnabled && (
+              <div className="sound-customize" data-no-sound>
+                <button
+                  className="sound-customize-toggle"
+                  onClick={() => setSoundCustomizeOpen((v) => !v)}
+                >
+                  Customize Sounds <FiChevronDown size={14} className={`sound-customize-chevron ${soundCustomizeOpen ? "sound-customize-chevron--open" : ""}`} />
+                </button>
+
+                {soundCustomizeOpen && (
+                  <div className="sound-customize-list">
+                    <SoundPrefToggle label="Hover Sounds" prefKey="hoverSounds" prefs={settings.soundPreferences} />
+                    <SoundPrefToggle label="Click Sounds" prefKey="clickSounds" prefs={settings.soundPreferences} />
+                    <SoundPrefToggle label="Game Notifications" prefKey="gameNotifications" prefs={settings.soundPreferences} />
+                    <SoundPrefToggle label="Action Feedback" prefKey="actionFeedback" prefs={settings.soundPreferences} />
+                    <SoundPrefToggle label="Player Sounds" prefKey="playerSounds" prefs={settings.soundPreferences} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -91,5 +114,22 @@ function ThemeBtn({ active, icon, label, onClick }: { active: boolean; icon: Rea
     <button className={`option-toggle-btn ${active ? "option-toggle-btn--active" : ""}`} onClick={onClick}>
       {icon} {label}
     </button>
+  );
+}
+
+function SoundPrefToggle({ label, prefKey, prefs }: { label: string; prefKey: keyof SoundPreferences; prefs: SoundPreferences }) {
+  const enabled = prefs[prefKey];
+  return (
+    <div className="sound-pref-item">
+      <span className="sound-pref-label">{label}</span>
+      <button
+        className={`sound-pref-switch ${enabled ? "sound-pref-switch--on" : ""}`}
+        role="switch"
+        aria-checked={enabled}
+        onClick={() => updateSettings({ soundPreferences: { ...prefs, [prefKey]: !enabled } })}
+      >
+        <span className="sound-pref-switch-knob" />
+      </button>
+    </div>
   );
 }

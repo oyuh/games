@@ -1,5 +1,7 @@
-import { FiMoon, FiSun, FiPlay, FiVolume2, FiVolumeX } from "react-icons/fi";
+import { useState } from "react";
+import { FiMoon, FiSun, FiPlay, FiVolume2, FiVolumeX, FiChevronDown } from "react-icons/fi";
 import { useSettings, updateSettings } from "../../lib/settings";
+import type { SoundPreferences } from "../../lib/settings";
 import { BottomSheet } from "./BottomSheet";
 import { mutators } from "@games/shared";
 import { useZero } from "../../lib/zero";
@@ -12,6 +14,7 @@ const isDev = import.meta.env.DEV;
 
 export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
   const settings = useSettings();
+  const [soundCustomizeOpen, setSoundCustomizeOpen] = useState(false);
   const zero = useZero();
   const navigate = useNavigate();
   const sessionId = getOrCreateSessionId();
@@ -237,35 +240,46 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
             <FiVolume2 size={14} /> On
           </button>
         </div>
+
+        {settings.soundEnabled && (
+          <div className="m-sound-customize" data-no-sound>
+            <button
+              className="m-sound-customize-toggle"
+              onClick={() => setSoundCustomizeOpen((v) => !v)}
+            >
+              Customize Sounds <FiChevronDown size={14} className={`m-sound-customize-chevron ${soundCustomizeOpen ? "m-sound-customize-chevron--open" : ""}`} />
+            </button>
+
+            {soundCustomizeOpen && (
+              <div className="m-sound-customize-list">
+                <MobileSoundPrefToggle label="Hover Sounds" prefKey="hoverSounds" prefs={settings.soundPreferences} />
+                <MobileSoundPrefToggle label="Click Sounds" prefKey="clickSounds" prefs={settings.soundPreferences} />
+                <MobileSoundPrefToggle label="Game Notifications" prefKey="gameNotifications" prefs={settings.soundPreferences} />
+                <MobileSoundPrefToggle label="Action Feedback" prefKey="actionFeedback" prefs={settings.soundPreferences} />
+                <MobileSoundPrefToggle label="Player Sounds" prefKey="playerSounds" prefs={settings.soundPreferences} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {isDev && (
-        <div className="m-options-group">
-          <label className="m-options-label"><FiPlay size={12} /> Dev: Demo Games</label>
-          <div className="m-demo-grid">
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoImposter("lobby")}>Imp Lobby</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoImposter("playing")}>Imp Play</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoImposter("voting")}>Imp Vote</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoImposter("results")}>Imp Results</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoPassword("lobby")}>Pwd Lobby</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoPassword("playing")}>Pwd Play</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoPassword("results")}>Pwd Results</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoChainReaction("lobby")}>CR Lobby</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoChainReaction("submitting")}>CR Submit</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoChainReaction("playing")}>CR Play</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoChainReaction("finished")}>CR Finish</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoShadeSignal("lobby")}>SS Lobby</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoShadeSignal("clue1")}>SS Clue</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoShadeSignal("guess1")}>SS Guess</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoShadeSignal("reveal")}>SS Reveal</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("lobby")}>LS Lobby</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("picking")}>LS Pick</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("clue1")}>LS Clue</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("guess1")}>LS Guess</button>
-            <button className="m-btn m-btn-muted m-btn-sm" onClick={() => void createDemoLocationSignal("reveal")}>LS Reveal</button>
-          </div>
-        </div>
-      )}
     </BottomSheet>
+  );
+}
+
+function MobileSoundPrefToggle({ label, prefKey, prefs }: { label: string; prefKey: keyof SoundPreferences; prefs: SoundPreferences }) {
+  const enabled = prefs[prefKey];
+  return (
+    <div className="m-sound-pref-item">
+      <span className="m-sound-pref-label">{label}</span>
+      <button
+        className={`m-sound-pref-switch ${enabled ? "m-sound-pref-switch--on" : ""}`}
+        role="switch"
+        aria-checked={enabled}
+        onClick={() => updateSettings({ soundPreferences: { ...prefs, [prefKey]: !enabled } })}
+      >
+        <span className="m-sound-pref-switch-knob" />
+      </button>
+    </div>
   );
 }
