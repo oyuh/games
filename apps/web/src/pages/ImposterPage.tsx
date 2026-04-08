@@ -42,6 +42,8 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
 
   usePresenceSocket({ sessionId, gameId, gameType: "imposter" });
 
+  const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
+
   useGameSounds({
     phase: game?.phase,
     sessionId,
@@ -50,7 +52,6 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   });
 
   const isHost = game?.host_id === sessionId;
-  const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
