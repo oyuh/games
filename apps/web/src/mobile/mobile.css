@@ -3281,6 +3281,45 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Skeleton loading rows ── */
+.m-lb-row--skeleton {
+  pointer-events: none;
+}
+
+.m-lb-skel-block {
+  display: inline-block;
+  height: 0.65rem;
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--muted-foreground) 15%, transparent);
+  animation: m-lb-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes m-lb-shimmer {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* ── Empty placeholder rows (keep height stable) ── */
+.m-lb-row--empty-placeholder {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.m-lb-empty-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  opacity: 1;
+}
+
+.m-lb-row--empty-placeholder:has(.m-lb-empty-msg) {
+  opacity: 1;
+}
+
 /* ── Theme-aware game header ─────────────────────────────── */
 .m-page[data-game-theme] .m-game-header {
   background: color-mix(in srgb, var(--game-bg) 65%, transparent);

@@ -12,6 +12,8 @@ import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
+import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
+import { playHint } from "../../lib/sounds";
 
 type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 
@@ -42,6 +44,13 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
+
+  useGameSounds({
+    phase: game?.phase,
+    sessionId,
+    isMyTurn: Boolean(game?.phase === "playing" && inGame),
+  });
+
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
   const mySession = mySessionRows[0];
   const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
@@ -187,6 +196,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     if (editingIndex === i) { setEditingIndex(null); setGuess(""); }
     try {
       await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })).server;
+      playHint();
     } catch { /* noop */ }
   };
 
@@ -207,6 +217,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     try {
       await zero.mutate(mutators.chainReaction.submitChain({ gameId, sessionId, words: submissionWords.map((w) => w.trim()) })).server;
       setHasSubmitted(true);
+      playSoundSubmit();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Submit failed", "error");
     }

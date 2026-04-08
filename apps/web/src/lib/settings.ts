@@ -6,6 +6,7 @@ export type SidebarPosition = "left" | "right" | "top";
 export interface Settings {
   theme: Theme;
   sidebarPosition: SidebarPosition;
+  soundEnabled: boolean;
 }
 
 const STORAGE_KEY = "games-settings";
@@ -13,6 +14,7 @@ const STORAGE_KEY = "games-settings";
 const defaults: Settings = {
   theme: "dark",
   sidebarPosition: "left",
+  soundEnabled: false,
 };
 
 let current: Settings = load();

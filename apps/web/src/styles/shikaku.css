@@ -77,6 +77,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
+  animation: shikaku-menu-fade-down 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .shikaku-title {
   font-size: 3.2rem;
@@ -84,6 +85,7 @@
   color: #34d399;
   line-height: 1;
   letter-spacing: -0.02em;
+  animation: shikaku-title-glow 3s ease-in-out infinite;
 }
 .shikaku-subtitle {
   font-size: 1rem;
@@ -94,6 +96,24 @@
   opacity: 0.7;
 }
 
+/* ── Menu entrance animations ─────────────────────────────── */
+@keyframes shikaku-menu-fade-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shikaku-menu-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shikaku-title-glow {
+  0%, 100% { text-shadow: 0 0 0 transparent; }
+  50% { text-shadow: 0 0 18px rgba(52, 211, 153, 0.25); }
+}
+@keyframes shikaku-menu-scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* ── Mode bar — tabs + seed toggle in one row ─────────────── */
 .shikaku-mode-bar {
   display: flex;
@@ -101,6 +121,7 @@
   gap: 0.5rem;
   width: 100%;
   max-width: 560px;
+  animation: shikaku-menu-fade-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
 }
 .shikaku-tabs {
   display: flex;
@@ -126,7 +147,7 @@
   border: 1.5px solid transparent;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .shikaku-tab:hover {
   color: var(--foreground);
@@ -156,7 +177,10 @@
   border: 1.5px solid var(--border);
   border-radius: 0.65rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.shikaku-seed-toggle:active {
+  transform: scale(0.92);
 }
 .shikaku-seed-toggle:hover {
   color: var(--foreground);
@@ -181,6 +205,7 @@
   gap: 0.65rem;
   width: 100%;
   max-width: 560px;
+  animation: shikaku-menu-scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
 }
 .shikaku-diff-card {
   display: flex;
@@ -197,7 +222,7 @@
   color: inherit;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.25s, transform 0.15s;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .shikaku-diff-card::before {
   content: "";
@@ -212,13 +237,14 @@
 .shikaku-diff-card:hover {
   border-color: color-mix(in srgb, var(--diff-color) 60%, transparent);
   background: color-mix(in srgb, var(--diff-color) 8%, var(--card));
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--diff-color) 20%, transparent);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--diff-color) 25%, transparent);
 }
 .shikaku-diff-card:hover::before { opacity: 0.08; }
 .shikaku-diff-card:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.97);
   box-shadow: none;
+  transition-duration: 0.08s;
 }
 
 /* Selected state (when custom seed is on) */
@@ -271,6 +297,7 @@
   font-size: 0.82rem;
   color: var(--muted-foreground);
   opacity: 0.5;
+  animation: shikaku-menu-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
 }
 
 /* ── Custom seed section ──────────────────────────────────── */
@@ -379,6 +406,7 @@
 .shikaku-menu-links {
   display: flex;
   gap: 1rem;
+  animation: shikaku-menu-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
 }
 .shikaku-menu-link {
   display: flex;
@@ -393,11 +421,15 @@
   cursor: pointer;
   padding: 0.25rem 0;
   opacity: 0.65;
-  transition: opacity 0.12s, color 0.12s;
+  transition: opacity 0.15s, color 0.15s, transform 0.15s;
+}
+.shikaku-menu-link:active {
+  transform: scale(0.95);
 }
 .shikaku-menu-link:hover {
   opacity: 1;
   color: var(--foreground);
+  transform: translateY(-1px);
 }
 
 /* ── Generating ────────────────────────────────────────────── */
@@ -1416,6 +1448,45 @@
   font-weight: 600;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Skeleton loading rows ── */
+.shikaku-lb-row--skeleton {
+  pointer-events: none;
+}
+
+.shikaku-lb-skel-block {
+  display: inline-block;
+  height: 0.75rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--muted-foreground) 15%, transparent);
+  animation: shikaku-lb-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes shikaku-lb-shimmer {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* ── Empty placeholder rows (keep height stable) ── */
+.shikaku-lb-row--empty-placeholder {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.shikaku-lb-empty-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  opacity: 1;
+}
+
+.shikaku-lb-row--empty-placeholder:has(.shikaku-lb-empty-msg) {
+  opacity: 1;
 }
 
 /* ── Give-up confirmation modal ─────────────────────────────── */

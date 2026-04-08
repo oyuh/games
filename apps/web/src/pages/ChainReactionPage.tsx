@@ -16,6 +16,8 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileChainReactionPage } from "../mobile/pages/MobileChainReactionPage";
 import { ChainDemo } from "../components/demos/ChainDemo";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
+import { useGameSounds, playSoundSubmit, playSoundCorrect, playSoundWrong } from "../hooks/useGameSounds";
+import { playHint } from "../lib/sounds";
 
 type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 
@@ -49,6 +51,12 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
 
   usePresenceSocket({ sessionId, gameId, gameType: "chain_reaction" });
+
+  useGameSounds({
+    phase: game?.phase,
+    sessionId,
+    isMyTurn: Boolean(game?.phase === "playing" && inGame),
+  });
 
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
@@ -209,6 +217,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     // Determine correct/wrong locally for flash animation
     const isCorrect = slot && currentGuess.toLowerCase().trim() === slot.word.toLowerCase().trim();
     setFlashSlot({ idx, type: isCorrect ? "correct" : "wrong" });
+    if (isCorrect) playSoundCorrect(); else playSoundWrong();
     setTimeout(() => setFlashSlot((cur) => (cur?.idx === idx ? null : cur)), 600);
 
     try {
@@ -231,6 +240,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     }
     try {
       await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })).server;
+      playHint();
     } catch {
       // All revealable letters already shown
     }
@@ -259,6 +269,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
         words: submissionWords.map((w) => w.trim())
       })).server;
       setHasSubmitted(true);
+      playSoundSubmit();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Submit failed", "error");
     }

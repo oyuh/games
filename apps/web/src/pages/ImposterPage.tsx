@@ -20,6 +20,8 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
 import { ImposterDemo } from "../components/demos/ImposterDemo";
 import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
+import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
+import { playVote, playGameStart, playReveal } from "../lib/sounds";
 
 function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
 
@@ -39,6 +41,13 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "imposter" });
+
+  useGameSounds({
+    phase: game?.phase,
+    sessionId,
+    isMyTurn: Boolean(me && !me.eliminated && (game?.phase === "playing" || game?.phase === "voting")),
+    phaseEndsAt: game?.settings.phaseEndsAt,
+  });
 
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
@@ -222,11 +231,13 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
     if (!clue.trim()) return;
     await zero.mutate(mutators.imposter.submitClue({ gameId, sessionId, text: clue.trim() })).server;
     setClue("");
+    playSoundSubmit();
   };
 
   const submitVote = async () => {
     if (!voteTarget) return;
     await zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })).server;
+    playVote();
   };
 
   const joinGame = () => {

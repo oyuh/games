@@ -52,11 +52,17 @@ function MobileLayoutInner() {
     const stateHandler = (e: Event) => {
       setShikakuState((e as CustomEvent).detail);
     };
+    const openLeaderboard = () => setSheet("leaderboard");
+    const openInfo = () => setSheet("info");
     window.addEventListener("shikaku-infinite-state", handler);
     window.addEventListener("shikaku-game-state", stateHandler);
+    window.addEventListener("shikaku-open-leaderboard", openLeaderboard);
+    window.addEventListener("shikaku-open-info", openInfo);
     return () => {
       window.removeEventListener("shikaku-infinite-state", handler);
       window.removeEventListener("shikaku-game-state", stateHandler);
+      window.removeEventListener("shikaku-open-leaderboard", openLeaderboard);
+      window.removeEventListener("shikaku-open-info", openInfo);
     };
   }, [isShikaku]);
 
@@ -108,12 +114,12 @@ function MobileLayoutInner() {
           <button
             className={`m-nav-item${shikakuState.phase !== "menu" ? " m-nav-item--active" : ""}`}
             onClick={() => {
-              const mode = shikakuState.customMode ? "Seeded" : shikakuState.infiniteMode ? "Infinite" : "Regular";
+              const mode = shikakuState.customMode ? "Seeded" : shikakuState.showSeedInput ? "Normal" : shikakuState.infiniteMode ? "Infinite" : "Ranked";
               const diff = shikakuState.difficulty.charAt(0).toUpperCase() + shikakuState.difficulty.slice(1);
               const phase = shikakuState.phase.charAt(0).toUpperCase() + shikakuState.phase.slice(1);
               const parts = [`${mode} — ${diff}`, `Phase: ${phase}`];
               if (shikakuState.seed) parts.push(`Seed: ${shikakuState.seed}`);
-              parts.push(shikakuState.customMode || shikakuState.infiniteMode ? "Unranked" : "Ranked");
+              parts.push(shikakuState.customMode || shikakuState.showSeedInput || shikakuState.infiniteMode ? "Unranked" : "Ranked");
               showToast(parts.join(" — "), "info");
             }}
           >
@@ -123,7 +129,7 @@ function MobileLayoutInner() {
                 ? <FiRepeat size={20} />
                 : <FiGrid size={20} />
             }
-            <span>{shikakuState.customMode || shikakuState.showSeedInput ? "Seed" : shikakuState.infiniteMode ? "Infinite" : "Regular"}</span>
+            <span>{shikakuState.customMode || shikakuState.showSeedInput ? "Seed" : shikakuState.infiniteMode ? "Infinite" : "Ranked"}</span>
           </button>
         )}
 

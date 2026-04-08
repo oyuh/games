@@ -8,6 +8,7 @@ import { PasswordDemo } from "../../components/demos/PasswordDemo";
 import { ChainDemo } from "../../components/demos/ChainDemo";
 import { ShadeDemo } from "../../components/demos/ShadeDemo";
 import { LocationDemo } from "../../components/demos/LocationDemo";
+import { ShikakuDemo } from "../../components/demos/ShikakuDemo";
 import { useConnectionDebug } from "../../lib/connection-debug";
 import { getCustomStatus, subscribeCustomStatus } from "../../hooks/useAdminBroadcast";
 
@@ -42,12 +43,13 @@ function relativeTime(iso: string) {
   return `${days}d ago`;
 }
 
-function getGameType(pathname: string): "imposter" | "password" | "chain" | "shade" | "location" | null {
+function getGameType(pathname: string): "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | null {
   if (pathname.startsWith("/imposter/")) return "imposter";
   if (pathname.startsWith("/password/")) return "password";
   if (pathname.startsWith("/chain/")) return "chain";
   if (pathname.startsWith("/shade/")) return "shade";
   if (pathname.startsWith("/location/")) return "location";
+  if (/^\/shikaku(\/|$)/.test(pathname)) return "shikaku";
   return null;
 }
 
@@ -97,6 +99,7 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
     if (gameType === "chain") return <ChainDemo onClose={onClose} />;
     if (gameType === "shade") return <ShadeDemo onClose={onClose} />;
     if (gameType === "location") return <LocationDemo onClose={onClose} />;
+    if (gameType === "shikaku") return <ShikakuDemo onClose={onClose} />;
   }
 
   return (
@@ -266,6 +269,13 @@ function getPageInfo(pathname: string): { title: string; description: string; ti
       title: "Location Signal",
       description: "One leader picks a location on the map and gives clues. Everyone else guesses where it is.",
       tips: ["Leaders: give clues to narrow it down", "Guessers: closer guesses = more points"],
+    };
+  }
+  if (/^\/shikaku(\/|$)/.test(pathname)) {
+    return {
+      title: "Shikaku",
+      description: "Divide the grid into rectangles — each containing exactly one number equal to its area.",
+      tips: ["Drag to draw rectangles on the grid", "Each rectangle must contain exactly one number", "Complete all puzzles as fast as you can for a higher score"],
     };
   }
   return { title: "Page", description: "You're on an unknown page." };

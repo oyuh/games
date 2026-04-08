@@ -12,6 +12,7 @@ import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/S
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { useGameSecret } from "../../lib/game-secrets";
 import { getSessionRequestHeaders } from "../../lib/session";
+import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
@@ -73,6 +74,13 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
     if (!game || !game.active_rounds.length || myTeamIndex === -1) return undefined;
     return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
   }, [game?.active_rounds, myTeamIndex]);
+
+  useGameSounds({
+    phase: game?.phase,
+    sessionId,
+    isMyTurn: Boolean(myActiveRound),
+    phaseEndsAt: game?.settings.roundEndsAt,
+  });
 
   const { decryptValue } = useGameSecret({
     gameType: "password",
@@ -234,14 +242,14 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   const submitClue = async (event: FormEvent) => {
     event.preventDefault();
     if (!clue.trim()) return;
-    try { await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server; setClue(""); }
+    try { await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server; setClue(""); playSoundSubmit(); }
     catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit clue", "error"); }
   };
 
   const submitGuess = async (event: FormEvent) => {
     event.preventDefault();
     if (!guess.trim()) return;
-    try { await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server; setGuess(""); }
+    try { await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server; setGuess(""); playSoundSubmit(); }
     catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit guess", "error"); }
   };
 
