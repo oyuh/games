@@ -5,6 +5,7 @@
  */
 
 import { getSettings } from "./settings";
+import type { SoundPreferences } from "./settings";
 
 /* ── Audio context (lazy singleton) ────────────────────── */
 
@@ -14,6 +15,14 @@ function getCtx(): AudioContext {
   if (!ctx) ctx = new AudioContext();
   if (ctx.state === "suspended") void ctx.resume();
   return ctx;
+}
+
+/** Check master + specific sound preference */
+function canPlay(key?: keyof SoundPreferences): boolean {
+  const s = getSettings();
+  if (!s.soundEnabled) return false;
+  if (key && !s.soundPreferences[key]) return false;
+  return true;
 }
 
 /* ── Master volume (kept low so sounds aren't annoying) ── */
@@ -35,7 +44,6 @@ function playTone(
     filterType?: BiquadFilterType;
   },
 ) {
-  if (!getSettings().soundEnabled) return;
   const ac = getCtx();
   const now = ac.currentTime + (opts?.delay ?? 0);
   const vol = (opts?.volume ?? 1) * MASTER_VOLUME;
@@ -71,7 +79,6 @@ function playTone(
 /* ── Helper: white-noise burst (for click/tap sounds) ── */
 
 function playNoise(duration: number, opts?: { volume?: number; delay?: number; filterFreq?: number }) {
-  if (!getSettings().soundEnabled) return;
   const ac = getCtx();
   const now = ac.currentTime + (opts?.delay ?? 0);
   const vol = (opts?.volume ?? 0.5) * MASTER_VOLUME;
@@ -108,17 +115,20 @@ function playNoise(duration: number, opts?: { volume?: number; delay?: number; f
 
 /** Soft click for button hover */
 export function playHover() {
+  if (!canPlay("hoverSounds")) return;
   playNoise(0.04, { volume: 0.15, filterFreq: 6000 });
 }
 
 /** Crisp tap for button press */
 export function playPress() {
+  if (!canPlay("clickSounds")) return;
   playTone(800, "sine", 0.06, { volume: 0.4, attack: 0.003, decay: 0.04 });
   playNoise(0.03, { volume: 0.2, filterFreq: 5000 });
 }
 
 /** Gentle notification — it's your turn */
 export function playYourTurn() {
+  if (!canPlay("gameNotifications")) return;
   playTone(523, "sine", 0.15, { volume: 0.5, filterFreq: 2000 });
   playTone(659, "sine", 0.15, { volume: 0.5, delay: 0.12, filterFreq: 2000 });
   playTone(784, "sine", 0.25, { volume: 0.6, delay: 0.24, filterFreq: 2000 });
@@ -126,28 +136,33 @@ export function playYourTurn() {
 
 /** Countdown tick (3-2-1) */
 export function playCountdownTick() {
+  if (!canPlay("gameNotifications")) return;
   playTone(440, "sine", 0.1, { volume: 0.5, attack: 0.005, decay: 0.08 });
 }
 
 /** Countdown final — GO! */
 export function playCountdownGo() {
+  if (!canPlay("gameNotifications")) return;
   playTone(523, "sine", 0.12, { volume: 0.6, attack: 0.005 });
   playTone(784, "sine", 0.2, { volume: 0.7, delay: 0.1 });
 }
 
 /** Timer running low warning (last ~5 seconds) */
 export function playTimerUrgent() {
+  if (!canPlay("gameNotifications")) return;
   playTone(880, "square", 0.06, { volume: 0.25, filterFreq: 2000 });
 }
 
 /** Successful submission (clue, guess, vote) */
 export function playSubmit() {
+  if (!canPlay("actionFeedback")) return;
   playTone(600, "sine", 0.1, { volume: 0.45, attack: 0.005 });
   playTone(800, "sine", 0.12, { volume: 0.4, delay: 0.08 });
 }
 
 /** Correct answer / positive reveal */
 export function playCorrect() {
+  if (!canPlay("actionFeedback")) return;
   playTone(523, "sine", 0.12, { volume: 0.5, attack: 0.005 });
   playTone(659, "sine", 0.12, { volume: 0.5, delay: 0.1 });
   playTone(784, "sine", 0.18, { volume: 0.55, delay: 0.2 });
@@ -156,12 +171,14 @@ export function playCorrect() {
 
 /** Wrong answer / negative reveal */
 export function playWrong() {
+  if (!canPlay("actionFeedback")) return;
   playTone(350, "sawtooth", 0.15, { volume: 0.3, filterFreq: 1200 });
   playTone(280, "sawtooth", 0.2, { volume: 0.35, delay: 0.12, filterFreq: 1000 });
 }
 
 /** Phase change / new round starting */
 export function playPhaseChange() {
+  if (!canPlay("gameNotifications")) return;
   playTone(440, "sine", 0.1, { volume: 0.4, attack: 0.005 });
   playTone(554, "sine", 0.1, { volume: 0.4, delay: 0.08 });
   playTone(659, "sine", 0.15, { volume: 0.45, delay: 0.16 });
@@ -169,6 +186,7 @@ export function playPhaseChange() {
 
 /** Game over / results reveal */
 export function playGameOver() {
+  if (!canPlay("gameNotifications")) return;
   playTone(392, "sine", 0.2, { volume: 0.45 });
   playTone(494, "sine", 0.2, { volume: 0.45, delay: 0.15 });
   playTone(587, "sine", 0.2, { volume: 0.5, delay: 0.3 });
@@ -177,6 +195,7 @@ export function playGameOver() {
 
 /** Victory fanfare — you/your team won */
 export function playVictory() {
+  if (!canPlay("actionFeedback")) return;
   playTone(523, "sine", 0.12, { volume: 0.5 });
   playTone(659, "sine", 0.12, { volume: 0.5, delay: 0.1 });
   playTone(784, "sine", 0.12, { volume: 0.55, delay: 0.2 });
@@ -187,18 +206,21 @@ export function playVictory() {
 
 /** Player joined the lobby */
 export function playPlayerJoin() {
+  if (!canPlay("playerSounds")) return;
   playTone(600, "sine", 0.08, { volume: 0.3, attack: 0.005 });
   playTone(750, "sine", 0.1, { volume: 0.3, delay: 0.06 });
 }
 
 /** Player left */
 export function playPlayerLeave() {
+  if (!canPlay("playerSounds")) return;
   playTone(500, "sine", 0.08, { volume: 0.25 });
   playTone(380, "sine", 0.12, { volume: 0.25, delay: 0.06 });
 }
 
 /** Puzzle solved (Shikaku) */
 export function playPuzzleSolved() {
+  if (!canPlay("actionFeedback")) return;
   playTone(523, "sine", 0.1, { volume: 0.5 });
   playTone(659, "sine", 0.1, { volume: 0.5, delay: 0.08 });
   playTone(784, "sine", 0.15, { volume: 0.55, delay: 0.16 });
@@ -206,6 +228,7 @@ export function playPuzzleSolved() {
 
 /** Reveal / uncover moment */
 export function playReveal() {
+  if (!canPlay("actionFeedback")) return;
   playTone(350, "sine", 0.15, { volume: 0.35 });
   playTone(440, "sine", 0.15, { volume: 0.4, delay: 0.1 });
   playTone(523, "sine", 0.15, { volume: 0.4, delay: 0.2 });
@@ -214,17 +237,20 @@ export function playReveal() {
 
 /** Letter hint revealed (Chain Reaction) */
 export function playHint() {
+  if (!canPlay("actionFeedback")) return;
   playTone(700, "sine", 0.08, { volume: 0.3, attack: 0.005 });
 }
 
 /** Vote cast */
 export function playVote() {
+  if (!canPlay("actionFeedback")) return;
   playTone(500, "sine", 0.08, { volume: 0.35, attack: 0.005 });
   playTone(650, "sine", 0.1, { volume: 0.3, delay: 0.06 });
 }
 
 /** Game start */
 export function playGameStart() {
+  if (!canPlay("gameNotifications")) return;
   playTone(440, "sine", 0.1, { volume: 0.45 });
   playTone(554, "sine", 0.1, { volume: 0.45, delay: 0.1 });
   playTone(659, "sine", 0.12, { volume: 0.5, delay: 0.2 });

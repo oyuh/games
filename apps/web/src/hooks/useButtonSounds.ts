@@ -7,6 +7,8 @@ import { playHover, playPress } from "../lib/sounds";
  */
 function isButton(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
+  // Skip elements inside sound-config panels (avoids race with setting update)
+  if (el.closest("[data-no-sound]")) return false;
   if (el.tagName === "BUTTON") return true;
   if (el.getAttribute("role") === "button") return true;
   // Walk up to find a button parent (for icon children inside buttons)
