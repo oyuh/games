@@ -1,4 +1,4 @@
-import { FiMoon, FiSun, FiPlay } from "react-icons/fi";
+import { FiMoon, FiSun, FiPlay, FiVolume2, FiVolumeX } from "react-icons/fi";
 import { useSettings, updateSettings } from "../../lib/settings";
 import { BottomSheet } from "./BottomSheet";
 import { mutators } from "@games/shared";
@@ -6,6 +6,7 @@ import { useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { useNavigate } from "react-router-dom";
 import { getOrCreateSessionId, getStoredName, addRecentGame } from "../../lib/session";
+import { playPress } from "../../lib/sounds";
 
 const isDev = import.meta.env.DEV;
 
@@ -213,6 +214,27 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
             onClick={() => updateSettings({ theme: "light" })}
           >
             <FiSun size={14} /> Light
+          </button>
+        </div>
+      </div>
+
+      <div className="m-options-group">
+        <label className="m-options-label">Sound Effects</label>
+        <div className="m-options-row">
+          <button
+            className={`m-btn ${!settings.soundEnabled ? "m-btn-primary" : "m-btn-muted"}`}
+            onClick={() => updateSettings({ soundEnabled: false })}
+          >
+            <FiVolumeX size={14} /> Off
+          </button>
+          <button
+            className={`m-btn ${settings.soundEnabled ? "m-btn-primary" : "m-btn-muted"}`}
+            onClick={() => {
+              updateSettings({ soundEnabled: true });
+              setTimeout(() => playPress(), 50);
+            }}
+          >
+            <FiVolume2 size={14} /> On
           </button>
         </div>
       </div>

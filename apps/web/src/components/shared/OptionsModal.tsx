@@ -1,6 +1,7 @@
-import { FiX, FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter } from "react-icons/fi";
+import { FiX, FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX } from "react-icons/fi";
 import { useSettings, updateSettings } from "../../lib/settings";
 import type { SidebarPosition, Theme } from "../../lib/settings";
+import { playPress } from "../../lib/sounds";
 
 const positionIcons: Record<SidebarPosition, React.ReactNode> = {
   left: <FiAlignLeft size={14} />,
@@ -54,6 +55,29 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
                   {positionIcons[pos]} {pos.charAt(0).toUpperCase() + pos.slice(1)}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Sound */}
+          <div className="option-group">
+            <label className="option-label">Sound Effects</label>
+            <div className="option-toggle-row">
+              <button
+                className={`option-toggle-btn ${!settings.soundEnabled ? "option-toggle-btn--active" : ""}`}
+                onClick={() => updateSettings({ soundEnabled: false })}
+              >
+                <FiVolumeX size={14} /> Off
+              </button>
+              <button
+                className={`option-toggle-btn ${settings.soundEnabled ? "option-toggle-btn--active" : ""}`}
+                onClick={() => {
+                  updateSettings({ soundEnabled: true });
+                  // Play a sound so the user hears it's on
+                  setTimeout(() => playPress(), 50);
+                }}
+              >
+                <FiVolume2 size={14} /> On
+              </button>
             </div>
           </div>
         </div>

@@ -16,6 +16,7 @@ import {
 } from "./lib/connection-debug";
 import { syncSessionIdentity } from "./lib/session";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
+import { useButtonSounds } from "./hooks/useButtonSounds";
 import { HomePage } from "./pages/HomePage";
 import { HomePageStylePreview } from "./pages/HomePageStylePreview";
 import { ImposterPage } from "./pages/ImposterPage";
@@ -86,6 +87,9 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
 
   // Global admin broadcast listener (toasts, refresh, custom status, kick)
   useAdminBroadcast();
+
+  // Global button hover/press sound effects
+  useButtonSounds();
 
   useEffect(() => {
     if (styleOnly) {

@@ -19,6 +19,7 @@ import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets
 import { MobileLocationSignalPage } from "../mobile/pages/MobileLocationSignalPage";
 import { WorldMap, MapMarker } from "../components/location/WorldMap";
 import { LocationDemo } from "../components/demos/LocationDemo";
+import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
 
 type LocPhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "clue3" | "guess3" | "clue4" | "guess4" | "reveal" | "finished" | "ended";
 
@@ -48,6 +49,17 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
   const isLeader = game?.leader_id === sessionId;
+
+  useGameSounds({
+    phase: game?.phase,
+    sessionId,
+    isMyTurn: Boolean(inGame && (
+      (isLeader && (game?.phase === "picking" || game?.phase?.startsWith("clue"))) ||
+      (!isLeader && game?.phase?.startsWith("guess"))
+    )),
+    phaseEndsAt: game?.settings.phaseEndsAt,
+  });
+
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
   const mySession = mySessionRows[0];
   const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
@@ -238,6 +250,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         gameId: game.id, sessionId, round: round as 1 | 2 | 3 | 4, text: draftClue.trim(),
       })).server;
       setDraftClue("");
+      playSoundSubmit();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Clue failed", "error");
     }
@@ -250,6 +263,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         gameId: game.id, sessionId, round: round as 1 | 2 | 3 | 4, lat: draftMarker.lat, lng: draftMarker.lng,
       })).server;
       showToast("Guess placed!", "success");
+      playSoundSubmit();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Guess failed", "error");
     }

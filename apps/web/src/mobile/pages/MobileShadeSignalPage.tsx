@@ -18,6 +18,7 @@ import { showToast } from "../../lib/toast";
 import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
 
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
+import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 
 type ShadePhase = "lobby" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended";
 
@@ -87,6 +88,17 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const isLeader = game?.leader_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
+
+  useGameSounds({
+    phase: game?.phase,
+    sessionId,
+    isMyTurn: Boolean(inGame && (
+      (isLeader && game?.phase?.startsWith("clue")) ||
+      (!isLeader && game?.phase?.startsWith("guess"))
+    )),
+    phaseEndsAt: game?.settings.phaseEndsAt,
+  });
+
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game?.spectators, sessionId]);
   const mySession = mySessionRows[0];
   const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
@@ -277,6 +289,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       const result = await zero.mutate(mutators.shadeSignal.submitClue({ gameId, sessionId, text: clue.trim() })).server;
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       setClue("");
+      playSoundSubmit();
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : "Failed to submit clue", "error");
     }
@@ -289,7 +302,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
         mutators.shadeSignal.submitGuess({ gameId, sessionId, row: selectedCell.row, col: selectedCell.col })
       ).server;
       if (result.type === "error") { showToast(result.error.message, "error"); }
-      else { setGuessLocked(true); }
+      else { setGuessLocked(true); playSoundSubmit(); }
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : "Failed to submit guess", "error");
     }

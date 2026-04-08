@@ -16,6 +16,8 @@ import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { callGameSecretInit, useGameSecret } from "../../lib/game-secrets";
+import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
+import { playVote } from "../../lib/sounds";
 
 /** Redact a clue showing a contiguous ~65% chunk of each word. */
 function redactClue(text: string): string {
@@ -51,6 +53,13 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
+
+  useGameSounds({
+    phase: game?.phase,
+    sessionId,
+    isMyTurn: Boolean(me && !me.eliminated && (game?.phase === "playing" || game?.phase === "voting")),
+    phaseEndsAt: game?.settings.phaseEndsAt,
+  });
   const inGame = Boolean(me);
   const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
   const mySession = mySessionRows[0];
@@ -210,11 +219,13 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     if (!clue.trim()) return;
     await zero.mutate(mutators.imposter.submitClue({ gameId, sessionId, text: clue.trim() })).server;
     setClue("");
+    playSoundSubmit();
   };
 
   const submitVote = async () => {
     if (!voteTarget) return;
     await zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })).server;
+    playVote();
   };
 
   const joinGame = () => {
