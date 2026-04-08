@@ -18,7 +18,8 @@ import {
 } from "../lib/shikaku-engine";
 import { getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { showToast } from "../lib/toast";
-import { useIsMobile } from "../hooks/useIsMobile";
+import { playCountdownTick, playCountdownGo, playPuzzleSolved, playGameOver } from "../lib/sounds";
+    import { useIsMobile } from "../hooks/useIsMobile";
 import "../styles/game-shared.css";
 import "../styles/shikaku.css";
 import { ShikakuDemo } from "../components/demos/ShikakuDemo";
@@ -378,11 +379,13 @@ export function ShikakuPage() {
   useEffect(() => {
     if (phase !== "countdown") return;
     if (countdownNum <= 0) {
+      playCountdownGo();
       setPhase("playing");
       setStartTime(Date.now());
       setPuzzleStartTime(Date.now());
       return;
     }
+    playCountdownTick();
     const t = setTimeout(() => setCountdownNum((n) => n - 1), 700);
     return () => clearTimeout(t);
   }, [phase, countdownNum]);
@@ -527,6 +530,7 @@ export function ShikakuPage() {
     const puzzleTime = now - puzzleStartTime;
 
     setShowPuzzleSolvedAnim(true);
+    playPuzzleSolved();
     // Pause timer during solved animation
     pauseStartRef.current = now;
 
@@ -585,6 +589,7 @@ export function ShikakuPage() {
       setTimeout(() => {
         setShowPuzzleSolvedAnim(false);
         setPhase("finished");
+        playGameOver();
         setScoreSubmitted(false);
         setSubmittingScore(false);
         setScoreSubmissionStatus(null);
@@ -1059,11 +1064,11 @@ export function ShikakuPage() {
                 <button
                   className={`shikaku-tab${!infiniteMode ? " shikaku-tab--active" : ""}`}
                   onClick={() => setInfiniteMode(false)}
-                  data-tooltip={`${PUZZLES_PER_RUN} puzzles, ranked on leaderboard`}
+                  data-tooltip={showSeedInput ? `${PUZZLES_PER_RUN} puzzles, unranked (custom seed)` : `${PUZZLES_PER_RUN} puzzles, ranked on leaderboard`}
                   data-tooltip-pos="bottom"
                 >
                   <FiFlag size={14} />
-                  Regular
+                  {showSeedInput ? "Normal" : "Ranked"}
                 </button>
                 <button
                   className={`shikaku-tab${infiniteMode ? " shikaku-tab--active" : ""}`}
@@ -1184,7 +1189,13 @@ export function ShikakuPage() {
             <div className="shikaku-menu-links">
               <button
                 className="shikaku-menu-link"
-                onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView); }}
+                onClick={() => {
+                  if (isMobile) {
+                    window.dispatchEvent(new CustomEvent("shikaku-open-leaderboard"));
+                  } else {
+                    setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
+                  }
+                }}
                 data-tooltip="View leaderboard"
                 data-tooltip-pos="bottom"
               >
@@ -1192,7 +1203,13 @@ export function ShikakuPage() {
               </button>
               <button
                 className="shikaku-menu-link"
-                onClick={() => setShowDemo(true)}
+                onClick={() => {
+                  if (isMobile) {
+                    window.dispatchEvent(new CustomEvent("shikaku-open-info"));
+                  } else {
+                    setShowDemo(true);
+                  }
+                }}
                 data-tooltip="Learn how to play"
                 data-tooltip-pos="bottom"
               >
@@ -2086,69 +2103,89 @@ function ShikakuLeaderboard({
           <span className="shikaku-lb-count">{total} {total === 1 ? "score" : "scores"}</span>
         </div>
 
-        {loading ? (
-          <p className="shikaku-lb-loading">Loading...</p>
-        ) : entries.length === 0 ? (
-          <p className="shikaku-lb-empty">{view === "mine" ? "You have no saved scores on this difficulty yet." : "No scores yet — be the first!"}</p>
-        ) : (
-          <div className="shikaku-lb-list">
-            <div className="shikaku-lb-col-header">
-              <span data-tooltip="Player ranking">#</span>
-              <span data-tooltip="Player name">Player</span>
-              <span data-tooltip="Points earned">Score</span>
-              <span data-tooltip="Completion time">Time</span>
-              <span data-tooltip="Copy seed">Seed</span>
-            </div>
-            {entries.map((entry, i) => {
-              const rank = (page - 1) * pageSize + i + 1;
-              return (
-                <div key={entry.id} className={`shikaku-lb-row${rank <= 3 ? ` shikaku-lb-row--top${rank}` : ""}${entry.isOwn ? " shikaku-lb-row--self" : ""}`}
-                  data-tooltip={entry.isOwn ? "Your score" : undefined}
-                >
-                  <span className="shikaku-lb-rank">#{rank}</span>
-                  <div className="shikaku-lb-player">
-                    <span className="shikaku-lb-name">{entry.name}</span>
-                    {entry.isOwn && <span className="shikaku-lb-badge">You</span>}
-                  </div>
-                  <span className="shikaku-lb-score">{entry.score.toLocaleString()}</span>
-                  <span className="shikaku-lb-time">{formatTime(entry.timeMs)}</span>
-                  <button
-                    className="shikaku-lb-copy-seed"
-                    data-tooltip={`Copy seed: ${entry.seed}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(String(entry.seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
-                    }}
+        <div className="shikaku-lb-list">
+          <div className="shikaku-lb-col-header">
+            <span data-tooltip="Player ranking">#</span>
+            <span data-tooltip="Player name">Player</span>
+            <span data-tooltip="Points earned">Score</span>
+            <span data-tooltip="Completion time">Time</span>
+            <span data-tooltip="Copy seed">Seed</span>
+          </div>
+          {loading ? (
+            Array.from({ length: pageSize }).map((_, i) => (
+              <div key={`skel-${i}`} className="shikaku-lb-row shikaku-lb-row--skeleton">
+                <span className="shikaku-lb-rank"><span className="shikaku-lb-skel-block" style={{ width: "1.5rem" }} /></span>
+                <div className="shikaku-lb-player"><span className="shikaku-lb-skel-block" style={{ width: `${40 + (i * 7) % 30}%` }} /></div>
+                <span className="shikaku-lb-score"><span className="shikaku-lb-skel-block" style={{ width: "2.5rem" }} /></span>
+                <span className="shikaku-lb-time"><span className="shikaku-lb-skel-block" style={{ width: "3rem" }} /></span>
+                <span style={{ minWidth: "2rem" }}><span className="shikaku-lb-skel-block" style={{ width: "1rem" }} /></span>
+              </div>
+            ))
+          ) : entries.length === 0 ? (
+            Array.from({ length: pageSize }).map((_, i) => (
+              <div key={`empty-${i}`} className="shikaku-lb-row shikaku-lb-row--empty-placeholder">
+                {i === 4 ? (
+                  <span className="shikaku-lb-empty-msg">{view === "mine" ? "You have no saved scores on this difficulty yet." : "No scores yet — be the first!"}</span>
+                ) : (
+                  <>&nbsp;</>
+                )}
+              </div>
+            ))
+          ) : (
+            <>
+              {entries.map((entry, i) => {
+                const rank = (page - 1) * pageSize + i + 1;
+                return (
+                  <div key={entry.id} className={`shikaku-lb-row${rank <= 3 ? ` shikaku-lb-row--top${rank}` : ""}${entry.isOwn ? " shikaku-lb-row--self" : ""}`}
+                    data-tooltip={entry.isOwn ? "Your score" : undefined}
                   >
-                    <FiCopy size={12} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    <span className="shikaku-lb-rank">#{rank}</span>
+                    <div className="shikaku-lb-player">
+                      <span className="shikaku-lb-name">{entry.name}</span>
+                      {entry.isOwn && <span className="shikaku-lb-badge">You</span>}
+                    </div>
+                    <span className="shikaku-lb-score">{entry.score.toLocaleString()}</span>
+                    <span className="shikaku-lb-time">{formatTime(entry.timeMs)}</span>
+                    <button
+                      className="shikaku-lb-copy-seed"
+                      data-tooltip={`Copy seed: ${entry.seed}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(String(entry.seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
+                      }}
+                    >
+                      <FiCopy size={12} />
+                    </button>
+                  </div>
+                );
+              })}
+              {/* Fill remaining rows to maintain height */}
+              {entries.length < pageSize && Array.from({ length: pageSize - entries.length }).map((_, i) => (
+                <div key={`pad-${i}`} className="shikaku-lb-row shikaku-lb-row--empty-placeholder"><>&nbsp;</></div>
+              ))}
+            </>
+          )}
+        </div>
 
-        {totalPages > 1 && (
-          <div className="shikaku-lb-pagination">
-            <button
-              className="shikaku-lb-page-btn"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page <= 1 || loading}
-            >
-              ←
-            </button>
-            <span className="shikaku-lb-page-info">
-              Page {page} of {totalPages} ({total} scores)
-            </span>
-            <button
-              className="shikaku-lb-page-btn"
-              onClick={() => onPageChange(page + 1)}
-              disabled={page >= totalPages || loading}
-            >
-              →
-            </button>
-          </div>
-        )}
+        <div className="shikaku-lb-pagination">
+          <button
+            className="shikaku-lb-page-btn"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1 || loading}
+          >
+            ←
+          </button>
+          <span className="shikaku-lb-page-info">
+            {totalPages > 0 ? `Page ${page} of ${totalPages} (${total} scores)` : "No scores"}
+          </span>
+          <button
+            className="shikaku-lb-page-btn"
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages || loading}
+          >
+            →
+          </button>
+        </div>
       </div>
     </div>
   );

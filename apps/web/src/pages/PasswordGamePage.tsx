@@ -15,6 +15,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordGamePage } from "../mobile/pages/MobilePasswordGamePage";
 import { useGameSecret } from "../lib/game-secrets";
 import { getSessionRequestHeaders } from "../lib/session";
+import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
 
 function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
 
@@ -60,6 +61,13 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     if (!game || !game.active_rounds.length || myTeamIndex === -1) return undefined;
     return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
   }, [game?.active_rounds, myTeamIndex]);
+
+  useGameSounds({
+    phase: game?.phase,
+    sessionId,
+    isMyTurn: Boolean(myActiveRound),
+    phaseEndsAt: game?.settings.roundEndsAt,
+  });
 
   const { decryptValue } = useGameSecret({
     gameType: "password",
@@ -250,6 +258,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     try {
       await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server;
       setClue("");
+      playSoundSubmit();
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Couldn't submit clue", "error");
     }
@@ -261,6 +270,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     try {
       await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server;
       setGuess("");
+      playSoundSubmit();
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Couldn't submit guess", "error");
     }

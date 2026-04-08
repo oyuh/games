@@ -159,70 +159,84 @@ export function MobileLeaderboardSheet({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Content */}
-        {loading ? (
-          <div className="m-lb-spinner-wrap">
-            <div className="m-lb-spinner" />
-            <span className="m-lb-spinner-text">Loading scores…</span>
-          </div>
-        ) : entries.length === 0 ? (
-          <div className="m-lb-empty-stable">
-            {view === "mine" ? "No scores on this difficulty yet." : "No scores yet — be the first!"}
-          </div>
-        ) : (
-          <div className="m-lb-list">
-            {entries.map((entry, i) => {
-              const rank = (page - 1) * PAGE_SIZE + i + 1;
-              return (
-                <div
-                  key={entry.id}
-                  className={`m-lb-row${rank <= 3 ? ` m-lb-row--top${rank}` : ""}${entry.isOwn ? " m-lb-row--self" : ""}`}
-                >
-                  <span className="m-lb-rank">#{rank}</span>
-                  <div className="m-lb-player">
-                    <span className="m-lb-name">{entry.name}</span>
-                    {entry.isOwn && <span className="m-lb-you">You</span>}
-                  </div>
-                  <span className="m-lb-score">{entry.score.toLocaleString()}</span>
-                  <span className="m-lb-time">{formatTime(entry.timeMs)}</span>
-                  <button
-                    className="m-lb-copy"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(String(entry.seed))
-                        .then(() => showToast("Seed copied!", "info"))
-                        .catch(() => {});
-                    }}
+        <div className="m-lb-list">
+          {loading ? (
+            Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              <div key={`skel-${i}`} className="m-lb-row m-lb-row--skeleton">
+                <span className="m-lb-rank"><span className="m-lb-skel-block" style={{ width: "1.4rem" }} /></span>
+                <div className="m-lb-player"><span className="m-lb-skel-block" style={{ width: `${35 + (i * 7) % 30}%` }} /></div>
+                <span className="m-lb-score"><span className="m-lb-skel-block" style={{ width: "2rem" }} /></span>
+                <span className="m-lb-time"><span className="m-lb-skel-block" style={{ width: "2.5rem" }} /></span>
+                <span className="m-lb-copy" style={{ visibility: "hidden" }}><FiCopy size={11} /></span>
+              </div>
+            ))
+          ) : entries.length === 0 ? (
+            Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              <div key={`empty-${i}`} className="m-lb-row m-lb-row--empty-placeholder">
+                {i === 4 ? (
+                  <span className="m-lb-empty-msg">{view === "mine" ? "No scores on this difficulty yet." : "No scores yet — be the first!"}</span>
+                ) : (
+                  <>&nbsp;</>
+                )}
+              </div>
+            ))
+          ) : (
+            <>
+              {entries.map((entry, i) => {
+                const rank = (page - 1) * PAGE_SIZE + i + 1;
+                return (
+                  <div
+                    key={entry.id}
+                    className={`m-lb-row${rank <= 3 ? ` m-lb-row--top${rank}` : ""}${entry.isOwn ? " m-lb-row--self" : ""}`}
                   >
-                    <FiCopy size={11} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    <span className="m-lb-rank">#{rank}</span>
+                    <div className="m-lb-player">
+                      <span className="m-lb-name">{entry.name}</span>
+                      {entry.isOwn && <span className="m-lb-you">You</span>}
+                    </div>
+                    <span className="m-lb-score">{entry.score.toLocaleString()}</span>
+                    <span className="m-lb-time">{formatTime(entry.timeMs)}</span>
+                    <button
+                      className="m-lb-copy"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(String(entry.seed))
+                          .then(() => showToast("Seed copied!", "info"))
+                          .catch(() => {});
+                      }}
+                    >
+                      <FiCopy size={11} />
+                    </button>
+                  </div>
+                );
+              })}
+              {entries.length < PAGE_SIZE && Array.from({ length: PAGE_SIZE - entries.length }).map((_, i) => (
+                <div key={`pad-${i}`} className="m-lb-row m-lb-row--empty-placeholder"><>&nbsp;</></div>
+              ))}
+            </>
+          )}
+        </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="m-lb-pagination">
-            <button
-              className="m-lb-page-btn"
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page <= 1 || loading}
-            >
-              ←
-            </button>
-            <span className="m-lb-page-info">
-              {page} / {totalPages}
-            </span>
-            <button
-              className="m-lb-page-btn"
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page >= totalPages || loading}
-            >
-              →
-            </button>
-          </div>
-        )}
+        <div className="m-lb-pagination">
+          <button
+            className="m-lb-page-btn"
+            onClick={() => handlePageChange(page - 1)}
+            disabled={page <= 1 || loading}
+          >
+            ←
+          </button>
+          <span className="m-lb-page-info">
+            {totalPages > 0 ? `${page} / ${totalPages}` : "No scores"}
+          </span>
+          <button
+            className="m-lb-page-btn"
+            onClick={() => handlePageChange(page + 1)}
+            disabled={page >= totalPages || loading}
+          >
+            →
+          </button>
+        </div>
       </div>
     </BottomSheet>
   );
