@@ -2448,6 +2448,96 @@
   gap: 0.35rem;
 }
 
+/* ─── Mobile Sound Customize Dropdown ────────────────── */
+
+.m-sound-customize {
+  margin-top: 0.5rem;
+}
+
+.m-sound-customize-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  color: var(--secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0;
+  transition: color 0.15s;
+}
+
+.m-sound-customize-toggle:active {
+  color: var(--text);
+}
+
+.m-sound-customize-chevron {
+  transition: transform 0.2s;
+}
+
+.m-sound-customize-chevron--open {
+  transform: rotate(180deg);
+}
+
+.m-sound-customize-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+
+.m-sound-pref-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.m-sound-pref-label {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.m-sound-pref-switch {
+  position: relative;
+  width: 2.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.m-sound-pref-switch--on {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.m-sound-pref-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+
+.m-sound-pref-switch--on .m-sound-pref-switch-knob {
+  transform: translateX(1rem);
+}
+
 .m-demo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
