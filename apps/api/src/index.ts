@@ -28,6 +28,7 @@ import {
   type SessionIdentityCandidate,
 } from "./session-identity";
 import { getClientInfo } from "./client-info";
+import { shikakuImageRoutes } from "./shikaku-image";
 
 config({ path: "../../.env" });
 
@@ -124,6 +125,9 @@ app.route("/api/admin", adminRoutes);
 
 // ─── Public endpoints (no auth) ─────────────────────────────
 app.route("/api/public", getRestrictedNamesRoute());
+
+// ─── Shikaku puzzle image generator ─────────────────────────
+app.route("/api/shikaku", shikakuImageRoutes);
 
 // ─── Map helpers (Location Signal scaffold) ──────────────────
 app.get("/api/maps/config", (c) => {
