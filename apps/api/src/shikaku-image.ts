@@ -279,6 +279,8 @@ shikakuImageRoutes.get("/puzzle.svg", (c) => {
     "Cache-Control": "max-age=0, no-cache, no-store, must-revalidate",
     "Pragma": "no-cache",
     "Expires": "0",
+    "ETag": `"${seed}-${Date.now()}"`,
+    "Vary": "*",
     "Content-Disposition": `inline; filename="shikaku-${difficulty}-${seed}.svg"`,
   });
 });
@@ -302,11 +304,13 @@ shikakuImageRoutes.get("/puzzle.svg/download", (c) => {
     "Cache-Control": "max-age=0, no-cache, no-store, must-revalidate",
     "Pragma": "no-cache",
     "Expires": "0",
+    "ETag": `"${seed}-${Date.now()}"`,
+    "Vary": "*",
     "Content-Disposition": `attachment; filename="shikaku-${difficulty}-${seed}.svg"`,
   });
 });
 
-// HTML preview page with OG/Twitter embed meta tags — styled to match the main site
+// HTML preview page with OG/Twitter embed meta tags — styled to match the main Games site
 shikakuImageRoutes.get("/puzzle", (c) => {
   const difficulty = parseDifficulty(c.req.query("difficulty"));
   const seed = parseSeed(c.req.query("seed"));
@@ -329,6 +333,9 @@ shikakuImageRoutes.get("/puzzle", (c) => {
   const accent = DIFF_ACCENT[difficulty];
 
   const imgW = cols * (rows <= 9 ? 48 : rows <= 15 ? 32 : 24) + 80;
+
+  // Difficulty selector options
+  const difficulties: Difficulty[] = ["easy", "medium", "hard", "expert"];
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -355,97 +362,111 @@ shikakuImageRoutes.get("/puzzle", (c) => {
   <!-- Discord / oEmbed -->
   <meta name="theme-color" content="${accent}">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-
   <style>
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Regular.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Medium.ttf') format('truetype'); font-weight: 500; font-display: swap; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-SemiBold.ttf') format('truetype'); font-weight: 600; font-display: swap; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Bold.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-ExtraBold.ttf') format('truetype'); font-weight: 800; font-display: swap; }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       min-height: 100dvh;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 1.25rem;
-      padding: 2rem 1.25rem;
+      padding: 2rem 1rem;
       background: #181a1b;
       color: #f5f5f5;
-      font-family: 'Geist Mono', 'SF Mono', 'Fira Code', monospace;
+      font-family: 'Axiforma', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
       position: relative;
       overflow-x: hidden;
     }
 
-    /* Corner glow effect — like the main site */
+    /* Corner glow */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
       pointer-events: none;
+      z-index: 0;
       background:
         radial-gradient(ellipse 55% 55% at 0% 0%, ${accent}18 0%, transparent 70%),
-        radial-gradient(ellipse 55% 55% at 100% 0%, ${accent}10 0%, transparent 70%),
-        radial-gradient(ellipse 55% 55% at 0% 100%, ${accent}10 0%, transparent 70%),
         radial-gradient(ellipse 55% 55% at 100% 100%, ${accent}18 0%, transparent 70%);
-      opacity: 0.5;
+      opacity: 0.6;
     }
 
-    /* Subtle grid pattern overlay */
+    /* Shikaku grid icon pattern */
     body::after {
       content: "";
       position: fixed;
       inset: -40%;
       pointer-events: none;
+      z-index: 0;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='${accent.replace("#", "%23")}' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3' y='3' width='7' height='7' rx='1'/%3E%3Crect x='14' y='3' width='7' height='7' rx='1'/%3E%3Crect x='3' y='14' width='7' height='7' rx='1'/%3E%3Crect x='14' y='14' width='7' height='7' rx='1'/%3E%3C/svg%3E");
-      background-size: 72px 72px;
-      opacity: 0.06;
-      filter: blur(1.5px);
+      background-size: 48px 48px;
+      opacity: 0.04;
+      filter: blur(2px);
       transform: rotate(-20deg);
-      mask-image:
-        radial-gradient(ellipse 60% 60% at 0% 0%, black 0%, transparent 65%),
-        radial-gradient(ellipse 60% 60% at 100% 100%, black 0%, transparent 65%);
-      -webkit-mask-image:
-        radial-gradient(ellipse 60% 60% at 0% 0%, black 0%, transparent 65%),
-        radial-gradient(ellipse 60% 60% at 100% 100%, black 0%, transparent 65%);
     }
 
-    body > * { position: relative; z-index: 1; }
+    /* Card */
+    .card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 540px;
+      border-radius: 1.25rem;
+      border: 1px solid color-mix(in srgb, ${accent} 18%, transparent);
+      background: linear-gradient(160deg, ${difficulty === "easy" ? "#1a2e26" : difficulty === "medium" ? "#1a2230" : difficulty === "hard" ? "#2e2418" : "#2a1a1a"} 0%, #1a1a1a 100%);
+      box-shadow: 0 8px 36px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+    .card:hover { border-color: color-mix(in srgb, ${accent} 35%, transparent); }
 
-    .hero { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; }
+    .card-body {
+      padding: 1.75rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    /* Header */
+    .header { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
 
     h1 {
-      font-size: 2rem;
+      font-size: 1.6rem;
       font-weight: 800;
-      color: ${accent};
-      text-align: center;
-      letter-spacing: -0.03em;
+      color: #f5f5f5;
+      letter-spacing: 0.06em;
       line-height: 1.1;
     }
 
     .subtitle {
-      font-size: 0.8rem;
-      color: #bdbdbd;
+      font-size: 0.72rem;
+      color: #888;
       text-align: center;
-      max-width: 420px;
-      line-height: 1.5;
-      font-weight: 400;
+      line-height: 1.4;
     }
 
+    /* Meta tags row */
     .meta-row {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.4rem;
       align-items: center;
       flex-wrap: wrap;
       justify-content: center;
     }
 
     .tag {
-      font-size: 0.65rem;
-      padding: 0.2rem 0.6rem;
+      font-size: 0.6rem;
+      padding: 0.15rem 0.5rem;
       border-radius: 6px;
-      background: #232323;
-      color: #bdbdbd;
+      background: rgba(255,255,255,0.04);
+      color: #888;
       border: 1px solid #333;
       font-weight: 500;
       letter-spacing: 0.02em;
@@ -453,22 +474,26 @@ shikakuImageRoutes.get("/puzzle", (c) => {
 
     .tag-accent {
       color: ${accent};
-      border-color: ${accent}40;
-      background: ${accent}12;
+      border-color: color-mix(in srgb, ${accent} 30%, transparent);
+      background: color-mix(in srgb, ${accent} 8%, transparent);
     }
 
+    /* Puzzle frame */
     .puzzle-wrap {
-      border-radius: 14px;
-      padding: 2px;
-      background: linear-gradient(135deg, ${accent}30, transparent 50%, ${accent}20);
-      max-width: 100%;
+      width: 100%;
+      border-radius: 0.75rem;
+      padding: 1px;
+      background: linear-gradient(135deg, color-mix(in srgb, ${accent} 25%, transparent), transparent 50%, color-mix(in srgb, ${accent} 15%, transparent));
     }
 
     .puzzle-frame {
-      border-radius: 12px;
+      border-radius: 0.7rem;
       overflow: hidden;
       background: #0f1117;
-      max-width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
     }
 
     .puzzle-frame img {
@@ -477,19 +502,22 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       height: auto;
     }
 
+    /* Button row */
     .actions {
       display: flex;
-      gap: 0.6rem;
+      gap: 0.5rem;
       flex-wrap: wrap;
       justify-content: center;
+      width: 100%;
     }
 
     .btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.35rem;
-      padding: 0.55rem 1.1rem;
-      border-radius: 10px;
+      padding: 0.55rem 1rem;
+      border-radius: 0.65rem;
       font-size: 0.78rem;
       font-weight: 600;
       text-decoration: none;
@@ -497,101 +525,146 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       cursor: pointer;
       border: none;
       font-family: inherit;
-      letter-spacing: -0.01em;
+      letter-spacing: 0.02em;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
     }
 
-    .btn-play {
+    .btn-primary {
       background: ${accent};
-      color: #181a1b;
-      box-shadow: 0 0 20px ${accent}40;
+      color: #111;
     }
-    .btn-play:hover { box-shadow: 0 0 30px ${accent}60; transform: translateY(-1px); }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-    .btn-secondary {
+    .btn-muted {
       background: #232323;
       color: #f5f5f5;
       border: 1px solid #333;
     }
-    .btn-secondary:hover { border-color: ${accent}80; transform: translateY(-1px); }
+    .btn-muted:hover { border-color: color-mix(in srgb, ${accent} 50%, transparent); transform: translateY(-1px); }
 
     .btn-ghost {
       background: transparent;
-      color: #bdbdbd;
+      color: #888;
       border: 1px solid #333;
+      flex: 0 0 auto;
     }
     .btn-ghost:hover { border-color: ${accent}; color: ${accent}; }
 
-    .divider {
-      width: 60px;
-      height: 1px;
-      background: #333;
+    /* Difficulty picker */
+    .diff-row {
+      display: flex;
+      gap: 0.35rem;
+      width: 100%;
+    }
+    .diff-btn {
+      flex: 1;
+      padding: 0.35rem 0;
+      border-radius: 0.5rem;
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-decoration: none;
+      text-align: center;
+      color: #888;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid #333;
+      transition: all 0.15s;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .diff-btn:hover { border-color: #555; color: #bdbdbd; }
+    .diff-btn--active {
+      color: ${accent};
+      border-color: color-mix(in srgb, ${accent} 40%, transparent);
+      background: color-mix(in srgb, ${accent} 10%, transparent);
     }
 
+    /* Divider */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #333, transparent);
+    }
+
+    /* Footer */
     .footer {
-      font-size: 0.7rem;
-      color: #64748b;
-      text-align: center;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 0.3rem;
+      justify-content: space-between;
+      width: 100%;
+      font-size: 0.6rem;
+      color: #555;
     }
 
     .footer a {
-      color: ${accent};
+      color: #888;
       text-decoration: none;
-      transition: opacity 0.15s;
+      transition: color 0.15s;
     }
-    .footer a:hover { opacity: 0.7; }
+    .footer a:hover { color: ${accent}; }
 
-    .footer-brand {
-      font-size: 0.65rem;
-      color: #475569;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
+    .footer-links { display: flex; gap: 0.6rem; }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .card-body { padding: 1.25rem 1rem; }
+      h1 { font-size: 1.3rem; }
+      .btn { font-size: 0.72rem; padding: 0.5rem 0.75rem; }
+      .diff-btn { font-size: 0.55rem; }
     }
   </style>
 </head>
 <body>
-  <div class="hero">
-    <h1>Shikaku</h1>
-    <p class="subtitle">${description}</p>
-  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="header">
+        <h1>Shikaku</h1>
+        <p class="subtitle">${description}</p>
+      </div>
 
-  <div class="meta-row">
-    <span class="tag tag-accent">${difficulty.toUpperCase()}</span>
-    <span class="tag">${rows}×${cols}</span>
-    <span class="tag">seed: ${seed}</span>
-  </div>
+      <div class="meta-row">
+        <span class="tag tag-accent">${difficulty.toUpperCase()}</span>
+        <span class="tag">${rows}×${cols}</span>
+        <span class="tag">seed ${seed}</span>
+      </div>
 
-  <div class="puzzle-wrap">
-    <div class="puzzle-frame">
-      <img src="${imageUrl}&bg=transparent" alt="${title}" width="${imgW}">
+      <div class="puzzle-wrap">
+        <div class="puzzle-frame">
+          <img src="${imageUrl}&bg=transparent" alt="${title}" width="${imgW}">
+        </div>
+      </div>
+
+      ${showingSolution ? `
+      <div class="puzzle-wrap">
+        <div class="puzzle-frame">
+          <img src="${imageUrl}&solution=true&bg=transparent" alt="Solution" width="${imgW}">
+        </div>
+      </div>` : ""}
+
+      <div class="actions">
+        <a class="btn btn-primary" href="${playUrl}">▶ Play</a>
+        <a class="btn btn-muted" href="${showingSolution ? pageUrl : pageUrl + "&solution=true"}">${showingSolution ? "✕ Hide Solution" : "◉ Solution"}</a>
+        <a class="btn btn-muted" href="${newPuzzleUrl}">⟳ New</a>
+        <a class="btn btn-ghost" href="${downloadUrl}">⬇</a>
+      </div>
+
+      <div class="diff-row">
+        ${difficulties.map((d) => `<a class="diff-btn${d === difficulty ? " diff-btn--active" : ""}" href="${baseUrl}/api/shikaku/puzzle?difficulty=${d}&theme=${theme}">${d}</a>`).join("")}
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="footer">
+        <span>games · lawson hart</span>
+        <div class="footer-links">
+          <a href="${siteUrl}">site</a>
+          <a href="https://github.com/oyuh/games">github</a>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <div class="actions">
-    <a class="btn btn-play" href="${playUrl}">▶ Play Shikaku</a>
-    <a class="btn btn-secondary" href="${downloadUrl}">⬇ Download</a>
-    <a class="btn btn-secondary" href="${newPuzzleUrl}">⟳ New Puzzle</a>
-    <a class="btn btn-ghost" href="${showingSolution ? pageUrl : pageUrl + "&solution=true"}">${showingSolution ? "✕ Hide Solution" : "◉ Solution"}</a>
-  </div>
-
-  ${showingSolution ? `
-  <div class="puzzle-wrap">
-    <div class="puzzle-frame">
-      <img src="${imageUrl}&solution=true&bg=transparent" alt="Solution" width="${imgW}">
-    </div>
-  </div>` : ""}
-
-  <div class="divider"></div>
-
-  <div class="footer">
-    <span class="footer-brand">games · Lawson Hart</span>
-    <span>
-      <a href="${siteUrl}">games.lawsonhart.me</a> ·
-      <a href="https://github.com/oyuh/games">github</a>
-    </span>
   </div>
 </body>
 </html>`;
