@@ -29,6 +29,18 @@ This repository contains six implemented game flows:
 **Single-player:**
 - Shikaku — timed grid logic puzzle with leaderboard
 
+---
+
+### 🧩 Random Shikaku Puzzle
+
+<a href="https://games.lawsonhart.me/shikaku">
+  <img src="https://api.games.lawsonhart.me/api/shikaku/puzzle.svg?difficulty=medium&bg=transparent" alt="Random Shikaku Puzzle" width="500">
+</a>
+
+<sub>↑ A fresh puzzle every time you load the page. <a href="https://games.lawsonhart.me/shikaku">Click to play</a> · <a href="https://api.games.lawsonhart.me/api/shikaku/puzzle">Full viewer with download</a></sub>
+
+---
+
 ## Table of Contents
 
 - [Project Summary](#project-summary)
