@@ -276,7 +276,9 @@ shikakuImageRoutes.get("/puzzle.svg", (c) => {
 
   return c.body(svg, 200, {
     "Content-Type": "image/svg+xml",
-    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Cache-Control": "max-age=0, no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
     "Content-Disposition": `inline; filename="shikaku-${difficulty}-${seed}.svg"`,
   });
 });
@@ -297,7 +299,9 @@ shikakuImageRoutes.get("/puzzle.svg/download", (c) => {
 
   return c.body(svg, 200, {
     "Content-Type": "image/svg+xml",
-    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Cache-Control": "max-age=0, no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
     "Content-Disposition": `attachment; filename="shikaku-${difficulty}-${seed}.svg"`,
   });
 });
