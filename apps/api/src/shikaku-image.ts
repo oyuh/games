@@ -294,7 +294,7 @@ function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: nu
   // Header — only when background is visible
   if (!transparentBg) {
     svg += `<text x="${totalW / 2}" y="${padding + 8}" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="800" fill="${accent}">SHIKAKU</text>`;
-    svg += `<text x="${totalW / 2}" y="${padding + 28}" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="11" fill="${mutedText}">${difficulty.toUpperCase()} · ${rows}×${cols} · seed ${seed}</text>`;
+    svg += `<text x="${totalW / 2}" y="${padding + 28}" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="11" fill="${mutedText}">${difficulty.toUpperCase()} / ${rows}×${cols} / seed ${seed}</text>`;
   }
 
   // Cell backgrounds

@@ -1569,6 +1569,27 @@
   pointer-events: none;
 }
 
+/* ── Compact playing header — always single row ─────────────── */
+.shikaku-page .game-header .game-header-left {
+  flex-wrap: nowrap;
+}
+.shikaku-page .game-header .game-header-icon {
+  width: 32px;
+  height: 32px;
+}
+.shikaku-page .game-header .game-header-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.shikaku-page .game-header .game-title {
+  font-size: 1.35rem;
+}
+.shikaku-page .game-header .badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.55rem;
+  white-space: nowrap;
+}
+
 /* ══════════════════════════════════════════════════════════════
    Mobile — Shikaku responsive overrides
    ══════════════════════════════════════════════════════════════ */
