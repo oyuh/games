@@ -391,9 +391,16 @@ function SidebarLink({
   );
 }
 
-function SidebarButton({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+function SidebarButton({ icon, label, onClick, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <button className="sidebar-link" data-tooltip={label} data-tooltip-pos="right" onClick={onClick}>
+    <button
+      className="sidebar-link"
+      data-tooltip={label}
+      data-tooltip-pos="right"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      style={disabled ? { opacity: 0.35, cursor: 'not-allowed', pointerEvents: 'none' } : undefined}
+    >
       {icon}
       <span className="sidebar-link-label">{label}</span>
     </button>
