@@ -325,7 +325,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
   const downloadUrl = `${baseUrl}/api/shikaku/puzzle.svg/download?difficulty=${difficulty}&seed=${seed}&theme=${theme}`;
   const newPuzzleUrl = `${baseUrl}/api/shikaku/puzzle?difficulty=${difficulty}&theme=${theme}`;
   const siteUrl = "https://games.lawsonhart.me";
-  const playUrl = `${siteUrl}/shikaku`;
+  const playUrl = `${siteUrl}/shikaku?from=puzzle&seed=${seed}&difficulty=${difficulty}&challenge=1`;
 
   const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
   const title = `Shikaku Puzzle — ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} ${rows}×${cols}`;
@@ -336,6 +336,10 @@ shikakuImageRoutes.get("/puzzle", (c) => {
 
   // Difficulty selector options
   const difficulties: Difficulty[] = ["easy", "medium", "hard", "expert"];
+
+  const DIFF_COLORS: Record<Difficulty, string> = { easy: "#34d399", medium: "#60a5fa", hard: "#f59e0b", expert: "#f87171" };
+  const DIFF_BG: Record<Difficulty, string> = { easy: "rgba(52,211,153,0.08)", medium: "rgba(96,165,250,0.08)", hard: "rgba(245,158,11,0.08)", expert: "rgba(248,113,113,0.08)" };
+  const diffColor = DIFF_COLORS[difficulty];
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -363,29 +367,43 @@ shikakuImageRoutes.get("/puzzle", (c) => {
   <meta name="theme-color" content="${accent}">
 
   <style>
-    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Regular.ttf') format('truetype'); font-weight: 400; font-display: swap; }
-    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Medium.ttf') format('truetype'); font-weight: 500; font-display: swap; }
-    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-SemiBold.ttf') format('truetype'); font-weight: 600; font-display: swap; }
-    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Bold.ttf') format('truetype'); font-weight: 700; font-display: swap; }
-    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-ExtraBold.ttf') format('truetype'); font-weight: 800; font-display: swap; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Regular.ttf') format('truetype'); font-weight: 400; font-display: swap; ascent-override: 95%; descent-override: 28%; line-gap-override: 0%; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Medium.ttf') format('truetype'); font-weight: 500; font-display: swap; ascent-override: 95%; descent-override: 28%; line-gap-override: 0%; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-SemiBold.ttf') format('truetype'); font-weight: 600; font-display: swap; ascent-override: 95%; descent-override: 28%; line-gap-override: 0%; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Bold.ttf') format('truetype'); font-weight: 700; font-display: swap; ascent-override: 95%; descent-override: 28%; line-gap-override: 0%; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-ExtraBold.ttf') format('truetype'); font-weight: 800; font-display: swap; ascent-override: 95%; descent-override: 28%; line-gap-override: 0%; }
+    @font-face { font-family: 'Axiforma'; src: url('https://games.lawsonhart.me/font/Axiforma-Black.ttf') format('truetype'); font-weight: 900; font-display: swap; ascent-override: 95%; descent-override: 28%; line-gap-override: 0%; }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #181a1b;
+      --foreground: #f5f5f5;
+      --card: #232323;
+      --border: #333;
+      --muted: #2d2d2d;
+      --muted-fg: #bdbdbd;
+      --secondary: #888;
+      --accent: ${accent};
+      --game-bg: ${DIFF_BG[difficulty]};
+    }
 
     body {
       min-height: 100dvh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 2rem 1rem;
-      background: #181a1b;
-      color: #f5f5f5;
+      background: var(--bg);
+      color: var(--foreground);
       font-family: 'Axiforma', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-font-smoothing: antialiased;
       position: relative;
       overflow-x: hidden;
     }
 
-    /* Corner glow */
+    /* Corner glows from all 4 corners — matches game-shared.css */
     body::before {
       content: "";
       position: fixed;
@@ -393,67 +411,85 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       pointer-events: none;
       z-index: 0;
       background:
-        radial-gradient(ellipse 55% 55% at 0% 0%, ${accent}18 0%, transparent 70%),
-        radial-gradient(ellipse 55% 55% at 100% 100%, ${accent}18 0%, transparent 70%);
-      opacity: 0.6;
+        radial-gradient(ellipse 60% 60% at 0% 0%, var(--game-bg) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 60% at 100% 0%, var(--game-bg) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 60% at 0% 100%, var(--game-bg) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 60% at 100% 100%, var(--game-bg) 0%, transparent 70%);
+      opacity: 0.3;
     }
 
-    /* Shikaku grid icon pattern */
+    /* Shikaku grid icon pattern — matches game-shared.css */
     body::after {
       content: "";
       position: fixed;
       inset: -40%;
       pointer-events: none;
       z-index: 0;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='${accent.replace("#", "%23")}' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3' y='3' width='7' height='7' rx='1'/%3E%3Crect x='14' y='3' width='7' height='7' rx='1'/%3E%3Crect x='3' y='14' width='7' height='7' rx='1'/%3E%3Crect x='14' y='14' width='7' height='7' rx='1'/%3E%3C/svg%3E");
-      background-size: 48px 48px;
-      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%2334d399' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3' y='3' width='7' height='7' rx='1'/%3E%3Crect x='14' y='3' width='7' height='7' rx='1'/%3E%3Crect x='3' y='14' width='7' height='7' rx='1'/%3E%3Crect x='14' y='14' width='7' height='7' rx='1'/%3E%3C/svg%3E");
+      background-size: 72px 72px;
+      opacity: 0.12;
       filter: blur(2px);
       transform: rotate(-20deg);
+      -webkit-mask-image:
+        radial-gradient(ellipse 60% 60% at 0% 0%, black 0%, transparent 65%),
+        radial-gradient(ellipse 60% 60% at 100% 0%, black 0%, transparent 65%),
+        radial-gradient(ellipse 60% 60% at 0% 100%, black 0%, transparent 65%),
+        radial-gradient(ellipse 60% 60% at 100% 100%, black 0%, transparent 65%);
+      mask-image:
+        radial-gradient(ellipse 60% 60% at 0% 0%, black 0%, transparent 65%),
+        radial-gradient(ellipse 60% 60% at 100% 0%, black 0%, transparent 65%),
+        radial-gradient(ellipse 60% 60% at 0% 100%, black 0%, transparent 65%),
+        radial-gradient(ellipse 60% 60% at 100% 100%, black 0%, transparent 65%);
     }
 
-    /* Card */
+    /* Card — matches components.css .card */
     .card {
       position: relative;
       z-index: 1;
       width: 100%;
       max-width: 540px;
-      border-radius: 1.25rem;
-      border: 1px solid color-mix(in srgb, ${accent} 18%, transparent);
-      background: linear-gradient(160deg, ${difficulty === "easy" ? "#1a2e26" : difficulty === "medium" ? "#1a2230" : difficulty === "hard" ? "#2e2418" : "#2a1a1a"} 0%, #1a1a1a 100%);
-      box-shadow: 0 8px 36px rgba(0, 0, 0, 0.45);
+      border-radius: 1rem;
+      border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+      background: linear-gradient(to bottom right, #232323, #181a1b);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
       overflow: hidden;
+      transition: border-color 0.2s;
     }
-    .card:hover { border-color: color-mix(in srgb, ${accent} 35%, transparent); }
+    .card:hover { border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
 
     .card-body {
       padding: 1.75rem 1.5rem;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1rem;
+      gap: 1.1rem;
     }
 
-    /* Header */
-    .header { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
-
-    h1 {
-      font-size: 1.6rem;
-      font-weight: 800;
-      color: #f5f5f5;
-      letter-spacing: 0.06em;
-      line-height: 1.1;
+    /* Title — matches shikaku.css .shikaku-title style */
+    .title {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #34d399;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      animation: title-glow 3s ease-in-out infinite;
+    }
+    @keyframes title-glow {
+      0%, 100% { text-shadow: 0 0 0 transparent; }
+      50% { text-shadow: 0 0 18px rgba(52, 211, 153, 0.25); }
     }
 
     .subtitle {
-      font-size: 0.72rem;
-      color: #888;
+      font-size: 0.82rem;
+      color: var(--muted-fg);
       text-align: center;
       line-height: 1.4;
+      opacity: 0.7;
+      max-width: 440px;
     }
 
-    /* Meta tags row */
-    .meta-row {
+    /* Badge row — matches components.css .badge */
+    .badge-row {
       display: flex;
       gap: 0.4rem;
       align-items: center;
@@ -461,29 +497,34 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       justify-content: center;
     }
 
-    .tag {
-      font-size: 0.6rem;
-      padding: 0.15rem 0.5rem;
-      border-radius: 6px;
-      background: rgba(255,255,255,0.04);
-      color: #888;
-      border: 1px solid #333;
-      font-weight: 500;
-      letter-spacing: 0.02em;
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      border-radius: 9999px;
+      padding: 0.15rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
     }
 
-    .tag-accent {
-      color: ${accent};
-      border-color: color-mix(in srgb, ${accent} 30%, transparent);
-      background: color-mix(in srgb, ${accent} 8%, transparent);
+    .badge-accent {
+      background: color-mix(in srgb, var(--accent) 20%, transparent);
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
     }
 
-    /* Puzzle frame */
+    .badge-muted {
+      background: color-mix(in srgb, var(--muted-fg) 15%, transparent);
+      color: var(--muted-fg);
+      border: 1px solid color-mix(in srgb, var(--muted-fg) 25%, transparent);
+    }
+
+    /* Puzzle frame — gradient border */
     .puzzle-wrap {
       width: 100%;
       border-radius: 0.75rem;
       padding: 1px;
-      background: linear-gradient(135deg, color-mix(in srgb, ${accent} 25%, transparent), transparent 50%, color-mix(in srgb, ${accent} 15%, transparent));
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 25%, transparent), transparent 50%, color-mix(in srgb, var(--accent) 15%, transparent));
     }
 
     .puzzle-frame {
@@ -502,7 +543,30 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       height: auto;
     }
 
-    /* Button row */
+    /* Play button — prominent, matches .solo-card-play */
+    .play-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      border-radius: 0.65rem;
+      background: var(--accent);
+      color: #111;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      transition: filter 0.2s, transform 0.15s;
+    }
+    .play-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+    .play-btn:active { transform: translateY(0); }
+
+    /* Secondary actions */
     .actions {
       display: flex;
       gap: 0.5rem;
@@ -515,149 +579,202 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.35rem;
-      padding: 0.55rem 1rem;
-      border-radius: 0.65rem;
-      font-size: 0.78rem;
+      gap: 0.5rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
       font-weight: 600;
       text-decoration: none;
-      transition: all 0.15s ease;
+      transition: background 0.15s, opacity 0.15s, border-color 0.15s, transform 0.15s;
       cursor: pointer;
       border: none;
       font-family: inherit;
-      letter-spacing: 0.02em;
+      line-height: 1.25;
       flex: 1;
       min-width: 0;
       white-space: nowrap;
     }
 
-    .btn-primary {
-      background: ${accent};
-      color: #111;
-    }
-    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
-
     .btn-muted {
-      background: #232323;
-      color: #f5f5f5;
-      border: 1px solid #333;
+      background: var(--muted);
+      color: var(--muted-fg);
+      border: 1px solid var(--border);
     }
-    .btn-muted:hover { border-color: color-mix(in srgb, ${accent} 50%, transparent); transform: translateY(-1px); }
+    .btn-muted:hover { background: #444; }
 
     .btn-ghost {
-      background: transparent;
-      color: #888;
-      border: 1px solid #333;
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
       flex: 0 0 auto;
     }
-    .btn-ghost:hover { border-color: ${accent}; color: ${accent}; }
+    .btn-ghost:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 
-    /* Difficulty picker */
-    .diff-row {
-      display: flex;
-      gap: 0.35rem;
+    /* Difficulty cards — matches shikaku.css .shikaku-diff-card */
+    .diff-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
       width: 100%;
     }
-    .diff-btn {
-      flex: 1;
-      padding: 0.35rem 0;
-      border-radius: 0.5rem;
-      font-size: 0.6rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      text-decoration: none;
-      text-align: center;
-      color: #888;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid #333;
-      transition: all 0.15s;
+    .diff-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.15rem;
+      padding: 0.75rem 0.4rem;
+      border-radius: 0.75rem;
+      border: 1.5px solid color-mix(in srgb, var(--dc) 25%, transparent);
+      background: color-mix(in srgb, var(--dc) 4%, var(--card));
       cursor: pointer;
+      text-decoration: none;
+      color: inherit;
       font-family: inherit;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.3s, transform 0.2s;
     }
-    .diff-btn:hover { border-color: #555; color: #bdbdbd; }
-    .diff-btn--active {
-      color: ${accent};
-      border-color: color-mix(in srgb, ${accent} 40%, transparent);
-      background: color-mix(in srgb, ${accent} 10%, transparent);
+    .diff-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 40%, var(--dc), transparent 70%);
+      transition: opacity 0.25s;
+      pointer-events: none;
+    }
+    .diff-card:hover {
+      border-color: color-mix(in srgb, var(--dc) 60%, transparent);
+      background: color-mix(in srgb, var(--dc) 8%, var(--card));
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--dc) 25%, transparent);
+    }
+    .diff-card:hover::before { opacity: 0.08; }
+    .diff-card--active {
+      border-color: var(--dc);
+      background: color-mix(in srgb, var(--dc) 12%, var(--card));
+      box-shadow: 0 0 18px color-mix(in srgb, var(--dc) 30%, transparent);
+    }
+    .diff-card--active::before { opacity: 0.12; }
+    .diff-card--active .diff-card-size { color: var(--dc); }
+    .diff-card--active .diff-card-name { color: color-mix(in srgb, var(--dc) 85%, var(--foreground)); }
+    .diff-card-size {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--foreground);
+      transition: color 0.2s;
+    }
+    .diff-card-name {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--secondary);
     }
 
-    /* Divider */
+    /* Divider — matches site */
     .divider {
       width: 100%;
       height: 1px;
-      background: linear-gradient(90deg, transparent, #333, transparent);
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
     }
 
-    /* Footer */
+    /* Footer — matches footer.css */
     .footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
       width: 100%;
-      font-size: 0.6rem;
-      color: #555;
+      font-size: 0.65rem;
+      color: var(--secondary);
+      letter-spacing: 0.04em;
     }
-
     .footer a {
-      color: #888;
+      color: var(--secondary);
       text-decoration: none;
       transition: color 0.15s;
     }
-    .footer a:hover { color: ${accent}; }
-
-    .footer-links { display: flex; gap: 0.6rem; }
+    .footer a:hover { color: var(--accent); }
+    .footer-links { display: flex; gap: 0.75rem; }
 
     /* Responsive */
     @media (max-width: 480px) {
       .card-body { padding: 1.25rem 1rem; }
-      h1 { font-size: 1.3rem; }
-      .btn { font-size: 0.72rem; padding: 0.5rem 0.75rem; }
-      .diff-btn { font-size: 0.55rem; }
+      .title { font-size: 2rem; }
+      .btn { font-size: 0.8rem; padding: 0.5rem 0.75rem; }
+      .diff-card { padding: 0.55rem 0.3rem; }
+      .diff-card-size { font-size: 1rem; }
+      .diff-card-name { font-size: 0.55rem; }
     }
+
+    /* Entrance animations */
+    @keyframes fade-down {
+      from { opacity: 0; transform: translateY(-12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scale-in {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .anim-1 { animation: fade-down 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+    .anim-2 { animation: fade-up 0.45s cubic-bezier(0.16,1,0.3,1) 0.08s both; }
+    .anim-3 { animation: scale-in 0.4s cubic-bezier(0.16,1,0.3,1) 0.15s both; }
+    .anim-4 { animation: fade-up 0.4s cubic-bezier(0.16,1,0.3,1) 0.2s both; }
+    .anim-5 { animation: fade-up 0.4s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="card-body">
-      <div class="header">
-        <h1>Shikaku</h1>
-        <p class="subtitle">${description}</p>
+      <div class="anim-1" style="display:flex;flex-direction:column;align-items:center;gap:0.15rem;">
+        <div class="title">Shikaku</div>
+        <p class="subtitle">Cover every cell with rectangles matching the numbers</p>
       </div>
 
-      <div class="meta-row">
-        <span class="tag tag-accent">${difficulty.toUpperCase()}</span>
-        <span class="tag">${rows}×${cols}</span>
-        <span class="tag">seed ${seed}</span>
+      <div class="badge-row anim-2">
+        <span class="badge badge-accent">${difficulty.toUpperCase()}</span>
+        <span class="badge badge-muted">${rows}×${cols}</span>
+        <span class="badge badge-muted">seed ${seed}</span>
       </div>
 
-      <div class="puzzle-wrap">
+      <div class="puzzle-wrap anim-3">
         <div class="puzzle-frame">
           <img src="${imageUrl}&bg=transparent" alt="${title}" width="${imgW}">
         </div>
       </div>
 
       ${showingSolution ? `
-      <div class="puzzle-wrap">
+      <div class="puzzle-wrap anim-3">
         <div class="puzzle-frame">
           <img src="${imageUrl}&solution=true&bg=transparent" alt="Solution" width="${imgW}">
         </div>
       </div>` : ""}
 
-      <div class="actions">
-        <a class="btn btn-primary" href="${playUrl}">▶ Play</a>
+      <a class="play-btn anim-4" href="${playUrl}">▶&ensp;Play This Puzzle</a>
+
+      <div class="actions anim-4">
         <a class="btn btn-muted" href="${showingSolution ? pageUrl : pageUrl + "&solution=true"}">${showingSolution ? "✕ Hide Solution" : "◉ Solution"}</a>
-        <a class="btn btn-muted" href="${newPuzzleUrl}">⟳ New</a>
+        <a class="btn btn-muted" href="${newPuzzleUrl}">⟳ New Puzzle</a>
         <a class="btn btn-ghost" href="${downloadUrl}">⬇</a>
       </div>
 
-      <div class="diff-row">
-        ${difficulties.map((d) => `<a class="diff-btn${d === difficulty ? " diff-btn--active" : ""}" href="${baseUrl}/api/shikaku/puzzle?difficulty=${d}&theme=${theme}">${d}</a>`).join("")}
+      <div class="diff-cards anim-5">
+        ${difficulties.map((d) => {
+          const dc = DIFF_COLORS[d];
+          const cfg = DIFFICULTY_CONFIG[d];
+          return `<a class="diff-card${d === difficulty ? " diff-card--active" : ""}" style="--dc:${dc}" href="${baseUrl}/api/shikaku/puzzle?difficulty=${d}&theme=${theme}"><span class="diff-card-size">${cfg.label}</span><span class="diff-card-name">${d}</span></a>`;
+        }).join("")}
       </div>
 
       <div class="divider"></div>
 
-      <div class="footer">
+      <div class="footer anim-5">
         <span>games · lawson hart</span>
         <div class="footer-links">
           <a href="${siteUrl}">site</a>
