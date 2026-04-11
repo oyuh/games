@@ -110,11 +110,123 @@ function tryGeneratePuzzle(rows: number, cols: number, rng: () => number, maxAre
   return { rows, cols, numbers, solution: rects };
 }
 
+function validateSolution(puzzle: ShikakuPuzzle, rects: Rect[]): boolean {
+  const { rows, cols, numbers } = puzzle;
+  const grid = Array.from({ length: rows }, () => new Int8Array(cols).fill(-1));
+  for (let i = 0; i < rects.length; i++) {
+    const rect = rects[i]!;
+    if (rect.r < 0 || rect.c < 0 || rect.r + rect.h > rows || rect.c + rect.w > cols) return false;
+    for (let dr = 0; dr < rect.h; dr++) {
+      for (let dc = 0; dc < rect.w; dc++) {
+        const gr = rect.r + dr;
+        const gc = rect.c + dc;
+        if (grid[gr]![gc] !== -1) return false;
+        grid[gr]![gc] = i;
+      }
+    }
+  }
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      if (grid[r]![c] === -1) return false;
+  for (let i = 0; i < rects.length; i++) {
+    const rect = rects[i]!;
+    const area = rect.w * rect.h;
+    const contained = numbers.filter(
+      (n) => n.r >= rect.r && n.r < rect.r + rect.h && n.c >= rect.c && n.c < rect.c + rect.w
+    );
+    if (contained.length !== 1) return false;
+    if (contained[0]!.value !== area) return false;
+  }
+  return true;
+}
+
+function countSolutions(puzzle: ShikakuPuzzle, maxCount: number, iterBudget: number): number {
+  const { rows, cols, numbers } = puzzle;
+  const grid = new Uint8Array(rows * cols);
+  const assigned = new Uint8Array(numbers.length);
+  let solutions = 0;
+  let iters = 0;
+  const idx = (r: number, c: number) => r * cols + c;
+
+  function canPlace(r: number, c: number, w: number, h: number): boolean {
+    for (let dr = 0; dr < h; dr++)
+      for (let dc = 0; dc < w; dc++)
+        if (grid[idx(r + dr, c + dc)]) return false;
+    return true;
+  }
+  function place(r: number, c: number, w: number, h: number) {
+    for (let dr = 0; dr < h; dr++)
+      for (let dc = 0; dc < w; dc++)
+        grid[idx(r + dr, c + dc)] = 1;
+  }
+  function unplace(r: number, c: number, w: number, h: number) {
+    for (let dr = 0; dr < h; dr++)
+      for (let dc = 0; dc < w; dc++)
+        grid[idx(r + dr, c + dc)] = 0;
+  }
+  function getOptions(ni: number): Rect[] {
+    const n = numbers[ni]!;
+    const area = n.value;
+    const rects: Rect[] = [];
+    for (let h = 1; h <= Math.min(area, rows); h++) {
+      if (area % h !== 0) continue;
+      const w = area / h;
+      if (w > cols) continue;
+      for (let r = Math.max(0, n.r - h + 1); r <= n.r && r + h <= rows; r++) {
+        for (let c = Math.max(0, n.c - w + 1); c <= n.c && c + w <= cols; c++) {
+          if (!canPlace(r, c, w, h)) continue;
+          let conflict = false;
+          for (let oi = 0; oi < numbers.length; oi++) {
+            if (oi === ni || assigned[oi]) continue;
+            const o = numbers[oi]!;
+            if (o.r >= r && o.r < r + h && o.c >= c && o.c < c + w) { conflict = true; break; }
+          }
+          if (!conflict) rects.push({ r, c, w, h });
+        }
+      }
+    }
+    return rects;
+  }
+  function solve(): void {
+    if (solutions >= maxCount || iters >= iterBudget) return;
+    iters++;
+    let bestNi = -1;
+    let bestOpts: Rect[] = [];
+    let bestCount = Infinity;
+    for (let ni = 0; ni < numbers.length; ni++) {
+      if (assigned[ni]) continue;
+      const opts = getOptions(ni);
+      if (opts.length === 0) return;
+      if (opts.length < bestCount) { bestCount = opts.length; bestNi = ni; bestOpts = opts; }
+    }
+    if (bestNi === -1) {
+      for (let i = 0; i < rows * cols; i++) if (!grid[i]!) return;
+      solutions++;
+      return;
+    }
+    assigned[bestNi] = 1;
+    for (const rect of bestOpts) {
+      place(rect.r, rect.c, rect.w, rect.h);
+      solve();
+      unplace(rect.r, rect.c, rect.w, rect.h);
+      if (solutions >= maxCount || iters >= iterBudget) break;
+    }
+    assigned[bestNi] = 0;
+  }
+  solve();
+  return iters >= iterBudget ? -1 : solutions;
+}
+
 function generatePuzzle(rows: number, cols: number, rng: () => number): ShikakuPuzzle {
   const maxArea = rows <= 5 ? 10 : rows <= 9 ? 16 : rows <= 15 ? 25 : 36;
+  const solverBudget = rows <= 5 ? 500_000 : rows <= 9 ? 200_000 : rows <= 15 ? 50_000 : 10_000;
   for (let attempt = 0; attempt < 80; attempt++) {
     const result = tryGeneratePuzzle(rows, cols, rng, maxArea);
-    if (result) return result;
+    if (!result) continue;
+    if (!validateSolution(result, result.solution)) continue;
+    const solveResult = countSolutions(result, 2, solverBudget);
+    if (solveResult === 1) return result;
+    if (solveResult === -1) return result;
   }
   // Fallback: trivial 1×1 grid
   const numbers: NumberCell[] = [];
