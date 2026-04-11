@@ -1356,7 +1356,7 @@ export function ShikakuPage() {
               <div className={`shikaku-end-header ${solved ? "shikaku-end-header--success" : "shikaku-end-header--fail"}`}>
                 <p className="shikaku-end-title">{solved ? "Puzzle Solved!" : "Puzzle Abandoned"}</p>
                 <p className="shikaku-end-sub">
-                  {difficulty} · {DIFFICULTY_CONFIG[difficulty].label} · seed {seed}
+                  {difficulty} / {DIFFICULTY_CONFIG[difficulty].label} / seed {seed}
                 </p>
               </div>
 
@@ -1642,27 +1642,23 @@ export function ShikakuPage() {
               <FiGrid size={20} />
             </div>
             <h1 className="game-title">Shikaku</h1>
-            <span className="badge badge-warn" data-tooltip={challengeMode ? "Puzzle challenge" : infiniteMode ? `${infiniteSolved} solved — ∞ mode` : `Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN}`} data-tooltip-variant="info">
-              {challengeMode ? "Challenge" : infiniteMode ? <>{infiniteSolved} solved <span style={{ opacity: 0.5 }}>∞</span></> : `${currentPuzzleIdx + 1} / ${PUZZLES_PER_RUN}`}
+            <span className="badge badge-warn" data-tooltip={challengeMode ? `Challenge — ${difficulty}` : infiniteMode ? `${infiniteSolved} solved — ∞ mode — ${difficulty}` : `Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN} — ${difficulty}`} data-tooltip-variant="info">
+              {challengeMode
+                ? <>Challenge / {difficulty}</>
+                : infiniteMode
+                  ? <>{infiniteSolved} solved <span style={{ opacity: 0.5 }}>∞</span> / {difficulty}</>
+                  : <>{currentPuzzleIdx + 1} / {PUZZLES_PER_RUN} - {difficulty}</>}
             </span>
             <span className="badge" data-tooltip="Elapsed time" data-tooltip-variant="info" style={{ fontVariantNumeric: "tabular-nums" }}>
               <FiClock size={12} /> {formatTime(elapsedMs)}
             </span>
-            <span className="badge badge-success" data-tooltip="Difficulty level" data-tooltip-variant="info">
-              {difficulty}
-            </span>
-            {customMode && (
-              <span className="badge" data-tooltip={challengeMode ? "Puzzle challenge (unranked)" : "Custom seed (unranked)"} data-tooltip-variant="info" style={{ opacity: 0.7 }}>
-                {challengeMode ? "challenge" : "custom"}
-              </span>
-            )}
-                {(infiniteMode || customMode) && (
+            {(infiniteMode || customMode) && (
               <span className="badge" data-tooltip={`Seed: ${seed} — click to copy`} data-tooltip-variant="info" style={{ cursor: "pointer", fontVariantNumeric: "tabular-nums" }}
                 onClick={() => {
                   navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
                 }}
               >
-                <FiHash size={12} /> {seed}
+                <FiHash size={12} /> {seed}{customMode && !challengeMode && <span style={{ opacity: 0.5 }}> / custom</span>}
               </span>
             )}
           </div>
