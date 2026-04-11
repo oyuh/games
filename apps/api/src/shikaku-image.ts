@@ -255,20 +255,23 @@ const DIFF_ACCENT: Record<Difficulty, string> = {
   expert: "#f87171",
 };
 
+type PaddingMode = "normal" | "tight" | "none";
+
 interface RenderOptions {
   theme?: "dark" | "light";
   showSolution?: boolean;
   transparentBg?: boolean;
+  paddingMode?: PaddingMode;
 }
 
 function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: number, opts: RenderOptions = {}): string {
-  const { theme = "dark", showSolution = false, transparentBg = false } = opts;
+  const { theme = "dark", showSolution = false, transparentBg = false, paddingMode = "normal" } = opts;
   const { rows, cols, numbers, solution } = puzzle;
 
   const cellSize = rows <= 9 ? 48 : rows <= 15 ? 32 : 24;
-  const padding = 40;
-  const headerHeight = 44;
-  const footerHeight = 32;
+  const padding = paddingMode === "none" ? 0 : paddingMode === "tight" ? 8 : 40;
+  const headerHeight = paddingMode === "none" || paddingMode === "tight" ? 0 : 44;
+  const footerHeight = paddingMode === "none" || paddingMode === "tight" ? 0 : 32;
   const gridW = cols * cellSize;
   const gridH = rows * cellSize;
   const totalW = gridW + padding * 2;
@@ -291,8 +294,8 @@ function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: nu
     svg += `<rect width="${totalW}" height="${totalH}" rx="12" fill="${bg}"/>`;
   }
 
-  // Header — only when background is visible
-  if (!transparentBg) {
+  // Header — only when background is visible and padding allows it
+  if (!transparentBg && paddingMode === "normal") {
     svg += `<text x="${totalW / 2}" y="${padding + 8}" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="800" fill="${accent}">SHIKAKU</text>`;
     svg += `<text x="${totalW / 2}" y="${padding + 28}" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="11" fill="${mutedText}">${difficulty.toUpperCase()} / ${rows}×${cols} / seed ${seed}</text>`;
   }
@@ -332,13 +335,15 @@ function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: nu
     svg += `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="system-ui,-apple-system,sans-serif" font-size="${fontSize}" font-weight="700" fill="${textColor}">${num.value}</text>`;
   }
 
-  // Watermark — bottom-right, subtle
-  const wmY = gridY + gridH + 18;
-  const wmX = totalW - padding + 4;
-  svg += `<text x="${wmX}" y="${wmY}" text-anchor="end" font-family="system-ui,-apple-system,sans-serif" font-size="8" font-weight="500" fill="${mutedText}" opacity="0.5">games · Lawson Hart</text>`;
+  // Watermark — bottom-right, subtle (skip in none/tight padding)
+  if (paddingMode === "normal") {
+    const wmY = gridY + gridH + 18;
+    const wmX = totalW - padding + 4;
+    svg += `<text x="${wmX}" y="${wmY}" text-anchor="end" font-family="system-ui,-apple-system,sans-serif" font-size="8" font-weight="500" fill="${mutedText}" opacity="0.5">games · Lawson Hart</text>`;
+  }
 
-  // Footer — only when background is visible
-  if (!transparentBg) {
+  // Footer — only when background is visible and padding allows it
+  if (!transparentBg && paddingMode === "normal") {
     const footerY = gridY + gridH + footerHeight - 4;
     svg += `<text x="${padding}" y="${footerY}" text-anchor="start" font-family="system-ui,-apple-system,sans-serif" font-size="10" fill="${mutedText}">games · shikaku puzzle</text>`;
   }
@@ -368,6 +373,12 @@ function parseTheme(val: string | undefined): "dark" | "light" {
   return "dark";
 }
 
+function parsePadding(val: string | undefined): PaddingMode {
+  if (val === "none" || val === "0") return "none";
+  if (val === "tight" || val === "small") return "tight";
+  return "normal";
+}
+
 /* ── Routes ────────────────────────────────────────────────── */
 
 export const shikakuImageRoutes = new Hono();
@@ -379,12 +390,13 @@ shikakuImageRoutes.get("/puzzle.svg", (c) => {
   const theme = parseTheme(c.req.query("theme"));
   const showSolution = c.req.query("solution") === "true";
   const transparentBg = c.req.query("bg") === "transparent";
+  const paddingMode = parsePadding(c.req.query("padding"));
 
   const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
   const rng = mulberry32(seed);
   const puzzle = generatePuzzle(rows, cols, rng);
 
-  const svg = renderPuzzleSvg(puzzle, difficulty, seed, { theme, showSolution, transparentBg });
+  const svg = renderPuzzleSvg(puzzle, difficulty, seed, { theme, showSolution, transparentBg, paddingMode });
 
   return c.body(svg, 200, {
     "Content-Type": "image/svg+xml",
@@ -404,12 +416,13 @@ shikakuImageRoutes.get("/puzzle.svg/download", (c) => {
   const theme = parseTheme(c.req.query("theme"));
   const showSolution = c.req.query("solution") === "true";
   const transparentBg = c.req.query("bg") === "transparent";
+  const paddingMode = parsePadding(c.req.query("padding"));
 
   const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
   const rng = mulberry32(seed);
   const puzzle = generatePuzzle(rows, cols, rng);
 
-  const svg = renderPuzzleSvg(puzzle, difficulty, seed, { theme, showSolution, transparentBg });
+  const svg = renderPuzzleSvg(puzzle, difficulty, seed, { theme, showSolution, transparentBg, paddingMode });
 
   return c.body(svg, 200, {
     "Content-Type": "image/svg+xml",
