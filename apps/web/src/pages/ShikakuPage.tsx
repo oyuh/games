@@ -19,6 +19,7 @@ import {
 } from "../lib/shikaku-engine";
 import { getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useIsMobile } from "../hooks/useIsMobile";
 import "../styles/game-shared.css";
 import "../styles/shikaku.css";
 import { ShikakuDemo } from "../components/demos/ShikakuDemo";
@@ -76,6 +77,7 @@ interface ScoreEligibilityResponse {
 export function ShikakuPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   const [phase, setPhase] = useState<GamePhase>("menu");
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
@@ -1319,7 +1321,13 @@ export function ShikakuPage() {
             <div className="shikaku-menu-links">
               <button
                 className="shikaku-menu-link"
-                onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView); }}
+                onClick={() => {
+                  if (isMobile) {
+                    window.dispatchEvent(new CustomEvent("shikaku-open-leaderboard"));
+                  } else {
+                    setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
+                  }
+                }}
                 data-tooltip="View leaderboard"
                 data-tooltip-pos="bottom"
               >
@@ -1609,7 +1617,13 @@ export function ShikakuPage() {
               </button>
               <button
                 className="btn btn-muted game-action-btn"
-                onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView); }}
+                onClick={() => {
+                  if (isMobile) {
+                    window.dispatchEvent(new CustomEvent("shikaku-open-leaderboard"));
+                  } else {
+                    setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
+                  }
+                }}
                 data-tooltip="View top scores"
               >
                 <FiAward size={16} /> Leaderboard
