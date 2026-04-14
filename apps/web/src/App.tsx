@@ -15,6 +15,7 @@ import {
   startGlobalConnectionDebugCapture
 } from "./lib/connection-debug";
 import { syncSessionIdentity } from "./lib/session";
+import { showToast } from "./lib/toast";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { useButtonSounds } from "./hooks/useButtonSounds";
 import { HomePage } from "./pages/HomePage";
@@ -260,8 +261,44 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
       message: "Zero client initialized"
     });
 
-    const mapAndTrack = (state: ConnectionState) => {
-      setZeroConnectionState(state);
+    const WAKE_MESSAGES = [
+      "The sync server is waking up... give it a sec",
+      "Zero is still hitting snooze...",
+      "Almost awake... the sync server had a late night",
+      "Still warming up... someone forgot to set the alarm",
+    ];
+    let wakeToastIndex = 0;
+    let wakeTimer: ReturnType<typeof setTimeout> | null = null;
+    let connected = false;
+
+    const startWakeTimer = () => {
+      if (wakeTimer || connected) return;
+      wakeTimer = setTimeout(() => {
+        if (!connected) {
+          showToast(WAKE_MESSAGES[wakeToastIndex % WAKE_MESSAGES.length]!, "info");
+          wakeToastIndex++;
+          wakeTimer = null;
+          startWakeTimer();
+        }
+      }, wakeToastIndex === 0 ? 4000 : 6000);
+    };
+
+    const mapAndTrack = (next: ConnectionState) => {
+      setZeroConnectionState(next);
+
+      if (next.name === "connected") {
+        if (wakeToastIndex > 0) {
+          showToast("⚡ Sync server is up — let's go!", "success");
+        }
+        connected = true;
+        if (wakeTimer) {
+          clearTimeout(wakeTimer);
+          wakeTimer = null;
+        }
+      } else if (next.name === "connecting") {
+        connected = false;
+        startWakeTimer();
+      }
     };
 
     mapAndTrack(zero.connection.state.current);
@@ -278,6 +315,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
     return () => {
       unsubscribeConnection();
       unsubscribeOnline();
+      if (wakeTimer) clearTimeout(wakeTimer);
     };
   }, [zero]);
 
