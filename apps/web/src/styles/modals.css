@@ -479,6 +479,275 @@
   color: var(--secondary);
 }
 
+/* ─── Info Modal (redesigned) ───────────────────────────── */
+
+.info-modal-panel {
+  max-width: 560px;
+  width: 94vw;
+}
+
+.info-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.info-version-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+.info-site-desc {
+  font-size: 0.84rem;
+  color: var(--secondary);
+  line-height: 1.55;
+  margin: 0 0 1rem;
+}
+
+.info-custom-banner {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  color: var(--foreground);
+  margin-bottom: 1rem;
+}
+
+.info-custom-banner a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* Current page section */
+.info-current-page {
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  margin-bottom: 0;
+}
+
+.info-current-page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.info-current-page-header h3 {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.info-current-page-icon {
+  color: var(--primary);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.info-current-page-desc {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+}
+
+/* Section titles */
+.info-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+  margin: 0 0 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Game catalog grid */
+.info-game-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.info-game-card {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+  transition: border-color 0.15s;
+}
+
+.info-game-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.info-game-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.info-game-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.info-game-card-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.info-game-card-name {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--foreground);
+}
+
+.info-game-card-players {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--secondary);
+}
+
+.info-game-card-desc {
+  font-size: 0.68rem;
+  color: var(--secondary);
+  line-height: 1.4;
+}
+
+/* Status section */
+.info-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.info-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.info-status-badge:hover {
+  border-color: var(--primary);
+}
+
+.info-status-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+
+.info-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.info-status-label {
+  color: var(--secondary);
+}
+
+.info-status-value {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.info-status-value--ok {
+  color: var(--primary);
+}
+
+.info-status-value--err {
+  color: var(--destructive);
+}
+
+.info-status-link {
+  font-family: "Geist Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
+/* Footer */
+.info-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--secondary);
+}
+
+.info-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--secondary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.info-footer-link:hover {
+  color: var(--foreground);
+}
+
+.info-footer-sep {
+  color: var(--border);
+}
+
+.info-footer-author {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.info-footer-author:hover {
+  color: var(--foreground);
+}
+
 .info-block {
   margin-bottom: 1.25rem;
 }
@@ -554,22 +823,23 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.45rem 0.7rem;
   background: var(--muted);
   border-radius: var(--radius);
+  margin-bottom: 0.5rem;
 }
 
 .info-session-label {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--secondary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .info-session-id {
   font-family: "Geist Mono", monospace;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--foreground);
   user-select: all;
   flex: 1;
@@ -583,11 +853,15 @@
   border: 1px solid var(--border);
   color: var(--secondary);
   cursor: pointer;
-  padding: 0.25rem 0.4rem;
+  width: 26px;
+  height: 26px;
   border-radius: 4px;
   display: flex;
   align-items: center;
-  font-size: 0.75rem;
+  justify-content: center;
+  font-size: 0.72rem;
+  line-height: 1;
+  flex-shrink: 0;
   transition: color 0.15s, border-color 0.15s;
 }
 
@@ -811,4 +1085,347 @@
 
 .welcome-heart {
   font-size: 0.72rem;
+}
+
+/* ─── Location Demo ─────────────────────────────────────── */
+
+.locdemo-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Overview grid */
+.locdemo-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.locdemo-overview-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+  padding: 0.85rem 0.65rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+
+.locdemo-overview-card h4 {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.locdemo-overview-card p {
+  font-size: 0.72rem;
+  color: var(--secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.locdemo-overview-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Map preview */
+.locdemo-map-preview {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.locdemo-map-caption {
+  font-size: 0.7rem;
+  color: var(--secondary);
+  text-align: center;
+  padding: 0.4rem 0.5rem;
+  margin: 0;
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+  border-top: 1px solid var(--border);
+}
+
+/* Phase banners */
+.locdemo-phase-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+}
+
+.locdemo-phase-banner h4 {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.locdemo-phase-banner p {
+  font-size: 0.75rem;
+  color: var(--secondary);
+  margin: 0.15rem 0 0;
+  line-height: 1.4;
+}
+
+.locdemo-phase-emoji {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.locdemo-phase-banner--pick {
+  background: color-mix(in srgb, #ef476f 8%, transparent);
+  border-color: color-mix(in srgb, #ef476f 20%, transparent);
+}
+
+.locdemo-phase-banner--leader {
+  background: color-mix(in srgb, #f59e0b 8%, transparent);
+  border-color: color-mix(in srgb, #f59e0b 20%, transparent);
+}
+
+.locdemo-phase-banner--reveal {
+  background: color-mix(in srgb, #06d6a0 8%, transparent);
+  border-color: color-mix(in srgb, #06d6a0 20%, transparent);
+}
+
+/* Action row */
+.locdemo-action-row {
+  display: flex;
+  justify-content: center;
+}
+
+/* Callout */
+.locdemo-callout {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.5rem;
+  border-left: 3px solid;
+}
+
+.locdemo-callout strong {
+  color: var(--foreground);
+}
+
+.locdemo-callout--info {
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border-color: var(--primary);
+  color: var(--secondary);
+}
+
+.locdemo-callout--leader {
+  background: color-mix(in srgb, #f59e0b 6%, transparent);
+  border-color: #f59e0b;
+  color: var(--secondary);
+}
+
+/* Split layout (clues & guesses) */
+.locdemo-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.locdemo-split-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.locdemo-phase-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  padding-left: 0.1rem;
+}
+
+.locdemo-clue-card {
+  padding: 0.5rem;
+}
+
+.locdemo-clue-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Reveal scores */
+.locdemo-reveal-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.locdemo-reveal-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+
+.locdemo-reveal-row--me {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.locdemo-reveal-rank {
+  font-size: 1rem;
+  width: 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.locdemo-reveal-avatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.locdemo-reveal-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--foreground);
+  flex: 1;
+  min-width: 0;
+}
+
+.locdemo-reveal-dist {
+  font-size: 0.72rem;
+  color: var(--secondary);
+  flex-shrink: 0;
+}
+
+.locdemo-reveal-pts {
+  font-size: 0.82rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Scoring table */
+.locdemo-scoring-intro {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, #f59e0b 6%, transparent);
+}
+
+.locdemo-scoring-intro h4 {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.locdemo-scoring-intro p {
+  font-size: 0.75rem;
+  color: var(--secondary);
+  margin: 0.15rem 0 0;
+  line-height: 1.4;
+}
+
+.locdemo-scoring-table {
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.locdemo-scoring-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.45rem 0.85rem;
+  background: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+}
+
+.locdemo-scoring-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.locdemo-scoring-emoji {
+  font-size: 0.9rem;
+  width: 1.25rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.locdemo-scoring-dist {
+  flex: 1;
+  color: var(--foreground);
+}
+
+.locdemo-scoring-pts {
+  font-weight: 700;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+/* Rules grid */
+.locdemo-rules-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.locdemo-rule {
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+
+.locdemo-rule strong {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--foreground);
+  margin-bottom: 0.25rem;
+}
+
+.locdemo-rule p {
+  font-size: 0.72rem;
+  color: var(--secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ─── Location Demo – responsive ────────────────────────── */
+
+@media (max-width: 640px) {
+  .locdemo-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .locdemo-split {
+    grid-template-columns: 1fr;
+  }
+
+  .locdemo-rules-grid {
+    grid-template-columns: 1fr;
+  }
 }

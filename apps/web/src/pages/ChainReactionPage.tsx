@@ -52,12 +52,6 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
   usePresenceSocket({ sessionId, gameId, gameType: "chain_reaction" });
 
-  useGameSounds({
-    phase: game?.phase,
-    sessionId,
-    isMyTurn: Boolean(game?.phase === "playing" && inGame),
-  });
-
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
   const inGame = Boolean(me);
@@ -66,6 +60,12 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
   const activeGameId = mySession?.game_id ?? null;
   const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "chain_reaction" || activeGameId !== gameId));
+
+  useGameSounds({
+    phase: game?.phase,
+    sessionId,
+    isMyTurn: Boolean(game?.phase === "playing" && inGame),
+  });
 
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
