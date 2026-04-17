@@ -1107,6 +1107,18 @@
   color: transparent;
 }
 
+.hc-join-input--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hc-sync-offline-hint {
+  font-size: 0.72rem;
+  color: var(--color-warn, #e6a700);
+  opacity: 0.85;
+  margin: -0.15rem 0 0.15rem 0;
+}
+
 /* ── Recent games ────────────────────────────────────────────── */
 .hc-recent-header {
   display: flex;

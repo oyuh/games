@@ -2663,30 +2663,44 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
 }
 
 .m-info-session-label {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--secondary);
 }
 
 .m-info-session-id {
-  font-size: 0.7rem;
-  font-family: monospace;
-  background: var(--muted);
-  padding: 0.15rem 0.4rem;
-  border-radius: var(--radius);
+  font-size: 0.68rem;
+  font-family: "Geist Mono", monospace;
+  color: var(--foreground);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .m-info-session-copy {
   background: none;
-  border: none;
-  color: var(--primary);
+  border: 1px solid var(--border);
+  color: var(--secondary);
   cursor: pointer;
-  padding: 0.15rem;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .m-info-divider {
@@ -2726,6 +2740,235 @@
   position: absolute;
   left: 0;
   color: var(--primary);
+}
+
+/* ─── Redesigned Mobile Info Sheet ──────────────────────── */
+
+.m-info-site-desc {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+}
+
+.m-info-custom-banner {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  color: var(--foreground);
+  margin-bottom: 0.75rem;
+}
+
+.m-info-custom-banner a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* Current page section */
+.m-info-current-page {
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  margin-bottom: 0.5rem;
+}
+
+.m-info-current-page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.3rem;
+}
+
+.m-info-current-page-header h3 {
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.m-info-current-page-icon {
+  color: var(--primary);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.m-info-current-page-desc {
+  font-size: 0.78rem;
+  color: var(--secondary);
+  line-height: 1.5;
+  margin: 0 0 0.4rem;
+}
+
+/* Section titles */
+.m-info-section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+  margin: 0.5rem 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Game catalog list */
+.m-info-game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.m-info-game-row {
+  display: flex;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+
+.m-info-game-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.m-info-game-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.m-info-game-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.m-info-game-name {
+  font-size: 0.76rem;
+  font-weight: 650;
+  color: var(--foreground);
+}
+
+.m-info-game-players {
+  font-size: 0.56rem;
+  font-weight: 600;
+  padding: 0.06rem 0.3rem;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--secondary);
+}
+
+.m-info-game-desc {
+  font-size: 0.66rem;
+  color: var(--secondary);
+  line-height: 1.4;
+}
+
+/* Status section */
+.m-info-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.5rem 0;
+}
+
+.m-info-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.m-info-status-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+  margin-bottom: 0.25rem;
+}
+
+.m-info-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--secondary);
+}
+
+.m-info-status-row span:last-child {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.m-info-status--ok {
+  color: var(--primary) !important;
+}
+
+.m-info-status--err {
+  color: var(--destructive) !important;
+}
+
+.m-info-commit-link {
+  font-family: "Geist Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
+/* Footer */
+.m-info-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.7rem;
+  color: var(--secondary);
+}
+
+.m-info-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--secondary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.m-info-footer-sep {
+  color: var(--border);
+}
+
+.m-info-footer-author {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 600;
 }
 
 /* ══════════════════════════════════════════════════════════════

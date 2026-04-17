@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
-import { FiZap, FiCopy } from "react-icons/fi";
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { FiZap, FiCopy, FiEye, FiShield, FiLink, FiDroplet, FiMapPin, FiGrid, FiActivity, FiGithub, FiExternalLink } from "react-icons/fi";
+import { useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { BottomSheet } from "./BottomSheet";
 import { ImposterDemo } from "../../components/demos/ImposterDemo";
@@ -104,6 +104,128 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
 
   return (
     <BottomSheet title="Info" onClose={onClose}>
+      {/* Site description */}
+      <p className="m-info-site-desc">
+        A real-time multiplayer party game platform. No accounts — just create or join a game and play.
+      </p>
+
+      {/* Custom status banner */}
+      {customStatus?.text && (
+        <div className="m-info-custom-banner" style={{ borderColor: customStatus.color || "var(--primary)" }}>
+          {customStatus.link ? (
+            <a href={customStatus.link} target="_blank" rel="noopener noreferrer">{customStatus.text}</a>
+          ) : customStatus.text}
+        </div>
+      )}
+
+      {/* Current page context */}
+      <div className="m-info-current-page">
+        <div className="m-info-current-page-header">
+          <span className="m-info-current-page-icon">{page.icon}</span>
+          <h3>{page.title}</h3>
+        </div>
+        <p className="m-info-current-page-desc">{page.description}</p>
+        {page.tips && page.tips.length > 0 && (
+          <ul className="m-info-tips">
+            {page.tips.map((tip, i) => (
+              <li key={i} className="m-info-tip">
+                <FiZap size={10} style={{ flexShrink: 0, opacity: 0.6 }} />
+                {tip}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* How to Play button on game pages */}
+      {gameType && (
+        <button
+          className="m-btn m-btn--primary"
+          style={{ width: "100%", marginTop: 12, marginBottom: 4 }}
+          onClick={() => setShowDemo(true)}
+        >
+          How to Play
+        </button>
+      )}
+
+      <div className="m-info-divider" />
+
+      {/* Game catalog */}
+      <h4 className="m-info-section-title">Games</h4>
+      <div className="m-info-game-list">
+        {GAME_CATALOG.map((g) => (
+          <div key={g.key} className="m-info-game-row">
+            <div className="m-info-game-icon" style={{ background: `color-mix(in srgb, ${g.color} 15%, transparent)`, color: g.color }}>
+              {g.icon}
+            </div>
+            <div className="m-info-game-body">
+              <div className="m-info-game-name-row">
+                <span className="m-info-game-name">{g.name}</span>
+                <span className="m-info-game-players">{g.players}</span>
+              </div>
+              <span className="m-info-game-desc">{g.description}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="m-info-divider" />
+
+      {/* System Status */}
+      <div className="m-info-status-header">
+        <h4 className="m-info-section-title" style={{ margin: 0 }}>
+          <FiActivity size={12} />
+          System Status
+        </h4>
+        <button className="m-info-status-badge" onClick={() => setShowSystemText(!showSystemText)}>
+          <span className={`status-dot ${allHealthy ? "status-dot--ok" : isLoading ? "status-dot--loading" : "status-dot--err"}`} />
+          {overallLabel}
+        </button>
+      </div>
+
+      {showSystemText && (
+        <div className="m-info-status-details">
+          <div className="m-info-status-row">
+            <span>API</span>
+            <span className={apiOk ? "m-info-status--ok" : "m-info-status--err"}>
+              {apiOk ? "Online" : isLoading ? "Checking…" : "Offline"}
+            </span>
+          </div>
+          <div className="m-info-status-row">
+            <span>Database</span>
+            <span className={dbOk ? "m-info-status--ok" : "m-info-status--err"}>
+              {dbOk ? "Connected" : isLoading ? "Checking…" : "Disconnected"}
+            </span>
+          </div>
+          {latency != null && (
+            <div className="m-info-status-row">
+              <span>Latency</span>
+              <span>{latency}ms</span>
+            </div>
+          )}
+          {uptimeText && (
+            <div className="m-info-status-row">
+              <span>Uptime</span>
+              <span>{uptimeText}</span>
+            </div>
+          )}
+          {buildTime && (
+            <div className="m-info-status-row">
+              <span>Built</span>
+              <span>{buildTime}</span>
+            </div>
+          )}
+          {commitShort && (
+            <div className="m-info-status-row">
+              <span>Commit</span>
+              <a href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`} target="_blank" rel="noopener noreferrer" className="m-info-commit-link">
+                {commitShort}
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Session */}
       <div className="m-info-session">
         <span className="m-info-session-label">Session</span>
@@ -113,170 +235,51 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      <div className="m-info-divider" />
-
-      {/* Page info */}
-      <h3 className="m-info-heading">{page.title}</h3>
-      <p className="m-info-text">{page.description}</p>
-
-      {page.tips && page.tips.length > 0 && (
-        <ul className="m-info-tips">
-          {page.tips.map((tip, i) => (
-            <li key={i} className="m-info-tip">
-              <FiZap size={11} style={{ flexShrink: 0, opacity: 0.6 }} />
-              {tip}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* How to Play button on game pages */}
-      {gameType && (
-        <button
-          className="m-btn m-btn--primary"
-          style={{ width: "100%", marginTop: 12, marginBottom: 12 }}
-          onClick={() => setShowDemo(true)}
-        >
-          How to Play
-        </button>
-      )}
-
-      <div className="m-info-divider" />
-
-      {/* System Status Section */}
-      <div style={{ marginTop: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <h3 className="m-info-heading" style={{ margin: 0 }}>System Status</h3>
-          <button
-            onClick={() => setShowSystemText(!showSystemText)}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--card)", border: "1px solid var(--border)", padding: "0.25rem 0.5rem", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 600, color: "var(--foreground)" }}
-          >
-            <span className={`status-dot ${allHealthy ? "status-dot--ok" : isLoading ? "status-dot--loading" : "status-dot--err"}`} />
-            {overallLabel}
-          </button>
-        </div>
-
-        {customStatus?.text && (
-          <div style={{ background: "var(--card)", padding: "0.5rem", borderRadius: "12px", border: "1px solid var(--border)", marginBottom: "0.75rem", fontSize: "0.8rem", color: customStatus.color || "var(--primary)",textAlign: "center" }}>
-            {customStatus.link ? (
-              <a href={customStatus.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit" }}>{customStatus.text}</a>
-            ) : customStatus.text}
-          </div>
-        )}
-
-        {showSystemText && (
-          <div style={{ padding: "0.75rem", background: "var(--card)", borderRadius: "12px", border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem", fontSize: "0.75rem" }}>
-              <span style={{ color: "var(--secondary)" }}>API</span>
-              <span style={{ fontWeight: 600, color: apiOk ? "var(--primary)" : "var(--destructive)" }}>{apiOk ? "Online" : isLoading ? "Checking…" : "Offline"}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem", fontSize: "0.75rem" }}>
-              <span style={{ color: "var(--secondary)" }}>Database</span>
-              <span style={{ fontWeight: 600, color: dbOk ? "var(--primary)" : "var(--destructive)" }}>{dbOk ? "Connected" : isLoading ? "Checking…" : "Disconnected"}</span>
-            </div>
-
-            <div style={{ paddingTop: "0.5rem", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-              {latency != null && (
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem" }}>
-                  <span style={{ color: "var(--secondary)" }}>Latency</span>
-                  <span>{latency}ms</span>
-                </div>
-              )}
-              {uptimeText && (
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem" }}>
-                  <span style={{ color: "var(--secondary)" }}>Uptime</span>
-                  <span>{uptimeText}</span>
-                </div>
-              )}
-              {buildTime && (
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem" }}>
-                  <span style={{ color: "var(--secondary)" }}>Built</span>
-                  <span>{buildTime}</span>
-                </div>
-              )}
-              {commitShort && (
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem" }}>
-                  <span style={{ color: "var(--secondary)" }}>Commit</span>
-                  <a href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", fontFamily: "monospace", color: "inherit" }}>
-                    {commitShort}
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Made by text */}
-      <div style={{ marginTop: "1.5rem", marginBottom: "0.5rem", textAlign: "center", fontSize: "0.75rem", color: "var(--secondary)" }}>
-        Made with <span style={{ color: "#ef4444" }}>❤️</span> by{" "}
-        <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit", fontWeight: 600 }}>
-          Lawson
+      {/* Footer */}
+      <div className="m-info-footer">
+        <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" className="m-info-footer-link">
+          <FiGithub size={12} /> Source <FiExternalLink size={9} />
         </a>
+        <span className="m-info-footer-sep">·</span>
+        <span>
+          Made with <span style={{ color: "#ef4444" }}>❤️</span>{" "}
+          by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" className="m-info-footer-author">Lawson</a>
+        </span>
       </div>
     </BottomSheet>
   );
 }
 
-function getPageInfo(pathname: string): { title: string; description: string; tips?: string[] } {
+const GAME_CATALOG = [
+  { key: "imposter", name: "Imposter", icon: <FiEye size={14} />, color: "#7eb8ff", players: "3–12", description: "Find the fake — everyone gives clues, then votes" },
+  { key: "password", name: "Password", icon: <FiShield size={14} />, color: "#a78bfa", players: "4+", description: "Team word-guessing with one-word clues" },
+  { key: "chain", name: "Chain Reaction", icon: <FiLink size={14} />, color: "#34d399", players: "2", description: "1v1 word chain duel — guess the hidden words" },
+  { key: "shade", name: "Shade Signal", icon: <FiDroplet size={14} />, color: "#f472b6", players: "3–8", description: "Guess the secret color from text clues" },
+  { key: "location", name: "Location Signal", icon: <FiMapPin size={14} />, color: "#f59e0b", players: "3–8", description: "Guess the secret map location from clues" },
+  { key: "shikaku", name: "Shikaku", icon: <FiGrid size={14} />, color: "#06b6d4", players: "Solo", description: "Logic puzzle — divide the grid into rectangles" },
+];
+
+function getPageInfo(pathname: string): { title: string; icon: ReactNode; description: string; tips?: string[] } {
   if (pathname === "/") {
-    return {
-      title: "Home",
-      description: "Create a new game or join an existing one with a code.",
-      tips: ["Set your name before joining a game", "Use the join code to hop into a friend's lobby"],
-    };
+    return { title: "Home", icon: <FiZap size={16} />, description: "Create a new game or join an existing one with a code.", tips: ["Set your name before joining a game", "Use the join code to hop into a friend's lobby"] };
   }
   if (pathname.startsWith("/imposter/")) {
-    return {
-      title: "Imposter",
-      description: "A social deduction game. Everyone gives one-word clues, then votes on who the imposter is.",
-      tips: ["Give clues that prove you know the word", "Vote for who you think is faking it"],
-    };
-  }
-  if (pathname.startsWith("/password/") && pathname.endsWith("/results")) {
-    return { title: "Password — Results", description: "See the final scores and round history." };
-  }
-  if (pathname.startsWith("/password/") && pathname.endsWith("/begin")) {
-    return {
-      title: "Password — Lobby",
-      description: "Join a team, then the host starts the game.",
-      tips: ["Join a team before the game starts", "Need at least 2 teams with players"],
-    };
+    return { title: "Imposter", icon: <FiEye size={16} />, description: "Social deduction — everyone gives one-word clues, then votes on who the imposter is.", tips: ["Give clues that prove you know the word", "Vote for who you think is faking it"] };
   }
   if (pathname.startsWith("/password/")) {
-    return {
-      title: "Password — In Game",
-      description: "Give one-word clues. Guess the secret word. First team to target score wins!",
-      tips: ["Clue givers: one word only", "Guessers: type your best guess"],
-    };
+    return { title: "Password", icon: <FiShield size={16} />, description: "Team word-guessing. Give one-word clues — first team to target score wins!", tips: ["Clue givers: one word only", "Guessers: type your best guess"] };
   }
   if (pathname.startsWith("/chain/")) {
-    return {
-      title: "Chain Reaction",
-      description: "A 1v1 word chain duel. Guess the hidden words between the hints!",
-      tips: ["Tap a word to guess", "Wrong guesses reveal a letter as a hint", "Fewer hints = more points"],
-    };
+    return { title: "Chain Reaction", icon: <FiLink size={16} />, description: "1v1 word chain duel. Guess the hidden words between the hints!", tips: ["Tap a word to guess", "Wrong guesses reveal a letter", "Fewer hints = more points"] };
   }
   if (pathname.startsWith("/shade/")) {
-    return {
-      title: "Shade Signal",
-      description: "One leader describes a target color. Everyone else guesses which cell it is.",
-      tips: ["Leaders: describe the color without naming it", "Guessers: closer guesses = more points"],
-    };
+    return { title: "Shade Signal", icon: <FiDroplet size={16} />, description: "The leader describes a secret color. Everyone else guesses which cell it is.", tips: ["Leaders: describe the color creatively", "Closer guesses = more points"] };
   }
   if (pathname.startsWith("/location/")) {
-    return {
-      title: "Location Signal",
-      description: "One leader picks a location on the map and gives clues. Everyone else guesses where it is.",
-      tips: ["Leaders: give clues to narrow it down", "Guessers: closer guesses = more points"],
-    };
+    return { title: "Location Signal", icon: <FiMapPin size={16} />, description: "The leader picks a map location and gives text clues. Guess as close as you can!", tips: ["Leaders: don't name the place directly", "5,000 pts for exact, drops with distance"] };
   }
   if (/^\/shikaku(\/|$)/.test(pathname)) {
-    return {
-      title: "Shikaku",
-      description: "Divide the grid into rectangles — each containing exactly one number equal to its area.",
-      tips: ["Drag to draw rectangles on the grid", "Each rectangle must contain exactly one number", "Complete all puzzles as fast as you can for a higher score"],
-    };
+    return { title: "Shikaku", icon: <FiGrid size={16} />, description: "Divide the grid into rectangles — each with one number equal to its area.", tips: ["Drag to draw rectangles", "Each must contain exactly one number"] };
   }
-  return { title: "Page", description: "You're on an unknown page." };
+  return { title: "Page", icon: <FiZap size={16} />, description: "You're on an unknown page." };
 }

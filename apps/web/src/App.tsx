@@ -2,8 +2,8 @@ import { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
-import { Component, useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Component, useEffect, useRef, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import {
   addConnectionDebugEvent,
@@ -12,7 +12,8 @@ import {
   setApiConnectionProbe,
   setDatabaseStatusProbe,
   setZeroConnectionState,
-  startGlobalConnectionDebugCapture
+  startGlobalConnectionDebugCapture,
+  useConnectionDebug
 } from "./lib/connection-debug";
 import { syncSessionIdentity } from "./lib/session";
 import { showToast } from "./lib/toast";
@@ -82,6 +83,87 @@ function stringifyError(error: unknown) {
   return String(error);
 }
 
+/** Routes that don't use the Zero sync server (solo/offline games). */
+const SYNC_FREE_ROUTES = ["/shikaku"];
+
+/**
+ * Route-aware wake-toast: only shows "sync server is waking up" toasts
+ * when the user is on a page that actually needs the sync server.
+ */
+function SyncWakeToast() {
+  const location = useLocation();
+  const debug = useConnectionDebug();
+  const zeroState = debug.zeroState;
+  const needsSync = !SYNC_FREE_ROUTES.some((prefix) => location.pathname.startsWith(prefix));
+
+  const wakeIndexRef = useRef(0);
+  const wakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectedRef = useRef(zeroState === "connected");
+
+  useEffect(() => {
+    connectedRef.current = zeroState === "connected";
+
+    if (zeroState === "connected") {
+      if (wakeIndexRef.current > 0 && needsSync) {
+        showToast("⚡ Sync server is up — let's go!", "success");
+      }
+      wakeIndexRef.current = 0;
+      if (wakeTimerRef.current) {
+        clearTimeout(wakeTimerRef.current);
+        wakeTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (zeroState !== "connecting" || !needsSync) {
+      if (wakeTimerRef.current) {
+        clearTimeout(wakeTimerRef.current);
+        wakeTimerRef.current = null;
+      }
+      return;
+    }
+
+    // connecting + on a sync-dependent route → start wake timer
+    const WAKE_MESSAGES = [
+      "The sync server is waking up... give it a sec",
+      "Zero is still hitting snooze...",
+      "Almost awake... the sync server had a late night",
+      "Still warming up... someone forgot to set the alarm",
+    ];
+
+    const schedule = () => {
+      if (wakeTimerRef.current || connectedRef.current) return;
+      const initialDelay = import.meta.env.DEV ? 10_000 : 4000;
+      const subsequentDelay = import.meta.env.DEV ? 15_000 : 6000;
+      wakeTimerRef.current = setTimeout(() => {
+        if (!connectedRef.current) {
+          showToast(WAKE_MESSAGES[wakeIndexRef.current % WAKE_MESSAGES.length]!, "info");
+          wakeIndexRef.current++;
+          wakeTimerRef.current = null;
+          schedule();
+        }
+      }, wakeIndexRef.current === 0 ? initialDelay : subsequentDelay);
+    };
+
+    schedule();
+
+    return () => {
+      if (wakeTimerRef.current) {
+        clearTimeout(wakeTimerRef.current);
+        wakeTimerRef.current = null;
+      }
+    };
+  }, [zeroState, needsSync]);
+
+  return null;
+}
+
+/** Hook: is the Zero sync server currently connected? */
+export function useZeroConnected() {
+  const debug = useConnectionDebug();
+  return debug.zeroState === "connected";
+}
+
 export function App({ initialSessionId, initialSessionProof }: { initialSessionId: string; initialSessionProof: string | null }) {
   const styleOnly = import.meta.env.VITE_STYLE_ONLY === "true";
   const [zero] = useState(() => createZero(initialSessionId, initialSessionProof));
@@ -94,6 +176,13 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
 
   useEffect(() => {
     if (styleOnly) {
+      return;
+    }
+
+    // In dev mode, skip the periodic identity verification that triggers
+    // page reloads — the server may return varying sessions due to relaxed
+    // fingerprinting, which causes an infinite reload loop.
+    if (import.meta.env.DEV) {
       return;
     }
 
@@ -261,44 +350,8 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
       message: "Zero client initialized"
     });
 
-    const WAKE_MESSAGES = [
-      "The sync server is waking up... give it a sec",
-      "Zero is still hitting snooze...",
-      "Almost awake... the sync server had a late night",
-      "Still warming up... someone forgot to set the alarm",
-    ];
-    let wakeToastIndex = 0;
-    let wakeTimer: ReturnType<typeof setTimeout> | null = null;
-    let connected = false;
-
-    const startWakeTimer = () => {
-      if (wakeTimer || connected) return;
-      wakeTimer = setTimeout(() => {
-        if (!connected) {
-          showToast(WAKE_MESSAGES[wakeToastIndex % WAKE_MESSAGES.length]!, "info");
-          wakeToastIndex++;
-          wakeTimer = null;
-          startWakeTimer();
-        }
-      }, wakeToastIndex === 0 ? 4000 : 6000);
-    };
-
     const mapAndTrack = (next: ConnectionState) => {
       setZeroConnectionState(next);
-
-      if (next.name === "connected") {
-        if (wakeToastIndex > 0) {
-          showToast("⚡ Sync server is up — let's go!", "success");
-        }
-        connected = true;
-        if (wakeTimer) {
-          clearTimeout(wakeTimer);
-          wakeTimer = null;
-        }
-      } else if (next.name === "connecting") {
-        connected = false;
-        startWakeTimer();
-      }
     };
 
     mapAndTrack(zero.connection.state.current);
@@ -315,7 +368,6 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
     return () => {
       unsubscribeConnection();
       unsubscribeOnline();
-      if (wakeTimer) clearTimeout(wakeTimer);
     };
   }, [zero]);
 
@@ -335,6 +387,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
     <ZeroProvider zero={zero}>
       <ErrorBoundary>
         <BrowserRouter>
+          <SyncWakeToast />
           <Routes>
             <Route element={<AppShell />}>
               <Route path="/" element={<HomePage sessionId={initialSessionId} />} />
