@@ -1,5 +1,5 @@
 import { Map, Overlay, ZoomControl } from "pigeon-maps";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export interface MapMarker {
   lat: number;
@@ -25,6 +25,12 @@ interface WorldMapProps {
   defaultCenter?: [number, number];
   /** Override default zoom level. Defaults to 2. */
   defaultZoom?: number;
+  /** Controlled center — overrides defaultCenter and enables controlled mode */
+  center?: [number, number];
+  /** Controlled zoom — overrides defaultZoom and enables controlled mode */
+  zoom?: number;
+  /** Called when the user pans/zooms (use with center/zoom for controlled mode) */
+  onBoundsChanged?: (params: { center: [number, number]; zoom: number }) => void;
 }
 
 // Google Hybrid tiles — satellite imagery with labels/roads/place names.
@@ -43,16 +49,42 @@ export function WorldMap({
   interactive = true,
   className,
   coordsOverlay,
-  defaultCenter: center = [25, 10],
-  defaultZoom: zoom = 2,
+  defaultCenter = [25, 10],
+  defaultZoom = 2,
+  center: controlledCenter,
+  zoom: controlledZoom,
+  onBoundsChanged,
 }: WorldMapProps) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(controlledCenter ?? defaultCenter);
+  const [mapZoom, setMapZoom] = useState(controlledZoom ?? defaultZoom);
+
+  // Sync controlled center into internal state
+  const ccLat = controlledCenter?.[0];
+  const ccLng = controlledCenter?.[1];
+  useEffect(() => {
+    if (ccLat !== undefined && ccLng !== undefined) setMapCenter([ccLat, ccLng]);
+  }, [ccLat, ccLng]);
+
+  // Sync controlled zoom into internal state
+  useEffect(() => {
+    if (controlledZoom !== undefined) setMapZoom(controlledZoom);
+  }, [controlledZoom]);
+
+  const handleBoundsChanged = useCallback(
+    ({ center: c, zoom: z }: { center: [number, number]; zoom: number }) => {
+      setMapCenter(c);
+      setMapZoom(z);
+      onBoundsChanged?.({ center: c, zoom: z });
+    },
+    [onBoundsChanged],
+  );
 
   return (
     <div className={`locsig-map-outer${className ? ` ${className}` : ""}`} style={{ position: "relative", height, overflow: "hidden", background: "#0b1a2e" }}>
       <Map
-        defaultCenter={center}
-        defaultZoom={zoom}
+        center={mapCenter}
+        zoom={mapZoom}
         minZoom={2}
         maxZoom={18}
         height={height}
@@ -69,6 +101,7 @@ export function WorldMap({
         animate
         attribution={false}
         boxClassname="locsig-map-box"
+        onBoundsChanged={handleBoundsChanged}
       >
         {interactive && <ZoomControl />}
 

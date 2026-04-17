@@ -31,6 +31,10 @@ function getClientIP(c: { req: { header: (name: string) => string | undefined } 
 
 export function rateLimiter(options: RateLimitOptions): MiddlewareHandler {
   const { windowMs, maxRequests, scope } = options;
+  // In local development (not test, not production), multiply the limit by 10x
+  // so rapid manual testing isn't blocked by rate limits.
+  const isDev = process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test";
+  const effectiveMax = isDev ? maxRequests * 10 : maxRequests;
 
   return async (c, next) => {
     const ip = getClientIP(c);
@@ -41,7 +45,7 @@ export function rateLimiter(options: RateLimitOptions): MiddlewareHandler {
     let timestamps = store.get(bucketKey) || [];
     timestamps = timestamps.filter((t) => t > windowStart);
 
-    if (timestamps.length >= maxRequests) {
+    if (timestamps.length >= effectiveMax) {
       const retryAfterMs = Math.max(500, windowMs - (now - timestamps[0]!));
       c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
       return c.json(

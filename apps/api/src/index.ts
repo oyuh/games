@@ -36,6 +36,10 @@ const app = new Hono();
 const DB_STATUS_KEY = process.env.DB_STATUS_KEY?.trim() || "footer";
 const DB_STATUS_EXPECTED_VALUE = process.env.DB_STATUS_EXPECTED_VALUE?.trim() || "ok";
 const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || process.env.PUSHER_SECRET?.trim() || "games-dev-session-secret";
+const DEV_MODE = process.env.NODE_ENV !== "production";
+if (DEV_MODE) {
+  console.log("[dev-mode] Security relaxations active — fingerprint binding, session proof, and rate limits are loosened for local testing.");
+}
 
 app.use(
   "*",
@@ -197,6 +201,7 @@ const sessionFingerprints = new Map<string, Set<string>>();
 const MAX_FINGERPRINTS_PER_SESSION = 5;
 
 function checkFingerprintAnomaly(sessionId: string, fingerprint: string): boolean {
+  if (DEV_MODE) return false;
   let fps = sessionFingerprints.get(sessionId);
   if (!fps) {
     fps = new Set();
@@ -257,20 +262,27 @@ async function resolveSessionIdentity(
   const [claimedSession, cookieSession, fingerprintSession] = await Promise.all([
     loadSessionCandidate(normalizedClaimedId || null),
     loadSessionCandidate(cookieSessionId),
-    drizzleClient
-      .select({ id: sessions.id, name: sessions.name, fingerprint: sessions.fingerprint, lastSeen: sessions.lastSeen })
-      .from(sessions)
-      .where(eq(sessions.fingerprint, fingerprint))
-      .orderBy(desc(sessions.lastSeen))
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
+    // In dev mode, skip fingerprint-based session lookup so tabs with different
+    // claimed session IDs don't get merged into one session.
+    DEV_MODE
+      ? Promise.resolve(null)
+      : drizzleClient
+          .select({ id: sessions.id, name: sessions.name, fingerprint: sessions.fingerprint, lastSeen: sessions.lastSeen })
+          .from(sessions)
+          .where(eq(sessions.fingerprint, fingerprint))
+          .orderBy(desc(sessions.lastSeen))
+          .limit(1)
+          .then((rows) => rows[0] ?? null),
   ]);
 
   const decision = chooseCanonicalSession({
     cookieSessionId,
     claimedSessionId: normalizedClaimedId,
     claimedName,
-    fingerprint,
+    // In dev mode, pass the claimed session's own fingerprint so the
+    // fingerprint-match guard in chooseCanonicalSession always passes.
+    // This lets multiple sessions coexist from the same browser.
+    fingerprint: DEV_MODE && claimedSession?.fingerprint ? claimedSession.fingerprint : fingerprint,
     cookieSession,
     claimedSession,
     fingerprintSession,
@@ -533,6 +545,11 @@ function getVerifiedClaimedSessionId(
   const proofUserId = getCallerProofUserId(c);
   const normalizedClaimedId = normalizeSessionId(claimedSessionId);
 
+  // In dev mode, trust claimed session IDs without proof verification
+  if (DEV_MODE) {
+    return proofUserId ?? normalizedClaimedId;
+  }
+
   if (headerUserId !== "anon" && (!proofUserId || headerUserId !== proofUserId)) {
     return null;
   }
@@ -615,6 +632,10 @@ function resolveZeroMutatorCaller(userId: string, name: string, args: unknown, p
     return proofUserId ?? userId;
   }
   if (!proofUserId) {
+    // In dev mode, trust the claimed user ID instead of requiring proof
+    if (DEV_MODE) {
+      return userId !== "anon" ? userId : "dev-" + crypto.randomUUID().slice(0, 8);
+    }
     throw new Error(
       process.env.NODE_ENV === "production"
         ? "Invalid session proof"
