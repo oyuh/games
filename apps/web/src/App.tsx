@@ -17,6 +17,7 @@ import {
 } from "./lib/connection-debug";
 import { syncSessionIdentity } from "./lib/session";
 import { showToast } from "./lib/toast";
+import { markSyncConnecting, markSyncConnected, useSyncCountdown } from "./lib/sync-wake";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { useButtonSounds } from "./hooks/useButtonSounds";
 import { HomePage } from "./pages/HomePage";
@@ -87,75 +88,58 @@ function stringifyError(error: unknown) {
 const SYNC_FREE_ROUTES = ["/shikaku"];
 
 /**
- * Route-aware wake-toast: only shows "sync server is waking up" toasts
- * when the user is on a page that actually needs the sync server.
+ * Route-aware wake-toast: shows a persistent toast with countdown
+ * immediately when connecting on a sync-dependent route.
+ * Stays visible until connected, then briefly shows a success message.
  */
 function SyncWakeToast() {
   const location = useLocation();
   const debug = useConnectionDebug();
   const zeroState = debug.zeroState;
   const needsSync = !SYNC_FREE_ROUTES.some((prefix) => location.pathname.startsWith(prefix));
-
-  const wakeIndexRef = useRef(0);
-  const wakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const connectedRef = useRef(zeroState === "connected");
+  const countdown = useSyncCountdown();
+  const [showSuccess, setShowSuccess] = useState(false);
+  const wasConnectingRef = useRef(false);
 
   useEffect(() => {
-    connectedRef.current = zeroState === "connected";
-
-    if (zeroState === "connected") {
-      if (wakeIndexRef.current > 0 && needsSync) {
-        showToast("⚡ Sync server is up — let's go!", "success");
+    if (zeroState === "connecting" && needsSync) {
+      markSyncConnecting();
+      wasConnectingRef.current = true;
+    } else if (zeroState === "connected") {
+      if (wasConnectingRef.current && needsSync) {
+        markSyncConnected();
+        setShowSuccess(true);
+        const timer = setTimeout(() => setShowSuccess(false), 2500);
+        return () => clearTimeout(timer);
       }
-      wakeIndexRef.current = 0;
-      if (wakeTimerRef.current) {
-        clearTimeout(wakeTimerRef.current);
-        wakeTimerRef.current = null;
-      }
-      return;
+      markSyncConnected();
+    } else {
+      markSyncConnected();
     }
-
-    if (zeroState !== "connecting" || !needsSync) {
-      if (wakeTimerRef.current) {
-        clearTimeout(wakeTimerRef.current);
-        wakeTimerRef.current = null;
-      }
-      return;
-    }
-
-    // connecting + on a sync-dependent route → start wake timer
-    const WAKE_MESSAGES = [
-      "The sync server is waking up... give it a sec",
-      "Zero is still hitting snooze...",
-      "Almost awake... the sync server had a late night",
-      "Still warming up... someone forgot to set the alarm",
-    ];
-
-    const schedule = () => {
-      if (wakeTimerRef.current || connectedRef.current) return;
-      const initialDelay = import.meta.env.DEV ? 10_000 : 4000;
-      const subsequentDelay = import.meta.env.DEV ? 15_000 : 6000;
-      wakeTimerRef.current = setTimeout(() => {
-        if (!connectedRef.current) {
-          showToast(WAKE_MESSAGES[wakeIndexRef.current % WAKE_MESSAGES.length]!, "info");
-          wakeIndexRef.current++;
-          wakeTimerRef.current = null;
-          schedule();
-        }
-      }, wakeIndexRef.current === 0 ? initialDelay : subsequentDelay);
-    };
-
-    schedule();
-
-    return () => {
-      if (wakeTimerRef.current) {
-        clearTimeout(wakeTimerRef.current);
-        wakeTimerRef.current = null;
-      }
-    };
   }, [zeroState, needsSync]);
 
-  return null;
+  const isWaking = zeroState === "connecting" && needsSync;
+
+  if (!isWaking && !showSuccess) return null;
+
+  return (
+    <div className="sync-wake-toast-container">
+      {showSuccess ? (
+        <div className="sync-wake-toast sync-wake-toast--success">
+          <span className="sync-wake-icon">⚡</span>
+          <span className="sync-wake-msg">Sync server is up — let's go!</span>
+        </div>
+      ) : (
+        <div className="sync-wake-toast sync-wake-toast--info">
+          <span className="sync-wake-spinner" />
+          <span className="sync-wake-msg">
+            Sync server is waking up
+            {countdown != null && <span className="sync-wake-countdown"> ~{countdown}s</span>}
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** Hook: is the Zero sync server currently connected? */
