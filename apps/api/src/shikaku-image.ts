@@ -7,7 +7,7 @@
  *   GET /api/shikaku/puzzle      — HTML page with puzzle display, download, and embeds
  */
 
-import { Hono } from "hono";
+import { Context, Hono } from "hono";
 
 /* ── Minimal Shikaku engine (self-contained for server-side) ── */
 
@@ -255,6 +255,10 @@ const DIFF_ACCENT: Record<Difficulty, string> = {
   expert: "#f87171",
 };
 
+const README_SEED_TTL_MS = 15 * 60 * 1000;
+const README_SEED_COOKIE_MAX_AGE_SECONDS = README_SEED_TTL_MS / 1000;
+const readmeSeedCache = new Map<string, { seed: number; createdAt: number }>();
+
 type PaddingMode = "normal" | "tight" | "none";
 
 interface RenderOptions {
@@ -360,12 +364,20 @@ function parseDifficulty(val: string | undefined): Difficulty {
   return "medium";
 }
 
-function parseSeed(val: string | undefined): number {
+function randomSeed(): number {
+  return Math.floor(Math.random() * 2_147_483_647) + 1;
+}
+
+function parseSeedParam(val: string | undefined): number | null {
   if (val) {
     const n = parseInt(val, 10);
     if (Number.isFinite(n) && n > 0 && n <= 2_147_483_647) return n;
   }
-  return Math.floor(Math.random() * 2_147_483_647) + 1;
+  return null;
+}
+
+function parseSeed(val: string | undefined): number {
+  return parseSeedParam(val) ?? randomSeed();
 }
 
 function parseTheme(val: string | undefined): "dark" | "light" {
@@ -379,6 +391,73 @@ function parsePadding(val: string | undefined): PaddingMode {
   return "normal";
 }
 
+function parseBooleanFlag(val: string | undefined): boolean {
+  return val === "1" || val === "true" || val === "yes";
+}
+
+function parseCookieHeader(cookieHeader: string | undefined): Map<string, string> {
+  const cookies = new Map<string, string>();
+  if (!cookieHeader) return cookies;
+  for (const chunk of cookieHeader.split(";")) {
+    const [name, ...rawValue] = chunk.trim().split("=");
+    if (!name || rawValue.length === 0) continue;
+    cookies.set(name, decodeURIComponent(rawValue.join("=")));
+  }
+  return cookies;
+}
+
+function isReadmeHandoffRequest(val: string | undefined): boolean {
+  return val === "readme" || val === "profile" || val === "1" || val === "true";
+}
+
+function getReadmeScope(val: string | undefined): string {
+  const clean = val?.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+  return clean || "default";
+}
+
+function getReadmeSeedKey(difficulty: Difficulty, scope: string): string {
+  return `${scope}:${difficulty}`;
+}
+
+function getReadmeSeedCookieName(difficulty: Difficulty, scope: string): string {
+  return `shikaku_readme_${scope}_${difficulty}`;
+}
+
+function getRequestProto(c: Context): string {
+  return c.req.header("x-forwarded-proto") || "https";
+}
+
+function rememberReadmeSeed(
+  c: Context,
+  difficulty: Difficulty,
+  scope: string,
+  seed: number,
+) {
+  readmeSeedCache.set(getReadmeSeedKey(difficulty, scope), { seed, createdAt: Date.now() });
+  const sameSite = getRequestProto(c) === "https" ? "SameSite=None; Secure" : "SameSite=Lax";
+  c.header(
+    "Set-Cookie",
+    `${getReadmeSeedCookieName(difficulty, scope)}=${seed}; Path=/api/shikaku; Max-Age=${README_SEED_COOKIE_MAX_AGE_SECONDS}; ${sameSite}`,
+  );
+}
+
+function getRememberedReadmeSeed(
+  c: Context,
+  difficulty: Difficulty,
+  scope: string,
+): number | null {
+  const cookieSeed = parseSeedParam(parseCookieHeader(c.req.header("cookie")).get(getReadmeSeedCookieName(difficulty, scope)));
+  if (cookieSeed !== null) return cookieSeed;
+
+  const cached = readmeSeedCache.get(getReadmeSeedKey(difficulty, scope));
+  if (!cached) return null;
+  if (Date.now() - cached.createdAt > README_SEED_TTL_MS) {
+    readmeSeedCache.delete(getReadmeSeedKey(difficulty, scope));
+    return null;
+  }
+  return cached.seed;
+}
+
 /* ── Routes ────────────────────────────────────────────────── */
 
 export const shikakuImageRoutes = new Hono();
@@ -388,15 +467,21 @@ shikakuImageRoutes.get("/puzzle.svg", (c) => {
   const difficulty = parseDifficulty(c.req.query("difficulty"));
   const seed = parseSeed(c.req.query("seed"));
   const theme = parseTheme(c.req.query("theme"));
-  const showSolution = c.req.query("solution") === "true";
+  const showSolution = parseBooleanFlag(c.req.query("solution"));
   const transparentBg = c.req.query("bg") === "transparent";
   const paddingMode = parsePadding(c.req.query("padding"));
+  const isReadmeHandoff = isReadmeHandoffRequest(c.req.query("from")) || isReadmeHandoffRequest(c.req.query("readme"));
+  const readmeScope = getReadmeScope(c.req.query("scope"));
 
   const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
   const rng = mulberry32(seed);
   const puzzle = generatePuzzle(rows, cols, rng);
 
   const svg = renderPuzzleSvg(puzzle, difficulty, seed, { theme, showSolution, transparentBg, paddingMode });
+
+  if (isReadmeHandoff) {
+    rememberReadmeSeed(c, difficulty, readmeScope, seed);
+  }
 
   return c.body(svg, 200, {
     "Content-Type": "image/svg+xml",
@@ -414,7 +499,7 @@ shikakuImageRoutes.get("/puzzle.svg/download", (c) => {
   const difficulty = parseDifficulty(c.req.query("difficulty"));
   const seed = parseSeed(c.req.query("seed"));
   const theme = parseTheme(c.req.query("theme"));
-  const showSolution = c.req.query("solution") === "true";
+  const showSolution = parseBooleanFlag(c.req.query("solution"));
   const transparentBg = c.req.query("bg") === "transparent";
   const paddingMode = parsePadding(c.req.query("padding"));
 
@@ -438,23 +523,41 @@ shikakuImageRoutes.get("/puzzle.svg/download", (c) => {
 // HTML preview page with OG/Twitter embed meta tags — styled to match the main Games site
 shikakuImageRoutes.get("/puzzle", (c) => {
   const difficulty = parseDifficulty(c.req.query("difficulty"));
-  const seed = parseSeed(c.req.query("seed"));
   const theme = parseTheme(c.req.query("theme"));
-  const showingSolution = c.req.query("solution") === "true";
+  const showingSolution = parseBooleanFlag(c.req.query("solution"));
+  const shouldRedirectToPlay = parseBooleanFlag(c.req.query("play"));
+  const isReadmeHandoff = isReadmeHandoffRequest(c.req.query("from")) || isReadmeHandoffRequest(c.req.query("readme"));
+  const readmeScope = getReadmeScope(c.req.query("scope"));
+  const seedParam = parseSeedParam(c.req.query("seed"));
+  const seed = seedParam
+    ?? (isReadmeHandoff ? getRememberedReadmeSeed(c, difficulty, readmeScope) : null)
+    ?? randomSeed();
 
-  const proto = c.req.header("x-forwarded-proto") || "https";
+  if (isReadmeHandoff) {
+    rememberReadmeSeed(c, difficulty, readmeScope, seed);
+  }
+
+  const proto = getRequestProto(c);
   const host = c.req.header("host") || "localhost:3001";
   const baseUrl = `${proto}://${host}`;
-  const pageUrl = `${baseUrl}/api/shikaku/puzzle?difficulty=${difficulty}&seed=${seed}&theme=${theme}`;
+  const puzzlePageUrl = `${baseUrl}/api/shikaku/puzzle?difficulty=${difficulty}&seed=${seed}&theme=${theme}`;
+  const pageUrl = showingSolution ? `${puzzlePageUrl}&solution=1` : puzzlePageUrl;
+  const solutionUrl = `${puzzlePageUrl}&solution=1`;
   const imageUrl = `${baseUrl}/api/shikaku/puzzle.svg?difficulty=${difficulty}&seed=${seed}&theme=${theme}`;
   const downloadUrl = `${baseUrl}/api/shikaku/puzzle.svg/download?difficulty=${difficulty}&seed=${seed}&theme=${theme}`;
   const newPuzzleUrl = `${baseUrl}/api/shikaku/puzzle?difficulty=${difficulty}&theme=${theme}`;
   const siteUrl = "https://games.lawsonhart.me";
   const playUrl = `${siteUrl}/shikaku?from=puzzle&seed=${seed}&difficulty=${difficulty}&challenge=1`;
 
+  if (shouldRedirectToPlay) {
+    return c.redirect(playUrl, 302);
+  }
+
   const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
-  const title = `Shikaku Puzzle — ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} ${rows}×${cols}`;
-  const description = `A ${rows}×${cols} ${difficulty} Shikaku logic puzzle. Cover every cell with rectangles matching the numbers!`;
+  const title = `Shikaku ${showingSolution ? "Solution" : "Puzzle"} — ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} ${rows}×${cols}`;
+  const description = showingSolution
+    ? `The solution for a ${rows}×${cols} ${difficulty} Shikaku logic puzzle.`
+    : `A ${rows}×${cols} ${difficulty} Shikaku logic puzzle. Cover every cell with rectangles matching the numbers!`;
   const accent = DIFF_ACCENT[difficulty];
 
   const imgW = cols * (rows <= 9 ? 48 : rows <= 15 ? 32 : 24) + 80;
@@ -877,14 +980,14 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       ${showingSolution ? `
       <div class="puzzle-wrap anim-3">
         <div class="puzzle-frame">
-          <img src="${imageUrl}&solution=true&bg=transparent" alt="Solution" width="${imgW}">
+          <img src="${imageUrl}&solution=1&bg=transparent" alt="Solution" width="${imgW}">
         </div>
       </div>` : ""}
 
       <a class="play-btn anim-4" href="${playUrl}">▶&ensp;Play This Puzzle</a>
 
       <div class="actions anim-4">
-        <a class="btn btn-muted" href="${showingSolution ? pageUrl : pageUrl + "&solution=true"}">${showingSolution ? "✕ Hide Solution" : "◉ Solution"}</a>
+        <a class="btn btn-muted" href="${showingSolution ? puzzlePageUrl : solutionUrl}">${showingSolution ? "✕ Hide Solution" : "◉ Solution"}</a>
         <a class="btn btn-muted" href="${newPuzzleUrl}">⟳ New Puzzle</a>
         <a class="btn btn-ghost" href="${downloadUrl}">⬇</a>
       </div>
