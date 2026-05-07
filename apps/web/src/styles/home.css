@@ -1112,19 +1112,56 @@
   cursor: not-allowed;
 }
 
-.hc-sync-offline-hint {
-  font-size: 0.72rem;
-  color: var(--color-warn, #e6a700);
-  opacity: 0.85;
-  margin: -0.15rem 0 0.15rem 0;
+.hc-sync-mini-spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid color-mix(in srgb, currentColor 24%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  color: var(--primary);
+  flex: 0 0 auto;
+  animation: hc-sync-spin 0.8s linear infinite;
 }
 
-.hc-sync-wait-hint {
-  font-size: 0.72rem;
-  color: var(--color-warn, #e6a700);
-  opacity: 0.85;
-  margin: -0.1rem 0 0;
-  text-align: center;
+.hc-sync-mini-spinner--label {
+  width: 0.74rem;
+  height: 0.74rem;
+  margin-left: 0.1rem;
+  opacity: 0.78;
+}
+
+.hc-sync-button-content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+}
+
+.hc-sync-pending-control {
+  opacity: 0.72;
+  color: color-mix(in srgb, var(--card-accent, var(--primary)) 70%, var(--foreground));
+}
+
+.hc-sync-pending-control:disabled {
+  opacity: 0.72;
+}
+
+.hc-sync-pending-control .hc-sync-mini-spinner {
+  width: 1rem;
+  height: 1rem;
+  color: currentColor;
+}
+
+.hc-go-btn .hc-sync-mini-spinner {
+  width: 0.86rem;
+  height: 0.86rem;
+  color: currentColor;
+}
+
+@keyframes hc-sync-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── Recent games ────────────────────────────────────────────── */
@@ -1603,6 +1640,10 @@
   transform: translateX(135%) skewX(-18deg);
 }
 
+.home-card .hc-go-btn:disabled .hc-sync-button-content {
+  color: rgba(255, 255, 255, 0.78);
+}
+
 /* ? help button */
 .hc-help-btn {
   width: 36px;
@@ -1908,6 +1949,17 @@
   top: -5px;
   right: -5px;
 }
+.hc-browse-globe.hc-sync-pending-control {
+  color: color-mix(in srgb, var(--card-accent, var(--primary)) 72%, var(--foreground));
+  opacity: 0.72;
+}
+
+.hc-browse-globe.hc-sync-pending-control:disabled {
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 10%, transparent);
+  color: color-mix(in srgb, var(--card-accent, var(--primary)) 72%, var(--foreground));
+  opacity: 0.72;
+}
+
 .hc-globe-empty {
   color: var(--muted-foreground);
   opacity: 0.35;
@@ -1916,6 +1968,12 @@
   color: var(--muted-foreground);
   opacity: 0.6;
   background: color-mix(in srgb, var(--muted-foreground) 8%, transparent);
+}
+
+.hc-browse-globe.hc-globe-empty.hc-sync-pending-control:disabled {
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 10%, transparent);
+  color: color-mix(in srgb, var(--card-accent, var(--primary)) 72%, var(--foreground));
+  opacity: 0.72;
 }
 
 /* ── Globe Browse Button (mobile cards) ─────────────────── */

@@ -66,6 +66,9 @@ const API_METADATA_POLL_MS = 30_000;
 const zeroCacheURL = import.meta.env.VITE_ZERO_CACHE_URL ?? "http://localhost:4848";
 const apiBaseURL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 const apiInfoURL = `${apiBaseURL}/debug/build-info`;
+const SYNC_WAKE_NOTICE_DELAY_MS = 2_500;
+const SYNC_WAKE_NOTICE_COOLDOWN_MS = 120_000;
+let lastSyncWakeNoticeShownAt = 0;
 
 function createZero(sessionId: string, sessionProof: string | null) {
   return new Zero({
@@ -87,57 +90,57 @@ function stringifyError(error: unknown) {
 /** Routes that don't use the Zero sync server (solo/offline games). */
 const SYNC_FREE_ROUTES = ["/shikaku"];
 
-/**
- * Route-aware wake-toast: shows a persistent toast with countdown
- * immediately when connecting on a sync-dependent route.
- * Stays visible until connected, then briefly shows a success message.
- */
+/** Route-aware wake notice for a real sync cold start. */
 function SyncWakeToast() {
   const location = useLocation();
   const debug = useConnectionDebug();
   const zeroState = debug.zeroState;
   const needsSync = !SYNC_FREE_ROUTES.some((prefix) => location.pathname.startsWith(prefix));
   const countdown = useSyncCountdown();
-  const [showSuccess, setShowSuccess] = useState(false);
-  const wasConnectingRef = useRef(false);
+  const [showWakeNotice, setShowWakeNotice] = useState(false);
+  const wakeNoticeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (zeroState === "connecting" && needsSync) {
-      markSyncConnecting();
-      wasConnectingRef.current = true;
-    } else if (zeroState === "connected") {
-      if (wasConnectingRef.current && needsSync) {
-        markSyncConnected();
-        setShowSuccess(true);
-        const timer = setTimeout(() => setShowSuccess(false), 2500);
-        return () => clearTimeout(timer);
+    const clearWakeTimer = () => {
+      if (wakeNoticeTimerRef.current !== null) {
+        window.clearTimeout(wakeNoticeTimerRef.current);
+        wakeNoticeTimerRef.current = null;
       }
-      markSyncConnected();
+    };
+
+    const isWaking = zeroState === "connecting" && needsSync;
+
+    if (isWaking) {
+      markSyncConnecting();
+      if (!showWakeNotice && wakeNoticeTimerRef.current === null) {
+        wakeNoticeTimerRef.current = window.setTimeout(() => {
+          wakeNoticeTimerRef.current = null;
+          if (Date.now() - lastSyncWakeNoticeShownAt >= SYNC_WAKE_NOTICE_COOLDOWN_MS) {
+            lastSyncWakeNoticeShownAt = Date.now();
+            setShowWakeNotice(true);
+          }
+        }, SYNC_WAKE_NOTICE_DELAY_MS);
+      }
     } else {
+      clearWakeTimer();
+      setShowWakeNotice(false);
       markSyncConnected();
     }
-  }, [zeroState, needsSync]);
 
-  const isWaking = zeroState === "connecting" && needsSync;
+    return clearWakeTimer;
+  }, [zeroState, needsSync, showWakeNotice]);
 
-  if (!isWaking && !showSuccess) return null;
+  if (!showWakeNotice) return null;
 
   return (
     <div className="sync-wake-toast-container">
-      {showSuccess ? (
-        <div className="sync-wake-toast sync-wake-toast--success">
-          <span className="sync-wake-icon">⚡</span>
-          <span className="sync-wake-msg">Sync server is up — let's go!</span>
-        </div>
-      ) : (
-        <div className="sync-wake-toast sync-wake-toast--info">
-          <span className="sync-wake-spinner" />
-          <span className="sync-wake-msg">
-            Sync server is waking up
-            {countdown != null && <span className="sync-wake-countdown"> ~{countdown}s</span>}
-          </span>
-        </div>
-      )}
+      <div className="sync-wake-toast sync-wake-toast--info">
+        <span className="sync-wake-spinner" />
+        <span className="sync-wake-msg">
+          Sync server is waking up
+          {countdown != null && <span className="sync-wake-countdown"> ~{countdown}s</span>}
+        </span>
+      </div>
     </div>
   );
 }
