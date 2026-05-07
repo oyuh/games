@@ -114,15 +114,6 @@
   border-color: color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
-.sync-wake-toast--success {
-  border-color: color-mix(in srgb, #22c55e 35%, transparent);
-}
-
-.sync-wake-icon {
-  flex-shrink: 0;
-  font-size: 1.1rem;
-}
-
 .sync-wake-msg {
   flex: 1;
   line-height: 1.35;
