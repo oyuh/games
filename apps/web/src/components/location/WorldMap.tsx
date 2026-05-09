@@ -40,6 +40,8 @@ interface WorldMapProps {
   timerLabel?: string;
   /** Changing this value closes the expanded map. */
   closeKey?: string | number | null;
+  /** Controls shown at the bottom of the expanded map. */
+  expandedActions?: React.ReactNode;
 }
 
 type WorldPoint = { x: number; y: number };
@@ -212,6 +214,7 @@ interface MapSurfaceProps {
   onZoomAround: (zoom: number, anchor: WorldPoint, viewport: ViewportSize) => void;
   onMapClick?: ((coords: { lat: number; lng: number }) => void) | undefined;
   onExpand: () => void;
+  actionOverlay?: React.ReactNode;
 }
 
 function MapSurface({
@@ -230,6 +233,7 @@ function MapSurface({
   onZoomAround,
   onMapClick,
   onExpand,
+  actionOverlay,
 }: MapSurfaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height });
@@ -596,6 +600,12 @@ function MapSurface({
           Map imagery &copy; Google
         </div>
       </div>
+
+      {actionOverlay && (
+        <div className="locsig-map-expanded-actions locsig-map-ui" data-cursor="default">
+          {actionOverlay}
+        </div>
+      )}
     </div>
   );
 }
@@ -616,6 +626,7 @@ export function WorldMap({
   timerEndsAt,
   timerLabel = "Time",
   closeKey,
+  expandedActions,
 }: WorldMapProps) {
   const initialZoom = clampZoom(controlledZoom ?? defaultZoom);
   const initialCenter = controlledCenter ?? defaultCenter;
@@ -746,6 +757,7 @@ export function WorldMap({
       onZoomAround={zoomAround}
       onMapClick={interactive ? onClick : undefined}
       onExpand={() => setExpanded(true)}
+      actionOverlay={showExpand ? undefined : expandedActions}
     />
   );
 

@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { FiHome, FiMessageCircle, FiInfo, FiSettings, FiX, FiAward, FiGrid, FiHash, FiRepeat } from "react-icons/fi";
-import { PiCrownSimpleFill } from "react-icons/pi";
+import { FaCrown } from "react-icons/fa";
 import { useChatContext } from "../lib/chat-context";
 import { MobileHostProvider, useMobileHost } from "../lib/mobile-host-context";
 import { getOrCreateSessionId } from "../lib/session";
@@ -105,7 +105,7 @@ function MobileLayoutInner() {
             className={`m-nav-item${sheet === "host" ? " m-nav-item--active" : ""}`}
             onClick={() => setSheet(sheet === "host" ? null : "host")}
           >
-            <PiCrownSimpleFill size={20} />
+            <FaCrown size={19} />
             <span>Host</span>
           </button>
         )}

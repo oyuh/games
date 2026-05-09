@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
 import { FiSend } from "react-icons/fi";
-import { PiCrownSimpleFill } from "react-icons/pi";
+import { FaCrown } from "react-icons/fa";
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { getDisplayName, getOrCreateSessionId } from "../../lib/session";
@@ -92,7 +92,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
                   <span className={`m-chat-msg-name${isMe ? " m-chat-msg-name--me" : ""}`}>{displayName}</span>
                   {isHost && (
                     <span className="m-chat-badge m-chat-badge--host">
-                      <PiCrownSimpleFill size={8} /> Host
+                      <FaCrown size={8} /> Host
                     </span>
                   )}
                   {isMe && <span className="m-chat-badge">You</span>}

@@ -20,13 +20,15 @@ The repo now has React Doctor ignore configs at the root and in `apps/web` / `ap
 - Current web status: score 100, 0 errors, 0 warnings.
 - Current admin status: score 100, 0 errors, 0 warnings.
 - Verification passed:
+  - `npx -y react-doctor@latest apps/web --full --offline --fail-on warning`
+  - `npx -y react-doctor@latest apps/admin --full --offline --fail-on warning`
   - `bun --filter @games/web typecheck`
   - `bun --filter @games/web test`
   - `bun --filter @games/web build`
   - `bun --filter @games/admin typecheck`
   - `bun --filter @games/admin build`
 
-The web production build still warns that the main JS chunk is large, around 1.65 MB minified. The admin production build passes with existing Next/Auth Edge Runtime warnings from `jose` (`CompressionStream` / `DecompressionStream`). Neither is a React Doctor diagnostic, but both belong on the performance/platform checklist.
+The web production build no longer reports a large chunk warning. The initial app chunk is now around 228 KB minified, with vendor code split into cacheable chunks (`vendor-zero` is the largest at around 410 KB minified). The admin production build passes.
 
 The remaining architectural/state guidance is now tracked through scoped app-local React Doctor overrides instead of appearing as active warnings. These overrides are file-and-rule specific, so new warnings outside those known surfaces still show up.
 
@@ -56,14 +58,17 @@ The remaining architectural/state guidance is now tracked through scoped app-loc
 - [x] Raised the web TS app target/lib to ES2023 and replaced remaining React Doctor flagged immutable sorts with `toSorted()`.
 - [x] Replaced flagged `.find()` lookups inside repeated result/marker loops with indexed `Map` lookups.
 - [x] Added scoped React Doctor overrides for known large-surface architecture/state guidance in `apps/web` and `apps/admin`, bringing both apps to 100 with no active diagnostics.
+- [x] Code-split Vite route pages, home/sidebar demo modals, mobile shell, chat, and debug UI so page-specific code no longer lands in the initial web chunk.
+- [x] Added focused Vite vendor chunks for React/router, Zero/data, realtime, icons, and avatar dependencies; the web build now clears the previous large-chunk warning.
+- [x] Removed the remaining `react-icons/pi` usage from the web app so the UI icon set stays on a single icon pack.
 
 ## Remaining Checklist
 
 - [x] Accessibility: resolved the last clickable/static element warnings in the web grid/slot surfaces.
 - [x] React Doctor: web and admin now report 100 with no issues found.
+- [x] Performance: code-split large page modules and heavy demos; the main web chunk dropped from around 1.65 MB to around 228 KB minified.
+- [x] Performance: keep the intentionally non-passive mobile sheet and Shikaku touch handlers because they call `preventDefault()` for drag/scroll behavior.
 - [ ] State/effects: optional follow-up refactors remain in the scoped override list, mainly large game/admin surfaces with reducer/component extraction opportunities.
-- [ ] Performance: keep the intentionally non-passive mobile sheet and Shikaku touch handlers because they call `preventDefault()` for drag/scroll behavior.
-- [ ] Performance: code-split large page modules or heavy demos to reduce the 1.65 MB main web chunk.
 - [ ] Architecture: gradually retire scoped overrides by extracting render helpers in demos, `WorldMap`, `Footer`, and Chain Reaction, and by converting clustered page state to reducers where it materially improves readability.
 
 ## Recommended Ongoing Command Set

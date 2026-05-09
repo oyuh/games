@@ -372,6 +372,13 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const lockTarget = () => {
+    if (!draftMarker) return;
+    setLeaderTarget({ lat: draftMarker.lat, lng: draftMarker.lng });
+    void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng }))
+      .server.then(() => callGameSecretInit("location_signal", game.id, sessionId));
+  };
+
   const buildMarkers = (): MapMarker[] => {
     const markers: MapMarker[] = [];
     const guessBySessionRound = new Map(
@@ -484,6 +491,25 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   };
 
   const sortedPlayers = game.players.toSorted((a, b) => b.totalScore - a.totalScore);
+  const expandedMapActions = phase === "picking" && isLeader ? (
+    <>
+      <span className="locsig-map-action-hint">
+        {draftMarker ? "Ready to lock this target." : "Tap the map to pick a target."}
+      </span>
+      <button className="m-btn m-btn-primary" disabled={!draftMarker} onClick={lockTarget}>
+        <FiMapPin size={14} /> Lock Target
+      </button>
+    </>
+  ) : isGuessPhase && !isLeader && inGame ? (
+    <>
+      <span className="locsig-map-action-hint">
+        {draftMarker ? "Ready to submit this guess." : "Tap the map to place your guess."}
+      </span>
+      <button className="m-btn m-btn-primary" disabled={!draftMarker} onClick={() => void submitGuess(currentGuessRound)}>
+        <FiMapPin size={14} /> {myRoundGuess ? "Update Guess" : isLastGuessPhase ? "Place Final Guess" : "Place Guess"}
+      </button>
+    </>
+  ) : null;
 
   return (
     <div className="m-page" data-game-theme="location">
@@ -552,6 +578,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
               onBoundsChanged={handleBoundsChanged}
               timerEndsAt={game.settings.phaseEndsAt}
               closeKey={`${game.phase}:${game.settings.currentRound}`}
+              expandedActions={expandedMapActions}
             />
           </div>
         </div>
@@ -633,12 +660,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           </div>
           <div className="m-actions">
             <button className="m-btn m-btn-primary" disabled={!draftMarker}
-              onClick={() => {
-                if (!draftMarker) return;
-                setLeaderTarget({ lat: draftMarker.lat, lng: draftMarker.lng });
-                void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng }))
-                  .server.then(() => callGameSecretInit("location_signal", game.id, sessionId));
-              }}>
+              onClick={lockTarget}>
               <FiMapPin size={14} /> Lock Target
             </button>
           </div>

@@ -1,24 +1,26 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiGrid, FiHash, FiRepeat } from "react-icons/fi";
-import { PiCrownSimpleFill } from "react-icons/pi";
+import { FaCrown } from "react-icons/fa";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
-import { OptionsModal } from "./shared/OptionsModal";
-import { InfoModal } from "./shared/InfoModal";
-import { HostControlsModal } from "./shared/HostControlsModal";
-import { ImposterDemo } from "./demos/ImposterDemo";
-import { PasswordDemo } from "./demos/PasswordDemo";
-import { ChainDemo } from "./demos/ChainDemo";
-import { ShadeDemo } from "./demos/ShadeDemo";
-import { LocationDemo } from "./demos/LocationDemo";
-import { ShikakuDemo } from "./demos/ShikakuDemo";
+import type { GameContext } from "./shared/HostControlsModal";
 import { useSettings } from "../lib/settings";
 import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
 import { showToast } from "../lib/toast";
 
-type GameContext = Parameters<typeof HostControlsModal>[0]["game"];
+const ImposterDemo = lazy(() => import("./demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
+const PasswordDemo = lazy(() => import("./demos/PasswordDemo").then(({ PasswordDemo }) => ({ default: PasswordDemo })));
+const ChainDemo = lazy(() => import("./demos/ChainDemo").then(({ ChainDemo }) => ({ default: ChainDemo })));
+const ShadeDemo = lazy(() => import("./demos/ShadeDemo").then(({ ShadeDemo }) => ({ default: ShadeDemo })));
+const LocationDemo = lazy(() => import("./demos/LocationDemo").then(({ LocationDemo }) => ({ default: LocationDemo })));
+const ShikakuDemo = lazy(() => import("./demos/ShikakuDemo").then(({ ShikakuDemo }) => ({ default: ShikakuDemo })));
+const OptionsModal = lazy(() => import("./shared/OptionsModal").then(({ OptionsModal }) => ({ default: OptionsModal })));
+const InfoModal = lazy(() => import("./shared/InfoModal").then(({ InfoModal }) => ({ default: InfoModal })));
+const HostControlsModal = lazy(() =>
+  import("./shared/HostControlsModal").then(({ HostControlsModal }) => ({ default: HostControlsModal }))
+);
 
 function useGameContext(): GameContext | null {
   const { pathname } = useLocation();
@@ -288,7 +290,7 @@ export function Sidebar() {
         </Link>
         {gameContext && (
           <SidebarButton
-            icon={<PiCrownSimpleFill size={24} className="sidebar-host-icon" />}
+            icon={<FaCrown size={22} className="sidebar-host-icon" />}
             label="Host"
             onClick={() => { setModal("host"); setMobileOpen(false); }}
           />
@@ -357,17 +359,19 @@ export function Sidebar() {
       </nav>
 
       {/* Modals */}
-      {modal === "options" && <OptionsModal onClose={() => setModal(null)} />}
-      {modal === "info" && demoInfo.gameType === "imposter" && <ImposterDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
-      {modal === "info" && demoInfo.gameType === "password" && <PasswordDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
-      {modal === "info" && demoInfo.gameType === "chain" && <ChainDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
-      {modal === "info" && demoInfo.gameType === "shade" && <ShadeDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
-      {modal === "info" && demoInfo.gameType === "location" && <LocationDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
-      {modal === "info" && demoInfo.gameType === "shikaku" && <ShikakuDemo onClose={() => setModal(null)} />}
-      {modal === "info" && !demoInfo.gameType && <InfoModal onClose={() => setModal(null)} />}
-      {modal === "host" && gameContext && (
-        <HostControlsModal game={gameContext} sessionId={sessionId} onClose={() => setModal(null)} />
-      )}
+      <Suspense fallback={null}>
+        {modal === "options" && <OptionsModal onClose={() => setModal(null)} />}
+        {modal === "info" && demoInfo.gameType === "imposter" && <ImposterDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
+        {modal === "info" && demoInfo.gameType === "password" && <PasswordDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
+        {modal === "info" && demoInfo.gameType === "chain" && <ChainDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
+        {modal === "info" && demoInfo.gameType === "shade" && <ShadeDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
+        {modal === "info" && demoInfo.gameType === "location" && <LocationDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
+        {modal === "info" && demoInfo.gameType === "shikaku" && <ShikakuDemo onClose={() => setModal(null)} />}
+        {modal === "info" && !demoInfo.gameType && <InfoModal onClose={() => setModal(null)} />}
+        {modal === "host" && gameContext && (
+          <HostControlsModal game={gameContext} sessionId={sessionId} onClose={() => setModal(null)} />
+        )}
+      </Suspense>
     </>
   );
 }

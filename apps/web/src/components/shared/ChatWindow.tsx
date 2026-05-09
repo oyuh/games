@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { FiMessageCircle, FiMinus, FiX, FiSend, FiMaximize2 } from "react-icons/fi";
-import { PiCrownSimpleFill } from "react-icons/pi";
+import { FaCrown } from "react-icons/fa";
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { getDisplayName, getOrCreateSessionId } from "../../lib/session";
@@ -239,7 +239,7 @@ function ChatMessage({
           <span className={`chat-msg-name${isMe ? " chat-msg-name--me" : ""}`}>{senderName}</span>
           {isHost && (
             <span className="chat-badge chat-badge--host">
-              <PiCrownSimpleFill size={9} /> Host
+              <FaCrown size={9} /> Host
             </span>
           )}
           {isMe && <span className="chat-badge chat-badge--you">You</span>}

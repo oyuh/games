@@ -1,6 +1,5 @@
 import { useRef, useState, FormEvent } from "react";
-import { FiSend } from "react-icons/fi";
-import { PiPaintBrushBold } from "react-icons/pi";
+import { FiDroplet, FiSend } from "react-icons/fi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { ColorGrid, generateGridColor } from "../shade/ColorGrid";
 import "../../styles/game-shared.css";
@@ -255,7 +254,7 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
   return (
     <DemoModal
       title="Shade Signal"
-      icon={<PiPaintBrushBold size={20} />}
+      icon={<FiDroplet size={20} />}
       color="#f472b6"
       steps={steps}
       currentStep={step}

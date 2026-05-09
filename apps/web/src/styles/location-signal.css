@@ -266,6 +266,46 @@ body.locsig-map-expanded .app-footer {
   color: rgba(255, 255, 255, 0.72);
 }
 
+.locsig-map-expanded-actions {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(0.75rem, 2vw, 1.25rem);
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  width: min(92%, 28rem);
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.locsig-map-action-hint {
+  max-width: 100%;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(4, 10, 18, 0.74);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-align: center;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.locsig-map-expanded-actions .btn,
+.locsig-map-expanded-actions .m-btn {
+  min-width: min(100%, 12rem);
+  justify-content: center;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+}
+
+.locsig-map-expanded-actions .btn:disabled,
+.locsig-map-expanded-actions .m-btn:disabled {
+  opacity: 0.72;
+}
+
 /* Clue display pill */
 .locsig-clue-display-row {
   display: flex;
