@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, use, useState, useEffect, type ReactNode } from "react";
 import type { MobileHostGameContext } from "../mobile/components/MobileHostControlsSheet";
 
 interface MobileHostContextValue {
@@ -9,7 +9,7 @@ interface MobileHostContextValue {
 const Ctx = createContext<MobileHostContextValue>({ hostGame: null, setHostGame: () => {} });
 
 export function useMobileHost() {
-  return useContext(Ctx);
+  return use(Ctx);
 }
 
 export function MobileHostProvider({ children }: { children: ReactNode }) {

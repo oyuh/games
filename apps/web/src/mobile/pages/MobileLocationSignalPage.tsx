@@ -301,7 +301,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     return () => clearTimeout(timer);
   }, [game, game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost, sessionId]);
 
-  // Per-player color assignment — must be above `if (!game)` so hook count is constant
+  // Per-player color assignment - must be above `if (!game)` so hook count is constant
   const guesserColorMap = useMemo(() => {
     if (!game) return {};
     const guessers = game.players.filter((p) => p.sessionId !== game.leader_id);
@@ -609,7 +609,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
                   {game.players.length < 2 ? `Need ${2 - game.players.length} more` : "Start Game"}
                 </button>
               ) : (
-                <p className="m-text-muted m-text-center">Waiting for host to start...</p>
+                <p className="m-text-muted m-text-center">Waiting for host to start&hellip;</p>
               )}
               <button className="m-btn m-btn-muted"
                 onClick={() => void zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })).server}>
@@ -646,7 +646,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
         <div className="m-section">
           <div className="m-waiting">
             <div className="m-pulse" />
-            <p><strong>{leaderName}</strong> is picking a location...</p>
+            <p><strong>{leaderName}</strong> is picking a location&hellip;</p>
           </div>
         </div>
       )}
@@ -669,7 +669,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
             </div>
           )}
           <form onSubmit={(e) => void submitClue(e, currentClueRound)} className="m-shade-clue-form">
-            <input className="m-input" autoFocus onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire..." : `Clue ${currentClueRound}...`} maxLength={80} />
+            <input className="m-input" onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire!" : `Clue ${currentClueRound}!`} maxLength={80} />
             <button className="m-btn m-btn-primary" type="submit" disabled={!draftClue.trim()}>
               <FiSend size={14} /> Send
             </button>
@@ -692,7 +692,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           )}
           <div className="m-waiting">
             <div className="m-pulse" />
-            <p><strong>{leaderName}</strong> is writing clue {currentClueRound}...</p>
+            <p><strong>{leaderName}</strong> is writing clue {currentClueRound}&hellip;</p>
           </div>
         </div>
       )}
@@ -732,7 +732,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           </div>
           <div className="m-waiting">
             <div className="m-pulse" />
-            <p>Guessers are choosing... ({guessesThisRound(currentGuessRound).length}/{roundGuessers.length})</p>
+            <p>Guessers are choosing&hellip; ({guessesThisRound(currentGuessRound).length}/{roundGuessers.length})</p>
           </div>
         </div>
       )}
@@ -755,7 +755,13 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
             <h4 className="m-label">Round {game.settings.currentRound} Scores</h4>
             {(() => {
               const prevHistory = game.round_history.length > 1 ? game.round_history[game.round_history.length - 2] : null;
-              return sortedPlayers.filter((p) => p.sessionId !== game.leader_id).map((p) => {
+              const scorePlayers = sortedPlayers.reduce<typeof sortedPlayers>((players, player) => {
+                if (player.sessionId !== game.leader_id) {
+                  players.push(player);
+                }
+                return players;
+              }, []);
+              return scorePlayers.map((p) => {
                 const isMe = p.sessionId === sessionId;
                 const name = playerName(p.sessionId);
                 const roundPts = p.totalScore - (prevHistory?.scores[p.sessionId] ?? 0);
@@ -834,7 +840,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
         <div className="m-section">
           <div className="m-waiting">
             <div className="m-pulse" />
-            <p>Game in progress — watching!</p>
+            <p>Game in progress - watching!</p>
           </div>
         </div>
       )}

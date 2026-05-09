@@ -167,7 +167,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
     }
 
     // In dev mode, skip the periodic identity verification that triggers
-    // page reloads — the server may return varying sessions due to relaxed
+    // page reloads - the server may return varying sessions due to relaxed
     // fingerprinting, which causes an infinite reload loop.
     if (import.meta.env.DEV) {
       return;

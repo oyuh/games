@@ -40,7 +40,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     return () => window.removeEventListener("games:name-changed", handler);
   }, []);
 
-  const [recentGames, setRecentGames] = useState(getRecentGames());
+  const [recentGames, setRecentGames] = useState(() => getRecentGames());
   const [joinCode, setJoinCode] = useState("");
   const [showRecent, setShowRecent] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -322,7 +322,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         <div className="m-home-row">
           <input
             className="m-input"
-            style={{ letterSpacing: "0.15em", fontWeight: 600, flex: 1 }}
+            style={{ letterSpacing: "0.04em", fontWeight: 600, flex: 1 }}
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
             placeholder="ABCXYZ"
@@ -428,8 +428,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           ) : (
           <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-field">
-              <label className="m-config-label">Category</label>
-              <select className="m-input" value={imposterCategory} onChange={(e) => setImposterCategory(e.target.value)} onWheel={wheelSelect(imposterCategory, imposterCategories as string[], setImposterCategory)}>
+              <label htmlFor="mobile-home-imposter-category" className="m-config-label">Category</label>
+              <select id="mobile-home-imposter-category" className="m-input" value={imposterCategory} onChange={(e) => setImposterCategory(e.target.value)} onWheel={wheelSelect(imposterCategory, imposterCategories as string[], setImposterCategory)}>
                 {imposterCategories.map((key) => (
                   <option key={key} value={key}>{imposterCategoryLabels[key] ?? key}</option>
                 ))}
@@ -437,14 +437,14 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             </div>
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Imposters</label>
-                <select className="m-input" value={imposterImposters} onChange={(e) => setImposterImposters(Number(e.target.value))} onWheel={wheelSelect(imposterImposters, [1, 2, 3], setImposterImposters)}>
+                <label htmlFor="mobile-home-imposter-count" className="m-config-label">Imposters</label>
+                <select id="mobile-home-imposter-count" className="m-input" value={imposterImposters} onChange={(e) => setImposterImposters(Number(e.target.value))} onWheel={wheelSelect(imposterImposters, [1, 2, 3], setImposterImposters)}>
                   {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Rounds</label>
-                <select className="m-input" value={imposterRounds} onChange={(e) => setImposterRounds(Number(e.target.value))} onWheel={wheelSelect(imposterRounds, [1, 2, 3, 5, 7, 10], setImposterRounds)}>
+                <label htmlFor="mobile-home-imposter-rounds" className="m-config-label">Rounds</label>
+                <select id="mobile-home-imposter-rounds" className="m-input" value={imposterRounds} onChange={(e) => setImposterRounds(Number(e.target.value))} onWheel={wheelSelect(imposterRounds, [1, 2, 3, 5, 7, 10], setImposterRounds)}>
                   {[1, 2, 3, 5, 7, 10].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
@@ -496,8 +496,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           ) : (
           <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-field">
-              <label className="m-config-label">Category</label>
-              <select className="m-input" value={passwordCategory} onChange={(e) => setPasswordCategory(e.target.value)} onWheel={wheelSelect(passwordCategory, passwordCategories as string[], setPasswordCategory)}>
+              <label htmlFor="mobile-home-password-category" className="m-config-label">Category</label>
+              <select id="mobile-home-password-category" className="m-input" value={passwordCategory} onChange={(e) => setPasswordCategory(e.target.value)} onWheel={wheelSelect(passwordCategory, passwordCategories as string[], setPasswordCategory)}>
                 {passwordCategories.map((key) => (
                   <option key={key} value={key}>{passwordCategoryLabels[key] ?? key}</option>
                 ))}
@@ -505,14 +505,14 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             </div>
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Teams</label>
-                <select className="m-input" value={passwordTeams} onChange={(e) => setPasswordTeams(Number(e.target.value))} onWheel={wheelSelect(passwordTeams, [2, 3, 4, 5, 6], setPasswordTeams)}>
+                <label htmlFor="mobile-home-password-teams" className="m-config-label">Teams</label>
+                <select id="mobile-home-password-teams" className="m-input" value={passwordTeams} onChange={(e) => setPasswordTeams(Number(e.target.value))} onWheel={wheelSelect(passwordTeams, [2, 3, 4, 5, 6], setPasswordTeams)}>
                   {[2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Target Score</label>
-                <select className="m-input" value={passwordTargetScore} onChange={(e) => setPasswordTargetScore(Number(e.target.value))} onWheel={wheelSelect(passwordTargetScore, [3, 5, 7, 10, 15, 20], setPasswordTargetScore)}>
+                <label htmlFor="mobile-home-password-target-score" className="m-config-label">Target Score</label>
+                <select id="mobile-home-password-target-score" className="m-input" value={passwordTargetScore} onChange={(e) => setPasswordTargetScore(Number(e.target.value))} onWheel={wheelSelect(passwordTargetScore, [3, 5, 7, 10, 15, 20], setPasswordTargetScore)}>
                   {[3, 5, 7, 10, 15, 20].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
@@ -564,8 +564,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           ) : (
           <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-field">
-              <label className="m-config-label">Category</label>
-              <select className="m-input" value={chainCategory} onChange={(e) => setChainCategory(e.target.value)} onWheel={wheelSelect(chainCategory, chainCategories as string[], setChainCategory)}>
+              <label htmlFor="mobile-home-chain-category" className="m-config-label">Category</label>
+              <select id="mobile-home-chain-category" className="m-input" value={chainCategory} onChange={(e) => setChainCategory(e.target.value)} onWheel={wheelSelect(chainCategory, chainCategories as string[], setChainCategory)}>
                 {chainCategories.map((key) => (
                   <option key={key} value={key}>{chainCategoryLabels[key] ?? key}</option>
                 ))}
@@ -573,21 +573,21 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             </div>
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Length</label>
-                <select className="m-input" value={chainLength} onChange={(e) => setChainLength(Number(e.target.value))} onWheel={wheelSelect(chainLength, [5, 6, 7, 8, 9, 10], setChainLength)}>
+                <label htmlFor="mobile-home-chain-length" className="m-config-label">Length</label>
+                <select id="mobile-home-chain-length" className="m-input" value={chainLength} onChange={(e) => setChainLength(Number(e.target.value))} onWheel={wheelSelect(chainLength, [5, 6, 7, 8, 9, 10], setChainLength)}>
                   {[5, 6, 7, 8, 9, 10].map((n) => <option key={n} value={n}>{n} words</option>)}
                 </select>
               </div>
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Rounds</label>
-                <select className="m-input" value={chainRounds} onChange={(e) => setChainRounds(Number(e.target.value))} onWheel={wheelSelect(chainRounds, [1, 2, 3, 5, 7], setChainRounds)}>
+                <label htmlFor="mobile-home-chain-rounds" className="m-config-label">Rounds</label>
+                <select id="mobile-home-chain-rounds" className="m-input" value={chainRounds} onChange={(e) => setChainRounds(Number(e.target.value))} onWheel={wheelSelect(chainRounds, [1, 2, 3, 5, 7], setChainRounds)}>
                   {[1, 2, 3, 5, 7].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
             </div>
             <div className="m-config-field">
-              <label className="m-config-label">Mode</label>
-              <select className="m-input" value={chainMode} onChange={(e) => setChainMode(e.target.value as "premade" | "custom")} onWheel={wheelSelect(chainMode, ["premade", "custom"] as const, (v) => setChainMode(v as "premade" | "custom"))}>
+              <label htmlFor="mobile-home-chain-mode" className="m-config-label">Mode</label>
+              <select id="mobile-home-chain-mode" className="m-input" value={chainMode} onChange={(e) => setChainMode(e.target.value as "premade" | "custom")} onWheel={wheelSelect(chainMode, ["premade", "custom"] as const, (v) => setChainMode(v as "premade" | "custom"))}>
                 <option value="premade">Random (premade)</option>
                 <option value="custom">Custom (write your own)</option>
               </select>
@@ -640,16 +640,16 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Game Length</label>
-                <select className="m-input" value={shadeRoundsPerPlayer} onChange={(e) => setShadeRoundsPerPlayer(Number(e.target.value))} onWheel={wheelSelect(shadeRoundsPerPlayer, [1, 2, 3], setShadeRoundsPerPlayer)}>
+                <label htmlFor="mobile-home-shade-rounds-per-player" className="m-config-label">Game Length</label>
+                <select id="mobile-home-shade-rounds-per-player" className="m-input" value={shadeRoundsPerPlayer} onChange={(e) => setShadeRoundsPerPlayer(Number(e.target.value))} onWheel={wheelSelect(shadeRoundsPerPlayer, [1, 2, 3], setShadeRoundsPerPlayer)}>
                   <option value={1}>Quick</option>
                   <option value={2}>Standard</option>
                   <option value={3}>Long</option>
                 </select>
               </div>
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Clue Rules</label>
-                <select className="m-input" value={shadeHardMode ? "yes" : "no"} onChange={(e) => setShadeHardMode(e.target.value === "yes")}>
+                <label htmlFor="mobile-home-shade-clue-rules" className="m-config-label">Clue Rules</label>
+                <select id="mobile-home-shade-clue-rules" className="m-input" value={shadeHardMode ? "yes" : "no"} onChange={(e) => setShadeHardMode(e.target.value === "yes")}>
                   <option value="no">Normal</option>
                   <option value="yes">No Colors</option>
                 </select>
@@ -710,8 +710,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           <div className="m-game-card-config hc-card-anim" key="config">
             <div className="m-config-row">
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Clue Pairs</label>
-                <select className="m-input" value={locCluePairs} onChange={(e) => setLocCluePairs(Number(e.target.value))} onWheel={wheelSelect(locCluePairs, [1, 2, 3, 4], setLocCluePairs)}>
+                <label htmlFor="mobile-home-location-clue-pairs" className="m-config-label">Clue Pairs</label>
+                <select id="mobile-home-location-clue-pairs" className="m-input" value={locCluePairs} onChange={(e) => setLocCluePairs(Number(e.target.value))} onWheel={wheelSelect(locCluePairs, [1, 2, 3, 4], setLocCluePairs)}>
                   <option value={1}>1 pair</option>
                   <option value={2}>2 pairs</option>
                   <option value={3}>3 pairs</option>
@@ -719,8 +719,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 </select>
               </div>
               <div className="m-config-field" style={{ flex: 1 }}>
-                <label className="m-config-label">Rounds / Player</label>
-                <select className="m-input" value={locRoundsPerPlayer} onChange={(e) => setLocRoundsPerPlayer(Number(e.target.value))} onWheel={wheelSelect(locRoundsPerPlayer, [1, 2, 3], setLocRoundsPerPlayer)}>
+                <label htmlFor="mobile-home-location-rounds-per-player" className="m-config-label">Rounds / Player</label>
+                <select id="mobile-home-location-rounds-per-player" className="m-input" value={locRoundsPerPlayer} onChange={(e) => setLocRoundsPerPlayer(Number(e.target.value))} onWheel={wheelSelect(locRoundsPerPlayer, [1, 2, 3], setLocRoundsPerPlayer)}>
                   <option value={1}>1 each</option>
                   <option value={2}>2 each</option>
                   <option value={3}>3 each</option>

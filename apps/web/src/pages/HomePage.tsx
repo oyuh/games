@@ -24,6 +24,16 @@ import { useZeroConnected } from "../App";
 import { useSyncCountdown } from "../lib/sync-wake";
 
 const isDev = import.meta.env.DEV;
+const SHADE_PREVIEW_CELLS = Array.from({ length: 20 }, (_, index) => ({
+  id: `shade-preview-${index}`,
+  hue: index * 18,
+  lightness: 45 + (index % 3) * 10,
+}));
+const GAME_CARD_COUNT = 6;
+const GAME_CARD_DOTS = Array.from({ length: GAME_CARD_COUNT }, (_, index) => ({
+  id: `game-card-dot-${index}`,
+  index,
+}));
 
 /* ── Solo game definitions ────────────────────────────────────── */
 const SOLO_GAMES: SoloGameDef[] = [
@@ -115,9 +125,9 @@ function ConfigSummary({ items }: { items: SummaryItem[] }) {
   return (
     <div className="hc-summary" aria-label="Selected options">
       <div className="hc-summary-row">
-        {items.map((item, idx) => (
+        {items.map((item) => (
           <span
-            key={`${item.value}-${idx}`}
+            key={`${item.label ?? item.value}-${item.value}`}
             className="hc-summary-pill"
             title={item.label ?? item.value}
             aria-label={item.label ?? item.value}
@@ -169,7 +179,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     window.addEventListener("games:name-changed", handler);
     return () => window.removeEventListener("games:name-changed", handler);
   }, []);
-  const [recentGames, setRecentGames] = useState(getRecentGames());
+  const [recentGames, setRecentGames] = useState(() => getRecentGames());
   const [joinCode, setJoinCode] = useState("");
   const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "create-shade" | "create-location" | "join" | null>(null);
   const [imposterMatches] = useQuery(queries.imposter.byCode({ code: joinCode || "______" }));
@@ -229,13 +239,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   // Mobile scroll dot tracking
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeDot, setActiveDot] = useState(0);
-  const CARD_COUNT = 6;
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     const idx = Math.round(el.scrollLeft / el.clientWidth);
-    setActiveDot(Math.min(idx, CARD_COUNT - 1));
+    setActiveDot(Math.min(idx, GAME_CARD_COUNT - 1));
   }, []);
 
   useEffect(() => {
@@ -523,7 +532,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       <div className="home-section-multi">
 
       {/* ── Card 1: Utils ──────────────────────────────────── */}
-      <div className={`home-card home-card--utils${firstVisit ? " home-card--glow" : ""}`} onClick={dismissFirstVisit}>
+      <div className={`home-card home-card--utils${firstVisit ? " home-card--glow" : ""}`}>
         <div className="home-card-body">
           {/* First-visit hint */}
           {firstVisit && (
@@ -560,9 +569,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </form>
             <div className="hc-divider" />
           </section>
-          {/* Name section — inline editable */}
+          {/* Name section - inline editable */}
           <section className="hc-section">
-            <h3 className="hc-label" data-tooltip="Your in-game identity — visible to other players" data-tooltip-variant="info">Display Name</h3>
+            <h3 className="hc-label" data-tooltip="Your in-game identity - visible to other players" data-tooltip-variant="info">Display Name</h3>
             <div className="hc-name-display" title="Click to edit your name" data-tooltip-variant="info">
               <input
                 className="hc-name-inline-input"
@@ -585,7 +594,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           </section>
 
-          {/* Recent games — collapsible */}
+          {/* Recent games - collapsible */}
           {recentGames.length > 0 && (
             <>
               <div className="hc-divider" />
@@ -693,7 +702,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 2: Imposter ───────────────────────────────── */}
-      <div className={`home-card home-card--imposter${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
+      <div className={`home-card home-card--imposter${firstVisit ? " home-card--dimmed" : ""}`}>
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${imposterExpanded || imposterBrowsing ? " hc-game-title-lg--compact" : ""}`}>Imposter</h2>
 
@@ -705,8 +714,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             <div className="hc-card-anim" key="config">
               <div className="hc-config">
                 <div className="hc-config-field">
-                  <label className="hc-config-label" data-tooltip="The theme for the word list. Everyone gets a word from this category — except the imposter." data-tooltip-variant="info">Category</label>
+                  <label htmlFor="home-imposter-category" className="hc-config-label" data-tooltip="The theme for the word list. Everyone gets a word from this category - except the imposter." data-tooltip-variant="info">Category</label>
                   <select
+                    id="home-imposter-category"
                     className="input"
                     value={imposterCategory}
                     onChange={(e) => setImposterCategory(e.target.value)}
@@ -719,8 +729,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </div>
                 <div className="hc-config-row">
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="How many players are secretly the imposter each round. More imposters = harder for the group." data-tooltip-variant="info">Imposters</label>
+                    <label htmlFor="home-imposter-count" className="hc-config-label" data-tooltip="How many players are secretly the imposter each round. More imposters = harder for the group." data-tooltip-variant="info">Imposters</label>
                     <select
+                      id="home-imposter-count"
                       className="input"
                       value={imposterImposters}
                       onChange={(e) => setImposterImposters(Number(e.target.value))}
@@ -732,8 +743,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                     </select>
                   </div>
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="How many rounds to play. Each round, a new imposter is chosen and everyone votes." data-tooltip-variant="info">Rounds</label>
+                    <label htmlFor="home-imposter-rounds" className="hc-config-label" data-tooltip="How many rounds to play. Each round, a new imposter is chosen and everyone votes." data-tooltip-variant="info">Rounds</label>
                     <select
+                      id="home-imposter-rounds"
                       className="input"
                       value={imposterRounds}
                       onChange={(e) => setImposterRounds(Number(e.target.value))}
@@ -768,7 +780,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                     </div>
                     <div className="hc-mini-row hc-mini-row--suspect">
                       <span className="hc-mini-avatar hc-mini-avatar--suspect">C</span>
-                      <span className="hc-mini-clue">"Uhh..."</span>
+                      <span className="hc-mini-clue">&quot;Uhh&hellip;&quot;</span>
                       <span className="hc-mini-badge hc-mini-badge--caught">🕵️</span>
                     </div>
                   </div>
@@ -835,7 +847,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 3: Password ───────────────────────────────── */}
-      <div className={`home-card home-card--password${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
+      <div className={`home-card home-card--password${firstVisit ? " home-card--dimmed" : ""}`}>
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${passwordExpanded || passwordBrowsing ? " hc-game-title-lg--compact" : ""}`}>Password</h2>
 
@@ -847,8 +859,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             <div className="hc-card-anim" key="config">
               <div className="hc-config">
                 <div className="hc-config-field">
-                  <label className="hc-config-label" data-tooltip="The theme for the word list. Words will be drawn from this category." data-tooltip-variant="info">Category</label>
+                  <label htmlFor="home-password-category" className="hc-config-label" data-tooltip="The theme for the word list. Words will be drawn from this category." data-tooltip-variant="info">Category</label>
                   <select
+                    id="home-password-category"
                     className="input"
                     value={passwordCategory}
                     onChange={(e) => setPasswordCategory(e.target.value)}
@@ -861,8 +874,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </div>
                 <div className="hc-config-row">
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="Split players into this many teams. Teams take turns giving and guessing clues." data-tooltip-variant="info">Teams</label>
+                    <label htmlFor="home-password-teams" className="hc-config-label" data-tooltip="Split players into this many teams. Teams take turns giving and guessing clues." data-tooltip-variant="info">Teams</label>
                     <select
+                      id="home-password-teams"
                       className="input"
                       value={passwordTeams}
                       onChange={(e) => setPasswordTeams(Number(e.target.value))}
@@ -874,8 +888,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                     </select>
                   </div>
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="The score a team needs to win. Higher = longer game." data-tooltip-variant="info">Target Score</label>
+                    <label htmlFor="home-password-target-score" className="hc-config-label" data-tooltip="The score a team needs to win. Higher = longer game." data-tooltip-variant="info">Target Score</label>
                     <select
+                      id="home-password-target-score"
                       className="input"
                       value={passwordTargetScore}
                       onChange={(e) => setPasswordTargetScore(Number(e.target.value))}
@@ -975,7 +990,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 4: Chain Reaction ─────────────────────────── */}
-      <div className={`home-card home-card--chain${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
+      <div className={`home-card home-card--chain${firstVisit ? " home-card--dimmed" : ""}`}>
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${chainExpanded || chainBrowsing ? " hc-game-title-lg--compact" : ""}`}>Chain Reaction</h2>
 
@@ -987,8 +1002,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             <div className="hc-card-anim" key="config">
               <div className="hc-config">
                 <div className="hc-config-field">
-                  <label className="hc-config-label" data-tooltip="The theme for the word chains. Chains will be drawn from this category." data-tooltip-variant="info">Category</label>
+                  <label htmlFor="home-chain-category" className="hc-config-label" data-tooltip="The theme for the word chains. Chains will be drawn from this category." data-tooltip-variant="info">Category</label>
                   <select
+                    id="home-chain-category"
                     className="input"
                     value={chainCategory}
                     onChange={(e) => setChainCategory(e.target.value)}
@@ -1001,8 +1017,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </div>
                 <div className="hc-config-row">
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="How many words in the chain. Each word links to the next — longer chains are harder!" data-tooltip-variant="info">Length</label>
+                    <label htmlFor="home-chain-length" className="hc-config-label" data-tooltip="How many words in the chain. Each word links to the next - longer chains are harder!" data-tooltip-variant="info">Length</label>
                     <select
+                      id="home-chain-length"
                       className="input"
                       value={chainLength}
                       onChange={(e) => setChainLength(Number(e.target.value))}
@@ -1014,8 +1031,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                     </select>
                   </div>
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="How many chains to play. Each round is a fresh chain for both players." data-tooltip-variant="info">Rounds</label>
+                    <label htmlFor="home-chain-rounds" className="hc-config-label" data-tooltip="How many chains to play. Each round is a fresh chain for both players." data-tooltip-variant="info">Rounds</label>
                     <select
+                      id="home-chain-rounds"
                       className="input"
                       value={chainRounds}
                       onChange={(e) => setChainRounds(Number(e.target.value))}
@@ -1028,8 +1046,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   </div>
                 </div>
                 <div className="hc-config-field">
-                  <label className="hc-config-label" data-tooltip="Random uses pre-made chains. Custom lets both players write their own chain for the other to solve." data-tooltip-variant="info">Mode</label>
+                  <label htmlFor="home-chain-mode" className="hc-config-label" data-tooltip="Random uses pre-made chains. Custom lets both players write their own chain for the other to solve." data-tooltip-variant="info">Mode</label>
                   <select
+                    id="home-chain-mode"
                     className="input"
                     value={chainMode}
                     onChange={(e) => setChainMode(e.target.value as "premade" | "custom")}
@@ -1115,7 +1134,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 5: Shade Signal ──────────────────────────── */}
-      <div className={`home-card home-card--shade${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
+      <div className={`home-card home-card--shade${firstVisit ? " home-card--dimmed" : ""}`}>
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${shadeExpanded || shadeBrowsing ? " hc-game-title-lg--compact" : ""}`}>Shade Signal</h2>
 
@@ -1128,8 +1147,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               <div className="hc-config">
                 <div className="hc-config-row">
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="Each player takes a turn as Leader. This controls how many turns each person gets, so more = longer game." data-tooltip-variant="info">Game Length</label>
+                    <label htmlFor="home-shade-rounds-per-player" className="hc-config-label" data-tooltip="Each player takes a turn as Leader. This controls how many turns each person gets, so more = longer game." data-tooltip-variant="info">Game Length</label>
                     <select
+                      id="home-shade-rounds-per-player"
                       className="input"
                       value={shadeRoundsPerPlayer}
                       onChange={(e) => setShadeRoundsPerPlayer(Number(e.target.value))}
@@ -1141,8 +1161,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                     </select>
                   </div>
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="Controls what the Leader can say in their clue. &quot;No Color Names&quot; bans words like red, blue, green, etc." data-tooltip-variant="info">Clue Rules</label>
+                    <label htmlFor="home-shade-clue-rules" className="hc-config-label" data-tooltip="Controls what the Leader can say in their clue. &quot;No Color Names&quot; bans words like red, blue, green, etc." data-tooltip-variant="info">Clue Rules</label>
                     <select
+                      id="home-shade-clue-rules"
                       className="input"
                       value={shadeHardMode ? "yes" : "no"}
                       onChange={(e) => setShadeHardMode(e.target.value === "yes")}
@@ -1167,11 +1188,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               <p className="hc-game-desc">One leader, one color. Give clues and guess the target shade.</p>
               <div className="hc-coming-preview">
                 <div className="hc-shade-grid">
-                  {Array.from({ length: 20 }, (_, i) => (
+                  {SHADE_PREVIEW_CELLS.map((cell) => (
                     <div
-                      key={i}
+                      key={cell.id}
                       className="hc-shade-cell"
-                      style={{ background: `hsl(${i * 18}, 60%, ${45 + (i % 3) * 10}%)` }}
+                      style={{ background: `hsl(${cell.hue}, 60%, ${cell.lightness}%)` }}
                     />
                   ))}
                 </div>
@@ -1237,7 +1258,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 6: Location Signal ──────────────────────────── */}
-      <div className={`home-card home-card--location${firstVisit ? " home-card--dimmed" : ""}`} onClick={firstVisit ? dismissFirstVisit : undefined}>
+      <div className={`home-card home-card--location${firstVisit ? " home-card--dimmed" : ""}`}>
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${locationExpanded || locationBrowsing ? " hc-game-title-lg--compact" : ""}`}>Location Signal</h2>
 
@@ -1250,8 +1271,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               <div className="hc-config">
                 <div className="hc-config-row">
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="How many clue + guess pairs per round. More pairs means the leader gives more hints and guessers refine their answer." data-tooltip-variant="info">Clue Pairs</label>
+                    <label htmlFor="home-location-clue-pairs" className="hc-config-label" data-tooltip="How many clue + guess pairs per round. More pairs means the leader gives more hints and guessers refine their answer." data-tooltip-variant="info">Clue Pairs</label>
                     <select
+                      id="home-location-clue-pairs"
                       className="input"
                       value={locCluePairs}
                       onChange={(e) => setLocCluePairs(Number(e.target.value))}
@@ -1264,8 +1286,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                     </select>
                   </div>
                   <div className="hc-config-field flex-1">
-                    <label className="hc-config-label" data-tooltip="How many rounds each player leads. More rounds means a longer session." data-tooltip-variant="info">Rounds/Player</label>
+                    <label htmlFor="home-location-rounds-per-player" className="hc-config-label" data-tooltip="How many rounds each player leads. More rounds means a longer session." data-tooltip-variant="info">Rounds/Player</label>
                     <select
+                      id="home-location-rounds-per-player"
                       className="input"
                       value={locRoundsPerPlayer}
                       onChange={(e) => setLocRoundsPerPlayer(Number(e.target.value))}
@@ -1393,11 +1416,13 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
     {/* Scroll indicators (mobile) */}
     <div className="home-cards-dots">
-      {Array.from({ length: CARD_COUNT }, (_, i) => (
-        <span
-          key={i}
-          className={`home-cards-dot${activeDot === i ? " home-cards-dot--active" : ""}`}
-          onClick={() => scrollRef.current?.scrollTo({ left: i * (scrollRef.current?.clientWidth ?? 0), behavior: "smooth" })}
+      {GAME_CARD_DOTS.map((dot) => (
+        <button
+          key={dot.id}
+          type="button"
+          className={`home-cards-dot${activeDot === dot.index ? " home-cards-dot--active" : ""}`}
+          onClick={() => scrollRef.current?.scrollTo({ left: dot.index * (scrollRef.current?.clientWidth ?? 0), behavior: "smooth" })}
+          aria-label={`Go to game card ${dot.index + 1}`}
         />
       ))}
     </div>
@@ -1454,7 +1479,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", text: "gl hf!" },
         { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p3", senderName: "Bob", text: "I have no idea what the word is lol" },
         { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p4", senderName: "Charlie", text: "hmm suspicious \ud83e\udd14" },
-        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", text: "Charlie seems nervous..." },
+        { id: nanoid(), gameType: "imposter" as const, gameId: id, senderId: "demo-p2", senderName: "Alice", text: "Charlie seems nervous!" },
       ];
       for (const msg of chatMsgs) {
         await zero.mutate(mutators.chat.send(msg));
@@ -1777,7 +1802,7 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
 
       for (const r of g.round_history ?? []) {
         const votedOut = r.votedOutName ?? "no one";
-        lines.push(`R${r.round}: "${r.secretWord}" — voted out ${votedOut} (${r.wasImposter ? "imposter" : "innocent"})`);
+        lines.push(`R${r.round}: "${r.secretWord}" - voted out ${votedOut} (${r.wasImposter ? "imposter" : "innocent"})`);
       }
       return lines.join("\n") || "No rounds played";
     }

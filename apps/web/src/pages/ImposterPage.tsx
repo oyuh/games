@@ -199,7 +199,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
     return () => clearTimeout(timer);
   }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
 
-  // Announcement watcher (skip for host — they sent it)
+  // Announcement watcher (skip for host - they sent it)
   useEffect(() => {
     if (!game?.announcement || isHost) return;
     const prev = prevAnnouncementRef.current;
@@ -305,8 +305,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
         votedOutId={game.phase === "results" ? (() => {
           const t = game.votes.reduce<Record<string, number>>((acc, v) => { acc[v.targetId] = (acc[v.targetId] ?? 0) + 1; return acc; }, {});
           const max = Math.max(...Object.values(t), 0);
-          const top = Object.entries(t).filter(([, c]) => c === max && max > 0).map(([id]) => id);
-          return top[0] ?? null;
+          return Object.entries(t).find(([, count]) => count === max && max > 0)?.[0] ?? null;
         })() : null}
       />
 
@@ -464,10 +463,10 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
                       {(game.round_history ?? []).map((rh) => (
                         <tr key={rh.round}>
                           <td>{rh.round}</td>
-                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ? (decryptedRoundWords[rh.round] ?? "••••") : "—"}</td>
+                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ? (decryptedRoundWords[rh.round] ?? "••••") : "-"}</td>
                           <td style={{ fontWeight: 600 }}>{rh.votedOutName ?? "No one"}</td>
                           <td style={{ color: rh.wasImposter ? "#f87171" : "#4ade80", fontWeight: 600 }}>
-                            {rh.votedOutName ? (rh.wasImposter ? "Imposter" : "Innocent") : "—"}
+                            {rh.votedOutName ? (rh.wasImposter ? "Imposter" : "Innocent") : "-"}
                           </td>
                         </tr>
                       ))}

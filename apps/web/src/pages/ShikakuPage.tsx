@@ -126,7 +126,7 @@ export function ShikakuPage() {
   const [showDemo, setShowDemo] = useState(false);
   const [personalBest, setPersonalBest] = useState<PersonalBest | null>(null);
   const [endListTab, setEndListTab] = useState<"times" | "scores">("times");
-  // Snapshot of leaderboard at game finish — immune to modal tab changes
+  // Snapshot of leaderboard at game finish - immune to modal tab changes
   const [finishedLeaderboard, setFinishedLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [finishedPersonalBest, setFinishedPersonalBest] = useState<PersonalBest | null>(null);
   const finishedLbSnapshotted = useRef(false);
@@ -154,14 +154,14 @@ export function ShikakuPage() {
   const [customSeedInput, setCustomSeedInput] = useState("");
   const [showSeedInput, setShowSeedInput] = useState(false);
 
-  // Challenge mode — single puzzle from puzzle image page play button
+  // Challenge mode - single puzzle from puzzle image page play button
   const [challengeMode, setChallengeMode] = useState(false);
 
-  // Pause tracking — freeze timer during solved animation (non-abusable, system-controlled only)
+  // Pause tracking - freeze timer during solved animation (non-abusable, system-controlled only)
   const pausedMsRef = useRef(0);
   const pauseStartRef = useRef<number | null>(null);
 
-  // Debug mode — enable via browser console: window.shikakuDebug(true)
+  // Debug mode - enable via browser console: window.shikakuDebug(true)
   const debugRef = useRef(false);
   useEffect(() => {
     const dbg = (enabled?: boolean) => {
@@ -349,7 +349,7 @@ export function ShikakuPage() {
     }
   }, []);
 
-  // Timer — pauses automatically during solved animation (system-controlled, non-abusable)
+  // Timer - pauses automatically during solved animation (system-controlled, non-abusable)
   useEffect(() => {
     if (phase !== "playing") return;
     const iv = setInterval(() => {
@@ -361,7 +361,7 @@ export function ShikakuPage() {
       const maxMs = MAX_TIME_MS[difficulty];
       if (elapsed >= maxMs) {
         clearInterval(iv);
-        showToast("Time limit reached — run ended", "info");
+        showToast("Time limit reached - run ended", "info");
         // Force-end via giveUp-like logic
         const totalTime = maxMs;
         const puzzleTime = Date.now() - puzzleStartTime;
@@ -526,7 +526,7 @@ export function ShikakuPage() {
     debugLog("startChallenge", { diff, seed: challengeSeed });
   }, [debugLog]);
 
-  // Deferred challenge start — runs after startChallenge is available
+  // Deferred challenge start - runs after startChallenge is available
   useEffect(() => {
     if (!pendingChallenge.current || phase !== "menu") return;
     const { seed: challengeSeed, diff } = pendingChallenge.current;
@@ -540,8 +540,9 @@ export function ShikakuPage() {
     const gen = pendingGenRef.current;
     if (!gen) return;
 
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const raf = requestAnimationFrame(() => {
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         if (infiniteMode) {
           const rng = mulberry32(gen.newSeed);
           infiniteRng.current = rng;
@@ -566,9 +567,13 @@ export function ShikakuPage() {
         pendingGenRef.current = null;
         setPhase("countdown");
       }, 0);
-      return () => clearTimeout(timer);
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, [phase, infiniteMode, debugLog]);
 
   /* ── Check if a placed rect is "valid" (exactly 1 number, area matches) ── */
@@ -632,7 +637,7 @@ export function ShikakuPage() {
       setInfiniteSolved((n) => n + 1);
       debugLog("puzzle solved (infinite)", { puzzleTime, solved: infiniteSolved + 1 });
       setTimeout(() => {
-        // Resume timer — accumulate paused duration
+        // Resume timer - accumulate paused duration
         if (pauseStartRef.current !== null) {
           pausedMsRef.current += Date.now() - pauseStartRef.current;
           pauseStartRef.current = null;
@@ -640,7 +645,7 @@ export function ShikakuPage() {
         setShowPuzzleSolvedAnim(false);
         const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
         if (!infiniteRng.current) {
-          debugLog("ERROR: infiniteRng is null — cannot generate next puzzle");
+          debugLog("ERROR: infiniteRng is null - cannot generate next puzzle");
           return;
         }
         const nextPuzzle = generatePuzzle(rows, cols, infiniteRng.current);
@@ -654,7 +659,7 @@ export function ShikakuPage() {
         setPuzzleStartTime(Date.now());
       }, 1200);
     } else if (challengeMode) {
-      // Challenge mode — single puzzle complete
+      // Challenge mode - single puzzle complete
       const totalTime = now - startTime - pausedMsRef.current;
       setFinalScore(0); // no score for challenge
       setFinalTimeMs(totalTime);
@@ -671,7 +676,7 @@ export function ShikakuPage() {
       // Show solve animation, then next puzzle
       setPuzzleTimes((prev) => [...prev, puzzleTime]);
       setTimeout(() => {
-        // Resume timer — accumulate paused duration
+        // Resume timer - accumulate paused duration
         if (pauseStartRef.current !== null) {
           pausedMsRef.current += Date.now() - pauseStartRef.current;
           pauseStartRef.current = null;
@@ -742,7 +747,7 @@ export function ShikakuPage() {
   const handleCellMouseDown = useCallback((r: number, c: number) => {
     if (showPuzzleSolvedAnim) return;
     didDrag.current = false;
-    // Check if clicking on existing rect — always allow drag to start from filled cells
+    // Check if clicking on existing rect - always allow drag to start from filled cells
     const existingIdx = placedRects.findIndex(
       (pr) => r >= pr.r && r < pr.r + pr.h && c >= pr.c && c < pr.c + pr.w
     );
@@ -756,7 +761,7 @@ export function ShikakuPage() {
     pressedRectIdx.current = existingIdx;
     setDragStart({ r, c });
     setDragEnd({ r, c });
-    // Sync refs immediately — native touch events may fire before React re-renders
+    // Sync refs immediately - native touch events may fire before React re-renders
     dragStartRef.current = { r, c };
     dragEndRef.current = { r, c };
     isDraggingRef.current = true;
@@ -764,7 +769,7 @@ export function ShikakuPage() {
   }, [isAutoFilledRect, placedRects, showPuzzleSolvedAnim]);
 
   const handleCellMouseEnter = useCallback((r: number, c: number) => {
-    // Read from ref, not closure — touchmove may fire before React commits the isDragging state
+    // Read from ref, not closure - touchmove may fire before React commits the isDragging state
     if (!isDraggingRef.current) return;
     didDrag.current = true;
     setDragEnd({ r, c });
@@ -961,7 +966,7 @@ export function ShikakuPage() {
       canSubmit: false,
       pending: true,
       tone: "info",
-      message: "Checking leaderboard eligibility...",
+      message: "Checking leaderboard eligibility!",
     });
 
     void resolveScoreEligibility(seed, difficulty, finalScore, finalTimeMs).then((status) => {
@@ -997,7 +1002,7 @@ export function ShikakuPage() {
       canSubmit: false,
       pending: true,
       tone: "info",
-      message: "Submitting verified score...",
+      message: "Submitting verified score!",
     });
 
     try {
@@ -1060,7 +1065,7 @@ export function ShikakuPage() {
             canSubmit: true,
             pending: false,
             tone: "info",
-            message: "Too many requests — try again in a moment.",
+            message: "Too many requests - try again in a moment.",
           });
         } else if (data?.error === "Score rejected") {
           setScoreSubmissionStatus({
@@ -1083,7 +1088,7 @@ export function ShikakuPage() {
         canSubmit: true,
         pending: false,
         tone: "error",
-        message: "Network error — this score was not submitted.",
+        message: "Network error - this score was not submitted.",
       });
     } finally {
       setSubmittingScore(false);
@@ -1145,7 +1150,7 @@ export function ShikakuPage() {
               <div className="shikaku-generating-spinner" />
               <p className="shikaku-generating-label">Generating puzzles…</p>
               <p className="shikaku-generating-sub">
-                {difficulty} — {customMode ? "custom seed" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
+                {difficulty} - {customMode ? "custom seed" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
               </p>
             </div>
           </div>
@@ -1166,7 +1171,7 @@ export function ShikakuPage() {
                 {countdownNum > 0 ? countdownNum : "GO!"}
               </div>
               <p className="shikaku-countdown-label">
-                {difficulty} — {customMode ? "custom seed" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
+                {difficulty} - {customMode ? "custom seed" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
               </p>
             </div>
           </div>
@@ -1187,7 +1192,7 @@ export function ShikakuPage() {
             {/* ── Title ── */}
             <div className="shikaku-menu-hero">
               <h1 className="shikaku-title">Shikaku</h1>
-              <p className="shikaku-subtitle">Divide the grid into rectangles — each containing exactly one number equal to its area</p>
+              <p className="shikaku-subtitle">Divide the grid into rectangles - each containing exactly one number equal to its area</p>
             </div>
 
             {/* ── Mode bar: tabs + seed toggle ── */}
@@ -1215,14 +1220,14 @@ export function ShikakuPage() {
               <button
                 className={`shikaku-seed-toggle${showSeedInput ? " shikaku-seed-toggle--on" : ""}`}
                 onClick={() => setShowSeedInput((v) => !v)}
-                data-tooltip={showSeedInput ? "Custom seed on — click to disable" : "Play a specific seed"}
+                data-tooltip={showSeedInput ? "Custom seed on - click to disable" : "Play a specific seed"}
                 data-tooltip-pos="bottom"
               >
                 <FiHash size={16} />
               </button>
             </div>
 
-            {/* ── Difficulty cards — click to start (or select when seed is on) ── */}
+            {/* ── Difficulty cards - click to start (or select when seed is on) ── */}
             <div className="shikaku-diff-cards">
               {diffKeys.map((d) => (
                 <button
@@ -1236,7 +1241,7 @@ export function ShikakuPage() {
                   data-tooltip={
                     showSeedInput
                       ? `Select ${d} (${DIFFICULTY_CONFIG[d].label})`
-                      : `Start ${infiniteMode ? "infinite " : ""}${d} — ${DIFFICULTY_CONFIG[d].label}${!infiniteMode ? ` — ${PUZZLES_PER_RUN} puzzles` : ""}`
+                      : `Start ${infiniteMode ? "infinite " : ""}${d} - ${DIFFICULTY_CONFIG[d].label}${!infiniteMode ? ` - ${PUZZLES_PER_RUN} puzzles` : ""}`
                   }
                   data-tooltip-pos="bottom"
                 >
@@ -1312,7 +1317,7 @@ export function ShikakuPage() {
                   </button>
                 </div>
                 <p className="shikaku-seed-note">
-                  {difficulty} — {DIFFICULTY_CONFIG[difficulty].label} — {infiniteMode ? "infinite" : `${PUZZLES_PER_RUN} puzzles`} — unranked
+                  {difficulty} - {DIFFICULTY_CONFIG[difficulty].label} - {infiniteMode ? "infinite" : `${PUZZLES_PER_RUN} puzzles`} - unranked
                 </p>
               </div>
             )}
@@ -1352,7 +1357,7 @@ export function ShikakuPage() {
     );
   }
 
-  // Challenge complete — single puzzle from puzzle image page
+  // Challenge complete - single puzzle from puzzle image page
   if (phase === "finished" && challengeMode) {
     const solved = puzzleTimes.length > 0 && finalTimeMs > 0;
     const puzzlePageUrl = `${API_BASE}/api/shikaku/puzzle?difficulty=${difficulty}&seed=${seed}`;
@@ -1431,6 +1436,11 @@ export function ShikakuPage() {
     const gavUp = infiniteMode ? true : completedCount < PUZZLES_PER_RUN;
     const hasLeaderboard = finishedLeaderboard.length > 0 && !infiniteMode && !customMode;
     const hasPuzzleTimes = puzzleTimes.length > 0;
+    const puzzleTimeRows = puzzleTimes.map((time, index) => ({
+      id: `puzzle-time-${index}`,
+      time,
+      index,
+    }));
     const showSubmitButton = !infiniteMode && !customMode && (scoreSubmitted || submittingScore || Boolean(scoreSubmissionStatus?.canSubmit));
     const statusLabel = scoreSubmissionStatus?.pending
       ? (submittingScore ? "Submitting" : "Checking")
@@ -1451,9 +1461,9 @@ export function ShikakuPage() {
               </p>
               <p className="shikaku-end-sub">
                 {customMode && infiniteMode
-                  ? `Seed ${seed} — solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} in infinite mode`
+                  ? `Seed ${seed} - solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} in infinite mode`
                   : customMode
-                  ? `Custom seed ${seed} — ${gavUp ? `completed ${completedCount - 1} of ${PUZZLES_PER_RUN} puzzles` : `all ${PUZZLES_PER_RUN} puzzles solved!`}`
+                  ? `Custom seed ${seed} - ${gavUp ? `completed ${completedCount - 1} of ${PUZZLES_PER_RUN} puzzles` : `all ${PUZZLES_PER_RUN} puzzles solved!`}`
                   : infiniteMode
                   ? `Solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} in infinite mode`
                   : gavUp ? `Completed ${completedCount - 1} of ${PUZZLES_PER_RUN} puzzles` : `All ${PUZZLES_PER_RUN} puzzles solved!`}
@@ -1507,7 +1517,7 @@ export function ShikakuPage() {
               {/* Right column: tabbed puzzle times / leaderboard */}
               {(hasPuzzleTimes || hasLeaderboard) && (
                 <div className="shikaku-end-list-tile">
-                  {/* Tab bar — only show tabs when both views exist */}
+                  {/* Tab bar - only show tabs when both views exist */}
                   {hasPuzzleTimes && hasLeaderboard ? (
                     <div className="shikaku-end-tab-bar">
                       <button
@@ -1534,10 +1544,10 @@ export function ShikakuPage() {
                     {/* Puzzle Times view */}
                     {(endListTab === "times" || !hasLeaderboard) && hasPuzzleTimes && (
                       <>
-                        {puzzleTimes.map((t, i) => (
-                          <div key={i} className="shikaku-end-list-row">
-                            <span>Puzzle {i + 1}{gavUp && i === puzzleTimes.length - 1 ? " (incomplete)" : ""}</span>
-                            <span>{formatTime(t)}</span>
+                        {puzzleTimeRows.map(({ id, time, index }) => (
+                          <div key={id} className="shikaku-end-list-row">
+                            <span>Puzzle {index + 1}{gavUp && index === puzzleTimes.length - 1 ? " (incomplete)" : ""}</span>
+                            <span>{formatTime(time)}</span>
                           </div>
                         ))}
                       </>
@@ -1551,9 +1561,13 @@ export function ShikakuPage() {
                       let showSeparator = false;
 
                       if (ownRank > 3) {
-                        const nearbyEntries = finishedLeaderboard
-                          .map((e, idx) => ({ entry: e, rank: idx + 1 }))
-                          .filter(({ rank }) => rank > 3 && Math.abs(rank - ownRank) <= 5);
+                        const nearbyEntries = finishedLeaderboard.reduce<{ entry: LeaderboardEntry; rank: number }[]>((entries, entry, index) => {
+                          const rank = index + 1;
+                          if (rank > 3 && Math.abs(rank - ownRank) <= 5) {
+                            entries.push({ entry, rank });
+                          }
+                          return entries;
+                        }, []);
 
                         if (nearbyEntries.length > 0) {
                           showSeparator = true;
@@ -1570,7 +1584,7 @@ export function ShikakuPage() {
                         <>
                           {top3.map((entry, i) => (
                             <div key={entry.id} className={`shikaku-end-list-row${entry.isOwn ? " shikaku-end-list-row--self" : ""}`}>
-                              <span>#{i + 1} {entry.name} — {entry.score.toLocaleString()}</span>
+                              <span>#{i + 1} {entry.name} - {entry.score.toLocaleString()}</span>
                               <span>{formatTime(entry.timeMs)}</span>
                             </div>
                           ))}
@@ -1579,7 +1593,7 @@ export function ShikakuPage() {
                           )}
                           {contextEntries.map(({ entry, rank }) => (
                             <div key={entry.id} className={`shikaku-end-list-row${entry.isOwn ? " shikaku-end-list-row--self" : ""}`}>
-                              <span>#{rank} {entry.name} — {entry.score.toLocaleString()}</span>
+                              <span>#{rank} {entry.name} - {entry.score.toLocaleString()}</span>
                               <span>{formatTime(entry.timeMs)}</span>
                             </div>
                           ))}
@@ -1601,7 +1615,7 @@ export function ShikakuPage() {
                   data-tooltip={scoreSubmitted ? "Score already submitted" : "Submit your score to the leaderboard"}
                 >
                   {submittingScore ? (
-                    <>Submitting...</>
+                    <>Submitting&hellip;</>
                   ) : scoreSubmitted ? (
                     <><FiCheck size={16} /> Submitted</>
                   ) : (
@@ -1656,7 +1670,7 @@ export function ShikakuPage() {
               <FiGrid size={20} />
             </div>
             <h1 className="game-title">Shikaku</h1>
-            <span className="badge badge-warn" data-tooltip={challengeMode ? `Challenge — ${difficulty}` : infiniteMode ? `${infiniteSolved} solved — ∞ mode — ${difficulty}` : `Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN} — ${difficulty}`} data-tooltip-variant="info">
+            <span className="badge badge-warn" data-tooltip={challengeMode ? `Challenge - ${difficulty}` : infiniteMode ? `${infiniteSolved} solved - ∞ mode - ${difficulty}` : `Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN} - ${difficulty}`} data-tooltip-variant="info">
               {challengeMode
                 ? <>Challenge / {difficulty}</>
                 : infiniteMode
@@ -1667,10 +1681,22 @@ export function ShikakuPage() {
               <FiClock size={12} /> {formatTime(elapsedMs)}
             </span>
             {(infiniteMode || customMode) && (
-              <span className="badge" data-tooltip={`Seed: ${seed} — click to copy`} data-tooltip-variant="info" style={{ cursor: "pointer", fontVariantNumeric: "tabular-nums" }}
+              <span
+                className="badge"
+                data-tooltip={`Seed: ${seed} - click to copy`}
+                data-tooltip-variant="info"
+                style={{ cursor: "pointer", fontVariantNumeric: "tabular-nums" }}
                 onClick={() => {
                   navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
+                  }
+                }}
+                role="button"
+                tabIndex={0}
               >
                 <FiHash size={12} /> {seed}{customMode && !challengeMode && <span style={{ opacity: 0.5 }}> / custom</span>}
               </span>
@@ -1700,9 +1726,9 @@ export function ShikakuPage() {
         />
 
         <div className="shikaku-playing-footer">
-          <p className="shikaku-hint">Drag to draw — click to remove — right-click to remove</p>
+          <p className="shikaku-hint">Drag to draw - click to remove - right-click to remove</p>
           <div className="shikaku-footer-btns">
-            {/* Scroll left / down — shown on mobile for expert */}
+            {/* Scroll left / down - shown on mobile for expert */}
             {scrollApi?.isLarge && (
               <div className="shikaku-scroll-pair">
                 <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.left ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(-160, 0)} aria-label="Scroll left">
@@ -1755,7 +1781,7 @@ export function ShikakuPage() {
             >
               <FiFlag size={16} />
             </button>
-            {/* Scroll up / right — shown on mobile for expert */}
+            {/* Scroll up / right - shown on mobile for expert */}
             {scrollApi?.isLarge && (
               <div className="shikaku-scroll-pair">
                 <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.up ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(0, -160)} aria-label="Scroll up">
@@ -1770,7 +1796,13 @@ export function ShikakuPage() {
         </div>
 
         {confirmGiveUp && (
-          <div className="shikaku-giveup-overlay" onClick={(e) => { if (e.target === e.currentTarget) cancelGiveUp(); }}>
+          <div
+            className="shikaku-giveup-overlay"
+            onClick={(e) => { if (e.target === e.currentTarget) cancelGiveUp(); }}
+            onKeyDown={(e) => { if (e.key === "Escape") cancelGiveUp(); }}
+            role="presentation"
+            tabIndex={-1}
+          >
             <div className="shikaku-giveup-modal">
               <div className="shikaku-giveup-icon"><FiFlag /></div>
               <p className="shikaku-giveup-title">{challengeMode ? "Abandon Puzzle?" : infiniteMode ? "End Run?" : "Give Up?"}</p>
@@ -1796,7 +1828,7 @@ export function ShikakuPage() {
 }
 
 /* ═══════════════════════════════════════════════════════════ */
-/*  Grid wrapper — scroll buttons for large puzzles on mobile  */
+/*  Grid wrapper - scroll buttons for large puzzles on mobile  */
 /* ═══════════════════════════════════════════════════════════ */
 interface ScrollApi {
   canScroll: { up: boolean; down: boolean; left: boolean; right: boolean };
@@ -1860,7 +1892,7 @@ function ShikakuGridWrapper({
     if (!el) return;
     const maxLeft = el.scrollWidth - el.clientWidth;
     const maxTop = el.scrollHeight - el.clientHeight;
-    // Compute the exact target — clamp to 0/max so we always reach the edge
+    // Compute the exact target - clamp to 0/max so we always reach the edge
     const targetLeft = Math.round(Math.min(Math.max(el.scrollLeft + dx, 0), maxLeft));
     const targetTop = Math.round(Math.min(Math.max(el.scrollTop + dy, 0), maxTop));
     if (targetLeft !== Math.round(el.scrollLeft) || targetTop !== Math.round(el.scrollTop)) {
@@ -1891,7 +1923,7 @@ function ShikakuGridWrapper({
           />
         )}
 
-        {/* Drag dimension counter — positioned at the preview rect */}
+        {/* Drag dimension counter - positioned at the preview rect */}
         {previewRect && currentPuzzle && (
           <div
             className="shikaku-dim-counter"
@@ -1905,7 +1937,7 @@ function ShikakuGridWrapper({
         )}
       </div>
 
-      {/* Floating dim counter for large puzzles on mobile — stays visible during scroll */}
+      {/* Floating dim counter for large puzzles on mobile - stays visible during scroll */}
       {previewRect && currentPuzzle && isLarge && (
         <div className="shikaku-dim-counter shikaku-dim-counter--floating">
           {previewRect.w}×{previewRect.h}
@@ -2048,7 +2080,7 @@ function ShikakuGrid({
       stopAutoScroll();
 
       // The finger may have moved to a new cell between the last touchmove
-      // and touchend — changedTouches has the final lift position
+      // and touchend - changedTouches has the final lift position
       const touch = e.changedTouches[0];
       if (touch) {
         const cell = getCellFromTouchRef.current(touch);
@@ -2065,7 +2097,7 @@ function ShikakuGrid({
         onMouseUpRef.current?.();
       });
 
-      // Force browser repaint — mobile compositors sometimes skip painting
+      // Force browser repaint - mobile compositors sometimes skip painting
       // updated cells after a touch sequence ends
       requestAnimationFrame(() => {
         const g = gridRef.current;
@@ -2165,6 +2197,7 @@ function ShikakuGrid({
               onMouseDown={(e) => { e.preventDefault(); onCellMouseDown(r, c); }}
               onMouseEnter={() => { onCellMouseEnter(r, c); }}
               onContextMenu={(e) => { e.preventDefault(); if (onCellRightClick) onCellRightClick(r, c); }}
+              role="gridcell"
             >
               {num !== undefined && <span className="shikaku-num">{num}</span>}
             </div>

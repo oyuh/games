@@ -28,7 +28,7 @@ const TARGET = { lat: 41.9, lng: 12.5 };
 const CLUE_1 = "Ancient empire";
 const CLUE_2 = "Colosseum city";
 
-// Round 1 guesses (after clue 1 — spread out)
+// Round 1 guesses (after clue 1 - spread out)
 const GUESS_ROUND1: MapMarker[] = [
   { lat: 37.9, lng: 23.7, color: "#7ecbff", label: "Alice (Athens?)", size: 2.5 },
   { lat: 48.8, lng: 2.3, color: "#ef476f", label: "Bob (Paris?)", size: 2.5 },
@@ -36,13 +36,13 @@ const GUESS_ROUND1: MapMarker[] = [
   { lat: 30.0, lng: 31.2, color: "#a78bfa", label: "Diana (Cairo?)", size: 2.5 },
 ];
 
-// Leader view of Guess 1 — target + all guesses
+// Leader view of Guess 1 - target + all guesses
 const LEADER_GUESS1: MapMarker[] = [
   { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "Your Target", size: 3.5, ring: true },
   ...GUESS_ROUND1,
 ];
 
-// Round 2 guesses (after clue 2 — closer)
+// Round 2 guesses (after clue 2 - closer)
 const GUESS_ROUND2: MapMarker[] = [
   { lat: 43.7, lng: 11.2, color: "#7ecbff", label: "Alice", size: 2.5 },
   { lat: 45.4, lng: 9.2, color: "#ef476f", label: "Bob", size: 2.5 },
@@ -52,7 +52,7 @@ const GUESS_ROUND2: MapMarker[] = [
 
 // Reveal markers: target + all final guesses
 const REVEAL_MARKERS: MapMarker[] = [
-  { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "Target — Rome 🎯", size: 4.5, pulse: true, ring: true },
+  { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "Target - Rome 🎯", size: 4.5, pulse: true, ring: true },
   { lat: 43.7, lng: 11.2, color: "#7ecbff", label: "Alice", size: 2.5 },
   { lat: 45.4, lng: 9.2, color: "#ef476f", label: "Bob", size: 2.5 },
   { lat: 41.9, lng: 12.5, color: "#06d6a0", label: "You", size: 2.5, ring: true },
@@ -69,7 +69,7 @@ const SCORING_TABLE = [
 ];
 
 const REVEAL_SCORES = [
-  { name: "You", pts: 5000, dist: "0 km — exact!", color: "#06d6a0", id: P.you },
+  { name: "You", pts: 5000, dist: "0 km - exact!", color: "#06d6a0", id: P.you },
   { name: "Alice", pts: 4264, dist: "~200 km", color: "#7ecbff", id: P.alice },
   { name: "Bob", pts: 3785, dist: "~400 km", color: "#ef476f", id: P.bob },
   { name: "Diana", pts: 2930, dist: "~750 km", color: "#a78bfa", id: P.diana },
@@ -81,12 +81,12 @@ const steps: DemoStep[] = [
   {
     label: "Overview",
     description: "Location Signal is a map-based guessing game. One player picks a secret location, gives text clues, and everyone else guesses where it is on the world map.",
-    hint: "Think GeoGuessr meets party game — the closer your guess, the more points you get!",
+    hint: "Think GeoGuessr meets party game - the closer your guess, the more points you get!",
   },
   {
     label: "Leader Picks",
     description: "Each round, one player is the Leader. They click anywhere on the world map to secretly place a target pin. Nobody else can see it.",
-    hint: "Pick somewhere fun! Mountains, cities, coastlines — anywhere on Earth works.",
+    hint: "Pick somewhere fun! Mountains, cities, coastlines - anywhere on Earth works.",
   },
   {
     label: "Clues & Guesses",
@@ -95,7 +95,7 @@ const steps: DemoStep[] = [
   },
   {
     label: "Leader's View",
-    description: "As the Leader, you can see your target pin AND all the guesses in real-time. Use this to write a better second clue — if everyone guessed too far north, hint south!",
+    description: "As the Leader, you can see your target pin AND all the guesses in real-time. Use this to write a better second clue - if everyone guessed too far north, hint south!",
     hint: "The leader always sees their own target pin throughout the entire round.",
   },
   {
@@ -106,7 +106,7 @@ const steps: DemoStep[] = [
   {
     label: "Scoring",
     description: "Points are based on distance from the target. Closer = more points! The scoring curve rewards accuracy but still gives partial credit.",
-    hint: "Lowest score wins in golf mode — but the default mode rewards highest score!",
+    hint: "Lowest score wins in golf mode - but the default mode rewards highest score!",
   },
 ];
 
@@ -146,7 +146,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
                   <FiSend size={22} />
                 </div>
                 <h4>Give Clues</h4>
-                <p>Leader writes text clues — guessers place pins based on hints</p>
+                <p>Leader writes text clues - guessers place pins based on hints</p>
               </div>
               <div className="locdemo-overview-card">
                 <div className="locdemo-overview-icon" style={{ background: "rgba(239,71,111,0.15)", color: "#ef476f" }}>
@@ -160,7 +160,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
                   <FiAward size={22} />
                 </div>
                 <h4>Take Turns</h4>
-                <p>Every player gets to be Leader — highest total score wins!</p>
+                <p>Every player gets to be Leader - highest total score wins!</p>
               </div>
             </div>
             <div className="locdemo-map-preview">
@@ -173,7 +173,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 interactive
                 markers={draftMarker ? [{ lat: draftMarker.lat, lng: draftMarker.lng, color: "var(--primary)", label: "Try clicking!", size: 2, ring: true }] : []}
               />
-              <p className="locdemo-map-caption">Try clicking the map — this is what the game looks like!</p>
+              <p className="locdemo-map-caption">Try clicking the map - this is what the game looks like!</p>
             </div>
           </div>
         );
@@ -209,7 +209,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
               </div>
             )}
             <div className="locdemo-callout locdemo-callout--info">
-              <strong>Tip:</strong> Pick somewhere interesting — not too obscure, not too obvious. The fun is in the clues!
+              <strong>Tip:</strong> Pick somewhere interesting - not too obscure, not too obvious. The fun is in the clues!
             </div>
           </div>
         );
@@ -221,7 +221,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
             <div className="locdemo-split">
               {/* Clue 1 block */}
               <div className="locdemo-split-section">
-                <div className="locdemo-phase-label">Round 1 — First Clue</div>
+                <div className="locdemo-phase-label">Round 1 - First Clue</div>
                 <DemoGlow label="Leader types a clue">
                   <div className="locdemo-clue-card">
                     <form className="locsig-clue-form" onSubmit={noop}>
@@ -240,12 +240,12 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 </div>
                 <div className="locdemo-map-preview">
                   <WorldMap height={180} interactive={false} markers={GUESS_ROUND1} defaultCenter={[40, 12]} defaultZoom={3} />
-                  <p className="locdemo-map-caption">Guesses are spread out — clue is vague!</p>
+                  <p className="locdemo-map-caption">Guesses are spread out - clue is vague!</p>
                 </div>
               </div>
               {/* Clue 2 block */}
               <div className="locdemo-split-section">
-                <div className="locdemo-phase-label">Round 2 — Second Clue</div>
+                <div className="locdemo-phase-label">Round 2 - Second Clue</div>
                 <div className="locdemo-clue-reveal">
                   <div className="locsig-clue-display">
                     <span className="locsig-clue-tag">Clue 1</span>
@@ -273,15 +273,15 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
               <span className="locdemo-phase-emoji">👀</span>
               <div>
                 <h4>Leader's perspective</h4>
-                <p>You see your target AND all guesses — use this to write better clues!</p>
+                <p>You see your target AND all guesses - use this to write better clues!</p>
               </div>
             </div>
             <div className="locdemo-map-preview">
               <WorldMap height={280} interactive={false} markers={LEADER_GUESS1} defaultCenter={[40, 12]} defaultZoom={3} />
-              <p className="locdemo-map-caption">Leader sees everything — target (gold) + all player guesses</p>
+              <p className="locdemo-map-caption">Leader sees everything - target (gold) + all player guesses</p>
             </div>
             <div className="locdemo-callout locdemo-callout--leader">
-              <strong>Strategy:</strong> If guessers are all in Greece and your target is Rome, try a clue like <em>"Further west — think pasta!"</em>
+              <strong>Strategy:</strong> If guessers are all in Greece and your target is Rome, try a clue like <em>"Further west - think pasta!"</em>
             </div>
           </div>
         );
@@ -324,7 +324,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
               <FiTarget size={28} style={{ color: "#f59e0b" }} />
               <div>
                 <h4>How scoring works</h4>
-                <p>Points decrease exponentially with distance — being close matters a lot!</p>
+                <p>Points decrease exponentially with distance - being close matters a lot!</p>
               </div>
             </div>
             <div className="locdemo-scoring-table">

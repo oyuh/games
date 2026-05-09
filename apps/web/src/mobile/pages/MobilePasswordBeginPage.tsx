@@ -162,7 +162,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
         {isHost && <MobileHostBadge />}
       </MobileGameHeader>
 
-      {/* Join prompt — not yet in a team */}
+      {/* Join prompt - not yet in a team */}
       {!inGame && (
         <div className="m-card" style={{ textAlign: "center" }}>
           <p style={{ marginBottom: "0.75rem", opacity: 0.7 }}>{isSpectator ? "You're spectating. Join a team to play!" : "Pick a team to join!"}</p>
@@ -201,11 +201,19 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
                             <span>{(n[0] ?? "?").toUpperCase()} {n}{isMe ? " (you)" : ""}</span>
                             {isHost && !isMe && (
                               <div className="m-pw-member-actions">
-                                {game.teams.filter((t) => t.name !== team.name).map((t, ti) => (
+                                {game.teams.reduce<Array<{ team: typeof game.teams[number]; color: string }>>((targets, targetTeam, targetIndex) => {
+                                  if (targetTeam.name !== team.name) {
+                                    targets.push({
+                                      team: targetTeam,
+                                      color: teamColors[targetIndex % teamColors.length]!,
+                                    });
+                                  }
+                                  return targets;
+                                }, []).map(({ team: t, color }) => (
                                   <button
                                     key={t.name}
                                     className="m-pw-move-btn"
-                                    style={{ borderColor: teamColors[game.teams.indexOf(t) % teamColors.length], color: teamColors[game.teams.indexOf(t) % teamColors.length] }}
+                                    style={{ borderColor: color, color }}
                                     onClick={() => void zero.mutate(mutators.password.movePlayer({ gameId, hostId: sessionId, playerId: id, teamName: t.name }))}
                                   >
                                     <FiArrowRight size={10} /> {t.name}

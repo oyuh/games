@@ -2,7 +2,7 @@ import { mutators, queries, chainCategoryLabels } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/chain-reaction.css";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiEye, FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
@@ -187,6 +187,13 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const oppChain: ChainSlot[] = opponentId ? (game.chain[opponentId] ?? []) : [];
   const viewingChain = viewingId === sessionId ? myChain : oppChain;
   const isViewingMine = viewingId === sessionId;
+  const submissionSlots = submissionWords.map((word, index) => ({ id: `submission-slot-${index}`, word, index }));
+  const viewingSlots = viewingChain.map((slot, index) => ({ id: `${viewingId}-chain-slot-${index}`, slot, index }));
+  const submittedChainEntries = (game.submitted_chains[sessionId] ?? []).map((word, index) => ({
+    id: `submitted-chain-word-${index}`,
+    word,
+    index,
+  }));
 
   const myDone = myChain.length > 0 && myChain.every((s) => s.revealed);
   const oppDone = oppChain.length > 0 && oppChain.every((s) => s.revealed);
@@ -228,7 +235,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
         guess: currentGuess
       })).server;
     } catch {
-      // Mutation error — stay out of editing
+      // Mutation error - stay out of editing
     }
   };
 
@@ -320,6 +327,12 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const myTotal = myChain.length > 0 ? myChain.length - 2 : 0;
   const oppProgress = oppChain.length > 0 ? oppChain.filter((s) => s.revealed).length - 2 : 0;
   const oppTotal = oppChain.length > 0 ? oppChain.length - 2 : 0;
+  const activateOnKeyboard = (event: KeyboardEvent<HTMLElement>, action: () => void) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      action();
+    }
+  };
 
   return (
     <div className="game-page" data-game-theme="chain">
@@ -340,6 +353,9 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
           <div
             className={`cr-vs-player cr-vs-player--clickable${isViewingMine && game.phase === "playing" ? " cr-vs-player--active" : ""}${myDone ? " cr-vs-player--done" : ""}${flashSlot?.type === "correct" ? " cr-vs-player--flash-green" : ""}${flashSlot?.type === "wrong" ? " cr-vs-player--flash-red" : ""}`}
             onClick={() => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); }}
+            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); })}
+            role="button"
+            tabIndex={0}
           >
             <div className="cr-vs-avatar">
               <BorringAvatar
@@ -363,6 +379,9 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
           <div
             className={`cr-vs-player cr-vs-player--right cr-vs-player--clickable${!isViewingMine && game.phase === "playing" ? " cr-vs-player--active" : ""}${oppDone ? " cr-vs-player--done" : ""}`}
             onClick={() => { setViewingId(opponentId ?? sessionId); setEditingIndex(null); setGuess(""); }}
+            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingId(opponentId ?? sessionId); setEditingIndex(null); setGuess(""); })}
+            role="button"
+            tabIndex={0}
           >
             <div className="cr-vs-info">
               <span className="cr-vs-name">{oppName}</span>
@@ -398,7 +417,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                   </div>
                   <span className="cr-lobby-name">{name}</span>
                   {isMe && <span className="cr-lobby-you">you</span>}
-                  {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>}
+                  {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.75rem" }}>host</span>}
                   {isHost && !isMe && (
                     <button className="btn-icon btn-icon--danger cr-lobby-kick" data-tooltip="Remove from game" data-tooltip-variant="danger"
                       onClick={() => void zero.mutate(mutators.chainReaction.kick({ gameId, hostId: sessionId, targetId: p.sessionId }))}>
@@ -430,7 +449,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                   </div>
                   <span className="cr-lobby-name">{name}</span>
                   {isMe && <span className="cr-lobby-you">you</span>}
-                  {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>}
+                  {p.sessionId === game.host_id && <span className="badge" style={{ fontSize: "0.75rem" }}>host</span>}
                   {isHost && !isMe && (
                     <button className="btn-icon btn-icon--danger cr-lobby-kick" data-tooltip="Remove from game" data-tooltip-variant="danger"
                       onClick={() => void zero.mutate(mutators.chainReaction.kick({ gameId, hostId: sessionId, targetId: p.sessionId }))}>
@@ -440,8 +459,13 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                 </div>
               );
             })() : !inGame ? (
-              <div className="cr-lobby-slot cr-lobby-slot--join"
-                onClick={handleJoinClick}>
+              <div
+                className="cr-lobby-slot cr-lobby-slot--join"
+                onClick={handleJoinClick}
+                onKeyDown={(event) => activateOnKeyboard(event, handleJoinClick)}
+                role="button"
+                tabIndex={0}
+              >
                 <div className="cr-lobby-avatar cr-lobby-avatar--empty"><FiLogIn size={20} /></div>
                 <span className="cr-lobby-join-text">Join Duel</span>
               </div>
@@ -490,7 +514,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
         <div className="game-section">
           <div className="cr-submit-banner">
             <FiSend size={18} />
-            <span>Write your chain — {game.settings.chainLength} connected words</span>
+            <span>Write your chain - {game.settings.chainLength} connected words</span>
           </div>
           {game.settings.category && (
             <p style={{ textAlign: "center", margin: "0.25rem 0 0.5rem", fontSize: "0.85rem", color: "var(--secondary)" }}>
@@ -500,14 +524,13 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
           <form onSubmit={submitChain}>
             <div className="cr-chain">
-              {submissionWords.map((word, i) => {
+              {submissionSlots.map(({ id, word, index: i }) => {
                 const isEdge = i === 0 || i === submissionWords.length - 1;
                 return (
-                  <div key={i} className="cr-submit-slot">
+                  <div key={id} className="cr-submit-slot">
                     <span className="cr-slot-num">{i + 1}</span>
                     <input
                       className="cr-submit-input"
-                      autoFocus={i === 0}
                       onFocus={(e) => e.currentTarget.select()}
                       value={word}
                       onChange={(e) => {
@@ -542,10 +565,10 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
             <div className="cr-chain-preview">
               <h4 className="cr-preview-label">Your Chain</h4>
               <div className="cr-preview-words">
-                {game.submitted_chains[sessionId].map((word, i, arr) => {
-                  const isEdge = i === 0 || i === arr.length - 1;
+                {submittedChainEntries.map(({ id, word, index: i }) => {
+                  const isEdge = i === 0 || i === submittedChainEntries.length - 1;
                   return (
-                    <div key={i} className={`cr-preview-word${isEdge ? " cr-preview-word--edge" : ""}`}>
+                    <div key={id} className={`cr-preview-word${isEdge ? " cr-preview-word--edge" : ""}`}>
                       <span className="cr-slot-num">{i + 1}</span>
                       <span className="cr-preview-text">{word}</span>
                       {isEdge && <span className="cr-slot-tag">hint</span>}
@@ -557,7 +580,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
           )}
           <div className="cr-opponent-status">
             {game.submitted_chains[opponentId ?? ""] ? (
-              <p className="cr-status-text cr-status-text--done">✅ {oppName} has submitted — starting soon!</p>
+              <p className="cr-status-text cr-status-text--done">✅ {oppName} has submitted - starting soon!</p>
             ) : (
               <div className="cr-status-writing">
                 <div className="game-waiting-pulse" />
@@ -586,7 +609,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
               myDone ? (
                 <span className="cr-view-label cr-view-label--done">✅ You finished! Click {oppName}'s card to spectate</span>
               ) : (
-                <span className="cr-view-label">Solve the chain — tap a word to guess!</span>
+                <span className="cr-view-label">Solve the chain - tap a word to guess!</span>
               )
             ) : (
               <span className="cr-view-label cr-view-label--spectate">
@@ -597,15 +620,15 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
           {/* Chain display */}
           <div className="cr-chain">
-            {viewingChain.map((slot, i) => {
+            {viewingSlots.map(({ id, slot, index: i }) => {
               const isEditing = isViewingMine && editingIndex === i;
               const isEdge = i === 0 || i === viewingChain.length - 1;
               const canClick = isViewingMine && !myDone && !slot.revealed && !isEditing;
 
               return (
-                <div key={i} className="cr-slot-outer">
+                <div key={id} className="cr-slot-outer">
                   <div className="cr-slot-wrapper">
-                    {/* Hint button — left side */}
+                    {/* Hint button - left side */}
                     {isViewingMine && !isEdge && !slot.revealed && !myDone ? (
                       <button
                         className="cr-action-hint"
@@ -632,7 +655,10 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                         flashSlot?.idx === i && flashSlot.type === "correct" ? "cr-word-slot--flash-green" : "",
                         flashSlot?.idx === i && flashSlot.type === "wrong" ? "cr-word-slot--flash-red" : "",
                       ].filter(Boolean).join(" ")}
-                      onClick={() => canClick && handleSlotClick(i)}
+                      onClick={canClick ? () => handleSlotClick(i) : undefined}
+                      onKeyDown={canClick ? (event) => activateOnKeyboard(event, () => handleSlotClick(i)) : undefined}
+                      role={canClick ? "button" : undefined}
+                      tabIndex={canClick ? 0 : undefined}
                     >
                       <span className="cr-slot-idx">{i + 1}</span>
 
@@ -674,7 +700,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                       )}
                     </div>
 
-                    {/* Give-up button — right side */}
+                    {/* Give-up button - right side */}
                     {isViewingMine && !isEdge && !slot.revealed && !myDone ? (
                       <button
                         className={`cr-action-giveup${giveUpConfirm === i ? " cr-action-giveup--confirm" : ""}`}
@@ -717,7 +743,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
         <div className="game-section">
           <div className="game-waiting">
             <div className="game-waiting-pulse" />
-            <p>Duel in progress — watching!</p>
+            <p>Duel in progress - watching!</p>
           </div>
         </div>
       )}
@@ -749,20 +775,22 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                 {game.round_history.map((r) => {
                   const myRoundChain = r.chains[sessionId] ?? [];
                   const oppRoundChain = opponentId ? (r.chains[opponentId] ?? []) : [];
+                  const myRoundWords = myRoundChain.map((word, index) => ({ id: `you-${r.round}-${index}`, word }));
+                  const oppRoundWords = oppRoundChain.map((word, index) => ({ id: `opponent-${r.round}-${index}`, word }));
                   return (
                     <div key={r.round} className="cr-round-row">
                       <span className="cr-round-num">R{r.round}</span>
                       <div className="cr-round-chains">
                         <div className="cr-round-chain">
                           <span className="cr-round-chain-label">You</span>
-                          {myRoundChain.map((w, wi) => (
-                            <span key={wi} className="cr-round-word cr-round-word--me">{w.word}</span>
+                          {myRoundWords.map((entry) => (
+                            <span key={entry.id} className="cr-round-word cr-round-word--me">{entry.word.word}</span>
                           ))}
                         </div>
                         <div className="cr-round-chain">
                           <span className="cr-round-chain-label">{oppName}</span>
-                          {oppRoundChain.map((w, wi) => (
-                            <span key={wi} className="cr-round-word cr-round-word--opp">{w.word}</span>
+                          {oppRoundWords.map((entry) => (
+                            <span key={entry.id} className="cr-round-word cr-round-word--opp">{entry.word.word}</span>
                           ))}
                         </div>
                       </div>
