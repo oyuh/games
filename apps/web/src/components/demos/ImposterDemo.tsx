@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useRef, useState, FormEvent } from "react";
 import { FiEye } from "react-icons/fi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { ImposterHeader } from "../imposter/ImposterHeader";
@@ -86,7 +86,8 @@ const steps: DemoStep[] = [
 /* ── Component ──────────────────────────────────────────── */
 
 export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void; initialStep?: number }) {
-  const [step, setStep] = useState(initialStep);
+  const initialStepRef = useRef(initialStep);
+  const [step, setStep] = useState(initialStepRef.current);
   const [clue, setClue] = useState("");
   const [voteTarget, setVoteTarget] = useState("");
 

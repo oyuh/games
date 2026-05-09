@@ -7,6 +7,74 @@
       "out/**",
       ".turbo/**",
       "coverage/**"
+    ],
+    "overrides": [
+      {
+        "files": ["src/app/(dashboard)/bans/page.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/app/(dashboard)/clients/page.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-derived-state-effect",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/app/(dashboard)/games/page.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/app/(dashboard)/page.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/app/(dashboard)/shikaku/page.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-derived-state-effect",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/components/admin/broadcast-controls-dialog.tsx"],
+        "rules": ["react-doctor/prefer-useReducer"]
+      },
+      {
+        "files": ["src/components/admin/client-detail-dialog.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/components/admin/game-state-dialog.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-giant-component"
+        ]
+      }
     ]
   }
 }

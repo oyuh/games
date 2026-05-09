@@ -943,8 +943,8 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
           <h3 className="shade-finished-title">🏆 Game Over!</h3>
 
           <div className="shade-final-scores">
-            {[...game.players]
-              .sort((a, b) => b.totalScore - a.totalScore)
+            {game.players
+              .toSorted((a, b) => b.totalScore - a.totalScore)
               .map((p, i) => {
                 const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
                 const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";

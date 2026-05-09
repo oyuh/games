@@ -85,6 +85,8 @@ type GamesResponse = {
   totals: Record<string, number>;
 };
 
+const GAME_TYPE_FILTER_OPTIONS = GAME_TYPE_OPTIONS.filter((option) => option.value !== "all");
+
 export default function GamesPage() {
   const { show } = useToast();
   const confirm = useConfirmDialog();
@@ -169,8 +171,11 @@ export default function GamesPage() {
   const visiblePlayers = useMemo(() => filteredGames.reduce((sum, game) => sum + game.playerCount, 0), [filteredGames]);
   const visibleSpectators = useMemo(() => filteredGames.reduce((sum, game) => sum + game.spectatorCount, 0), [filteredGames]);
   const maxTypeTotal = useMemo(() => {
-    const totals = GAME_TYPE_OPTIONS.filter((option) => option.value !== "all").map((option) => response?.totals?.[option.value] ?? 0);
-    return Math.max(1, ...totals);
+    let maxTotal = 1;
+    for (const option of GAME_TYPE_FILTER_OPTIONS) {
+      maxTotal = Math.max(maxTotal, response?.totals?.[option.value] ?? 0);
+    }
+    return maxTotal;
   }, [response]);
 
   const endGame = async (game: GameSummary) => {
@@ -206,19 +211,19 @@ export default function GamesPage() {
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_180px_180px] xl:flex-1">
                 <div className="relative sm:col-span-3 xl:col-span-1">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                  <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
                   <Input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search by code, host, id, type, or phase"
-                    className="border-white/8 bg-[#0d1624] pl-11 text-slate-50"
+                    className="border-white/8 bg-[#0d1624] pl-11 text-zinc-50"
                   />
                 </div>
 
                 <select
                   value={gameType}
                   onChange={(event) => setGameType(event.target.value as any)}
-                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-slate-50 outline-none"
+                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-zinc-50 outline-none"
                 >
                   {GAME_TYPE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -230,7 +235,7 @@ export default function GamesPage() {
                 <select
                   value={phase}
                   onChange={(event) => setPhase(event.target.value)}
-                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-slate-50 outline-none"
+                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-zinc-50 outline-none"
                 >
                   <option value="all">All phases</option>
                   {phaseOptions.map((value) => (
@@ -242,12 +247,12 @@ export default function GamesPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="border-white/8 bg-white/3 text-slate-200">
+                <Badge variant="outline" className="border-white/8 bg-white/3 text-zinc-200">
                   {filteredGames.length} visible
                 </Badge>
                 <Button
                   variant="outline"
-                  className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"
+                  className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
                   onClick={() => setRefreshKey((value) => value + 1)}
                 >
                   <RefreshCcw className="size-4" />
@@ -260,27 +265,27 @@ export default function GamesPage() {
           <Surface className="overflow-hidden">
             <div className="mb-4 flex flex-col gap-3 border-b border-white/8 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Room List</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Room List</div>
                 <div className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">Active game sessions</div>
               </div>
-              <div className="text-sm text-slate-400">Open any room to inspect live state and attached people.</div>
+              <div className="text-sm text-zinc-400">Open any room to inspect live state and attached people.</div>
             </div>
 
             <Table>
               <TableHeader>
                 <TableRow className="border-white/8 hover:bg-transparent">
-                  <TableHead className="text-slate-400">Game</TableHead>
-                  <TableHead className="text-slate-400">Players</TableHead>
-                  <TableHead className="text-slate-400">Spectators</TableHead>
-                  <TableHead className="text-slate-400">Phase</TableHead>
-                  <TableHead className="text-slate-400">Updated</TableHead>
-                  <TableHead className="text-slate-400">Actions</TableHead>
+                  <TableHead className="text-zinc-400">Game</TableHead>
+                  <TableHead className="text-zinc-400">Players</TableHead>
+                  <TableHead className="text-zinc-400">Spectators</TableHead>
+                  <TableHead className="text-zinc-400">Phase</TableHead>
+                  <TableHead className="text-zinc-400">Updated</TableHead>
+                  <TableHead className="text-zinc-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredGames.length === 0 ? (
                   <TableRow className="border-white/8 hover:bg-transparent">
-                    <TableCell colSpan={6} className="px-4 py-16 text-center text-sm text-slate-500">
+                    <TableCell colSpan={6} className="px-4 py-16 text-center text-sm text-zinc-500">
                       No active games match the current search.
                     </TableCell>
                   </TableRow>
@@ -289,22 +294,22 @@ export default function GamesPage() {
                     <TableRow key={game.id} className="border-white/8 hover:bg-[#142033]">
                       <TableCell>
                         <div className="font-medium text-white">{game.code}</div>
-                        <div className="mt-1 text-sm text-slate-400">{formatGameType(game.type)}</div>
+                        <div className="mt-1 text-sm text-zinc-400">{formatGameType(game.type)}</div>
                       </TableCell>
-                      <TableCell className="text-slate-200">{game.playerCount}</TableCell>
-                      <TableCell className="text-slate-200">{game.spectatorCount}</TableCell>
+                      <TableCell className="text-zinc-200">{game.playerCount}</TableCell>
+                      <TableCell className="text-zinc-200">{game.spectatorCount}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="border-white/8 bg-[#0d1624] text-slate-200">
+                        <Badge variant="outline" className="border-white/8 bg-[#0d1624] text-zinc-200">
                           {game.phase}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-400">{formatRelativeTime(game.updatedAt)}</TableCell>
+                      <TableCell className="text-sm text-zinc-400">{formatRelativeTime(game.updatedAt)}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"
+                            className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
                             onClick={() => setSelectedGame({ id: game.id, type: game.type })}
                           >
                             <Activity className="size-4" />
@@ -330,7 +335,7 @@ export default function GamesPage() {
 
         <div className="space-y-4">
           <Surface className="bg-[#111b2a]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Room Snapshot</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Room Snapshot</div>
             <div className="mt-4 space-y-3">
               {[
                 { label: "Visible rooms", value: filteredGames.length.toLocaleString(), icon: Layers3 },
@@ -338,13 +343,13 @@ export default function GamesPage() {
                 { label: "Visible spectators", value: visibleSpectators.toLocaleString(), icon: Activity },
                 { label: "Active phases", value: phaseCounts.length.toLocaleString(), icon: BarChart3 },
               ].map(({ label, value, icon: Icon }) => (
-                <div key={label} className="rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-4">
+                <div key={label} className="rounded-[18px] border border-white/8 bg-[#0d1624] p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-[14px] border border-white/8 bg-[#18253a] text-slate-100">
+                    <div className="flex size-10 items-center justify-center rounded-[14px] border border-white/8 bg-[#18253a] text-zinc-100">
                       <Icon className="size-4" />
                     </div>
                     <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.26em] text-slate-500">{label}</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.26em] text-zinc-500">{label}</div>
                       <div className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white">{value}</div>
                     </div>
                   </div>
@@ -354,16 +359,16 @@ export default function GamesPage() {
           </Surface>
 
           <Surface className="bg-[#111b2a]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Type Distribution</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Type Distribution</div>
             <div className="mt-4 space-y-3">
-              {GAME_TYPE_OPTIONS.filter((option) => option.value !== "all").map((option) => {
+              {GAME_TYPE_FILTER_OPTIONS.map((option) => {
                 const total = response?.totals?.[option.value] ?? 0;
 
                 return (
                   <div key={option.value}>
-                    <div className="mb-1.5 flex items-center justify-between gap-3 text-sm text-slate-300">
+                    <div className="mb-1.5 flex items-center justify-between gap-3 text-sm text-zinc-300">
                       <span>{option.label}</span>
-                      <span className="text-slate-400">{total}</span>
+                      <span className="text-zinc-400">{total}</span>
                     </div>
                     <div className="h-2 rounded-full bg-[#0c1420]">
                       <div className="h-2 rounded-full bg-[#4f7cff]" style={{ width: `${(total / maxTypeTotal) * 100}%` }} />
@@ -375,17 +380,17 @@ export default function GamesPage() {
           </Surface>
 
           <Surface className="bg-[#111b2a]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Phase Mix</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Phase Mix</div>
             <div className="mt-4 space-y-2">
               {phaseCounts.length === 0 ? (
-                <div className="rounded-[18px] border border-dashed border-white/8 px-4 py-5 text-sm text-slate-500">
+                <div className="rounded-[18px] border border-dashed border-white/8 px-4 py-5 text-sm text-zinc-500">
                   Phase distribution appears once live rooms load.
                 </div>
               ) : (
                 phaseCounts.map(([phaseName, total]) => (
                   <div key={phaseName} className="flex items-center justify-between rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-3 text-sm">
-                    <span className="text-slate-200">{phaseName}</span>
-                    <span className="text-slate-400">{total}</span>
+                    <span className="text-zinc-200">{phaseName}</span>
+                    <span className="text-zinc-400">{total}</span>
                   </div>
                 ))
               )}

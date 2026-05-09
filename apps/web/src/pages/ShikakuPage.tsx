@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FiAward, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiClipboard, FiClock, FiCopy, FiCornerUpLeft, FiFlag, FiGrid, FiHash, FiHelpCircle, FiPlay, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
 import { ShikakuLeaderboard, LeaderboardEntry, LeaderboardView, PersonalBest } from "../components/ShikakuLeaderboard";
@@ -2093,9 +2092,7 @@ function ShikakuGrid({
       }
 
       lastTouchCell.current = "";
-      flushSync(() => {
-        onMouseUpRef.current?.();
-      });
+      onMouseUpRef.current?.();
 
       // Force browser repaint - mobile compositors sometimes skip painting
       // updated cells after a touch sequence ends

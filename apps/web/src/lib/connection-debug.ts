@@ -264,7 +264,7 @@ export function setPresenceConnectionState(next: { state: string; reason?: strin
   emit();
 }
 
-export function setBrowserOnlineState(isOnline: boolean) {
+function setBrowserOnlineState(isOnline: boolean) {
   state.isOnline = isOnline;
   addConnectionDebugEvent({
     level: isOnline ? "info" : "warn",

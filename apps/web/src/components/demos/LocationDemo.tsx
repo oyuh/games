@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { FiMapPin, FiSend, FiTarget, FiAward } from "react-icons/fi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { BorringAvatar } from "../shared/BorringAvatar";
@@ -113,7 +113,8 @@ const steps: DemoStep[] = [
 /* ── Component ──────────────────────────────────────────── */
 
 export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void; initialStep?: number }) {
-  const [step, setStep] = useState(initialStep);
+  const initialStepRef = useRef(initialStep);
+  const [step, setStep] = useState(initialStepRef.current);
   const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
   const [clue, setClue] = useState("");
 

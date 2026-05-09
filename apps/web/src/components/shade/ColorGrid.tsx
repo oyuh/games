@@ -144,44 +144,23 @@ export function ColorGrid({
                 cellTooltip = pts > 0 ? `${dist === 0 ? "Exact" : `${dist} away`} - ${pts}pt${pts > 1 ? "s" : ""}` : `${dist} away - 0pts`;
               }
 
-              return (
-                <div
-                  key={`${r}-${c}`}
-                  className={[
-                    "shade-cell",
-                    isSelected && "shade-cell--selected",
-                    isTarget && "shade-cell--target",
-                    isHovered && interactive && "shade-cell--hover",
-                    hasMarkers && "shade-cell--marked",
-                    zoneClass,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  style={{ backgroundColor: color }}
-                  data-tooltip={cellTooltip}
-                  data-tooltip-pos={cellTooltip ? "top" : undefined}
-                  onClick={interactive ? () => handleCellClick(r, c) : undefined}
-                  onMouseEnter={interactive ? () => setHoveredCell({ row: r, col: c }) : undefined}
-                  onMouseLeave={interactive ? () => setHoveredCell(null) : undefined}
-                  role={interactive ? "button" : "presentation"}
-                  tabIndex={interactive ? 0 : undefined}
-                  onKeyDown={
-                    interactive
-                      ? (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            handleCellClick(r, c);
-                          }
-                        }
-                      : undefined
-                  }
-                >
+              const cellKey = `${r}-${c}`;
+              const cellClassName = [
+                "shade-cell",
+                isSelected && "shade-cell--selected",
+                isTarget && "shade-cell--target",
+                isHovered && interactive && "shade-cell--hover",
+                hasMarkers && "shade-cell--marked",
+                zoneClass,
+              ]
+                .filter(Boolean)
+                .join(" ");
+              const cellContent = (
+                <>
                   {isTarget && (
                     <div className="shade-cell-target-ring" data-tooltip="Target Color 🎯" data-tooltip-pos="top" />
                   )}
-                  {isSelected && !isTarget && (
-                    <div className="shade-cell-selection" />
-                  )}
+                  {isSelected && !isTarget && <div className="shade-cell-selection" />}
                   {hasMarkers && (
                     <div className="shade-cell-markers">
                       {cellMarkers.map((m) => (
@@ -191,14 +170,41 @@ export function ColorGrid({
                           data-tooltip={m.tooltip ?? m.name}
                           data-tooltip-pos="top"
                         >
-                          <BorringAvatar
-                            seed={m.sessionId}
-                            playerIndex={playerIndexMap[m.sessionId] ?? 0}
-                          />
+                          <BorringAvatar seed={m.sessionId} playerIndex={playerIndexMap[m.sessionId] ?? 0} />
                         </div>
                       ))}
                     </div>
                   )}
+                </>
+              );
+
+              if (interactive) {
+                return (
+                  <button
+                    key={cellKey}
+                    type="button"
+                    className={cellClassName}
+                    style={{ backgroundColor: color }}
+                    data-tooltip={cellTooltip}
+                    data-tooltip-pos={cellTooltip ? "top" : undefined}
+                    onClick={() => handleCellClick(r, c)}
+                    onMouseEnter={() => setHoveredCell({ row: r, col: c })}
+                    onMouseLeave={() => setHoveredCell(null)}
+                  >
+                    {cellContent}
+                  </button>
+                );
+              }
+
+              return (
+                <div
+                  key={cellKey}
+                  className={cellClassName}
+                  style={{ backgroundColor: color }}
+                  data-tooltip={cellTooltip}
+                  data-tooltip-pos={cellTooltip ? "top" : undefined}
+                >
+                  {cellContent}
                 </div>
               );
             })

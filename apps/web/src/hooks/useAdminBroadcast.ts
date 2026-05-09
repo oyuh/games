@@ -39,11 +39,11 @@ function setStatus(status: CustomStatusPayload) {
   statusListeners.forEach((cb) => cb());
 }
 
-export function getRestrictedPatterns(): string[] {
+function getRestrictedPatterns(): string[] {
   return restrictedPatterns;
 }
 
-export function subscribeRestrictedPatterns(cb: () => void) {
+function subscribeRestrictedPatterns(cb: () => void) {
   restrictedListeners.add(cb);
   return () => { restrictedListeners.delete(cb); };
 }

@@ -20,6 +20,7 @@ import { useGameSounds, playSoundSubmit, playSoundCorrect, playSoundWrong } from
 import { playHint } from "../lib/sounds";
 
 type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
+type ChainViewTarget = "self" | "opponent";
 
 function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
@@ -43,7 +44,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   // Which player's chain we're viewing: our own (solving) or opponent's (spectating their progress)
-  const [viewingId, setViewingId] = useState<string>(sessionId);
+  const [viewingTarget, setViewingTarget] = useState<ChainViewTarget>("self");
   // Give-up confirmation: index of slot awaiting second press
   const [giveUpConfirm, setGiveUpConfirm] = useState<number | null>(null);
   const [flashSlot, setFlashSlot] = useState<{ idx: number; type: "correct" | "wrong" } | null>(null);
@@ -138,7 +139,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     setEditingIndex(null);
     setGuess("");
     setHasSubmitted(false);
-    setViewingId(sessionId);
+    setViewingTarget("self");
     setGiveUpConfirm(null);
   }, [game?.settings.currentRound, sessionId]);
 
@@ -185,8 +186,9 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const myChain: ChainSlot[] = game.chain[sessionId] ?? [];
   const opponentId = opponent?.sessionId;
   const oppChain: ChainSlot[] = opponentId ? (game.chain[opponentId] ?? []) : [];
-  const viewingChain = viewingId === sessionId ? myChain : oppChain;
-  const isViewingMine = viewingId === sessionId;
+  const isViewingMine = viewingTarget === "self" || !opponentId;
+  const viewingId = isViewingMine ? sessionId : (opponentId ?? sessionId);
+  const viewingChain = isViewingMine ? myChain : oppChain;
   const submissionSlots = submissionWords.map((word, index) => ({ id: `submission-slot-${index}`, word, index }));
   const viewingSlots = viewingChain.map((slot, index) => ({ id: `${viewingId}-chain-slot-${index}`, slot, index }));
   const submittedChainEntries = (game.submitted_chains[sessionId] ?? []).map((word, index) => ({
@@ -352,8 +354,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
         <div className="cr-versus">
           <div
             className={`cr-vs-player cr-vs-player--clickable${isViewingMine && game.phase === "playing" ? " cr-vs-player--active" : ""}${myDone ? " cr-vs-player--done" : ""}${flashSlot?.type === "correct" ? " cr-vs-player--flash-green" : ""}${flashSlot?.type === "wrong" ? " cr-vs-player--flash-red" : ""}`}
-            onClick={() => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); }}
-            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); })}
+            onClick={() => { setViewingTarget("self"); setEditingIndex(null); setGuess(""); }}
+            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingTarget("self"); setEditingIndex(null); setGuess(""); })}
             role="button"
             tabIndex={0}
           >
@@ -378,8 +380,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
           <div
             className={`cr-vs-player cr-vs-player--right cr-vs-player--clickable${!isViewingMine && game.phase === "playing" ? " cr-vs-player--active" : ""}${oppDone ? " cr-vs-player--done" : ""}`}
-            onClick={() => { setViewingId(opponentId ?? sessionId); setEditingIndex(null); setGuess(""); }}
-            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingId(opponentId ?? sessionId); setEditingIndex(null); setGuess(""); })}
+            onClick={() => { setViewingTarget("opponent"); setEditingIndex(null); setGuess(""); }}
+            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingTarget("opponent"); setEditingIndex(null); setGuess(""); })}
             role="button"
             tabIndex={0}
           >
@@ -624,6 +626,59 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
               const isEditing = isViewingMine && editingIndex === i;
               const isEdge = i === 0 || i === viewingChain.length - 1;
               const canClick = isViewingMine && !myDone && !slot.revealed && !isEditing;
+              const slotClassName = [
+                "cr-word-slot",
+                slot.revealed ? "cr-word-slot--revealed" : "cr-word-slot--hidden",
+                isEditing ? "cr-word-slot--editing" : "",
+                canClick ? "cr-word-slot--clickable" : "",
+                slot.solvedBy === sessionId ? "cr-word-slot--mine" : "",
+                slot.solvedBy && slot.solvedBy !== sessionId ? "cr-word-slot--theirs" : "",
+                slot.revealed && !slot.solvedBy && !isEdge ? "cr-word-slot--givenup" : "",
+                flashSlot?.idx === i && flashSlot.type === "correct" ? "cr-word-slot--flash-green" : "",
+                flashSlot?.idx === i && flashSlot.type === "wrong" ? "cr-word-slot--flash-red" : "",
+              ].filter(Boolean).join(" ");
+              const slotContent = (
+                <>
+                  <span className="cr-slot-idx">{i + 1}</span>
+
+                  <div className="cr-slot-body">
+                    {isEditing ? (
+                      <form onSubmit={handleInlineGuess} className="cr-inline-form">
+                        <input
+                          ref={inlineInputRef}
+                          className="cr-inline-input"
+                          value={guess}
+                          onChange={(e) => setGuess(e.target.value)}
+                          placeholder="type your guess…"
+                          maxLength={slot.word.length}
+                          onBlur={() => { if (!guess.trim()) { setEditingIndex(null); } }}
+                          onKeyDown={(e) => { if (e.key === "Escape") { setEditingIndex(null); setGuess(""); } }}
+                        />
+                        <button type="submit" className="cr-inline-go" disabled={!guess.trim()}>↵</button>
+                      </form>
+                    ) : slot.revealed ? (
+                      <span className="cr-word-text">{slot.word}</span>
+                    ) : (
+                      <span className="cr-word-text cr-word-text--partial">
+                        {renderPartialWord(slot.word, slot.lettersShown)}
+                      </span>
+                    )}
+                  </div>
+
+                  {!slot.revealed && !isEditing && slot.lettersShown > 0 && (
+                    <span className="cr-letters-count">{slot.lettersShown}/{slot.word.length}</span>
+                  )}
+                  {isEdge && slot.revealed && <span className="cr-slot-tag">hint</span>}
+                  {slot.revealed && !slot.solvedBy && !isEdge && (
+                    <span className="cr-solver-tag cr-solver-tag--skip">skipped</span>
+                  )}
+                  {slot.solvedBy && !isEdge && (
+                    <span className={`cr-solver-tag${slot.solvedBy === sessionId ? " cr-solver-tag--me" : ""}`}>
+                      {slot.solvedBy === sessionId ? "you" : isViewingMine ? "you" : oppName}
+                    </span>
+                  )}
+                </>
+              );
 
               return (
                 <div key={id} className="cr-slot-outer">
@@ -643,62 +698,13 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                       <div className="cr-action-spacer" />
                     )}
 
-                    <div
-                      className={[
-                        "cr-word-slot",
-                        slot.revealed ? "cr-word-slot--revealed" : "cr-word-slot--hidden",
-                        isEditing ? "cr-word-slot--editing" : "",
-                        canClick ? "cr-word-slot--clickable" : "",
-                        slot.solvedBy === sessionId ? "cr-word-slot--mine" : "",
-                        slot.solvedBy && slot.solvedBy !== sessionId ? "cr-word-slot--theirs" : "",
-                        slot.revealed && !slot.solvedBy && !isEdge ? "cr-word-slot--givenup" : "",
-                        flashSlot?.idx === i && flashSlot.type === "correct" ? "cr-word-slot--flash-green" : "",
-                        flashSlot?.idx === i && flashSlot.type === "wrong" ? "cr-word-slot--flash-red" : "",
-                      ].filter(Boolean).join(" ")}
-                      onClick={canClick ? () => handleSlotClick(i) : undefined}
-                      onKeyDown={canClick ? (event) => activateOnKeyboard(event, () => handleSlotClick(i)) : undefined}
-                      role={canClick ? "button" : undefined}
-                      tabIndex={canClick ? 0 : undefined}
-                    >
-                      <span className="cr-slot-idx">{i + 1}</span>
-
-                      <div className="cr-slot-body">
-                        {isEditing ? (
-                          <form onSubmit={handleInlineGuess} className="cr-inline-form">
-                            <input
-                              ref={inlineInputRef}
-                              className="cr-inline-input"
-                              value={guess}
-                              onChange={(e) => setGuess(e.target.value)}
-                              placeholder="type your guess…"
-                              maxLength={slot.word.length}
-                              onBlur={() => { if (!guess.trim()) { setEditingIndex(null); } }}
-                              onKeyDown={(e) => { if (e.key === "Escape") { setEditingIndex(null); setGuess(""); } }}
-                            />
-                            <button type="submit" className="cr-inline-go" disabled={!guess.trim()}>↵</button>
-                          </form>
-                        ) : slot.revealed ? (
-                          <span className="cr-word-text">{slot.word}</span>
-                        ) : (
-                          <span className="cr-word-text cr-word-text--partial">
-                            {renderPartialWord(slot.word, slot.lettersShown)}
-                          </span>
-                        )}
-                      </div>
-
-                      {!slot.revealed && !isEditing && slot.lettersShown > 0 && (
-                        <span className="cr-letters-count">{slot.lettersShown}/{slot.word.length}</span>
-                      )}
-                      {isEdge && slot.revealed && <span className="cr-slot-tag">hint</span>}
-                      {slot.revealed && !slot.solvedBy && !isEdge && (
-                        <span className="cr-solver-tag cr-solver-tag--skip">skipped</span>
-                      )}
-                      {slot.solvedBy && !isEdge && (
-                        <span className={`cr-solver-tag${slot.solvedBy === sessionId ? " cr-solver-tag--me" : ""}`}>
-                          {slot.solvedBy === sessionId ? "you" : isViewingMine ? "you" : oppName}
-                        </span>
-                      )}
-                    </div>
+                    {canClick ? (
+                      <button type="button" className={slotClassName} onClick={() => handleSlotClick(i)}>
+                        {slotContent}
+                      </button>
+                    ) : (
+                      <div className={slotClassName}>{slotContent}</div>
+                    )}
 
                     {/* Give-up button - right side */}
                     {isViewingMine && !isEdge && !slot.revealed && !myDone ? (

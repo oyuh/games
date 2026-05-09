@@ -49,7 +49,7 @@ function getToneStyles(tone: ConfirmationTone) {
 
   return {
     icon: AlertTriangle,
-    iconClassName: "border-[#38589a] bg-[#15274a] text-slate-50",
+    iconClassName: "border-[#38589a] bg-[#15274a] text-zinc-50",
     buttonVariant: "default" as const,
     buttonClassName: "bg-primary text-primary-foreground hover:bg-primary/90",
   };
@@ -109,7 +109,7 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
               <div className="min-w-0">
                 <DialogTitle className="text-lg text-white">{options?.title}</DialogTitle>
                 {options?.description ? (
-                  <DialogDescription className="mt-2 text-sm leading-6 text-slate-300/74">
+                  <DialogDescription className="mt-2 text-sm leading-6 text-zinc-300/74">
                     {options.description}
                   </DialogDescription>
                 ) : null}
@@ -118,7 +118,7 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
           </DialogHeader>
 
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button variant="outline" className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6" onClick={() => close(false)}>
+            <Button variant="outline" className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6" onClick={() => close(false)}>
               {options?.cancelLabel}
             </Button>
             <Button
@@ -136,7 +136,7 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
 }
 
 export function useConfirmDialog() {
-  const context = React.useContext(ConfirmDialogContext);
+  const context = React.use(ConfirmDialogContext);
 
   if (!context) {
     throw new Error("useConfirmDialog must be used within ConfirmDialogProvider.");

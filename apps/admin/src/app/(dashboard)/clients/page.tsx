@@ -169,19 +169,19 @@ export default function ClientsPage() {
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_180px_180px_180px] xl:flex-1">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                  <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
                   <Input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search by session, name, region, IP, or game"
-                    className="border-white/8 bg-[#0d1624] pl-11 text-slate-50"
+                    className="border-white/8 bg-[#0d1624] pl-11 text-zinc-50"
                   />
                 </div>
 
                 <select
                   value={gameType}
                   onChange={(event) => setGameType(event.target.value as any)}
-                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-slate-50 outline-none"
+                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-zinc-50 outline-none"
                 >
                   {GAME_TYPE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -193,7 +193,7 @@ export default function ClientsPage() {
                 <select
                   value={activity}
                   onChange={(event) => setActivity(event.target.value as any)}
-                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-slate-50 outline-none"
+                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-zinc-50 outline-none"
                 >
                   <option value="all">All states</option>
                   <option value="in-game">In game</option>
@@ -205,7 +205,7 @@ export default function ClientsPage() {
                 <select
                   value={region}
                   onChange={(event) => setRegion(event.target.value)}
-                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-slate-50 outline-none"
+                  className="h-10 rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-zinc-50 outline-none"
                 >
                   <option value="all">All regions</option>
                   {visibleRegions.map((value) => (
@@ -217,12 +217,12 @@ export default function ClientsPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="border-white/8 bg-white/3 text-slate-200">
+                <Badge variant="outline" className="border-white/8 bg-white/3 text-zinc-200">
                   {data?.total ?? 0} results
                 </Badge>
                 <Button
                   variant="outline"
-                  className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"
+                  className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
                   onClick={() => setRefreshKey((value) => value + 1)}
                 >
                   <RefreshCcw className="size-4" />
@@ -235,26 +235,26 @@ export default function ClientsPage() {
           <Surface className="overflow-hidden">
             <div className="mb-4 flex flex-col gap-3 border-b border-white/8 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Live Roster</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Live Roster</div>
                 <div className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">Session list</div>
               </div>
-              <div className="text-sm text-slate-400">Click any session row to open its control panel.</div>
+              <div className="text-sm text-zinc-400">Click any session row to open its control panel.</div>
             </div>
 
             <Table>
               <TableHeader>
                 <TableRow className="border-white/8 hover:bg-transparent">
-                  <TableHead className="text-slate-400">Identity</TableHead>
-                  <TableHead className="text-slate-400">Location</TableHead>
-                  <TableHead className="text-slate-400">Game</TableHead>
-                  <TableHead className="hidden text-slate-400 xl:table-cell">Fingerprint / UA</TableHead>
-                  <TableHead className="text-slate-400">Seen</TableHead>
+                  <TableHead className="text-zinc-400">Identity</TableHead>
+                  <TableHead className="text-zinc-400">Location</TableHead>
+                  <TableHead className="text-zinc-400">Game</TableHead>
+                  <TableHead className="hidden text-zinc-400 xl:table-cell">Fingerprint / UA</TableHead>
+                  <TableHead className="text-zinc-400">Seen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {clients.length === 0 ? (
                   <TableRow className="border-white/8 hover:bg-transparent">
-                    <TableCell colSpan={5} className="px-4 py-16 text-center text-sm text-slate-500">
+                    <TableCell colSpan={5} className="px-4 py-16 text-center text-sm text-zinc-500">
                       No active clients match the current filters.
                     </TableCell>
                   </TableRow>
@@ -267,18 +267,18 @@ export default function ClientsPage() {
                     >
                       <TableCell className="align-top">
                         <div className="font-medium text-white">{client.name || "Anonymous"}</div>
-                        <div className="mt-1 text-sm text-slate-400">{shortId(client.sessionId, 16)}</div>
+                        <div className="mt-1 text-sm text-zinc-400">{shortId(client.sessionId, 16)}</div>
                       </TableCell>
-                      <TableCell className="align-top text-sm text-slate-300/78">
+                      <TableCell className="align-top text-sm text-zinc-300/78">
                         <div>{client.region || "Unknown region"}</div>
-                        <div className="mt-1 text-slate-500">{client.ip || "Unknown IP"}</div>
+                        <div className="mt-1 text-zinc-500">{client.ip || "Unknown IP"}</div>
                       </TableCell>
                       <TableCell className="align-top">
                         {client.gameId && client.gameType ? (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"
+                            className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
                             onClick={(event) => {
                               event.stopPropagation();
                               setSelectedGame({ id: client.gameId!, type: client.gameType! });
@@ -288,16 +288,16 @@ export default function ClientsPage() {
                             {formatGameType(client.gameType)}
                           </Button>
                         ) : (
-                          <span className="text-sm text-slate-500">Not attached</span>
+                          <span className="text-sm text-zinc-500">Not attached</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden max-w-sm align-top text-sm text-slate-400 xl:table-cell">
+                      <TableCell className="hidden max-w-sm align-top text-sm text-zinc-400 xl:table-cell">
                         <div>{shortId(client.fingerprint, 18)}</div>
                         <div className="mt-1 truncate">{client.userAgent || "Unknown device"}</div>
                       </TableCell>
-                      <TableCell className="align-top text-sm text-slate-300/78">
+                      <TableCell className="align-top text-sm text-zinc-300/78">
                         <div>{formatRelativeTime(client.lastSeen)}</div>
-                        <div className="mt-1 text-slate-500">Connected {formatRelativeTime(client.connectedAt ?? null)}</div>
+                        <div className="mt-1 text-zinc-500">Connected {formatRelativeTime(client.connectedAt ?? null)}</div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -321,20 +321,20 @@ export default function ClientsPage() {
 
         <div className="space-y-4">
           <Surface className="bg-[#111b2a]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Roster Snapshot</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Roster Snapshot</div>
             <div className="mt-4 space-y-3">
               {[
                 { label: "Visible sessions", value: (data?.total ?? 0).toLocaleString(), icon: Users },
                 { label: "Loaded this page", value: clients.length.toLocaleString(), icon: Activity },
                 { label: "Search mode", value: activity.replace("-", " "), icon: Shield },
               ].map(({ label, value, icon: Icon }) => (
-                <div key={label} className="rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-4">
+                <div key={label} className="rounded-[18px] border border-white/8 bg-[#0d1624] p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-[14px] border border-white/8 bg-[#18253a] text-slate-100">
+                    <div className="flex size-10 items-center justify-center rounded-[14px] border border-white/8 bg-[#18253a] text-zinc-100">
                       <Icon className="size-4" />
                     </div>
                     <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.26em] text-slate-500">{label}</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.26em] text-zinc-500">{label}</div>
                       <div className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white">{value}</div>
                     </div>
                   </div>
@@ -344,13 +344,13 @@ export default function ClientsPage() {
           </Surface>
 
           <Surface className="bg-[#111b2a]">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
               <SlidersHorizontal className="size-4" />
               Filter Context
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {filterTags.map((tag) => (
-                <Badge key={tag} variant="outline" className="border-white/8 bg-[#0d1624] text-slate-200">
+                <Badge key={tag} variant="outline" className="border-white/8 bg-[#0d1624] text-zinc-200">
                   {tag}
                 </Badge>
               ))}
@@ -358,21 +358,21 @@ export default function ClientsPage() {
           </Surface>
 
           <Surface className="bg-[#111b2a]">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
               <Globe2 className="size-4" />
               Available Regions
             </div>
             <div className="mt-4 space-y-2">
               {visibleRegions.length === 0 ? (
-                <div className="rounded-[18px] border border-dashed border-white/8 px-4 py-5 text-sm text-slate-500">
+                <div className="rounded-[18px] border border-dashed border-white/8 px-4 py-5 text-sm text-zinc-500">
                   Region filters will appear as live traffic comes in.
                 </div>
               ) : (
                 visibleRegions.slice(0, 10).map((value) => (
                   <div key={value} className="flex items-center justify-between rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-3 text-sm">
-                    <span className="text-slate-200">{value}</span>
+                    <span className="text-zinc-200">{value}</span>
                     {region === value ? (
-                      <Badge variant="outline" className="border-[#38589a] bg-[#15274a] text-slate-100">
+                      <Badge variant="outline" className="border-[#38589a] bg-[#15274a] text-zinc-100">
                         Active
                       </Badge>
                     ) : null}

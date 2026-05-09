@@ -24,7 +24,7 @@ const STORAGE_KEY = "games-settings";
 export const CURSOR_SCALE_MIN = 0.7;
 export const CURSOR_SCALE_MAX = 1.8;
 export const CURSOR_SCALE_STEP = 0.05;
-export const CURSOR_SCALE_DEFAULT = 1;
+const CURSOR_SCALE_DEFAULT = 1;
 
 const defaultSoundPreferences: SoundPreferences = {
   hoverSounds: true,

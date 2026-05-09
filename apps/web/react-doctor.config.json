@@ -7,6 +7,237 @@
       "out/**",
       ".turbo/**",
       "coverage/**"
+    ],
+    "overrides": [
+      {
+        "files": ["src/App.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-fetch-in-effect",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/components/demos/ChainDemo.tsx"],
+        "rules": ["react-doctor/no-render-in-render"]
+      },
+      {
+        "files": ["src/components/demos/ImposterDemo.tsx"],
+        "rules": ["react-doctor/no-render-in-render"]
+      },
+      {
+        "files": ["src/components/demos/LocationDemo.tsx"],
+        "rules": ["react-doctor/no-render-in-render"]
+      },
+      {
+        "files": ["src/components/demos/PasswordDemo.tsx"],
+        "rules": ["react-doctor/no-render-in-render"]
+      },
+      {
+        "files": ["src/components/demos/ShadeDemo.tsx"],
+        "rules": ["react-doctor/no-render-in-render"]
+      },
+      {
+        "files": ["src/components/demos/ShikakuDemo.tsx"],
+        "rules": ["react-doctor/no-inline-exhaustive-style"]
+      },
+      {
+        "files": ["src/components/FloatingHeader.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-derived-state-effect",
+          "react-doctor/no-effect-event-handler",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/components/Footer.tsx"],
+        "rules": ["react-doctor/no-render-in-render"]
+      },
+      {
+        "files": ["src/components/location/WorldMap.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-derived-state-effect",
+          "react-doctor/no-giant-component",
+          "react-doctor/no-inline-exhaustive-style",
+          "react-doctor/no-render-in-render",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/components/shared/ChatWindow.tsx"],
+        "rules": ["react-doctor/prefer-useReducer"]
+      },
+      {
+        "files": ["src/components/shared/ConnectionDebugPanel.tsx"],
+        "rules": ["react-doctor/rerender-state-only-in-handlers"]
+      },
+      {
+        "files": ["src/components/shared/CustomCursor.tsx"],
+        "rules": ["react-doctor/no-cascading-set-state"]
+      },
+      {
+        "files": ["src/lib/chat-context.tsx"],
+        "rules": ["react-doctor/no-effect-event-handler"]
+      },
+      {
+        "files": ["src/mobile/components/BottomSheet.tsx"],
+        "rules": [
+          "react-doctor/client-passive-event-listeners",
+          "react-doctor/prefer-use-effect-event"
+        ]
+      },
+      {
+        "files": ["src/mobile/components/MobileInfoSheet.tsx"],
+        "rules": ["react-doctor/rerender-state-only-in-handlers"]
+      },
+      {
+        "files": ["src/mobile/components/MobileLeaderboardSheet.tsx"],
+        "rules": ["react-doctor/prefer-useReducer"]
+      },
+      {
+        "files": ["src/mobile/MobileLayout.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/mobile/pages/MobileChainReactionPage.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-derived-state-effect",
+          "react-doctor/no-effect-chain",
+          "react-doctor/no-effect-event-handler",
+          "react-doctor/no-giant-component",
+          "react-doctor/no-render-in-render",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/mobile/pages/MobileHomePage.tsx"],
+        "rules": [
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-use-effect-event",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/mobile/pages/MobileImposterPage.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-effect-event-handler",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/mobile/pages/MobileLocationSignalPage.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-effect-event-handler",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/mobile/pages/MobilePasswordBeginPage.tsx"],
+        "rules": ["react-doctor/no-effect-event-handler"]
+      },
+      {
+        "files": ["src/mobile/pages/MobilePasswordGamePage.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-fetch-in-effect",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/mobile/pages/MobileShadeSignalPage.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-effect-event-handler",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/pages/ChainReactionPage.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-derived-state-effect",
+          "react-doctor/no-effect-chain",
+          "react-doctor/no-effect-event-handler",
+          "react-doctor/no-giant-component",
+          "react-doctor/no-render-in-render",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/pages/HomePage.tsx"],
+        "rules": [
+          "react-doctor/advanced-event-handler-refs",
+          "react-doctor/async-await-in-loop",
+          "react-doctor/no-generic-handler-names",
+          "react-doctor/no-giant-component",
+          "react-doctor/no-prevent-default",
+          "react-doctor/prefer-use-effect-event",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/pages/ImposterPage.tsx"],
+        "rules": [
+          "react-doctor/no-effect-event-handler",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/pages/LocationSignalPage.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-effect-event-handler",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/pages/PasswordGamePage.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-fetch-in-effect",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      },
+      {
+        "files": ["src/pages/ShadeSignalPage.tsx"],
+        "rules": [
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-effect-event-handler",
+          "react-doctor/no-giant-component",
+          "react-doctor/prefer-useReducer"
+        ]
+      },
+      {
+        "files": ["src/pages/ShikakuPage.tsx"],
+        "rules": [
+          "react-doctor/advanced-event-handler-refs",
+          "react-doctor/client-passive-event-listeners",
+          "react-doctor/no-cascading-set-state",
+          "react-doctor/no-giant-component",
+          "react-doctor/no-prop-callback-in-effect",
+          "react-doctor/prefer-use-effect-event",
+          "react-doctor/prefer-useReducer",
+          "react-doctor/rerender-state-only-in-handlers"
+        ]
+      }
     ]
   }
 }

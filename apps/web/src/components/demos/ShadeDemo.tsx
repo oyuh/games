@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useRef, useState, FormEvent } from "react";
 import { FiSend } from "react-icons/fi";
 import { PiPaintBrushBold } from "react-icons/pi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
@@ -76,7 +76,8 @@ const steps: DemoStep[] = [
 /* ── Component ──────────────────────────────────────────── */
 
 export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; initialStep?: number }) {
-  const [step, setStep] = useState(initialStep);
+  const initialStepRef = useRef(initialStep);
+  const [step, setStep] = useState(initialStepRef.current);
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [lobbyPreview, setLobbyPreview] = useState<{ row: number; col: number } | null>(null);
