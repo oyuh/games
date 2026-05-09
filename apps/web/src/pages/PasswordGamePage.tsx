@@ -14,7 +14,7 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordGamePage } from "../mobile/pages/MobilePasswordGamePage";
 import { useGameSecret } from "../lib/game-secrets";
-import { getSessionRequestHeaders } from "../lib/session";
+import { getDisplayName, getSessionRequestHeaders } from "../lib/session";
 import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
 
 function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
@@ -45,7 +45,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = s.name ?? s.id.slice(0, 6);
+      acc[s.id] = getDisplayName(s.name, s.id);
       return acc;
     }, {});
   }, [sessions]);

@@ -1,4 +1,5 @@
 import { BorringAvatar } from "../shared/BorringAvatar";
+import { getDisplayName } from "../../lib/session";
 
 type Player = { sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player"; eliminated?: boolean };
 
@@ -24,7 +25,7 @@ export function ImposterPlayersCard({
       <div className="game-players-grid">
         {players.map((player, playerIndex) => {
           const isMe = player.sessionId === sessionId;
-          const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
+          const name = sessionById[player.sessionId] ?? getDisplayName(player.name, player.sessionId);
           const showRole = revealRoles || player.sessionId === votedOutId;
           const isImposter = showRole && player.role === "imposter";
           const isEliminated = Boolean(player.eliminated);

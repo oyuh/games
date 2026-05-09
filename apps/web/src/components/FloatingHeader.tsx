@@ -14,7 +14,7 @@ import { ShadeDemo } from "./demos/ShadeDemo";
 import { LocationDemo } from "./demos/LocationDemo";
 import { ShikakuDemo } from "./demos/ShikakuDemo";
 import { useSettings } from "../lib/settings";
-import { getOrCreateSessionId } from "../lib/session";
+import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
 import { showToast } from "../lib/toast";
 
@@ -82,11 +82,11 @@ function useGameContext(): GameContext | null {
       const game = passwordGames[0];
       if (!game || game.host_id !== sessionId) return null;
       const sessionNames = sessions.reduce<Record<string, string>>((acc, s) => {
-        acc[s.id] = s.name ?? s.id.slice(0, 6);
+        acc[s.id] = getDisplayName(s.name, s.id);
         return acc;
       }, {});
       const allPlayers = game.teams.flatMap((t) =>
-        t.members.map((id) => ({ id, name: sessionNames[id] ?? id.slice(0, 6) }))
+        t.members.map((id) => ({ id, name: sessionNames[id] ?? getDisplayName(null, id) }))
       );
       return {
         type: "password",

@@ -13,7 +13,7 @@ import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
+import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
 
@@ -131,7 +131,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
 
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = s.name ?? s.id.slice(0, 6);
+      acc[s.id] = getDisplayName(s.name, s.id);
       return acc;
     }, {});
   }, [sessions]);
@@ -243,7 +243,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
     if (!game || (phase !== "reveal" && phase !== "finished")) return [];
     const latest = game.round_history[game.round_history.length - 1];
     return game.guesses.map((g) => {
-      const name = sessionById[g.sessionId] ?? g.sessionId.slice(0, 6);
+      const name = sessionById[g.sessionId] ?? getDisplayName(null, g.sessionId);
       const dist = target ? chebyshevDist({ row: g.row, col: g.col }, target) : null;
       const pts = latest?.scores[g.sessionId] ?? null;
       const roundLabel = g.round === 1 ? "Clue 1" : "Clue 2";
@@ -308,8 +308,8 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
     }
   };
 
-  const joinGame = () => {
-    ensureName(zero, sessionId);
+  const joinGame = async () => {
+    await ensureName(zero, sessionId);
     if (isSpectator) {
       void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId }))
         .client.then(() => zero.mutate(mutators.shadeSignal.join({ gameId, sessionId })))
@@ -327,24 +327,24 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
         .catch(() => showToast("Couldn't leave current game", "error"))
         .finally(() => {
           setJoiningFromOtherGame(false);
-          joinGame();
+          void joinGame();
         });
       return;
     }
-    joinGame();
+    void joinGame();
   };
 
   const confirmLeaveAndJoin = () => {
     if (!activeGameType || !activeGameId) {
       setShowInSessionModal(false);
-      joinGame();
+      void joinGame();
       return;
     }
     setJoiningFromOtherGame(true);
     void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
       .then(() => {
         setShowInSessionModal(false);
-        joinGame();
+        void joinGame();
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => setJoiningFromOtherGame(false));
@@ -381,7 +381,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
         <h3 className="m-label">Players <span className="m-badge-small">{game.players.length}</span></h3>
         <div className="m-players-row">
           {game.players.map((player, playerIndex) => {
-            const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
+            const name = sessionById[player.sessionId] ?? getDisplayName(player.name, player.sessionId);
             const isMe = player.sessionId === sessionId;
             const isCurrentLeader = player.sessionId === game.leader_id;
             const isGuessPhase = phase === "guess1" || phase === "guess2";
@@ -677,7 +677,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
                   return (
                     <div key={p.sessionId} className="m-shade-score-row">
                       <span className="m-shade-score-name">
-                        {sessionById[p.sessionId] ?? p.sessionId.slice(0, 6)}
+                        {sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId)}
                         {p.sessionId === sessionId && <span className="m-badge-small m-badge-small--you">you</span>}
                       </span>
                       {dist != null && <span className="m-shade-score-dist">{distLabel(dist)}</span>}
@@ -720,7 +720,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
             {[...game.players]
               .sort((a, b) => b.totalScore - a.totalScore)
               .map((p, i) => {
-                const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
+                const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
                 const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
                 return (
                   <div key={p.sessionId} className={`m-shade-final-row${i === 0 ? " m-shade-final-row--winner" : ""}`}>

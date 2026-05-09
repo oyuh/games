@@ -14,63 +14,6 @@ const siteInfo = {
   author: "Lawson",
 };
 
-const GAME_CATALOG = [
-  {
-    key: "imposter",
-    name: "Imposter",
-    icon: <FiEye size={16} />,
-    color: "#7eb8ff",
-    players: "3–12",
-    tagline: "Social deduction — find the fake",
-    description: "Everyone sees a secret word except the imposter. Give one-word clues, then vote.",
-  },
-  {
-    key: "password",
-    name: "Password",
-    icon: <FiShield size={16} />,
-    color: "#a78bfa",
-    players: "4+",
-    tagline: "Team word-guessing",
-    description: "Teams take turns giving one-word clues. Guess the secret word before the other team!",
-  },
-  {
-    key: "chain",
-    name: "Chain Reaction",
-    icon: <FiLink size={16} />,
-    color: "#34d399",
-    players: "2",
-    tagline: "1v1 word chain duel",
-    description: "Race to guess hidden words in a chain. Fewer hints = more points.",
-  },
-  {
-    key: "shade",
-    name: "Shade Signal",
-    icon: <FiDroplet size={16} />,
-    color: "#f472b6",
-    players: "3–8",
-    tagline: "Color-clue guessing",
-    description: "The leader hints at a secret color on the grid. Guess the right cell!",
-  },
-  {
-    key: "location",
-    name: "Location Signal",
-    icon: <FiMapPin size={16} />,
-    color: "#f59e0b",
-    players: "3–8",
-    tagline: "Map-based guessing",
-    description: "The leader picks a spot on the world map and gives text clues. Get as close as you can!",
-  },
-  {
-    key: "shikaku",
-    name: "Shikaku",
-    icon: <FiGrid size={16} />,
-    color: "#06b6d4",
-    players: "Solo",
-    tagline: "Logic puzzle",
-    description: "Divide the grid into rectangles — each containing exactly one number equal to its area.",
-  },
-];
-
 interface PageInfo {
   title: string;
   description: string;
@@ -284,29 +227,6 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
                 ))}
               </ul>
             )}
-          </div>
-
-          <hr className="info-divider" />
-
-          {/* Game catalog */}
-          <div className="info-block">
-            <h3 className="info-section-title">Games</h3>
-            <div className="info-game-grid">
-              {GAME_CATALOG.map((g) => (
-                <div key={g.key} className="info-game-card">
-                  <div className="info-game-card-icon" style={{ background: `color-mix(in srgb, ${g.color} 15%, transparent)`, color: g.color }}>
-                    {g.icon}
-                  </div>
-                  <div className="info-game-card-body">
-                    <div className="info-game-card-row">
-                      <span className="info-game-card-name">{g.name}</span>
-                      <span className="info-game-card-players">{g.players}</span>
-                    </div>
-                    <span className="info-game-card-desc">{g.description}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
           <hr className="info-divider" />

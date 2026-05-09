@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { assertCaller, now, sanitizeText } from "./helpers";
+import { assertCaller, now, sanitizeText, resolvePlayerName } from "./helpers";
 
 export const chatMutators = {
   send: defineMutator(
@@ -19,13 +19,13 @@ export const chatMutators = {
       assertCaller(tx, ctx, args.senderId);
       const cleanText = sanitizeText(args.text);
       if (!cleanText) throw new Error("Message cannot be empty");
-      const cleanName = sanitizeText(args.senderName);
+      const cleanName = resolvePlayerName(sanitizeText(args.senderName), args.senderId);
       await tx.mutate.chat_messages.insert({
         id: args.id,
         game_type: args.gameType,
         game_id: args.gameId,
         sender_id: args.senderId,
-        sender_name: cleanName || "Anonymous",
+        sender_name: cleanName,
         badge: args.badge,
         channel: args.channel ?? "all",
         text: cleanText,

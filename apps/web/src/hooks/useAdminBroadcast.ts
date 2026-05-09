@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import Pusher from "pusher-js";
 import { showToast } from "../lib/toast";
-import { getOrCreateSessionId, getStoredName, setStoredName } from "../lib/session";
+import { getDisplayName, getOrCreateSessionId, getStoredName, setStoredName } from "../lib/session";
 
 type CustomStatusPayload = {
   text: string;
@@ -108,11 +108,12 @@ function handleMessage(msg: AdminBroadcastMessage) {
 
     case "admin:name-changed":
       if (msg.sessionId === sessionId) {
-        setStoredName(msg.name ?? "");
+        const nextName = getDisplayName(msg.name, sessionId);
+        setStoredName(nextName);
         if (msg.name) {
-          showToast(`Your name has been changed to "${msg.name}" by an admin.`, "info");
+          showToast(`Your name has been changed to "${nextName}" by an admin.`, "info");
         } else {
-          showToast("Your name was cleared by an admin. Choose a new one to keep playing.", "info");
+          showToast(`Your display name is now ${nextName}.`, "info");
         }
       }
       break;

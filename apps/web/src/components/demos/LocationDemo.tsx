@@ -117,7 +117,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
   const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
   const [clue, setClue] = useState("");
 
-  // Force WorldMap remount after modal animation settles so pigeon-maps
+  // Force WorldMap remount after modal animation settles so the map
   // measures the container at its final size
   const [mapKey, setMapKey] = useState(0);
   useEffect(() => {

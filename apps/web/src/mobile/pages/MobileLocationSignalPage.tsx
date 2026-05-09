@@ -12,11 +12,11 @@ import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/S
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
+import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
 
-import { WorldMap, MapMarker } from "../../components/location/WorldMap";
+import { WorldMap, MapMarker, fitRepeatingMapBounds } from "../../components/location/WorldMap";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 
 type LocPhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "clue3" | "guess3" | "clue4" | "guess4" | "reveal" | "finished" | "ended";
@@ -30,30 +30,14 @@ const phaseLabels: Record<LocPhase, string> = {
 
 const PLAYER_COLORS = ["#06d6a0","#7ecbff","#ef476f","#a78bfa","#fb923c","#38bdf8","#f472b6","#4ade80","#facc15","#34d399"];
 
-/** Compute center + zoom that fits all points in the map viewport */
+/** Compute center + zoom that fits all points in the repeating map viewport */
 function fitBounds(
   points: { lat: number; lng: number }[],
   mapWidth: number,
   mapHeight: number,
   padding = 0.25,
 ): { center: [number, number]; zoom: number } {
-  if (points.length === 0) return { center: [25, 10], zoom: 2 };
-  const first = points[0];
-  if (points.length === 1 && first) return { center: [first.lat, first.lng] as [number, number], zoom: 5 };
-  const lats = points.map((p) => p.lat);
-  const lngs = points.map((p) => p.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latSpan = Math.max((maxLat - minLat) * (1 + padding * 2), 0.01);
-  const lngSpan = Math.max((maxLng - minLng) * (1 + padding * 2), 0.01);
-  const latZoom = Math.log2((mapHeight / 256) * (180 / latSpan));
-  const lngZoom = Math.log2((mapWidth / 256) * (360 / lngSpan));
-  return {
-    center: [(minLat + maxLat) / 2, (minLng + maxLng) / 2],
-    zoom: Math.max(2, Math.min(14, Math.floor(Math.min(latZoom, lngZoom)))),
-  };
+  return fitRepeatingMapBounds(points, mapWidth, mapHeight, padding);
 }
 
 export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
@@ -107,18 +91,18 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
 
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = s.name ?? s.id.slice(0, 6);
+      acc[s.id] = getDisplayName(s.name, s.id);
       return acc;
     }, {});
   }, [sessions]);
 
-  const playerName = (id: string) => sessionById[id] ?? id.slice(0, 6);
+  const playerName = (id: string) => sessionById[id] ?? getDisplayName(null, id);
 
   // Register host context for MobileHostControlsSheet
   useMobileHostRegister(
     isHost && game
       ? { type: "location_signal", gameId, hostId: game.host_id,
-          players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null })),
+          players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId) })),
           spectators: game.spectators ?? [] }
       : null
   );
@@ -331,7 +315,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   if (!game) return <MobileGameNotFound theme="location" />;
 
   const phase = game.phase as LocPhase;
-  const leaderName = game.players.find((p) => p.sessionId === game.leader_id)?.name ?? game.leader_id?.slice(0, 6) ?? "---";
+  const leaderName = game.leader_id ? getDisplayName(game.players.find((p) => p.sessionId === game.leader_id)?.name, game.leader_id) : "---";
   const roundGuessers = game.players.filter((p) => p.sessionId !== game.leader_id);
   const guessesThisRound = (round: number) => game.guesses.filter((g) => g.round === round);
   const totalRounds = game.settings.roundsPerPlayer * game.players.length;
@@ -458,10 +442,10 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   };
 
   const mapClickable = (phase === "picking" && isLeader) || (isGuessPhase && !isLeader && inGame);
-  const mapInteractive = mapClickable || (isLeader && isGameActive) || phase === "reveal";
+  const mapInteractive = true;
 
-  const joinGame = () => {
-    ensureName(zero, sessionId);
+  const joinGame = async () => {
+    await ensureName(zero, sessionId);
     void zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })).server.catch(() => showToast("Couldn't join", "error"));
   };
 
@@ -472,24 +456,24 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
         .catch(() => showToast("Couldn't leave current game", "error"))
         .finally(() => {
           setJoiningFromOtherGame(false);
-          joinGame();
+          void joinGame();
         });
       return;
     }
-    joinGame();
+    void joinGame();
   };
 
   const confirmLeaveAndJoin = () => {
     if (!activeGameType || !activeGameId) {
       setShowInSessionModal(false);
-      joinGame();
+      void joinGame();
       return;
     }
     setJoiningFromOtherGame(true);
     void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
       .then(() => {
         setShowInSessionModal(false);
-        joinGame();
+        void joinGame();
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => setJoiningFromOtherGame(false));
@@ -562,6 +546,8 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
               center={mapCenter}
               zoom={mapZoom}
               onBoundsChanged={handleBoundsChanged}
+              timerEndsAt={game.settings.phaseEndsAt}
+              closeKey={`${game.phase}:${game.settings.currentRound}`}
             />
           </div>
         </div>

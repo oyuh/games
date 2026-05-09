@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiAward, FiTag } from "react-icons/fi";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
+import { getDisplayName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordResultsPage } from "../mobile/pages/MobilePasswordResultsPage";
@@ -24,7 +25,7 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = s.name ?? s.id.slice(0, 6);
+      acc[s.id] = getDisplayName(s.name, s.id);
       return acc;
     }, {});
   }, [sessions]);

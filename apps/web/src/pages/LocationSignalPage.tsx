@@ -11,13 +11,13 @@ import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggl
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
+import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets";
 
 import { MobileLocationSignalPage } from "../mobile/pages/MobileLocationSignalPage";
-import { WorldMap, MapMarker } from "../components/location/WorldMap";
+import { WorldMap, MapMarker, fitRepeatingMapBounds } from "../components/location/WorldMap";
 import { LocationDemo } from "../components/demos/LocationDemo";
 import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
 
@@ -25,30 +25,14 @@ type LocPhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | 
 
 const PLAYER_COLORS = ["#06d6a0","#7ecbff","#ef476f","#a78bfa","#fb923c","#38bdf8","#f472b6","#4ade80","#facc15","#34d399"];
 
-/** Compute center + zoom that fits all points in the map viewport */
+/** Compute center + zoom that fits all points in the repeating map viewport */
 function fitBounds(
   points: { lat: number; lng: number }[],
   mapWidth: number,
   mapHeight: number,
   padding = 0.25,
 ): { center: [number, number]; zoom: number } {
-  if (points.length === 0) return { center: [25, 10], zoom: 2 };
-  const first = points[0];
-  if (points.length === 1 && first) return { center: [first.lat, first.lng] as [number, number], zoom: 5 };
-  const lats = points.map((p) => p.lat);
-  const lngs = points.map((p) => p.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latSpan = Math.max((maxLat - minLat) * (1 + padding * 2), 0.01);
-  const lngSpan = Math.max((maxLng - minLng) * (1 + padding * 2), 0.01);
-  const latZoom = Math.log2((mapHeight / 256) * (180 / latSpan));
-  const lngZoom = Math.log2((mapWidth / 256) * (360 / lngSpan));
-  return {
-    center: [(minLat + maxLat) / 2, (minLng + maxLng) / 2],
-    zoom: Math.max(2, Math.min(14, Math.floor(Math.min(latZoom, lngZoom)))),
-  };
+  return fitRepeatingMapBounds(points, mapWidth, mapHeight, padding);
 }
 
 function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
@@ -128,12 +112,12 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = s.name ?? s.id.slice(0, 6);
+      acc[s.id] = getDisplayName(s.name, s.id);
       return acc;
     }, {});
   }, [sessions]);
 
-  const playerName = (id: string) => sessionById[id] ?? id.slice(0, 6);
+  const playerName = (id: string) => sessionById[id] ?? getDisplayName(null, id);
 
   const myRoundGuess = useMemo(() => {
     if (!game) return null;
@@ -332,7 +316,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   }
 
   const phase = game.phase as LocPhase;
-  const leaderName = game.players.find((p) => p.sessionId === game.leader_id)?.name ?? game.leader_id?.slice(0, 6) ?? "---";
+  const leaderName = game.leader_id ? getDisplayName(game.players.find((p) => p.sessionId === game.leader_id)?.name, game.leader_id) : "---";
   const roundGuessers = game.players.filter((p) => p.sessionId !== game.leader_id);
   const guessesThisRound = (round: number) => game.guesses.filter((g) => g.round === round);
   const totalRounds = game.settings.roundsPerPlayer * game.players.length;
@@ -477,8 +461,8 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const mapClickable = (phase === "picking" && isLeader) || (isGuessPhase && !isLeader && inGame);
   const mapInteractive = true;
 
-  const joinGame = () => {
-    ensureName(zero, sessionId);
+  const joinGame = async () => {
+    await ensureName(zero, sessionId);
     void zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })).server.catch(() => showToast("Couldn't join", "error"));
   };
 
@@ -489,24 +473,24 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         .catch(() => showToast("Couldn't leave current game", "error"))
         .finally(() => {
           setJoiningFromOtherGame(false);
-          joinGame();
+          void joinGame();
         });
       return;
     }
-    joinGame();
+    void joinGame();
   };
 
   const confirmLeaveAndJoin = () => {
     if (!activeGameType || !activeGameId) {
       setShowInSessionModal(false);
-      joinGame();
+      void joinGame();
       return;
     }
     setJoiningFromOtherGame(true);
     void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
       .then(() => {
         setShowInSessionModal(false);
-        joinGame();
+        void joinGame();
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => setJoiningFromOtherGame(false));
@@ -566,6 +550,8 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           center={mapCenter}
           zoom={mapZoom}
           onBoundsChanged={handleBoundsChanged}
+          timerEndsAt={game.settings.phaseEndsAt}
+          closeKey={`${game.phase}:${game.settings.currentRound}`}
         />
       </div>
     </div>

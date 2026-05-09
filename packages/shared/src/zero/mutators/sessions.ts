@@ -1,14 +1,14 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { assertCaller, now, sanitizeText } from "./helpers";
+import { assertCaller, now, sanitizeText, resolvePlayerName } from "./helpers";
 
 export const sessionMutators = {
   upsert: defineMutator(
     z.object({ id: z.string(), name: z.string().transform(s => s.replace(/\s/g, "")).nullable().optional() }),
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.id);
-      const cleanName = args.name ? sanitizeText(args.name).replace(/\s/g, "") : null;
+      const cleanName = resolvePlayerName(args.name ? sanitizeText(args.name).replace(/\s/g, "") : null, args.id);
       await tx.mutate.sessions.upsert({
         id: args.id,
         name: cleanName,

@@ -31,7 +31,7 @@ export function useGameSounds({
   /** Whether it's currently the local player's turn to act */
   isMyTurn?: boolean;
   /** Timestamp when the current phase ends (for timer warning) */
-  phaseEndsAt?: number | null;
+  phaseEndsAt?: number | null | undefined;
 }) {
   const { soundEnabled } = useSettings();
   const prevPhaseRef = useRef<string | undefined>(undefined);
