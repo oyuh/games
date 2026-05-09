@@ -373,6 +373,13 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const lockTarget = () => {
+    if (!draftMarker) return;
+    setLeaderTarget({ lat: draftMarker.lat, lng: draftMarker.lng });
+    void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng }))
+      .server.then(() => callGameSecretInit("location_signal", game.id, sessionId));
+  };
+
   const buildMarkers = (): MapMarker[] => {
     const markers: MapMarker[] = [];
     const guessBySessionRound = new Map(
@@ -501,6 +508,38 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const sortedPlayers = game.players.toSorted((a, b) => b.totalScore - a.totalScore);
 
+  const expandedMapActions = phase === "picking" && isLeader ? (
+    <>
+      <span className="locsig-map-action-hint">
+        {draftMarker ? "Ready to lock this target." : "Click the map to pick a target."}
+      </span>
+      <button
+        className="btn btn-primary game-action-btn"
+        disabled={!draftMarker}
+        data-tooltip={draftMarker ? "Confirm this location as the target" : "Click the map first to pick a target"}
+        data-tooltip-variant="info"
+        onClick={lockTarget}
+      >
+        <FiMapPin size={14} /> Lock Target
+      </button>
+    </>
+  ) : isGuessPhase && !isLeader && inGame ? (
+    <>
+      <span className="locsig-map-action-hint">
+        {draftMarker ? "Ready to submit this guess." : "Click the map to place your guess."}
+      </span>
+      <button
+        className="btn btn-primary game-action-btn"
+        disabled={!draftMarker}
+        data-tooltip={draftMarker ? "Submit your guess location" : "Click the map to pick a location first"}
+        data-tooltip-variant="info"
+        onClick={() => void submitGuess(currentGuessRound)}
+      >
+        <FiMapPin size={14} /> {myRoundGuess ? "Update Guess" : isLastGuessPhase ? "Place Final Guess" : "Place Guess"}
+      </button>
+    </>
+  ) : null;
+
   /* ── Players bar (shared across phases) ── */
   const renderPlayersBar = () => (
     <div className="game-section">
@@ -555,6 +594,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           onBoundsChanged={handleBoundsChanged}
           timerEndsAt={game.settings.phaseEndsAt}
           closeKey={`${game.phase}:${game.settings.currentRound}`}
+          expandedActions={expandedMapActions}
         />
       </div>
     </div>
@@ -664,12 +704,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           <div className="game-actions">
             <button className="btn btn-primary game-action-btn" disabled={!draftMarker}
               data-tooltip={draftMarker ? "Confirm this location as the target" : "Click the map first to pick a target"} data-tooltip-variant="info"
-              onClick={() => {
-                if (!draftMarker) return;
-                setLeaderTarget({ lat: draftMarker.lat, lng: draftMarker.lng });
-                void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng }))
-                  .server.then(() => callGameSecretInit("location_signal", game.id, sessionId));
-              }}>
+              onClick={lockTarget}>
               <FiMapPin size={14} /> Lock Target
             </button>
           </div>

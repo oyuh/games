@@ -2,7 +2,7 @@ import { imposterCategories, imposterCategoryLabels, chainCategories, chainCateg
 import { useQuery, useZero } from "../lib/zero";
 import "../styles/home.css";
 import { nanoid } from "nanoid";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
 import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiZap, FiGrid } from "react-icons/fi";
@@ -14,14 +14,15 @@ import { MobileHomePage } from "../mobile/pages/MobileHomePage";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { ActiveGameModal } from "../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../components/shared/PublicGamesBrowser";
-import { ImposterDemo } from "../components/demos/ImposterDemo";
-import { PasswordDemo } from "../components/demos/PasswordDemo";
-import { ChainDemo } from "../components/demos/ChainDemo";
-import { ShadeDemo } from "../components/demos/ShadeDemo";
-import { LocationDemo } from "../components/demos/LocationDemo";
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { useZeroConnected } from "../App";
 import { useSyncCountdown } from "../lib/sync-wake";
+
+const ImposterDemo = lazy(() => import("../components/demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
+const PasswordDemo = lazy(() => import("../components/demos/PasswordDemo").then(({ PasswordDemo }) => ({ default: PasswordDemo })));
+const ChainDemo = lazy(() => import("../components/demos/ChainDemo").then(({ ChainDemo }) => ({ default: ChainDemo })));
+const ShadeDemo = lazy(() => import("../components/demos/ShadeDemo").then(({ ShadeDemo }) => ({ default: ShadeDemo })));
+const LocationDemo = lazy(() => import("../components/demos/LocationDemo").then(({ LocationDemo }) => ({ default: LocationDemo })));
 
 const isDev = import.meta.env.DEV;
 const SHADE_PREVIEW_CELLS = Array.from({ length: 20 }, (_, index) => ({
@@ -1427,11 +1428,13 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       ))}
     </div>
 
-    {activeDemo === "imposter" && <ImposterDemo onClose={() => setActiveDemo(null)} />}
-    {activeDemo === "password" && <PasswordDemo onClose={() => setActiveDemo(null)} />}
-    {activeDemo === "chain" && <ChainDemo onClose={() => setActiveDemo(null)} />}
-    {activeDemo === "shade" && <ShadeDemo onClose={() => setActiveDemo(null)} />}
-    {activeDemo === "location" && <LocationDemo onClose={() => setActiveDemo(null)} />}
+    <Suspense fallback={null}>
+      {activeDemo === "imposter" && <ImposterDemo onClose={() => setActiveDemo(null)} />}
+      {activeDemo === "password" && <PasswordDemo onClose={() => setActiveDemo(null)} />}
+      {activeDemo === "chain" && <ChainDemo onClose={() => setActiveDemo(null)} />}
+      {activeDemo === "shade" && <ShadeDemo onClose={() => setActiveDemo(null)} />}
+      {activeDemo === "location" && <LocationDemo onClose={() => setActiveDemo(null)} />}
+    </Suspense>
     </>
   );
 

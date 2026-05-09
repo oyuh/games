@@ -6,7 +6,7 @@ import { useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
 import { getDisplayName } from "../../lib/session";
 
-type GameContext =
+export type GameContext =
   | { type: "imposter"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
   | { type: "password"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ id: string; name: string }>; spectators?: Array<{ sessionId: string; name: string | null }> }
   | { type: "shade_signal"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }

@@ -2,7 +2,7 @@ import { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
-import { Component, useEffect, useRef, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import {
@@ -20,16 +20,31 @@ import { showToast } from "./lib/toast";
 import { markSyncConnecting, markSyncConnected, useSyncCountdown } from "./lib/sync-wake";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { useButtonSounds } from "./hooks/useButtonSounds";
-import { HomePage } from "./pages/HomePage";
-import { HomePageStylePreview } from "./pages/HomePageStylePreview";
-import { ImposterPage } from "./pages/ImposterPage";
-import { PasswordBeginPage } from "./pages/PasswordBeginPage";
-import { PasswordGamePage } from "./pages/PasswordGamePage";
-import { PasswordResultsPage } from "./pages/PasswordResultsPage";
-import { ChainReactionPage } from "./pages/ChainReactionPage";
-import { ShadeSignalPage } from "./pages/ShadeSignalPage";
-import { LocationSignalPage } from "./pages/LocationSignalPage";
-import { ShikakuPage } from "./pages/ShikakuPage";
+
+const HomePage = lazy(() => import("./pages/HomePage").then(({ HomePage }) => ({ default: HomePage })));
+const HomePageStylePreview = lazy(() =>
+  import("./pages/HomePageStylePreview").then(({ HomePageStylePreview }) => ({ default: HomePageStylePreview }))
+);
+const ImposterPage = lazy(() => import("./pages/ImposterPage").then(({ ImposterPage }) => ({ default: ImposterPage })));
+const PasswordBeginPage = lazy(() =>
+  import("./pages/PasswordBeginPage").then(({ PasswordBeginPage }) => ({ default: PasswordBeginPage }))
+);
+const PasswordGamePage = lazy(() =>
+  import("./pages/PasswordGamePage").then(({ PasswordGamePage }) => ({ default: PasswordGamePage }))
+);
+const PasswordResultsPage = lazy(() =>
+  import("./pages/PasswordResultsPage").then(({ PasswordResultsPage }) => ({ default: PasswordResultsPage }))
+);
+const ChainReactionPage = lazy(() =>
+  import("./pages/ChainReactionPage").then(({ ChainReactionPage }) => ({ default: ChainReactionPage }))
+);
+const ShadeSignalPage = lazy(() =>
+  import("./pages/ShadeSignalPage").then(({ ShadeSignalPage }) => ({ default: ShadeSignalPage }))
+);
+const LocationSignalPage = lazy(() =>
+  import("./pages/LocationSignalPage").then(({ LocationSignalPage }) => ({ default: LocationSignalPage }))
+);
+const ShikakuPage = lazy(() => import("./pages/ShikakuPage").then(({ ShikakuPage }) => ({ default: ShikakuPage })));
 
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -85,6 +100,19 @@ function stringifyError(error: unknown) {
     return error.message;
   }
   return String(error);
+}
+
+function RouteLoading() {
+  return (
+    <div className="route-loading" role="status" aria-live="polite">
+      <span className="route-loading-spinner" />
+      <span>Loading</span>
+    </div>
+  );
+}
+
+function LazyRoute({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<RouteLoading />}>{children}</Suspense>;
 }
 
 /** Routes that don't use the Zero sync server (solo/offline games). */
@@ -363,7 +391,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
       <BrowserRouter>
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="*" element={<HomePageStylePreview />} />
+              <Route path="*" element={<LazyRoute><HomePageStylePreview /></LazyRoute>} />
             </Route>
           </Routes>
         </BrowserRouter>
@@ -377,15 +405,15 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
           <SyncWakeToast />
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="/" element={<HomePage sessionId={initialSessionId} />} />
-              <Route path="/imposter/:id" element={<ImposterPage sessionId={initialSessionId} />} />
-              <Route path="/password/:id/begin" element={<PasswordBeginPage sessionId={initialSessionId} />} />
-              <Route path="/password/:id" element={<PasswordGamePage sessionId={initialSessionId} />} />
-              <Route path="/password/:id/results" element={<PasswordResultsPage sessionId={initialSessionId} />} />
-              <Route path="/chain/:id" element={<ChainReactionPage sessionId={initialSessionId} />} />
-              <Route path="/shade/:id" element={<ShadeSignalPage sessionId={initialSessionId} />} />
-              <Route path="/location/:id" element={<LocationSignalPage sessionId={initialSessionId} />} />
-              <Route path="/shikaku" element={<ShikakuPage />} />
+              <Route path="/" element={<LazyRoute><HomePage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/imposter/:id" element={<LazyRoute><ImposterPage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/password/:id/begin" element={<LazyRoute><PasswordBeginPage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/password/:id" element={<LazyRoute><PasswordGamePage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/password/:id/results" element={<LazyRoute><PasswordResultsPage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/chain/:id" element={<LazyRoute><ChainReactionPage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/shade/:id" element={<LazyRoute><ShadeSignalPage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/location/:id" element={<LazyRoute><LocationSignalPage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/shikaku" element={<LazyRoute><ShikakuPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

@@ -1,5 +1,5 @@
 import { FiEye } from "react-icons/fi";
-import { PiCrownSimpleFill } from "react-icons/pi";
+import { FaCrown } from "react-icons/fa";
 
 export function SpectatorBadge() {
   return (
@@ -20,7 +20,7 @@ export function MobileSpectatorBadge() {
 export function HostBadge() {
   return (
     <span className="host-crown-indicator" data-tooltip="You are the host" data-tooltip-variant="info">
-      <PiCrownSimpleFill size={16} />
+      <FaCrown size={15} />
     </span>
   );
 }
@@ -28,7 +28,7 @@ export function HostBadge() {
 export function MobileHostBadge() {
   return (
     <span className="host-crown-indicator" data-tooltip="You are the host" data-tooltip-variant="info">
-      <PiCrownSimpleFill size={14} />
+      <FaCrown size={13} />
     </span>
   );
 }
