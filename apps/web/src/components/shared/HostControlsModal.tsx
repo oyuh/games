@@ -4,6 +4,7 @@ import { FiX, FiUserMinus, FiPower, FiMessageCircle, FiSend, FiEye, FiGlobe, FiL
 import { mutators } from "@games/shared";
 import { useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
+import { getDisplayName } from "../../lib/session";
 
 type GameContext =
   | { type: "imposter"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
@@ -30,9 +31,9 @@ export function HostControlsModal({
   const kickablePlayersList =
     game.type === "password"
       ? game.players.filter((p) => p.id !== sessionId)
-      : game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: p.name ?? p.sessionId.slice(0, 6) }));
+      : game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: getDisplayName(p.name, p.sessionId) }));
 
-  const spectatorsList = (game.spectators ?? []).map((s) => ({ id: s.sessionId, name: s.name ?? s.sessionId.slice(0, 6) }));
+  const spectatorsList = (game.spectators ?? []).map((s) => ({ id: s.sessionId, name: getDisplayName(s.name, s.sessionId) }));
 
   const handleKick = (targetId: string, targetName: string) => {
     if (game.type === "imposter") {

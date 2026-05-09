@@ -6,7 +6,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { Link, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
 import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiZap, FiGrid } from "react-icons/fi";
-import { addRecentGame, clearRecentGames, getRecentGames, getStoredName, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
+import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { isNameRestricted } from "../hooks/useAdminBroadcast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -98,28 +98,6 @@ const SOLO_GAMES: SoloGameDef[] = [
   },
 ];
 
-/* ── Word bank for random names ──────────────────────── */
-const adjectives = [
-  "Swift", "Sneaky", "Cosmic", "Lucky", "Dizzy", "Frosty", "Bold", "Chill",
-  "Witty", "Fierce", "Jolly", "Mystic", "Nifty", "Pixel", "Rapid", "Silent",
-  "Turbo", "Vivid", "Wacky", "Zesty", "Brave", "Clever", "Funky", "Groovy",
-  "Hyper", "Keen", "Lively", "Plucky", "Radiant", "Spunky", "Sleepy", "Stormy",
-  "Sunny", "Fuzzy", "Crispy", "Bouncy", "Shifty", "Sparky", "Tricky", "Zippy",
-];
-const nouns = [
-  "Panda", "Fox", "Falcon", "Otter", "Wolf", "Shark", "Raven", "Lynx",
-  "Cobra", "Badger", "Hawk", "Tiger", "Bear", "Moose", "Owl", "Penguin",
-  "Dragon", "Phoenix", "Pirate", "Knight", "Ninja", "Wizard", "Ghost", "Robot",
-  "Yeti", "Gremlin", "Goblin", "Squid", "Toucan", "Ferret", "Walrus", "Jackal",
-  "Beetle", "Puffin", "Coyote", "Mole", "Parrot", "Wasp", "Mantis", "Orca",
-];
-
-function randomName(): string {
-  const adj = adjectives[Math.floor(Math.random() * adjectives.length)]!;
-  const noun = nouns[Math.floor(Math.random() * nouns.length)]!;
-  return `${adj}${noun}`;
-}
-
 /** Scroll-wheel on a <select> cycles through its options */
 function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
   return (e: React.WheelEvent) => {
@@ -176,8 +154,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const syncStatusTooltip = syncOffline
     ? `Sync server is waking${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}`
     : "Browse Public Games";
-  const [name, setName] = useState(getStoredName());
-  const [savedName, setSavedName] = useState(getStoredName());
+  const [name, setName] = useState(() => getOrCreateStoredName(sessionId));
+  const [savedName, setSavedName] = useState(() => getOrCreateStoredName(sessionId));
   const [firstVisit, setFirstVisit] = useState(() => !hasVisited());
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -275,19 +253,16 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   }, [firstVisit]);
 
   /** Assign a random name if the user doesn't have one yet */
-  const ensureName = useCallback(() => {
-    if (!getStoredName()) {
-      const generated = randomName();
-      setStoredName(generated);
-      setName(generated);
-      setSavedName(generated);
-      void zero.mutate(mutators.sessions.setName({ id: sessionId, name: generated }));
-    }
+  const ensureName = useCallback(async () => {
+    const resolved = await ensureSessionName(zero, sessionId);
+    setName(resolved);
+    setSavedName(resolved);
+    return resolved;
   }, [zero, sessionId]);
 
   const dismissFirstVisit = useCallback(() => {
     if (firstVisit) {
-      ensureName();
+      void ensureName();
       markVisited();
       setFirstVisit(false);
     }
@@ -304,19 +279,16 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const saveName = async (event: FormEvent) => {
     event.preventDefault();
     dismissFirstVisit();
-    const sanitizedName = name.replace(/\s/g, "");
+    const sanitizedName = name.replace(/\s/g, "") || getDisplayName(null, sessionId);
     if (sanitizedName && isNameRestricted(sanitizedName)) {
       showToast("That name is restricted by admin. Pick another one.", "error");
       return;
     }
 
     try {
-      if (sanitizedName) {
-        await zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })).server;
-      } else {
-        await zero.mutate(mutators.sessions.upsert({ id: sessionId, name: null })).server;
-      }
+      await zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })).server;
       setStoredName(sanitizedName);
+      setName(sanitizedName);
       setSavedName(sanitizedName);
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Unable to save name.", "error");
@@ -327,6 +299,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     setPendingAction("create-imposter");
     const id = nanoid();
     try {
+      await ensureName();
       const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
@@ -342,6 +315,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     setPendingAction("create-password");
     const id = nanoid();
     try {
+      await ensureName();
       const result = await zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
@@ -357,6 +331,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     setPendingAction("create-chain");
     const id = nanoid();
     try {
+      await ensureName();
       const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
@@ -372,6 +347,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     setPendingAction("create-shade");
     const id = nanoid();
     try {
+      await ensureName();
       const result = await zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
@@ -387,6 +363,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     setPendingAction("create-location");
     const id = nanoid();
     try {
+      await ensureName();
       const result = await zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
@@ -407,7 +384,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       return;
     }
     // Make sure the player has a name before joining any game
-    ensureName();
+    await ensureName();
 
     const mySession = mySessionRows[0] ?? null;
     const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
@@ -1822,7 +1799,7 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
       const g = gameData as typeof chainResults[0];
       if (!g) return null;
       const players = g.players ?? [];
-      const nameOf = (id: string) => players.find((p) => p.sessionId === id)?.name ?? id.slice(0, 6);
+      const nameOf = (id: string) => getDisplayName(players.find((p) => p.sessionId === id)?.name, id);
       const lines: string[] = [];
 
       // Final scores

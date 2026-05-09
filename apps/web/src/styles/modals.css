@@ -351,6 +351,54 @@
   color: var(--primary);
 }
 
+.cursor-scale-control {
+  margin-top: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  transition: opacity 0.15s ease;
+}
+
+.cursor-scale-control--disabled {
+  opacity: 0.55;
+}
+
+.cursor-scale-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.cursor-scale-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cursor-scale-value {
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cursor-scale-range {
+  display: block;
+  width: 100%;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.cursor-scale-range:disabled {
+  cursor: default;
+}
+
 /* ─── Sound Customize Dropdown ─────────────────────────── */
 
 .sound-customize {

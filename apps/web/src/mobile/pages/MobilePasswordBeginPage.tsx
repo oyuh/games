@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogIn, FiLock, FiUnlock, FiArrowRight, FiCheck, FiXCircle } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
+import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
@@ -31,7 +31,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
   const [pendingTeamToJoin, setPendingTeamToJoin] = useState<string | null>(null);
   const [startingGame, setStartingGame] = useState(false);
 
-  const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
+  const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = getDisplayName(s.name, s.id); return acc; }, {}), [sessions]);
 
   useEffect(() => { if (game) addRecentGame({ id: game.id, code: game.code, gameType: "password" }); }, [game]);
   useEffect(() => { if (game?.phase === "playing") navigate(`/password/${game.id}`); }, [game?.phase, game?.id, navigate]);
@@ -62,7 +62,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? id.slice(0, 6) }))), spectators: game.spectators ?? [] }
+      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? getDisplayName(null, id) }))), spectators: game.spectators ?? [] }
       : null
   );
 
@@ -88,10 +88,12 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
 
   const joinTeam = (teamName: string) => {
     if (!inGame) {
-      ensureName(zero, sessionId);
-      const doJoin = () => zero.mutate(mutators.password.join({ gameId, sessionId }))
-        .client.then(() => zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName })))
-        .catch(() => showToast("Couldn't join team", "error"));
+      const doJoin = async () => {
+        await ensureName(zero, sessionId);
+        return zero.mutate(mutators.password.join({ gameId, sessionId }))
+          .client.then(() => zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName })))
+          .catch(() => showToast("Couldn't join team", "error"));
+      };
       if (isSpectator) {
         void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId })).client.then(doJoin).catch(doJoin);
       } else {
@@ -192,7 +194,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
                   {team.members.length > 0 ? (
                     <div className="m-pw-team-members">
                       {team.members.map((id) => {
-                        const n = names[id] ?? id.slice(0, 6);
+                        const n = names[id] ?? getDisplayName(null, id);
                         const isMe = id === sessionId;
                         return (
                           <div key={id} className={`m-pw-member${isMe ? " m-pw-member--me" : ""}`}>

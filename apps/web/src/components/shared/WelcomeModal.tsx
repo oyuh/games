@@ -1,28 +1,7 @@
 import { FormEvent, useState } from "react";
 import { FiArrowRight, FiZap, FiEye, FiShield, FiLink, FiX } from "react-icons/fi";
 import { PiPaintBrushBold } from "react-icons/pi";
-
-/* ── Word bank for random names ──────────────────────────── */
-const adjectives = [
-  "Swift", "Sneaky", "Cosmic", "Lucky", "Dizzy", "Frosty", "Bold", "Chill",
-  "Witty", "Fierce", "Jolly", "Mystic", "Nifty", "Pixel", "Rapid", "Silent",
-  "Turbo", "Vivid", "Wacky", "Zesty", "Brave", "Clever", "Funky", "Groovy",
-  "Hyper", "Keen", "Lively", "Plucky", "Radiant", "Spunky", "Sleepy", "Stormy",
-  "Sunny", "Fuzzy", "Crispy", "Bouncy", "Shifty", "Sparky", "Tricky", "Zippy",
-];
-const nouns = [
-  "Panda", "Fox", "Falcon", "Otter", "Wolf", "Shark", "Raven", "Lynx",
-  "Cobra", "Badger", "Hawk", "Tiger", "Bear", "Moose", "Owl", "Penguin",
-  "Dragon", "Phoenix", "Pirate", "Knight", "Ninja", "Wizard", "Ghost", "Robot",
-  "Yeti", "Gremlin", "Goblin", "Squid", "Toucan", "Ferret", "Walrus", "Jackal",
-  "Beetle", "Puffin", "Coyote", "Mole", "Parrot", "Wasp", "Mantis", "Orca",
-];
-
-function randomName(): string {
-  const adj = adjectives[Math.floor(Math.random() * adjectives.length)]!;
-  const noun = nouns[Math.floor(Math.random() * nouns.length)]!;
-  return `${adj}${noun}`;
-}
+import { randomName } from "../../lib/session";
 
 const games = [
   {

@@ -1,6 +1,7 @@
 import { FormEvent } from "react";
 import { FiEye, FiEyeOff, FiSend, FiCheck } from "react-icons/fi";
 import { imposterCategoryLabels } from "@games/shared";
+import { getDisplayName } from "../../lib/session";
 
 /** Redact a clue showing a contiguous ~65% chunk of each word. */
 function redactClue(text: string): string {
@@ -77,7 +78,7 @@ export function ImposterClueSection({
           <h4 className="game-section-label" style={{ fontSize: "0.8rem", opacity: 0.7 }}>Hints from other clues</h4>
           <div className="game-clue-recap">
             {othersClues.map((c) => {
-              const name = sessionById[c.sessionId] ?? c.sessionId.slice(0, 6);
+              const name = sessionById[c.sessionId] ?? getDisplayName(null, c.sessionId);
               return (
                 <div key={c.sessionId} className="game-clue-item">
                   <span className="game-clue-name">{name}</span>

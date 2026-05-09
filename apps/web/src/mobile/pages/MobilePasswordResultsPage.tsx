@@ -6,6 +6,7 @@ import { FiAward } from "react-icons/fi";
 import { showToast } from "../../lib/toast";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { getDisplayName } from "../../lib/session";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
@@ -20,7 +21,7 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
   const prevAnnouncementTs = useRef<number | null>(null);
   const navHandledRef = useRef(false);
 
-  const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
+  const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = getDisplayName(s.name, s.id); return acc; }, {}), [sessions]);
 
   useEffect(() => {
     if (!game) return;

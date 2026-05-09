@@ -4,7 +4,7 @@ import { FiMessageCircle, FiMinus, FiX, FiSend, FiMaximize2 } from "react-icons/
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
-import { getOrCreateSessionId } from "../../lib/session";
+import { getDisplayName, getOrCreateSessionId } from "../../lib/session";
 import { useChatContext } from "../../lib/chat-context";
 
 export interface ChatWindowProps {
@@ -177,7 +177,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
             {filteredMessages.map((msg, i) => {
               const prev = filteredMessages[i - 1];
               const sameSender = prev?.sender_id === msg.sender_id;
-              const displayName = msg.sender_name || msg.sender_id.slice(0, 6);
+              const displayName = getDisplayName(msg.sender_name, msg.sender_id);
               return (
                 <ChatMessage
                   key={msg.id}

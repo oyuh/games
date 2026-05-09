@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { getDisplayName } from "../../lib/session";
 
 type Round = {
   round: number;
@@ -50,8 +51,8 @@ export function PasswordRoundsTable({
           {[...rounds].reverse().map((round, idx) => {
             const teamName = teams[round.teamIndex]?.name ?? `Team ${round.teamIndex + 1}`;
             const teamColor = teamColors[round.teamIndex % teamColors.length]!;
-            const guesserName = names[round.guesserId] ?? round.guesserId.slice(0, 6);
-            const clueGiverNames = round.clues.map((c) => names[c.sessionId] ?? c.sessionId.slice(0, 6));
+            const guesserName = names[round.guesserId] ?? getDisplayName(null, round.guesserId);
+            const clueGiverNames = round.clues.map((c) => names[c.sessionId] ?? getDisplayName(null, c.sessionId));
 
             return (
               <div

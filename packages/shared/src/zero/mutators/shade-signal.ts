@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, shuffle, assertCaller, assertHost, sanitizeText } from "./helpers";
+import { now, code, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
 
 export const shadeSignalMutators = {
   create: defineMutator(
@@ -17,12 +17,13 @@ export const shadeSignalMutators = {
     async ({ args, tx }) => {
       const ts = now();
       const session = await tx.run(zql.sessions.where("id", args.hostId).one());
+      const hostName = resolvePlayerName(session?.name, args.hostId);
       await tx.mutate.shade_signal_games.insert({
         id: args.id,
         code: code(),
         host_id: args.hostId,
         phase: "lobby",
-        players: [{ sessionId: args.hostId, name: session?.name ?? null, connected: true, totalScore: 0 }],
+        players: [{ sessionId: args.hostId, name: hostName, connected: true, totalScore: 0 }],
         leader_id: null,
         leader_order: [],
         current_leader_index: 0,
@@ -53,7 +54,7 @@ export const shadeSignalMutators = {
       });
       await tx.mutate.sessions.upsert({
         id: args.hostId,
-        name: session?.name ?? null,
+        name: hostName,
         game_type: "shade_signal",
         game_id: args.id,
         created_at: ts,
@@ -67,6 +68,7 @@ export const shadeSignalMutators = {
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");
@@ -76,12 +78,12 @@ export const shadeSignalMutators = {
         if (!game.players.some((p) => p.sessionId === args.sessionId) && !game.spectators.find((s) => s.sessionId === args.sessionId)) {
           await tx.mutate.shade_signal_games.update({
             id: game.id,
-            spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+            spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
             updated_at: now()
           });
           await tx.mutate.sessions.upsert({
             id: args.sessionId,
-            name: session?.name ?? null,
+            name: sessionName,
             game_type: "shade_signal",
             game_id: game.id,
             created_at: now(),
@@ -95,10 +97,10 @@ export const shadeSignalMutators = {
       const players = existing
         ? game.players.map((p) =>
             p.sessionId === args.sessionId
-              ? { ...p, connected: true, name: session?.name ?? p.name }
+              ? { ...p, connected: true, name: resolvePlayerName(session?.name ?? p.name, args.sessionId) }
               : p
           )
-        : [...game.players, { sessionId: args.sessionId, name: session?.name ?? null, connected: true, totalScore: 0 }];
+        : [...game.players, { sessionId: args.sessionId, name: sessionName, connected: true, totalScore: 0 }];
 
       await tx.mutate.shade_signal_games.update({
         id: game.id,
@@ -107,7 +109,7 @@ export const shadeSignalMutators = {
       });
       await tx.mutate.sessions.upsert({
         id: args.sessionId,
-        name: session?.name ?? null,
+        name: sessionName,
         game_type: "shade_signal",
         game_id: game.id,
         created_at: now(),
@@ -681,6 +683,7 @@ export const shadeSignalMutators = {
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");
@@ -690,12 +693,12 @@ export const shadeSignalMutators = {
 
       await tx.mutate.shade_signal_games.update({
         id: game.id,
-        spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+        spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
         updated_at: now()
       });
       await tx.mutate.sessions.upsert({
         id: args.sessionId,
-        name: session?.name ?? null,
+        name: sessionName,
         game_type: "shade_signal",
         game_id: game.id,
         created_at: now(),
