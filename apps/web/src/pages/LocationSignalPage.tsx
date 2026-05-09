@@ -375,6 +375,9 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const buildMarkers = (): MapMarker[] => {
     const markers: MapMarker[] = [];
+    const guessBySessionRound = new Map(
+      game.guesses.map((guess) => [`${guess.sessionId}:${guess.round}`, guess])
+    );
 
     // Draft marker (picking or guessing)
     if (draftMarker && (phase === "picking" || isGuessPhase)) {
@@ -395,7 +398,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     if (!isLeader && isGameActive && phase !== "picking") {
       const maxVisible = isGuessPhase ? currentGuessRound : (isCluePhase ? currentClueRound : cluePairs);
       for (let r = 1; r <= maxVisible; r++) {
-        const prev = game.guesses.find((g) => g.sessionId === sessionId && g.round === r);
+        const prev = guessBySessionRound.get(`${sessionId}:${r}`);
         if (prev && !(isGuessPhase && r === currentGuessRound)) {
           markers.push({ lat: prev.lat, lng: prev.lng, color: guesserColorMap[sessionId] ?? "#06d6a0", label: `Your G${r}`, size: 1.5 });
         }
@@ -496,7 +499,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
       .finally(() => setJoiningFromOtherGame(false));
   };
 
-  const sortedPlayers = [...game.players].sort((a, b) => b.totalScore - a.totalScore);
+  const sortedPlayers = game.players.toSorted((a, b) => b.totalScore - a.totalScore);
 
   /* ── Players bar (shared across phases) ── */
   const renderPlayersBar = () => (

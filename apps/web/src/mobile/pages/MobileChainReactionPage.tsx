@@ -16,6 +16,7 @@ import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 import { playHint } from "../../lib/sounds";
 
 type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
+type ChainViewTarget = "self" | "opponent";
 
 export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
@@ -34,7 +35,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
 
   const [submissionWords, setSubmissionWords] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [viewingId, setViewingId] = useState<string>(sessionId);
+  const [viewingTarget, setViewingTarget] = useState<ChainViewTarget>("self");
   const [giveUpConfirm, setGiveUpConfirm] = useState<number | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
@@ -135,7 +136,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     setEditingIndex(null);
     setGuess("");
     setHasSubmitted(false);
-    setViewingId(sessionId);
+    setViewingTarget("self");
     setGiveUpConfirm(null);
   }, [game?.settings.currentRound, sessionId]);
 
@@ -162,8 +163,9 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const myChain: ChainSlot[] = game.chain[sessionId] ?? [];
   const opponentId = opponent?.sessionId;
   const oppChain: ChainSlot[] = opponentId ? (game.chain[opponentId] ?? []) : [];
-  const viewingChain = viewingId === sessionId ? myChain : oppChain;
-  const isViewingMine = viewingId === sessionId;
+  const isViewingMine = viewingTarget === "self" || !opponentId;
+  const viewingId = isViewingMine ? sessionId : (opponentId ?? sessionId);
+  const viewingChain = isViewingMine ? myChain : oppChain;
   const submissionSlots = submissionWords.map((word, index) => ({ id: `mobile-submission-slot-${index}`, word, index }));
   const viewingSlots = viewingChain.map((slot, index) => ({ id: `${viewingId}-mobile-chain-slot-${index}`, slot, index }));
   const submittedChainEntries = (game.submitted_chains[sessionId] ?? []).map((word, index) => ({
@@ -306,8 +308,8 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
         <div className="m-cr-versus">
           <div
             className={`m-cr-vs-card${isViewingMine && game.phase === "playing" ? " m-cr-vs-card--active" : ""}${myDone ? " m-cr-vs-card--done" : ""}`}
-            onClick={() => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); }}
-            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); })}
+            onClick={() => { setViewingTarget("self"); setEditingIndex(null); setGuess(""); }}
+            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingTarget("self"); setEditingIndex(null); setGuess(""); })}
             role="button"
             tabIndex={0}
           >
@@ -327,8 +329,8 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
 
           <div
             className={`m-cr-vs-card${!isViewingMine && game.phase === "playing" ? " m-cr-vs-card--active" : ""}${oppDone ? " m-cr-vs-card--done" : ""}`}
-            onClick={() => { setViewingId(opponentId ?? sessionId); setEditingIndex(null); setGuess(""); }}
-            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingId(opponentId ?? sessionId); setEditingIndex(null); setGuess(""); })}
+            onClick={() => { setViewingTarget("opponent"); setEditingIndex(null); setGuess(""); }}
+            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingTarget("opponent"); setEditingIndex(null); setGuess(""); })}
             role="button"
             tabIndex={0}
           >
@@ -560,49 +562,49 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
               const isEditing = isViewingMine && editingIndex === i;
               const isEdge = i === 0 || i === viewingChain.length - 1;
               const canClick = isViewingMine && !myDone && !slot.revealed && !isEditing;
+              const slotClassName = [
+                "m-cr-word-slot",
+                slot.revealed ? "m-cr-word-slot--revealed" : "m-cr-word-slot--hidden",
+                isEditing ? "m-cr-word-slot--editing" : "",
+                canClick ? "m-cr-word-slot--clickable" : "",
+                slot.solvedBy === sessionId ? "m-cr-word-slot--mine" : "",
+                slot.solvedBy && slot.solvedBy !== sessionId ? "m-cr-word-slot--theirs" : "",
+                slot.revealed && !slot.solvedBy && !isEdge ? "m-cr-word-slot--givenup" : "",
+              ].filter(Boolean).join(" ");
+              const slotContent = isEditing ? (
+                <form onSubmit={handleInlineGuess} className="m-cr-inline-form">
+                  <input
+                    ref={inlineInputRef}
+                    className="m-cr-inline-input"
+                    value={guess}
+                    onChange={(e) => setGuess(e.target.value)}
+                    placeholder="guess…"
+                    maxLength={slot.word.length}
+                    onBlur={() => { if (!guess.trim()) { setEditingIndex(null); } }}
+                    onKeyDown={(e) => { if (e.key === "Escape") { setEditingIndex(null); setGuess(""); } }}
+                  />
+                  <button type="submit" className="m-cr-inline-go" disabled={!guess.trim()}>↵</button>
+                </form>
+              ) : slot.revealed ? (
+                <span className="m-cr-word-text">{slot.word}</span>
+              ) : (
+                <span className="m-cr-word-text m-cr-word-text--partial">
+                  {renderPartialWord(slot.word, slot.lettersShown)}
+                </span>
+              );
 
               return (
                 <div key={id} className="m-cr-slot-outer">
                   <div className="m-cr-slot-row">
                     <span className="m-cr-slot-num">{i + 1}</span>
 
-                    <div
-                      className={[
-                        "m-cr-word-slot",
-                        slot.revealed ? "m-cr-word-slot--revealed" : "m-cr-word-slot--hidden",
-                        isEditing ? "m-cr-word-slot--editing" : "",
-                        canClick ? "m-cr-word-slot--clickable" : "",
-                        slot.solvedBy === sessionId ? "m-cr-word-slot--mine" : "",
-                        slot.solvedBy && slot.solvedBy !== sessionId ? "m-cr-word-slot--theirs" : "",
-                        slot.revealed && !slot.solvedBy && !isEdge ? "m-cr-word-slot--givenup" : "",
-                      ].filter(Boolean).join(" ")}
-                      onClick={canClick ? () => handleSlotClick(i) : undefined}
-                      onKeyDown={canClick ? (event) => activateOnKeyboard(event, () => handleSlotClick(i)) : undefined}
-                      role={canClick ? "button" : undefined}
-                      tabIndex={canClick ? 0 : undefined}
-                    >
-                      {isEditing ? (
-                        <form onSubmit={handleInlineGuess} className="m-cr-inline-form">
-                          <input
-                            ref={inlineInputRef}
-                            className="m-cr-inline-input"
-                            value={guess}
-                            onChange={(e) => setGuess(e.target.value)}
-                            placeholder="guess…"
-                            maxLength={slot.word.length}
-                            onBlur={() => { if (!guess.trim()) { setEditingIndex(null); } }}
-                            onKeyDown={(e) => { if (e.key === "Escape") { setEditingIndex(null); setGuess(""); } }}
-                          />
-                          <button type="submit" className="m-cr-inline-go" disabled={!guess.trim()}>↵</button>
-                        </form>
-                      ) : slot.revealed ? (
-                        <span className="m-cr-word-text">{slot.word}</span>
-                      ) : (
-                        <span className="m-cr-word-text m-cr-word-text--partial">
-                          {renderPartialWord(slot.word, slot.lettersShown)}
-                        </span>
-                      )}
-                    </div>
+                    {canClick ? (
+                      <button type="button" className={slotClassName} onClick={() => handleSlotClick(i)}>
+                        {slotContent}
+                      </button>
+                    ) : (
+                      <div className={slotClassName}>{slotContent}</div>
+                    )}
 
                     {/* Action buttons */}
                     <div className="m-cr-slot-actions">

@@ -729,8 +729,8 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
           <h3 className="m-label" style={{ textAlign: "center" }}>🏆 Game Over!</h3>
 
           <div className="m-shade-final-scores">
-            {[...game.players]
-              .sort((a, b) => b.totalScore - a.totalScore)
+            {game.players
+              .toSorted((a, b) => b.totalScore - a.totalScore)
               .map((p, i) => {
                 const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
                 const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";

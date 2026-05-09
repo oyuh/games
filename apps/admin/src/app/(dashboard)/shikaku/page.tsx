@@ -40,6 +40,8 @@ const DIFFICULTIES = ["all", "easy", "medium", "hard", "expert"] as const;
 type DifficultyFilter = (typeof DIFFICULTIES)[number];
 type DifficultyValue = ShikakuScoreRecord["difficulty"];
 
+const EDITABLE_DIFFICULTIES: readonly DifficultyValue[] = ["easy", "medium", "hard", "expert"];
+
 type ScoreDraft = {
   sessionId: string;
   name: string;
@@ -347,8 +349,8 @@ export default function ShikakuPage() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.label} className="rounded-[20px] border border-white/8 bg-[#111b2a] px-4 py-4">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+              <div key={item.label} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
                   <Icon className="size-4" />
                   {item.label}
                 </div>
@@ -365,12 +367,12 @@ export default function ShikakuPage() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by player, session, seed, or difficulty"
-                className="border-white/8 bg-[#0d1624] pl-11 text-slate-50"
+                className="border-white/8 bg-[#0d1624] pl-11 text-zinc-50"
               />
             </div>
 
@@ -383,7 +385,7 @@ export default function ShikakuPage() {
                   className={
                     difficulty === value
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/[0.06]"
+                      : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
                   }
                   onClick={() => setDifficulty(value)}
                 >
@@ -410,16 +412,16 @@ export default function ShikakuPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-slate-400">Rank</TableHead>
-                <TableHead className="text-slate-400">Player</TableHead>
-                <TableHead className="text-slate-400">Difficulty</TableHead>
-                <TableHead className="text-slate-400">Score</TableHead>
-                <TableHead className="text-slate-400">Time</TableHead>
-                <TableHead className="text-slate-400">Puzzles</TableHead>
-                <TableHead className="text-slate-400">Seed</TableHead>
-                <TableHead className="text-slate-400">Session</TableHead>
-                <TableHead className="text-slate-400">Submitted</TableHead>
-                <TableHead className="text-slate-400">Actions</TableHead>
+                <TableHead className="text-zinc-400">Rank</TableHead>
+                <TableHead className="text-zinc-400">Player</TableHead>
+                <TableHead className="text-zinc-400">Difficulty</TableHead>
+                <TableHead className="text-zinc-400">Score</TableHead>
+                <TableHead className="text-zinc-400">Time</TableHead>
+                <TableHead className="text-zinc-400">Puzzles</TableHead>
+                <TableHead className="text-zinc-400">Seed</TableHead>
+                <TableHead className="text-zinc-400">Session</TableHead>
+                <TableHead className="text-zinc-400">Submitted</TableHead>
+                <TableHead className="text-zinc-400">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -435,35 +437,35 @@ export default function ShikakuPage() {
                 </TableRow>
               ) : visibleScores.length === 0 ? (
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={10} className="px-4 py-12 text-center text-sm text-slate-500">
+                  <TableCell colSpan={10} className="px-4 py-12 text-center text-sm text-zinc-500">
                     No Shikaku entries match the current search.
                   </TableCell>
                 </TableRow>
               ) : (
                 visibleScores.map((score, index) => (
                   <TableRow key={score.id} className="border-white/8 hover:bg-[#142033]">
-                    <TableCell className="text-slate-400">{(page - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell className="text-zinc-400">{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell>
                       <div className="font-medium text-white">{score.name}</div>
-                      <div className="mt-1 text-xs text-slate-500">{shortId(score.id, 14)}</div>
+                      <div className="mt-1 text-xs text-zinc-500">{shortId(score.id, 14)}</div>
                     </TableCell>
                     <TableCell>
                       <Badge className={`border ${difficultyTone(score.difficulty)}`}>
                         {score.difficulty}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-slate-200">{score.score.toLocaleString()}</TableCell>
-                    <TableCell className="text-slate-200">{formatDurationMs(score.timeMs)}</TableCell>
-                    <TableCell className="text-slate-200">{score.puzzleCount}</TableCell>
-                    <TableCell className="font-mono text-sm text-slate-300">{score.seed}</TableCell>
-                    <TableCell className="font-mono text-sm text-slate-300">{shortId(score.sessionId, 14)}</TableCell>
-                    <TableCell className="text-sm text-slate-400">{formatDateTime(score.createdAt)}</TableCell>
+                    <TableCell className="text-zinc-200">{score.score.toLocaleString()}</TableCell>
+                    <TableCell className="text-zinc-200">{formatDurationMs(score.timeMs)}</TableCell>
+                    <TableCell className="text-zinc-200">{score.puzzleCount}</TableCell>
+                    <TableCell className="font-mono text-sm text-zinc-300">{score.seed}</TableCell>
+                    <TableCell className="font-mono text-sm text-zinc-300">{shortId(score.sessionId, 14)}</TableCell>
+                    <TableCell className="text-sm text-zinc-400">{formatDateTime(score.createdAt)}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/[0.06]"
+                          className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
                           onClick={() => openEditor(score)}
                         >
                           <Edit3 className="size-4" />
@@ -506,7 +508,7 @@ export default function ShikakuPage() {
         <DialogContent className="[--dialog-content-width:66rem] 2xl:[--dialog-content-width:72rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
           <DialogHeader>
             <DialogTitle className="text-xl text-white">Edit Shikaku entry</DialogTitle>
-            <DialogDescription className="text-slate-300/74">
+            <DialogDescription className="text-zinc-300/74">
               Every persisted field on the score record is editable here, including the timestamp and source session id.
             </DialogDescription>
           </DialogHeader>
@@ -515,43 +517,46 @@ export default function ShikakuPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-3">
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  <label htmlFor="score-session-id" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                     Session id
                   </label>
                   <Input
+                    id="score-session-id"
                     value={draft.sessionId}
                     onChange={(event) =>
                       setDraft((current) => (current ? { ...current, sessionId: event.target.value } : current))
                     }
-                    className="border-white/8 bg-[#0d1624] text-slate-50"
+                    className="border-white/8 bg-[#0d1624] text-zinc-50"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  <label htmlFor="score-player-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                     Player name
                   </label>
                   <Input
+                    id="score-player-name"
                     value={draft.name}
                     onChange={(event) =>
                       setDraft((current) => (current ? { ...current, name: event.target.value } : current))
                     }
-                    className="border-white/8 bg-[#0d1624] text-slate-50"
+                    className="border-white/8 bg-[#0d1624] text-zinc-50"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  <label htmlFor="score-difficulty" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                     Difficulty
                   </label>
                   <select
+                    id="score-difficulty"
                     value={draft.difficulty}
                     onChange={(event) =>
                       setDraft((current) =>
                         current ? { ...current, difficulty: event.target.value as DifficultyValue } : current
                       )
                     }
-                    className="h-10 w-full rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-slate-50 outline-none"
+                    className="h-10 w-full rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-zinc-50 outline-none"
                   >
-                    {DIFFICULTIES.filter((value) => value !== "all").map((value) => (
+                    {EDITABLE_DIFFICULTIES.map((value) => (
                       <option key={value} value={value}>
                         {value}
                       </option>
@@ -559,75 +564,80 @@ export default function ShikakuPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  <label htmlFor="score-created-at" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                     Submitted at
                   </label>
                   <Input
+                    id="score-created-at"
                     type="datetime-local"
                     value={draft.createdAt}
                     onChange={(event) =>
                       setDraft((current) => (current ? { ...current, createdAt: event.target.value } : current))
                     }
-                    className="border-white/8 bg-[#0d1624] text-slate-50"
+                    className="border-white/8 bg-[#0d1624] text-zinc-50"
                   />
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  <label htmlFor="score-seed" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                     Seed
                   </label>
                   <Input
+                    id="score-seed"
                     type="number"
                     min={0}
                     value={draft.seed}
                     onChange={(event) =>
                       setDraft((current) => (current ? { ...current, seed: event.target.value } : current))
                     }
-                    className="border-white/8 bg-[#0d1624] text-slate-50"
+                    className="border-white/8 bg-[#0d1624] text-zinc-50"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  <label htmlFor="score-score" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                     Score
                   </label>
                   <Input
+                    id="score-score"
                     type="number"
                     min={0}
                     value={draft.score}
                     onChange={(event) =>
                       setDraft((current) => (current ? { ...current, score: event.target.value } : current))
                     }
-                    className="border-white/8 bg-[#0d1624] text-slate-50"
+                    className="border-white/8 bg-[#0d1624] text-zinc-50"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  <label htmlFor="score-time-ms" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                     Time in ms
                   </label>
                   <Input
+                    id="score-time-ms"
                     type="number"
                     min={0}
                     value={draft.timeMs}
                     onChange={(event) =>
                       setDraft((current) => (current ? { ...current, timeMs: event.target.value } : current))
                     }
-                    className="border-white/8 bg-[#0d1624] text-slate-50"
+                    className="border-white/8 bg-[#0d1624] text-zinc-50"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  <label htmlFor="score-puzzle-count" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
                     Puzzle count
                   </label>
                   <Input
+                    id="score-puzzle-count"
                     type="number"
                     min={0}
                     value={draft.puzzleCount}
                     onChange={(event) =>
                       setDraft((current) => (current ? { ...current, puzzleCount: event.target.value } : current))
                     }
-                    className="rounded-full border-white/10 bg-white/4 text-slate-50"
+                    className="rounded-full border-white/10 bg-white/4 text-zinc-50"
                   />
                 </div>
               </div>
@@ -648,7 +658,7 @@ export default function ShikakuPage() {
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/[0.06]"
+                className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
                 onClick={closeEditor}
               >
                 Cancel

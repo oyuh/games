@@ -136,7 +136,7 @@ export function ClientDetailDialog({
       <DialogContent className="[--dialog-content-width:80rem] 2xl:[--dialog-content-width:86rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
         <DialogHeader>
           <DialogTitle className="text-xl text-white">Client controls</DialogTitle>
-          <DialogDescription className="text-slate-300/74">
+          <DialogDescription className="text-zinc-300/74">
             Open a live session, inspect what they are attached to, and take action without bouncing through separate admin pages.
           </DialogDescription>
         </DialogHeader>
@@ -146,20 +146,20 @@ export function ClientDetailDialog({
             <Surface>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Session</div>
+                  <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">Session</div>
                   <div className="mt-2 text-2xl font-semibold tracking-tight text-white">
                     {activeClient.name || "Anonymous"}
                   </div>
                 </div>
-                <Badge className="border border-white/10 bg-white/10 text-slate-100">
+                <Badge className="border border-white/10 bg-white/10 text-zinc-100">
                   {formatRelativeTime(activeClient.lastSeen)}
                 </Badge>
               </div>
 
               <div className="mt-4 space-y-3 text-sm">
                 <div className="rounded-[20px] border border-white/8 bg-[#0d1624] p-4">
-                  <div className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Identity</div>
-                  <div className="mt-3 space-y-2 text-slate-100">
+                  <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Identity</div>
+                  <div className="mt-3 space-y-2 text-zinc-100">
                     <div>Session: {shortId(activeClient.sessionId, 18)}</div>
                     <div>Connected: {formatDateTime(activeClient.connectedAt)}</div>
                     <div>Last seen: {formatDateTime(activeClient.lastSeen)}</div>
@@ -167,11 +167,11 @@ export function ClientDetailDialog({
                 </div>
 
                 <div className="rounded-[20px] border border-white/8 bg-[#0d1624] p-4">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-slate-500">
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-zinc-500">
                     <Globe2 className="size-4" />
                     Network
                   </div>
-                  <div className="mt-3 space-y-2 text-slate-100">
+                  <div className="mt-3 space-y-2 text-zinc-100">
                     <div>IP: {activeClient.ip || "Unknown"}</div>
                     <div>Region: {activeClient.region || "Unknown"}</div>
                     <div className="break-all">UA: {activeClient.userAgent || "Unknown"}</div>
@@ -179,11 +179,11 @@ export function ClientDetailDialog({
                 </div>
 
                 <div className="rounded-[20px] border border-white/8 bg-[#0d1624] p-4">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-slate-500">
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-zinc-500">
                     <Fingerprint className="size-4" />
                     Client fingerprint
                   </div>
-                  <div className="mt-3 break-all text-slate-100">
+                  <div className="mt-3 break-all text-zinc-100">
                     {activeClient.fingerprint || "Unavailable"}
                   </div>
                 </div>
@@ -191,8 +191,8 @@ export function ClientDetailDialog({
                 <div className="rounded-[20px] border border-white/8 bg-[#0d1624] p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Current game</div>
-                      <div className="mt-2 text-slate-100">
+                      <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Current game</div>
+                      <div className="mt-2 text-zinc-100">
                         {activeClient.gameId && activeClient.gameType ? formatGameType(activeClient.gameType) : "Not in a game"}
                       </div>
                     </div>
@@ -200,7 +200,7 @@ export function ClientDetailDialog({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-white/8 bg-[#162131] text-slate-100 hover:bg-white/6"
+                        className="border-white/8 bg-[#162131] text-zinc-100 hover:bg-white/6"
                         onClick={() => {
                           onOpenChange(false);
                           onViewGame({ id: activeClient.gameId!, type: activeClient.gameType! });
@@ -212,7 +212,7 @@ export function ClientDetailDialog({
                     )}
                   </div>
                   {activeClient.gameId && (
-                    <div className="mt-2 text-sm text-slate-400">{shortId(activeClient.gameId, 16)}</div>
+                    <div className="mt-2 text-sm text-zinc-400">{shortId(activeClient.gameId, 16)}</div>
                   )}
                 </div>
 
@@ -238,7 +238,7 @@ export function ClientDetailDialog({
             <div className="space-y-4">
               <Surface>
                 <div className="text-sm font-semibold text-white">Name override</div>
-                <div className="mt-1 text-sm text-slate-300/72">
+                <div className="mt-1 text-sm text-zinc-300/72">
                   Force a specific display name for this session or clear the override to hand control back.
                 </div>
 
@@ -247,14 +247,14 @@ export function ClientDetailDialog({
                   onChange={(event) => setNameInput(event.target.value)}
                   placeholder="Forced name"
                   maxLength={20}
-                  className="mt-4 border-white/8 bg-[#0d1624] text-slate-50"
+                  className="mt-4 border-white/8 bg-[#0d1624] text-zinc-50"
                 />
                 <Textarea
                   value={nameReason}
                   onChange={(event) => setNameReason(event.target.value)}
                   placeholder="Reason (optional)"
                   maxLength={200}
-                  className="mt-3 border-white/8 bg-[#0d1624] text-slate-50"
+                  className="mt-3 border-white/8 bg-[#0d1624] text-zinc-50"
                 />
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -276,7 +276,7 @@ export function ClientDetailDialog({
                   {detail?.nameOverride && activeClient.sessionId && (
                     <Button
                       variant="outline"
-                      className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"
+                      className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
                       disabled={pendingAction !== null}
                       onClick={() =>
                         runAction("clear-override", async () => {
@@ -304,7 +304,7 @@ export function ClientDetailDialog({
                       key={value}
                       type="button"
                       variant={restrictionType === value ? "default" : "outline"}
-                      className={restrictionType === value ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"}
+                      className={restrictionType === value ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"}
                       onClick={() => setRestrictionType(value)}
                     >
                       {label}
@@ -317,7 +317,7 @@ export function ClientDetailDialog({
                   onChange={(event) => setRestrictionReason(event.target.value)}
                   placeholder="Reason for the ban or restriction"
                   maxLength={200}
-                  className="mt-4 border-white/8 bg-[#0d1624] text-slate-50"
+                  className="mt-4 border-white/8 bg-[#0d1624] text-zinc-50"
                 />
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -357,7 +357,7 @@ export function ClientDetailDialog({
                   {activeClient.name && (
                     <Button
                       variant="outline"
-                      className="rounded-full border-white/10 bg-white/3 text-slate-100 hover:bg-white/8"
+                      className="rounded-full border-white/10 bg-white/3 text-zinc-100 hover:bg-white/8"
                       disabled={pendingAction !== null}
                       onClick={() =>
                         runAction("ban-name", async () => {
@@ -383,7 +383,7 @@ export function ClientDetailDialog({
                   onChange={(event) => setToastMessage(event.target.value)}
                   placeholder="Message this client"
                   maxLength={300}
-                  className="mt-4 rounded-full border-white/10 bg-white/4 text-slate-50"
+                  className="mt-4 rounded-full border-white/10 bg-white/4 text-zinc-50"
                 />
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -396,7 +396,7 @@ export function ClientDetailDialog({
                       key={value}
                       type="button"
                       variant={toastLevel === value ? "default" : "outline"}
-                      className={toastLevel === value ? "rounded-full bg-white text-slate-900 hover:bg-white/90" : "rounded-full border-white/10 bg-white/3 text-slate-100 hover:bg-white/8"}
+                      className={toastLevel === value ? "rounded-full bg-white text-zinc-900 hover:bg-white/90" : "rounded-full border-white/10 bg-white/3 text-zinc-100 hover:bg-white/8"}
                       onClick={() => setToastLevel(value)}
                     >
                       {label}

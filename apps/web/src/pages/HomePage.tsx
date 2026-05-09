@@ -1812,8 +1812,9 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
       if (!g) return null;
       const lines: string[] = [];
       const teams = g.teams ?? [];
+      const teamByName = new Map(teams.map((team) => [team.name, team]));
       for (const [teamKey, score] of Object.entries(g.scores ?? {})) {
-        const team = teams.find((t) => t.name === teamKey);
+        const team = teamByName.get(teamKey);
         const teamName = team?.name ?? teamKey;
         lines.push(`${teamName}: ${score} pts`);
       }
@@ -1824,7 +1825,8 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
       const g = gameData as typeof chainResults[0];
       if (!g) return null;
       const players = g.players ?? [];
-      const nameOf = (id: string) => getDisplayName(players.find((p) => p.sessionId === id)?.name, id);
+      const playerBySessionId = new Map(players.map((player) => [player.sessionId, player]));
+      const nameOf = (id: string) => getDisplayName(playerBySessionId.get(id)?.name, id);
       const lines: string[] = [];
 
       // Final scores

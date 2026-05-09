@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FiLink, FiHelpCircle, FiXCircle } from "react-icons/fi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { PasswordHeader } from "../password/PasswordHeader";
@@ -69,7 +69,8 @@ function renderPartialWord(word: string, lettersShown: number): string {
 /* ── Component ──────────────────────────────────────────── */
 
 export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; initialStep?: number }) {
-  const [step, setStep] = useState(initialStep);
+  const initialStepRef = useRef(initialStep);
+  const [step, setStep] = useState(initialStepRef.current);
 
   const renderChain = (chain: Slot[], interactive: boolean) => (
     <div className="cr-chain">

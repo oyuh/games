@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useSettings } from "../lib/settings";
 import {
-  playCountdownGo,
   playCountdownTick,
   playCorrect,
   playGameOver,
@@ -9,7 +8,6 @@ import {
   playPhaseChange,
   playReveal,
   playSubmit,
-  playVictory,
   playWrong,
   playYourTurn,
 } from "../lib/sounds";
@@ -100,11 +98,3 @@ export { playSubmit as playSoundSubmit };
 export { playCorrect as playSoundCorrect };
 /** Play wrong answer sound */
 export { playWrong as playSoundWrong };
-/** Play victory sound */
-export { playVictory as playSoundVictory };
-/** Play countdown tick */
-export { playCountdownTick as playSoundCountdownTick };
-/** Play countdown go */
-export { playCountdownGo as playSoundCountdownGo };
-/** Play reveal */
-export { playReveal as playSoundReveal };

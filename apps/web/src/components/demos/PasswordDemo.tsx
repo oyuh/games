@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useRef, useState, FormEvent } from "react";
 import { FiShield } from "react-icons/fi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { PasswordHeader } from "../password/PasswordHeader";
@@ -77,7 +77,8 @@ const steps: DemoStep[] = [
 /* ── Component ──────────────────────────────────────────── */
 
 export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void; initialStep?: number }) {
-  const [step, setStep] = useState(initialStep);
+  const initialStepRef = useRef(initialStep);
+  const [step, setStep] = useState(initialStepRef.current);
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState("");
 

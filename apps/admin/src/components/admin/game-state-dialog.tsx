@@ -49,7 +49,7 @@ function getPhaseTone(phase: string | undefined) {
     return "border-red-300/20 bg-red-300/10 text-red-50";
   }
   if (normalized.includes("lobby")) {
-    return "border-white/10 bg-white/10 text-slate-100";
+    return "border-white/10 bg-white/10 text-zinc-100";
   }
   return "border-emerald-300/20 bg-emerald-300/12 text-emerald-50";
 }
@@ -111,8 +111,8 @@ function JsonNode({ label, value, depth = 0 }: { label: string; value: unknown; 
   if (value == null || typeof value !== "object") {
     return (
       <div className="flex items-center justify-between gap-4 rounded-[18px] border border-white/8 bg-[#0d1624] px-3 py-2 text-sm">
-        <div className="text-slate-400">{label}</div>
-        <div className="max-w-[65%] truncate text-right text-slate-100">{summarizeValue(value)}</div>
+        <div className="text-zinc-400">{label}</div>
+        <div className="max-w-[65%] truncate text-right text-zinc-100">{summarizeValue(value)}</div>
       </div>
     );
   }
@@ -123,15 +123,15 @@ function JsonNode({ label, value, depth = 0 }: { label: string; value: unknown; 
 
   return (
     <details open={depth < 1} className="rounded-[20px] border border-white/8 bg-[#0d1624] p-3">
-      <summary className="flex items-center justify-between gap-3 text-sm text-slate-200">
+      <summary className="flex items-center justify-between gap-3 text-sm text-zinc-200">
         <span className="font-medium">{label}</span>
-        <span className="text-xs uppercase tracking-[0.24em] text-slate-500">
+        <span className="text-xs uppercase tracking-[0.24em] text-zinc-500">
           {Array.isArray(value) ? `${entries.length} items` : `${entries.length} fields`}
         </span>
       </summary>
       <div className="mt-3 space-y-2">
         {entries.length === 0 ? (
-          <div className="rounded-[18px] border border-dashed border-white/8 px-3 py-2 text-sm text-slate-500">
+          <div className="rounded-[18px] border border-dashed border-white/8 px-3 py-2 text-sm text-zinc-500">
             Empty
           </div>
         ) : (
@@ -286,6 +286,20 @@ export function GameStateDialog({
     }
   };
 
+  const gameSections =
+    game == null
+      ? []
+      : ([
+          ["Settings", (game as { settings?: unknown }).settings],
+          ["Scores", (game as { scores?: unknown }).scores],
+          ["Announcement", (game as { announcement?: unknown }).announcement],
+        ] as const).reduce<Array<readonly [string, unknown]>>((sections, section) => {
+          if (section[1] != null) {
+            sections.push(section);
+          }
+          return sections;
+        }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="[--dialog-content-width:84rem] 2xl:[--dialog-content-width:90rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
@@ -295,18 +309,18 @@ export function GameStateDialog({
               <DialogTitle className="text-xl text-white">
                 {game ? `${formatGameType(game.type)} state` : "Live game state"}
               </DialogTitle>
-              <DialogDescription className="mt-1 text-slate-300/74">
+              <DialogDescription className="mt-1 text-zinc-300/74">
                 Opens the raw state with a readable layer on top and keeps polling while the modal stays open.
               </DialogDescription>
               {game && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Badge className="border border-white/10 bg-white/10 text-slate-50">
+                  <Badge className="border border-white/10 bg-white/10 text-zinc-50">
                     Code {String(game.code ?? "----")}
                   </Badge>
                   <Badge className={cn("border", getPhaseTone(String(game.phase ?? "unknown")))}>
                     {String(game.phase ?? "unknown")}
                   </Badge>
-                  <Badge variant="outline" className="border-white/10 text-slate-200">
+                  <Badge variant="outline" className="border-white/10 text-zinc-200">
                     Updated {formatRelativeTime(Number(game.updatedAt ?? 0))}
                   </Badge>
                 </div>
@@ -316,7 +330,7 @@ export function GameStateDialog({
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
-                className="border-white/8 bg-[#162131] text-slate-100 hover:bg-white/6"
+                className="border-white/8 bg-[#162131] text-zinc-100 hover:bg-white/6"
                 onClick={() => void refresh()}
                 disabled={loading}
               >
@@ -350,7 +364,7 @@ export function GameStateDialog({
             </div>
           </div>
         ) : !detail || !game ? (
-          <div className="rounded-[24px] border border-dashed border-white/8 px-5 py-12 text-center text-sm text-slate-400">
+          <div className="rounded-[24px] border border-dashed border-white/8 px-5 py-12 text-center text-sm text-zinc-400">
             No state available for this game yet.
           </div>
         ) : (
@@ -389,11 +403,11 @@ export function GameStateDialog({
 
                   return (
                     <Surface key={metric.label} className="flex items-center gap-3">
-                      <div className="flex size-12 items-center justify-center rounded-[16px] border border-white/8 bg-[#18253a] text-slate-100">
+                      <div className="flex size-12 items-center justify-center rounded-[16px] border border-white/8 bg-[#18253a] text-zinc-100">
                         <Icon className="size-5" />
                       </div>
                       <div>
-                        <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{metric.label}</div>
+                        <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">{metric.label}</div>
                         <div className="mt-1 text-2xl font-semibold tracking-tight text-white">{metric.value}</div>
                       </div>
                     </Surface>
@@ -413,9 +427,9 @@ export function GameStateDialog({
                       ["Created", formatDateTime(typeof game.createdAt === "number" ? game.createdAt : null)],
                       ["Updated", formatDateTime(typeof game.updatedAt === "number" ? game.updatedAt : null)],
                     ].map(([label, value]) => (
-                      <div key={label} className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3">
-                        <div className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{label}</div>
-                        <div className="mt-2 text-sm text-slate-100">{value}</div>
+                      <div key={label} className="rounded-2xl border border-white/8 bg-black/20 p-3">
+                        <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">{label}</div>
+                        <div className="mt-2 text-sm text-zinc-100">{value}</div>
                       </div>
                     ))}
                   </div>
@@ -425,17 +439,17 @@ export function GameStateDialog({
                   <div className="text-sm font-semibold text-white">Live attachments</div>
                   <div className="mt-4 space-y-2">
                     {detail.sessions.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-white/8 px-3 py-4 text-sm text-slate-500">
+                      <div className="rounded-2xl border border-dashed border-white/8 px-3 py-4 text-sm text-zinc-500">
                         No active sessions currently attached.
                       </div>
                     ) : (
                       detail.sessions.map((session) => (
-                        <div key={session.sessionId ?? Math.random()} className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-sm">
+                        <div key={String(session.sessionId ?? session.name ?? session.lastSeen ?? "attached-session")} className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 p-3 text-sm">
                           <div>
-                            <div className="font-medium text-slate-100">{session.name || "Anonymous"}</div>
-                            <div className="mt-1 text-slate-400">{shortId(session.sessionId, 14)}</div>
+                            <div className="font-medium text-zinc-100">{session.name || "Anonymous"}</div>
+                            <div className="mt-1 text-zinc-400">{shortId(session.sessionId, 14)}</div>
                           </div>
-                          <Badge variant="outline" className="border-white/10 text-slate-200">
+                          <Badge variant="outline" className="border-white/10 text-zinc-200">
                             {formatRelativeTime(session.lastSeen)}
                           </Badge>
                         </div>
@@ -446,27 +460,21 @@ export function GameStateDialog({
               </div>
 
               <div className="grid gap-4 xl:grid-cols-2">
-                {([
-                  ["Settings", (game as { settings?: unknown }).settings],
-                  ["Scores", (game as { scores?: unknown }).scores],
-                  ["Announcement", (game as { announcement?: unknown }).announcement],
-                ] as const)
-                  .filter(([, value]) => value != null)
-                  .map(([label, value]) => (
+                {gameSections.map(([label, value]) => (
                     <Surface key={label}>
                       <div className="text-sm font-semibold text-white">{label}</div>
                       <div className="mt-4 space-y-2">
                         {value && typeof value === "object" && !Array.isArray(value) ? (
                           Object.entries(value).map(([entryKey, entryValue]) => (
                             <div key={entryKey} className="flex items-center justify-between gap-4 rounded-2xl border border-white/8 bg-black/20 px-3 py-2 text-sm">
-                              <div className="text-slate-400">{humanizeKey(entryKey)}</div>
-                              <div className="max-w-[60%] truncate text-right text-slate-100">
+                              <div className="text-zinc-400">{humanizeKey(entryKey)}</div>
+                              <div className="max-w-[60%] truncate text-right text-zinc-100">
                                 {summarizeValue(entryValue)}
                               </div>
                             </div>
                           ))
                         ) : (
-                          <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-sm text-slate-100">
+                          <div className="rounded-2xl border border-white/8 bg-black/20 p-3 text-sm text-zinc-100">
                             {summarizeValue(value)}
                           </div>
                         )}
@@ -482,22 +490,23 @@ export function GameStateDialog({
                   <div className="text-sm font-semibold text-white">Players and teams</div>
                   <div className="mt-4 space-y-3">
                     {Array.isArray((game as { players?: unknown[] }).players) &&
-                      (game as { players?: Array<Record<string, unknown>> }).players!.map((player, index) => {
+                      (game as { players?: Array<Record<string, unknown>> }).players!.map((player) => {
                         const playerSessionId = typeof player.sessionId === "string" ? player.sessionId : null;
+                        const playerKey = String(playerSessionId ?? player.name ?? player.role ?? "player");
 
                         return (
-                          <div key={`${playerSessionId ?? index}`} className="flex flex-wrap items-center gap-3 rounded-[24px] border border-white/8 bg-black/20 px-4 py-3">
+                          <div key={playerKey} className="flex flex-wrap items-center gap-3 rounded-[24px] border border-white/8 bg-black/20 px-4 py-3">
                             <div className="min-w-0 flex-1">
-                              <div className="font-medium text-slate-100">{typeof player.name === "string" && player.name ? player.name : "Anonymous"}</div>
-                              <div className="mt-1 text-sm text-slate-400">{shortId(playerSessionId, 14)}</div>
+                              <div className="font-medium text-zinc-100">{typeof player.name === "string" && player.name ? player.name : "Anonymous"}</div>
+                              <div className="mt-1 text-sm text-zinc-400">{shortId(playerSessionId, 14)}</div>
                             </div>
                             {typeof player.role === "string" && (
-                              <Badge variant="outline" className="border-white/10 text-slate-100">
+                              <Badge variant="outline" className="border-white/10 text-zinc-100">
                                 {player.role}
                               </Badge>
                             )}
                             {typeof player.totalScore === "number" && (
-                              <Badge variant="outline" className="border-white/10 text-slate-100">
+                              <Badge variant="outline" className="border-white/10 text-zinc-100">
                                 Score {player.totalScore}
                               </Badge>
                             )}
@@ -505,7 +514,7 @@ export function GameStateDialog({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="rounded-full border-white/10 bg-white/3 text-slate-100 hover:bg-white/8"
+                                className="rounded-full border-white/10 bg-white/3 text-zinc-100 hover:bg-white/8"
                                 onClick={() => void kickPlayer(playerSessionId)}
                                 disabled={pendingAction === playerSessionId}
                               >
@@ -517,22 +526,26 @@ export function GameStateDialog({
                       })}
 
                     {Array.isArray((game as { teams?: unknown[] }).teams) &&
-                      (game as { teams?: Array<Record<string, unknown>> }).teams!.map((team, index) => (
-                        <div key={`team-${index}`} className="rounded-[24px] border border-white/8 bg-black/20 p-4">
+                      (game as { teams?: Array<Record<string, unknown>> }).teams!.map((team, index) => {
+                        const teamMembers = Array.isArray(team.members) ? team.members : [];
+                        const teamKey = String(team.id ?? team.name ?? teamMembers.map(String).join("-") ?? "team");
+
+                        return (
+                        <div key={teamKey} className="rounded-[24px] border border-white/8 bg-black/20 p-4">
                           <div className="flex items-center justify-between gap-3">
                             <div className="font-medium text-white">{String(team.name ?? `Team ${index + 1}`)}</div>
-                            <Badge variant="outline" className="border-white/10 text-slate-100">
-                              {Array.isArray(team.members) ? team.members.length : 0} members
+                            <Badge variant="outline" className="border-white/10 text-zinc-100">
+                              {teamMembers.length} members
                             </Badge>
                           </div>
                           <div className="mt-3 space-y-2">
-                            {(Array.isArray(team.members) ? team.members : []).map((memberId) => (
+                            {teamMembers.map((memberId) => (
                               <div key={String(memberId)} className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 px-3 py-2 text-sm">
-                                <div className="text-slate-100">{shortId(String(memberId), 14)}</div>
+                                <div className="text-zinc-100">{shortId(String(memberId), 14)}</div>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="rounded-full border-white/10 bg-white/3 text-slate-100 hover:bg-white/8"
+                                  className="rounded-full border-white/10 bg-white/3 text-zinc-100 hover:bg-white/8"
                                   onClick={() => void kickPlayer(String(memberId))}
                                   disabled={pendingAction === String(memberId)}
                                 >
@@ -542,10 +555,11 @@ export function GameStateDialog({
                             ))}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
 
                     {!Array.isArray((game as { players?: unknown[] }).players) && !Array.isArray((game as { teams?: unknown[] }).teams) && (
-                      <div className="rounded-[24px] border border-dashed border-white/8 px-4 py-6 text-sm text-slate-500">
+                      <div className="rounded-[24px] border border-dashed border-white/8 px-4 py-6 text-sm text-zinc-500">
                         No roster data exposed on this game state.
                       </div>
                     )}
@@ -556,14 +570,14 @@ export function GameStateDialog({
                   <div className="text-sm font-semibold text-white">Spectators</div>
                   <div className="mt-4 space-y-2">
                     {Array.isArray((game as { spectators?: unknown[] }).spectators) && (game as { spectators?: Array<Record<string, unknown>> }).spectators!.length > 0 ? (
-                      (game as { spectators?: Array<Record<string, unknown>> }).spectators!.map((spectator, index) => (
-                        <div key={`${spectator.sessionId ?? index}`} className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-sm">
-                          <div className="font-medium text-slate-100">{typeof spectator.name === "string" && spectator.name ? spectator.name : "Spectator"}</div>
-                          <div className="mt-1 text-slate-400">{shortId(typeof spectator.sessionId === "string" ? spectator.sessionId : null, 14)}</div>
+                      (game as { spectators?: Array<Record<string, unknown>> }).spectators!.map((spectator) => (
+                        <div key={String(spectator.sessionId ?? spectator.name ?? "spectator")} className="rounded-2xl border border-white/8 bg-black/20 p-3 text-sm">
+                          <div className="font-medium text-zinc-100">{typeof spectator.name === "string" && spectator.name ? spectator.name : "Spectator"}</div>
+                          <div className="mt-1 text-zinc-400">{shortId(typeof spectator.sessionId === "string" ? spectator.sessionId : null, 14)}</div>
                         </div>
                       ))
                     ) : (
-                      <div className="rounded-[24px] border border-dashed border-white/8 px-4 py-6 text-sm text-slate-500">
+                      <div className="rounded-[24px] border border-dashed border-white/8 px-4 py-6 text-sm text-zinc-500">
                         No spectators attached.
                       </div>
                     )}
