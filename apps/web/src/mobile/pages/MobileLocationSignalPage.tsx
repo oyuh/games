@@ -374,6 +374,10 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
 
   const buildMarkers = (): MapMarker[] => {
     const markers: MapMarker[] = [];
+    const guessBySessionRound = new Map(
+      game.guesses.map((guess) => [`${guess.sessionId}:${guess.round}`, guess])
+    );
+
     if (draftMarker && (phase === "picking" || isGuessPhase)) {
       markers.push({ lat: draftMarker.lat, lng: draftMarker.lng, color: "#ef476f", label: "Your pick", size: 3.5, pulse: true });
     }
@@ -387,7 +391,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     // Non-leader: show my own previous round guesses as smaller dots during guess2+
     if (!isLeader && isGuessPhase && currentGuessRound > 1) {
       for (let r = 1; r < currentGuessRound; r++) {
-        const prev = game.guesses.find((g) => g.sessionId === sessionId && g.round === r);
+        const prev = guessBySessionRound.get(`${sessionId}:${r}`);
         if (prev) {
           markers.push({ lat: prev.lat, lng: prev.lng, color: guesserColorMap[sessionId] ?? "#06d6a0", label: `Your G${r}`, size: 1.5 });
         }
@@ -479,7 +483,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
       .finally(() => setJoiningFromOtherGame(false));
   };
 
-  const sortedPlayers = [...game.players].sort((a, b) => b.totalScore - a.totalScore);
+  const sortedPlayers = game.players.toSorted((a, b) => b.totalScore - a.totalScore);
 
   return (
     <div className="m-page" data-game-theme="location">

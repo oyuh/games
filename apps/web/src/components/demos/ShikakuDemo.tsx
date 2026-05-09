@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FiGrid } from "react-icons/fi";
 import { DemoModal, type DemoStep } from "./DemoModal";
 import "../../styles/shikaku.css";
@@ -145,7 +145,8 @@ function DemoGrid({ step }: { step: number }) {
 /* ── Component ──────────────────────────────────────────── */
 
 export function ShikakuDemo({ onClose, initialStep = 0 }: { onClose: () => void; initialStep?: number }) {
-  const [step, setStep] = useState(initialStep);
+  const initialStepRef = useRef(initialStep);
+  const [step, setStep] = useState(initialStepRef.current);
 
   return (
     <DemoModal

@@ -141,14 +141,14 @@ export function playCountdownTick() {
 }
 
 /** Countdown final — GO! */
-export function playCountdownGo() {
+function playCountdownGo() {
   if (!canPlay("gameNotifications")) return;
   playTone(523, "sine", 0.12, { volume: 0.6, attack: 0.005 });
   playTone(784, "sine", 0.2, { volume: 0.7, delay: 0.1 });
 }
 
 /** Timer running low warning (last ~5 seconds) */
-export function playTimerUrgent() {
+function playTimerUrgent() {
   if (!canPlay("gameNotifications")) return;
   playTone(880, "square", 0.06, { volume: 0.25, filterFreq: 2000 });
 }
@@ -194,7 +194,7 @@ export function playGameOver() {
 }
 
 /** Victory fanfare — you/your team won */
-export function playVictory() {
+function playVictory() {
   if (!canPlay("actionFeedback")) return;
   playTone(523, "sine", 0.12, { volume: 0.5 });
   playTone(659, "sine", 0.12, { volume: 0.5, delay: 0.1 });
@@ -205,21 +205,21 @@ export function playVictory() {
 }
 
 /** Player joined the lobby */
-export function playPlayerJoin() {
+function playPlayerJoin() {
   if (!canPlay("playerSounds")) return;
   playTone(600, "sine", 0.08, { volume: 0.3, attack: 0.005 });
   playTone(750, "sine", 0.1, { volume: 0.3, delay: 0.06 });
 }
 
 /** Player left */
-export function playPlayerLeave() {
+function playPlayerLeave() {
   if (!canPlay("playerSounds")) return;
   playTone(500, "sine", 0.08, { volume: 0.25 });
   playTone(380, "sine", 0.12, { volume: 0.25, delay: 0.06 });
 }
 
 /** Puzzle solved (Shikaku) */
-export function playPuzzleSolved() {
+function playPuzzleSolved() {
   if (!canPlay("actionFeedback")) return;
   playTone(523, "sine", 0.1, { volume: 0.5 });
   playTone(659, "sine", 0.1, { volume: 0.5, delay: 0.08 });

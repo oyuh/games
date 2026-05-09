@@ -116,7 +116,7 @@ export function BroadcastControlsDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className={cn("border-[#38589a] bg-[#16305a] text-slate-50 hover:bg-[#1c3969]")}>
+        <Button className={cn("border-[#38589a] bg-[#16305a] text-zinc-50 hover:bg-[#1c3969]")}>
           <Megaphone className="size-4" />
           Broadcast
         </Button>
@@ -125,7 +125,7 @@ export function BroadcastControlsDialog() {
       <DialogContent className="[--dialog-content-width:74rem] 2xl:[--dialog-content-width:78rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
         <DialogHeader>
           <DialogTitle className="text-xl text-white">Broadcast controls</DialogTitle>
-          <DialogDescription className="text-slate-300/74">
+          <DialogDescription className="text-zinc-300/74">
             Keep the messaging actions together without forcing a separate admin page.
           </DialogDescription>
         </DialogHeader>
@@ -134,17 +134,17 @@ export function BroadcastControlsDialog() {
           <section className="rounded-[24px] border border-white/8 bg-[#111b2a] p-5 lg:col-span-2">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
                   Global Toast
                 </div>
                 <div className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white">
                   Broadcast a live system message
                 </div>
-                <div className="mt-2 max-w-2xl text-sm leading-6 text-slate-300/72">
+                <div className="mt-2 max-w-2xl text-sm leading-6 text-zinc-300/72">
                   Send one message to every connected client without leaving the header flow.
                 </div>
               </div>
-              <Badge variant="secondary" className="w-fit border border-white/8 bg-[#0d1624] text-slate-100">
+              <Badge variant="secondary" className="w-fit border border-white/8 bg-[#0d1624] text-zinc-100">
                 Live
               </Badge>
             </div>
@@ -153,7 +153,7 @@ export function BroadcastControlsDialog() {
               value={toastMessage}
               onChange={(event) => setToastMessage(event.target.value)}
               placeholder="Tell everyone what is happening..."
-              className="mt-5 min-h-32 border-white/8 bg-[#0d1624] text-slate-50 placeholder:text-slate-400"
+              className="mt-5 min-h-32 border-white/8 bg-[#0d1624] text-zinc-50 placeholder:text-zinc-400"
               maxLength={300}
             />
 
@@ -171,7 +171,7 @@ export function BroadcastControlsDialog() {
                     className={
                       toastLevel === value
                         ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"
+                        : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
                     }
                     onClick={() => setToastLevel(value)}
                   >
@@ -181,7 +181,7 @@ export function BroadcastControlsDialog() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="text-xs uppercase tracking-[0.28em] text-slate-400">
+                <div className="text-xs uppercase tracking-[0.28em] text-zinc-400">
                   {toastMessage.length}/300
                 </div>
                 <Button
@@ -210,13 +210,13 @@ export function BroadcastControlsDialog() {
                 <BellRing className="size-4" />
               </div>
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
                   Update Countdown
                 </div>
                 <div className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
                   Stage a controlled refresh warning
                 </div>
-                <div className="mt-2 text-sm leading-6 text-slate-300/72">
+                <div className="mt-2 text-sm leading-6 text-zinc-300/72">
                   Clients get the start notice, one-minute reminder, and ten-second countdown.
                 </div>
               </div>
@@ -229,9 +229,9 @@ export function BroadcastControlsDialog() {
                 max={30}
                 value={warningMinutes}
                 onChange={(event) => setWarningMinutes(Number(event.target.value) || 1)}
-                className="max-w-28 border-white/8 bg-[#0d1624] text-slate-50"
+                className="max-w-28 border-white/8 bg-[#0d1624] text-zinc-50"
               />
-              <div className="text-sm text-slate-300/72">minutes</div>
+              <div className="text-sm text-zinc-300/72">minutes</div>
             </div>
 
             <Button
@@ -250,13 +250,13 @@ export function BroadcastControlsDialog() {
                 <TriangleAlert className="size-4" />
               </div>
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
                   Fast Actions
                 </div>
                 <div className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
                   Immediate operational controls
                 </div>
-                <div className="mt-2 text-sm leading-6 text-slate-300/72">
+                <div className="mt-2 text-sm leading-6 text-zinc-300/72">
                   Use these when you need an instant refresh or a hard stop before rollout.
                 </div>
               </div>
@@ -265,7 +265,7 @@ export function BroadcastControlsDialog() {
             <div className="mt-5 space-y-3">
               <Button
                 variant="outline"
-                className="w-full justify-start border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/6"
+                className="w-full justify-start border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
                 disabled={pendingAction !== null}
                 onClick={() => void forceRefresh()}
               >

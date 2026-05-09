@@ -130,7 +130,7 @@ export type ShikakuScoreRecord = {
   createdAt: number;
 };
 
-export const GAME_TYPE_LABELS: Record<GameType, string> = {
+const GAME_TYPE_LABELS: Record<GameType, string> = {
   imposter: "Imposter",
   password: "Password",
   chain_reaction: "Chain Reaction",

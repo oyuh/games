@@ -42,7 +42,7 @@ export default async function RootLayout({
                     <Button
                       type="submit"
                       variant="outline"
-                      className="min-w-[112px] justify-center border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/[0.06]"
+                      className="min-w-[112px] justify-center border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
                     >
                       Sign out
                     </Button>

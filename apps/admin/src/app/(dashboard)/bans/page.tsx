@@ -322,8 +322,8 @@ export default function BansPage() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.label} className="rounded-[20px] border border-white/8 bg-[#111b2a] px-4 py-4">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+              <div key={item.label} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
                   <Icon className="size-4" />
                   {item.label}
                 </div>
@@ -341,12 +341,12 @@ export default function BansPage() {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search restrictions, names, overrides, or reasons"
-                  className="border-white/8 bg-[#0d1624] pl-11 text-slate-50"
+                  className="border-white/8 bg-[#0d1624] pl-11 text-zinc-50"
                 />
               </div>
 
@@ -359,7 +359,7 @@ export default function BansPage() {
                     className={
                       banFilter === value
                         ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/[0.06]"
+                        : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
                     }
                     onClick={() => setBanFilter(value as typeof banFilter)}
                   >
@@ -369,7 +369,7 @@ export default function BansPage() {
               </div>
             </div>
 
-            <Badge variant="outline" className="w-fit border-white/8 bg-white/[0.03] text-slate-200">
+            <Badge variant="outline" className="w-fit border-white/8 bg-white/[0.03] text-zinc-200">
               {visibleBans.length} visible on this page
             </Badge>
           </div>
@@ -378,11 +378,11 @@ export default function BansPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-slate-400">Type</TableHead>
-                  <TableHead className="text-slate-400">Value</TableHead>
-                  <TableHead className="text-slate-400">Reason</TableHead>
-                  <TableHead className="text-slate-400">Created</TableHead>
-                  <TableHead className="text-slate-400">Actions</TableHead>
+                  <TableHead className="text-zinc-400">Type</TableHead>
+                  <TableHead className="text-zinc-400">Value</TableHead>
+                  <TableHead className="text-zinc-400">Reason</TableHead>
+                  <TableHead className="text-zinc-400">Created</TableHead>
+                  <TableHead className="text-zinc-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -398,7 +398,7 @@ export default function BansPage() {
                   </TableRow>
                 ) : visibleBans.length === 0 ? (
                   <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableCell colSpan={5} className="px-4 py-12 text-center text-sm text-slate-500">
+                    <TableCell colSpan={5} className="px-4 py-12 text-center text-sm text-zinc-500">
                       No restrictions match the current search.
                     </TableCell>
                   </TableRow>
@@ -410,11 +410,11 @@ export default function BansPage() {
                           {ban.type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-slate-100">{ban.value}</TableCell>
-                      <TableCell className="max-w-md text-sm text-slate-300/80">{ban.reason || "No reason provided"}</TableCell>
-                      <TableCell className="text-sm text-slate-400">
+                      <TableCell className="font-mono text-sm text-zinc-100">{ban.value}</TableCell>
+                      <TableCell className="max-w-md text-sm text-zinc-300/80">{ban.reason || "No reason provided"}</TableCell>
+                      <TableCell className="text-sm text-zinc-400">
                         <div>{formatRelativeTime(ban.createdAt)}</div>
-                        <div className="mt-1 text-xs text-slate-500">{formatDateTime(ban.createdAt)}</div>
+                        <div className="mt-1 text-xs text-zinc-500">{formatDateTime(ban.createdAt)}</div>
                       </TableCell>
                       <TableCell>
                         <Button
@@ -451,7 +451,7 @@ export default function BansPage() {
 
         <Surface>
           <div className="text-sm font-semibold text-white">Add restriction</div>
-          <div className="mt-1 text-sm leading-6 text-slate-400">
+          <div className="mt-1 text-sm leading-6 text-zinc-400">
             Session bans disconnect immediately. IP and region bans block re-entry on the next auth cycle.
           </div>
 
@@ -464,7 +464,7 @@ export default function BansPage() {
                 className={
                   newBan.type === option.value
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/[0.06]"
+                    : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
                 }
                 onClick={() => setNewBan((current) => ({ ...current, type: option.value }))}
               >
@@ -483,14 +483,14 @@ export default function BansPage() {
                   ? "IP address"
                   : "Region code"
             }
-            className="mt-4 border-white/8 bg-[#0d1624] text-slate-50"
+            className="mt-4 border-white/8 bg-[#0d1624] text-zinc-50"
           />
           <Textarea
             value={newBan.reason}
             onChange={(event) => setNewBan((current) => ({ ...current, reason: event.target.value }))}
             placeholder="Reason for this restriction"
             maxLength={200}
-            className="mt-3 border-white/8 bg-[#0d1624] text-slate-50"
+            className="mt-3 border-white/8 bg-[#0d1624] text-zinc-50"
           />
 
           <Button
@@ -501,7 +501,7 @@ export default function BansPage() {
             Create restriction
           </Button>
 
-          <div className="mt-5 rounded-[20px] border border-white/8 bg-[#111b2a] p-4 text-sm text-slate-400">
+          <div className="mt-5 rounded-[20px] border border-white/8 bg-[#111b2a] p-4 text-sm text-zinc-400">
             Name rules are enforced server-side now. Forced name overrides are best created from the client modal when you need to correct a single session without banning the pattern globally.
           </div>
         </Surface>
@@ -512,11 +512,11 @@ export default function BansPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-sm font-semibold text-white">Restricted names</div>
-              <div className="mt-1 text-sm leading-6 text-slate-400">
-                Supports exact matches and wildcard patterns like <span className="mono text-slate-200">admin*</span>.
+              <div className="mt-1 text-sm leading-6 text-zinc-400">
+                Supports exact matches and wildcard patterns like <span className="mono text-zinc-200">admin*</span>.
               </div>
             </div>
-            <Badge variant="outline" className="border-white/8 bg-white/[0.03] text-slate-200">
+            <Badge variant="outline" className="border-white/8 bg-white/[0.03] text-zinc-200">
               {ruleTotal} total
             </Badge>
           </div>
@@ -526,13 +526,13 @@ export default function BansPage() {
               value={newRule.pattern}
               onChange={(event) => setNewRule((current) => ({ ...current, pattern: event.target.value }))}
               placeholder="Restricted pattern"
-              className="border-white/8 bg-[#0d1624] text-slate-50"
+              className="border-white/8 bg-[#0d1624] text-zinc-50"
             />
             <Textarea
               value={newRule.reason}
               onChange={(event) => setNewRule((current) => ({ ...current, reason: event.target.value }))}
               placeholder="Why this name is blocked"
-              className="border-white/8 bg-[#0d1624] text-slate-50"
+              className="border-white/8 bg-[#0d1624] text-zinc-50"
             />
             <Button
               className="w-fit"
@@ -545,25 +545,25 @@ export default function BansPage() {
 
           <div className="mt-4 space-y-3">
             {visibleRestrictedNames.length === 0 ? (
-              <div className="rounded-[20px] border border-dashed border-white/8 px-4 py-8 text-sm text-slate-500">
+              <div className="rounded-[20px] border border-dashed border-white/8 px-4 py-8 text-sm text-zinc-500">
                 No name rules on this page match the current search.
               </div>
             ) : (
               visibleRestrictedNames.map((entry) => (
-                <div key={entry.id} className="rounded-[20px] border border-white/8 bg-[#111b2a] px-4 py-4">
+                <div key={entry.id} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="font-mono text-sm text-white">{entry.pattern}</div>
-                      <div className="mt-2 text-sm text-slate-400">{entry.reason || "No reason provided"}</div>
+                      <div className="mt-2 text-sm text-zinc-400">{entry.reason || "No reason provided"}</div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="text-xs uppercase tracking-[0.24em] text-slate-500">
+                      <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
                         {formatRelativeTime(entry.createdAt)}
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/[0.06]"
+                        className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
                         disabled={pendingAction === `remove-rule-${entry.id}`}
                         onClick={() => void removeRestrictedName(entry.id)}
                       >
@@ -595,37 +595,37 @@ export default function BansPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-sm font-semibold text-white">Forced name overrides</div>
-              <div className="mt-1 text-sm leading-6 text-slate-400">
+              <div className="mt-1 text-sm leading-6 text-zinc-400">
                 Create overrides from the client list when a single session needs intervention without adding a global rule.
               </div>
             </div>
-            <Badge variant="outline" className="border-white/8 bg-white/[0.03] text-slate-200">
+            <Badge variant="outline" className="border-white/8 bg-white/[0.03] text-zinc-200">
               {overrideTotal} total
             </Badge>
           </div>
 
           <div className="mt-4 space-y-3">
             {visibleOverrides.length === 0 ? (
-              <div className="rounded-[20px] border border-dashed border-white/8 px-4 py-8 text-sm text-slate-500">
+              <div className="rounded-[20px] border border-dashed border-white/8 px-4 py-8 text-sm text-zinc-500">
                 No name overrides on this page match the current search.
               </div>
             ) : (
               visibleOverrides.map((override) => (
-                <div key={override.sessionId} className="rounded-[20px] border border-white/8 bg-[#111b2a] px-4 py-4">
+                <div key={override.sessionId} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="font-medium text-white">{override.forcedName}</div>
-                      <div className="mt-1 text-sm text-slate-400">{shortId(override.sessionId, 18)}</div>
-                      <div className="mt-2 text-sm text-slate-400">{override.reason || "No reason provided"}</div>
+                      <div className="mt-1 text-sm text-zinc-400">{shortId(override.sessionId, 18)}</div>
+                      <div className="mt-2 text-sm text-zinc-400">{override.reason || "No reason provided"}</div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="text-xs uppercase tracking-[0.24em] text-slate-500">
+                      <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
                         {formatRelativeTime(override.updatedAt)}
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-white/8 bg-[#0d1624] text-slate-100 hover:bg-white/[0.06]"
+                        className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
                         disabled={pendingAction === `remove-override-${override.sessionId}`}
                         onClick={() => void removeOverride(override.sessionId)}
                       >
