@@ -33,7 +33,12 @@ export function MobileHostControlsSheet({
   const kickablePlayersList =
     game.type === "password"
       ? game.players.filter((p) => p.id !== sessionId)
-      : game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: getDisplayName(p.name, p.sessionId) }));
+      : game.players.reduce<Array<{ id: string; name: string }>>((players, player) => {
+          if (player.sessionId !== sessionId) {
+            players.push({ id: player.sessionId, name: getDisplayName(player.name, player.sessionId) });
+          }
+          return players;
+        }, []);
 
   const spectatorsList = (game.spectators ?? []).map((s) => ({ id: s.sessionId, name: getDisplayName(s.name, s.sessionId) }));
 

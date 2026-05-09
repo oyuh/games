@@ -7,7 +7,7 @@ export function RoundCountdown({
   endsAt: number | null | undefined;
   label: string;
 }) {
-  const [nowTs, setNowTs] = useState(Date.now());
+  const [nowTs, setNowTs] = useState(() => Date.now());
 
   useEffect(() => {
     const timer = setInterval(() => setNowTs(Date.now()), 1000);

@@ -275,8 +275,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const mobileVotedOutId = game.phase === "results" ? (() => {
     const t = game.votes.reduce<Record<string, number>>((acc, v) => { acc[v.targetId] = (acc[v.targetId] ?? 0) + 1; return acc; }, {});
     const max = Math.max(...Object.values(t), 0);
-    const top = Object.entries(t).filter(([, c]) => c === max && max > 0).map(([id]) => id);
-    return top[0] ?? null;
+    return Object.entries(t).find(([, count]) => count === max && max > 0)?.[0] ?? null;
   })() : null;
 
   return (
@@ -322,9 +321,9 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                   />
                 )}</span>
                 <span>{name}</span>
-                {isEliminated && <span className="m-badge m-badge--muted" style={{ fontSize: "0.6rem" }}>OUT</span>}
-                {!isEliminated && isImposter && <span className="m-badge m-badge--danger" style={{ fontSize: "0.6rem" }}>IMP</span>}
-                {!isEliminated && showRole && !isImposter && p.role && <span className="m-badge m-badge--success" style={{ fontSize: "0.6rem" }}>OK</span>}
+                {isEliminated && <span className="m-badge m-badge--muted" style={{ fontSize: "0.75rem" }}>OUT</span>}
+                {!isEliminated && isImposter && <span className="m-badge m-badge--danger" style={{ fontSize: "0.75rem" }}>IMP</span>}
+                {!isEliminated && showRole && !isImposter && p.role && <span className="m-badge m-badge--success" style={{ fontSize: "0.75rem" }}>OK</span>}
               </div>
             );
           })}
@@ -427,7 +426,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                     return (
                       <div key={c.sessionId} className="m-clue-item">
                         <span className="m-clue-name">{name}</span>
-                        <span className="m-clue-text" style={{ fontFamily: "monospace", letterSpacing: "0.1em" }}>
+                        <span className="m-clue-text" style={{ fontFamily: "monospace", letterSpacing: "0.04em" }}>
                           {redactClue(c.text)}
                         </span>
                       </div>
@@ -448,7 +447,6 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               <form className="m-input-row" onSubmit={submitClue} style={{ marginTop: "0.75rem" }}>
                 <input
                   className="m-input"
-                  autoFocus
                   onFocus={(e) => e.currentTarget.select()}
                   style={{ flex: 1 }}
                   value={clue}
@@ -472,7 +470,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         <div className="m-card">
           <div className="m-waiting">
             <div className="m-waiting-pulse" />
-            <p>{me?.eliminated && isHost ? "You've been eliminated. Still hosting\u2026" : me?.eliminated ? "You've been eliminated. Spectating\u2026" : "Players are submitting clues\u2026"} ({game.clues.length}/{game.players.filter((p) => !p.eliminated).length})</p>
+            <p>{me?.eliminated && isHost ? "You've been eliminated. Still hosting!" : me?.eliminated ? "You've been eliminated. Spectating!" : "Players are submitting clues!"} ({game.clues.length}/{game.players.filter((p) => !p.eliminated).length})</p>
           </div>
         </div>
       )}
@@ -482,6 +480,12 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         const hasVoted = game.votes.some((v) => v.voterId === sessionId);
         const votedName = voteTarget ? (sessionById[voteTarget] ?? getDisplayName(null, voteTarget)) : null;
         const activePlayers = game.players.filter((p) => !p.eliminated);
+        const votablePlayers = activePlayers.reduce<typeof activePlayers>((players, player) => {
+          if (player.sessionId !== sessionId) {
+            players.push(player);
+          }
+          return players;
+        }, []);
 
         return (
           <div className="m-card">
@@ -495,7 +499,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                 return (
                   <div key={p.sessionId} className="m-clue-item">
                     <span className="m-clue-name">{name}</span>
-                    <span className="m-clue-text">{clueText ?? "—"}</span>
+                    <span className="m-clue-text">{clueText ?? "-"}</span>
                   </div>
                 );
               })}
@@ -512,9 +516,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               <>
                 {/* Vote grid */}
                 <div className="m-vote-grid">
-                  {activePlayers
-                    .filter((p) => p.sessionId !== sessionId)
-                    .map((p) => {
+                  {votablePlayers.map((p) => {
                       const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
                       const selected = voteTarget === p.sessionId;
                       return (
@@ -557,7 +559,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         <div className="m-card">
           <div className="m-waiting">
             <div className="m-waiting-pulse" />
-            <p>{me?.eliminated && isHost ? "You've been eliminated. Still hosting\u2026" : me?.eliminated ? "You've been eliminated. Spectating\u2026" : "Players are voting\u2026"} ({game.votes.length}/{game.players.filter((p) => !p.eliminated).length})</p>
+            <p>{me?.eliminated && isHost ? "You've been eliminated. Still hosting!" : me?.eliminated ? "You've been eliminated. Spectating!" : "Players are voting!"} ({game.votes.length}/{game.players.filter((p) => !p.eliminated).length})</p>
           </div>
         </div>
       )}
@@ -567,15 +569,14 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         const activePlayers = game.players.filter((p) => !p.eliminated);
         const maxVotes = Math.max(...Object.values(tally), 1);
         const topVoteCount = Math.max(...Object.values(tally), 0);
-        const topVoted = Object.entries(tally).filter(([, c]) => c === topVoteCount && topVoteCount > 0).map(([id]) => id);
-        const votedOutId = topVoted.length > 0 ? topVoted[0] : null;
+        const votedOutId = Object.entries(tally).find(([, count]) => count === topVoteCount && topVoteCount > 0)?.[0] ?? null;
         const votedOutPlayer = votedOutId ? activePlayers.find((p) => p.sessionId === votedOutId) : null;
         const votedOutName = votedOutPlayer ? (sessionById[votedOutPlayer.sessionId] ?? getDisplayName(votedOutPlayer.name, votedOutPlayer.sessionId)) : null;
         const wasImposter = votedOutPlayer?.role === "imposter";
         const voteLines = game.votes.map((vote) => {
           const voter = sessionById[vote.voterId] ?? getDisplayName(null, vote.voterId);
           const target = sessionById[vote.targetId] ?? getDisplayName(null, vote.targetId);
-          return `${voter} → ${target}`;
+          return { id: `${vote.voterId}->${vote.targetId}`, text: `${voter} → ${target}` };
         });
 
         return (
@@ -605,8 +606,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               <h3 className="m-card-title">Vote Breakdown</h3>
               {voteLines.length > 0 ? (
                 <div style={{ display: "grid", gap: "0.25rem", marginBottom: "0.65rem" }}>
-                  {voteLines.map((line, index) => (
-                    <p key={`${line}-${index}`} style={{ margin: 0, fontSize: "0.85rem", opacity: 0.9 }}>{line}</p>
+                  {voteLines.map((line) => (
+                    <p key={line.id} style={{ margin: 0, fontSize: "0.85rem", opacity: 0.9 }}>{line.text}</p>
                   ))}
                 </div>
               ) : (
@@ -620,9 +621,12 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                   const voteCount = tally[p.sessionId] ?? 0;
                   const pct = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
                   const isVotedOut = p.sessionId === votedOutId;
-                  const voterNames = game.votes
-                    .filter((v) => v.targetId === p.sessionId)
-                    .map((v) => sessionById[v.voterId] ?? getDisplayName(null, v.voterId));
+                  const voterNames = game.votes.reduce<string[]>((names, vote) => {
+                    if (vote.targetId === p.sessionId) {
+                      names.push(sessionById[vote.voterId] ?? getDisplayName(null, vote.voterId));
+                    }
+                    return names;
+                  }, []);
                   return (
                     <div key={p.sessionId} className="m-result-row">
                       <div className="m-result-info">
@@ -633,7 +637,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                         <div className={`m-result-bar${isVotedOut ? " m-result-bar--danger" : ""}`} style={{ width: `${pct}%` }} />
                       </div>
                       {voterNames.length > 0 && (
-                        <p className="m-result-voters" style={{ fontSize: "0.7rem", opacity: 0.7, margin: "0.15rem 0 0" }}>
+                        <p className="m-result-voters" style={{ fontSize: "0.75rem", opacity: 0.7, margin: "0.15rem 0 0" }}>
                           Voted by: {voterNames.join(", ")}
                         </p>
                       )}
@@ -695,10 +699,10 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                       {(game.round_history ?? []).map((rh) => (
                         <tr key={rh.round}>
                           <td>{rh.round}</td>
-                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ? (decryptedRoundWords[rh.round] ?? "••••") : "—"}</td>
+                          <td style={{ color: "var(--primary)", fontWeight: 600 }}>{rh.secretWord ? (decryptedRoundWords[rh.round] ?? "••••") : "-"}</td>
                           <td style={{ fontWeight: 600 }}>{rh.votedOutName ?? "No one"}</td>
                           <td style={{ color: rh.wasImposter ? "#f87171" : "#4ade80", fontWeight: 600 }}>
-                            {rh.votedOutName ? (rh.wasImposter ? "Imposter" : "Innocent") : "—"}
+                            {rh.votedOutName ? (rh.wasImposter ? "Imposter" : "Innocent") : "-"}
                           </td>
                         </tr>
                       ))}

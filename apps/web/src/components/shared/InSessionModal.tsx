@@ -21,8 +21,21 @@ export function InSessionModal({
   busy?: boolean;
 }) {
   return (
-    <div className="modal-overlay" onClick={busy ? undefined : onCancel}>
-      <div className="modal-panel" onClick={(event) => event.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={(event) => {
+        if (!busy && event.target === event.currentTarget) {
+          onCancel();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (!busy && event.key === "Escape") {
+          onCancel();
+        }
+      }}
+      role="presentation"
+    >
+      <div className="modal-panel">
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
             <FiAlertTriangle size={18} /> Already in a game

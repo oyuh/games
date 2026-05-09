@@ -48,7 +48,7 @@ export function PasswordRoundsTable({
 
       {open && (
         <div className="pw-history-list">
-          {[...rounds].reverse().map((round, idx) => {
+          {[...rounds].reverse().map((round) => {
             const teamName = teams[round.teamIndex]?.name ?? `Team ${round.teamIndex + 1}`;
             const teamColor = teamColors[round.teamIndex % teamColors.length]!;
             const guesserName = names[round.guesserId] ?? getDisplayName(null, round.guesserId);
@@ -56,7 +56,7 @@ export function PasswordRoundsTable({
 
             return (
               <div
-                key={`${round.round}-${idx}`}
+                key={round.round}
                 className={`pw-history-card ${round.correct ? "pw-history-card--correct" : "pw-history-card--wrong"}`}
                 style={{ "--pw-team-color": teamColor } as React.CSSProperties}
               >
@@ -80,8 +80,8 @@ export function PasswordRoundsTable({
                     <span className="pw-history-detail-label">Clues</span>
                     <div className="pw-history-clues">
                       {round.clues.length > 0
-                        ? round.clues.map((c, ci) => (
-                            <span key={ci} className="pw-history-clue-chip">{c.text}</span>
+                        ? round.clues.map((c) => (
+                            <span key={`${c.sessionId}-${c.text}`} className="pw-history-clue-chip">{c.text}</span>
                           ))
                         : <span className="pw-history-none">No clues given</span>}
                     </div>

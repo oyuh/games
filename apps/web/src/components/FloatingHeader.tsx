@@ -21,15 +21,15 @@ import { showToast } from "../lib/toast";
 type GameContext = Parameters<typeof HostControlsModal>[0]["game"];
 
 function useGameContext(): GameContext | null {
-  const location = useLocation();
+  const { pathname } = useLocation();
   const sessionId = getOrCreateSessionId();
 
   // Parse route to find game type + id
-  const imposterMatch = location.pathname.match(/^\/imposter\/([^/]+)/);
-  const passwordMatch = location.pathname.match(/^\/password\/([^/]+)/);
-  const chainMatch2 = location.pathname.match(/^\/chain\/([^/]+)/);
-  const shadeMatch = location.pathname.match(/^\/shade\/([^/]+)/);
-  const locationMatch = location.pathname.match(/^\/location\/([^/]+)/);
+  const imposterMatch = pathname.match(/^\/imposter\/([^/]+)/);
+  const passwordMatch = pathname.match(/^\/password\/([^/]+)/);
+  const chainMatch2 = pathname.match(/^\/chain\/([^/]+)/);
+  const shadeMatch = pathname.match(/^\/shade\/([^/]+)/);
+  const locationMatch = pathname.match(/^\/location\/([^/]+)/);
   const gameType = imposterMatch ? "imposter" as const : passwordMatch ? "password" as const : chainMatch2 ? "chain_reaction" as const : shadeMatch ? "shade_signal" as const : locationMatch ? "location_signal" as const : null;
   const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch2?.[1] ?? shadeMatch?.[1] ?? locationMatch?.[1] ?? "";
 
@@ -146,13 +146,13 @@ const SHADE_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, gue
 const LOCATION_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, guess1: 2, clue2: 3, guess2: 3, clue3: 3, guess3: 3, clue4: 3, guess4: 3, reveal: 4, finished: 4 };
 
 function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | null; step: number } {
-  const location = useLocation();
-  const imposterMatch = location.pathname.match(/^\/imposter\/([^/]+)/);
-  const passwordMatch = location.pathname.match(/^\/password\/([^/]+)/);
-  const chainMatch = location.pathname.match(/^\/chain\/([^/]+)/);
-  const shadeMatch = location.pathname.match(/^\/shade\/([^/]+)/);
-  const locationMatch = location.pathname.match(/^\/location\/([^/]+)/);
-  const shikakuMatch = /^\/shikaku(\/|$)/.test(location.pathname);
+  const { pathname } = useLocation();
+  const imposterMatch = pathname.match(/^\/imposter\/([^/]+)/);
+  const passwordMatch = pathname.match(/^\/password\/([^/]+)/);
+  const chainMatch = pathname.match(/^\/chain\/([^/]+)/);
+  const shadeMatch = pathname.match(/^\/shade\/([^/]+)/);
+  const locationMatch = pathname.match(/^\/location\/([^/]+)/);
+  const shikakuMatch = /^\/shikaku(\/|$)/.test(pathname);
 
   const detected = imposterMatch ? "imposter" as const
     : passwordMatch ? "password" as const
@@ -186,7 +186,7 @@ export function Sidebar() {
   const [modal, setModal] = useState<"options" | "info" | "host" | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const location = useLocation();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const settings = useSettings();
   const gameContext = useGameContext();
@@ -194,8 +194,8 @@ export function Sidebar() {
   const sessionId = getOrCreateSessionId();
   const chat = useChatContext();
 
-  const isInGame = /^\/(imposter|password|chain|shade|location)\/|^\/shikaku(\/|$)/.test(location.pathname);
-  const isShikaku = /^\/shikaku(\/|$)/.test(location.pathname);
+  const isInGame = /^\/(imposter|password|chain|shade|location)\/|^\/shikaku(\/|$)/.test(pathname);
+  const isShikaku = /^\/shikaku(\/|$)/.test(pathname);
 
   // Track infinite mode state from ShikakuPage
   const [infiniteEnabled, setInfiniteEnabled] = useState(false);
@@ -228,7 +228,7 @@ export function Sidebar() {
   useEffect(() => {
     setMobileOpen(false);
     setConfirmLeave(false);
-  }, [location.pathname]);
+  }, [pathname]);
 
   // Auto-dismiss confirm after 3 seconds
   useEffect(() => {
@@ -259,7 +259,7 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile toggle — always rendered; CSS hides on desktop */}
+      {/* Mobile toggle - always rendered; CSS hides on desktop */}
       <button
         onClick={() => setMobileOpen((o) => !o)}
         aria-label="Toggle menu"
@@ -270,14 +270,14 @@ export function Sidebar() {
 
       {/* Mobile backdrop */}
       {mobileOpen && (
-        <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
+        <button type="button" className="sidebar-overlay" onClick={() => setMobileOpen(false)} aria-label="Close menu" />
       )}
 
       {/* Floating sidebar / top bar */}
       <nav className={`sidebar ${mobileOpen ? "sidebar--open" : ""}`}>
         <Link
           to="/"
-          className={`sidebar-link ${location.pathname === "/" ? "sidebar-link--active" : ""} ${confirmLeave ? "sidebar-link--confirm" : ""}`}
+          className={`sidebar-link ${pathname === "/" ? "sidebar-link--active" : ""} ${confirmLeave ? "sidebar-link--confirm" : ""}`}
           data-tooltip={confirmLeave ? "Click again to leave game" : "Home"}
           data-tooltip-pos="right"
           data-tooltip-variant={confirmLeave ? "danger" : undefined}
@@ -307,28 +307,28 @@ export function Sidebar() {
             onClick={() => { chat.toggle(); setMobileOpen(false); }}
           />
         )}
-        {/^\/shikaku(\/|$)/.test(location.pathname) && (
+        {/^\/shikaku(\/|$)/.test(pathname) && (
           <>
             <button
               className={`sidebar-link shikaku-mode-indicator${shikakuState.phase !== "menu" ? " shikaku-mode-indicator--active" : ""}`}
               data-tooltip={
                 shikakuState.customMode
-                  ? `Seeded — ${shikakuState.difficulty} — seed ${shikakuState.seed}`
+                  ? `Seeded - ${shikakuState.difficulty} - seed ${shikakuState.seed}`
                   : shikakuState.infiniteMode
-                    ? `Infinite — ${shikakuState.difficulty}`
-                    : `Regular — ${shikakuState.difficulty}`
+                    ? `Infinite - ${shikakuState.difficulty}`
+                    : `Regular - ${shikakuState.difficulty}`
               }
               data-tooltip-pos="right"
               onClick={() => {
                 const mode = shikakuState.customMode ? "Seeded" : shikakuState.infiniteMode ? "Infinite" : "Regular";
                 const diff = shikakuState.difficulty.charAt(0).toUpperCase() + shikakuState.difficulty.slice(1);
                 const phase = shikakuState.phase.charAt(0).toUpperCase() + shikakuState.phase.slice(1);
-                const parts = [`${mode} — ${diff}`, `Phase: ${phase}`];
+                const parts = [`${mode} - ${diff}`, `Phase: ${phase}`];
                 if (shikakuState.seed) parts.push(`Seed: ${shikakuState.seed}`);
                 if (shikakuState.customMode) parts.push("Unranked");
                 else if (shikakuState.infiniteMode) parts.push("Unranked");
                 else parts.push("Ranked");
-                showToast(parts.join(" — "), "info");
+                showToast(parts.join(" - "), "info");
                 setMobileOpen(false);
               }}
             >

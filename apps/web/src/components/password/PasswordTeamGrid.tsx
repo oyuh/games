@@ -74,13 +74,13 @@ export function PasswordTeamGrid({
                   <span className="game-team-meta">{memberCountLabel}</span>
                 </div>
                 <div className="game-team-badges">
-                  {showScores && <span className="game-team-score" data-tooltip={`${team.name}'s score${targetScore ? ` — first to ${targetScore} wins` : ""}`} data-tooltip-variant="game">{score}{targetScore ? ` / ${targetScore}` : ""}</span>}
+                  {showScores && <span className="game-team-score" data-tooltip={`${team.name}'s score${targetScore ? ` - first to ${targetScore} wins` : ""}`} data-tooltip-variant="game">{score}{targetScore ? ` / ${targetScore}` : ""}</span>}
                   {isMyTeam && (
                     <span className="game-team-state-badge game-team-state-badge--mine">
                       <FiCheck size={11} /> You're in
                     </span>
                   )}
-                  {isActive && <span className="badge badge-warn" style={{ fontSize: "0.58rem" }} data-tooltip="This team is currently guessing" data-tooltip-variant="game">Playing</span>}
+                  {isActive && <span className="badge badge-warn" style={{ fontSize: "0.75rem" }} data-tooltip="This team is currently guessing" data-tooltip-variant="game">Playing</span>}
                 </div>
               </div>
               <div className="game-team-members">
@@ -151,9 +151,12 @@ function MoveTargets({
   currentTeam: string;
   onMove: (teamName: string) => void;
 }) {
-  const otherTeams = teams
-    .map((team, index) => ({ ...team, color: teamColors[index % teamColors.length]! }))
-    .filter((t) => t.name !== currentTeam);
+  const otherTeams = teams.reduce<Array<Team & { color: string }>>((targets, team, index) => {
+    if (team.name !== currentTeam) {
+      targets.push({ ...team, color: teamColors[index % teamColors.length]! });
+    }
+    return targets;
+  }, []);
 
   if (otherTeams.length === 0) return null;
 

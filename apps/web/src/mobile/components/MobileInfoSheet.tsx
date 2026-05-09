@@ -106,7 +106,7 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
     <BottomSheet title="Info" onClose={onClose}>
       {/* Site description */}
       <p className="m-info-site-desc">
-        A real-time multiplayer party game platform. No accounts — just create or join a game and play.
+        A real-time multiplayer party game platform. No accounts - just create or join a game and play.
       </p>
 
       {/* Custom status banner */}
@@ -127,8 +127,8 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
         <p className="m-info-current-page-desc">{page.description}</p>
         {page.tips && page.tips.length > 0 && (
           <ul className="m-info-tips">
-            {page.tips.map((tip, i) => (
-              <li key={i} className="m-info-tip">
+            {page.tips.map((tip) => (
+              <li key={`${page.title}-${tip}`} className="m-info-tip">
                 <FiZap size={10} style={{ flexShrink: 0, opacity: 0.6 }} />
                 {tip}
               </li>
@@ -251,12 +251,12 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
 }
 
 const GAME_CATALOG = [
-  { key: "imposter", name: "Imposter", icon: <FiEye size={14} />, color: "#7eb8ff", players: "3–12", description: "Find the fake — everyone gives clues, then votes" },
+  { key: "imposter", name: "Imposter", icon: <FiEye size={14} />, color: "#7eb8ff", players: "3–12", description: "Find the fake - everyone gives clues, then votes" },
   { key: "password", name: "Password", icon: <FiShield size={14} />, color: "#a78bfa", players: "4+", description: "Team word-guessing with one-word clues" },
-  { key: "chain", name: "Chain Reaction", icon: <FiLink size={14} />, color: "#34d399", players: "2", description: "1v1 word chain duel — guess the hidden words" },
+  { key: "chain", name: "Chain Reaction", icon: <FiLink size={14} />, color: "#34d399", players: "2", description: "1v1 word chain duel - guess the hidden words" },
   { key: "shade", name: "Shade Signal", icon: <FiDroplet size={14} />, color: "#f472b6", players: "3–8", description: "Guess the secret color from text clues" },
   { key: "location", name: "Location Signal", icon: <FiMapPin size={14} />, color: "#f59e0b", players: "3–8", description: "Guess the secret map location from clues" },
-  { key: "shikaku", name: "Shikaku", icon: <FiGrid size={14} />, color: "#06b6d4", players: "Solo", description: "Logic puzzle — divide the grid into rectangles" },
+  { key: "shikaku", name: "Shikaku", icon: <FiGrid size={14} />, color: "#06b6d4", players: "Solo", description: "Logic puzzle - divide the grid into rectangles" },
 ];
 
 function getPageInfo(pathname: string): { title: string; icon: ReactNode; description: string; tips?: string[] } {
@@ -264,10 +264,10 @@ function getPageInfo(pathname: string): { title: string; icon: ReactNode; descri
     return { title: "Home", icon: <FiZap size={16} />, description: "Create a new game or join an existing one with a code.", tips: ["Set your name before joining a game", "Use the join code to hop into a friend's lobby"] };
   }
   if (pathname.startsWith("/imposter/")) {
-    return { title: "Imposter", icon: <FiEye size={16} />, description: "Social deduction — everyone gives one-word clues, then votes on who the imposter is.", tips: ["Give clues that prove you know the word", "Vote for who you think is faking it"] };
+    return { title: "Imposter", icon: <FiEye size={16} />, description: "Social deduction - everyone gives one-word clues, then votes on who the imposter is.", tips: ["Give clues that prove you know the word", "Vote for who you think is faking it"] };
   }
   if (pathname.startsWith("/password/")) {
-    return { title: "Password", icon: <FiShield size={16} />, description: "Team word-guessing. Give one-word clues — first team to target score wins!", tips: ["Clue givers: one word only", "Guessers: type your best guess"] };
+    return { title: "Password", icon: <FiShield size={16} />, description: "Team word-guessing. Give one-word clues - first team to target score wins!", tips: ["Clue givers: one word only", "Guessers: type your best guess"] };
   }
   if (pathname.startsWith("/chain/")) {
     return { title: "Chain Reaction", icon: <FiLink size={16} />, description: "1v1 word chain duel. Guess the hidden words between the hints!", tips: ["Tap a word to guess", "Wrong guesses reveal a letter", "Fewer hints = more points"] };
@@ -279,7 +279,7 @@ function getPageInfo(pathname: string): { title: string; icon: ReactNode; descri
     return { title: "Location Signal", icon: <FiMapPin size={16} />, description: "The leader picks a map location and gives text clues. Guess as close as you can!", tips: ["Leaders: don't name the place directly", "5,000 pts for exact, drops with distance"] };
   }
   if (/^\/shikaku(\/|$)/.test(pathname)) {
-    return { title: "Shikaku", icon: <FiGrid size={16} />, description: "Divide the grid into rectangles — each with one number equal to its area.", tips: ["Drag to draw rectangles", "Each must contain exactly one number"] };
+    return { title: "Shikaku", icon: <FiGrid size={16} />, description: "Divide the grid into rectangles - each with one number equal to its area.", tips: ["Drag to draw rectangles", "Each must contain exactly one number"] };
   }
   return { title: "Page", icon: <FiZap size={16} />, description: "You're on an unknown page." };
 }

@@ -19,7 +19,7 @@ const steps: DemoStep[] = [
   {
     label: "Solve All Puzzles",
     description: "Each run has 5 puzzles. Fill the entire grid with valid rectangles to solve a puzzle. A checkmark appears when you get it right!",
-    hint: "The timer runs across all 5 puzzles — speed matters for your score!",
+    hint: "The timer runs across all 5 puzzles - speed matters for your score!",
   },
   {
     label: "Scoring",
@@ -29,7 +29,7 @@ const steps: DemoStep[] = [
   {
     label: "Leaderboard",
     description: "Your score is submitted automatically. Check the leaderboard to see how you rank against other players on each difficulty!",
-    hint: "Giving up still submits a score with a penalty — try to finish all 5 puzzles for the best result.",
+    hint: "Giving up still submits a score with a penalty - try to finish all 5 puzzles for the best result.",
   },
 ];
 
@@ -37,7 +37,7 @@ const steps: DemoStep[] = [
 
 function DemoGrid({ step }: { step: number }) {
   // A simple 4×4 visual that changes based on step
-  const cells = Array.from({ length: 16 });
+  const cells = Array.from({ length: 16 }, (_, index) => ({ id: `demo-shikaku-cell-${index}`, index }));
 
   // Step 0: empty grid with numbers
   // Step 1: partially filled
@@ -48,16 +48,16 @@ function DemoGrid({ step }: { step: number }) {
   const filled: Record<number, string> = {};
 
   if (step >= 1) {
-    // First rectangle: cells 0,1,2,3 (top row) — area 4
+    // First rectangle: cells 0,1,2,3 (top row) - area 4
     [0, 1, 2, 3].forEach((i) => { filled[i] = "#34d399"; });
-    // Second rectangle: cells 4,5 — area 2
+    // Second rectangle: cells 4,5 - area 2
     [4, 5].forEach((i) => { filled[i] = "#60a5fa"; });
   }
 
   if (step >= 2) {
-    // Third rectangle: cells 6,7,8,9,10,11 — area 6
+    // Third rectangle: cells 6,7,8,9,10,11 - area 6
     [6, 7, 8, 9, 10, 11].forEach((i) => { filled[i] = "#f472b6"; });
-    // Fourth rectangle: cells 12,13,14,15 — area 4
+    // Fourth rectangle: cells 12,13,14,15 - area 4
     [12, 13, 14, 15].forEach((i) => { filled[i] = "#a78bfa"; });
   }
 
@@ -71,7 +71,8 @@ function DemoGrid({ step }: { step: number }) {
           gap: "3px",
         }}
       >
-        {cells.map((_, i) => {
+        {cells.map(({ id, index }) => {
+          const i = index;
           const bg = filled[i] ?? "rgba(255,255,255,0.06)";
           const border = filled[i]
             ? `2px solid ${filled[i]}`
@@ -80,7 +81,7 @@ function DemoGrid({ step }: { step: number }) {
 
           return (
             <div
-              key={i}
+              key={id}
               style={{
                 background: filled[i] ? `color-mix(in srgb, ${filled[i]} 20%, transparent)` : bg,
                 border,
@@ -106,7 +107,7 @@ function DemoGrid({ step }: { step: number }) {
       )}
       {step === 1 && (
         <p style={{ fontSize: "0.75rem", color: "var(--muted-foreground)", textAlign: "center", margin: 0 }}>
-          Drag to draw — each rectangle covers exactly one number
+          Drag to draw - each rectangle covers exactly one number
         </p>
       )}
       {step === 2 && (

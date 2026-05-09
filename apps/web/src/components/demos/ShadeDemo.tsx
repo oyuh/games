@@ -54,7 +54,7 @@ const steps: DemoStep[] = [
   {
     label: "Pick Color (Leader)",
     description: "The Leader picks a target color from the grid. Nobody else can see which cell they chose.",
-    hint: "Think about what words could describe this color — you'll give 2 clues total!",
+    hint: "Think about what words could describe this color - you'll give 2 clues total!",
   },
   {
     label: "Clue 1 & Guess 1",
@@ -89,7 +89,7 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       case 0: // Lobby
         return (
           <div className="game-page shade-page" data-game-theme="shade">
-            <DemoGlow label="Explore the grid — click cells to preview scoring zones">
+            <DemoGlow label="Explore the grid - click cells to preview scoring zones">
               <ColorGrid
                 rows={GRID.rows}
                 cols={GRID.cols}
@@ -141,7 +141,7 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       case 2: // Clue 1 + Guess 1
         return (
           <div className="game-page shade-page" data-game-theme="shade">
-            <DemoGlow label="Leader view — give a one-word clue about your target">
+            <DemoGlow label="Leader view - give a one-word clue about your target">
               <div className="game-section shade-clue-section">
                 <div className="shade-clue-leader-info">
                   <h3>You are the Leader! 🎨</h3>
@@ -169,7 +169,7 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
 
             <hr style={{ border: 0, borderTop: "1px dashed var(--border)", margin: "1rem 0" }} />
 
-            <DemoGlow label="Guesser view — click a cell based on the clue">
+            <DemoGlow label="Guesser view - click a cell based on the clue">
               <div className="game-section shade-guess-section">
                 <div className="shade-clue-display-row">
                   <div className="shade-clue-display">

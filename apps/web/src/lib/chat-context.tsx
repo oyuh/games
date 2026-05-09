@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
+import { createContext, use, useState, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { mutators } from "@games/shared";
 import { queries } from "@games/shared";
@@ -35,7 +35,7 @@ const ChatContext = createContext<ChatState>({
 });
 
 export function useChatContext() {
-  return useContext(ChatContext);
+  return use(ChatContext);
 }
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {

@@ -41,7 +41,7 @@ const steps: DemoStep[] = [
   {
     label: "Write Chain (Custom)",
     description: "In custom mode, each player writes a chain of connected words. The first and last words are given as hints for your opponent.",
-    hint: "Make the middle words tricky — your opponent has to guess them!",
+    hint: "Make the middle words tricky - your opponent has to guess them!",
   },
   {
     label: "Solve the Chain",
@@ -56,7 +56,7 @@ const steps: DemoStep[] = [
   {
     label: "Finished",
     description: "The player with the most points wins! See round-by-round breakdown of both chains.",
-    hint: "Play again to swap chains — you'll solve what your opponent wrote!",
+    hint: "Play again to swap chains - you'll solve what your opponent wrote!",
   },
 ];
 
@@ -76,7 +76,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       {chain.map((slot, i) => {
         const isEdge = i === 0 || i === chain.length - 1;
         return (
-          <div key={i} className="cr-slot-outer">
+          <div key={slot.word} className="cr-slot-outer">
             <div className="cr-slot-wrapper">
               {/* Hint button placeholder */}
               {interactive && !isEdge && !slot.revealed ? (
@@ -134,14 +134,14 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
         return (
           <div className="game-page" data-game-theme="chain">
             <PasswordHeader title="Chain Reaction" code="DEMO" phase="lobby" isHost category="moviesAndShows" />
-            <DemoGlow label="1v1 duel — two player slots">
+            <DemoGlow label="1v1 duel - two player slots">
               <div className="game-section">
                 <div className="cr-lobby-duel">
                   <div className="cr-lobby-slot cr-lobby-slot--filled cr-lobby-slot--me">
                     <div className="cr-lobby-avatar">Y</div>
                     <span className="cr-lobby-name">You</span>
                     <span className="cr-lobby-you">you</span>
-                    <span className="badge" style={{ fontSize: "0.55rem" }}>host</span>
+                    <span className="badge" style={{ fontSize: "0.75rem" }}>host</span>
                   </div>
                   <div className="cr-lobby-vs">VS</div>
                   <div className="cr-lobby-slot cr-lobby-slot--filled">
@@ -159,13 +159,13 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
         return (
           <div className="game-page" data-game-theme="chain">
             <PasswordHeader title="Chain Reaction" code="DEMO" phase="submitting" category="moviesAndShows" />
-            <DemoGlow label="Write connected words — first & last are shown as hints">
+            <DemoGlow label="Write connected words - first & last are shown as hints">
               <div className="game-section">
                 <div className="cr-chain">
                   {SUBMIT_WORDS.map((word, i) => {
                     const isEdge = i === 0 || i === SUBMIT_WORDS.length - 1;
                     return (
-                      <div key={i} className="cr-submit-slot">
+                      <div key={word} className="cr-submit-slot">
                         <span className="cr-slot-num">{i + 1}</span>
                         <input
                           className="cr-submit-input"
@@ -191,7 +191,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
             <PasswordHeader title="Chain Reaction" code="DEMO" phase="playing" currentRound={1} category="moviesAndShows" />
             <DemoGlow label="Click any hidden word to type your guess">
               <div className="game-section">
-                <span className="cr-view-label">Solve the chain — tap a word to guess!</span>
+                <span className="cr-view-label">Solve the chain - tap a word to guess!</span>
                 {renderChain(CHAIN_YOURS, true)}
                 <p className="game-progress-text">0 / 3 words cracked</p>
               </div>

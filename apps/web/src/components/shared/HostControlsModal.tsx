@@ -31,7 +31,12 @@ export function HostControlsModal({
   const kickablePlayersList =
     game.type === "password"
       ? game.players.filter((p) => p.id !== sessionId)
-      : game.players.filter((p) => p.sessionId !== sessionId).map((p) => ({ id: p.sessionId, name: getDisplayName(p.name, p.sessionId) }));
+      : game.players.reduce<Array<{ id: string; name: string }>>((players, player) => {
+          if (player.sessionId !== sessionId) {
+            players.push({ id: player.sessionId, name: getDisplayName(player.name, player.sessionId) });
+          }
+          return players;
+        }, []);
 
   const spectatorsList = (game.spectators ?? []).map((s) => ({ id: s.sessionId, name: getDisplayName(s.name, s.sessionId) }));
 
@@ -128,8 +133,13 @@ export function HostControlsModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel modal-panel--wide" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+      role="presentation"
+    >
+      <div className="modal-panel modal-panel--wide">
         <div className="modal-header">
           <h2 className="modal-title">Host Controls</h2>
           <button className="modal-close" onClick={onClose}><FiX size={18} /></button>
@@ -164,8 +174,8 @@ export function HostControlsModal({
             <h3 className="host-section-title">{game.isPublic ? <FiGlobe size={14} /> : <FiLock size={14} />} Game Visibility</h3>
             <p className="host-section-desc">
               {game.isPublic
-                ? "This game is public — anyone can find and join it from the Browse Games section."
-                : "This game is private — players need the join code to enter."}
+                ? "This game is public - anyone can find and join it from the Browse Games section."
+                : "This game is private - players need the join code to enter."}
             </p>
             <button
               className={`btn ${game.isPublic ? "btn-muted" : "btn-primary"} host-visibility-btn`}

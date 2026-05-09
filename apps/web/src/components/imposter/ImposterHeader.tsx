@@ -26,7 +26,7 @@ const phaseTooltips: Record<string, string> = {
   playing: "Players are submitting clues",
   voting: "Vote for who you think is the imposter",
   results: "See who the imposter was",
-  finished: "Game over — all rounds complete"
+  finished: "Game over - all rounds complete"
 };
 
 export function ImposterHeader({

@@ -33,13 +33,18 @@ export function DemoModal({
   const isLast = currentStep === steps.length - 1;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel demo-modal-panel" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+      role="presentation"
+    >
+      <div className="modal-panel demo-modal-panel">
         {/* Header */}
         <div className="demo-modal-header">
           <div className="demo-modal-title-row">
             <span className="demo-modal-icon" style={{ color }}>{icon}</span>
-            <h2 className="demo-modal-title">{title} — How to Play</h2>
+            <h2 className="demo-modal-title">{title} - How to Play</h2>
           </div>
           <button className="modal-close" onClick={onClose}>
             <FiX size={18} />
@@ -50,7 +55,7 @@ export function DemoModal({
         <div className="demo-step-bar">
           {steps.map((s, i) => (
             <button
-              key={i}
+              key={s.label}
               className={`demo-step-dot${i === currentStep ? " demo-step-dot--active" : ""}${i < currentStep ? " demo-step-dot--done" : ""}`}
               onClick={() => onStepChange(i)}
             >

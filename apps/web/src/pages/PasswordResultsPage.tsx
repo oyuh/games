@@ -46,7 +46,7 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
-  // Announcement watcher (skip for host — they sent it)
+  // Announcement watcher (skip for host - they sent it)
   useEffect(() => {
     if (!game?.announcement) return;
     if (prevAnnouncementTs.current !== game.announcement.ts) {
@@ -102,7 +102,7 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
           <FiAward size={28} />
           <div>
             <p className="game-winner-title">It's a Tie!</p>
-            <p className="game-winner-score">{winners.map(([name]) => name).join(" & ")} — {topScore} points each</p>
+            <p className="game-winner-score">{winners.map(([name]) => name).join(" & ")} - {topScore} points each</p>
           </div>
         </div>
       ) : winners[0] ? (

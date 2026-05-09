@@ -47,7 +47,7 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
     if (e.target === backdropRef.current) animateClose();
   }, [animateClose]);
 
-  /* ── apply transform during gesture (no React state — direct DOM) ── */
+  /* ── apply transform during gesture (no React state - direct DOM) ── */
   const applyTransform = useCallback((offsetY: number) => {
     const sheet = sheetRef.current;
     const backdrop = backdropRef.current;
@@ -56,13 +56,13 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
     if (offsetY <= 0) {
       const clamped = -Math.min(-offsetY, RUBBER_MAX);
       const rubber = clamped * 0.35;
-      sheet.style.transform = `translateY(${rubber}px)`;
-      if (backdrop) backdrop.style.opacity = "";
+      Object.assign(sheet.style, { transform: `translateY(${rubber}px)` });
+      if (backdrop) Object.assign(backdrop.style, { opacity: "" });
     } else {
-      sheet.style.transform = `translateY(${offsetY}px)`;
+      Object.assign(sheet.style, { transform: `translateY(${offsetY}px)` });
       if (backdrop) {
         const progress = Math.min(offsetY / 300, 1);
-        backdrop.style.opacity = String(1 - progress * 0.6);
+        Object.assign(backdrop.style, { opacity: String(1 - progress * 0.6) });
       }
     }
   }, []);
@@ -71,14 +71,18 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
     const sheet = sheetRef.current;
     const backdrop = backdropRef.current;
     if (sheet) {
-      sheet.style.transition = "transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)";
-      sheet.style.transform = "";
+      Object.assign(sheet.style, {
+        transition: "transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+        transform: "",
+      });
       const cleanup = () => { sheet.style.transition = ""; sheet.removeEventListener("transitionend", cleanup); };
       sheet.addEventListener("transitionend", cleanup);
     }
     if (backdrop) {
-      backdrop.style.transition = "opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1)";
-      backdrop.style.opacity = "";
+      Object.assign(backdrop.style, {
+        transition: "opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+        opacity: "",
+      });
       const cleanup = () => { backdrop.style.transition = ""; backdrop.removeEventListener("transitionend", cleanup); };
       backdrop.addEventListener("transitionend", cleanup);
     }
@@ -135,7 +139,7 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
         }
       }
 
-      /* THIS is the key fix — actually prevent the page from scrolling */
+      /* THIS is the key fix - actually prevent the page from scrolling */
       e.preventDefault();
 
       currentOffsetY.current = deltaY;
@@ -157,12 +161,16 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
         const s = sheetRef.current;
         const b = backdropRef.current;
         if (s) {
-          s.style.transition = "transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)";
-          s.style.transform = "translateY(100%)";
+          Object.assign(s.style, {
+            transition: "transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)",
+            transform: "translateY(100%)",
+          });
         }
         if (b) {
-          b.style.transition = "opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1)";
-          b.style.opacity = "0";
+          Object.assign(b.style, {
+            transition: "opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1)",
+            opacity: "0",
+          });
         }
         closingRef.current = true;
         setTimeout(() => onCloseRef(), 250);
@@ -172,7 +180,7 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
       currentOffsetY.current = 0;
     };
 
-    /* { passive: false } is critical — it lets preventDefault() work */
+    /* { passive: false } is critical - it lets preventDefault() work */
     sheet.addEventListener("touchstart", handleTouchStart, { passive: true });
     sheet.addEventListener("touchmove", handleTouchMove, { passive: false });
     sheet.addEventListener("touchend", handleTouchEnd, { passive: true });
@@ -189,6 +197,8 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
       className={`m-sheet-backdrop${closing ? " m-sheet-backdrop--closing" : ""}`}
       ref={backdropRef}
       onClick={handleBackdropClick}
+      onKeyDown={(e) => { if (e.key === "Escape") animateClose(); }}
+      role="presentation"
     >
       <div
         className={`m-sheet${closing ? " m-sheet--closing" : ""}`}

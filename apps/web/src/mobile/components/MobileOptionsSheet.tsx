@@ -204,7 +204,7 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
   return (
     <BottomSheet title="Options" onClose={onClose}>
       <div className="m-options-group">
-        <label className="m-options-label">Theme</label>
+        <span className="m-options-label">Theme</span>
         <div className="m-options-row">
           <button
             className={`m-btn ${settings.theme === "dark" ? "m-btn-primary" : "m-btn-muted"}`}
@@ -222,7 +222,7 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="m-options-group">
-        <label className="m-options-label">Sound Effects</label>
+        <span className="m-options-label">Sound Effects</span>
         <div className="m-options-row">
           <button
             className={`m-btn ${!settings.soundEnabled ? "m-btn-primary" : "m-btn-muted"}`}
@@ -264,7 +264,7 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="m-options-group">
-        <label className="m-options-label">Cursor</label>
+        <span className="m-options-label">Cursor</span>
         <div className="m-options-row">
           <button
             className={`m-btn ${settings.customCursor ? "m-btn-primary" : "m-btn-muted"}`}

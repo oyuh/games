@@ -60,12 +60,12 @@ export function PasswordActiveRound({
         </div>
       </div>
 
-      {/* Wrong guess — retry notice */}
+      {/* Wrong guess - retry notice */}
       {hasWrongGuess && (
         <div className="game-reveal-card game-reveal-card--fail" style={{ marginBottom: "1rem" }}>
           <p className="game-reveal-title">Incorrect!</p>
           <p className="game-reveal-sub">
-            "{activeRound.guess}" was wrong — submit new clues!
+            "{activeRound.guess}" was wrong - submit new clues!
           </p>
         </div>
       )}
@@ -82,7 +82,6 @@ export function PasswordActiveRound({
               <form className="game-input-row" onSubmit={onSubmitClue}>
                 <input
                   className="input flex-1"
-                  autoFocus
                   onFocus={(e) => e.currentTarget.select()}
                   value={clue}
                   onChange={(e) => onClueChange(e.target.value)}
@@ -132,7 +131,7 @@ export function PasswordActiveRound({
         </div>
       )}
 
-      {/* Phase 3: All clues in — guesser guesses */}
+      {/* Phase 3: All clues in - guesser guesses */}
       {allCluesIn && (
         <>
           <div className="game-section" style={{ padding: 0 }}>
@@ -150,7 +149,6 @@ export function PasswordActiveRound({
             <form className="game-input-row" onSubmit={onSubmitGuess}>
               <input
                 className="input flex-1"
-                autoFocus
                 onFocus={(e) => e.currentTarget.select()}
                 value={guess}
                 onChange={(e) => onGuessChange(e.target.value)}

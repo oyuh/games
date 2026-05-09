@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { BorringAvatar } from "../shared/BorringAvatar";
 
+const EMPTY_MARKERS: NonNullable<GridProps["markers"]> = [];
+const EMPTY_PLAYER_INDEX_MAP: NonNullable<GridProps["playerIndexMap"]> = {};
+
 /**
  * Deterministic color grid generation from seed.
  * Uses HSL: hue varies across columns, lightness varies across rows,
@@ -61,8 +64,8 @@ export function ColorGrid({
   interactive = false,
   target,
   showTarget = false,
-  markers = [],
-  playerIndexMap = {},
+  markers = EMPTY_MARKERS,
+  playerIndexMap = EMPTY_PLAYER_INDEX_MAP,
   compact = false,
   showZones = false,
   showScoreTooltips = false,
@@ -138,7 +141,7 @@ export function ColorGrid({
               } else if (showScoreTooltips && target) {
                 const dist = Math.max(Math.abs(r - target.row), Math.abs(c - target.col));
                 const pts = dist === 0 ? 5 : dist === 1 ? 3 : dist === 2 ? 2 : dist <= 3 ? 1 : 0;
-                cellTooltip = pts > 0 ? `${dist === 0 ? "Exact" : `${dist} away`} — ${pts}pt${pts > 1 ? "s" : ""}` : `${dist} away — 0pts`;
+                cellTooltip = pts > 0 ? `${dist === 0 ? "Exact" : `${dist} away`} - ${pts}pt${pts > 1 ? "s" : ""}` : `${dist} away - 0pts`;
               }
 
               return (
@@ -157,10 +160,10 @@ export function ColorGrid({
                   style={{ backgroundColor: color }}
                   data-tooltip={cellTooltip}
                   data-tooltip-pos={cellTooltip ? "top" : undefined}
-                  onClick={() => handleCellClick(r, c)}
-                  onMouseEnter={() => interactive && setHoveredCell({ row: r, col: c })}
-                  onMouseLeave={() => interactive && setHoveredCell(null)}
-                  role={interactive ? "button" : undefined}
+                  onClick={interactive ? () => handleCellClick(r, c) : undefined}
+                  onMouseEnter={interactive ? () => setHoveredCell({ row: r, col: c }) : undefined}
+                  onMouseLeave={interactive ? () => setHoveredCell(null) : undefined}
+                  role={interactive ? "button" : "presentation"}
                   tabIndex={interactive ? 0 : undefined}
                   onKeyDown={
                     interactive
@@ -181,9 +184,9 @@ export function ColorGrid({
                   )}
                   {hasMarkers && (
                     <div className="shade-cell-markers">
-                      {cellMarkers.map((m, i) => (
+                      {cellMarkers.map((m) => (
                         <div
-                          key={m.sessionId + i}
+                          key={m.sessionId}
                           className={`shade-marker${m.isOwn ? " shade-marker--own" : ""}`}
                           data-tooltip={m.tooltip ?? m.name}
                           data-tooltip-pos="top"

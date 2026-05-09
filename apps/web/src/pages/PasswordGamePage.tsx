@@ -221,7 +221,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
-  // Announcement watcher (skip for host — they sent it)
+  // Announcement watcher (skip for host - they sent it)
   useEffect(() => {
     if (!game?.announcement || isHost) return;
     const prev = prevAnnouncementRef.current;

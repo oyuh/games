@@ -63,7 +63,7 @@ const steps: DemoStep[] = [
   },
   {
     label: "Clues (as Player)",
-    description: "You see the secret word and give a one-word clue that proves you know it — without being too obvious.",
+    description: "You see the secret word and give a one-word clue that proves you know it - without being too obvious.",
     hint: "Be subtle! If your clue is too direct, the imposter can piggyback off it.",
   },
   {
@@ -74,7 +74,7 @@ const steps: DemoStep[] = [
   {
     label: "Voting",
     description: "Everyone reviews all the clues side by side and votes on who they think the imposter is.",
-    hint: "Look for the vaguest or most off-topic clue — that's usually the imposter!",
+    hint: "Look for the vaguest or most off-topic clue - that's usually the imposter!",
   },
   {
     label: "Results",
@@ -107,7 +107,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
           </div>
         );
 
-      case 1: // Clues — player perspective
+      case 1: // Clues - player perspective
         return (
           <div className="game-page" data-game-theme="imposter">
             <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
@@ -131,12 +131,12 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
           </div>
         );
 
-      case 2: // Clues — imposter perspective
+      case 2: // Clues - imposter perspective
         return (
           <div className="game-page" data-game-theme="imposter">
             <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
             <ImposterPlayersCard players={PLAYERS} sessionId={P.charlie} sessionById={NAMES} revealRoles={false} />
-            <DemoGlow label="The imposter doesn't see the word — only redacted hints!">
+            <DemoGlow label="The imposter doesn't see the word - only redacted hints!">
               <ImposterClueSection
                 role="imposter"
                 secretWord={null}

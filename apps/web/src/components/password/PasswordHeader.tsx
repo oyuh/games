@@ -43,7 +43,7 @@ const phaseVariants: Record<string, string> = {
 const phaseTooltips: Record<string, string> = {
   lobby: "Waiting for players to join teams",
   submitting: "Players are submitting chain words",
-  playing: "Active round — give clues or guess",
+  playing: "Active round - give clues or guess",
   picking: "Leader is choosing a location on the map",
   clue1: "Leader is writing their first clue",
   guess1: "Players are guessing the location",
@@ -54,8 +54,8 @@ const phaseTooltips: Record<string, string> = {
   clue4: "Leader is writing their final clue",
   guess4: "Players are making their final guesses",
   reveal: "Showing results for this round",
-  results: "Game complete — see final scores",
-  finished: "Game complete — see final scores"
+  results: "Game complete - see final scores",
+  finished: "Game complete - see final scores"
 };
 
 const headerIcons: Record<string, ReactNode> = {

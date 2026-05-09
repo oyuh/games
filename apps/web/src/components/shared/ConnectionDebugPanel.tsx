@@ -72,7 +72,7 @@ function apiStatusClass(state: ConnectionDebugState["apiMetaState"]) {
   if (state === "loading") {
     return "text-amber-300";
   }
-  return "text-slate-300";
+  return "text-zinc-300";
 }
 
 function dbStatusClass(state: ConnectionDebugState["dbState"]) {
@@ -88,7 +88,7 @@ function dbStatusClass(state: ConnectionDebugState["dbState"]) {
   if (state === "loading") {
     return "text-amber-300";
   }
-  return "text-slate-300";
+  return "text-zinc-300";
 }
 
 export function ConnectionDebugPanel() {
@@ -132,12 +132,12 @@ export function ConnectionDebugPanel() {
   }
 
   return (
-    <section className="fixed bottom-3 right-3 z-50 max-w-sm rounded-lg border border-slate-700 bg-slate-950/95 p-3 text-xs text-slate-200 shadow-xl backdrop-blur">
+    <section className="fixed bottom-3 right-3 z-50 max-w-sm rounded-lg border border-zinc-700 bg-zinc-950/95 p-3 text-xs text-zinc-200 shadow-xl backdrop-blur">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="font-semibold text-[var(--color-primary-400)]">Connection Debug</h2>
         <button
           type="button"
-          className="rounded border border-slate-700 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-800"
+          className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-800"
           onClick={() => setOpen((current) => !current)}
         >
           {open ? "Hide" : "Show"}
@@ -148,119 +148,119 @@ export function ConnectionDebugPanel() {
         <div className="space-y-2">
           <dl className="space-y-1 text-[11px]">
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">Online</dt>
+              <dt className="text-zinc-400">Online</dt>
               <dd>{String(state.isOnline)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">Zero</dt>
+              <dt className="text-zinc-400">Zero</dt>
               <dd>{state.zeroState}</dd>
             </div>
             {state.zeroReason ? (
-              <div className="rounded bg-slate-900 p-1 text-[10px] text-rose-300">{state.zeroReason}</div>
+              <div className="rounded bg-zinc-900 p-1 text-[10px] text-rose-300">{state.zeroReason}</div>
             ) : null}
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">Presence</dt>
+              <dt className="text-zinc-400">Presence</dt>
               <dd>{state.presenceState}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">Presence connect</dt>
+              <dt className="text-zinc-400">Presence connect</dt>
               <dd>{formatLatency(state.presenceConnectLatencyMs)}</dd>
             </div>
             {state.presenceReason ? (
-              <div className="rounded bg-slate-900 p-1 text-[10px] text-amber-200">{state.presenceReason}</div>
+              <div className="rounded bg-zinc-900 p-1 text-[10px] text-amber-200">{state.presenceReason}</div>
             ) : null}
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API probe</dt>
+              <dt className="text-zinc-400">API probe</dt>
               <dd className={apiStatusClass(state.apiMetaState)}>{state.apiMetaState}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API latency</dt>
+              <dt className="text-zinc-400">API latency</dt>
               <dd>{formatLatency(state.apiLatencyMs)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">Database</dt>
+              <dt className="text-zinc-400">Database</dt>
               <dd className={dbStatusClass(state.dbState)}>{state.dbState}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">DB checked</dt>
+              <dt className="text-zinc-400">DB checked</dt>
               <dd>{formatDateTime(state.dbCheckedAt)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">DB key</dt>
+              <dt className="text-zinc-400">DB key</dt>
               <dd>{state.dbKey || "(unknown)"}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">DB expected</dt>
+              <dt className="text-zinc-400">DB expected</dt>
               <dd>{state.dbExpectedValue || "(unknown)"}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">DB actual</dt>
+              <dt className="text-zinc-400">DB actual</dt>
               <dd>{state.dbActualValue || "(unknown)"}</dd>
             </div>
             {state.dbReason ? (
-              <div className="rounded bg-slate-900 p-1 text-[10px] text-amber-200">{state.dbReason}</div>
+              <div className="rounded bg-zinc-900 p-1 text-[10px] text-amber-200">{state.dbReason}</div>
             ) : null}
             {state.apiMetaReason ? (
-              <div className="rounded bg-slate-900 p-1 text-[10px] text-rose-300">{state.apiMetaReason}</div>
+              <div className="rounded bg-zinc-900 p-1 text-[10px] text-rose-300">{state.apiMetaReason}</div>
             ) : null}
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API commit</dt>
+              <dt className="text-zinc-400">API commit</dt>
               <dd>{shortCommit(state.apiCommitSha)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API branch</dt>
+              <dt className="text-zinc-400">API branch</dt>
               <dd className="truncate">{state.apiCommitRef || "(unknown)"}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API platform</dt>
+              <dt className="text-zinc-400">API platform</dt>
               <dd>{state.apiPlatform || "(unknown)"}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API commit at</dt>
+              <dt className="text-zinc-400">API commit at</dt>
               <dd>{formatDateTime(state.apiCommitTimestamp)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API updated</dt>
+              <dt className="text-zinc-400">API updated</dt>
               <dd>{formatDateTime(state.apiUpdatedAt)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API built</dt>
+              <dt className="text-zinc-400">API built</dt>
               <dd>{formatDateTime(state.apiBuildTimestamp)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API started</dt>
+              <dt className="text-zinc-400">API started</dt>
               <dd>{formatDateTime(state.apiStartedAt)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API uptime</dt>
+              <dt className="text-zinc-400">API uptime</dt>
               <dd>{formatDurationMs(state.apiUptimeMs)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">API checked</dt>
+              <dt className="text-zinc-400">API checked</dt>
               <dd>{formatDateTime(state.apiMetaCheckedAt)}</dd>
             </div>
             {state.apiCommitMessage ? (
-              <div className="rounded bg-slate-900 p-1 text-[10px] text-slate-300">{state.apiCommitMessage}</div>
+              <div className="rounded bg-zinc-900 p-1 text-[10px] text-zinc-300">{state.apiCommitMessage}</div>
             ) : null}
-            <div className="truncate text-[10px] text-slate-400">API Info URL: {state.apiInfoURL || "(unset)"}</div>
-            <div className="truncate text-[10px] text-slate-400">Zero URL: {state.zeroCacheURL || "(unset)"}</div>
-            <div className="truncate text-[10px] text-slate-400">API URL: {state.apiBaseURL || "(unset)"}</div>
-            <div className="truncate text-[10px] text-slate-400">Session: {state.sessionId || "(unset)"}</div>
+            <div className="truncate text-[10px] text-zinc-400">API Info URL: {state.apiInfoURL || "(unset)"}</div>
+            <div className="truncate text-[10px] text-zinc-400">Zero URL: {state.zeroCacheURL || "(unset)"}</div>
+            <div className="truncate text-[10px] text-zinc-400">API URL: {state.apiBaseURL || "(unset)"}</div>
+            <div className="truncate text-[10px] text-zinc-400">Session: {state.sessionId || "(unset)"}</div>
           </dl>
 
-          <div className="max-h-44 space-y-1 overflow-auto rounded border border-slate-800 bg-slate-900/70 p-2">
+          <div className="max-h-44 space-y-1 overflow-auto rounded border border-zinc-800 bg-zinc-900/70 p-2">
             {state.events.length === 0 ? (
-              <p className="text-[10px] text-slate-400">No events captured yet.</p>
+              <p className="text-[10px] text-zinc-400">No events captured yet.</p>
             ) : (
               state.events.map((event) => (
                 <div key={event.id} className="text-[10px]">
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-500">{new Date(event.at).toLocaleTimeString()}</span>
+                    <span className="text-zinc-500">{formatDateTime(event.at)}</span>
                     <span className={levelClass(event.level)}>{event.level.toUpperCase()}</span>
-                    <span className="text-slate-300">{event.source}</span>
+                    <span className="text-zinc-300">{event.source}</span>
                   </div>
-                  <p className="text-slate-200">{event.message}</p>
-                  {event.details ? <p className="break-words text-slate-400">{event.details}</p> : null}
+                  <p className="text-zinc-200">{event.message}</p>
+                  {event.details ? <p className="break-words text-zinc-400">{event.details}</p> : null}
                 </div>
               ))
             )}

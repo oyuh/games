@@ -1,0 +1,13 @@
+{
+  "ignore": {
+    "files": [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/out/**",
+      "**/.turbo/**",
+      "**/.turbo-cache/**",
+      "**/coverage/**"
+    ]
+  }
+}

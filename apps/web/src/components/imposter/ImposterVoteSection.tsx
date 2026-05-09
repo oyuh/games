@@ -29,6 +29,13 @@ export function ImposterVoteSection({
 }) {
   const clueByPlayer = new Map(clues.map((c) => [c.sessionId, c.text]));
   const votedName = voteTarget ? (sessionById[voteTarget] ?? getDisplayName(null, voteTarget)) : null;
+  const votablePlayers: Array<{ player: Player; playerIndex: number }> = [];
+
+  for (const [playerIndex, player] of players.entries()) {
+    if (player.sessionId !== sessionId) {
+      votablePlayers.push({ player, playerIndex });
+    }
+  }
 
   return (
     <div className="game-section">
@@ -41,7 +48,7 @@ export function ImposterVoteSection({
           return (
             <div key={player.sessionId} className="game-clue-item">
               <span className="game-clue-name">{name}</span>
-              <span className="game-clue-text">{clueText ?? "—"}</span>
+              <span className="game-clue-text">{clueText ?? "-"}</span>
             </div>
           );
         })}
@@ -57,13 +64,10 @@ export function ImposterVoteSection({
       ) : (
         <>
           <div className="game-vote-grid">
-            {players
-              .filter((p) => p.sessionId !== sessionId)
-              .map((player) => {
+            {votablePlayers
+              .map(({ player, playerIndex }) => {
                 const name = sessionById[player.sessionId] ?? getDisplayName(null, player.sessionId);
                 const selected = voteTarget === player.sessionId;
-                // Find the actual index in the full players array to get consistent colors
-                const playerIndex = players.findIndex(p => p.sessionId === player.sessionId);
                 return (
                   <button
                     key={player.sessionId}

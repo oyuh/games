@@ -1,6 +1,6 @@
 import { mutators, queries, chainCategoryLabels } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle, FiEye, FiClock } from "react-icons/fi";
 import { MobileGameHeader } from "../components/MobileGameHeader";
@@ -164,6 +164,13 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const oppChain: ChainSlot[] = opponentId ? (game.chain[opponentId] ?? []) : [];
   const viewingChain = viewingId === sessionId ? myChain : oppChain;
   const isViewingMine = viewingId === sessionId;
+  const submissionSlots = submissionWords.map((word, index) => ({ id: `mobile-submission-slot-${index}`, word, index }));
+  const viewingSlots = viewingChain.map((slot, index) => ({ id: `${viewingId}-mobile-chain-slot-${index}`, slot, index }));
+  const submittedChainEntries = (game.submitted_chains[sessionId] ?? []).map((word, index) => ({
+    id: `mobile-submitted-chain-word-${index}`,
+    word,
+    index,
+  }));
 
   const myDone = myChain.length > 0 && myChain.every((s) => s.revealed);
   const oppDone = oppChain.length > 0 && oppChain.every((s) => s.revealed);
@@ -267,6 +274,12 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const myTotal = myChain.length > 0 ? myChain.length - 2 : 0;
   const oppProgress = oppChain.length > 0 ? oppChain.filter((s) => s.revealed).length - 2 : 0;
   const oppTotal = oppChain.length > 0 ? oppChain.length - 2 : 0;
+  const activateOnKeyboard = (event: KeyboardEvent<HTMLElement>, action: () => void) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      action();
+    }
+  };
 
   return (
     <div className="m-page" data-game-theme="chain">
@@ -294,6 +307,9 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
           <div
             className={`m-cr-vs-card${isViewingMine && game.phase === "playing" ? " m-cr-vs-card--active" : ""}${myDone ? " m-cr-vs-card--done" : ""}`}
             onClick={() => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); }}
+            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingId(sessionId); setEditingIndex(null); setGuess(""); })}
+            role="button"
+            tabIndex={0}
           >
             <div className="m-cr-vs-avatar">{(myName[0] ?? "?").toUpperCase()}</div>
             <div className="m-cr-vs-details">
@@ -312,6 +328,9 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
           <div
             className={`m-cr-vs-card${!isViewingMine && game.phase === "playing" ? " m-cr-vs-card--active" : ""}${oppDone ? " m-cr-vs-card--done" : ""}`}
             onClick={() => { setViewingId(opponentId ?? sessionId); setEditingIndex(null); setGuess(""); }}
+            onKeyDown={(event) => activateOnKeyboard(event, () => { setViewingId(opponentId ?? sessionId); setEditingIndex(null); setGuess(""); })}
+            role="button"
+            tabIndex={0}
           >
             <div className="m-cr-vs-avatar m-cr-vs-avatar--opp">{(oppName[0] ?? "?").toUpperCase()}</div>
             <div className="m-cr-vs-details">
@@ -374,8 +393,13 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                 </div>
               );
             })() : !inGame ? (
-              <div className="m-cr-slot m-cr-slot--join"
-                onClick={handleJoinClick}>
+              <div
+                className="m-cr-slot m-cr-slot--join"
+                onClick={handleJoinClick}
+                onKeyDown={(event) => activateOnKeyboard(event, handleJoinClick)}
+                role="button"
+                tabIndex={0}
+              >
                 <div className="m-cr-slot-avatar m-cr-slot-avatar--empty"><FiLogIn size={18} /></div>
                 <span className="m-cr-slot-join-text">Join Duel</span>
               </div>
@@ -428,7 +452,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
         <div className="m-section">
           <div className="m-cr-submit-banner">
             <FiSend size={16} />
-            <span>Write your chain — {game.settings.chainLength} connected words</span>
+            <span>Write your chain - {game.settings.chainLength} connected words</span>
           </div>
           {game.settings.category && (
             <p style={{ textAlign: "center", margin: "0.25rem 0 0.5rem", fontSize: "0.82rem", color: "var(--secondary)" }}>
@@ -438,14 +462,13 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
 
           <form onSubmit={submitChain}>
             <div className="m-cr-chain">
-              {submissionWords.map((word, i) => {
+              {submissionSlots.map(({ id, word, index: i }) => {
                 const isEdge = i === 0 || i === submissionWords.length - 1;
                 return (
-                  <div key={i} className="m-cr-submit-slot">
+                  <div key={id} className="m-cr-submit-slot">
                     <span className="m-cr-slot-num">{i + 1}</span>
                     <input
                       className="m-input"
-                      autoFocus={i === 0}
                       onFocus={(e) => e.currentTarget.select()}
                       value={word}
                       onChange={(e) => {
@@ -480,10 +503,10 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
             <div className="m-cr-preview">
               <h4 className="m-label">Your Chain</h4>
               <div className="m-cr-preview-words">
-                {game.submitted_chains[sessionId].map((word, i, arr) => {
-                  const isEdge = i === 0 || i === arr.length - 1;
+                {submittedChainEntries.map(({ id, word, index: i }) => {
+                  const isEdge = i === 0 || i === submittedChainEntries.length - 1;
                   return (
-                    <div key={i} className={`m-cr-preview-word${isEdge ? " m-cr-preview-word--edge" : ""}`}>
+                    <div key={id} className={`m-cr-preview-word${isEdge ? " m-cr-preview-word--edge" : ""}`}>
                       <span className="m-cr-slot-num">{i + 1}</span>
                       <span>{word}</span>
                       {isEdge && <span className="m-badge-small">hint</span>}
@@ -495,7 +518,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
           )}
           <div className="m-cr-opponent-status">
             {game.submitted_chains[opponentId ?? ""] ? (
-              <p className="m-text-success">✅ {oppName} has submitted — starting soon!</p>
+              <p className="m-text-success">✅ {oppName} has submitted - starting soon!</p>
             ) : (
               <div className="m-waiting">
                 <div className="m-pulse" />
@@ -523,7 +546,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
               myDone ? (
                 <span className="m-text-success">✅ You finished! Tap {oppName}'s card to spectate</span>
               ) : (
-                <span>Solve the chain — tap a word to guess!</span>
+                <span>Solve the chain - tap a word to guess!</span>
               )
             ) : (
               <span className="m-text-muted">
@@ -533,13 +556,13 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
           </div>
 
           <div className="m-cr-chain">
-            {viewingChain.map((slot, i) => {
+            {viewingSlots.map(({ id, slot, index: i }) => {
               const isEditing = isViewingMine && editingIndex === i;
               const isEdge = i === 0 || i === viewingChain.length - 1;
               const canClick = isViewingMine && !myDone && !slot.revealed && !isEditing;
 
               return (
-                <div key={i} className="m-cr-slot-outer">
+                <div key={id} className="m-cr-slot-outer">
                   <div className="m-cr-slot-row">
                     <span className="m-cr-slot-num">{i + 1}</span>
 
@@ -553,7 +576,10 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                         slot.solvedBy && slot.solvedBy !== sessionId ? "m-cr-word-slot--theirs" : "",
                         slot.revealed && !slot.solvedBy && !isEdge ? "m-cr-word-slot--givenup" : "",
                       ].filter(Boolean).join(" ")}
-                      onClick={() => canClick && handleSlotClick(i)}
+                      onClick={canClick ? () => handleSlotClick(i) : undefined}
+                      onKeyDown={canClick ? (event) => activateOnKeyboard(event, () => handleSlotClick(i)) : undefined}
+                      role={canClick ? "button" : undefined}
+                      tabIndex={canClick ? 0 : undefined}
                     >
                       {isEditing ? (
                         <form onSubmit={handleInlineGuess} className="m-cr-inline-form">
@@ -639,7 +665,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
         <div className="m-section">
           <div className="m-waiting">
             <div className="m-pulse" />
-            <p>Duel in progress — watching!</p>
+            <p>Duel in progress - watching!</p>
           </div>
         </div>
       )}
@@ -671,6 +697,8 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                 {game.round_history.map((r) => {
                   const myRoundChain = r.chains[sessionId] ?? [];
                   const oppRoundChain = opponentId ? (r.chains[opponentId] ?? []) : [];
+                  const myRoundWords = myRoundChain.map((word, index) => ({ id: `mobile-you-${r.round}-${index}`, word }));
+                  const oppRoundWords = oppRoundChain.map((word, index) => ({ id: `mobile-opponent-${r.round}-${index}`, word }));
                   return (
                     <div key={r.round} className="m-cr-round-row">
                       <span className="m-cr-round-num">R{r.round}</span>
@@ -678,16 +706,16 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                         <div className="m-cr-round-chain">
                           <span className="m-cr-round-chain-label">You</span>
                           <div className="m-cr-round-words">
-                            {myRoundChain.map((w, wi) => (
-                              <span key={wi} className="m-cr-round-word m-cr-round-word--me">{w.word}</span>
+                            {myRoundWords.map((entry) => (
+                              <span key={entry.id} className="m-cr-round-word m-cr-round-word--me">{entry.word.word}</span>
                             ))}
                           </div>
                         </div>
                         <div className="m-cr-round-chain">
                           <span className="m-cr-round-chain-label">{oppName}</span>
                           <div className="m-cr-round-words">
-                            {oppRoundChain.map((w, wi) => (
-                              <span key={wi} className="m-cr-round-word m-cr-round-word--opp">{w.word}</span>
+                            {oppRoundWords.map((entry) => (
+                              <span key={entry.id} className="m-cr-round-word m-cr-round-word--opp">{entry.word.word}</span>
                             ))}
                           </div>
                         </div>

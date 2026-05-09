@@ -9,7 +9,7 @@ const GITHUB_REPO = "https://github.com/oyuh/games";
 
 const siteInfo = {
   title: "Games",
-  description: "A real-time multiplayer party game platform. Create or join lobbies, play with friends, and have fun — no accounts required.",
+  description: "A real-time multiplayer party game platform. Create or join lobbies, play with friends, and have fun - no accounts required.",
   version: "1.0",
   author: "Lawson",
 };
@@ -39,7 +39,7 @@ function getPageInfo(pathname: string): PageInfo {
     return {
       title: "Imposter",
       icon: <FiEye size={18} />,
-      description: "A social deduction game. Each round, players see a secret word — except the imposter. Everyone gives one-word clues, then votes on who the imposter is.",
+      description: "A social deduction game. Each round, players see a secret word - except the imposter. Everyone gives one-word clues, then votes on who the imposter is.",
       tips: [
         "Give a clue that proves you know the word without giving it away",
         "The imposter should try to blend in",
@@ -65,7 +65,7 @@ function getPageInfo(pathname: string): PageInfo {
     return {
       title: "Chain Reaction",
       icon: <FiLink size={18} />,
-      description: "A 1v1 word chain duel. Each player gets a chain of connected words — the first and last are revealed as hints. Guess the hidden words in between!",
+      description: "A 1v1 word chain duel. Each player gets a chain of connected words - the first and last are revealed as hints. Guess the hidden words in between!",
       tips: [
         "Wrong guesses auto-reveal one letter as a hint",
         "Fewer hints used = more points per word (3 → 2 → 1)",
@@ -91,7 +91,7 @@ function getPageInfo(pathname: string): PageInfo {
     return {
       title: "Location Signal",
       icon: <FiMapPin size={18} />,
-      description: "A map-based guessing game. The Leader secretly picks a spot on the world map and gives text clues. Everyone else guesses where it is — closer = more points!",
+      description: "A map-based guessing game. The Leader secretly picks a spot on the world map and gives text clues. Everyone else guesses where it is - closer = more points!",
       tips: [
         "Leaders: don't name the place directly",
         "You get two clues to narrow it down",
@@ -183,8 +183,13 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel info-modal-panel" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+      role="presentation"
+    >
+      <div className="modal-panel info-modal-panel">
         {/* Header */}
         <div className="modal-header">
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -220,7 +225,7 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
             {page.tips && page.tips.length > 0 && (
               <ul className="info-tips">
                 {page.tips.map((tip, i) => (
-                  <li key={i} className="info-tip">
+                  <li key={`${page.title}-${tip}`} className="info-tip">
                     <FiZap size={11} className="info-tip-icon" />
                     {tip}
                   </li>

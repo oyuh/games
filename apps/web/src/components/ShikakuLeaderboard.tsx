@@ -25,7 +25,7 @@ export interface PersonalBest {
 export type LeaderboardView = "all" | "mine";
 
 /* ═══════════════════════════════════════════════════════════ */
-/*  ShikakuLeaderboard — modal popup (props-based)             */
+/*  ShikakuLeaderboard - modal popup (props-based)             */
 /* ═══════════════════════════════════════════════════════════ */
 export function ShikakuLeaderboard({
   entries,
@@ -79,6 +79,11 @@ export function ShikakuLeaderboard({
     <div
       className="shikaku-leaderboard-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          onClose();
+        }
+      }}
       role="dialog"
       aria-modal="true"
       aria-label="Shikaku leaderboard"
@@ -108,11 +113,11 @@ export function ShikakuLeaderboard({
         <div className="shikaku-lb-personal-best">
           {personalBest ? (
             <>
-              <span className="shikaku-lb-pb-label" data-tooltip="Your highest score on this difficulty">Your Best — #{personalBest.rank}</span>
-              <span className="shikaku-lb-pb-value">{personalBest.score.toLocaleString()} — {formatTime(personalBest.timeMs)}</span>
+              <span className="shikaku-lb-pb-label" data-tooltip="Your highest score on this difficulty">Your Best - #{personalBest.rank}</span>
+              <span className="shikaku-lb-pb-value">{personalBest.score.toLocaleString()} - {formatTime(personalBest.timeMs)}</span>
             </>
           ) : (
-            <span className="shikaku-lb-pb-none">No personal best yet — play a round!</span>
+            <span className="shikaku-lb-pb-none">No personal best yet - play a round!</span>
           )}
         </div>
 
@@ -148,7 +153,7 @@ export function ShikakuLeaderboard({
               <span className="shikaku-lb-spinner-text">Loading scores…</span>
             </div>
           ) : entries.length === 0 ? (
-            <div className="shikaku-lb-empty-stable">{view === "mine" ? "You have no saved scores on this difficulty yet." : "No scores yet — be the first!"}</div>
+            <div className="shikaku-lb-empty-stable">{view === "mine" ? "You have no saved scores on this difficulty yet." : "No scores yet - be the first!"}</div>
           ) : (
             <div className="shikaku-lb-list">
               {entries.map((entry, i) => {

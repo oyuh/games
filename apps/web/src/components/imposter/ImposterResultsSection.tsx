@@ -32,17 +32,15 @@ export function ImposterResultsSection({
 
   // Determine who got the most votes
   const topVoteCount = Math.max(...Object.values(tally), 0);
-  const topVoted = Object.entries(tally)
-    .filter(([, count]) => count === topVoteCount && topVoteCount > 0)
-    .map(([id]) => id);
-  const votedOutId = topVoted.length > 0 ? topVoted[0] : null;
+  const votedOutEntry = Object.entries(tally).find(([, count]) => count === topVoteCount && topVoteCount > 0);
+  const votedOutId = votedOutEntry?.[0] ?? null;
   const votedOutPlayer = votedOutId ? activePlayers.find((p) => p.sessionId === votedOutId) : null;
   const votedOutName = votedOutPlayer ? (sessionById[votedOutPlayer.sessionId] ?? getDisplayName(votedOutPlayer.name, votedOutPlayer.sessionId)) : null;
   const wasImposter = votedOutPlayer?.role === "imposter";
   const voteLines = votes.map((vote) => {
     const voter = sessionById[vote.voterId] ?? getDisplayName(null, vote.voterId);
     const target = sessionById[vote.targetId] ?? getDisplayName(null, vote.targetId);
-    return `${voter} → ${target}`;
+    return { id: `${vote.voterId}->${vote.targetId}`, text: `${voter} → ${target}` };
   });
 
   return (
@@ -79,8 +77,8 @@ export function ImposterResultsSection({
         <h3 className="game-section-label" style={{ marginTop: 0 }}>Vote Breakdown</h3>
         {voteLines.length > 0 ? (
           <div style={{ display: "grid", gap: "0.35rem", marginBottom: "0.6rem" }}>
-            {voteLines.map((line, index) => (
-              <p key={`${line}-${index}`} style={{ margin: 0, fontSize: "0.92rem", opacity: 0.9 }}>{line}</p>
+            {voteLines.map((line) => (
+              <p key={line.id} style={{ margin: 0, fontSize: "0.92rem", opacity: 0.9 }}>{line.text}</p>
             ))}
           </div>
         ) : (
@@ -95,9 +93,12 @@ export function ImposterResultsSection({
           const voteCount = tally[player.sessionId] ?? 0;
           const pct = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
           const isVotedOut = player.sessionId === votedOutId;
-          const voterNames = votes
-            .filter((v) => v.targetId === player.sessionId)
-            .map((v) => sessionById[v.voterId] ?? getDisplayName(null, v.voterId));
+          const voterNames = votes.reduce<string[]>((names, vote) => {
+            if (vote.targetId === player.sessionId) {
+              names.push(sessionById[vote.voterId] ?? getDisplayName(null, vote.voterId));
+            }
+            return names;
+          }, []);
 
           return (
             <div key={player.sessionId} className="game-result-row">
