@@ -195,7 +195,7 @@ function accentForTarget(el: Element | null, pathname: string) {
 
 export function CustomCursor() {
   const { customCursor, customCursorScale } = useSettings();
-  const location = useLocation();
+  const { pathname } = useLocation();
   const [state, setState] = useState({
     x: -100,
     y: -100,
@@ -221,7 +221,7 @@ export function CustomCursor() {
         visible: true,
         pressed,
         kind: cursorKindForTarget(el, pressed),
-        accent: accentForTarget(el, location.pathname),
+        accent: accentForTarget(el, pathname),
       });
     };
 
@@ -245,7 +245,7 @@ export function CustomCursor() {
       window.removeEventListener("pointerup", onPointerUp);
       document.documentElement.removeEventListener("pointerleave", onPointerLeave);
     };
-  }, [customCursor, location.pathname]);
+  }, [customCursor, pathname]);
 
   if (!customCursor) {
     return null;

@@ -40,7 +40,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
   // Position & size state
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [size, setSize] = useState({ w: DEFAULT_W, h: DEFAULT_H });
-  const [initialized, setInitialized] = useState(false);
+  const initializedRef = useRef(false);
 
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
@@ -48,14 +48,14 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
 
   // Initialize position on first open
   useEffect(() => {
-    if (open && !initialized) {
+    if (open && !initializedRef.current) {
       setPos({
         x: Math.max(16, window.innerWidth - DEFAULT_W - 24),
         y: Math.max(16, window.innerHeight - DEFAULT_H - 80),
       });
-      setInitialized(true);
+      initializedRef.current = true;
     }
-  }, [open, initialized]);
+  }, [open]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -147,7 +147,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
       }}
     >
       {/* Title bar (draggable) */}
-      <div className="chat-titlebar" onMouseDown={onDragStart}>
+      <div className="chat-titlebar" onMouseDown={onDragStart} role="presentation">
         <FiMessageCircle size={14} />
         <span className="chat-titlebar-text">{showChannels && channel === "imposter" ? "Imposter Chat" : "Game Chat"}</span>
         <span className="chat-titlebar-count">{filteredMessages.length}</span>
@@ -195,7 +195,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
           <div className="chat-input-row">
             <input
               className="chat-input"
-              placeholder="Type a message..."
+              placeholder="Type a message"
               value={input}
               maxLength={500}
               onChange={(e) => setInput(e.target.value)}
@@ -212,7 +212,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
           </div>
 
           {/* Resize handle */}
-          <div className="chat-resize-handle" onMouseDown={onResizeStart} />
+          <div className="chat-resize-handle" onMouseDown={onResizeStart} role="presentation" />
         </>
       )}
     </div>

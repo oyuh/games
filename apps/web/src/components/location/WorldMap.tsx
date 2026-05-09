@@ -51,6 +51,7 @@ const MAX_ZOOM = 18;
 const MERCATOR_LAT_LIMIT = 85.05112878;
 const CLICK_TOLERANCE_PX = 6;
 const MARKER_REPEAT_PADDING = 96;
+const EMPTY_MARKERS: MapMarker[] = [];
 
 // Google Hybrid tiles: satellite imagery with labels/roads/place names.
 // Tile indices are wrapped in both axes so the whole map repeats forever.
@@ -499,7 +500,7 @@ function MapSurface({
                         background: `${marker.color}cc`,
                         padding: "1px 6px",
                         borderRadius: "4px",
-                        fontSize: "0.62rem",
+                        fontSize: "0.75rem",
                         fontWeight: 700,
                         whiteSpace: "nowrap",
                         textShadow: "0 1px 2px rgba(0,0,0,0.9)",
@@ -602,7 +603,7 @@ function MapSurface({
 export function WorldMap({
   height = 360,
   onClick,
-  markers = [],
+  markers = EMPTY_MARKERS,
   interactive = true,
   className,
   coordsOverlay,
@@ -758,6 +759,10 @@ export function WorldMap({
         onClick={(event) => {
           if (event.target === event.currentTarget) setExpanded(false);
         }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setExpanded(false);
+        }}
+        tabIndex={-1}
       >
         <div className="locsig-map-modal-panel">
           {timerEndsAt != null && (

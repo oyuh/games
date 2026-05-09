@@ -308,7 +308,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
       <div className="game-page">
         <div className="game-empty">
           <p className="game-empty-title">Game not found</p>
-          <p className="game-empty-sub">Redirecting home...</p>
+          <p className="game-empty-sub">Redirecting home&hellip;</p>
           <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
         </div>
       </div>
@@ -516,7 +516,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
             <div
               key={p.sessionId}
               className={`game-player-chip${isMe ? " game-player-chip--me" : ""}${isCurrentLeader ? " game-player-chip--leader" : ""}${isLockedIn ? " game-player-chip--locked" : ""}`}
-              data-tooltip={`${name}${isCurrentLeader ? " — Leader 📍" : ""}${isLockedIn ? " — Locked in ✅" : ""}${isMe ? " (you)" : ""}\n${p.totalScore} pts`}
+              data-tooltip={`${name}${isCurrentLeader ? " - Leader 📍" : ""}${isLockedIn ? " - Locked in ✅" : ""}${isMe ? " (you)" : ""}\n${p.totalScore} pts`}
               data-tooltip-variant={isCurrentLeader ? "game" : isLockedIn ? "success" : "info"}
             >
               <div className={`game-player-avatar${isCurrentLeader ? " game-player-avatar--leader" : ""}`}>
@@ -528,7 +528,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
                 )}
               </div>
               <span className="game-player-name">{name}</span>
-              {isGameActive && <span className="badge" data-tooltip={`${name}'s score`} data-tooltip-variant="info" style={{ fontSize: "0.55rem" }}>{p.totalScore}</span>}
+              {isGameActive && <span className="badge" data-tooltip={`${name}'s score`} data-tooltip-variant="info" style={{ fontSize: "0.75rem" }}>{p.totalScore}</span>}
               {isMe && <span className="game-player-you">you</span>}
             </div>
           );
@@ -640,7 +640,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
                     : "Start Game"}
                 </button>
               ) : (
-                <p className="game-waiting-text">Waiting for host to start...</p>
+                <p className="game-waiting-text">Waiting for host to start&hellip;</p>
               )}
               <button className="btn btn-muted game-action-btn" data-tooltip="Leave this game" data-tooltip-variant="info"
                 onClick={() => void zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })).server}>
@@ -678,7 +678,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         <div className="game-section locsig-waiting-section">
           <div className="game-waiting">
             <div className="game-waiting-pulse" />
-            <p><strong>{leaderName}</strong> is picking a location...</p>
+            <p><strong>{leaderName}</strong> is picking a location&hellip;</p>
           </div>
         </div>
       )}
@@ -688,7 +688,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         <div className="game-section locsig-clue-section">
           <div className="locsig-clue-leader-info">
             <h3>{currentClueRound === 1 ? "You are the Leader! 📍" : `Write clue ${currentClueRound}! 📍`}</h3>
-            <p>{currentClueRound === 1 ? "Give a text clue to hint at the location — don't name it directly!" : "Help them narrow it down — you can see their previous guesses on the map!"}</p>
+            <p>{currentClueRound === 1 ? "Give a text clue to hint at the location - don't name it directly!" : "Help them narrow it down - you can see their previous guesses on the map!"}</p>
           </div>
           {visibleClues(currentClueRound - 1).length > 0 && (
             <div className="locsig-clue-display-row">
@@ -701,7 +701,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
           <form onSubmit={(e) => void submitClue(e, currentClueRound)} className="locsig-clue-form">
-            <input className="input locsig-clue-input" autoFocus onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire..." : `Clue ${currentClueRound}...`} maxLength={80} />
+            <input className="input locsig-clue-input" onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire" : `Clue ${currentClueRound}`} maxLength={80} />
             <button className="btn btn-primary" type="submit" disabled={!draftClue.trim()} data-tooltip="Submit this clue to the guessers" data-tooltip-variant="info">
               <FiSend size={14} /> Send
             </button>
@@ -724,7 +724,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           )}
           <div className="game-waiting">
             <div className="game-waiting-pulse" />
-            <p><strong>{leaderName}</strong> is writing clue {currentClueRound}...</p>
+            <p><strong>{leaderName}</strong> is writing clue {currentClueRound}&hellip;</p>
           </div>
         </div>
       )}
@@ -766,7 +766,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           </div>
           <div className="game-waiting">
             <div className="game-waiting-pulse" />
-            <p>Guessers are choosing... ({guessesThisRound(currentGuessRound).length}/{roundGuessers.length})</p>
+            <p>Guessers are choosing&hellip; ({guessesThisRound(currentGuessRound).length}/{roundGuessers.length})</p>
           </div>
         </div>
       )}
@@ -792,12 +792,18 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
             <div className="locsig-score-rows">
               {(() => {
                 const prevHistory = game.round_history.length > 1 ? game.round_history[game.round_history.length - 2] : null;
-                return sortedPlayers.filter((p) => p.sessionId !== game.leader_id).map((p) => {
+                const scorePlayers = sortedPlayers.reduce<typeof sortedPlayers>((players, player) => {
+                  if (player.sessionId !== game.leader_id) {
+                    players.push(player);
+                  }
+                  return players;
+                }, []);
+                return scorePlayers.map((p) => {
                   const isMe = p.sessionId === sessionId;
                   const name = playerName(p.sessionId);
                   const roundPts = p.totalScore - (prevHistory?.scores[p.sessionId] ?? 0);
                   return (
-                    <div key={p.sessionId} className="locsig-score-row" data-tooltip={`${name} — ${p.totalScore} pts`} data-tooltip-variant="info">
+                    <div key={p.sessionId} className="locsig-score-row" data-tooltip={`${name} - ${p.totalScore} pts`} data-tooltip-variant="info">
                       <span className="locsig-score-name">
                         {name} {isMe && <span className="game-player-you">you</span>}
                       </span>
@@ -828,7 +834,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
               const name = playerName(p.sessionId);
               const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
               return (
-                <div key={p.sessionId} className={`locsig-final-row${i === 0 ? " locsig-final-row--winner" : ""}`} data-tooltip={`${name} — ${p.totalScore} pts`} data-tooltip-variant="info">
+                <div key={p.sessionId} className={`locsig-final-row${i === 0 ? " locsig-final-row--winner" : ""}`} data-tooltip={`${name} - ${p.totalScore} pts`} data-tooltip-variant="info">
                   <span className="locsig-final-rank">{medal}</span>
                   <span className="locsig-final-name">
                     {name} {isMe && <span className="game-player-you">you</span>}
@@ -876,7 +882,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         <div className="game-section">
           <div className="game-waiting">
             <div className="game-waiting-pulse" />
-            <p>Game in progress — watching!</p>
+            <p>Game in progress - watching!</p>
           </div>
         </div>
       )}

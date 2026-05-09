@@ -57,7 +57,7 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
             <FiAward size={28} style={{ color: "#f59e0b" }} />
             <div>
               <h3 className="m-reveal-title">It's a Tie!</h3>
-              <p className="m-reveal-sub">{winners.map(([n]) => n).join(" & ")} — {topScore} pts each</p>
+              <p className="m-reveal-sub">{winners.map(([n]) => n).join(" & ")} - {topScore} pts each</p>
             </div>
           </div>
         </div>
@@ -105,8 +105,8 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
             <table className="m-data-table">
               <thead><tr><th>#</th><th>Team</th><th>Word</th><th>Result</th></tr></thead>
               <tbody>
-                {game.rounds.map((r, i) => (
-                  <tr key={i}>
+                {game.rounds.map((r) => (
+                  <tr key={r.round}>
                     <td>{r.round}</td>
                     <td>{game.teams[r.teamIndex]?.name ?? `Team ${r.teamIndex + 1}`}</td>
                     <td style={{ color: "var(--primary)", fontWeight: 600 }}>{r.word}</td>

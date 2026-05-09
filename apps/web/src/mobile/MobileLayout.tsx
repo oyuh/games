@@ -117,10 +117,10 @@ function MobileLayoutInner() {
               const mode = shikakuState.customMode ? "Seeded" : shikakuState.showSeedInput ? "Normal" : shikakuState.infiniteMode ? "Infinite" : "Ranked";
               const diff = shikakuState.difficulty.charAt(0).toUpperCase() + shikakuState.difficulty.slice(1);
               const phase = shikakuState.phase.charAt(0).toUpperCase() + shikakuState.phase.slice(1);
-              const parts = [`${mode} — ${diff}`, `Phase: ${phase}`];
+              const parts = [`${mode} - ${diff}`, `Phase: ${phase}`];
               if (shikakuState.seed) parts.push(`Seed: ${shikakuState.seed}`);
               parts.push(shikakuState.customMode || shikakuState.showSeedInput || shikakuState.infiniteMode ? "Unranked" : "Ranked");
-              showToast(parts.join(" — "), "info");
+              showToast(parts.join(" - "), "info");
             }}
           >
             {shikakuState.customMode || shikakuState.showSeedInput

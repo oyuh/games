@@ -315,14 +315,24 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const currentRoundGuesses = useMemo(() => {
     if (!game || (phase !== "guess1" && phase !== "guess2")) return 0;
     const round = phase === "guess1" ? 1 : 2;
-    return new Set(game.guesses.filter((g) => g.round === round).map((g) => g.sessionId)).size;
+    return game.guesses.reduce<Set<string>>((ids, guess) => {
+      if (guess.round === round) {
+        ids.add(guess.sessionId);
+      }
+      return ids;
+    }, new Set()).size;
   }, [game, phase]);
 
   // Set of player IDs who have locked in for the current guess round
   const lockedInIds = useMemo(() => {
     if (!game || (phase !== "guess1" && phase !== "guess2")) return new Set<string>();
     const round = phase === "guess1" ? 1 : 2;
-    return new Set(game.guesses.filter((g) => g.round === round).map((g) => g.sessionId));
+    return game.guesses.reduce<Set<string>>((ids, guess) => {
+      if (guess.round === round) {
+        ids.add(guess.sessionId);
+      }
+      return ids;
+    }, new Set());
   }, [game, phase]);
 
   useEffect(() => {
@@ -485,7 +495,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
               <div
                 key={player.sessionId}
                 className={`game-player-chip${isMe ? " game-player-chip--me" : ""}${isCurrentLeader ? " game-player-chip--leader" : ""}${isLockedIn ? " game-player-chip--locked" : ""}`}
-                data-tooltip={`${name}${isCurrentLeader ? " — Leader 🎨" : ""}${isLockedIn ? " — Locked in ✅" : ""}${isMe ? " (you)" : ""}${isGameActive ? ` — ${player.totalScore} pts` : ""}`}
+                data-tooltip={`${name}${isCurrentLeader ? " - Leader 🎨" : ""}${isLockedIn ? " - Locked in ✅" : ""}${isMe ? " (you)" : ""}${isGameActive ? ` - ${player.totalScore} pts` : ""}`}
                 data-tooltip-variant={isCurrentLeader ? "warn" : isLockedIn ? "success" : "info"}
               >
                 <div className={`game-player-avatar${isCurrentLeader ? " game-player-avatar--leader" : ""}`}>
@@ -498,7 +508,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
                 </div>
                 <span className="game-player-name">{name}</span>
                 {isGameActive && (
-                  <span className="badge" style={{ fontSize: "0.55rem" }}>{player.totalScore}</span>
+                  <span className="badge" style={{ fontSize: "0.75rem" }}>{player.totalScore}</span>
                 )}
                 {isMe && <span className="game-player-you">you</span>}
               </div>
@@ -636,7 +646,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
                 : <>Give a <strong>second clue</strong> (up to 2 words) to help guessers find your target color.</>}
             </p>
             {game.settings.hardMode && (
-              <p className="shade-hard-mode-warning">🚫 No Color Names — you can't use words like red, blue, green, etc.</p>
+              <p className="shade-hard-mode-warning">🚫 No Color Names - you can't use words like red, blue, green, etc.</p>
             )}
             {target && targetColor && (
               <div className="shade-target-preview">
@@ -670,7 +680,6 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
               onFocus={(e) => e.currentTarget.select()}
               placeholder={phase === "clue1" ? "One word clue…" : "Second clue (1-2 words)…"}
               maxLength={60}
-              autoFocus
             />
             <button className="btn btn-primary" type="submit" disabled={!clue.trim()}>
               <FiSend size={14} /> Send
@@ -871,9 +880,12 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
             <div className="shade-score-table">
               <h4>Round Scores</h4>
               <div className="shade-score-rows">
-                {game.players
-                  .filter((p) => p.sessionId !== game.leader_id)
-                  .map((p) => {
+                {game.players.reduce<typeof game.players>((players, player) => {
+                  if (player.sessionId !== game.leader_id) {
+                    players.push(player);
+                  }
+                  return players;
+                }, []).map((p) => {
                     const pts = latestRound.scores[p.sessionId] ?? 0;
                     const g2 = latestRound.guesses.find((g) => g.sessionId === p.sessionId && g.round === 2);
                     const g1 = latestRound.guesses.find((g) => g.sessionId === p.sessionId && g.round === 1);

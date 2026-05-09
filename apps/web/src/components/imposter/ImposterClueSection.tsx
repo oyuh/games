@@ -82,7 +82,7 @@ export function ImposterClueSection({
               return (
                 <div key={c.sessionId} className="game-clue-item">
                   <span className="game-clue-name">{name}</span>
-                  <span className="game-clue-text" style={{ fontFamily: "monospace", letterSpacing: "0.1em" }}>
+                  <span className="game-clue-text" style={{ fontFamily: "monospace", letterSpacing: "0.04em" }}>
                     {redactClue(c.text)}
                   </span>
                 </div>
@@ -103,7 +103,6 @@ export function ImposterClueSection({
         <form className="game-input-row" onSubmit={onSubmit}>
           <input
             className="input flex-1"
-            autoFocus
             onFocus={(e) => e.currentTarget.select()}
             value={clue}
             onChange={(e) => onClueChange(e.target.value)}

@@ -267,13 +267,23 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const currentRoundGuesses = useMemo(() => {
     if (!game || (phase !== "guess1" && phase !== "guess2")) return 0;
     const round = phase === "guess1" ? 1 : 2;
-    return new Set(game.guesses.filter((g) => g.round === round).map((g) => g.sessionId)).size;
+    return game.guesses.reduce<Set<string>>((ids, guess) => {
+      if (guess.round === round) {
+        ids.add(guess.sessionId);
+      }
+      return ids;
+    }, new Set()).size;
   }, [game, phase]);
 
   const lockedInIds = useMemo(() => {
     if (!game || (phase !== "guess1" && phase !== "guess2")) return new Set<string>();
     const round = phase === "guess1" ? 1 : 2;
-    return new Set(game.guesses.filter((g) => g.round === round).map((g) => g.sessionId));
+    return game.guesses.reduce<Set<string>>((ids, guess) => {
+      if (guess.round === round) {
+        ids.add(guess.sessionId);
+      }
+      return ids;
+    }, new Set());
   }, [game, phase]);
 
   if (!game) return <MobileGameNotFound theme="shade" />;
@@ -472,7 +482,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
                 : <>Give a <strong>second clue</strong> (up to 2 words).</>}
             </p>
             {game.settings.hardMode && (
-              <p className="m-shade-hard-warn">🚫 No Color Names — you can't use words like red, blue, green, etc.</p>
+              <p className="m-shade-hard-warn">🚫 No Color Names - you can't use words like red, blue, green, etc.</p>
             )}
           </div>
 
@@ -500,7 +510,6 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
               onFocus={(e) => e.currentTarget.select()}
               placeholder={phase === "clue1" ? "One word clue…" : "Second clue (1-2 words)…"}
               maxLength={60}
-              autoFocus
             />
             <button className="m-btn m-btn-primary" type="submit" disabled={!clue.trim()}>
               <FiSend size={14} /> Send
@@ -666,9 +675,12 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
           {latestRound && (
             <div className="m-shade-score-table">
               <h4 className="m-label">Round Scores</h4>
-              {game.players
-                .filter((p) => p.sessionId !== game.leader_id)
-                .map((p) => {
+              {game.players.reduce<typeof game.players>((players, player) => {
+                if (player.sessionId !== game.leader_id) {
+                  players.push(player);
+                }
+                return players;
+              }, []).map((p) => {
                   const pts = latestRound.scores[p.sessionId] ?? 0;
                   const g2 = latestRound.guesses.find((g) => g.sessionId === p.sessionId && g.round === 2);
                   const g1 = latestRound.guesses.find((g) => g.sessionId === p.sessionId && g.round === 1);

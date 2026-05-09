@@ -34,7 +34,7 @@ export function ImposterPlayersCard({
             <div
               key={player.sessionId}
               className={`game-player-chip${isMe ? " game-player-chip--me" : ""}${isImposter ? " game-player-chip--danger" : ""}${isEliminated ? " game-player-chip--eliminated" : ""}`}
-              data-tooltip={`${name}${!player.connected ? " (disconnected)" : ""}${isEliminated ? " — Eliminated" : ""}${isImposter ? " — Imposter!" : showRole ? " — Innocent" : ""}`}
+              data-tooltip={`${name}${!player.connected ? " (disconnected)" : ""}${isEliminated ? " - Eliminated" : ""}${isImposter ? " - Imposter!" : showRole ? " - Innocent" : ""}`}
               data-tooltip-variant={isEliminated ? "warning" : isImposter ? "danger" : showRole ? "success" : "info"}
             >
               <div className={`game-player-avatar${isImposter ? " game-player-avatar--danger" : ""}${isEliminated ? " game-player-avatar--eliminated" : ""}`}>
@@ -50,10 +50,10 @@ export function ImposterPlayersCard({
               <span className={`game-player-name${isEliminated ? " game-player-name--eliminated" : ""}`}>{name}</span>
               {isMe && !isEliminated && <span className="game-player-you">you</span>}
               {isEliminated && (
-                <span className="badge badge-muted" style={{ fontSize: "0.58rem" }}>out</span>
+                <span className="badge badge-muted" style={{ fontSize: "0.75rem" }}>out</span>
               )}
               {!isEliminated && showRole && player.role && (
-                <span className={`badge ${isImposter ? "badge-danger" : "badge-success"}`} style={{ fontSize: "0.58rem" }}>
+                <span className={`badge ${isImposter ? "badge-danger" : "badge-success"}`} style={{ fontSize: "0.75rem" }}>
                   {player.role}
                 </span>
               )}

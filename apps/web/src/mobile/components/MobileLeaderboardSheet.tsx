@@ -131,8 +131,8 @@ export function MobileLeaderboardSheet({ onClose }: { onClose: () => void }) {
         <div className="m-lb-pb">
           {personalBest ? (
             <>
-              <span className="m-lb-pb-label">Your Best — #{personalBest.rank}</span>
-              <span className="m-lb-pb-value">{personalBest.score.toLocaleString()} — {formatTime(personalBest.timeMs)}</span>
+              <span className="m-lb-pb-label">Your Best - #{personalBest.rank}</span>
+              <span className="m-lb-pb-value">{personalBest.score.toLocaleString()} - {formatTime(personalBest.timeMs)}</span>
             </>
           ) : (
             <span className="m-lb-pb-none">No personal best yet</span>
@@ -174,7 +174,7 @@ export function MobileLeaderboardSheet({ onClose }: { onClose: () => void }) {
             Array.from({ length: PAGE_SIZE }).map((_, i) => (
               <div key={`empty-${i}`} className="m-lb-row m-lb-row--empty-placeholder">
                 {i === 4 ? (
-                  <span className="m-lb-empty-msg">{view === "mine" ? "No scores on this difficulty yet." : "No scores yet — be the first!"}</span>
+                  <span className="m-lb-empty-msg">{view === "mine" ? "No scores on this difficulty yet." : "No scores yet - be the first!"}</span>
                 ) : (
                   <>&nbsp;</>
                 )}

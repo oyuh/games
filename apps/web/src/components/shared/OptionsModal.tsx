@@ -15,8 +15,13 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
   const [soundCustomizeOpen, setSoundCustomizeOpen] = useState(false);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+      role="presentation"
+    >
+      <div className="modal-panel">
         <div className="modal-header">
           <h2 className="modal-title">Options</h2>
           <button className="modal-close" onClick={onClose}>
@@ -27,7 +32,7 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
         <div className="modal-body">
           {/* Theme */}
           <div className="option-group">
-            <label className="option-label">Theme</label>
+            <span className="option-label">Theme</span>
             <div className="option-toggle-row">
               <ThemeBtn
                 active={settings.theme === "dark"}
@@ -46,7 +51,7 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
 
           {/* Cursor */}
           <div className="option-group">
-            <label className="option-label">Cursor</label>
+            <span className="option-label">Cursor</span>
             <div className="option-toggle-row">
               <button
                 className={`option-toggle-btn ${settings.customCursor ? "option-toggle-btn--active" : ""}`}
@@ -83,7 +88,7 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
 
           {/* Sidebar position */}
           <div className="option-group">
-            <label className="option-label">Sidebar Position</label>
+            <span className="option-label">Sidebar Position</span>
             <div className="option-toggle-row">
               {(["left", "right", "top"] as SidebarPosition[]).map((pos) => (
                 <button
@@ -99,7 +104,7 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
 
           {/* Sound */}
           <div className="option-group">
-            <label className="option-label">Sound Effects</label>
+            <span className="option-label">Sound Effects</span>
             <div className="option-toggle-row">
               <button
                 className={`option-toggle-btn ${!settings.soundEnabled ? "option-toggle-btn--active" : ""}`}

@@ -74,7 +74,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
 
       <div className="m-chat-body" ref={bodyRef}>
         {filteredMessages.length === 0 && (
-          <p className="m-chat-empty">No messages yet — say something!</p>
+          <p className="m-chat-empty">No messages yet - say something!</p>
         )}
         {filteredMessages.map((msg, i) => {
           const prev = filteredMessages[i - 1];
@@ -107,7 +107,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
         <input
           className="m-input"
           style={{ flex: 1 }}
-          placeholder="Type a message..."
+          placeholder="Type a message\u2026"
           value={input}
           maxLength={500}
           onChange={(e) => setInput(e.target.value)}

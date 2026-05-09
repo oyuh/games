@@ -52,8 +52,13 @@ export function WelcomeModal({ onDone }: WelcomeModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={handleSkip}>
-      <div className="modal-panel welcome-panel" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={(event) => { if (event.target === event.currentTarget) handleSkip(); }}
+      onKeyDown={(event) => { if (event.key === "Escape") handleSkip(); }}
+      role="presentation"
+    >
+      <div className="modal-panel welcome-panel">
         <button className="welcome-close" onClick={handleSkip} type="button" aria-label="Close">
           <FiX size={16} />
         </button>
@@ -89,22 +94,22 @@ export function WelcomeModal({ onDone }: WelcomeModalProps) {
         </div>
 
         <form className="welcome-form" onSubmit={handleSubmit}>
-          <label className="welcome-label">Pick a display name</label>
+          <label htmlFor="welcome-display-name" className="welcome-label">Pick a display name</label>
           <div className="welcome-input-row">
             <input
+              id="welcome-display-name"
               className="input welcome-input"
               value={name}
               onChange={(e) => setName(e.target.value.replace(/\s/g, ""))}
               placeholder="Enter a name…"
               maxLength={32}
-              autoFocus
             />
             <button type="submit" className="btn btn-primary welcome-go">
               <FiArrowRight size={16} />
             </button>
           </div>
           <button type="button" className="welcome-skip" onClick={handleSkip}>
-            Skip — give me a random name
+            Skip - give me a random name
           </button>
         </form>
 

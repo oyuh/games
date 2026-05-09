@@ -54,13 +54,13 @@ const ROUNDS_HISTORY = [
 const steps: DemoStep[] = [
   {
     label: "Team Lobby",
-    description: "Pick a team before the host starts. Each team needs at least 2 players — one to give clues and one to guess.",
+    description: "Pick a team before the host starts. Each team needs at least 2 players - one to give clues and one to guess.",
     hint: "The host can lock teams and move players between them.",
   },
   {
     label: "Give Clues",
     description: "Clue givers see the secret word and each submit a one-word clue. The guesser waits and can't see the word.",
-    hint: "Make your clue descriptive but not too obvious — only one word allowed!",
+    hint: "Make your clue descriptive but not too obvious - only one word allowed!",
   },
   {
     label: "Guess the Word",
@@ -69,7 +69,7 @@ const steps: DemoStep[] = [
   },
   {
     label: "Scoring & Results",
-    description: "Correct guesses earn a point. All teams play simultaneously — first team to the target score wins!",
+    description: "Correct guesses earn a point. All teams play simultaneously - first team to the target score wins!",
     hint: "Check the round history at the bottom to see every word, clue, and guess.",
   },
 ];
@@ -116,7 +116,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
               showScores
               targetScore={5}
             />
-            <DemoGlow label="You see the secret word — type a one-word clue">
+            <DemoGlow label="You see the secret word - type a one-word clue">
               <PasswordActiveRound
                 activeRound={ROUND_CLUE_PHASE}
                 names={NAMES}
@@ -171,7 +171,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
         return (
           <div className="game-page" data-game-theme="password">
             <PasswordHeader title="Password" code="DEMO" phase="results" currentRound={3} category="food" />
-            <DemoGlow label="Final scores — first to the target wins">
+            <DemoGlow label="Final scores - first to the target wins">
               <PasswordTeamGrid
                 teams={TEAMS}
                 scores={SCORES_MID}

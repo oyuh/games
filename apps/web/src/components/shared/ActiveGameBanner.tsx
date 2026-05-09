@@ -39,7 +39,7 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
   const gameType = (mySession?.game_type ?? null) as SessionGameType | null;
   const gameId = mySession?.game_id ?? null;
 
-  // Query each game type — only the matching one returns anything
+  // Query each game type - only the matching one returns anything
   const [imposterRows] = useQuery(queries.imposter.byId({ id: gameType === "imposter" && gameId ? gameId : DUMMY_ID }));
   const [passwordRows] = useQuery(queries.password.byId({ id: gameType === "password" && gameId ? gameId : DUMMY_ID }));
   const [chainRows] = useQuery(queries.chainReaction.byId({ id: gameType === "chain_reaction" && gameId ? gameId : DUMMY_ID }));
@@ -53,7 +53,7 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
   const wasKicked = kicked.includes(sessionId);
 
   // Only treat as ended when we actually found the game AND it's over.
-  // game === null could mean the query hasn't resolved yet — don't auto-clear for that.
+  // game === null could mean the query hasn't resolved yet - don't auto-clear for that.
   const gameExistsAndEnded = game != null && (phase === "ended" || phase === "finished");
 
   // Auto-clear stale session when the game has ended or we've been kicked
@@ -91,7 +91,7 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
 
   return (
     <div className="modal-overlay">
-      <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel">
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
             <FiAlertTriangle size={18} /> {wasKicked ? "You were removed" : "You're in a game!"}

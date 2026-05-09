@@ -318,7 +318,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
 
             {hasWrongGuess && (
               <div className="m-alert m-alert--danger" style={{ marginBottom: "0.75rem" }}>
-                <strong>Incorrect!</strong> "{ar.guess}" was wrong — new clues needed!
+                <strong>Incorrect!</strong> "{ar.guess}" was wrong - new clues needed!
               </div>
             )}
 
@@ -330,7 +330,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                   <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)" }}>{activeRoundWord}</span>
                 </div>
                 <form className="m-input-row" onSubmit={submitClue}>
-                  <input className="m-input" autoFocus onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={clue} onChange={(e) => setClue(e.target.value)} placeholder="Enter clue…" maxLength={80} />
+                  <input className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={clue} onChange={(e) => setClue(e.target.value)} placeholder="Enter clue…" maxLength={80} />
                   <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}><FiSend size={14} /></button>
                 </form>
                 <p className="m-progress-text">Clues: {ar.clues.length} / {clueGiverCount}</p>
@@ -362,7 +362,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
               <div className="m-waiting"><div className="m-waiting-pulse" /><p>Clue givers submitting… ({ar.clues.length}/{clueGiverCount})</p></div>
             )}
 
-            {/* All clues in — guesser guesses */}
+            {/* All clues in - guesser guesses */}
             {activeRoundWord && allCluesIn && (
               <>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
@@ -372,7 +372,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                 </div>
                 {isGuesser ? (
                   <form className="m-input-row" onSubmit={submitGuess}>
-                    <input className="m-input" autoFocus onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Your guess…" maxLength={80} />
+                    <input className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Your guess…" maxLength={80} />
                     <button type="submit" className="m-btn m-btn-primary" disabled={!guess.trim()}><FiSend size={14} /> Guess</button>
                   </form>
                 ) : (
@@ -418,7 +418,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
               <thead><tr><th>#</th><th>Team</th><th>Word</th><th>Result</th></tr></thead>
               <tbody>
                 {game.rounds.map((r, i) => (
-                  <tr key={i}>
+                  <tr key={r.round}>
                     <td>{r.round}</td>
                     <td>{game.teams[r.teamIndex]?.name ?? `Team ${r.teamIndex + 1}`}</td>
                     <td style={{ color: "var(--primary)", fontWeight: 600 }}>{decryptedRoundWords[i] ?? (isEncrypted(r.word) ? "••••" : r.word)}</td>

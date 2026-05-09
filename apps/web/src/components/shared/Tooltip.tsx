@@ -53,7 +53,7 @@ function place(
 /**
  * Pure-DOM tooltip system. Uses `mouseleave` on the actual target element
  * (never fires between child nodes) and synchronous measurement via forced
- * reflow — no requestAnimationFrame, no React state, no flicker.
+ * reflow - no requestAnimationFrame, no React state, no flicker.
  */
 export function TooltipLayer() {
   const tipRef = useRef<HTMLDivElement>(null);
@@ -70,8 +70,7 @@ export function TooltipLayer() {
     const arrow = arrowRef.current!;
 
     function hideTip() {
-      tip.style.display = "none";
-      tip.style.visibility = "";
+      Object.assign(tip.style, { display: "none", visibility: "" });
       if (activeRef.current) {
         activeRef.current.removeEventListener("mouseleave", hideTip);
         activeRef.current = null;
@@ -102,33 +101,41 @@ export function TooltipLayer() {
       // Set variant class
       tip.className = `tt tt--${variant}`;
 
-      // Show invisible at 0,0 to measure — getBoundingClientRect forces
+      // Show invisible at 0,0 to measure - getBoundingClientRect forces
       // a synchronous layout so we get exact dimensions in the same frame
-      tip.style.display = "block";
-      tip.style.visibility = "hidden";
-      tip.style.left = "0px";
-      tip.style.top = "0px";
+      Object.assign(tip.style, {
+        display: "block",
+        visibility: "hidden",
+        left: "0px",
+        top: "0px",
+      });
 
       const anchorRect = target.getBoundingClientRect();
       const tipRect = tip.getBoundingClientRect();
       const { pos, x, y, ax, ay } = place(anchorRect, tipRect, preferred);
 
       // Apply computed position and make visible
-      tip.style.left = `${x}px`;
-      tip.style.top = `${y}px`;
-      tip.style.visibility = "visible";
+      Object.assign(tip.style, {
+        left: `${x}px`,
+        top: `${y}px`,
+        visibility: "visible",
+      });
 
       // Arrow
       arrow.className = `tt-arrow tt-arrow--${pos}`;
       if (pos === "top" || pos === "bottom") {
-        arrow.style.left = `${Math.max(6, Math.min(ax, tipRect.width - 6))}px`;
-        arrow.style.top = "";
+        Object.assign(arrow.style, {
+          left: `${Math.max(6, Math.min(ax, tipRect.width - 6))}px`,
+          top: "",
+        });
       } else {
-        arrow.style.top = `${Math.max(6, Math.min(ay, tipRect.height - 6))}px`;
-        arrow.style.left = "";
+        Object.assign(arrow.style, {
+          top: `${Math.max(6, Math.min(ay, tipRect.height - 6))}px`,
+          left: "",
+        });
       }
 
-      // MOUSELEAVE on the target itself — this event does NOT bubble and
+      // MOUSELEAVE on the target itself - this event does NOT bubble and
       // does NOT fire when the mouse moves between child elements (SVGs,
       // spans, paths, etc.). It only fires when the pointer truly exits
       // the target element's bounding box.
@@ -167,7 +174,7 @@ export function TooltipLayer() {
         if (!newText) continue;
 
         if (el === activeRef.current) {
-          // Tooltip is currently shown for this element — update text inline
+          // Tooltip is currently shown for this element - update text inline
           textEl.textContent = newText;
         } else if (el === lastHoverTarget) {
           // Tooltip was hidden (e.g. by mousedown) but pointer is still over this element
