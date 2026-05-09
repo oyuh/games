@@ -3,9 +3,8 @@ import { queries } from "@games/shared";
 import "../styles/layout.css";
 import "../styles/modals.css";
 import "../styles/host-chat.css";
+import { lazy, Suspense } from "react";
 import { useQuery } from "@rocicorp/zero/react";
-import { ConnectionDebugPanel } from "./shared/ConnectionDebugPanel";
-import { ChatWindow } from "./shared/ChatWindow";
 import { Sidebar } from "./FloatingHeader";
 import { Footer } from "./Footer";
 import { ToastContainer } from "./shared/ToastContainer";
@@ -15,7 +14,12 @@ import { ChatProvider, useChatContext } from "../lib/chat-context";
 import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useGameMeta } from "../hooks/useGameMeta";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { MobileLayout } from "../mobile/MobileLayout";
+
+const ChatWindow = lazy(() => import("./shared/ChatWindow").then(({ ChatWindow }) => ({ default: ChatWindow })));
+const ConnectionDebugPanel = lazy(() =>
+  import("./shared/ConnectionDebugPanel").then(({ ConnectionDebugPanel }) => ({ default: ConnectionDebugPanel }))
+);
+const MobileLayout = lazy(() => import("../mobile/MobileLayout").then(({ MobileLayout }) => ({ default: MobileLayout })));
 
 export function AppShell() {
   return (
@@ -30,7 +34,13 @@ function AppShellInner() {
   useGameMeta();
   const isMobile = useIsMobile();
 
-  if (isMobile) return <MobileLayout />;
+  if (isMobile) {
+    return (
+      <Suspense fallback={<div className="route-loading" />}>
+        <MobileLayout />
+      </Suspense>
+    );
+  }
   return <AppShellDesktop />;
 }
 
@@ -82,12 +92,14 @@ function AppShellDesktop() {
         <main className="shell-main">
           <Outlet />
         </main>
-        <Footer />
+      <Footer />
       </div>
       <ToastContainer />
       <TooltipLayer />
-      <ConnectionDebugPanel />
-      {inGame && !isSpectator && <ChatWindow hostId={hostId} myName={myName} />}
+      <Suspense fallback={null}>
+        <ConnectionDebugPanel />
+        {inGame && !isSpectator && <ChatWindow hostId={hostId} myName={myName} />}
+      </Suspense>
     </div>
   );
 }

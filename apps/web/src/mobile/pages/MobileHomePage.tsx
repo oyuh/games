@@ -3,8 +3,7 @@ import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGrid, FiZap } from "react-icons/fi";
-import { PiPaintBrushBold } from "react-icons/pi";
+import { FiSearch, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGrid, FiZap, FiDroplet } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
@@ -615,7 +614,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <div className="m-game-card m-game-card--shade">
         <button className="m-game-card-header" onClick={() => toggle("shade")}>
           <div className="m-game-card-info">
-            <PiPaintBrushBold size={18} />
+            <FiDroplet size={18} />
             <div>
               <h3 className="m-game-card-title">Shade Signal</h3>
               <p className="m-game-card-desc">One leader, one color. Give clues and guess the shade.</p>
