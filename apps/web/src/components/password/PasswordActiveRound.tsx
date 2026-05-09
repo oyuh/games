@@ -1,5 +1,6 @@
 import { FormEvent } from "react";
 import { FiSend, FiSkipForward } from "react-icons/fi";
+import { getDisplayName } from "../../lib/session";
 
 type ActiveRound = {
   teamIndex: number;
@@ -39,7 +40,7 @@ export function PasswordActiveRound({
   onSkip: () => void;
   onRetryWordLoad?: () => void;
 }) {
-  const guesserName = names[activeRound.guesserId] ?? activeRound.guesserId.slice(0, 6);
+  const guesserName = names[activeRound.guesserId] ?? getDisplayName(null, activeRound.guesserId);
   const isGuesser = activeRound.guesserId === sessionId;
   const isOnTeam = teamMembers.includes(sessionId);
   const isClueGiver = isOnTeam && !isGuesser;

@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
-import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds, assertCaller, assertHost, sanitizeText } from "./helpers";
+import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
 
 async function maybeEncryptPasswordWord(ctx: unknown, gameId: string, word: string | null) {
   if (!word) {
@@ -79,9 +79,10 @@ export const passwordMutators = {
       });
 
       const hostSession = await tx.run(zql.sessions.where("id", args.hostId).one());
+      const hostName = resolvePlayerName(hostSession?.name, args.hostId);
       await tx.mutate.sessions.upsert({
         id: args.hostId,
-        name: hostSession?.name ?? null,
+        name: hostName,
         game_type: "password",
         game_id: args.id,
         created_at: now(),
@@ -95,6 +96,7 @@ export const passwordMutators = {
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase === "ended") throw new Error("Game has ended");
@@ -105,12 +107,12 @@ export const passwordMutators = {
         if (!allMembers.has(args.sessionId) && !game.spectators.find((s) => s.sessionId === args.sessionId)) {
           await tx.mutate.password_games.update({
             id: game.id,
-            spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+            spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
             updated_at: now()
           });
           await tx.mutate.sessions.upsert({
             id: args.sessionId,
-            name: session?.name ?? null,
+            name: sessionName,
             game_type: "password",
             game_id: game.id,
             created_at: now(),
@@ -141,7 +143,7 @@ export const passwordMutators = {
 
       await tx.mutate.sessions.upsert({
         id: args.sessionId,
-        name: session?.name ?? null,
+        name: sessionName,
         game_type: "password",
         game_id: game.id,
         created_at: now(),
@@ -680,6 +682,7 @@ export const passwordMutators = {
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase === "ended") throw new Error("Game has ended");
@@ -690,12 +693,12 @@ export const passwordMutators = {
 
       await tx.mutate.password_games.update({
         id: game.id,
-        spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+        spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
         updated_at: now()
       });
       await tx.mutate.sessions.upsert({
         id: args.sessionId,
-        name: session?.name ?? null,
+        name: sessionName,
         game_type: "password",
         game_id: game.id,
         created_at: now(),

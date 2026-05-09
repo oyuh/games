@@ -1,4 +1,4 @@
-import { mutators, queries, schema } from "@games/shared";
+import { fallbackPlayerName, mutators, queries, schema } from "@games/shared";
 import { adminNameOverrides, chatMessages, chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
@@ -301,7 +301,7 @@ async function resolveSessionIdentity(
     .limit(1);
 
   const forcedName = sanitizeSessionName(override?.forcedName ?? null);
-  const canonicalName = forcedName ?? await allowUnrestrictedSessionName(decision.canonicalName);
+  const canonicalName = forcedName ?? await allowUnrestrictedSessionName(decision.canonicalName) ?? fallbackPlayerName(decision.sessionId);
   const now = Date.now();
 
   if (decision.shouldCreate) {
@@ -1289,7 +1289,7 @@ async function buildShikakuScoreCandidate(
   }
 
   const effectiveSessionId = resolvedIdentity.sessionId;
-  const effectiveName = sanitizeSessionName(resolvedIdentity.name) ?? "Anonymous";
+  const effectiveName = sanitizeSessionName(resolvedIdentity.name) ?? fallbackPlayerName(effectiveSessionId);
 
   if (!effectiveSessionId || effectiveSessionId.length > 64) {
     return {

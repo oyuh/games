@@ -1,5 +1,6 @@
 import { FiCheck } from "react-icons/fi";
 import { BorringAvatar } from "../shared/BorringAvatar";
+import { getDisplayName } from "../../lib/session";
 
 type Player = { sessionId: string };
 
@@ -27,7 +28,7 @@ export function ImposterVoteSection({
   onSubmit: () => void;
 }) {
   const clueByPlayer = new Map(clues.map((c) => [c.sessionId, c.text]));
-  const votedName = voteTarget ? (sessionById[voteTarget] ?? voteTarget.slice(0, 6)) : null;
+  const votedName = voteTarget ? (sessionById[voteTarget] ?? getDisplayName(null, voteTarget)) : null;
 
   return (
     <div className="game-section">
@@ -35,7 +36,7 @@ export function ImposterVoteSection({
 
       <div className="game-clue-recap">
         {players.map((player) => {
-          const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
+          const name = sessionById[player.sessionId] ?? getDisplayName(null, player.sessionId);
           const clueText = clueByPlayer.get(player.sessionId);
           return (
             <div key={player.sessionId} className="game-clue-item">
@@ -59,7 +60,7 @@ export function ImposterVoteSection({
             {players
               .filter((p) => p.sessionId !== sessionId)
               .map((player) => {
-                const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
+                const name = sessionById[player.sessionId] ?? getDisplayName(null, player.sessionId);
                 const selected = voteTarget === player.sessionId;
                 // Find the actual index in the full players array to get consistent colors
                 const playerIndex = players.findIndex(p => p.sessionId === player.sessionId);

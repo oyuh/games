@@ -1,5 +1,6 @@
 import "./styles/base.css";
 import "./styles/components.css";
+import "./styles/cursor.css";
 import "./styles/themes.css";
 import "./styles/responsive.css";
 import "./mobile/mobile.css";

@@ -14,7 +14,7 @@ import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
+import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
@@ -95,7 +95,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
 
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = s.name ?? s.id.slice(0, 6);
+      acc[s.id] = getDisplayName(s.name, s.id);
       return acc;
     }, {});
   }, [sessions]);
@@ -241,8 +241,8 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
     playVote();
   };
 
-  const joinGame = () => {
-    ensureName(zero, sessionId);
+  const joinGame = async () => {
+    await ensureName(zero, sessionId);
     if (isSpectator) {
       void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }))
         .client.then(() => zero.mutate(mutators.imposter.join({ gameId, sessionId })))
@@ -260,24 +260,24 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
         .catch(() => showToast("Couldn't leave current game", "error"))
         .finally(() => {
           setJoiningFromOtherGame(false);
-          joinGame();
+          void joinGame();
         });
       return;
     }
-    joinGame();
+    void joinGame();
   };
 
   const confirmLeaveAndJoin = () => {
     if (!activeGameType || !activeGameId) {
       setShowInSessionModal(false);
-      joinGame();
+      void joinGame();
       return;
     }
     setJoiningFromOtherGame(true);
     void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
       .then(() => {
         setShowInSessionModal(false);
-        joinGame();
+        void joinGame();
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => setJoiningFromOtherGame(false));
@@ -423,7 +423,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
         const impostersLeft = game.players.filter((p) => p.role === "imposter" && !p.eliminated).length;
         const playersWin = impostersLeft === 0;
         const imposters = game.players.filter((p) => p.role === "imposter");
-        const imposterNames = imposters.map((p) => sessionById[p.sessionId] ?? p.sessionId.slice(0, 6));
+        const imposterNames = imposters.map((p) => sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId));
 
         return (
           <div className="game-section">

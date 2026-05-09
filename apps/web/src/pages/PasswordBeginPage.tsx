@@ -10,7 +10,7 @@ import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
+import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
@@ -37,7 +37,7 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = s.name ?? s.id.slice(0, 6);
+      acc[s.id] = getDisplayName(s.name, s.id);
       return acc;
     }, {});
   }, [sessions]);
@@ -107,8 +107,8 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
   const activeGameId = mySession?.game_id ?? null;
   const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "password" || activeGameId !== gameId));
 
-  const joinGame = () => {
-    ensureName(zero, sessionId);
+  const joinGame = async () => {
+    await ensureName(zero, sessionId);
     if (isSpectator) {
       void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }))
         .client.then(() => zero.mutate(mutators.password.join({ gameId, sessionId })))
@@ -126,24 +126,24 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
         .catch(() => showToast("Couldn't leave current game", "error"))
         .finally(() => {
           setJoiningFromOtherGame(false);
-          joinGame();
+          void joinGame();
         });
       return;
     }
-    joinGame();
+    void joinGame();
   };
 
   const confirmLeaveAndJoin = () => {
     if (!activeGameType || !activeGameId) {
       setShowInSessionModal(false);
-      joinGame();
+      void joinGame();
       return;
     }
     setJoiningFromOtherGame(true);
     void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
       .then(() => {
         setShowInSessionModal(false);
-        joinGame();
+        void joinGame();
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => setJoiningFromOtherGame(false));

@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { mutators } from "@games/shared";
+import { mutators, randomPlayerName, resolvePlayerName, sanitizePlayerName } from "@games/shared";
 
 const SESSION_KEY = "games:user-id";
 const SESSION_PROOF_KEY = "games:session-proof";
@@ -17,7 +17,7 @@ let cachedSessionProof: string | null | undefined;
 let cachedName: string | null | undefined;
 
 function sanitizeStoredNameValue(value: string | null | undefined) {
-  return (value ?? "").replace(/\s/g, "");
+  return sanitizePlayerName(value) ?? "";
 }
 
 function ensureSessionIdCache() {
@@ -63,26 +63,23 @@ export function resetStoredIdentityForTests() {
   cachedName = undefined;
 }
 
-/* ── Word bank for random names ──────────────────────── */
-const adjectives = [
-  "Swift", "Sneaky", "Cosmic", "Lucky", "Dizzy", "Frosty", "Bold", "Chill",
-  "Witty", "Fierce", "Jolly", "Mystic", "Nifty", "Pixel", "Rapid", "Silent",
-  "Turbo", "Vivid", "Wacky", "Zesty", "Brave", "Clever", "Funky", "Groovy",
-  "Hyper", "Keen", "Lively", "Plucky", "Radiant", "Spunky", "Sleepy", "Stormy",
-  "Sunny", "Fuzzy", "Crispy", "Bouncy", "Shifty", "Sparky", "Tricky", "Zippy",
-];
-const nouns = [
-  "Panda", "Fox", "Falcon", "Otter", "Wolf", "Shark", "Raven", "Lynx",
-  "Cobra", "Badger", "Hawk", "Tiger", "Bear", "Moose", "Owl", "Penguin",
-  "Dragon", "Phoenix", "Pirate", "Knight", "Ninja", "Wizard", "Ghost", "Robot",
-  "Yeti", "Gremlin", "Goblin", "Squid", "Toucan", "Ferret", "Walrus", "Jackal",
-  "Beetle", "Puffin", "Coyote", "Mole", "Parrot", "Wasp", "Mantis", "Orca",
-];
-
 export function randomName(): string {
-  const adj = adjectives[Math.floor(Math.random() * adjectives.length)]!;
-  const noun = nouns[Math.floor(Math.random() * nouns.length)]!;
-  return `${adj}${noun}`;
+  return randomPlayerName();
+}
+
+export function getDisplayName(name: string | null | undefined, sessionId?: string | null) {
+  return resolvePlayerName(name, sessionId);
+}
+
+export function getOrCreateStoredName(sessionId?: string | null) {
+  const stored = getStoredName();
+  if (stored) {
+    return stored;
+  }
+
+  const generated = getDisplayName(null, sessionId ?? getOrCreateSessionId());
+  setStoredName(generated);
+  return generated;
 }
 
 /**
@@ -92,12 +89,10 @@ export function randomName(): string {
  * mutator picks it up.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function ensureName(zero: { mutate: any }, sessionId: string) {
-  if (!getStoredName()) {
-    const generated = randomName();
-    setStoredName(generated);
-    void zero.mutate(mutators.sessions.setName({ id: sessionId, name: generated }));
-  }
+export async function ensureName(zero: { mutate: any }, sessionId: string) {
+  const name = getOrCreateStoredName(sessionId);
+  await zero.mutate(mutators.sessions.setName({ id: sessionId, name })).server.catch(() => undefined);
+  return name;
 }
 
 export type SessionGameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
@@ -193,7 +188,7 @@ export function syncStoredIdentity(identity: { sessionId: string; name: string |
   const previousSessionId = ensureSessionIdCache();
   const previousName = getStoredName();
   const nextSessionId = identity.sessionId.trim();
-  const nextName = sanitizeStoredNameValue(identity.name);
+  const nextName = sanitizeStoredNameValue(identity.name) || getDisplayName(null, nextSessionId || previousSessionId);
 
   if (nextSessionId && nextSessionId !== previousSessionId) {
     setStoredSessionId(nextSessionId);
@@ -234,7 +229,7 @@ export async function syncSessionIdentity(
   options?: { allowCreate?: boolean; reason?: string; timeoutMs?: number }
 ): Promise<SyncedSessionIdentity> {
   const fallbackSessionId = getOrCreateSessionId();
-  const fallbackName = getStoredName() || null;
+  const fallbackName = getOrCreateStoredName(fallbackSessionId);
   const fallbackZeroSessionProof = getStoredSessionProof();
   const controller = new AbortController();
   const timeout = window.setTimeout(
@@ -272,7 +267,7 @@ export async function syncSessionIdentity(
     const sessionId = typeof data.sessionId === "string" && data.sessionId.trim()
       ? data.sessionId.trim()
       : fallbackSessionId;
-    const name = typeof data.name === "string" ? data.name : data.name === null ? null : fallbackName;
+    const name = getDisplayName(typeof data.name === "string" ? data.name : data.name === null ? null : fallbackName, sessionId);
     const synced = syncStoredIdentity({ sessionId, name });
     if (typeof data.zeroSessionProof === "string" || data.zeroSessionProof === null) {
       setStoredSessionProof(data.zeroSessionProof);
@@ -337,9 +332,10 @@ export async function syncSessionIdentityForBoot(
 }
 
 export function getPlayerProfile() {
+  const id = getOrCreateSessionId();
   return {
-    id: getOrCreateSessionId(),
-    name: getStoredName()
+    id,
+    name: getOrCreateStoredName(id)
   };
 }
 

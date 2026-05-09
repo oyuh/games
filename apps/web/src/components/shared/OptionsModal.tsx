@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { FiX, FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX, FiChevronDown } from "react-icons/fi";
-import { useSettings, updateSettings } from "../../lib/settings";
+import { FiX, FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX, FiChevronDown, FiNavigation, FiMonitor, FiMaximize2 } from "react-icons/fi";
+import { CURSOR_SCALE_MAX, CURSOR_SCALE_MIN, CURSOR_SCALE_STEP, updateSettings, useSettings } from "../../lib/settings";
 import type { SidebarPosition, Theme, SoundPreferences } from "../../lib/settings";
 import { playPress } from "../../lib/sounds";
 
@@ -40,6 +40,43 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
                 icon={<FiSun size={14} />}
                 label="Light"
                 onClick={() => updateSettings({ theme: "light" })}
+              />
+            </div>
+          </div>
+
+          {/* Cursor */}
+          <div className="option-group">
+            <label className="option-label">Cursor</label>
+            <div className="option-toggle-row">
+              <button
+                className={`option-toggle-btn ${settings.customCursor ? "option-toggle-btn--active" : ""}`}
+                onClick={() => updateSettings({ customCursor: true })}
+              >
+                <FiNavigation size={14} /> Custom
+              </button>
+              <button
+                className={`option-toggle-btn ${!settings.customCursor ? "option-toggle-btn--active" : ""}`}
+                onClick={() => updateSettings({ customCursor: false })}
+              >
+                <FiMonitor size={14} /> System
+              </button>
+            </div>
+            <div className={`cursor-scale-control ${!settings.customCursor ? "cursor-scale-control--disabled" : ""}`}>
+              <div className="cursor-scale-head">
+                <span className="cursor-scale-title"><FiMaximize2 size={14} /> Scale</span>
+                <span className="cursor-scale-value">{Math.round(settings.customCursorScale * 100)}%</span>
+              </div>
+              <input
+                className="cursor-scale-range"
+                type="range"
+                min={CURSOR_SCALE_MIN}
+                max={CURSOR_SCALE_MAX}
+                step={CURSOR_SCALE_STEP}
+                value={settings.customCursorScale}
+                disabled={!settings.customCursor}
+                aria-label="Cursor scale"
+                data-cursor="slider"
+                onChange={(event) => updateSettings({ customCursorScale: Number(event.currentTarget.value) })}
               />
             </div>
           </div>

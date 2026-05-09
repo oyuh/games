@@ -32,7 +32,7 @@
   --locsig-accent: var(--game-accent, #f59e0b);
 }
 
-/* Marker styles (pigeon-maps overlays) */
+/* Marker styles */
 .locsig-marker-dot {
   border-radius: 50%;
   animation: locsig-marker-drop 0.5s ease-out both;
@@ -67,19 +67,189 @@
 }
 
 /* Map outer wrapper */
-.locsig-map-outer [class*="pigeon-"] {
-  display: block !important;
+.locsig-map-outer {
+  contain: paint;
+  isolation: isolate;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.locsig-map-box {
-  background: #0b1a2e !important;
+.locsig-map-outer--interactive {
+  cursor: url("/cursor/cursor-map-pin.svg") 16 44, crosshair;
 }
 
-/* Coordinates overlay (bottom-left inside map) */
-.locsig-coords-overlay {
+.locsig-map-outer--interactive:active {
+  cursor: url("/cursor/cursor-map-drag.svg") 19 20, grabbing;
+}
+
+.locsig-map-viewport,
+.locsig-map-tiles,
+.locsig-map-marker-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.locsig-map-tiles,
+.locsig-map-marker-layer {
+  overflow: hidden;
+}
+
+.locsig-map-tiles {
+  pointer-events: none;
+}
+
+.locsig-map-tile {
+  user-select: none;
+  -webkit-user-drag: none;
+  max-width: none;
+  pointer-events: none;
+}
+
+.locsig-map-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.locsig-zoom-controls {
+  position: absolute;
+  left: 0.55rem;
+  top: 0.55rem;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.locsig-zoom-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 0.45rem;
+  background: rgba(6, 12, 22, 0.82);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+}
+
+.locsig-zoom-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--locsig-accent) 70%, white 20%);
+  background: color-mix(in srgb, var(--locsig-accent) 24%, rgba(6, 12, 22, 0.88));
+}
+
+.locsig-zoom-btn:disabled {
+  opacity: 0.45;
+}
+
+.locsig-map-expand-btn,
+.locsig-map-close-btn {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 12;
+  display: inline-grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 0.45rem;
+  background: rgba(6, 12, 22, 0.82);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.locsig-map-expand-btn:hover,
+.locsig-map-close-btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--locsig-accent) 70%, white 20%);
+  background: color-mix(in srgb, var(--locsig-accent) 24%, rgba(6, 12, 22, 0.88));
+}
+
+.locsig-map-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  background: rgba(3, 7, 14, 0.72);
+  backdrop-filter: blur(12px);
+  animation: locsig-map-reveal 0.18s ease-out both;
+}
+
+.locsig-map-modal-panel {
+  position: relative;
+  width: min(1500px, 85vw);
+  max-width: calc(100vw - 2rem);
+  border: 1px solid color-mix(in srgb, var(--locsig-accent) 28%, rgba(255, 255, 255, 0.18));
+  border-radius: 0.7rem;
+  overflow: hidden;
+  background: #0b1a2e;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.48);
+}
+
+.locsig-map-modal-panel .locsig-map-outer {
+  border-radius: 0;
+}
+
+.locsig-map-close-btn {
+  right: 0.7rem;
+  top: 0.7rem;
+  z-index: 18;
+}
+
+.locsig-map-modal-timer {
+  position: absolute;
+  left: 50%;
+  top: 0.75rem;
+  z-index: 18;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+body.locsig-map-expanded .sidebar,
+body.locsig-map-expanded .sidebar-mobile-toggle {
+  z-index: 1200;
+}
+
+body.locsig-map-expanded .app-footer {
+  position: relative;
+  z-index: 1200;
+}
+
+@media (max-width: 768px) {
+  .locsig-map-modal-panel {
+    width: min(94vw, 1500px);
+    max-width: calc(100vw - 1rem);
+  }
+}
+
+/* Map overlays (bottom-left inside map) */
+.locsig-map-bottom-left {
   position: absolute;
   bottom: 8px;
   left: 8px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  pointer-events: none;
+}
+
+.locsig-coords-overlay,
+.locsig-map-credit {
   background: rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 0.35rem;
@@ -87,9 +257,13 @@
   font-size: 0.7rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
-  pointer-events: none;
-  z-index: 20;
   letter-spacing: 0.02em;
+}
+
+.locsig-map-credit {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 /* Clue display pill */

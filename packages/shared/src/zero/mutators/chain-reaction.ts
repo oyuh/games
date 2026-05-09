@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText } from "./helpers";
+import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
 
 export const chainReactionMutators = {
   create: defineMutator(
@@ -17,12 +17,13 @@ export const chainReactionMutators = {
     async ({ args, tx }) => {
       const ts = now();
       const session = await tx.run(zql.sessions.where("id", args.hostId).one());
+      const hostName = resolvePlayerName(session?.name, args.hostId);
       await tx.mutate.chain_reaction_games.insert({
         id: args.id,
         code: code(),
         host_id: args.hostId,
         phase: "lobby",
-        players: [{ sessionId: args.hostId, name: session?.name ?? null, connected: true }],
+        players: [{ sessionId: args.hostId, name: hostName, connected: true }],
         chain: {},
         submitted_chains: {},
         current_turn: null,
@@ -46,7 +47,7 @@ export const chainReactionMutators = {
       });
       await tx.mutate.sessions.upsert({
         id: args.hostId,
-        name: session?.name ?? null,
+        name: hostName,
         game_type: "chain_reaction",
         game_id: args.id,
         created_at: ts,
@@ -60,6 +61,7 @@ export const chainReactionMutators = {
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");
@@ -69,12 +71,12 @@ export const chainReactionMutators = {
         if (!game.players.some((p) => p.sessionId === args.sessionId) && !game.spectators.find((s) => s.sessionId === args.sessionId)) {
           await tx.mutate.chain_reaction_games.update({
             id: game.id,
-            spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+            spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
             updated_at: now()
           });
           await tx.mutate.sessions.upsert({
             id: args.sessionId,
-            name: session?.name ?? null,
+            name: sessionName,
             game_type: "chain_reaction",
             game_id: game.id,
             created_at: now(),
@@ -91,10 +93,10 @@ export const chainReactionMutators = {
       const players = existing
         ? game.players.map((p) =>
             p.sessionId === args.sessionId
-              ? { ...p, connected: true, name: session?.name ?? p.name }
+              ? { ...p, connected: true, name: resolvePlayerName(session?.name ?? p.name, args.sessionId) }
               : p
           )
-        : [...game.players, { sessionId: args.sessionId, name: session?.name ?? null, connected: true }];
+        : [...game.players, { sessionId: args.sessionId, name: sessionName, connected: true }];
 
       await tx.mutate.chain_reaction_games.update({
         id: game.id,
@@ -103,7 +105,7 @@ export const chainReactionMutators = {
       });
       await tx.mutate.sessions.upsert({
         id: args.sessionId,
-        name: session?.name ?? null,
+        name: sessionName,
         game_type: "chain_reaction",
         game_id: game.id,
         created_at: now(),
@@ -296,7 +298,7 @@ export const chainReactionMutators = {
       if (!allSubmitted) {
         // Just save this player's chain and wait
         const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
-        const name = session?.name ?? args.sessionId.slice(0, 6);
+        const name = resolvePlayerName(session?.name, args.sessionId);
         await tx.mutate.chain_reaction_games.update({
           id: game.id,
           submitted_chains: submitted,
@@ -404,7 +406,7 @@ export const chainReactionMutators = {
 
       // Correct guess
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
-      const playerName = session?.name ?? args.sessionId.slice(0, 6);
+      const playerName = resolvePlayerName(session?.name, args.sessionId);
 
       updatedPlayerChain = updatedPlayerChain.map((s, i) =>
         i === args.wordIndex ? { ...s, revealed: true, solvedBy: args.sessionId } : s
@@ -445,7 +447,7 @@ export const chainReactionMutators = {
           const winner = sorted[0];
           const isTie = sorted.length >= 2 && sorted[0]![1] === sorted[1]![1];
           const winnerSession = winner ? await tx.run(zql.sessions.where("id", winner[0]).one()) : null;
-          const winnerName = winnerSession?.name ?? winner?.[0].slice(0, 6) ?? "???";
+          const winnerName = winner ? resolvePlayerName(winnerSession?.name, winner[0]) : "???";
           const endText = isTie ? "Game over! It's a tie!" : `Game over! ${winnerName} wins!`;
 
           await tx.mutate.chain_reaction_games.update({
@@ -537,7 +539,7 @@ export const chainReactionMutators = {
       );
 
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
-      const playerName = session?.name ?? args.sessionId.slice(0, 6);
+      const playerName = resolvePlayerName(session?.name, args.sessionId);
 
       const scores = { ...game.scores };
       const updatedChains = { ...game.chain, [args.sessionId]: updatedPlayerChain };
@@ -563,7 +565,7 @@ export const chainReactionMutators = {
           const winner = sorted[0];
           const isTie = sorted.length >= 2 && sorted[0]![1] === sorted[1]![1];
           const winnerSession = winner ? await tx.run(zql.sessions.where("id", winner[0]).one()) : null;
-          const winnerName = winnerSession?.name ?? winner?.[0].slice(0, 6) ?? "???";
+          const winnerName = winner ? resolvePlayerName(winnerSession?.name, winner[0]) : "???";
           const endText = isTie ? "Game over! It's a tie!" : `Game over! ${winnerName} wins!`;
 
           await tx.mutate.chain_reaction_games.update({
@@ -699,6 +701,7 @@ export const chainReactionMutators = {
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");
@@ -708,12 +711,12 @@ export const chainReactionMutators = {
 
       await tx.mutate.chain_reaction_games.update({
         id: game.id,
-        spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+        spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
         updated_at: now()
       });
       await tx.mutate.sessions.upsert({
         id: args.sessionId,
-        name: session?.name ?? null,
+        name: sessionName,
         game_type: "chain_reaction",
         game_id: game.id,
         created_at: now(),

@@ -39,7 +39,9 @@ Object.defineProperty(globalThis, "CustomEvent", {
 // Must import after mocks are set up
 import {
   randomName,
+  getDisplayName,
   getOrCreateSessionId,
+  getOrCreateStoredName,
   getStoredName,
   getStoredSessionProof,
   getSessionRequestHeaders,
@@ -194,6 +196,23 @@ describe("getPlayerProfile", () => {
   });
 });
 
+describe("display name fallbacks", () => {
+  it("uses a generated name instead of exposing the session id", () => {
+    const displayName = getDisplayName(null, "server-session");
+    expect(displayName).toBeTruthy();
+    expect(displayName).not.toBe("server-session");
+    expect(displayName).not.toContain("server");
+  });
+
+  it("creates and stores a generated name when none exists", () => {
+    const sessionId = getOrCreateSessionId();
+    const generated = getOrCreateStoredName(sessionId);
+    expect(generated).toBeTruthy();
+    expect(getStoredName()).toBe(generated);
+    expect(generated).not.toBe(sessionId.slice(0, 5));
+  });
+});
+
 describe("syncSessionIdentityForBoot", () => {
   it("retries until it gets a verified proof", async () => {
     const fetchMock = vi.fn()
@@ -221,7 +240,7 @@ describe("syncSessionIdentityForBoot", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(result).toMatchObject({
       sessionId: "server-session",
-      name: "Server Name",
+      name: "ServerName",
       zeroSessionProof: "fresh-proof",
       source: "claimed",
     });

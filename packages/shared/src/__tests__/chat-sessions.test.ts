@@ -50,6 +50,7 @@ vi.mock("@rocicorp/zero", () => {
 
 const { chatMutators } = await import("../zero/mutators/chat");
 const { sessionMutators } = await import("../zero/mutators/sessions");
+const { fallbackPlayerName } = await import("../player-names");
 type Handler = (params: { args: any; tx: any; ctx: any }) => Promise<void>;
 const chat = chatMutators as unknown as Record<string, Handler>;
 const sessions = sessionMutators as unknown as Record<string, Handler>;
@@ -154,7 +155,7 @@ describe("Chat — send message", () => {
     );
   });
 
-  it("falls back to 'Anonymous' for empty sender name", async () => {
+  it("falls back to a generated player name for empty sender name", async () => {
     await chat.send({
       args: {
         id: "msg6",
@@ -168,7 +169,7 @@ describe("Chat — send message", () => {
       ctx: serverCtx("user1"),
     });
     const msg = tx.getById("chat_messages", "msg6") as any;
-    expect(msg.sender_name).toBe("Anonymous");
+    expect(msg.sender_name).toBe(fallbackPlayerName("user1"));
   });
 });
 

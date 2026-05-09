@@ -1,7 +1,8 @@
 import { FiSkipForward } from "react-icons/fi";
 import { RoundCountdown } from "../shared/RoundCountdown";
+import { getDisplayName } from "../../lib/session";
 
-type Player = { sessionId: string; role?: "imposter" | "player"; eliminated?: boolean };
+type Player = { sessionId: string; name?: string | null; role?: "imposter" | "player"; eliminated?: boolean };
 
 export function ImposterResultsSection({
   tally,
@@ -36,11 +37,11 @@ export function ImposterResultsSection({
     .map(([id]) => id);
   const votedOutId = topVoted.length > 0 ? topVoted[0] : null;
   const votedOutPlayer = votedOutId ? activePlayers.find((p) => p.sessionId === votedOutId) : null;
-  const votedOutName = votedOutPlayer ? (sessionById[votedOutPlayer.sessionId] ?? votedOutPlayer.sessionId.slice(0, 6)) : null;
+  const votedOutName = votedOutPlayer ? (sessionById[votedOutPlayer.sessionId] ?? getDisplayName(votedOutPlayer.name, votedOutPlayer.sessionId)) : null;
   const wasImposter = votedOutPlayer?.role === "imposter";
   const voteLines = votes.map((vote) => {
-    const voter = sessionById[vote.voterId] ?? vote.voterId.slice(0, 6);
-    const target = sessionById[vote.targetId] ?? vote.targetId.slice(0, 6);
+    const voter = sessionById[vote.voterId] ?? getDisplayName(null, vote.voterId);
+    const target = sessionById[vote.targetId] ?? getDisplayName(null, vote.targetId);
     return `${voter} → ${target}`;
   });
 
@@ -90,13 +91,13 @@ export function ImposterResultsSection({
       <h3 className="game-section-label" style={{ marginTop: "0.9rem" }}>Vote Totals</h3>
       <div className="game-results-list">
         {activePlayers.map((player) => {
-          const name = sessionById[player.sessionId] ?? player.sessionId.slice(0, 6);
+          const name = sessionById[player.sessionId] ?? getDisplayName(player.name, player.sessionId);
           const voteCount = tally[player.sessionId] ?? 0;
           const pct = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
           const isVotedOut = player.sessionId === votedOutId;
           const voterNames = votes
             .filter((v) => v.targetId === player.sessionId)
-            .map((v) => sessionById[v.voterId] ?? v.voterId.slice(0, 6));
+            .map((v) => sessionById[v.voterId] ?? getDisplayName(null, v.voterId));
 
           return (
             <div key={player.sessionId} className="game-result-row">

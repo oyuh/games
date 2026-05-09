@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { FiMoon, FiSun, FiPlay, FiVolume2, FiVolumeX, FiChevronDown } from "react-icons/fi";
-import { useSettings, updateSettings } from "../../lib/settings";
+import { FiMoon, FiSun, FiVolume2, FiVolumeX, FiChevronDown, FiNavigation, FiMonitor, FiMaximize2 } from "react-icons/fi";
+import { CURSOR_SCALE_MAX, CURSOR_SCALE_MIN, CURSOR_SCALE_STEP, updateSettings, useSettings } from "../../lib/settings";
 import type { SoundPreferences } from "../../lib/settings";
 import { BottomSheet } from "./BottomSheet";
 import { mutators } from "@games/shared";
@@ -261,6 +261,42 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
             )}
           </div>
         )}
+      </div>
+
+      <div className="m-options-group">
+        <label className="m-options-label">Cursor</label>
+        <div className="m-options-row">
+          <button
+            className={`m-btn ${settings.customCursor ? "m-btn-primary" : "m-btn-muted"}`}
+            onClick={() => updateSettings({ customCursor: true })}
+          >
+            <FiNavigation size={14} /> Custom
+          </button>
+          <button
+            className={`m-btn ${!settings.customCursor ? "m-btn-primary" : "m-btn-muted"}`}
+            onClick={() => updateSettings({ customCursor: false })}
+          >
+            <FiMonitor size={14} /> System
+          </button>
+        </div>
+        <div className={`m-cursor-scale-control ${!settings.customCursor ? "m-cursor-scale-control--disabled" : ""}`}>
+          <div className="m-cursor-scale-head">
+            <span className="m-cursor-scale-title"><FiMaximize2 size={14} /> Scale</span>
+            <span className="m-cursor-scale-value">{Math.round(settings.customCursorScale * 100)}%</span>
+          </div>
+          <input
+            className="m-cursor-scale-range"
+            type="range"
+            min={CURSOR_SCALE_MIN}
+            max={CURSOR_SCALE_MAX}
+            step={CURSOR_SCALE_STEP}
+            value={settings.customCursorScale}
+            disabled={!settings.customCursor}
+            aria-label="Cursor scale"
+            data-cursor="slider"
+            onChange={(event) => updateSettings({ customCursorScale: Number(event.currentTarget.value) })}
+          />
+        </div>
       </div>
 
     </BottomSheet>

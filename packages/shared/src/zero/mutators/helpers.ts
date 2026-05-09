@@ -1,4 +1,5 @@
 import { customAlphabet } from "nanoid";
+export { fallbackPlayerName, randomPlayerName, resolvePlayerName } from "../../player-names";
 import { chainWordBank, passwordWordBank } from "./word-banks";
 
 export const now = () => Date.now();

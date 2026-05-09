@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, sanitizeText } from "./helpers";
+import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
 import { imposterWordBank } from "./word-banks";
 
 export const imposterMutators = {
@@ -16,6 +16,7 @@ export const imposterMutators = {
     async ({ args, tx }) => {
       const ts = now();
       const session = await tx.run(zql.sessions.where("id", args.hostId).one());
+      const hostName = resolvePlayerName(session?.name, args.hostId);
       await tx.mutate.imposter_games.insert({
         id: args.id,
         code: code(),
@@ -23,7 +24,7 @@ export const imposterMutators = {
         phase: "lobby",
         category: args.category ?? "animals",
         secret_word: null,
-        players: [{ sessionId: args.hostId, name: session?.name ?? null, connected: true }],
+        players: [{ sessionId: args.hostId, name: hostName, connected: true }],
         clues: [],
         votes: [],
         kicked: [],
@@ -44,7 +45,7 @@ export const imposterMutators = {
       });
       await tx.mutate.sessions.upsert({
         id: args.hostId,
-        name: session?.name ?? null,
+        name: hostName,
         game_type: "imposter",
         game_id: args.id,
         created_at: ts,
@@ -58,6 +59,7 @@ export const imposterMutators = {
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game) {
         throw new Error("Game not found");
@@ -76,14 +78,14 @@ export const imposterMutators = {
             id: game.id,
             players: game.players.map((player) =>
               player.sessionId === args.sessionId
-                ? { ...player, connected: true, name: session?.name ?? player.name }
+                ? { ...player, connected: true, name: resolvePlayerName(session?.name ?? player.name, args.sessionId) }
                 : player
             ),
             updated_at: now()
           });
           await tx.mutate.sessions.upsert({
             id: args.sessionId,
-            name: session?.name ?? null,
+            name: sessionName,
             game_type: "imposter",
             game_id: game.id,
             created_at: now(),
@@ -95,12 +97,12 @@ export const imposterMutators = {
         if (game.spectators.find((s) => s.sessionId === args.sessionId)) return;
         await tx.mutate.imposter_games.update({
           id: game.id,
-          spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+          spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
           updated_at: now()
         });
         await tx.mutate.sessions.upsert({
           id: args.sessionId,
-          name: session?.name ?? null,
+          name: sessionName,
           game_type: "imposter",
           game_id: game.id,
           created_at: now(),
@@ -112,10 +114,10 @@ export const imposterMutators = {
       const players = existingPlayer
         ? game.players.map((player) =>
             player.sessionId === args.sessionId
-              ? { ...player, connected: true, name: session?.name ?? player.name }
+              ? { ...player, connected: true, name: resolvePlayerName(session?.name ?? player.name, args.sessionId) }
               : player
           )
-        : [...game.players, { sessionId: args.sessionId, name: session?.name ?? null, connected: true }];
+        : [...game.players, { sessionId: args.sessionId, name: sessionName, connected: true }];
 
       await tx.mutate.imposter_games.update({
         id: game.id,
@@ -125,7 +127,7 @@ export const imposterMutators = {
 
       await tx.mutate.sessions.upsert({
         id: args.sessionId,
-        name: session?.name ?? null,
+        name: sessionName,
         game_type: "imposter",
         game_id: game.id,
         created_at: now(),
@@ -611,6 +613,7 @@ export const imposterMutators = {
     async ({ args, tx, ctx }) => {
       assertCaller(tx, ctx, args.sessionId);
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
+      const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase === "ended") throw new Error("Game has ended");
@@ -622,12 +625,12 @@ export const imposterMutators = {
 
       await tx.mutate.imposter_games.update({
         id: game.id,
-        spectators: [...game.spectators, { sessionId: args.sessionId, name: session?.name ?? null }],
+        spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
         updated_at: now()
       });
       await tx.mutate.sessions.upsert({
         id: args.sessionId,
-        name: session?.name ?? null,
+        name: sessionName,
         game_type: "imposter",
         game_id: game.id,
         created_at: now(),

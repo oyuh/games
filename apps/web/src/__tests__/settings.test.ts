@@ -33,16 +33,20 @@ beforeEach(() => {
 });
 
 describe("getSettings", () => {
-  it("returns an object with theme and sidebarPosition", () => {
+  it("returns an object with theme, sidebarPosition, and cursor settings", () => {
     const s = getSettings();
     expect(s).toHaveProperty("theme");
     expect(s).toHaveProperty("sidebarPosition");
+    expect(s).toHaveProperty("customCursor");
+    expect(s).toHaveProperty("customCursorScale");
   });
 
   it("returns defaults when localStorage is empty", () => {
     const s = getSettings();
     expect(s.theme).toBe("dark");
     expect(s.sidebarPosition).toBe("left");
+    expect(s.customCursor).toBe(true);
+    expect(s.customCursorScale).toBe(1);
   });
 });
 
@@ -79,11 +83,30 @@ describe("updateSettings", () => {
     expect(setAttrMock).toHaveBeenCalledWith("data-sidebar", "top");
   });
 
+  it("applies custom cursor preference to document", () => {
+    updateSettings({ customCursor: false });
+    expect(setAttrMock).toHaveBeenCalledWith("data-custom-cursor", "off");
+  });
+
+  it("updates and clamps custom cursor scale", () => {
+    updateSettings({ customCursorScale: 1.35 });
+    expect(getSettings().customCursorScale).toBe(1.35);
+
+    updateSettings({ customCursorScale: 5 });
+    expect(getSettings().customCursorScale).toBe(1.8);
+
+    updateSettings({ customCursorScale: 0.1 });
+    expect(getSettings().customCursorScale).toBe(0.7);
+  });
+
   it("partial update preserves other fields", () => {
+    updateSettings({ theme: "dark", sidebarPosition: "left", customCursor: true, customCursorScale: 1.25 });
     updateSettings({ theme: "light" });
     updateSettings({ sidebarPosition: "right" });
     const s = getSettings();
     expect(s.theme).toBe("light");
     expect(s.sidebarPosition).toBe("right");
+    expect(s.customCursor).toBe(true);
+    expect(s.customCursorScale).toBe(1.25);
   });
 });

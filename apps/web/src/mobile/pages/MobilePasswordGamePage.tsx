@@ -11,7 +11,7 @@ import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { useGameSecret } from "../../lib/game-secrets";
-import { getSessionRequestHeaders } from "../../lib/session";
+import { getDisplayName, getSessionRequestHeaders } from "../../lib/session";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
@@ -41,7 +41,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   phaseRef.current = game?.phase;
 
   usePresenceSocket({ sessionId, gameId, gameType: "password" });
-  const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = s.name ?? s.id.slice(0, 6); return acc; }, {}), [sessions]);
+  const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = getDisplayName(s.name, s.id); return acc; }, {}), [sessions]);
 
   useEffect(() => {
     const spectating = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
@@ -61,7 +61,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? id.slice(0, 6) }))), spectators: game.spectators ?? [] }
+      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? getDisplayName(null, id) }))), spectators: game.spectators ?? [] }
       : null
   );
 
@@ -298,7 +298,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       {!isSpectator && game.phase === "playing" && myActiveRound && (() => {
         const ar = myActiveRound;
         const activeRoundWord = decryptedActiveWord ?? (ar.word && !isEncrypted(ar.word) ? ar.word : null);
-        const guesserName = names[ar.guesserId] ?? ar.guesserId.slice(0, 6);
+        const guesserName = names[ar.guesserId] ?? getDisplayName(null, ar.guesserId);
         const isGuesser = ar.guesserId === sessionId;
         const isOnTeam = myTeamMembers.includes(sessionId);
         const isClueGiver = isOnTeam && !isGuesser;

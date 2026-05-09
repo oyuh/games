@@ -10,8 +10,9 @@ import { Sidebar } from "./FloatingHeader";
 import { Footer } from "./Footer";
 import { ToastContainer } from "./shared/ToastContainer";
 import { TooltipLayer } from "./shared/Tooltip";
+import { CustomCursor } from "./shared/CustomCursor";
 import { ChatProvider, useChatContext } from "../lib/chat-context";
-import { getOrCreateSessionId } from "../lib/session";
+import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useGameMeta } from "../hooks/useGameMeta";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileLayout } from "../mobile/MobileLayout";
@@ -20,6 +21,7 @@ export function AppShell() {
   return (
     <ChatProvider>
       <AppShellInner />
+      <CustomCursor />
     </ChatProvider>
   );
 }
@@ -71,7 +73,7 @@ function AppShellDesktop() {
     : gameType === "location_signal" ? (locationGames[0]?.host_id ?? "")
     : "";
 
-  const myName = sessions[0]?.name ?? sessionId.slice(0, 6);
+  const myName = getDisplayName(sessions[0]?.name, sessionId);
 
   return (
     <div className="shell">

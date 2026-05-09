@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { FiArrowRight, FiCheck, FiLock } from "react-icons/fi";
 import { BorringAvatar } from "../shared/BorringAvatar";
+import { getDisplayName } from "../../lib/session";
 
 type Team = { name: string; members: string[] };
 
@@ -85,7 +86,7 @@ export function PasswordTeamGrid({
               <div className="game-team-members">
                 {team.members.length > 0 ? (
                   team.members.map((id) => {
-                    const n = names[id] ?? id.slice(0, 6);
+                    const n = names[id] ?? getDisplayName(null, id);
                     const isMe = id === sessionId;
                     const playerIndex = allPlayers.indexOf(id);
                     return (

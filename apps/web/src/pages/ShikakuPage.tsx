@@ -17,7 +17,7 @@ import {
   ShikakuPuzzle,
   validateSolution,
 } from "../lib/shikaku-engine";
-import { getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
+import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import "../styles/game-shared.css";
@@ -300,7 +300,7 @@ export function ShikakuPage() {
     try {
       const identity = await syncSessionIdentity(API_BASE, { allowCreate: true, reason: "shikaku-eligibility" });
       const activeSessionId = identity.sessionId;
-      const activeName = identity.name || "Anonymous";
+      const activeName = getDisplayName(identity.name, identity.sessionId);
 
       const res = await fetch(`${API_BASE}/api/shikaku/score/eligibility`, {
         method: "POST",
@@ -1003,7 +1003,7 @@ export function ShikakuPage() {
     try {
       const identity = await syncSessionIdentity(API_BASE, { allowCreate: true, reason: "shikaku-submit" });
       const activeSessionId = identity.sessionId;
-      const activeName = identity.name || "Anonymous";
+      const activeName = getDisplayName(identity.name, identity.sessionId);
 
       const res = await fetch(`${API_BASE}/api/shikaku/score`, {
         method: "POST",

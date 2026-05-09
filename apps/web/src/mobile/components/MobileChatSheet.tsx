@@ -4,7 +4,7 @@ import { FiSend } from "react-icons/fi";
 import { PiCrownSimpleFill } from "react-icons/pi";
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
-import { getOrCreateSessionId } from "../../lib/session";
+import { getDisplayName, getOrCreateSessionId } from "../../lib/session";
 import { useChatContext } from "../../lib/chat-context";
 import { BottomSheet } from "./BottomSheet";
 
@@ -29,7 +29,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
 
   // Get my session name
   const [sessions] = useQuery(queries.sessions.byId({ id: sessionId }));
-  const myName = sessions[0]?.name ?? sessionId.slice(0, 6);
+  const myName = getDisplayName(sessions[0]?.name, sessionId);
 
   // Fetch host ID
   const [imposterGames] = useQuery(gameType === "imposter" ? queries.imposter.byId({ id: gameId }) : queries.imposter.byId({ id: "__none__" }));
@@ -81,7 +81,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
           const sameSender = prev?.sender_id === msg.sender_id;
           const isMe = msg.sender_id === sessionId;
           const isHost = msg.sender_id === hostId;
-          const displayName = msg.sender_name || msg.sender_id.slice(0, 6);
+          const displayName = getDisplayName(msg.sender_name, msg.sender_id);
           return (
             <div
               key={msg.id}

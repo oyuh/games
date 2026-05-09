@@ -100,6 +100,7 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
     const handleTouchStart = (e: TouchEvent) => {
       if (closingRef.current) return;
       const touch = e.touches[0];
+      if (!touch) return;
       touchStartY.current = touch.clientY;
       touchStartTime.current = Date.now();
       currentOffsetY.current = 0;
@@ -109,6 +110,7 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
     const handleTouchMove = (e: TouchEvent) => {
       if (closingRef.current) return;
       const touch = e.touches[0];
+      if (!touch) return;
       const deltaY = touch.clientY - touchStartY.current;
       const bodyEl = bodyRef.current;
 

@@ -10,7 +10,7 @@ import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
+import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileChainReactionPage } from "../mobile/pages/MobileChainReactionPage";
@@ -97,12 +97,12 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = s.name ?? s.id.slice(0, 6);
+      acc[s.id] = getDisplayName(s.name, s.id);
       return acc;
     }, {});
   }, [sessions]);
 
-  const playerName = (id: string) => sessionById[id] ?? id.slice(0, 6);
+  const playerName = (id: string) => sessionById[id] ?? getDisplayName(null, id);
   const opponent = useMemo(() => game?.players.find((p) => p.sessionId !== sessionId), [game, sessionId]);
 
   useEffect(() => {
@@ -275,8 +275,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     }
   };
 
-  const joinGame = () => {
-    ensureName(zero, sessionId);
+  const joinGame = async () => {
+    await ensureName(zero, sessionId);
     void zero.mutate(mutators.chainReaction.join({ gameId, sessionId })).client.catch(() => showToast("Couldn't join", "error"));
   };
 
@@ -287,24 +287,24 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
         .catch(() => showToast("Couldn't leave current game", "error"))
         .finally(() => {
           setJoiningFromOtherGame(false);
-          joinGame();
+          void joinGame();
         });
       return;
     }
-    joinGame();
+    void joinGame();
   };
 
   const confirmLeaveAndJoin = () => {
     if (!activeGameType || !activeGameId) {
       setShowInSessionModal(false);
-      joinGame();
+      void joinGame();
       return;
     }
     setJoiningFromOtherGame(true);
     void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
       .then(() => {
         setShowInSessionModal(false);
-        joinGame();
+        void joinGame();
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => setJoiningFromOtherGame(false));

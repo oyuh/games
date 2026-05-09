@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiEye, FiEyeOff, FiSend, FiCheck, FiArrowRight, FiClock } from "react-icons/fi";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
+import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
@@ -69,14 +69,14 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
   const sessionById = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = s.name ?? s.id.slice(0, 6);
+      acc[s.id] = getDisplayName(s.name, s.id);
       return acc;
     }, {});
   }, [sessions]);
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "imposter", gameId, hostId: game.host_id, players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null })), spectators: game.spectators ?? [] }
+      ? { type: "imposter", gameId, hostId: game.host_id, players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId) })), spectators: game.spectators ?? [] }
       : null
   );
 
@@ -228,8 +228,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     playVote();
   };
 
-  const joinGame = () => {
-    ensureName(zero, sessionId);
+  const joinGame = async () => {
+    await ensureName(zero, sessionId);
     if (isSpectator) {
       void zero.mutate(mutators.imposter.leaveSpectator({ gameId, sessionId }))
         .client.then(() => zero.mutate(mutators.imposter.join({ gameId, sessionId })))
@@ -247,24 +247,24 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         .catch(() => showToast("Couldn't leave current game", "error"))
         .finally(() => {
           setJoiningFromOtherGame(false);
-          joinGame();
+          void joinGame();
         });
       return;
     }
-    joinGame();
+    void joinGame();
   };
 
   const confirmLeaveAndJoin = () => {
     if (!activeGameType || !activeGameId) {
       setShowInSessionModal(false);
-      joinGame();
+      void joinGame();
       return;
     }
     setJoiningFromOtherGame(true);
     void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
       .then(() => {
         setShowInSessionModal(false);
-        joinGame();
+        void joinGame();
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => setJoiningFromOtherGame(false));
@@ -304,7 +304,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         <h3 className="m-card-title">Players <span style={{ opacity: 0.5, fontWeight: 400 }}>{game.players.filter((p) => !p.eliminated).length}/{game.players.length}</span></h3>
         <div className="m-player-chips">
           {game.players.map((p, playerIndex) => {
-            const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
+            const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
             const showRole = revealRoles || p.sessionId === mobileVotedOutId;
             const isImposter = showRole && p.role === "imposter";
             const isMe = p.sessionId === sessionId;
@@ -423,7 +423,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                 <p style={{ fontSize: "0.75rem", opacity: 0.6, marginBottom: "0.25rem" }}>Hints from other clues</p>
                 <div className="m-clue-recap">
                   {othersClues.map((c) => {
-                    const name = sessionById[c.sessionId] ?? c.sessionId.slice(0, 6);
+                    const name = sessionById[c.sessionId] ?? getDisplayName(null, c.sessionId);
                     return (
                       <div key={c.sessionId} className="m-clue-item">
                         <span className="m-clue-name">{name}</span>
@@ -480,7 +480,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       {/* Voting */}
       {!isSpectator && game.phase === "voting" && inGame && !me?.eliminated && (() => {
         const hasVoted = game.votes.some((v) => v.voterId === sessionId);
-        const votedName = voteTarget ? (sessionById[voteTarget] ?? voteTarget.slice(0, 6)) : null;
+        const votedName = voteTarget ? (sessionById[voteTarget] ?? getDisplayName(null, voteTarget)) : null;
         const activePlayers = game.players.filter((p) => !p.eliminated);
 
         return (
@@ -490,7 +490,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
             {/* Clue recap */}
             <div className="m-clue-recap">
               {activePlayers.map((p) => {
-                const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
+                const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
                 const clueText = game.clues.find(c => c.sessionId === p.sessionId)?.text;
                 return (
                   <div key={p.sessionId} className="m-clue-item">
@@ -515,7 +515,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                   {activePlayers
                     .filter((p) => p.sessionId !== sessionId)
                     .map((p) => {
-                      const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
+                      const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
                       const selected = voteTarget === p.sessionId;
                       return (
                         <button
@@ -570,11 +570,11 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         const topVoted = Object.entries(tally).filter(([, c]) => c === topVoteCount && topVoteCount > 0).map(([id]) => id);
         const votedOutId = topVoted.length > 0 ? topVoted[0] : null;
         const votedOutPlayer = votedOutId ? activePlayers.find((p) => p.sessionId === votedOutId) : null;
-        const votedOutName = votedOutPlayer ? (sessionById[votedOutPlayer.sessionId] ?? votedOutPlayer.sessionId.slice(0, 6)) : null;
+        const votedOutName = votedOutPlayer ? (sessionById[votedOutPlayer.sessionId] ?? getDisplayName(votedOutPlayer.name, votedOutPlayer.sessionId)) : null;
         const wasImposter = votedOutPlayer?.role === "imposter";
         const voteLines = game.votes.map((vote) => {
-          const voter = sessionById[vote.voterId] ?? vote.voterId.slice(0, 6);
-          const target = sessionById[vote.targetId] ?? vote.targetId.slice(0, 6);
+          const voter = sessionById[vote.voterId] ?? getDisplayName(null, vote.voterId);
+          const target = sessionById[vote.targetId] ?? getDisplayName(null, vote.targetId);
           return `${voter} → ${target}`;
         });
 
@@ -616,13 +616,13 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.9rem" }}>Vote Totals</h4>
               <div className="m-results-list">
                 {activePlayers.map((p) => {
-                  const name = sessionById[p.sessionId] ?? p.sessionId.slice(0, 6);
+                  const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
                   const voteCount = tally[p.sessionId] ?? 0;
                   const pct = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
                   const isVotedOut = p.sessionId === votedOutId;
                   const voterNames = game.votes
                     .filter((v) => v.targetId === p.sessionId)
-                    .map((v) => sessionById[v.voterId] ?? v.voterId.slice(0, 6));
+                    .map((v) => sessionById[v.voterId] ?? getDisplayName(null, v.voterId));
                   return (
                     <div key={p.sessionId} className="m-result-row">
                       <div className="m-result-info">
@@ -665,7 +665,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         const impostersLeft = game.players.filter((p) => p.role === "imposter" && !p.eliminated).length;
         const playersWin = impostersLeft === 0;
         const imposters = game.players.filter((p) => p.role === "imposter");
-        const imposterNames = imposters.map((p) => sessionById[p.sessionId] ?? p.sessionId.slice(0, 6));
+        const imposterNames = imposters.map((p) => sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId));
 
         return (
           <>

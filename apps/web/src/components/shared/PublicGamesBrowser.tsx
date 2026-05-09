@@ -127,9 +127,9 @@ export function PublicGamesList({
 
   const handleJoin = async (game: NormalizedGame) => {
     setJoining(game.id);
-    ensureName(zero, sessionId);
 
     try {
+      await ensureName(zero, sessionId);
       if (gameType === "imposter") {
         const result = await zero.mutate(mutators.imposter.join({ gameId: game.id, sessionId })).server;
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
