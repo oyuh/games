@@ -824,8 +824,9 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                 <button
                   className="btn btn-muted"
                   onClick={() => {
-                    void zero.mutate(mutators.chainReaction.endGame({ gameId, hostId: sessionId }));
-                    navigate("/");
+                    void zero.mutate(mutators.chainReaction.endGame({ gameId, hostId: sessionId }))
+                      .client.then(() => navigate("/"))
+                      .catch(() => showToast("Couldn't end game", "error"));
                   }}
                 >
                   End Game

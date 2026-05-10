@@ -5,6 +5,8 @@ import { PasswordHeader } from "../password/PasswordHeader";
 import { PasswordTeamGrid } from "../password/PasswordTeamGrid";
 import { PasswordActiveRound } from "../password/PasswordActiveRound";
 import { PasswordRoundsTable } from "../password/PasswordRoundsTable";
+import "../../styles/game-shared.css";
+import "../../styles/password.css";
 
 /* ── Fake data ──────────────────────────────────────────── */
 

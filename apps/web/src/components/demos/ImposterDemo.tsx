@@ -7,6 +7,7 @@ import { ImposterLobbyActions } from "../imposter/ImposterLobbyActions";
 import { ImposterClueSection } from "../imposter/ImposterClueSection";
 import { ImposterVoteSection } from "../imposter/ImposterVoteSection";
 import { ImposterResultsSection } from "../imposter/ImposterResultsSection";
+import "../../styles/game-shared.css";
 
 /* ── Fake data ──────────────────────────────────────────── */
 

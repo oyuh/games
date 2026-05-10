@@ -124,7 +124,7 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
       settings: { chainLength: 5, rounds: phase === "finished" ? 2 : 3, currentRound: phase === "lobby" ? 1 : phase === "finished" ? 2 : 1, turnTimeSec: null, phaseEndsAt: null, chainMode: phase === "submitting" ? "custom" : "premade" },
     }));
     addRecentGame({ id, code: "DEMO", gameType: "chain_reaction" });
-    go(`/chain-reaction/${id}`);
+    go(`/chain/${id}`);
   }
 
   async function createDemoShadeSignal(phase: "lobby" | "clue1" | "guess1" | "reveal") {
