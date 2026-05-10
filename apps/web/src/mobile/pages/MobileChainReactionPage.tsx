@@ -742,7 +742,11 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                   Play Again
                 </button>
                 <button className="m-btn m-btn-muted"
-                  onClick={() => { void zero.mutate(mutators.chainReaction.endGame({ gameId, hostId: sessionId })); navigate("/"); }}>
+                  onClick={() => {
+                    void zero.mutate(mutators.chainReaction.endGame({ gameId, hostId: sessionId }))
+                      .client.then(() => navigate("/"))
+                      .catch(() => showToast("Couldn't end game", "error"));
+                  }}>
                   End Game
                 </button>
               </>

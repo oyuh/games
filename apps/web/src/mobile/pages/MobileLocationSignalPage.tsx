@@ -839,8 +839,9 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
                   Play Again
                 </button>
                 <button className="m-btn m-btn-muted" onClick={() => {
-                  void zero.mutate(mutators.locationSignal.endGame({ gameId: game.id, hostId: sessionId }));
-                  navigate("/");
+                  void zero.mutate(mutators.locationSignal.endGame({ gameId: game.id, hostId: sessionId }))
+                    .client.then(() => navigate("/"))
+                    .catch(() => showToast("Couldn't end game", "error"));
                 }}>
                   End Game
                 </button>

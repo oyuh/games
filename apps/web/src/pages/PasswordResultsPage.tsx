@@ -153,8 +153,9 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
             className="btn btn-muted"
             style={{ marginTop: "0.5rem" }}
             onClick={() => {
-              void zero.mutate(mutators.password.endGame({ gameId, hostId: sessionId }));
-              navigate("/");
+              void zero.mutate(mutators.password.endGame({ gameId, hostId: sessionId }))
+                .client.then(() => navigate("/"))
+                .catch(() => showToast("Couldn't end game", "error"));
             }}
           >
             End Game

@@ -973,8 +973,9 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
                 <button
                   className="btn btn-muted"
                   onClick={() => {
-                    void zero.mutate(mutators.shadeSignal.endGame({ gameId, hostId: sessionId }));
-                    navigate("/");
+                    void zero.mutate(mutators.shadeSignal.endGame({ gameId, hostId: sessionId }))
+                      .client.then(() => navigate("/"))
+                      .catch(() => showToast("Couldn't end game", "error"));
                   }}
                 >
                   End Game

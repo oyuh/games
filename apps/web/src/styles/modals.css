@@ -74,6 +74,101 @@
   padding: 1.25rem 1.5rem 1.5rem;
 }
 
+/* ─── Active Game Guard ─────────────────────────────────── */
+
+.active-game-modal {
+  max-width: 460px;
+  border-color: color-mix(in srgb, var(--active-game-accent) 28%, var(--border));
+}
+
+.active-game-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.active-game-title svg {
+  color: var(--active-game-accent);
+}
+
+.active-game-copy {
+  margin: 0 0 1rem;
+  color: var(--secondary);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.active-game-summary {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--active-game-accent) 22%, transparent);
+  background: color-mix(in srgb, var(--active-game-accent) 7%, transparent);
+}
+
+.active-game-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+
+.active-game-summary-label {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.active-game-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--active-game-accent);
+  letter-spacing: 0.08em;
+}
+
+.active-game-actions {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.55rem;
+}
+
+.active-game-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.active-game-leave-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
+  color: #f87171;
+}
+
+.active-game-leave-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef4444 18%, transparent);
+  border-color: color-mix(in srgb, #ef4444 45%, transparent);
+}
+
+.active-game-rejoin-btn {
+  background: color-mix(in srgb, var(--active-game-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--active-game-accent) 36%, transparent);
+  color: var(--active-game-accent);
+}
+
+.active-game-rejoin-btn:hover {
+  background: color-mix(in srgb, var(--active-game-accent) 24%, transparent);
+  border-color: color-mix(in srgb, var(--active-game-accent) 52%, transparent);
+}
+
 /* ─── Demo / How to Play Modal ──────────────────────────── */
 
 .demo-modal-panel {
