@@ -274,7 +274,11 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
                 <button
                   className="m-btn m-btn-muted"
                   style={{ width: "100%", color: "var(--destructive)" }}
-                  onClick={() => void zero.mutate(mutators.password.endGame({ gameId, hostId: sessionId }))}
+                  onClick={() => {
+                    void zero.mutate(mutators.password.endGame({ gameId, hostId: sessionId }))
+                      .client.then(() => navigate("/"))
+                      .catch(() => showToast("Couldn't end game", "error"));
+                  }}
                 >
                   <FiXCircle size={14} /> End Game
                 </button>

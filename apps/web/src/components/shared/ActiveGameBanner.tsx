@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiAlertTriangle, FiArrowRight, FiLogOut, FiX } from "react-icons/fi";
+import { FiAlertTriangle, FiArrowRight, FiHash, FiLogOut } from "react-icons/fi";
 import { queries, mutators } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { SessionGameType, leaveCurrentGame } from "../../lib/session";
@@ -13,6 +13,27 @@ const GAME_LABELS: Record<SessionGameType, string> = {
   shade_signal: "Shade Signal",
   location_signal: "Location Signal",
 };
+
+const GAME_ACCENTS: Record<SessionGameType, string> = {
+  imposter: "#7eb8ff",
+  password: "#a78bfa",
+  chain_reaction: "#34d399",
+  shade_signal: "#f472b6",
+  location_signal: "#f59e0b",
+};
+
+const ACTIVE_GAME_MODAL_DELAY_MS = 800;
+
+function formatPhase(phase: string | undefined): string {
+  if (!phase) return "Syncing";
+  if (phase === "lobby") return "Lobby";
+  if (phase === "playing") return "In progress";
+  if (phase === "submitting") return "Submitting";
+  if (phase === "results") return "Results";
+  if (phase === "finished") return "Finished";
+  if (phase === "ended") return "Ended";
+  return phase.charAt(0).toUpperCase() + phase.slice(1);
+}
 
 function routeForGame(gameType: SessionGameType, gameId: string): string {
   if (gameType === "imposter") return `/imposter/${gameId}`;
@@ -32,6 +53,7 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
   const zero = useZero();
   const navigate = useNavigate();
   const [leaving, setLeaving] = useState(false);
+  const [readyToShow, setReadyToShow] = useState(false);
 
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const mySession = mySessionRows[0] ?? null;
@@ -48,13 +70,16 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
 
   const game = imposterRows[0] || passwordRows[0] || chainRows[0] || shadeRows[0] || locationRows[0] || null;
 
-  const phase = (game as Record<string, unknown> | null)?.phase as string | undefined;
-  const kicked = ((game as Record<string, unknown> | null)?.kicked ?? []) as string[];
+  const gameRecord = game as Record<string, unknown> | null;
+  const phase = gameRecord?.phase as string | undefined;
+  const gameCode = gameRecord?.code as string | undefined;
+  const kicked = (gameRecord?.kicked ?? []) as string[];
   const wasKicked = kicked.includes(sessionId);
 
   // Only treat as ended when we actually found the game AND it's over.
   // game === null could mean the query hasn't resolved yet - don't auto-clear for that.
   const gameExistsAndEnded = game != null && (phase === "ended" || phase === "finished");
+  const shouldBlock = Boolean(gameType && gameId && game && !gameExistsAndEnded && !suppress);
 
   // Auto-clear stale session when the game has ended or we've been kicked
   useEffect(() => {
@@ -63,6 +88,14 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
     }
   }, [gameType, gameId, gameExistsAndEnded, wasKicked, zero, sessionId]);
 
+  useEffect(() => {
+    setReadyToShow(false);
+    if (!shouldBlock) return;
+
+    const timer = window.setTimeout(() => setReadyToShow(true), ACTIVE_GAME_MODAL_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [shouldBlock, gameType, gameId, phase]);
+
   // Don't show if no session game attachment, or game has ended / been cleaned up
   if (!gameType || !gameId) return null;
   if (gameExistsAndEnded) return null;
@@ -70,6 +103,7 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
   if (!game) return null;
   // Suppress when the parent is mid-action (creating/joining a game)
   if (suppress) return null;
+  if (!readyToShow) return null;
 
   const handleRejoin = () => {
     navigate(routeForGame(gameType, gameId));
@@ -89,41 +123,57 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
     }
   };
 
+  const gameLabel = GAME_LABELS[gameType];
+  const accent = GAME_ACCENTS[gameType];
+  const roomLabel = gameCode ?? gameId.slice(0, 6).toUpperCase();
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-panel">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="active-game-title">
+      <div className="modal-panel active-game-modal" style={{ "--active-game-accent": accent } as CSSProperties}>
         <div className="modal-header">
-          <h2 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-            <FiAlertTriangle size={18} /> {wasKicked ? "You were removed" : "You're in a game!"}
+          <h2 id="active-game-title" className="modal-title active-game-title">
+            <FiAlertTriangle size={18} /> {wasKicked ? "You were removed" : "Game already open"}
           </h2>
         </div>
 
         <div className="modal-body">
           {wasKicked ? (
-            <p className="host-section-desc" style={{ marginBottom: "1rem" }}>
-              You were removed from the <strong>{GAME_LABELS[gameType]}</strong> game.
+            <p className="active-game-copy">
+              You were removed from this <strong>{gameLabel}</strong> game.
             </p>
           ) : (
-            <>
-              <p className="host-section-desc" style={{ marginBottom: "0.75rem" }}>
-                You're currently in a <strong>{GAME_LABELS[gameType]}</strong> game
-                {phase === "lobby" ? " (lobby)" : " (in progress)"}.
-              </p>
-              <p className="host-section-desc" style={{ marginBottom: "1rem" }}>
-                Would you like to rejoin or leave?
-              </p>
-            </>
+            <p className="active-game-copy">
+              You are still attached to this game. Rejoin it, or leave it before starting or joining another room.
+            </p>
           )}
-          <div className="game-actions" style={{ justifyContent: "flex-end" }}>
-            <button className="btn btn-muted" onClick={() => void handleLeave()} disabled={leaving}>
-              <FiLogOut size={14} style={{ marginRight: "0.25rem" }} />
-              {leaving ? "Leaving…" : "Leave Game"}
-            </button>
+
+          <div className="active-game-summary">
+            <div className="active-game-summary-row">
+              <span className="active-game-summary-label">Game</span>
+              <strong>{gameLabel}</strong>
+            </div>
+            <div className="active-game-summary-row">
+              <span className="active-game-summary-label">Room</span>
+              <strong className="active-game-code">
+                <FiHash size={12} /> {roomLabel}
+              </strong>
+            </div>
+            <div className="active-game-summary-row">
+              <span className="active-game-summary-label">Status</span>
+              <strong>{formatPhase(phase)}</strong>
+            </div>
+          </div>
+
+          <div className="game-actions active-game-actions">
             {!wasKicked && (
-              <button className="btn btn-primary game-action-btn" onClick={handleRejoin}>
-                Rejoin <FiArrowRight size={14} style={{ marginLeft: "0.25rem" }} />
+              <button className="btn active-game-rejoin-btn game-action-btn" onClick={handleRejoin}>
+                Rejoin {gameLabel} <FiArrowRight size={14} />
               </button>
             )}
+            <button className="btn active-game-leave-btn" onClick={() => void handleLeave()} disabled={leaving}>
+              <FiLogOut size={14} />
+              {leaving ? "Leaving..." : "Leave Game"}
+            </button>
           </div>
         </div>
       </div>

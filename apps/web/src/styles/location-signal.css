@@ -564,22 +564,3 @@ body.locsig-map-expanded .app-footer {
     max-width: 100%;
   }
 }
-
-.cr-lobby-vs {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  color: var(--secondary);
-  padding: 0 0.6rem;
-  flex-shrink: 0;
-  align-self: center;
-}
-
-.cr-lobby-kick {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-}

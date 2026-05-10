@@ -1,3 +1,77 @@
+/* ── Game page layout ──────────────────────────────── */
+.game-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  max-width: 56rem;
+  margin: auto;
+  width: 100%;
+  font-size: 1.12rem;
+}
+
+/* Scale up game page controls to match the showcase layout. */
+.game-page .btn {
+  padding: 0.8rem 1.6rem;
+  font-size: 1.1rem;
+}
+
+.game-page .input {
+  padding: 0.85rem 1.1rem;
+  font-size: 1.1rem;
+}
+
+.game-page .game-title {
+  font-size: 1.8rem;
+}
+
+.game-page .game-code-btn {
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem;
+}
+
+.game-page .game-section-label {
+  font-size: 0.95rem;
+}
+
+.game-page .game-section-count {
+  font-size: 0.82rem;
+  min-width: 24px;
+  height: 24px;
+}
+
+.game-page .game-player-chip {
+  padding: 0.6rem 1rem;
+  gap: 0.7rem;
+}
+
+.game-page .game-player-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 0.95rem;
+}
+
+.game-page .game-player-name {
+  font-size: 1.05rem;
+}
+
+.game-page .game-player-you {
+  font-size: 0.78rem;
+}
+
+.game-page .badge {
+  font-size: 0.88rem;
+  padding: 0.25rem 0.8rem;
+}
+
+.game-page .game-header-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.game-page .game-header-icon svg {
+  width: 24px;
+  height: 24px;
+}
 
 /* ── Game page themed background ──────────────────── */
 .game-page[data-game-theme] {

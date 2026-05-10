@@ -1640,7 +1640,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
     addRecentGame({ id, code: "DEMO", gameType: "chain_reaction" });
     setRecentGames(getRecentGames());
-    navigate(`/chain-reaction/${id}`);
+    navigate(`/chain/${id}`);
   }
 
   async function createDemoShadeSignal(phase: "lobby" | "clue1" | "guess1" | "reveal") {

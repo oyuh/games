@@ -75,21 +75,25 @@ export function HostControlsModal({
     showToast(`Kicked ${targetName}`, "info");
   };
 
-  const handleEndGame = () => {
-    if (game.type === "imposter") {
-      void zero.mutate(mutators.imposter.endGame({ gameId: game.gameId, hostId: sessionId }));
-    } else if (game.type === "shade_signal") {
-      void zero.mutate(mutators.shadeSignal.endGame({ gameId: game.gameId, hostId: sessionId }));
-    } else if (game.type === "chain_reaction") {
-      void zero.mutate(mutators.chainReaction.endGame({ gameId: game.gameId, hostId: sessionId }));
-    } else if (game.type === "location_signal") {
-      void zero.mutate(mutators.locationSignal.endGame({ gameId: game.gameId, hostId: sessionId }));
-    } else {
-      void zero.mutate(mutators.password.endGame({ gameId: game.gameId, hostId: sessionId }));
+  const handleEndGame = async () => {
+    try {
+      if (game.type === "imposter") {
+        await zero.mutate(mutators.imposter.endGame({ gameId: game.gameId, hostId: sessionId })).client;
+      } else if (game.type === "shade_signal") {
+        await zero.mutate(mutators.shadeSignal.endGame({ gameId: game.gameId, hostId: sessionId })).client;
+      } else if (game.type === "chain_reaction") {
+        await zero.mutate(mutators.chainReaction.endGame({ gameId: game.gameId, hostId: sessionId })).client;
+      } else if (game.type === "location_signal") {
+        await zero.mutate(mutators.locationSignal.endGame({ gameId: game.gameId, hostId: sessionId })).client;
+      } else {
+        await zero.mutate(mutators.password.endGame({ gameId: game.gameId, hostId: sessionId })).client;
+      }
+      showToast("Game ended", "info");
+      onClose();
+      navigate("/");
+    } catch {
+      showToast("Couldn't end game", "error");
     }
-    showToast("Game ended", "info");
-    onClose();
-    navigate("/");
   };
 
   const handleAnnounce = () => {
