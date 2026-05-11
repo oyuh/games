@@ -757,14 +757,14 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         <span className="m-solo-card-play">Play</span>
       </Link>
 
-      <div className="m-solo-card m-solo-card--disabled">
+      <Link to="/pips" className="m-solo-card m-solo-card--pips">
         <div className="m-solo-card-icon"><FiZap size={20} /></div>
         <div className="m-solo-card-body">
           <h3 className="m-solo-card-title">Pips</h3>
           <p className="m-solo-card-desc">Fill the board with dominoes</p>
         </div>
-        <span className="m-solo-card-soon">Soon</span>
-      </div>
+        <span className="m-solo-card-play">Play</span>
+      </Link>
 
       <div className="m-solo-card m-solo-card--disabled">
         <div className="m-solo-card-icon"><FiZap size={20} /></div>

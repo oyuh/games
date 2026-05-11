@@ -96,6 +96,18 @@
   animation: sidebar-confirm-pulse 0.6s ease;
 }
 
+.sidebar-link--pips:hover:not(:disabled),
+.sidebar-link--pips.sidebar-link--active {
+  color: #fb923c;
+  background: color-mix(in srgb, #fb923c 13%, transparent);
+}
+
+.sidebar-link--pips-confirm {
+  color: #fb923c;
+  background: color-mix(in srgb, #fb923c 16%, transparent);
+  animation: sidebar-confirm-pulse 0.6s ease;
+}
+
 @keyframes sidebar-confirm-pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
@@ -103,6 +115,14 @@
 
 .sidebar-link-label {
   display: none;
+}
+
+.sidebar-separator {
+  width: 28px;
+  height: 1px;
+  margin: 0.15rem 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--secondary) 28%, transparent);
 }
 
 /* ── Mobile hamburger ────────────────────────────────────────── */

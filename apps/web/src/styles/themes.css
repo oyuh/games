@@ -87,6 +87,12 @@
   width: auto;
 }
 
+[data-sidebar="top"] .sidebar-separator {
+  width: 1px;
+  height: 28px;
+  margin: 0 0.15rem;
+}
+
 [data-sidebar="top"] .sidebar-toggle {
   display: none;
 }

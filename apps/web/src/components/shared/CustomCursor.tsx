@@ -31,6 +31,7 @@ const THEME_COLORS: Record<string, string> = {
   shade: "#f472b6",
   location: "#f59e0b",
   shikaku: "#34d399",
+  pips: "#fb923c",
 };
 
 const cursorUrl = (path: string) => `${import.meta.env.BASE_URL}${path}`;
@@ -160,7 +161,7 @@ function cursorKindForTarget(el: Element | null, pressed: boolean): CursorKind {
   if (el.closest(".chat-resize-handle, [data-cursor='resize']")) return "resize";
   if (el.closest(".chat-titlebar, [data-cursor='drag']")) return pressed ? "grabbing" : "grab";
   if (el.closest(".hc-help-btn, [data-cursor='help']")) return "help";
-  if (el.closest(".shade-grid, .shade-cell, .shikaku-grid, .shikaku-cell, [data-cursor='select']")) return "crosshair";
+  if (el.closest(".shade-grid, .shade-cell, .shikaku-grid, .shikaku-cell, .pips-board, .pips-cell, [data-cursor='select']")) return "crosshair";
   if (!el.closest(".locsig-map-ui") && el.closest(".locsig-map-outer, .locsig-map-box, [data-cursor='map']")) return pressed ? "grabbing" : "map";
   if (isClickable(el)) return "pointer";
   if (el.closest("[data-tooltip]")) return "help";
@@ -174,6 +175,7 @@ function themeForPathname(pathname: string) {
   if (pathname.startsWith("/shade/")) return "shade";
   if (pathname.startsWith("/location/")) return "location";
   if (/^\/shikaku(\/|$)/.test(pathname)) return "shikaku";
+  if (/^\/pips(\/|$)/.test(pathname)) return "pips";
   return "";
 }
 
@@ -183,6 +185,7 @@ function themeForHomeCard(el: Element | null) {
   if (el?.closest(".home-card--chain, .m-game-card--chain")) return "chain";
   if (el?.closest(".home-card--shade, .m-game-card--shade")) return "shade";
   if (el?.closest(".home-card--location, .m-game-card--location")) return "location";
+  if (el?.closest(".m-solo-card--pips")) return "pips";
   return "";
 }
 

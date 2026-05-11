@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiGrid, FiHash, FiRepeat } from "react-icons/fi";
+import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiGrid, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward } from "react-icons/fi";
 import { FaCrown } from "react-icons/fa";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
@@ -16,6 +16,7 @@ const ChainDemo = lazy(() => import("./demos/ChainDemo").then(({ ChainDemo }) =>
 const ShadeDemo = lazy(() => import("./demos/ShadeDemo").then(({ ShadeDemo }) => ({ default: ShadeDemo })));
 const LocationDemo = lazy(() => import("./demos/LocationDemo").then(({ LocationDemo }) => ({ default: LocationDemo })));
 const ShikakuDemo = lazy(() => import("./demos/ShikakuDemo").then(({ ShikakuDemo }) => ({ default: ShikakuDemo })));
+const PipsDemo = lazy(() => import("./demos/PipsDemo").then(({ PipsDemo }) => ({ default: PipsDemo })));
 const OptionsModal = lazy(() => import("./shared/OptionsModal").then(({ OptionsModal }) => ({ default: OptionsModal })));
 const InfoModal = lazy(() => import("./shared/InfoModal").then(({ InfoModal }) => ({ default: InfoModal })));
 const HostControlsModal = lazy(() =>
@@ -147,7 +148,7 @@ const CHAIN_STEP: Record<string, number> = { lobby: 0, submitting: 1, playing: 2
 const SHADE_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, guess1: 2, clue2: 3, guess2: 3, reveal: 4, finished: 4 };
 const LOCATION_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, guess1: 2, clue2: 3, guess2: 3, clue3: 3, guess3: 3, clue4: 3, guess4: 3, reveal: 4, finished: 4 };
 
-function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | null; step: number } {
+function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | "pips" | null; step: number } {
   const { pathname } = useLocation();
   const imposterMatch = pathname.match(/^\/imposter\/([^/]+)/);
   const passwordMatch = pathname.match(/^\/password\/([^/]+)/);
@@ -155,6 +156,7 @@ function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "sha
   const shadeMatch = pathname.match(/^\/shade\/([^/]+)/);
   const locationMatch = pathname.match(/^\/location\/([^/]+)/);
   const shikakuMatch = /^\/shikaku(\/|$)/.test(pathname);
+  const pipsMatch = /^\/pips(\/|$)/.test(pathname);
 
   const detected = imposterMatch ? "imposter" as const
     : passwordMatch ? "password" as const
@@ -162,6 +164,7 @@ function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "sha
     : shadeMatch ? "shade" as const
     : locationMatch ? "location" as const
     : shikakuMatch ? "shikaku" as const
+    : pipsMatch ? "pips" as const
     : null;
 
   const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch?.[1] ?? shadeMatch?.[1] ?? locationMatch?.[1] ?? "";
@@ -179,6 +182,7 @@ function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "sha
     if (detected === "shade") return { gameType: "shade", step: SHADE_STEP[shd[0]?.phase ?? "lobby"] ?? 0 };
     if (detected === "location") return { gameType: "location", step: LOCATION_STEP[loc[0]?.phase ?? "lobby"] ?? 0 };
     if (detected === "shikaku") return { gameType: "shikaku", step: 0 };
+    if (detected === "pips") return { gameType: "pips", step: 0 };
     return { gameType: null, step: 0 };
   }, [detected, imp, pwd, chr, shd, loc]);
 }
@@ -187,7 +191,9 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [modal, setModal] = useState<"options" | "info" | "host" | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [pipsConfirmAction, setPipsConfirmAction] = useState<"restart" | "give-up" | null>(null);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pipsConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const settings = useSettings();
@@ -196,8 +202,9 @@ export function Sidebar() {
   const sessionId = getOrCreateSessionId();
   const chat = useChatContext();
 
-  const isInGame = /^\/(imposter|password|chain|shade|location)\/|^\/shikaku(\/|$)/.test(pathname);
+  const isInGame = /^\/(imposter|password|chain|shade|location)\/|^\/shikaku(\/|$)|^\/pips(\/|$)/.test(pathname);
   const isShikaku = /^\/shikaku(\/|$)/.test(pathname);
+  const isPips = /^\/pips(\/|$)/.test(pathname);
 
   // Track infinite mode state from ShikakuPage
   const [infiniteEnabled, setInfiniteEnabled] = useState(false);
@@ -208,6 +215,35 @@ export function Sidebar() {
     phase: string; infiniteMode: boolean; customMode: boolean;
     showSeedInput: boolean; difficulty: string; seed: number | null;
   }>({ phase: "menu", infiniteMode: false, customMode: false, showSeedInput: false, difficulty: "easy", seed: null });
+  const [pipsState, setPipsState] = useState<{
+    phase: string;
+    runMode: string;
+    difficulty: string;
+    puzzleIndex: number;
+    puzzleCount: number;
+    placedCount: number;
+    totalDominoes: number;
+    remainingMoves: number;
+    solved: boolean;
+    canLeaderboard: boolean;
+    canUndo: boolean;
+    showDevTools: boolean;
+    canDevSkip: boolean;
+  }>({
+    phase: "menu",
+    runMode: "ranked",
+    difficulty: "easy",
+    puzzleIndex: 0,
+    puzzleCount: 3,
+    placedCount: 0,
+    totalDominoes: 0,
+    remainingMoves: 0,
+    solved: false,
+    canLeaderboard: false,
+    canUndo: false,
+    showDevTools: false,
+    canDevSkip: false,
+  });
 
   useEffect(() => {
     if (!isShikaku) return;
@@ -228,8 +264,18 @@ export function Sidebar() {
   }, [isShikaku]);
 
   useEffect(() => {
+    if (!isPips) return;
+    const stateHandler = (e: Event) => {
+      setPipsState((e as CustomEvent).detail);
+    };
+    window.addEventListener("pips-game-state", stateHandler);
+    return () => window.removeEventListener("pips-game-state", stateHandler);
+  }, [isPips]);
+
+  useEffect(() => {
     setMobileOpen(false);
     setConfirmLeave(false);
+    setPipsConfirmAction(null);
   }, [pathname]);
 
   // Auto-dismiss confirm after 3 seconds
@@ -239,6 +285,13 @@ export function Sidebar() {
       return () => { if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current); };
     }
   }, [confirmLeave]);
+
+  useEffect(() => {
+    if (pipsConfirmAction) {
+      pipsConfirmTimerRef.current = setTimeout(() => setPipsConfirmAction(null), 3000);
+      return () => { if (pipsConfirmTimerRef.current) clearTimeout(pipsConfirmTimerRef.current); };
+    }
+  }, [pipsConfirmAction]);
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
@@ -256,6 +309,18 @@ export function Sidebar() {
       setConfirmLeave(true);
     }
   }, [isInGame, confirmLeave, navigate]);
+
+  const handlePipsConfirmedAction = useCallback((action: "restart" | "give-up") => {
+    if (pipsConfirmAction === action) {
+      setPipsConfirmAction(null);
+      window.dispatchEvent(new CustomEvent(action === "restart" ? "pips-restart-run" : "pips-give-up"));
+      setMobileOpen(false);
+      return;
+    }
+
+    setPipsConfirmAction(action);
+    showToast(action === "restart" ? "Click restart again to reset this run" : "Click give up again to abandon this run", "info");
+  }, [pipsConfirmAction]);
 
   const isTop = settings.sidebarPosition === "top";
 
@@ -354,6 +419,70 @@ export function Sidebar() {
             />
           </>
         )}
+        {isPips && (
+          <>
+            <SidebarButton
+              icon={<FiCornerUpLeft size={24} />}
+              label="Undo"
+              disabled={pipsState.phase !== "playing" || !pipsState.canUndo}
+              className="sidebar-link--pips"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("pips-undo"));
+                setMobileOpen(false);
+              }}
+            />
+            <SidebarButton
+              icon={<FiRepeat size={24} />}
+              label={pipsConfirmAction === "restart" ? "Confirm Restart" : "Restart"}
+              disabled={pipsState.phase === "menu"}
+              className={`sidebar-link--pips${pipsConfirmAction === "restart" ? " sidebar-link--pips-confirm" : ""}`}
+              tooltipVariant={pipsConfirmAction === "restart" ? "danger" : undefined}
+              onClick={() => handlePipsConfirmedAction("restart")}
+            />
+            <SidebarButton
+              icon={<FiFlag size={24} />}
+              label={pipsConfirmAction === "give-up" ? "Confirm Give Up" : "Give Up"}
+              disabled={pipsState.phase === "menu" || pipsState.phase === "complete"}
+              className={`sidebar-link--pips${pipsConfirmAction === "give-up" ? " sidebar-link--pips-confirm" : ""}`}
+              tooltipVariant={pipsConfirmAction === "give-up" ? "danger" : undefined}
+              onClick={() => handlePipsConfirmedAction("give-up")}
+            />
+            <SidebarButton
+              icon={<FiAward size={24} />}
+              label="Leaderboard"
+              disabled={!pipsState.canLeaderboard}
+              className="sidebar-link--pips"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("pips-toggle-leaderboard"));
+                setMobileOpen(false);
+              }}
+            />
+            {pipsState.showDevTools && (
+              <>
+                <span className="sidebar-separator" aria-hidden="true" />
+                <SidebarButton
+                  icon={<FiEye size={24} />}
+                  label="DEV Solve"
+                  className="sidebar-link--pips"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("pips-dev-solution"));
+                    setMobileOpen(false);
+                  }}
+                />
+                <SidebarButton
+                  icon={<FiSkipForward size={24} />}
+                  label="DEV Skip"
+                  disabled={!pipsState.canDevSkip}
+                  className="sidebar-link--pips"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("pips-dev-skip"));
+                    setMobileOpen(false);
+                  }}
+                />
+              </>
+            )}
+          </>
+        )}
         <SidebarButton icon={<FiInfo size={24} />} label="Info" onClick={() => { setModal("info"); setMobileOpen(false); }} />
         <SidebarButton icon={<FiSettings size={24} />} label="Options" onClick={() => { setModal("options"); setMobileOpen(false); }} />
       </nav>
@@ -367,6 +496,7 @@ export function Sidebar() {
         {modal === "info" && demoInfo.gameType === "shade" && <ShadeDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
         {modal === "info" && demoInfo.gameType === "location" && <LocationDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
         {modal === "info" && demoInfo.gameType === "shikaku" && <ShikakuDemo onClose={() => setModal(null)} />}
+        {modal === "info" && demoInfo.gameType === "pips" && <PipsDemo onClose={() => setModal(null)} />}
         {modal === "info" && !demoInfo.gameType && <InfoModal onClose={() => setModal(null)} />}
         {modal === "host" && gameContext && (
           <HostControlsModal game={gameContext} sessionId={sessionId} onClose={() => setModal(null)} />
@@ -395,12 +525,27 @@ function SidebarLink({
   );
 }
 
-function SidebarButton({ icon, label, onClick, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean }) {
+function SidebarButton({
+  icon,
+  label,
+  onClick,
+  disabled,
+  className = "",
+  tooltipVariant,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+  tooltipVariant?: string | undefined;
+}) {
   return (
     <button
-      className="sidebar-link"
+      className={`sidebar-link ${className}`}
       data-tooltip={label}
       data-tooltip-pos="right"
+      data-tooltip-variant={tooltipVariant}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={disabled ? { opacity: 0.35, cursor: 'not-allowed', pointerEvents: 'none' } : undefined}

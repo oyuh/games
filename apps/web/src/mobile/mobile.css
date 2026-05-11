@@ -3920,6 +3920,14 @@
 }
 .m-solo-card--shikaku .m-solo-card-icon { color: #34d399; }
 .m-solo-card--shikaku .m-solo-card-title { color: #34d399; }
+
+.m-solo-card--pips {
+  --card-accent: #fb923c;
+  border-color: color-mix(in srgb, #fb923c 18%, var(--border));
+}
+.m-solo-card--pips .m-solo-card-icon { color: #fb923c; }
+.m-solo-card--pips .m-solo-card-title { color: #fb923c; }
+
 .m-solo-card-icon {
   flex-shrink: 0;
   display: flex;

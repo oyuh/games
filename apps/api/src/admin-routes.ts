@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, ne, and, gt, desc, sql, count, isNotNull } from "drizzle-orm";
+import { asc, eq, ne, and, gt, desc, sql, count, isNotNull } from "drizzle-orm";
 import {
   sessions,
   imposterGames,
@@ -12,6 +12,7 @@ import {
   adminRestrictedNames,
   adminNameOverrides,
   statusTable,
+  pipsScores,
   shikakuScores,
 } from "@games/shared";
 import { drizzleClient } from "./db-provider";
@@ -1183,6 +1184,91 @@ adminRoutes.delete("/shikaku/scores", async (c) => {
 
   // wipe all
   await drizzleClient.delete(shikakuScores);
+  return c.json({ ok: true, cleared: "all" });
+});
+
+// ─── Pips leaderboard management ────────────────────────────
+adminRoutes.get("/pips/scores", async (c) => {
+  const { page, pageSize, offset } = parsePagination(c, 50, 200);
+
+  const [scores, countResult] = await Promise.all([
+    drizzleClient.select().from(pipsScores).orderBy(asc(pipsScores.totalMs), asc(pipsScores.createdAt)).limit(pageSize).offset(offset),
+    drizzleClient.select({ total: count() }).from(pipsScores),
+  ]);
+  const totalCount = countResult[0]?.total ?? 0;
+
+  return c.json({ ok: true, scores, total: totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) });
+});
+
+adminRoutes.patch("/pips/scores/:id", async (c) => {
+  const { id } = c.req.param();
+  const body = await c.req.json<{
+    sessionId?: string;
+    name?: string;
+    seed?: number;
+    totalMs?: number;
+    easyMs?: number;
+    mediumMs?: number;
+    hardMs?: number;
+    puzzleCount?: number;
+    createdAt?: number;
+  }>();
+
+  const [existing] = await drizzleClient.select().from(pipsScores).where(eq(pipsScores.id, id));
+  if (!existing) return c.json({ error: "Score not found" }, 404);
+
+  const updates: Record<string, unknown> = {};
+  if (typeof body.sessionId === "string") {
+    const sessionId = body.sessionId.trim();
+    if (sessionId && sessionId.length <= 64) {
+      updates.sessionId = sessionId;
+    }
+  }
+  if (typeof body.name === "string") {
+    const name = body.name.trim().slice(0, 50);
+    if (name) {
+      updates.name = name;
+    }
+  }
+  if (typeof body.seed === "number" && Number.isInteger(body.seed) && body.seed >= 0) {
+    updates.seed = body.seed;
+  }
+  if (typeof body.totalMs === "number" && Number.isFinite(body.totalMs) && body.totalMs >= 0) {
+    updates.totalMs = Math.floor(body.totalMs);
+  }
+  if (typeof body.easyMs === "number" && Number.isFinite(body.easyMs) && body.easyMs >= 0) {
+    updates.easyMs = Math.floor(body.easyMs);
+  }
+  if (typeof body.mediumMs === "number" && Number.isFinite(body.mediumMs) && body.mediumMs >= 0) {
+    updates.mediumMs = Math.floor(body.mediumMs);
+  }
+  if (typeof body.hardMs === "number" && Number.isFinite(body.hardMs) && body.hardMs >= 0) {
+    updates.hardMs = Math.floor(body.hardMs);
+  }
+  if (typeof body.puzzleCount === "number" && Number.isInteger(body.puzzleCount) && body.puzzleCount >= 0) {
+    updates.puzzleCount = body.puzzleCount;
+  }
+  if (typeof body.createdAt === "number" && Number.isFinite(body.createdAt) && body.createdAt > 0) {
+    updates.createdAt = Math.floor(body.createdAt);
+  }
+
+  if (Object.keys(updates).length === 0) return c.json({ error: "No valid fields to update" }, 400);
+
+  await drizzleClient.update(pipsScores).set(updates).where(eq(pipsScores.id, id));
+  return c.json({ ok: true, updated: { id, ...updates } });
+});
+
+adminRoutes.delete("/pips/scores/:id", async (c) => {
+  const { id } = c.req.param();
+  const [existing] = await drizzleClient.select({ id: pipsScores.id }).from(pipsScores).where(eq(pipsScores.id, id));
+  if (!existing) return c.json({ error: "Score not found" }, 404);
+
+  await drizzleClient.delete(pipsScores).where(eq(pipsScores.id, id));
+  return c.json({ ok: true, deleted: id });
+});
+
+adminRoutes.delete("/pips/scores", async (c) => {
+  await drizzleClient.delete(pipsScores);
   return c.json({ ok: true, cleared: "all" });
 });
 

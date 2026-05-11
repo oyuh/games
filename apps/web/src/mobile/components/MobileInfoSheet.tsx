@@ -1,5 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { FiZap, FiCopy, FiEye, FiShield, FiLink, FiDroplet, FiMapPin, FiGrid, FiActivity, FiGithub, FiExternalLink } from "react-icons/fi";
+import { GiDominoTiles } from "react-icons/gi";
 import { useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { BottomSheet } from "./BottomSheet";
@@ -9,6 +10,7 @@ import { ChainDemo } from "../../components/demos/ChainDemo";
 import { ShadeDemo } from "../../components/demos/ShadeDemo";
 import { LocationDemo } from "../../components/demos/LocationDemo";
 import { ShikakuDemo } from "../../components/demos/ShikakuDemo";
+import { PipsDemo } from "../../components/demos/PipsDemo";
 import { useConnectionDebug } from "../../lib/connection-debug";
 import { getCustomStatus, subscribeCustomStatus } from "../../hooks/useAdminBroadcast";
 
@@ -43,13 +45,14 @@ function relativeTime(iso: string) {
   return `${days}d ago`;
 }
 
-function getGameType(pathname: string): "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | null {
+function getGameType(pathname: string): "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | "pips" | null {
   if (pathname.startsWith("/imposter/")) return "imposter";
   if (pathname.startsWith("/password/")) return "password";
   if (pathname.startsWith("/chain/")) return "chain";
   if (pathname.startsWith("/shade/")) return "shade";
   if (pathname.startsWith("/location/")) return "location";
   if (/^\/shikaku(\/|$)/.test(pathname)) return "shikaku";
+  if (/^\/pips(\/|$)/.test(pathname)) return "pips";
   return null;
 }
 
@@ -100,6 +103,7 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
     if (gameType === "shade") return <ShadeDemo onClose={onClose} />;
     if (gameType === "location") return <LocationDemo onClose={onClose} />;
     if (gameType === "shikaku") return <ShikakuDemo onClose={onClose} />;
+    if (gameType === "pips") return <PipsDemo onClose={onClose} />;
   }
 
   return (
@@ -257,6 +261,7 @@ const GAME_CATALOG = [
   { key: "shade", name: "Shade Signal", icon: <FiDroplet size={14} />, color: "#f472b6", players: "3–8", description: "Guess the secret color from text clues" },
   { key: "location", name: "Location Signal", icon: <FiMapPin size={14} />, color: "#f59e0b", players: "3–8", description: "Guess the secret map location from clues" },
   { key: "shikaku", name: "Shikaku", icon: <FiGrid size={14} />, color: "#06b6d4", players: "Solo", description: "Logic puzzle - divide the grid into rectangles" },
+  { key: "pips", name: "Pips", icon: <GiDominoTiles size={14} />, color: "#fb923c", players: "Solo", description: "Domino logic run with timed splits" },
 ];
 
 function getPageInfo(pathname: string): { title: string; icon: ReactNode; description: string; tips?: string[] } {
@@ -280,6 +285,9 @@ function getPageInfo(pathname: string): { title: string; icon: ReactNode; descri
   }
   if (/^\/shikaku(\/|$)/.test(pathname)) {
     return { title: "Shikaku", icon: <FiGrid size={16} />, description: "Divide the grid into rectangles - each with one number equal to its area.", tips: ["Drag to draw rectangles", "Each must contain exactly one number"] };
+  }
+  if (/^\/pips(\/|$)/.test(pathname)) {
+    return { title: "Pips", icon: <GiDominoTiles size={16} />, description: "Place dominoes so every colored region satisfies its rule.", tips: ["Drag dominoes onto adjacent cells", "Click or press R to rotate", "Ranked runs use Easy, Medium, and Hard splits"] };
   }
   return { title: "Page", icon: <FiZap size={16} />, description: "You're on an unknown page." };
 }
