@@ -388,6 +388,38 @@ export const shikakuBannedSessions = pgTable(
   }
 );
 
+export const pipsScores = pgTable(
+  "pips_scores",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    name: text("name").notNull(),
+    seed: integer("seed").notNull(),
+    totalMs: integer("total_ms").notNull(),
+    easyMs: integer("easy_ms").notNull(),
+    mediumMs: integer("medium_ms").notNull(),
+    hardMs: integer("hard_ms").notNull(),
+    puzzleCount: integer("puzzle_count").notNull().default(3),
+    replayData: jsonb("replay_data"),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  },
+  (table) => ({
+    totalTimeIdx: index("pips_scores_total_time_idx").on(table.totalMs),
+    sessionIdx: index("pips_scores_session_idx").on(table.sessionId),
+    sessionSeedIdx: index("pips_scores_session_seed_idx").on(table.sessionId, table.seed),
+  })
+);
+
+export const pipsBannedSessions = pgTable(
+  "pips_banned_sessions",
+  {
+    sessionId: text("session_id").primaryKey(),
+    reason: text("reason").notNull(),
+    violations: integer("violations").notNull().default(1),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  }
+);
+
 export type DrizzleSchema = {
   sessions: typeof sessions;
   statusTable: typeof statusTable;
@@ -403,4 +435,6 @@ export type DrizzleSchema = {
   adminNameOverrides: typeof adminNameOverrides;
   shikakuScores: typeof shikakuScores;
   shikakuBannedSessions: typeof shikakuBannedSessions;
+  pipsScores: typeof pipsScores;
+  pipsBannedSessions: typeof pipsBannedSessions;
 };

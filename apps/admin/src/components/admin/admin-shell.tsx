@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Dice5,
   Gamepad2,
   LayoutDashboard,
   RadioTower,
@@ -43,6 +44,12 @@ const NAV_ITEMS = [
     description: "Scores and cleanup",
     icon: Trophy,
   },
+  {
+    href: "/pips",
+    label: "Pips",
+    description: "Runs and leaderboard",
+    icon: Dice5,
+  },
 ] as const;
 
 function resolvePageMeta(pathname: string) {
@@ -75,6 +82,14 @@ function resolvePageMeta(pathname: string) {
       eyebrow: "Records",
       title: "Shikaku Scores",
       description: "Edit persisted score data, filter suspicious runs, and clean leaderboard entries without touching the database.",
+    };
+  }
+
+  if (pathname.startsWith("/pips")) {
+    return {
+      eyebrow: "Records",
+      title: "Pips Runs",
+      description: "Inspect ranked run splits, edit leaderboard entries, and clean Pips score records from the admin console.",
     };
   }
 

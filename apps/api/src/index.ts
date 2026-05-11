@@ -1,5 +1,5 @@
 import { fallbackPlayerName, mutators, queries, schema } from "@games/shared";
-import { adminNameOverrides, chatMessages, chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
+import { adminNameOverrides, chatMessages, chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -1748,6 +1748,526 @@ app.post("/api/shikaku/score", async (c) => {
     difficulty: candidate.difficulty,
     score: candidate.score,
     timeMs: candidate.timeMs,
+    puzzleCount: candidate.puzzleCount,
+    createdAt: Date.now(),
+  });
+
+  return c.json({ ok: true, id, replaced: assessment.willReplace });
+});
+
+// ─── Pips solo game endpoints ────────────────────────────────
+
+const PIPS_PUZZLES = 3;
+const PIPS_MIN_TOTAL_TIME_MS = 12_000;
+const PIPS_MIN_SPLIT_TIME_MS = 1_500;
+const PIPS_AUTO_BAN_MIN_TIME_MS = 4_000;
+const PIPS_MAX_TOTAL_TIME_MS = 7_200_000;
+const PIPS_MAX_SCORES_PER_SESSION = 20;
+const PIPS_SPLIT_SUM_TOLERANCE_MS = 250;
+
+type PipsScoreRequestBody = {
+  sessionId?: string;
+  name?: string;
+  seed?: number;
+  totalMs?: number;
+  easyMs?: number;
+  mediumMs?: number;
+  hardMs?: number;
+  puzzleCount?: number;
+};
+
+type PipsScoreCandidate = {
+  effectiveSessionId: string;
+  effectiveName: string;
+  seed: number;
+  totalMs: number;
+  easyMs: number;
+  mediumMs: number;
+  hardMs: number;
+  puzzleCount: number;
+  callerIp: string;
+  callerRegion: string;
+  callerUA: string;
+};
+
+type PipsScoreErrorCode =
+  | "invalid-body"
+  | "invalid-session"
+  | "invalid-session-id"
+  | "invalid-name"
+  | "invalid-seed"
+  | "invalid-time"
+  | "invalid-splits"
+  | "invalid-puzzle-count"
+  | "banned"
+  | "too-fast"
+  | "too-slow"
+  | "duplicate";
+
+type PipsScoreValidationResult =
+  | {
+      ok: false;
+      status: number;
+      error: string;
+      reason: string;
+      code: PipsScoreErrorCode;
+    }
+  | {
+      ok: true;
+      candidate: PipsScoreCandidate;
+    };
+
+type PipsScoreAssessment =
+  | {
+      kind: "error";
+      status: number;
+      error: string;
+      reason: string;
+      code: Extract<PipsScoreErrorCode, "banned" | "too-fast" | "too-slow" | "duplicate">;
+    }
+  | {
+      kind: "accepted-no-store";
+      reason: string;
+    }
+  | {
+      kind: "eligible";
+      willReplace: boolean;
+      worstScoreId: string | null;
+    };
+
+function isValidPipsTime(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+async function buildPipsScoreCandidate(
+  c: { req: { header: (name: string) => string | undefined }; header: (name: string, value: string) => void },
+  body: PipsScoreRequestBody | null
+): Promise<PipsScoreValidationResult> {
+  if (!body) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid body",
+      reason: "This run could not be verified because the score payload was invalid.",
+      code: "invalid-body",
+    };
+  }
+
+  const { sessionId, name, seed, totalMs, easyMs, mediumMs, hardMs, puzzleCount } = body;
+  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, sessionId);
+  if (!verifiedClaimedSessionId) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Invalid session",
+      reason: "Your session could not be verified for this run.",
+      code: "invalid-session",
+    };
+  }
+
+  const resolvedIdentity = await resolveSessionIdentity(c, {
+    claimedSessionId: verifiedClaimedSessionId,
+    claimedName: name,
+    allowCreate: false,
+  });
+
+  if (!resolvedIdentity) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Invalid session",
+      reason: "Your session could not be verified for this run.",
+      code: "invalid-session",
+    };
+  }
+
+  const effectiveSessionId = resolvedIdentity.sessionId;
+  const effectiveName = sanitizeSessionName(resolvedIdentity.name) ?? fallbackPlayerName(effectiveSessionId);
+
+  if (!effectiveSessionId || effectiveSessionId.length > 64) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid sessionId",
+      reason: "This run could not be verified because the session ID was invalid.",
+      code: "invalid-session-id",
+    };
+  }
+  if (typeof name === "string" && name.length > 50) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid name",
+      reason: "Your player name is too long to submit.",
+      code: "invalid-name",
+    };
+  }
+  if (typeof seed !== "number" || !Number.isInteger(seed)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid seed",
+      reason: "This run could not be verified because the puzzle seed was invalid.",
+      code: "invalid-seed",
+    };
+  }
+  if (!isValidPipsTime(totalMs) || !isValidPipsTime(easyMs) || !isValidPipsTime(mediumMs) || !isValidPipsTime(hardMs)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid time",
+      reason: "This run could not be verified because the recorded time was invalid.",
+      code: "invalid-time",
+    };
+  }
+  if (easyMs < PIPS_MIN_SPLIT_TIME_MS || mediumMs < PIPS_MIN_SPLIT_TIME_MS || hardMs < PIPS_MIN_SPLIT_TIME_MS) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid splits",
+      reason: "This run could not be verified because one of the split times was too short.",
+      code: "invalid-splits",
+    };
+  }
+  if (typeof puzzleCount !== "number" || puzzleCount !== PIPS_PUZZLES) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid puzzleCount",
+      reason: "Only complete ranked Pips runs can be submitted.",
+      code: "invalid-puzzle-count",
+    };
+  }
+
+  const splitTotal = easyMs + mediumMs + hardMs;
+  if (Math.abs(splitTotal - totalMs) > PIPS_SPLIT_SUM_TOLERANCE_MS) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid splits",
+      reason: "This run could not be verified because the split times do not match the total.",
+      code: "invalid-splits",
+    };
+  }
+
+  const { ip: callerIp, region: callerRegion, userAgent: callerUA } = await getClientInfo(c.req);
+
+  return {
+    ok: true,
+    candidate: {
+      effectiveSessionId,
+      effectiveName,
+      seed,
+      totalMs,
+      easyMs,
+      mediumMs,
+      hardMs,
+      puzzleCount,
+      callerIp,
+      callerRegion,
+      callerUA,
+    },
+  };
+}
+
+const pipsBanCache = new Set<string>();
+
+async function loadPipsBans() {
+  try {
+    const rows = await drizzleClient
+      .select({ sessionId: pipsBannedSessions.sessionId })
+      .from(pipsBannedSessions);
+    for (const r of rows) pipsBanCache.add(r.sessionId);
+  } catch {
+    // table may not exist yet
+  }
+}
+loadPipsBans().catch(console.error);
+
+function isPipsBanned(sessionId: string): boolean {
+  return pipsBanCache.has(sessionId);
+}
+
+async function autoBanPipsSession(sessionId: string, reasons: string[]) {
+  const reason = `Auto-ban: ${reasons.join("; ")}`;
+  pipsBanCache.add(sessionId);
+  try {
+    await drizzleClient
+      .insert(pipsBannedSessions)
+      .values({ sessionId, reason, violations: reasons.length, createdAt: Date.now() })
+      .onConflictDoUpdate({
+        target: pipsBannedSessions.sessionId,
+        set: {
+          reason,
+          violations: sql`${pipsBannedSessions.violations} + ${reasons.length}`,
+        },
+      });
+  } catch {
+    // DB write failed, in-memory ban still active
+  }
+}
+
+async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<PipsScoreAssessment> {
+  if (isPipsBanned(candidate.effectiveSessionId) || isBanned(candidate.effectiveSessionId, candidate.callerIp, candidate.callerRegion)) {
+    return {
+      kind: "error",
+      status: 403,
+      error: "Score rejected",
+      reason: "This session is not allowed to submit Pips scores.",
+      code: "banned",
+    };
+  }
+
+  if (candidate.totalMs < PIPS_MIN_TOTAL_TIME_MS) {
+    return {
+      kind: "error",
+      status: 400,
+      error: "Score rejected",
+      reason: "This run was faster than the minimum verifiable time for Pips.",
+      code: "too-fast",
+    };
+  }
+
+  if (candidate.totalMs > PIPS_MAX_TOTAL_TIME_MS) {
+    return {
+      kind: "error",
+      status: 400,
+      error: "Score rejected",
+      reason: "This run exceeded the maximum allowed time for Pips.",
+      code: "too-slow",
+    };
+  }
+
+  const [existing] = await drizzleClient
+    .select({ id: pipsScores.id })
+    .from(pipsScores)
+    .where(and(eq(pipsScores.sessionId, candidate.effectiveSessionId), eq(pipsScores.seed, candidate.seed)))
+    .limit(1);
+  if (existing) {
+    return {
+      kind: "error",
+      status: 409,
+      error: "Score already submitted for this run",
+      reason: "This run has already been submitted to the leaderboard.",
+      code: "duplicate",
+    };
+  }
+
+  const sessionScores = await drizzleClient
+    .select({ id: pipsScores.id, totalMs: pipsScores.totalMs })
+    .from(pipsScores)
+    .where(eq(pipsScores.sessionId, candidate.effectiveSessionId))
+    .orderBy(asc(pipsScores.totalMs));
+
+  if (sessionScores.length >= PIPS_MAX_SCORES_PER_SESSION) {
+    const worst = sessionScores[sessionScores.length - 1] ?? null;
+    if (worst && candidate.totalMs >= worst.totalMs) {
+      return {
+        kind: "accepted-no-store",
+        reason: "This score was verified, but it is not fast enough to enter your saved top 20.",
+      };
+    }
+
+    return {
+      kind: "eligible",
+      willReplace: Boolean(worst),
+      worstScoreId: worst?.id ?? null,
+    };
+  }
+
+  return {
+    kind: "eligible",
+    willReplace: false,
+    worstScoreId: null,
+  };
+}
+
+app.use(
+  "/api/pips/*",
+  rateLimiter({
+    windowMs: 60_000,
+    maxRequests: 30,
+    scope: "pips"
+  })
+);
+
+app.use(
+  "/api/pips/score",
+  rateLimiter({
+    windowMs: 60_000,
+    maxRequests: 6,
+    scope: "pips_score"
+  })
+);
+
+app.get("/api/pips/leaderboard", async (c) => {
+  const limitParam = parseInt(c.req.query("limit") ?? "10", 10);
+  const limit = Math.min(Math.max(1, limitParam), 50);
+  const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
+  const offset = (page - 1) * limit;
+  const mineOnly = ["1", "true", "yes"].includes((c.req.query("mineOnly") ?? "").toLowerCase());
+  const requestedSessionId = c.req.query("sessionId")?.trim() ?? null;
+  const resolvedIdentity = requestedSessionId
+    ? await resolveSessionIdentity(c, { claimedSessionId: requestedSessionId, allowCreate: false })
+    : null;
+  const sessionIdParam = resolvedIdentity?.sessionId ?? (normalizeSessionId(requestedSessionId) || null);
+  const filters = [sql`true`];
+
+  if (mineOnly) {
+    if (!sessionIdParam) {
+      return c.json({ entries: [], personalBest: null, page: 1, pageSize: limit, total: 0, totalPages: 1 });
+    }
+    filters.push(eq(pipsScores.sessionId, sessionIdParam));
+  }
+
+  const whereClause = and(...filters);
+  const [rows, totalResult] = await Promise.all([
+    drizzleClient
+      .select({
+        id: pipsScores.id,
+        name: pipsScores.name,
+        totalMs: pipsScores.totalMs,
+        easyMs: pipsScores.easyMs,
+        mediumMs: pipsScores.mediumMs,
+        hardMs: pipsScores.hardMs,
+        createdAt: pipsScores.createdAt,
+        sessionId: pipsScores.sessionId,
+        seed: pipsScores.seed,
+      })
+      .from(pipsScores)
+      .where(whereClause)
+      .orderBy(asc(pipsScores.totalMs), asc(pipsScores.createdAt))
+      .limit(limit)
+      .offset(offset),
+    drizzleClient
+      .select({ total: sql<number>`count(*)::int` })
+      .from(pipsScores)
+      .where(whereClause),
+  ]);
+  const totalCount = totalResult[0]?.total ?? 0;
+
+  let personalBest: { totalMs: number; rank: number; seed: number; easyMs: number; mediumMs: number; hardMs: number; createdAt: number; name: string } | null = null;
+  if (sessionIdParam && sessionIdParam.length <= 64) {
+    const [pb] = await drizzleClient
+      .select({
+        name: pipsScores.name,
+        seed: pipsScores.seed,
+        totalMs: pipsScores.totalMs,
+        easyMs: pipsScores.easyMs,
+        mediumMs: pipsScores.mediumMs,
+        hardMs: pipsScores.hardMs,
+        createdAt: pipsScores.createdAt,
+      })
+      .from(pipsScores)
+      .where(eq(pipsScores.sessionId, sessionIdParam))
+      .orderBy(asc(pipsScores.totalMs), asc(pipsScores.createdAt))
+      .limit(1);
+    if (pb) {
+      const [countResult] = await drizzleClient
+        .select({ count: sql<number>`count(*)::int` })
+        .from(pipsScores)
+        .where(lt(pipsScores.totalMs, pb.totalMs));
+      personalBest = { ...pb, rank: Number(countResult?.count ?? 0) + 1 };
+    }
+  }
+
+  return c.json({
+    entries: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      totalMs: r.totalMs,
+      easyMs: r.easyMs,
+      mediumMs: r.mediumMs,
+      hardMs: r.hardMs,
+      createdAt: r.createdAt,
+      seed: r.seed,
+      isOwn: sessionIdParam ? r.sessionId === sessionIdParam : false,
+    })),
+    personalBest,
+    page,
+    pageSize: limit,
+    total: totalCount,
+    totalPages: Math.ceil(totalCount / limit),
+  });
+});
+
+app.post("/api/pips/score/eligibility", async (c) => {
+  const body = await c.req.json().catch(() => null) as PipsScoreRequestBody | null;
+  const validation = await buildPipsScoreCandidate(c, body);
+  if (!validation.ok) {
+    return c.json({ ok: true, canSubmit: false, code: validation.code, reason: validation.reason });
+  }
+
+  const assessment = await assessPipsScoreCandidate(validation.candidate);
+  if (assessment.kind === "eligible") {
+    return c.json({
+      ok: true,
+      canSubmit: true,
+      code: "eligible",
+      reason: assessment.willReplace
+        ? "This run is verified and will replace your current slowest saved run."
+        : "This run is verified and ready to submit.",
+      willReplace: assessment.willReplace,
+    });
+  }
+
+  if (assessment.kind === "accepted-no-store") {
+    return c.json({ ok: true, canSubmit: false, code: "not-ranked", reason: assessment.reason });
+  }
+
+  return c.json({ ok: true, canSubmit: false, code: assessment.code, reason: assessment.reason });
+});
+
+app.post("/api/pips/score", async (c) => {
+  const body = await c.req.json().catch(() => null) as PipsScoreRequestBody | null;
+  const validation = await buildPipsScoreCandidate(c, body);
+  if (!validation.ok) {
+    return c.json({ error: validation.error }, { status: validation.status as 400 | 403 | 409 });
+  }
+
+  const { candidate } = validation;
+  const fp = computeFingerprint(candidate.callerIp, candidate.callerUA);
+  const fpAnomaly = checkFingerprintAnomaly(candidate.effectiveSessionId, fp);
+  if (fpAnomaly) {
+    const shouldBan = recordStrike(candidate.effectiveSessionId, "pips fingerprint anomaly: too many distinct clients");
+    if (shouldBan) {
+      const entry = abuseStrikes.get(candidate.effectiveSessionId);
+      await autoBanPipsSession(candidate.effectiveSessionId, entry?.reasons ?? ["fingerprint abuse"]);
+    }
+  }
+
+  const assessment = await assessPipsScoreCandidate(candidate);
+  if (assessment.kind === "error") {
+    if (assessment.code === "too-fast" && candidate.totalMs < PIPS_AUTO_BAN_MIN_TIME_MS) {
+      const shouldBan = recordStrike(candidate.effectiveSessionId, `pips impossibly fast: ${candidate.totalMs}ms`);
+      if (shouldBan) {
+        const entry = abuseStrikes.get(candidate.effectiveSessionId);
+        await autoBanPipsSession(candidate.effectiveSessionId, entry?.reasons ?? ["speed abuse"]);
+      }
+    }
+    return c.json({ error: assessment.error }, { status: assessment.status as 400 | 403 | 409 });
+  }
+
+  if (assessment.kind === "accepted-no-store") {
+    return c.json({ ok: true, id: null, replaced: false, reason: assessment.reason });
+  }
+
+  if (assessment.willReplace && assessment.worstScoreId) {
+    await drizzleClient
+      .delete(pipsScores)
+      .where(eq(pipsScores.id, assessment.worstScoreId));
+  }
+
+  const id = crypto.randomUUID();
+  await drizzleClient.insert(pipsScores).values({
+    id,
+    sessionId: candidate.effectiveSessionId,
+    name: candidate.effectiveName.slice(0, 50),
+    seed: candidate.seed,
+    totalMs: candidate.totalMs,
+    easyMs: candidate.easyMs,
+    mediumMs: candidate.mediumMs,
+    hardMs: candidate.hardMs,
     puzzleCount: candidate.puzzleCount,
     createdAt: Date.now(),
   });

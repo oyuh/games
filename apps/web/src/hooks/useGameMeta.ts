@@ -48,6 +48,31 @@ const favicons = {
       </g>
     </svg>`
   )}`,
+  shikaku: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="6" fill="#11251c"/>
+      <g transform="translate(6,6)" fill="none" stroke="#34d399" stroke-width="2" stroke-linejoin="round">
+        <rect x="0" y="0" width="20" height="20" rx="2"/>
+        <path d="M0 7h20M0 13h20M7 0v20M13 0v20"/>
+        <circle cx="4" cy="4" r="1" fill="#34d399" stroke="none"/>
+        <circle cx="16" cy="10" r="1" fill="#34d399" stroke="none"/>
+      </g>
+    </svg>`
+  )}`,
+  pips: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="6" fill="#2f2118"/>
+      <g transform="translate(5,9) rotate(-8 11 7)">
+        <rect x="0" y="0" width="22" height="14" rx="3" fill="#f6f1e8" stroke="#fb923c" stroke-width="2"/>
+        <path d="M11 1.5v11" stroke="#d6cab8" stroke-width="1.5"/>
+        <circle cx="5" cy="4" r="1.4" fill="#242424"/>
+        <circle cx="7" cy="10" r="1.4" fill="#242424"/>
+        <circle cx="15.5" cy="4" r="1.4" fill="#242424"/>
+        <circle cx="18.5" cy="7" r="1.4" fill="#242424"/>
+        <circle cx="15.5" cy="10" r="1.4" fill="#242424"/>
+      </g>
+    </svg>`
+  )}`,
 } as const;
 
 const titles: Record<string, string> = {
@@ -57,6 +82,8 @@ const titles: Record<string, string> = {
   chain: "Chain Reaction | Games",
   shade: "Shade Signal | Games",
   location: "Location Signal | Games",
+  shikaku: "Shikaku | Games",
+  pips: "Pips | Games",
 };
 
 function getGameFromPath(pathname: string): keyof typeof favicons {
@@ -65,6 +92,8 @@ function getGameFromPath(pathname: string): keyof typeof favicons {
   if (pathname.startsWith("/chain")) return "chain";
   if (pathname.startsWith("/shade")) return "shade";
   if (pathname.startsWith("/location")) return "location";
+  if (pathname.startsWith("/shikaku")) return "shikaku";
+  if (pathname.startsWith("/pips")) return "pips";
   return "home";
 }
 

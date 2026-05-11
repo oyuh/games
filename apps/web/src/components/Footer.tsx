@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useConnectionDebug } from "../lib/connection-debug";
 import "../styles/footer.css";
 import { getCustomStatus, subscribeCustomStatus } from "../hooks/useAdminBroadcast";
+import { getOrCreateSessionId } from "../lib/session";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
 
@@ -12,6 +13,7 @@ function useCustomStatus() {
 export function Footer() {
   const debug = useConnectionDebug();
   const customStatus = useCustomStatus();
+  const sessionId = getOrCreateSessionId();
   const [expanded, setExpanded] = useState(false);
   const [tick, setTick] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -161,6 +163,7 @@ export function Footer() {
             </div>
           )}
         </div>
+        <span className="footer-session-id">{sessionId}</span>
       </div>
     </footer>
   );
