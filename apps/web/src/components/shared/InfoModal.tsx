@@ -113,6 +113,19 @@ function getPageInfo(pathname: string): PageInfo {
     };
   }
 
+  if (/^\/pips(\/|$)/.test(pathname)) {
+    return {
+      title: "Pips",
+      icon: <FiZap size={18} />,
+      description: "A timed domino logic run. Place every domino onto adjacent cells so each colored region satisfies its rule.",
+      tips: [
+        "Drag dominoes from the tray onto adjacent cells",
+        "Click a domino or press R while holding it to rotate clockwise",
+        "Ranked runs use Easy, Medium, and Hard splits; fastest total time ranks",
+      ],
+    };
+  }
+
   return {
     title: "Page",
     icon: <FiMap size={18} />,

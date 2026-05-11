@@ -71,6 +71,7 @@ const SOLO_GAMES: SoloGameDef[] = [
     description: "Fill the board with dominoes. No duplicates.",
     icon: FiZap, accent: "#fb923c",
     bgGradient: "linear-gradient(160deg, #2e2218 0%, #1a1a1a 100%)",
+    href: "/pips",
     preview: (
       <div className="solo-preview-pips">
         <div className="solo-pips-domino solo-pips-domino--placed">

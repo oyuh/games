@@ -130,6 +130,19 @@ export type ShikakuScoreRecord = {
   createdAt: number;
 };
 
+export type PipsScoreRecord = {
+  id: string;
+  sessionId: string;
+  name: string;
+  seed: number;
+  totalMs: number;
+  easyMs: number;
+  mediumMs: number;
+  hardMs: number;
+  puzzleCount: number;
+  createdAt: number;
+};
+
 const GAME_TYPE_LABELS: Record<GameType, string> = {
   imposter: "Imposter",
   password: "Password",

@@ -1,8 +1,10 @@
 /* ── Footer ──────────────────────────────────────────────────── */
 .app-footer {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
   padding: 0.5rem 1rem;
   font-family: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
   font-size: 0.65rem;
@@ -18,20 +20,34 @@
 }
 
 .footer-row--main {
-  justify-content: center;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  justify-content: stretch;
 }
 
 .footer-row--status {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.15rem);
+  max-width: min(42rem, calc(100vw - 2rem));
   justify-content: center;
   padding: 0.25rem 0.75rem;
-  margin-bottom: 0.15rem;
+  margin: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
 }
 
 
 .footer-custom-status {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
   font-size: 0.7rem;
   color: var(--primary);
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   opacity: 0.85;
   letter-spacing: 0.02em;
   transition: color 0.2s;
@@ -45,6 +61,7 @@
 }
 
 .footer-credit {
+  justify-self: end;
   white-space: nowrap;
 }
 
@@ -98,6 +115,19 @@
 
 .footer-status-wrap {
   position: relative;
+  justify-self: center;
+}
+
+.footer-session-id {
+  justify-self: start;
+  min-width: 0;
+  max-width: min(24rem, calc(50vw - 8rem));
+  overflow: hidden;
+  color: color-mix(in srgb, var(--secondary) 72%, transparent);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Expanded details popover ────────────────────────────────── */

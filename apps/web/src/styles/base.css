@@ -118,6 +118,18 @@
   --game-accent: #f59e0b;
   --game-bg: #2e2418;
 }
+[data-game-theme="shikaku"] {
+  --primary: #34d399;
+  --primary-foreground: #181a1b;
+  --game-accent: #34d399;
+  --game-bg: #182c24;
+}
+[data-game-theme="pips"] {
+  --primary: #fb923c;
+  --primary-foreground: #181a1b;
+  --game-accent: #fb923c;
+  --game-bg: #2f2118;
+}
 
 /* ── Base ────────────────────────────────────────────────────── */
 *,

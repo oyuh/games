@@ -50,6 +50,13 @@
       "when": 1778801000000,
       "tag": "0006_locked_satellite",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778467335063,
+      "tag": "0007_wealthy_praxagora",
+      "breakpoints": true
     }
   ]
 }

@@ -1098,6 +1098,8 @@
 
 /* ── Leaderboard overlay ───────────────────────────────────── */
 .shikaku-leaderboard-overlay {
+  --primary: #34d399;
+  --primary-foreground: #181a1b;
   position: fixed;
   inset: 0;
   z-index: 900;
@@ -1112,6 +1114,8 @@
   overflow: hidden;
 }
 .shikaku-leaderboard {
+  --primary: #34d399;
+  --primary-foreground: #181a1b;
   background: linear-gradient(to bottom right, #232323, #181a1b);
   border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
   border-radius: 1rem;
