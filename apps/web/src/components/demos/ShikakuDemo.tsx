@@ -44,7 +44,7 @@ function DemoGrid({ step }: { step: number }) {
   // Step 2: fully solved
   // Step 3-4: scoring/leaderboard view
 
-  const numbers: Record<number, number> = { 2: 4, 5: 2, 8: 6, 13: 4 };
+  const numbers: Record<number, number> = { 2: 4, 5: 2, 11: 6, 13: 4 };
   const filled: Record<number, string> = {};
 
   if (step >= 1) {
@@ -56,9 +56,9 @@ function DemoGrid({ step }: { step: number }) {
 
   if (step >= 2) {
     // Third rectangle: cells 6,7,8,9,10,11 - area 6
-    [6, 7, 8, 9, 10, 11].forEach((i) => { filled[i] = "#f472b6"; });
+    [6, 7, 10, 11, 14, 15].forEach((i) => { filled[i] = "#f472b6"; });
     // Fourth rectangle: cells 12,13,14,15 - area 4
-    [12, 13, 14, 15].forEach((i) => { filled[i] = "#a78bfa"; });
+    [8, 9, 12, 13].forEach((i) => { filled[i] = "#a78bfa"; });
   }
 
   return (
