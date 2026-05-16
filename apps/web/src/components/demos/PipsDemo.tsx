@@ -1,7 +1,7 @@
 import { type CSSProperties, useMemo, useRef, useState } from "react";
-import { FiCheck, FiClock, FiMove, FiRotateCw, FiZap } from "react-icons/fi";
-import { GiDominoTiles } from "react-icons/gi";
+import { FiCheck, FiClock, FiMove, FiRotateCw } from "react-icons/fi";
 import { DemoModal, type DemoStep } from "./DemoModal";
+import { GameIcon } from "../shared/GameIcon";
 import "../../styles/pips.css";
 
 const steps: DemoStep[] = [
@@ -127,7 +127,7 @@ function MiniPipsBoard({ step }: { step: number }) {
       </div>
 
       <div className="pips-demo-status">
-        {step === 0 && <><FiZap size={14} /> Ranked run: Easy / Medium / Hard</>}
+        {step === 0 && <><GameIcon game="pips" size={14} /> Ranked run: Easy / Medium / Hard</>}
         {step === 1 && <><FiCheck size={14} /> Rule chips sit on region edges</>}
         {step === 2 && <><FiMove size={14} /> Drag, drop, and snap into place</>}
         {step === 3 && <><FiRotateCw size={14} /> Rotate clockwise with click or R</>}
@@ -182,7 +182,7 @@ export function PipsDemo({ onClose, initialStep = 0 }: { onClose: () => void; in
   return (
     <DemoModal
       title="Pips"
-      icon={<GiDominoTiles size={22} />}
+      icon={<GameIcon game="pips" size={22} />}
       color="#f97316"
       steps={steps}
       currentStep={step}

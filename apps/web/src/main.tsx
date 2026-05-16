@@ -10,6 +10,12 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { getOrCreateSessionId, getStoredSessionProof, syncSessionIdentityForBoot } from "./lib/session";
 
+const SYNC_FREE_BOOT_ROUTES = ["/shikaku", "/pips"];
+
+function isSyncFreeBootRoute() {
+  return SYNC_FREE_BOOT_ROUTES.some((prefix) => window.location.pathname.startsWith(prefix));
+}
+
 function renderBootstrapFailure(message: string) {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
@@ -54,7 +60,7 @@ async function bootstrap() {
   let initialSessionId = getOrCreateSessionId();
   let initialSessionProof = getStoredSessionProof();
 
-  if (!styleOnly) {
+  if (!styleOnly && !isSyncFreeBootRoute()) {
     try {
       const synced = await syncSessionIdentityForBoot(apiBase);
       initialSessionId = synced.sessionId;

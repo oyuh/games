@@ -119,12 +119,16 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
 /** Routes that don't use the Zero sync server (solo/offline games). */
 const SYNC_FREE_ROUTES = ["/shikaku", "/pips"];
 
+function isSyncFreePath(pathname: string) {
+  return SYNC_FREE_ROUTES.some((prefix) => pathname.startsWith(prefix));
+}
+
 /** Route-aware wake notice for a real sync cold start. */
 function SyncWakeToast() {
   const location = useLocation();
   const debug = useConnectionDebug();
   const zeroState = debug.zeroState;
-  const needsSync = !SYNC_FREE_ROUTES.some((prefix) => location.pathname.startsWith(prefix));
+  const needsSync = !isSyncFreePath(location.pathname);
   const countdown = useSyncCountdown();
   const [showWakeNotice, setShowWakeNotice] = useState(false);
   const wakeNoticeTimerRef = useRef<number | null>(null);
@@ -205,8 +209,11 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
     let cancelled = false;
 
     const verifyIdentity = async () => {
+      if (isSyncFreePath(window.location.pathname)) {
+        return;
+      }
       const synced = await syncSessionIdentity(apiBaseURL, { allowCreate: true, reason: "app-verify" });
-      if (!cancelled && (synced.sessionId !== initialSessionId || synced.zeroSessionProof !== initialSessionProof)) {
+      if (!cancelled && !isSyncFreePath(window.location.pathname) && (synced.sessionId !== initialSessionId || synced.zeroSessionProof !== initialSessionProof)) {
         window.location.reload();
       }
     };

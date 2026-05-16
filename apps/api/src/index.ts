@@ -29,6 +29,7 @@ import {
 } from "./session-identity";
 import { getClientInfo } from "./client-info";
 import { shikakuImageRoutes } from "./shikaku-image";
+import { embedRoutes } from "./embed-routes";
 
 config({ path: "../../.env" });
 
@@ -129,6 +130,9 @@ app.route("/api/admin", adminRoutes);
 
 // ─── Public endpoints (no auth) ─────────────────────────────
 app.route("/api/public", getRestrictedNamesRoute());
+
+// ─── Rich link embeds for crawlers/social previews ──────────
+app.route("/api/embed", embedRoutes);
 
 // ─── Shikaku puzzle image generator ─────────────────────────
 app.route("/api/shikaku", shikakuImageRoutes);

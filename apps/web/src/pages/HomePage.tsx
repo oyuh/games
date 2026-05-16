@@ -1,11 +1,11 @@
-import { imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
+import { GAME_META, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import "../styles/home.css";
 import { nanoid } from "nanoid";
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
-import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiZap, FiGrid } from "react-icons/fi";
+import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { isNameRestricted } from "../hooks/useAdminBroadcast";
@@ -37,11 +37,14 @@ const GAME_CARD_DOTS = Array.from({ length: GAME_CARD_COUNT }, (_, index) => ({
 }));
 
 /* ── Solo game definitions ────────────────────────────────────── */
+const shikakuMeta = GAME_META.shikaku;
+const pipsMeta = GAME_META.pips;
+
 const SOLO_GAMES: SoloGameDef[] = [
   {
-    id: "shikaku", title: "Shikaku",
-    description: "Divide the grid into rectangles.",
-    icon: FiGrid, accent: "#34d399",
+    id: "shikaku", gameSlug: "shikaku", title: shikakuMeta.title,
+    description: shikakuMeta.shortDescription,
+    accent: shikakuMeta.accent,
     bgGradient: "linear-gradient(160deg, #1a2e26 0%, #1a1a1a 100%)",
     href: "/shikaku",
     preview: (
@@ -67,9 +70,9 @@ const SOLO_GAMES: SoloGameDef[] = [
     ),
   },
   {
-    id: "pips", title: "Pips",
-    description: "Fill the board with dominoes. No duplicates.",
-    icon: FiZap, accent: "#fb923c",
+    id: "pips", gameSlug: "pips", title: pipsMeta.title,
+    description: pipsMeta.shortDescription,
+    accent: pipsMeta.accent,
     bgGradient: "linear-gradient(160deg, #2e2218 0%, #1a1a1a 100%)",
     href: "/pips",
     preview: (
@@ -92,7 +95,7 @@ const SOLO_GAMES: SoloGameDef[] = [
   {
     id: "nexus", title: "Nexus",
     description: "Connect nodes to complete the circuit.",
-    icon: FiZap, accent: "#38bdf8",
+    accent: "#38bdf8",
     bgGradient: "linear-gradient(160deg, #182530 0%, #1a1a1a 100%)",
     preview: (
       <div className="solo-preview-nexus">
@@ -1793,7 +1796,7 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
     ? `/location/${game.id}`
     : `/chain/${game.id}`;
 
-  const typeLabel = game.gameType === "chain_reaction" ? "chain reaction" : game.gameType === "shade_signal" ? "shade signal" : game.gameType === "location_signal" ? "location signal" : game.gameType;
+  const typeLabel = GAME_META[multiplayerTypeToGameSlug(game.gameType)].title.toLowerCase();
 
   // Tooltip content for finished games
   const tooltip = useMemo(() => {

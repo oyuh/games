@@ -1,12 +1,13 @@
-import { imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
+import { GAME_META, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiEye, FiShield, FiLink, FiMapPin, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGrid, FiZap, FiDroplet } from "react-icons/fi";
+import { FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiZap } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
+import { GameIcon } from "../../components/shared/GameIcon";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, SessionGameType, setStoredName } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { isNameRestricted } from "../../hooks/useAdminBroadcast";
@@ -403,7 +404,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <div className="m-game-card m-game-card--imposter">
         <button className="m-game-card-header" onClick={() => toggle("imposter")}>
           <div className="m-game-card-info">
-            <FiEye size={18} />
+            <GameIcon game="imposter" size={18} />
             <div>
               <h3 className="m-game-card-title">Imposter</h3>
               <p className="m-game-card-desc">Find the liar. Give clues. Vote them out.</p>
@@ -471,7 +472,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <div className="m-game-card m-game-card--password">
         <button className="m-game-card-header" onClick={() => toggle("password")}>
           <div className="m-game-card-info">
-            <FiShield size={18} />
+            <GameIcon game="password" size={18} />
             <div>
               <h3 className="m-game-card-title">Password</h3>
               <p className="m-game-card-desc">One-word clues. Team guessing. First to target wins.</p>
@@ -539,7 +540,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <div className="m-game-card m-game-card--chain">
         <button className="m-game-card-header" onClick={() => toggle("chain")}>
           <div className="m-game-card-info">
-            <FiLink size={18} />
+            <GameIcon game="chain" size={18} />
             <div>
               <h3 className="m-game-card-title">Chain Reaction</h3>
               <p className="m-game-card-desc">Race to solve linked word chains in a 1v1 duel.</p>
@@ -614,7 +615,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <div className="m-game-card m-game-card--shade">
         <button className="m-game-card-header" onClick={() => toggle("shade")}>
           <div className="m-game-card-info">
-            <FiDroplet size={18} />
+            <GameIcon game="shade" size={18} />
             <div>
               <h3 className="m-game-card-title">Shade Signal</h3>
               <p className="m-game-card-desc">One leader, one color. Give clues and guess the shade.</p>
@@ -684,7 +685,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <div className="m-game-card m-game-card--location">
         <button className="m-game-card-header" onClick={() => toggle("location")}>
           <div className="m-game-card-info">
-            <FiMapPin size={18} />
+            <GameIcon game="location" size={18} />
             <div>
               <h3 className="m-game-card-title">Location Signal</h3>
               <p className="m-game-card-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
@@ -748,8 +749,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       {/* ── Solo / Singleplayer Games ──────────────────── */}
       <h3 className="m-home-games-heading" style={{ marginTop: "0.5rem" }}>Singleplayer</h3>
 
-      <Link to="/shikaku" className="m-solo-card m-solo-card--shikaku">
-        <div className="m-solo-card-icon"><FiGrid size={20} /></div>
+      <Link to="/shikaku" className="m-solo-card m-solo-card--shikaku" data-game-theme="shikaku">
+        <div className="m-solo-card-icon"><GameIcon game="shikaku" size={20} /></div>
         <div className="m-solo-card-body">
           <h3 className="m-solo-card-title">Shikaku</h3>
           <p className="m-solo-card-desc">Divide the grid into rectangles</p>
@@ -757,8 +758,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         <span className="m-solo-card-play">Play</span>
       </Link>
 
-      <Link to="/pips" className="m-solo-card m-solo-card--pips">
-        <div className="m-solo-card-icon"><FiZap size={20} /></div>
+      <Link to="/pips" className="m-solo-card m-solo-card--pips" data-game-theme="pips">
+        <div className="m-solo-card-icon"><GameIcon game="pips" size={20} /></div>
         <div className="m-solo-card-body">
           <h3 className="m-solo-card-title">Pips</h3>
           <p className="m-solo-card-desc">Fill the board with dominoes</p>
@@ -793,7 +794,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
 
 /* ── Recent game item (mobile) ───── */
 function MobileRecentGameItem({ game }: { game: { id: string; code: string; gameType: string } }) {
-  const typeLabel = game.gameType === "chain_reaction" ? "Chain Reaction" : game.gameType === "shade_signal" ? "Shade Signal" : game.gameType === "location_signal" ? "Location Signal" : game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1);
+  const typeLabel = labelForRecentGameType(game.gameType);
 
   const link = game.gameType === "imposter"
     ? `/imposter/${game.id}`
@@ -811,4 +812,11 @@ function MobileRecentGameItem({ game }: { game: { id: string; code: string; game
       <span className="m-recent-code">{game.code}</span>
     </Link>
   );
+}
+
+function labelForRecentGameType(gameType: string) {
+  if (gameType === "imposter" || gameType === "password" || gameType === "chain_reaction" || gameType === "shade_signal" || gameType === "location_signal") {
+    return GAME_META[multiplayerTypeToGameSlug(gameType)].title;
+  }
+  return gameType.charAt(0).toUpperCase() + gameType.slice(1);
 }

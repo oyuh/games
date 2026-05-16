@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiGrid, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward } from "react-icons/fi";
+import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward } from "react-icons/fi";
 import { FaCrown } from "react-icons/fa";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
@@ -9,6 +9,7 @@ import { useSettings } from "../lib/settings";
 import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
 import { showToast } from "../lib/toast";
+import { GameIcon } from "./shared/GameIcon";
 
 const ImposterDemo = lazy(() => import("./demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
 const PasswordDemo = lazy(() => import("./demos/PasswordDemo").then(({ PasswordDemo }) => ({ default: PasswordDemo })));
@@ -319,7 +320,7 @@ export function Sidebar() {
     }
 
     setPipsConfirmAction(action);
-    showToast(action === "restart" ? "Click restart again to reset this run" : "Click give up again to abandon this run", "info");
+    showToast(action === "restart" ? "Click restart again to start a fresh seed" : "Click give up again to abandon this run", "info");
   }, [pipsConfirmAction]);
 
   const isTop = settings.sidebarPosition === "top";
@@ -403,7 +404,7 @@ export function Sidebar() {
                 ? <FiHash size={24} />
                 : shikakuState.infiniteMode
                   ? <FiRepeat size={24} />
-                  : <FiGrid size={24} />
+                  : <GameIcon game="shikaku" size={24} />
               }
               <span className="sidebar-link-label">
                 {shikakuState.customMode || shikakuState.showSeedInput ? "Seed" : shikakuState.infiniteMode ? "Infinite" : "Regular"}

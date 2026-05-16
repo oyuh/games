@@ -1,8 +1,9 @@
-import { ReactNode, useState } from "react";
+import { useState } from "react";
 import { FiCopy, FiCheck, FiTag } from "react-icons/fi";
-import { gameCategoryLabels } from "@games/shared";
+import { gameCategoryLabels, type GameSlug } from "@games/shared";
 import { RoundCountdown } from "../shared/RoundCountdown";
 import { SpectatorBadge, HostBadge } from "../shared/SpectatorBadge";
+import { GameIcon } from "../shared/GameIcon";
 
 const phaseLabels: Record<string, string> = {
   lobby: "Lobby",
@@ -58,24 +59,10 @@ const phaseTooltips: Record<string, string> = {
   finished: "Game complete - see final scores"
 };
 
-const headerIcons: Record<string, ReactNode> = {
-  Password: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  ),
-  "Chain Reaction": (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-    </svg>
-  ),
-  "Location Signal": (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  ),
+const headerGames: Record<string, GameSlug> = {
+  Password: "password",
+  "Chain Reaction": "chain",
+  "Location Signal": "location",
 };
 
 export function PasswordHeader({
@@ -108,7 +95,7 @@ export function PasswordHeader({
   return (
     <div className="game-header">
       <div className="game-header-left">
-        {headerIcons[title] && <div className="game-header-icon">{headerIcons[title]}</div>}
+        {headerGames[title] && <div className="game-header-icon"><GameIcon game={headerGames[title]} size={20} /></div>}
         <h1 className="game-title">{title}</h1>
         {category && gameCategoryLabels[category] && (
           <span className="badge badge-category" data-tooltip="Word bank category" data-tooltip-variant="info"><FiTag size={10} /> {gameCategoryLabels[category]}</span>
