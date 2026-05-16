@@ -1090,6 +1090,14 @@ export function getRestrictedNamesRoute() {
 // ─── Shikaku leaderboard management ─────────────────────────
 const VALID_DIFFICULTIES = ["easy", "medium", "hard", "expert"];
 
+function readTrimmedText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function readWholeNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? Math.floor(value) : null;
+}
+
 adminRoutes.get("/shikaku/scores", async (c) => {
   const difficulty = c.req.query("difficulty");
   const { page, pageSize, offset } = parsePagination(c, 50, 200);
@@ -1109,6 +1117,58 @@ adminRoutes.get("/shikaku/scores", async (c) => {
   const totalCount = countResult[0]?.total ?? 0;
 
   return c.json({ ok: true, scores, total: totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) });
+});
+
+adminRoutes.post("/shikaku/scores", async (c) => {
+  const body = await c.req.json<{
+    id?: string;
+    sessionId?: string;
+    name?: string;
+    seed?: number;
+    difficulty?: string;
+    score?: number;
+    timeMs?: number;
+    puzzleCount?: number;
+    createdAt?: number;
+  }>().catch(() => null);
+
+  if (!body) return c.json({ error: "Invalid body" }, 400);
+
+  const sessionId = readTrimmedText(body.sessionId);
+  const name = readTrimmedText(body.name).slice(0, 50);
+  const seed = readWholeNumber(body.seed);
+  const difficulty = readTrimmedText(body.difficulty);
+  const score = readWholeNumber(body.score);
+  const timeMs = readWholeNumber(body.timeMs);
+  const puzzleCount = readWholeNumber(body.puzzleCount) ?? 5;
+  const createdAt = readWholeNumber(body.createdAt) ?? Date.now();
+  const id = readTrimmedText(body.id) || crypto.randomUUID();
+
+  if (!sessionId || sessionId.length > 64) return c.json({ error: "Invalid sessionId" }, 400);
+  if (!name) return c.json({ error: "Invalid name" }, 400);
+  if (seed == null || seed < 0) return c.json({ error: "Invalid seed" }, 400);
+  if (!VALID_DIFFICULTIES.includes(difficulty)) return c.json({ error: "Invalid difficulty" }, 400);
+  if (score == null || score < 0) return c.json({ error: "Invalid score" }, 400);
+  if (timeMs == null || timeMs < 0) return c.json({ error: "Invalid timeMs" }, 400);
+  if (puzzleCount < 1) return c.json({ error: "Invalid puzzleCount" }, 400);
+  if (createdAt < 1) return c.json({ error: "Invalid createdAt" }, 400);
+
+  await drizzleClient.insert(shikakuScores).values({
+    id,
+    sessionId,
+    name,
+    seed,
+    difficulty,
+    score,
+    timeMs,
+    puzzleCount,
+    createdAt,
+  });
+
+  return c.json({
+    ok: true,
+    score: { id, sessionId, name, seed, difficulty, score, timeMs, puzzleCount, createdAt },
+  });
 });
 
 adminRoutes.patch("/shikaku/scores/:id", async (c) => {
@@ -1198,6 +1258,64 @@ adminRoutes.get("/pips/scores", async (c) => {
   const totalCount = countResult[0]?.total ?? 0;
 
   return c.json({ ok: true, scores, total: totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) });
+});
+
+adminRoutes.post("/pips/scores", async (c) => {
+  const body = await c.req.json<{
+    id?: string;
+    sessionId?: string;
+    name?: string;
+    seed?: number;
+    totalMs?: number;
+    easyMs?: number;
+    mediumMs?: number;
+    hardMs?: number;
+    puzzleCount?: number;
+    createdAt?: number;
+  }>().catch(() => null);
+
+  if (!body) return c.json({ error: "Invalid body" }, 400);
+
+  const sessionId = readTrimmedText(body.sessionId);
+  const name = readTrimmedText(body.name).slice(0, 50);
+  const seed = readWholeNumber(body.seed);
+  const easyMs = readWholeNumber(body.easyMs);
+  const mediumMs = readWholeNumber(body.mediumMs);
+  const hardMs = readWholeNumber(body.hardMs);
+  const derivedTotalMs = easyMs != null && mediumMs != null && hardMs != null ? easyMs + mediumMs + hardMs : null;
+  const totalMs = readWholeNumber(body.totalMs) ?? derivedTotalMs;
+  const puzzleCount = readWholeNumber(body.puzzleCount) ?? 3;
+  const createdAt = readWholeNumber(body.createdAt) ?? Date.now();
+  const id = readTrimmedText(body.id) || crypto.randomUUID();
+
+  if (!sessionId || sessionId.length > 64) return c.json({ error: "Invalid sessionId" }, 400);
+  if (!name) return c.json({ error: "Invalid name" }, 400);
+  if (seed == null || seed < 0) return c.json({ error: "Invalid seed" }, 400);
+  if (easyMs == null || easyMs < 0) return c.json({ error: "Invalid easyMs" }, 400);
+  if (mediumMs == null || mediumMs < 0) return c.json({ error: "Invalid mediumMs" }, 400);
+  if (hardMs == null || hardMs < 0) return c.json({ error: "Invalid hardMs" }, 400);
+  if (totalMs == null || totalMs < 0) return c.json({ error: "Invalid totalMs" }, 400);
+  if (totalMs !== easyMs + mediumMs + hardMs) return c.json({ error: "totalMs must equal easyMs + mediumMs + hardMs" }, 400);
+  if (puzzleCount < 1) return c.json({ error: "Invalid puzzleCount" }, 400);
+  if (createdAt < 1) return c.json({ error: "Invalid createdAt" }, 400);
+
+  await drizzleClient.insert(pipsScores).values({
+    id,
+    sessionId,
+    name,
+    seed,
+    totalMs,
+    easyMs,
+    mediumMs,
+    hardMs,
+    puzzleCount,
+    createdAt,
+  });
+
+  return c.json({
+    ok: true,
+    score: { id, sessionId, name, seed, totalMs, easyMs, mediumMs, hardMs, puzzleCount, createdAt },
+  });
 });
 
 adminRoutes.patch("/pips/scores/:id", async (c) => {

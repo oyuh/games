@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiZap } from "react-icons/fi";
+import { FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGithub } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
@@ -21,6 +21,8 @@ function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
     if (next !== i) set(opts[next]!);
   };
 }
+
+const NEW_GAME_ISSUE_URL = "https://github.com/oyuh/games/issues/new?template=new-game.md&title=%5BNew%20Game%5D%20";
 
 export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
@@ -755,7 +757,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           <h3 className="m-solo-card-title">Shikaku</h3>
           <p className="m-solo-card-desc">Divide the grid into rectangles</p>
         </div>
-        <span className="m-solo-card-play">Play</span>
+        <span className="m-solo-card-cta">Click to Play</span>
       </Link>
 
       <Link to="/pips" className="m-solo-card m-solo-card--pips" data-game-theme="pips">
@@ -764,17 +766,22 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           <h3 className="m-solo-card-title">Pips</h3>
           <p className="m-solo-card-desc">Fill the board with dominoes</p>
         </div>
-        <span className="m-solo-card-play">Play</span>
+        <span className="m-solo-card-cta">Click to Play</span>
       </Link>
 
-      <div className="m-solo-card m-solo-card--disabled">
-        <div className="m-solo-card-icon"><FiZap size={20} /></div>
+      <a
+        href={NEW_GAME_ISSUE_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="m-solo-card m-solo-card--ideas"
+      >
+        <div className="m-solo-card-icon"><FiGithub size={20} /></div>
         <div className="m-solo-card-body">
-          <h3 className="m-solo-card-title">Nexus</h3>
-          <p className="m-solo-card-desc">Connect nodes to complete the circuit</p>
+          <h3 className="m-solo-card-title">Coming Soon</h3>
+          <p className="m-solo-card-desc">Suggest the next singleplayer game on GitHub</p>
         </div>
-        <span className="m-solo-card-soon">Soon</span>
-      </div>
+        <span className="m-solo-card-cta">Coming Soon</span>
+      </a>
 
       {showInSessionModal && pendingJoinTarget && (
         <InSessionModal
