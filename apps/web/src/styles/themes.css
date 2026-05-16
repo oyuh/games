@@ -53,13 +53,14 @@
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
-[data-theme="light"] .solo-card:hover {
+[data-theme="light"] .solo-card--interactive:hover {
   border-color: color-mix(in srgb, var(--solo-accent, var(--primary)) 45%, var(--border));
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .solo-card-play {
-  color: #fff;
+[data-theme="light"] .solo-card-bottom {
+  background: color-mix(in srgb, var(--solo-accent, var(--primary)) 16%, var(--card));
+  border-top-color: color-mix(in srgb, var(--solo-accent, var(--primary)) 28%, var(--border));
 }
 
 [data-theme="light"] .home-icon-layer {

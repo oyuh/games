@@ -1,0 +1,224 @@
+.admin-scores-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2rem 2rem 5rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.admin-scores-hero,
+.admin-scores-auth {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-scores-kicker {
+  margin: 0 0 0.35rem;
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-scores-page h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.admin-scores-subtitle {
+  max-width: 46rem;
+  margin: 0.65rem 0 0;
+  color: var(--secondary);
+  line-height: 1.5;
+}
+
+.admin-scores-card {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+  padding: 1.25rem;
+}
+
+.admin-scores-auth-copy h2,
+.admin-scores-section-head h2,
+.admin-scores-panel h3 {
+  margin: 0;
+}
+
+.admin-scores-auth-copy h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+.admin-scores-auth-copy p,
+.admin-scores-section-head p,
+.admin-scores-panel-note,
+.admin-scores-empty,
+.admin-scores-footnote p {
+  margin: 0.45rem 0 0;
+  color: var(--secondary);
+  line-height: 1.45;
+}
+
+.admin-scores-auth-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(100%, 38rem);
+}
+
+.admin-scores-auth-controls .input {
+  flex: 1;
+}
+
+.admin-scores-tabs {
+  display: inline-flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+.admin-scores-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--secondary);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.admin-scores-tab--active {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--foreground);
+}
+
+.admin-scores-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.95fr);
+  gap: 1rem;
+}
+
+.admin-scores-form,
+.admin-scores-sidebar,
+.admin-scores-panel,
+.admin-score-example-list,
+.admin-score-recent-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.admin-scores-section-head,
+.admin-scores-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-scores-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.admin-scores-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-scores-field span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+}
+
+.admin-scores-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.admin-score-example,
+.admin-score-recent {
+  appearance: none;
+  width: 100%;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  color: inherit;
+  border-radius: 0.85rem;
+  padding: 0.85rem 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.admin-score-example:hover,
+.admin-score-recent:hover {
+  border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  transform: translateY(-1px);
+}
+
+.admin-score-example strong,
+.admin-score-recent-main {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.admin-score-example span,
+.admin-score-recent-meta {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--secondary);
+  line-height: 1.4;
+}
+
+.admin-scores-footnote a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+@media (max-width: 920px) {
+  .admin-scores-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-scores-page {
+    padding: 1rem 1rem 5rem;
+  }
+
+  .admin-scores-hero,
+  .admin-scores-auth,
+  .admin-scores-auth-controls,
+  .admin-scores-section-head,
+  .admin-scores-panel-head {
+    flex-direction: column;
+  }
+
+  .admin-scores-grid {
+    grid-template-columns: 1fr;
+  }
+}

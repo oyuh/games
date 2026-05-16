@@ -4,8 +4,8 @@ import { useSyncExternalStore, useEffect, useState } from "react";
  * Estimated cold-start time in seconds.
  * Slightly overestimated so it feels fast when the server comes up earlier.
  */
-const ESTIMATE_SECS = import.meta.env.DEV ? 30 : 20;
-const UNAVAILABLE_AFTER_MS = 12_000;
+const ESTIMATE_SECS = import.meta.env.DEV ? 35 : 25;
+const UNAVAILABLE_AFTER_MS = 25_000;
 
 let connectingStartedAt: number | null = null;
 const listeners = new Set<() => void>();

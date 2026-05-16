@@ -1527,6 +1527,15 @@ function PipsMenu({
           className="pips-ranked-start"
           type="button"
           onClick={onStartRanked}
+          onPointerMove={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            event.currentTarget.style.setProperty("--pips-cta-x", `${event.clientX - rect.left}px`);
+            event.currentTarget.style.setProperty("--pips-cta-y", `${event.clientY - rect.top}px`);
+          }}
+          onPointerLeave={(event) => {
+            event.currentTarget.style.setProperty("--pips-cta-x", "50%");
+            event.currentTarget.style.setProperty("--pips-cta-y", "50%");
+          }}
           data-tooltip="Start the ranked Easy / Medium / Hard run"
           data-tooltip-pos="bottom"
         >
