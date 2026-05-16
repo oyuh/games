@@ -5,6 +5,7 @@ import { useSyncExternalStore, useEffect, useState } from "react";
  * Slightly overestimated so it feels fast when the server comes up earlier.
  */
 const ESTIMATE_SECS = import.meta.env.DEV ? 30 : 20;
+const UNAVAILABLE_AFTER_MS = 12_000;
 
 let connectingStartedAt: number | null = null;
 const listeners = new Set<() => void>();
@@ -58,4 +59,37 @@ export function useSyncCountdown(): number | null {
   }, [startedAt]);
 
   return remaining;
+}
+
+export function useSyncTimedOut(): boolean {
+  const startedAt = useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => {
+        listeners.delete(cb);
+      };
+    },
+    () => connectingStartedAt,
+  );
+
+  const [timedOut, setTimedOut] = useState(() => {
+    return startedAt !== null && Date.now() - startedAt >= UNAVAILABLE_AFTER_MS;
+  });
+
+  useEffect(() => {
+    if (startedAt === null) {
+      setTimedOut(false);
+      return;
+    }
+
+    const update = () => {
+      setTimedOut(Date.now() - startedAt >= UNAVAILABLE_AFTER_MS);
+    };
+
+    update();
+    const timer = window.setInterval(update, 500);
+    return () => window.clearInterval(timer);
+  }, [startedAt]);
+
+  return timedOut;
 }
