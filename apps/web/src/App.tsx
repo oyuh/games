@@ -17,7 +17,7 @@ import {
 } from "./lib/connection-debug";
 import { syncSessionIdentity } from "./lib/session";
 import { showToast } from "./lib/toast";
-import { markSyncConnecting, markSyncConnected, useSyncCountdown } from "./lib/sync-wake";
+import { markSyncConnecting, markSyncConnected, useSyncCountdown, useSyncTimedOut } from "./lib/sync-wake";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { useButtonSounds } from "./hooks/useButtonSounds";
 
@@ -130,6 +130,7 @@ function SyncWakeToast() {
   const zeroState = debug.zeroState;
   const needsSync = !isSyncFreePath(location.pathname);
   const countdown = useSyncCountdown();
+  const syncTimedOut = useSyncTimedOut();
   const [showWakeNotice, setShowWakeNotice] = useState(false);
   const wakeNoticeTimerRef = useRef<number | null>(null);
 
@@ -142,6 +143,7 @@ function SyncWakeToast() {
     };
 
     const isWaking = zeroState === "connecting" && needsSync;
+    const hasFailed = needsSync && (zeroState === "error" || zeroState === "needs-auth");
 
     if (isWaking) {
       markSyncConnecting();
@@ -154,6 +156,10 @@ function SyncWakeToast() {
           }
         }, SYNC_WAKE_NOTICE_DELAY_MS);
       }
+    } else if (hasFailed) {
+      clearWakeTimer();
+      setShowWakeNotice(true);
+      markSyncConnected();
     } else {
       clearWakeTimer();
       setShowWakeNotice(false);
@@ -163,15 +169,17 @@ function SyncWakeToast() {
     return clearWakeTimer;
   }, [zeroState, needsSync, showWakeNotice]);
 
-  if (!showWakeNotice) return null;
+  const showUnavailable = needsSync && (syncTimedOut || zeroState === "error" || zeroState === "needs-auth");
+
+  if (!showWakeNotice && !showUnavailable) return null;
 
   return (
     <div className="sync-wake-toast-container">
-      <div className="sync-wake-toast sync-wake-toast--info">
-        <span className="sync-wake-spinner" />
+      <div className={`sync-wake-toast ${showUnavailable ? "sync-wake-toast--warn" : "sync-wake-toast--info"}`}>
+        {!showUnavailable && <span className="sync-wake-spinner" />}
         <span className="sync-wake-msg">
-          Sync server is waking up
-          {countdown != null && <span className="sync-wake-countdown"> ~{countdown}s</span>}
+          {showUnavailable ? "Multiplayer sync is unavailable" : "Sync server is waking up"}
+          {!showUnavailable && countdown != null && <span className="sync-wake-countdown"> ~{countdown}s</span>}
         </span>
       </div>
     </div>

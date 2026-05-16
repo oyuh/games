@@ -2338,14 +2338,15 @@ app.get("/debug/build-info", async (c) => {
 app.post("/api/zero/query", async (c) => {
   const request = c.req.raw;
   const callerUserId = getCallerProofUserId(c) ?? getCallerUserId(c);
-  const result = await handleQueryRequest(
-    (name, args) => {
+  const result = await handleQueryRequest({
+    handler: (name, args) => {
       const query = mustGetQuery(queries, name);
       return query.fn({ args, ctx: { userId: callerUserId } });
     },
     schema,
-    request
-  );
+    request,
+    userID: callerUserId,
+  });
   return c.json(result);
 });
 
@@ -2353,32 +2354,34 @@ app.post("/api/zero/mutate", async (c) => {
   const request = c.req.raw;
   const rawCallerUserId = getCallerUserId(c);
   const proofUserId = getCallerProofFromRequest(c);
+  const callerUserId = proofUserId ?? rawCallerUserId;
   try {
-    const result = await handleMutateRequest(
+    const result = await handleMutateRequest({
       dbProvider,
-      (transact) =>
+      handler: (transact) =>
         transact((tx, name, args) => {
           return Promise.resolve().then(async () => {
-          const callerUserId = resolveZeroMutatorCaller(rawCallerUserId, name, args, proofUserId);
-          const normalizedArgs = applyCanonicalMutatorCaller(callerUserId, name, args);
-          enforceMutatorCaller(callerUserId, name, normalizedArgs);
-          await assertAllowedSessionNameMutation(name, normalizedArgs);
-          if (name.startsWith("demo.") && process.env.NODE_ENV === "production") {
-            throw new Error("Demo mutators are disabled in production");
-          }
-          const mutator = mustGetMutator(mutators, name);
-          return mutator.fn({
-            args: normalizedArgs,
-            tx,
-            ctx: {
-              userId: callerUserId,
-              resolveGameSecretKey: (gameType: GameType, gameId: string) => getOrCreateGameKey(gameType, gameId),
+            const resolvedCallerUserId = resolveZeroMutatorCaller(rawCallerUserId, name, args, proofUserId);
+            const normalizedArgs = applyCanonicalMutatorCaller(resolvedCallerUserId, name, args);
+            enforceMutatorCaller(resolvedCallerUserId, name, normalizedArgs);
+            await assertAllowedSessionNameMutation(name, normalizedArgs);
+            if (name.startsWith("demo.") && process.env.NODE_ENV === "production") {
+              throw new Error("Demo mutators are disabled in production");
             }
-          });
+            const mutator = mustGetMutator(mutators, name);
+            return mutator.fn({
+              args: normalizedArgs,
+              tx,
+              ctx: {
+                userId: resolvedCallerUserId,
+                resolveGameSecretKey: (gameType: GameType, gameId: string) => getOrCreateGameKey(gameType, gameId),
+              }
+            });
           });
         }),
-      request
-    );
+      request,
+      userID: callerUserId,
+    });
     return c.json(result);
   } catch (err) {
     // Mutation ID conflicts happen when the client's IndexedDB cache gets
