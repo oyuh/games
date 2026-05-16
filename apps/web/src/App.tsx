@@ -3,6 +3,7 @@ import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
 import { Component, lazy, Suspense, useEffect, useRef, useState } from "react";
+import { FiExternalLink, FiInfo, FiX } from "react-icons/fi";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import {
@@ -16,7 +17,6 @@ import {
   useConnectionDebug
 } from "./lib/connection-debug";
 import { syncSessionIdentity } from "./lib/session";
-import { showToast } from "./lib/toast";
 import { markSyncConnecting, markSyncConnected, useSyncCountdown, useSyncTimedOut } from "./lib/sync-wake";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { useButtonSounds } from "./hooks/useButtonSounds";
@@ -24,6 +24,9 @@ import { useButtonSounds } from "./hooks/useButtonSounds";
 const HomePage = lazy(() => import("./pages/HomePage").then(({ HomePage }) => ({ default: HomePage })));
 const HomePageStylePreview = lazy(() =>
   import("./pages/HomePageStylePreview").then(({ HomePageStylePreview }) => ({ default: HomePageStylePreview }))
+);
+const AdminScoresPage = lazy(() =>
+  import("./pages/AdminScoresPage").then(({ AdminScoresPage }) => ({ default: AdminScoresPage }))
 );
 const ImposterPage = lazy(() => import("./pages/ImposterPage").then(({ ImposterPage }) => ({ default: ImposterPage })));
 const PasswordBeginPage = lazy(() =>
@@ -84,6 +87,7 @@ const apiBaseURL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 const apiInfoURL = `${apiBaseURL}/debug/build-info`;
 const SYNC_WAKE_NOTICE_DELAY_MS = 2_500;
 const SYNC_WAKE_NOTICE_COOLDOWN_MS = 120_000;
+const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/lawsonhart";
 let lastSyncWakeNoticeShownAt = 0;
 
 function createZero(sessionId: string, sessionProof: string | null) {
@@ -117,10 +121,50 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
 }
 
 /** Routes that don't use the Zero sync server (solo/offline games). */
-const SYNC_FREE_ROUTES = ["/shikaku", "/pips"];
+const SYNC_FREE_ROUTES = ["/shikaku", "/pips", "/admin"];
 
 function isSyncFreePath(pathname: string) {
   return SYNC_FREE_ROUTES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function HostingInfoModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-panel sync-hosting-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-header">
+          <div className="sync-hosting-title">
+            <FiInfo size={18} />
+            <span className="modal-title">Why the server sleeps</span>
+          </div>
+          <button className="modal-close" type="button" onClick={onClose} aria-label="Close hosting info">
+            <FiX size={18} />
+          </button>
+        </div>
+        <div className="modal-body sync-hosting-modal-body">
+          <p className="sync-hosting-copy">
+            Multiplayer runs on a separate sync service. When traffic is quiet, I let it sleep so hosting stays cheap
+            and the project does not burn money just sitting there idle.
+          </p>
+          <p className="sync-hosting-copy">
+            That means the first multiplayer visit can take a little while to wake up. Solo games like Shikaku and
+            Pips do not depend on that server, so they still work normally.
+          </p>
+          <div className="sync-hosting-note">
+            Supporting the project helps cover hosting and makes it easier to keep the multiplayer stack online longer.
+          </div>
+          <div className="sync-hosting-actions">
+            <a className="btn btn-primary" href={BUY_ME_A_COFFEE_URL} target="_blank" rel="noreferrer">
+              Buy Me a Coffee
+              <FiExternalLink size={16} />
+            </a>
+            <button className="btn btn-muted" type="button" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /** Route-aware wake notice for a real sync cold start. */
@@ -132,7 +176,9 @@ function SyncWakeToast() {
   const countdown = useSyncCountdown();
   const syncTimedOut = useSyncTimedOut();
   const [showWakeNotice, setShowWakeNotice] = useState(false);
+  const [showHostingInfo, setShowHostingInfo] = useState(false);
   const wakeNoticeTimerRef = useRef<number | null>(null);
+  const showUnavailable = needsSync && (syncTimedOut || zeroState === "needs-auth");
 
   useEffect(() => {
     const clearWakeTimer = () => {
@@ -142,10 +188,9 @@ function SyncWakeToast() {
       }
     };
 
-    const isWaking = zeroState === "connecting" && needsSync;
-    const hasFailed = needsSync && (zeroState === "error" || zeroState === "needs-auth");
+    const isWaitingForSync = needsSync && zeroState !== "connected" && !showUnavailable;
 
-    if (isWaking) {
+    if (isWaitingForSync) {
       markSyncConnecting();
       if (!showWakeNotice && wakeNoticeTimerRef.current === null) {
         wakeNoticeTimerRef.current = window.setTimeout(() => {
@@ -156,10 +201,9 @@ function SyncWakeToast() {
           }
         }, SYNC_WAKE_NOTICE_DELAY_MS);
       }
-    } else if (hasFailed) {
+    } else if (showUnavailable) {
       clearWakeTimer();
       setShowWakeNotice(true);
-      markSyncConnected();
     } else {
       clearWakeTimer();
       setShowWakeNotice(false);
@@ -167,22 +211,42 @@ function SyncWakeToast() {
     }
 
     return clearWakeTimer;
-  }, [zeroState, needsSync, showWakeNotice]);
+  }, [needsSync, showUnavailable, showWakeNotice, zeroState]);
 
-  const showUnavailable = needsSync && (syncTimedOut || zeroState === "error" || zeroState === "needs-auth");
+  useEffect(() => {
+    setShowHostingInfo(false);
+  }, [location.pathname]);
 
   if (!showWakeNotice && !showUnavailable) return null;
 
   return (
-    <div className="sync-wake-toast-container">
-      <div className={`sync-wake-toast ${showUnavailable ? "sync-wake-toast--warn" : "sync-wake-toast--info"}`}>
-        {!showUnavailable && <span className="sync-wake-spinner" />}
-        <span className="sync-wake-msg">
-          {showUnavailable ? "Multiplayer sync is unavailable" : "Sync server is waking up"}
-          {!showUnavailable && countdown != null && <span className="sync-wake-countdown"> ~{countdown}s</span>}
-        </span>
+    <>
+      <div className="sync-wake-toast-container">
+        <div className={`sync-wake-toast ${showUnavailable ? "sync-wake-toast--warn" : "sync-wake-toast--info"}`}>
+          <div className="sync-wake-toast-main">
+            {!showUnavailable && <span className="sync-wake-spinner" />}
+            <span className="sync-wake-msg">
+              {showUnavailable ? "Multiplayer sync is unavailable" : "Sync server is waking up"}
+            </span>
+            {!showUnavailable && countdown != null && (
+              <button
+                type="button"
+                className="sync-wake-countdown-link"
+                onClick={() => setShowHostingInfo(true)}
+              >
+                ~{countdown}s
+              </button>
+            )}
+          </div>
+          {showUnavailable && (
+            <button type="button" className="sync-wake-link" onClick={() => setShowHostingInfo(true)}>
+              Why does it sleep?
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+      {showHostingInfo && <HostingInfoModal onClose={() => setShowHostingInfo(false)} />}
+    </>
   );
 }
 
@@ -431,6 +495,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/location/:id" element={<LazyRoute><LocationSignalPage sessionId={initialSessionId} /></LazyRoute>} />
               <Route path="/shikaku" element={<LazyRoute><ShikakuPage /></LazyRoute>} />
               <Route path="/pips" element={<LazyRoute><PipsPage /></LazyRoute>} />
+              <Route path="/admin/scores" element={<LazyRoute><AdminScoresPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

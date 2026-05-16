@@ -10,7 +10,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { getOrCreateSessionId, getStoredSessionProof, syncSessionIdentityForBoot } from "./lib/session";
 
-const SYNC_FREE_BOOT_ROUTES = ["/shikaku", "/pips"];
+const SYNC_FREE_BOOT_ROUTES = ["/shikaku", "/pips", "/admin"];
 
 function isSyncFreeBootRoute() {
   return SYNC_FREE_BOOT_ROUTES.some((prefix) => window.location.pathname.startsWith(prefix));

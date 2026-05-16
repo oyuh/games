@@ -2,16 +2,7 @@ import { GAME_META, getGameSlugFromPath, renderGameFaviconSvg, svgToDataUri } fr
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? "https://api.games.lawsonhart.me" : "http://localhost:3001");
 const SITE_NAME = "Games · Lawson Hart";
-
-function publicApiBase() {
-  try {
-    return new URL(API_BASE, window.location.origin).toString().replace(/\/$/, "");
-  } catch {
-    return "https://api.games.lawsonhart.me";
-  }
-}
 
 function setMetaByName(name: string, content: string) {
   let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
@@ -50,7 +41,6 @@ export function useGameMeta() {
     const slug = getGameSlugFromPath(pathname);
     const meta = GAME_META[slug];
     const pageUrl = new URL(pathname, window.location.origin).toString();
-    const imageUrl = `${publicApiBase()}/api/embed/card.png?path=${encodeURIComponent(pathname)}`;
     const title = meta.pageTitle;
 
     document.title = title;
@@ -61,15 +51,11 @@ export function useGameMeta() {
     setMetaByProperty("og:type", "website");
     setMetaByProperty("og:title", title);
     setMetaByProperty("og:description", meta.description);
-    setMetaByProperty("og:image", imageUrl);
-    setMetaByProperty("og:image:alt", `${meta.title} icon and game card`);
     setMetaByProperty("og:url", pageUrl);
     setMetaByProperty("og:site_name", SITE_NAME);
 
-    setMetaByName("twitter:card", "summary_large_image");
+    setMetaByName("twitter:card", "summary");
     setMetaByName("twitter:title", title);
     setMetaByName("twitter:description", meta.description);
-    setMetaByName("twitter:image", imageUrl);
-    setMetaByName("twitter:image:alt", `${meta.title} icon and game card`);
   }, [pathname]);
 }

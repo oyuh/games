@@ -1,5 +1,4 @@
 import {
-  GAME_ICON_SVGS,
   GAME_META,
   chainReactionGames,
   getGameSlugFromPath,
@@ -22,7 +21,6 @@ type EmbedModel = {
   title: string;
   description: string;
   webUrl: string;
-  imageUrl: string;
   accent: string;
   code?: string;
   status?: string;
@@ -35,35 +33,11 @@ export const embedRoutes = new Hono();
 
 embedRoutes.get("/html", async (c) => {
   const path = normalizePath(c.req.query("path"));
-  const model = await resolveEmbedModel(path, getWebOrigin(c), getApiOrigin(c));
+  const model = await resolveEmbedModel(path, getWebOrigin(c));
 
   return c.html(renderEmbedHtml(model), 200, {
     "Cache-Control": "public, max-age=60, s-maxage=300",
     "Content-Type": "text/html; charset=utf-8",
-  });
-});
-
-embedRoutes.get("/card.svg", async (c) => {
-  const path = normalizePath(c.req.query("path"));
-  const model = await resolveEmbedModel(path, getWebOrigin(c), getApiOrigin(c));
-
-  return c.body(renderEmbedCardSvg(model), 200, {
-    "Cache-Control": "public, max-age=300, s-maxage=900",
-    "Content-Type": "image/svg+xml; charset=utf-8",
-  });
-});
-
-embedRoutes.get("/card.png", async (c) => {
-  const path = normalizePath(c.req.query("path"));
-  const model = await resolveEmbedModel(path, getWebOrigin(c), getApiOrigin(c));
-  const { default: sharp } = await import("sharp");
-  const pngBuffer = await sharp(Buffer.from(renderEmbedCardSvg(model))).png().toBuffer();
-  const png = new Uint8Array(pngBuffer.byteLength);
-  png.set(pngBuffer);
-
-  return c.body(png, 200, {
-    "Cache-Control": "public, max-age=300, s-maxage=900",
-    "Content-Type": "image/png",
   });
 });
 
@@ -97,21 +71,15 @@ function getWebOrigin(c: Context) {
   return DEFAULT_WEB_ORIGIN;
 }
 
-function getApiOrigin(c: Context) {
-  return getRequestOrigin(c, "api.games.lawsonhart.me").replace(/\/$/, "");
-}
-
-async function resolveEmbedModel(path: string, webOrigin: string, apiOrigin: string): Promise<EmbedModel> {
+async function resolveEmbedModel(path: string, webOrigin: string): Promise<EmbedModel> {
   const slug = getGameSlugFromPath(path);
   const meta = GAME_META[slug];
   const webUrl = new URL(path, webOrigin).toString();
-  const imageUrl = `${apiOrigin}/api/embed/card.png?path=${encodeURIComponent(path)}`;
   const fallback: EmbedModel = {
     slug,
     title: meta.pageTitle,
     description: meta.description,
     webUrl,
-    imageUrl,
     accent: meta.accent,
     details: [meta.players, meta.shortDescription],
   };
@@ -311,14 +279,9 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function escapeXml(value: string): string {
-  return escapeHtml(value).replace(/'/g, "&apos;");
-}
-
 function renderEmbedHtml(model: EmbedModel): string {
   const title = escapeHtml(model.title);
   const description = escapeHtml(model.description);
-  const imageUrl = escapeHtml(model.imageUrl);
   const webUrl = escapeHtml(model.webUrl);
   const accent = escapeHtml(model.accent);
 
@@ -333,19 +296,11 @@ function renderEmbedHtml(model: EmbedModel): string {
     <meta property="og:type" content="website">
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${description}">
-    <meta property="og:image" content="${imageUrl}">
-    <meta property="og:image:secure_url" content="${imageUrl}">
-    <meta property="og:image:type" content="image/png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="${title}">
     <meta property="og:url" content="${webUrl}">
     <meta property="og:site_name" content="${SITE_NAME}">
-    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${description}">
-    <meta name="twitter:image" content="${imageUrl}">
-    <meta name="twitter:image:alt" content="${title}">
     <style>
       body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: #181a1b; color: #f5f5f5; font-family: ui-sans-serif, system-ui, sans-serif; }
       a { color: ${accent}; font-weight: 800; }
@@ -358,71 +313,4 @@ function renderEmbedHtml(model: EmbedModel): string {
     </main>
   </body>
 </html>`;
-}
-
-function renderEmbedCardSvg(model: EmbedModel): string {
-  const meta = GAME_META[model.slug];
-  const icon = GAME_ICON_SVGS[meta.icon];
-  const accent = escapeXml(model.accent);
-  const titleLines = wrapText(model.title.replace(" | Games", ""), 28, 2);
-  const descriptionLines = wrapText(model.description, 58, 3);
-  const details = model.details.slice(0, 3);
-  const status = model.status ?? meta.players;
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#202323"/>
-      <stop offset="0.58" stop-color="#181a1b"/>
-      <stop offset="1" stop-color="${accent}" stop-opacity="0.16"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.38"/>
-    </filter>
-  </defs>
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <circle cx="1058" cy="72" r="230" fill="${accent}" opacity="0.12"/>
-  <circle cx="103" cy="572" r="180" fill="${accent}" opacity="0.08"/>
-  <rect x="64" y="64" width="1072" height="502" rx="34" fill="#232323" stroke="${accent}" stroke-opacity="0.36" filter="url(#shadow)"/>
-  <rect x="92" y="92" width="168" height="168" rx="30" fill="${escapeXml(meta.background)}" stroke="${accent}" stroke-opacity="0.45"/>
-  <svg x="126" y="126" width="100" height="100" viewBox="${icon.viewBox}" color="${accent}">
-    ${icon.markup}
-  </svg>
-  <text x="292" y="138" fill="${accent}" font-size="28" font-family="Arial, sans-serif" font-weight="800" letter-spacing="4">${escapeXml(SITE_NAME.toUpperCase())}</text>
-  ${titleLines.map((line, index) => `<text x="292" y="${220 + index * 70}" fill="#f5f5f5" font-size="64" font-family="Arial, sans-serif" font-weight="900">${escapeXml(line)}</text>`).join("")}
-  ${descriptionLines.map((line, index) => `<text x="292" y="${370 + index * 40}" fill="#cfcfcf" font-size="30" font-family="Arial, sans-serif" font-weight="600">${escapeXml(line)}</text>`).join("")}
-  <g transform="translate(92 438)">
-    <rect width="168" height="58" rx="18" fill="${accent}" fill-opacity="0.16" stroke="${accent}" stroke-opacity="0.5"/>
-    <text x="84" y="37" fill="${accent}" text-anchor="middle" font-size="24" font-family="Arial, sans-serif" font-weight="900">${escapeXml(status)}</text>
-  </g>
-  ${model.code ? `<g transform="translate(92 510)"><text fill="#a7a7a7" font-size="20" font-family="Arial, sans-serif" font-weight="800">ROOM</text><text x="0" y="38" fill="#f5f5f5" font-size="34" font-family="Arial, sans-serif" font-weight="900" letter-spacing="3">${escapeXml(model.code)}</text></g>` : ""}
-  <g transform="translate(292 506)">
-    ${details.map((detail, index) => `<g transform="translate(${index * 232} 0)"><rect width="204" height="48" rx="16" fill="#2d2d2d" stroke="#3a3a3a"/><text x="102" y="31" text-anchor="middle" fill="#f5f5f5" font-size="22" font-family="Arial, sans-serif" font-weight="800">${escapeXml(detail)}</text></g>`).join("")}
-  </g>
-</svg>`;
-}
-
-function wrapText(text: string, maxChars: number, maxLines: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let current = "";
-
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length > maxChars && current) {
-      lines.push(current);
-      current = word;
-      if (lines.length === maxLines) break;
-    } else {
-      current = next;
-    }
-  }
-
-  if (lines.length < maxLines && current) lines.push(current);
-  if (lines.length > maxLines) return lines.slice(0, maxLines);
-  const last = lines[lines.length - 1];
-  if (words.join(" ").length > lines.join(" ").length && last) {
-    lines[lines.length - 1] = `${last.replace(/\.*$/, "")}...`;
-  }
-  return lines;
 }

@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
 import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
-import { showToast } from "../lib/toast";
+import { showDedupedToast, showToast } from "../lib/toast";
 import { isNameRestricted } from "../hooks/useAdminBroadcast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileHomePage } from "../mobile/pages/MobileHomePage";
@@ -40,6 +40,7 @@ const GAME_CARD_DOTS = Array.from({ length: GAME_CARD_COUNT }, (_, index) => ({
 /* ── Solo game definitions ────────────────────────────────────── */
 const shikakuMeta = GAME_META.shikaku;
 const pipsMeta = GAME_META.pips;
+const NEW_GAME_ISSUE_URL = "https://github.com/oyuh/games/issues/new?template=new-game.md&title=%5BNew%20Game%5D%20";
 
 const SOLO_GAMES: SoloGameDef[] = [
   {
@@ -167,7 +168,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const debug = useConnectionDebug();
   const zeroConnected = useZeroConnected();
   const syncTimedOut = useSyncTimedOut();
-  const syncUnavailable = !zeroConnected && (syncTimedOut || debug.zeroState === "error" || debug.zeroState === "needs-auth");
+  const syncUnavailable = !zeroConnected && (syncTimedOut || debug.zeroState === "needs-auth");
   const syncPending = !zeroConnected && !syncUnavailable;
   const syncOffline = !zeroConnected;
   const syncCountdown = useSyncCountdown();
@@ -176,6 +177,20 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     : syncOffline
     ? `Sync server is waking${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}`
     : "Browse Public Games";
+  const blockSyncAction = useCallback((actionLabel: string) => {
+    if (syncUnavailable) {
+      showDedupedToast("Multiplayer sync is unavailable right now. Refresh to retry.", "error");
+      return true;
+    }
+    if (syncPending) {
+      showDedupedToast(
+        `Sync server is waking up${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}. Try ${actionLabel} again in a moment.`,
+        "info"
+      );
+      return true;
+    }
+    return false;
+  }, [syncCountdown, syncPending, syncUnavailable]);
   const [name, setName] = useState(() => getOrCreateStoredName(sessionId));
   const [savedName, setSavedName] = useState(() => getOrCreateStoredName(sessionId));
   const [firstVisit, setFirstVisit] = useState(() => !hasVisited());
@@ -317,6 +332,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   };
 
   const createImposter = async () => {
+    if (blockSyncAction("creating a game")) return;
     setPendingAction("create-imposter");
     const id = nanoid();
     try {
@@ -333,6 +349,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   };
 
   const createPassword = async () => {
+    if (blockSyncAction("creating a game")) return;
     setPendingAction("create-password");
     const id = nanoid();
     try {
@@ -349,6 +366,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   };
 
   const createChainReaction = async () => {
+    if (blockSyncAction("creating a game")) return;
     setPendingAction("create-chain");
     const id = nanoid();
     try {
@@ -365,6 +383,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   };
 
   const createShadeSignal = async () => {
+    if (blockSyncAction("creating a game")) return;
     setPendingAction("create-shade");
     const id = nanoid();
     try {
@@ -381,6 +400,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   };
 
   const createLocationSignal = async () => {
+    if (blockSyncAction("creating a game")) return;
     setPendingAction("create-location");
     const id = nanoid();
     try {
@@ -397,13 +417,13 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   };
 
   const joinAny = async () => {
-    setPendingAction("join");
     const normalizedCode = joinCode.trim().toUpperCase();
     if (!normalizedCode) {
       showToast("Enter a join code first.", "error");
-      setPendingAction(null);
       return;
     }
+    if (blockSyncAction("joining a game")) return;
+    setPendingAction("join");
     // Make sure the player has a name before joining any game
     await ensureName();
 
@@ -564,18 +584,18 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </h3>
             <form
               className="hc-row"
-              onSubmit={(e) => { e.preventDefault(); if (joinCode.length === 6 && pendingAction === null && !syncOffline) void joinAny(); }}
+              onSubmit={(e) => { e.preventDefault(); if (joinCode.length === 6 && pendingAction === null) void joinAny(); }}
             >
               <input
-                className={`input flex-1 hc-join-input${joinCode.length === 6 ? " hc-join-input--ready" : ""}${syncOffline ? " hc-join-input--disabled" : ""}`}
+                className={`input flex-1 hc-join-input${joinCode.length === 6 ? " hc-join-input--ready" : ""}${syncUnavailable ? " hc-join-input--disabled" : ""}`}
                 value={joinCode}
                 onChange={(e) =>
                   setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
                 }
-                onClick={() => { if (joinCode.length === 6 && pendingAction === null && !syncOffline) void joinAny(); }}
+                onClick={() => { if (joinCode.length === 6 && pendingAction === null) void joinAny(); }}
                 placeholder="ABCXYZ"
                 maxLength={6}
-                disabled={syncOffline}
+                disabled={syncUnavailable}
                 data-tooltip={syncOffline ? syncStatusTooltip : joinCode.length === 6 ? "Click or press Enter to join!" : "Paste or type a 6-letter code"}
                 data-tooltip-variant={joinCode.length === 6 && !syncOffline ? "success" : "info"}
               />
@@ -821,7 +841,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !imposterExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${imposterPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setImposterExpanded(false); setImposterBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${imposterPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncUnavailable} onClick={() => { if (blockSyncAction("browsing public games")) return; setImposterExpanded(false); setImposterBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && imposterPublicCount > 0 && <span className="hc-globe-badge">{imposterPublicCount}</span>}
                 </button>
@@ -841,7 +861,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 <button
                   className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createImposter()}
-                  disabled={pendingAction !== null || syncOffline}
+                  disabled={pendingAction !== null || syncUnavailable}
                   data-creating={pendingAction === "create-imposter" ? "true" : "false"}
                   data-tooltip={syncOffline ? syncStatusTooltip : undefined}
                   data-tooltip-variant="info"
@@ -965,7 +985,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !passwordExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${passwordPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setPasswordExpanded(false); setPasswordBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${passwordPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncUnavailable} onClick={() => { if (blockSyncAction("browsing public games")) return; setPasswordExpanded(false); setPasswordBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && passwordPublicCount > 0 && <span className="hc-globe-badge">{passwordPublicCount}</span>}
                 </button>
@@ -985,7 +1005,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 <button
                   className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createPassword()}
-                  disabled={pendingAction !== null || syncOffline}
+                  disabled={pendingAction !== null || syncUnavailable}
                   data-creating={pendingAction === "create-password" ? "true" : "false"}
                   data-tooltip={syncOffline ? syncStatusTooltip : undefined}
                   data-tooltip-variant="info"
@@ -1110,7 +1130,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !chainExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${chainPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setChainExpanded(false); setChainBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${chainPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncUnavailable} onClick={() => { if (blockSyncAction("browsing public games")) return; setChainExpanded(false); setChainBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && chainPublicCount > 0 && <span className="hc-globe-badge">{chainPublicCount}</span>}
                 </button>
@@ -1130,7 +1150,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 <button
                   className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createChainReaction()}
-                  disabled={pendingAction !== null || syncOffline}
+                  disabled={pendingAction !== null || syncUnavailable}
                   data-creating={pendingAction === "create-chain" ? "true" : "false"}
                   data-tooltip={syncOffline ? syncStatusTooltip : undefined}
                   data-tooltip-variant="info"
@@ -1235,7 +1255,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !shadeExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${shadePublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setShadeExpanded(false); setShadeBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${shadePublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncUnavailable} onClick={() => { if (blockSyncAction("browsing public games")) return; setShadeExpanded(false); setShadeBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && shadePublicCount > 0 && <span className="hc-globe-badge">{shadePublicCount}</span>}
                 </button>
@@ -1255,7 +1275,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 <button
                   className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createShadeSignal()}
-                  disabled={pendingAction !== null || syncOffline}
+                  disabled={pendingAction !== null || syncUnavailable}
                   data-creating={pendingAction === "create-shade" ? "true" : "false"}
                   data-tooltip={syncOffline ? syncStatusTooltip : undefined}
                   data-tooltip-variant="info"
@@ -1324,15 +1344,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               <p className="hc-game-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
               <div className="hc-coming-preview">
                 <div className="hc-loc-preview">
-                  <div className="hc-loc-map">
-                    <div className="hc-loc-pin hc-loc-pin--guess" style={{ top: "25%", left: "30%" }} />
-                    <div className="hc-loc-pin hc-loc-pin--guess" style={{ top: "55%", left: "72%" }} />
-                    <div className="hc-loc-pin hc-loc-pin--close" style={{ top: "38%", left: "53%" }} />
-                    <div className="hc-loc-pin hc-loc-pin--target" style={{ top: "36%", left: "56%" }} />
-                  </div>
-                  <div className="hc-loc-clue-row">
-                    <span className="hc-loc-clue-tag">Clue</span>
-                    <span className="hc-loc-clue-text">"Ancient empire"</span>
+                  <div className="hc-loc-map hc-loc-map--america">
+                    <div className="hc-loc-pin hc-loc-pin--pulse hc-loc-pin--west" />
+                    <div className="hc-loc-pin hc-loc-pin--pulse hc-loc-pin--central" />
+                    <div className="hc-loc-pin hc-loc-pin--pulse hc-loc-pin--east" />
                   </div>
                 </div>
               </div>
@@ -1357,7 +1372,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !locationExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${locationPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setLocationExpanded(false); setLocationBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${locationPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncUnavailable} onClick={() => { if (blockSyncAction("browsing public games")) return; setLocationExpanded(false); setLocationBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && locationPublicCount > 0 && <span className="hc-globe-badge">{locationPublicCount}</span>}
                 </button>
@@ -1377,7 +1392,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 <button
                   className="btn btn-primary flex-1 hc-go-btn"
                   onClick={() => void createLocationSignal()}
-                  disabled={pendingAction !== null || syncOffline}
+                  disabled={pendingAction !== null || syncUnavailable}
                   data-creating={pendingAction === "create-location" ? "true" : "false"}
                   data-tooltip={syncOffline ? syncStatusTooltip : undefined}
                   data-tooltip-variant="info"

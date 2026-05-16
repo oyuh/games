@@ -3904,29 +3904,35 @@
   gap: 0.75rem;
   padding: 0.85rem;
   border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--card);
+  border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 18%, var(--border));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--card-accent, var(--primary)) 9%, var(--card)) 0%, var(--card) 100%);
   text-decoration: none;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.16s ease;
 }
 .m-solo-card:active {
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 8%, var(--card));
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 12%, var(--card));
+  transform: scale(0.99);
 }
 .m-solo-card--shikaku {
   --card-accent: #34d399;
-  border-color: color-mix(in srgb, #34d399 18%, var(--border));
 }
 .m-solo-card--shikaku .m-solo-card-icon { color: #34d399; }
 .m-solo-card--shikaku .m-solo-card-title { color: #34d399; }
 
 .m-solo-card--pips {
   --card-accent: #fb923c;
-  border-color: color-mix(in srgb, #fb923c 18%, var(--border));
 }
 .m-solo-card--pips .m-solo-card-icon { color: #fb923c; }
 .m-solo-card--pips .m-solo-card-title { color: #fb923c; }
+
+.m-solo-card--ideas {
+  --card-accent: #93c5fd;
+}
+.m-solo-card--ideas .m-solo-card-icon { color: #93c5fd; }
+.m-solo-card--ideas .m-solo-card-title { color: #93c5fd; }
 
 .m-solo-card-icon {
   flex-shrink: 0;
@@ -3953,25 +3959,15 @@
   margin: 0;
   line-height: 1.3;
 }
-.m-solo-card-play {
+.m-solo-card-cta {
   flex-shrink: 0;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0.4rem 0.9rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.44rem 0.7rem;
   border-radius: 0.5rem;
-  background: var(--card-accent, var(--primary));
-  color: #111;
-}
-.m-solo-card-soon {
-  flex-shrink: 0;
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.3rem 0.7rem;
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--secondary) 20%, transparent);
-  color: var(--muted-foreground);
-}
-.m-solo-card--disabled {
-  opacity: 0.45;
-  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 25%, transparent);
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 14%, transparent);
+  color: var(--foreground);
 }
