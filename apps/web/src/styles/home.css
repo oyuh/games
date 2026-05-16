@@ -118,12 +118,29 @@
   z-index: 1;
 }
 
+.solo-card-title-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: var(--foreground);
+}
+
+.solo-card-title-row > svg {
+  color: var(--solo-accent, var(--primary));
+  flex: 0 0 auto;
+}
+
 .solo-card-title {
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  color: var(--foreground);
+  color: inherit;
   margin: 0;
+}
+
+.solo-card:has(.solo-preview-pips) .solo-card-title-row {
+  color: var(--solo-accent);
 }
 
 .solo-card-desc {

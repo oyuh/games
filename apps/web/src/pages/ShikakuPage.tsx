@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FiAward, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiClipboard, FiClock, FiCopy, FiCornerUpLeft, FiFlag, FiGrid, FiHash, FiHelpCircle, FiPlay, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
+import { FiAward, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiClipboard, FiClock, FiCopy, FiCornerUpLeft, FiFlag, FiHash, FiHelpCircle, FiPlay, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
 import { ShikakuLeaderboard, LeaderboardEntry, LeaderboardView, PersonalBest } from "../components/ShikakuLeaderboard";
 import {
   calculateScore,
@@ -22,6 +22,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import "../styles/game-shared.css";
 import "../styles/shikaku.css";
 import { ShikakuDemo } from "../components/demos/ShikakuDemo";
+import { GameIcon } from "../components/shared/GameIcon";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
@@ -1419,7 +1420,7 @@ export function ShikakuPage() {
                   data-tooltip="Back to puzzle page"
                   style={{ textDecoration: "none" }}
                 >
-                  <FiGrid size={16} /> Puzzle Page
+                  <GameIcon game="shikaku" size={16} /> Puzzle Page
                 </a>
               </div>
             </div>
@@ -1666,7 +1667,7 @@ export function ShikakuPage() {
         <div className="game-header">
           <div className="game-header-left">
             <div className="game-header-icon">
-              <FiGrid size={20} />
+              <GameIcon game="shikaku" size={20} />
             </div>
             <h1 className="game-title">Shikaku</h1>
             <span className="badge badge-warn" data-tooltip={challengeMode ? `Challenge - ${difficulty}` : infiniteMode ? `${infiniteSolved} solved - ∞ mode - ${difficulty}` : `Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN} - ${difficulty}`} data-tooltip-variant="info">

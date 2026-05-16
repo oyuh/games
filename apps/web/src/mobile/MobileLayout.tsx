@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { FiHome, FiMessageCircle, FiInfo, FiSettings, FiX, FiAward, FiGrid, FiHash, FiRepeat } from "react-icons/fi";
+import { FiHome, FiMessageCircle, FiInfo, FiSettings, FiAward, FiHash, FiRepeat } from "react-icons/fi";
 import { FaCrown } from "react-icons/fa";
 import { useChatContext } from "../lib/chat-context";
 import { MobileHostProvider, useMobileHost } from "../lib/mobile-host-context";
@@ -14,6 +14,7 @@ import { MobileLeaderboardSheet } from "./components/MobileLeaderboardSheet";
 import { ToastContainer } from "../components/shared/ToastContainer";
 import { ConnectionDebugPanel } from "../components/shared/ConnectionDebugPanel";
 import { showToast } from "../lib/toast";
+import { GameIcon } from "../components/shared/GameIcon";
 
 export function MobileLayout() {
   return (
@@ -127,7 +128,7 @@ function MobileLayoutInner() {
               ? <FiHash size={20} />
               : shikakuState.infiniteMode
                 ? <FiRepeat size={20} />
-                : <FiGrid size={20} />
+                : <GameIcon game="shikaku" size={20} />
             }
             <span>{shikakuState.customMode || shikakuState.showSeedInput ? "Seed" : shikakuState.infiniteMode ? "Infinite" : "Ranked"}</span>
           </button>
