@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
-import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers } from "react-icons/fi";
+import { FiBookOpen, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { isNameRestricted } from "../hooks/useAdminBroadcast";
@@ -16,7 +16,8 @@ import { ActiveGameModal } from "../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../components/shared/PublicGamesBrowser";
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { useZeroConnected } from "../App";
-import { useSyncCountdown } from "../lib/sync-wake";
+import { useConnectionDebug } from "../lib/connection-debug";
+import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
 
 const ImposterDemo = lazy(() => import("../components/demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
 const PasswordDemo = lazy(() => import("../components/demos/PasswordDemo").then(({ PasswordDemo }) => ({ default: PasswordDemo })));
@@ -163,10 +164,16 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const navigate = useNavigate();
+  const debug = useConnectionDebug();
   const zeroConnected = useZeroConnected();
+  const syncTimedOut = useSyncTimedOut();
+  const syncUnavailable = !zeroConnected && (syncTimedOut || debug.zeroState === "error" || debug.zeroState === "needs-auth");
+  const syncPending = !zeroConnected && !syncUnavailable;
   const syncOffline = !zeroConnected;
   const syncCountdown = useSyncCountdown();
-  const syncStatusTooltip = syncOffline
+  const syncStatusTooltip = syncUnavailable
+    ? "Multiplayer sync is unavailable. Solo games still work; refresh to retry multiplayer."
+    : syncOffline
     ? `Sync server is waking${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}`
     : "Browse Public Games";
   const [name, setName] = useState(() => getOrCreateStoredName(sessionId));
@@ -552,7 +559,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           <section className="hc-section">
             <h3 className="hc-label" data-tooltip="Enter a 6-character room code to join a friend's game" data-tooltip-variant="info">
               <FiSearch size={14} style={{ opacity: 0.6 }} /> Join Game
-              {syncOffline && <SyncMiniSpinner className="hc-sync-mini-spinner--label" />}
+              {syncPending && <SyncMiniSpinner className="hc-sync-mini-spinner--label" />}
+              {syncUnavailable && <FiWifiOff className="hc-sync-offline-icon hc-sync-offline-icon--label" size={14} />}
             </h3>
             <form
               className="hc-row"
@@ -813,8 +821,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !imposterExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${imposterPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}`} disabled={syncOffline} onClick={() => { setImposterExpanded(false); setImposterBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncOffline ? <SyncMiniSpinner /> : <FiGlobe size={18} />}
+                <button className={`btn hc-browse-globe${imposterPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setImposterExpanded(false); setImposterBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                  {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && imposterPublicCount > 0 && <span className="hc-globe-badge">{imposterPublicCount}</span>}
                 </button>
                 <button className="btn btn-primary flex-1" onClick={() => setImposterExpanded(true)}>
@@ -841,7 +849,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   {pendingAction === "create-imposter" ? "Creating…" : (
                     <span className="hc-sync-button-content">
                       Go
-                      {syncOffline && <SyncMiniSpinner />}
+                      {syncPending && <SyncMiniSpinner />}
+                      {syncUnavailable && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>
                   )}
                 </button>
@@ -956,8 +965,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !passwordExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${passwordPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}`} disabled={syncOffline} onClick={() => { setPasswordExpanded(false); setPasswordBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncOffline ? <SyncMiniSpinner /> : <FiGlobe size={18} />}
+                <button className={`btn hc-browse-globe${passwordPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setPasswordExpanded(false); setPasswordBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                  {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && passwordPublicCount > 0 && <span className="hc-globe-badge">{passwordPublicCount}</span>}
                 </button>
                 <button className="btn btn-primary flex-1" onClick={() => setPasswordExpanded(true)}>
@@ -984,7 +993,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   {pendingAction === "create-password" ? "Creating…" : (
                     <span className="hc-sync-button-content">
                       Go
-                      {syncOffline && <SyncMiniSpinner />}
+                      {syncPending && <SyncMiniSpinner />}
+                      {syncUnavailable && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>
                   )}
                 </button>
@@ -1100,8 +1110,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !chainExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${chainPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}`} disabled={syncOffline} onClick={() => { setChainExpanded(false); setChainBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncOffline ? <SyncMiniSpinner /> : <FiGlobe size={18} />}
+                <button className={`btn hc-browse-globe${chainPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setChainExpanded(false); setChainBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                  {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && chainPublicCount > 0 && <span className="hc-globe-badge">{chainPublicCount}</span>}
                 </button>
                 <button className="btn btn-primary flex-1" onClick={() => setChainExpanded(true)}>
@@ -1128,7 +1138,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   {pendingAction === "create-chain" ? "Creating…" : (
                     <span className="hc-sync-button-content">
                       Go
-                      {syncOffline && <SyncMiniSpinner />}
+                      {syncPending && <SyncMiniSpinner />}
+                      {syncUnavailable && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>
                   )}
                 </button>
@@ -1224,8 +1235,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !shadeExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${shadePublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}`} disabled={syncOffline} onClick={() => { setShadeExpanded(false); setShadeBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncOffline ? <SyncMiniSpinner /> : <FiGlobe size={18} />}
+                <button className={`btn hc-browse-globe${shadePublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setShadeExpanded(false); setShadeBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                  {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && shadePublicCount > 0 && <span className="hc-globe-badge">{shadePublicCount}</span>}
                 </button>
                 <button className="btn btn-primary flex-1" onClick={() => setShadeExpanded(true)}>
@@ -1252,7 +1263,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   {pendingAction === "create-shade" ? "Creating…" : (
                     <span className="hc-sync-button-content">
                       Go
-                      {syncOffline && <SyncMiniSpinner />}
+                      {syncPending && <SyncMiniSpinner />}
+                      {syncUnavailable && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>
                   )}
                 </button>
@@ -1345,8 +1357,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !locationExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${locationPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}`} disabled={syncOffline} onClick={() => { setLocationExpanded(false); setLocationBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncOffline ? <SyncMiniSpinner /> : <FiGlobe size={18} />}
+                <button className={`btn hc-browse-globe${locationPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncUnavailable ? " hc-sync-unavailable-control" : ""}`} disabled={syncOffline} onClick={() => { setLocationExpanded(false); setLocationBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                  {syncPending ? <SyncMiniSpinner /> : syncUnavailable ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && locationPublicCount > 0 && <span className="hc-globe-badge">{locationPublicCount}</span>}
                 </button>
                 <button className="btn btn-primary flex-1" onClick={() => setLocationExpanded(true)}>
@@ -1373,7 +1385,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   {pendingAction === "create-location" ? "Creating…" : (
                     <span className="hc-sync-button-content">
                       Go
-                      {syncOffline && <SyncMiniSpinner />}
+                      {syncPending && <SyncMiniSpinner />}
+                      {syncUnavailable && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>
                   )}
                 </button>

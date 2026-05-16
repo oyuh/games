@@ -1147,6 +1147,16 @@
   opacity: 0.78;
 }
 
+.hc-sync-offline-icon {
+  color: #f59e0b;
+  flex: 0 0 auto;
+}
+
+.hc-sync-offline-icon--label {
+  margin-left: 0.1rem;
+  opacity: 0.85;
+}
+
 .hc-sync-button-content {
   position: relative;
   z-index: 1;
@@ -1163,6 +1173,11 @@
 
 .hc-sync-pending-control:disabled {
   opacity: 0.72;
+}
+
+.hc-sync-unavailable-control:disabled {
+  color: #f59e0b;
+  opacity: 0.78;
 }
 
 .hc-sync-pending-control .hc-sync-mini-spinner {
