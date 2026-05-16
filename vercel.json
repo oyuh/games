@@ -5,6 +5,17 @@
   "outputDirectory": "apps/web/dist",
   "rewrites": [
     {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(bot|Bot|BOT|crawler|Crawler|spider|Spider|preview|Preview|facebookexternalhit|Facebot|Twitterbot|Discordbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot|SkypeUriPreview|vkShare|Embedly|redditbot|Pinterest|ia_archiver).*"
+        }
+      ],
+      "destination": "https://api.games.lawsonhart.me/api/embed/html?path=/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

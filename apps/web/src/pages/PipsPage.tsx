@@ -9,15 +9,14 @@ import {
   FiHash,
   FiHelpCircle,
   FiPlay,
-  FiRefreshCw,
   FiRepeat,
   FiUploadCloud,
   FiX,
 } from "react-icons/fi";
-import { GiDominoTiles } from "react-icons/gi";
 import "../styles/game-shared.css";
 import "../styles/pips.css";
 import { PipsDemo } from "../components/demos/PipsDemo";
+import { GameIcon } from "../components/shared/GameIcon";
 import {
   evaluateRegionRule,
   generateRun,
@@ -73,23 +72,6 @@ interface PipsPersonalBest {
   hardMs?: number;
   createdAt?: number;
   name?: string;
-}
-
-interface PipsRankedDecorDomino {
-  id: string;
-  left: number;
-  top: number;
-  z: number;
-  scale: number;
-  rotate: number;
-  duration: number;
-  delay: number;
-  blur: number;
-  opacity: number;
-  hoverOpacity: number;
-  a: number;
-  b: number;
-  path: 1 | 2 | 3 | 4;
 }
 
 interface ScoreSubmissionStatus {
@@ -162,7 +144,6 @@ const ROTATION_DIRECTIONS: Record<Rotation, PipsCell> = {
 const BOARD_BUFFER_CELLS = 1;
 const SHOW_PIPS_DEV_TOOLS = import.meta.env.DEV;
 const PIPS_DIFFICULTIES: PipsDifficulty[] = ["easy", "medium", "hard"];
-const PIPS_RANKED_DECOR_COUNT = 16;
 const PIPS_LEADERBOARD_PAGE_SIZE = 10;
 const PIPS_SEEDED_LEADERBOARD: PipsLeaderboardEntry[] = [
   makePipsLeaderboardEntry("seeded-1", "Tile Witch", 216336, 18_400, 34_200, 58_900),
@@ -501,9 +482,32 @@ export function PipsPage() {
   };
 
   const restartRun = () => {
-    const restartedRun = runMode === "infinite" ? generateSingleDifficultyRun(seed, infiniteDifficulty) : generateRun(seed);
-    beginRun(restartedRun, seed, runMode, infiniteDifficulty, runMode === "infinite" ? infiniteSeedBase : null);
-    showToast("Run restarted", "info");
+    if (runMode === "ranked") {
+      const nextSeed = makeRunSeed();
+      beginRun(generateRun(nextSeed), nextSeed, "ranked");
+      showToast("New ranked seed generated", "info");
+      return;
+    }
+
+    if (runMode === "infinite") {
+      const nextSeed = infiniteSeedBase ?? makeRunSeed();
+      beginRun(
+        generateSingleDifficultyRun(nextSeed, infiniteDifficulty),
+        nextSeed,
+        "infinite",
+        infiniteDifficulty,
+        infiniteSeedBase == null ? null : infiniteSeedBase,
+      );
+      showToast(infiniteSeedBase == null ? "New infinite seed generated" : "Seeded infinite run restarted", "info");
+      return;
+    }
+
+    const seededDifficulty = run.puzzles[0]?.difficulty ?? infiniteDifficulty;
+    const restartedRun = run.puzzles.length === 1
+      ? generateSingleDifficultyRun(seed, seededDifficulty)
+      : generateRun(seed);
+    beginRun(restartedRun, seed, "seeded", seededDifficulty);
+    showToast("Seeded practice restarted", "info");
   };
 
   const giveUpRun = () => {
@@ -590,6 +594,7 @@ export function PipsPage() {
   };
 
   const showSolvedPuzzle = () => {
+    if (!SHOW_PIPS_DEV_TOOLS) return;
     if (phase !== "playing") return;
     const solution = puzzle.solution.map((placement) => ({ ...placement }));
     setPlacements(solution);
@@ -623,6 +628,7 @@ export function PipsPage() {
   };
 
   const skipDifficulty = () => {
+    if (!SHOW_PIPS_DEV_TOOLS) return;
     if (phase !== "playing") return;
     if (puzzleIndex >= run.puzzles.length - 1) {
       showToast("Already on hard", "info");
@@ -1222,7 +1228,6 @@ export function PipsPage() {
               submittingScore={submittingScore}
               scoreSubmissionStatus={scoreSubmissionStatus}
               onSubmitScore={submitScore}
-              onPlayAgain={restartRun}
               onNewRanked={startRankedRun}
               onMenu={() => {
                 setOpenPanel(null);
@@ -1467,7 +1472,6 @@ function PipsMenu({
 }) {
   const [menuMode, setMenuMode] = useState<"ranked" | "infinite">("ranked");
   const [showSeedInput, setShowSeedInput] = useState(false);
-  const rankedDecorDominoes = useMemo(makeRankedDecorDominoes, []);
   const showDifficultyCards = menuMode === "infinite" || showSeedInput;
   const seedReady = customSeedInput.trim().length > 0;
 
@@ -1528,33 +1532,10 @@ function PipsMenu({
         >
           <span className="pips-ranked-start-text">
             <span className="pips-ranked-start-title">
-              <GiDominoTiles className="pips-ranked-start-title-icon" size={22} />
+              <GameIcon game="pips" className="pips-ranked-start-title-icon" size={22} />
               Start Ranked Run
             </span>
             <span className="pips-ranked-start-copy">Easy / Medium / Hard - fastest total time ranks.</span>
-          </span>
-          <span className="pips-ranked-start-dominoes" aria-hidden="true">
-            {rankedDecorDominoes.map((domino) => (
-              <span
-                className={`pips-ranked-mini pips-ranked-mini--path-${domino.path}`}
-                key={domino.id}
-                style={{
-                  "--ranked-x": `${domino.left}%`,
-                  "--ranked-y": `${domino.top}%`,
-                  "--ranked-z": `${domino.z}px`,
-                  "--ranked-scale": domino.scale,
-                  "--ranked-rotate": `${domino.rotate}deg`,
-                  "--ranked-duration": `${domino.duration}s`,
-                  "--ranked-delay": `${domino.delay}s`,
-                  "--ranked-blur": `${domino.blur}px`,
-                  "--ranked-opacity": domino.opacity,
-                  "--ranked-hover-opacity": domino.hoverOpacity,
-                } as CSSProperties}
-              >
-                <span><PipFace value={domino.a} /></span>
-                <span><PipFace value={domino.b} /></span>
-              </span>
-            ))}
           </span>
         </button>
       ) : (
@@ -1651,7 +1632,7 @@ function PipsMenu({
           <FiAward size={14} /> Leaderboard
         </button>
         <button className="pips-menu-link" type="button" onClick={onOpenHowTo} data-tooltip="Learn how to play" data-tooltip-pos="bottom">
-          <GiDominoTiles size={14} /> How to Play
+          <GameIcon game="pips" size={14} /> How to Play
         </button>
       </div>
     </main>
@@ -1673,7 +1654,6 @@ function PipsEndScreen({
   submittingScore,
   scoreSubmissionStatus,
   onSubmitScore,
-  onPlayAgain,
   onNewRanked,
   onMenu,
   onOpenLeaderboard,
@@ -1692,7 +1672,6 @@ function PipsEndScreen({
   submittingScore: boolean;
   scoreSubmissionStatus: ScoreSubmissionStatus | null;
   onSubmitScore: () => void;
-  onPlayAgain: () => void;
   onNewRanked: () => void;
   onMenu: () => void;
   onOpenLeaderboard: () => void;
@@ -1736,12 +1715,13 @@ function PipsEndScreen({
     : completed
       ? "Run Complete!"
       : "Run Over";
+  const puzzleCount = mode === "infinite" ? infiniteSolved : splitRows.length;
   const endSub = mode === "infinite"
     ? `Solved ${infiniteSolved} ${difficultyLabel(infiniteDifficulty)} puzzle${infiniteSolved === 1 ? "" : "s"}`
     : mode === "seeded"
       ? completed
-        ? `Seed ${seed} - all 3 puzzles solved`
-        : `Seed ${seed} - run abandoned`
+        ? `Seed ${seed} - ${puzzleCount === 1 ? `${splitRows[0]?.label ?? "Practice"} puzzle solved` : `all ${puzzleCount} puzzles solved`}`
+        : `Seed ${seed} - practice abandoned`
       : completed
         ? "All 3 puzzles solved"
         : "Run abandoned before every board was cleared";
@@ -1864,10 +1844,7 @@ function PipsEndScreen({
               )}
             </button>
           )}
-          <button className="btn btn-primary game-action-btn" type="button" onClick={onPlayAgain}>
-            <FiRefreshCw size={16} /> Play Again
-          </button>
-          <button className="btn btn-muted game-action-btn" type="button" onClick={onNewRanked}>
+          <button className="btn btn-primary game-action-btn" type="button" onClick={onNewRanked}>
             <FiFlag size={16} /> New Ranked
           </button>
           <button className="btn btn-muted" type="button" onClick={onMenu}>
@@ -2199,34 +2176,6 @@ function getRunSplitTotal(runSplits: PipsRunSplits): number {
 
 function formatSplitTime(ms: number | undefined): string {
   return ms == null ? "--" : formatTime(ms);
-}
-
-function makeRankedDecorDominoes(): PipsRankedDecorDomino[] {
-  return Array.from({ length: PIPS_RANKED_DECOR_COUNT }, (_, index) => {
-    const scale = randomBetween(0.38, 1.08);
-    const distance = Math.max(0, 1 - scale);
-    const opacity = randomBetween(0.42, 0.92) - distance * 0.22;
-    return {
-      id: `ranked-decor-${index}-${Math.round(Math.random() * 100000)}`,
-      left: randomBetween(-3, 103),
-      top: randomBetween(-8, 108),
-      z: randomBetween(-80, 90),
-      scale,
-      rotate: randomBetween(-34, 34) + (index % 4 === 0 ? 90 : 0),
-      duration: randomBetween(4.6, 8.8),
-      delay: randomBetween(-7.5, 0),
-      blur: randomBetween(distance * 0.6, distance * 2.2),
-      opacity,
-      hoverOpacity: Math.max(0.16, opacity * 0.48),
-      a: Math.floor(randomBetween(0, 7)),
-      b: Math.floor(randomBetween(0, 7)),
-      path: ((index % 4) + 1) as PipsRankedDecorDomino["path"],
-    };
-  });
-}
-
-function randomBetween(min: number, max: number): number {
-  return min + Math.random() * (max - min);
 }
 
 function makeRunSeed(): number {

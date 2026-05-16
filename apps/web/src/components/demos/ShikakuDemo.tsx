@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import { FiGrid } from "react-icons/fi";
 import { DemoModal, type DemoStep } from "./DemoModal";
+import { GameIcon } from "../shared/GameIcon";
 import "../../styles/shikaku.css";
 
 /* ── Steps ──────────────────────────────────────────────── */
@@ -151,7 +151,7 @@ export function ShikakuDemo({ onClose, initialStep = 0 }: { onClose: () => void;
   return (
     <DemoModal
       title="Shikaku"
-      icon={<FiGrid size={22} />}
+      icon={<GameIcon game="shikaku" size={22} />}
       color="#34d399"
       steps={steps}
       currentStep={step}

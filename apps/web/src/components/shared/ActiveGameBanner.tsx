@@ -1,26 +1,10 @@
 import { type CSSProperties, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiAlertTriangle, FiArrowRight, FiHash, FiLogOut } from "react-icons/fi";
-import { queries, mutators } from "@games/shared";
+import { GAME_META, multiplayerTypeToGameSlug, queries, mutators } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { SessionGameType, leaveCurrentGame } from "../../lib/session";
 import { showToast } from "../../lib/toast";
-
-const GAME_LABELS: Record<SessionGameType, string> = {
-  imposter: "Imposter",
-  password: "Password",
-  chain_reaction: "Chain Reaction",
-  shade_signal: "Shade Signal",
-  location_signal: "Location Signal",
-};
-
-const GAME_ACCENTS: Record<SessionGameType, string> = {
-  imposter: "#7eb8ff",
-  password: "#a78bfa",
-  chain_reaction: "#34d399",
-  shade_signal: "#f472b6",
-  location_signal: "#f59e0b",
-};
 
 const ACTIVE_GAME_MODAL_DELAY_MS = 800;
 
@@ -123,8 +107,9 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
     }
   };
 
-  const gameLabel = GAME_LABELS[gameType];
-  const accent = GAME_ACCENTS[gameType];
+  const gameMeta = GAME_META[multiplayerTypeToGameSlug(gameType)];
+  const gameLabel = gameMeta.title;
+  const accent = gameMeta.accent;
   const roomLabel = gameCode ?? gameId.slice(0, 6).toUpperCase();
 
   return (

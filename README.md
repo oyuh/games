@@ -870,12 +870,12 @@ The repo includes [railway.toml](railway.toml).
 
 Current Railway config in the repo:
 
-- builder: Nixpacks
-- build command: `pnpm --filter @games/api build`
-- start command: `pnpm --filter @games/api exec tsx src/index.ts`
+- builder: Dockerfile
+- Dockerfile path: [Dockerfile](Dockerfile)
+- start command: `bun apps/api/src/index.ts`
 - healthcheck path: `/health`
 
-That means the current Railway deployment starts the TypeScript entrypoint through `tsx` even though a compiled `dist` build is also available. This works, but you should be aware of it because it differs from a stricter `node dist/index.js` production model.
+That means the current Railway deployment starts the TypeScript entrypoint through Bun even though a compiled `dist` build is also available. This works, but you should be aware of it because it differs from a stricter `node dist/index.js` production model.
 
 #### Railway API environment variables
 
@@ -905,8 +905,23 @@ Zero should be deployed as its own service, separate from the API service.
 Recommended start command:
 
 ```bash
-pnpm dlx @rocicorp/zero@0.25.13 zero-cache --port "$PORT"
+pnpm dlx @rocicorp/zero@1.3.0 zero-cache --port "$PORT"
 ```
+
+Keep this version in lockstep with the `@rocicorp/zero` version used by the
+web, API, and shared packages. A mismatched Zero cache can still answer HTTP
+health checks while failing the browser WebSocket handshake, which shows up in
+production as `/sync/v50/connect` timing out after 10 seconds.
+
+Recommended Railway healthcheck path:
+
+```bash
+/
+```
+
+Do not use `/keepalive` as a casual external healthcheck. In Zero, that endpoint
+starts an opt-in heartbeat monitor and can cause the service to drain if
+follow-up heartbeats do not arrive on its expected cadence.
 
 Required Zero service environment variables:
 

@@ -22,6 +22,7 @@ import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 import { ShadeDemo } from "../components/demos/ShadeDemo";
 import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
+import { GameIcon } from "../components/shared/GameIcon";
 
 type ShadePhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended";
 
@@ -448,11 +449,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
       <div className="game-header">
         <div className="game-header-left">
           <div className="game-header-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18.37 2.63a2.12 2.12 0 0 1 3 3L14 13l-4 1 1-4Z" />
-              <path d="M9 3.5a8 8 0 1 0 5.59 13.77" />
-              <path d="M14 13l1.07-1.07" />
-            </svg>
+            <GameIcon game="shade" size={20} />
           </div>
           <h1 className="game-title">Shade Signal</h1>
           <span className={`badge ${phaseVariants[phase]}`} data-tooltip={phase === "lobby" ? "Waiting for host to start" : phase === "clue1" ? "Leader gives their 1st clue" : phase === "guess1" ? "Guessers pick a cell (1st guess)" : phase === "clue2" ? "Leader gives a 2nd clue" : phase === "guess2" ? "Guessers pick again (2nd guess)" : phase === "reveal" ? "Showing the target & scores" : phase === "finished" ? "All rounds complete" : "Game ended"} data-tooltip-variant="info">

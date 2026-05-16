@@ -1,12 +1,9 @@
+import { GAME_META, multiplayerTypeToGameSlug } from "@games/shared";
 import { FiAlertTriangle, FiX } from "react-icons/fi";
 import { SessionGameType } from "../../lib/session";
 
 function labelForGameType(gameType: SessionGameType): string {
-  if (gameType === "chain_reaction") return "Chain Reaction";
-  if (gameType === "shade_signal") return "Shade Signal";
-  if (gameType === "location_signal") return "Location Signal";
-  if (gameType === "imposter") return "Imposter";
-  return "Password";
+  return GAME_META[multiplayerTypeToGameSlug(gameType)].title;
 }
 
 export function InSessionModal({

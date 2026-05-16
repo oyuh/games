@@ -1,9 +1,11 @@
-import { FiX, FiZap, FiGlobe, FiMap, FiEye, FiShield, FiAward, FiLink, FiCopy, FiDroplet, FiMapPin, FiGrid, FiActivity, FiGithub, FiExternalLink } from "react-icons/fi";
+import { GAME_META, getGameSlugFromPath, type GameSlug } from "@games/shared";
+import { FiX, FiZap, FiCopy, FiActivity, FiGithub, FiExternalLink } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { useConnectionDebug } from "../../lib/connection-debug";
 import { getCustomStatus, subscribeCustomStatus } from "../../hooks/useAdminBroadcast";
+import { GameIcon } from "./GameIcon";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
 
@@ -21,115 +23,68 @@ interface PageInfo {
   tips?: string[];
 }
 
+const pageTips: Record<GameSlug, string[]> = {
+  home: [
+    "Set your name before joining a game",
+    "Use the join code to hop into a friend's lobby",
+    "Configure game options before creating",
+  ],
+  imposter: [
+    "Give a clue that proves you know the word without giving it away",
+    "The imposter should try to blend in",
+    "Review all clues carefully before voting",
+  ],
+  password: [
+    "Clue givers: your clue must be exactly one word",
+    "Guessers: type your best guess before time runs out",
+    "Watch the scoreboard to track team progress",
+  ],
+  chain: [
+    "Wrong guesses auto-reveal one letter as a hint",
+    "Fewer hints used = more points per word",
+    "Finish your chain first for a bonus point on the last word",
+  ],
+  shade: [
+    "Leaders: describe the color without naming it directly",
+    "Closer guesses earn more points",
+    "Every player takes a turn as leader across rounds",
+  ],
+  location: [
+    "Leaders: don't name the place directly",
+    "You get clues to narrow it down",
+    "Closer guesses score more points",
+  ],
+  shikaku: [
+    "Drag to draw rectangles on the grid",
+    "Each rectangle must contain exactly one number",
+    "Complete all puzzles as fast as you can for a higher score",
+  ],
+  pips: [
+    "Drag dominoes from the tray onto adjacent cells",
+    "Click a domino or press R while holding it to rotate clockwise",
+    "Ranked runs use Easy, Medium, and Hard splits; fastest total time ranks",
+  ],
+};
+
 function getPageInfo(pathname: string): PageInfo {
-  if (pathname === "/") {
+  const slug = getGameSlugFromPath(pathname);
+
+  if (slug === "home" && pathname !== "/") {
     return {
-      title: "Home",
-      icon: <FiGlobe size={18} />,
-      description: "Create a new game or join an existing one with a code. Set your display name so others can see you.",
-      tips: [
-        "Set your name before joining a game",
-        "Use the join code to hop into a friend's lobby",
-        "Configure game options before creating",
-      ],
+      title: "Page",
+      icon: <GameIcon game="home" size={18} />,
+      description: "You're on an unknown page.",
     };
   }
 
-  if (pathname.startsWith("/imposter/")) {
-    return {
-      title: "Imposter",
-      icon: <FiEye size={18} />,
-      description: "A social deduction game. Each round, players see a secret word - except the imposter. Everyone gives one-word clues, then votes on who the imposter is.",
-      tips: [
-        "Give a clue that proves you know the word without giving it away",
-        "The imposter should try to blend in",
-        "Review all clues carefully before voting",
-      ],
-    };
-  }
-
-  if (pathname.startsWith("/password/")) {
-    return {
-      title: "Password",
-      icon: <FiShield size={18} />,
-      description: "Team-based word guessing. Each round, one player gives a one-word clue and their teammate guesses. First team to the target score wins!",
-      tips: [
-        "Clue givers: your clue must be exactly one word",
-        "Guessers: type your best guess before time runs out",
-        "Watch the scoreboard to track team progress",
-      ],
-    };
-  }
-
-  if (pathname.startsWith("/chain/")) {
-    return {
-      title: "Chain Reaction",
-      icon: <FiLink size={18} />,
-      description: "A 1v1 word chain duel. Each player gets a chain of connected words - the first and last are revealed as hints. Guess the hidden words in between!",
-      tips: [
-        "Wrong guesses auto-reveal one letter as a hint",
-        "Fewer hints used = more points per word (3 → 2 → 1)",
-        "Finish your chain first for a bonus point on the last word",
-      ],
-    };
-  }
-
-  if (pathname.startsWith("/shade/")) {
-    return {
-      title: "Shade Signal",
-      icon: <FiDroplet size={18} />,
-      description: "A color-guessing party game. The Leader gives text clues about a secret color on the grid. Everyone else tries to guess which cell it is.",
-      tips: [
-        "Leaders: describe the color without naming it directly",
-        "Scoring: exact = 5 pts, 1 away = 3, 2 away = 2, 3 away = 1",
-        "Every player takes a turn as leader across rounds",
-      ],
-    };
-  }
-
-  if (pathname.startsWith("/location/")) {
-    return {
-      title: "Location Signal",
-      icon: <FiMapPin size={18} />,
-      description: "A map-based guessing game. The Leader secretly picks a spot on the world map and gives text clues. Everyone else guesses where it is - closer = more points!",
-      tips: [
-        "Leaders: don't name the place directly",
-        "You get two clues to narrow it down",
-        "5,000 pts for exact, scores drop with distance",
-      ],
-    };
-  }
-
-  if (/^\/shikaku(\/|$)/.test(pathname)) {
-    return {
-      title: "Shikaku",
-      icon: <FiGrid size={18} />,
-      description: "A logic puzzle. Divide the grid into rectangles, each containing exactly one number equal to its area. Race for the best time!",
-      tips: [
-        "Drag to draw rectangles on the grid",
-        "Each rectangle must contain exactly one number",
-        "Complete all puzzles as fast as you can for a higher score",
-      ],
-    };
-  }
-
-  if (/^\/pips(\/|$)/.test(pathname)) {
-    return {
-      title: "Pips",
-      icon: <FiZap size={18} />,
-      description: "A timed domino logic run. Place every domino onto adjacent cells so each colored region satisfies its rule.",
-      tips: [
-        "Drag dominoes from the tray onto adjacent cells",
-        "Click a domino or press R while holding it to rotate clockwise",
-        "Ranked runs use Easy, Medium, and Hard splits; fastest total time ranks",
-      ],
-    };
-  }
-
+  const meta = GAME_META[slug];
   return {
-    title: "Page",
-    icon: <FiMap size={18} />,
-    description: "You're on an unknown page.",
+    title: slug === "home" ? "Home" : meta.title,
+    icon: <GameIcon game={slug} size={18} />,
+    description: slug === "home"
+      ? "Create a new game or join an existing one with a code. Set your display name so others can see you."
+      : meta.description,
+    tips: pageTips[slug],
   };
 }
 
@@ -206,7 +161,7 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="modal-header">
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <FiZap size={18} style={{ color: "var(--primary)" }} />
+            <GameIcon game="home" size={18} style={{ color: "var(--primary)" }} />
             <h2 className="modal-title">{siteInfo.title}</h2>
             <span className="info-version-badge">v{siteInfo.version}</span>
           </div>

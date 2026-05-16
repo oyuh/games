@@ -1,9 +1,10 @@
 import { useLocation } from "react-router-dom";
-import { FiZap, FiCopy, FiEye, FiShield, FiLink, FiDroplet, FiMapPin, FiGrid, FiActivity, FiGithub, FiExternalLink } from "react-icons/fi";
-import { GiDominoTiles } from "react-icons/gi";
+import { GAME_META, getGameSlugFromPath, type GameSlug } from "@games/shared";
+import { FiZap, FiCopy, FiActivity, FiGithub, FiExternalLink } from "react-icons/fi";
 import { useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { BottomSheet } from "./BottomSheet";
+import { GameIcon } from "../../components/shared/GameIcon";
 import { ImposterDemo } from "../../components/demos/ImposterDemo";
 import { PasswordDemo } from "../../components/demos/PasswordDemo";
 import { ChainDemo } from "../../components/demos/ChainDemo";
@@ -46,14 +47,8 @@ function relativeTime(iso: string) {
 }
 
 function getGameType(pathname: string): "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | "pips" | null {
-  if (pathname.startsWith("/imposter/")) return "imposter";
-  if (pathname.startsWith("/password/")) return "password";
-  if (pathname.startsWith("/chain/")) return "chain";
-  if (pathname.startsWith("/shade/")) return "shade";
-  if (pathname.startsWith("/location/")) return "location";
-  if (/^\/shikaku(\/|$)/.test(pathname)) return "shikaku";
-  if (/^\/pips(\/|$)/.test(pathname)) return "pips";
-  return null;
+  const slug = getGameSlugFromPath(pathname);
+  return slug === "home" ? null : slug;
 }
 
 export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
@@ -160,7 +155,7 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
         {GAME_CATALOG.map((g) => (
           <div key={g.key} className="m-info-game-row">
             <div className="m-info-game-icon" style={{ background: `color-mix(in srgb, ${g.color} 15%, transparent)`, color: g.color }}>
-              {g.icon}
+              <GameIcon game={g.key} size={14} />
             </div>
             <div className="m-info-game-body">
               <div className="m-info-game-name-row">
@@ -254,40 +249,44 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-const GAME_CATALOG = [
-  { key: "imposter", name: "Imposter", icon: <FiEye size={14} />, color: "#7eb8ff", players: "3–12", description: "Find the fake - everyone gives clues, then votes" },
-  { key: "password", name: "Password", icon: <FiShield size={14} />, color: "#a78bfa", players: "4+", description: "Team word-guessing with one-word clues" },
-  { key: "chain", name: "Chain Reaction", icon: <FiLink size={14} />, color: "#34d399", players: "2", description: "1v1 word chain duel - guess the hidden words" },
-  { key: "shade", name: "Shade Signal", icon: <FiDroplet size={14} />, color: "#f472b6", players: "3–8", description: "Guess the secret color from text clues" },
-  { key: "location", name: "Location Signal", icon: <FiMapPin size={14} />, color: "#f59e0b", players: "3–8", description: "Guess the secret map location from clues" },
-  { key: "shikaku", name: "Shikaku", icon: <FiGrid size={14} />, color: "#06b6d4", players: "Solo", description: "Logic puzzle - divide the grid into rectangles" },
-  { key: "pips", name: "Pips", icon: <GiDominoTiles size={14} />, color: "#fb923c", players: "Solo", description: "Domino logic run with timed splits" },
-];
+const GAME_CATALOG_ORDER: GameSlug[] = ["imposter", "password", "chain", "shade", "location", "shikaku", "pips"];
+
+const GAME_CATALOG = GAME_CATALOG_ORDER.map((key) => {
+  const meta = GAME_META[key];
+  return {
+    key,
+    name: meta.title,
+    color: meta.accent,
+    players: meta.players,
+    description: meta.shortDescription,
+  };
+});
+
+const pageTips: Record<GameSlug, string[]> = {
+  home: ["Set your name before joining a game", "Use the join code to hop into a friend's lobby"],
+  imposter: ["Give clues that prove you know the word", "Vote for who you think is faking it"],
+  password: ["Clue givers: one word only", "Guessers: type your best guess"],
+  chain: ["Tap a word to guess", "Wrong guesses reveal a letter", "Fewer hints = more points"],
+  shade: ["Leaders: describe the color creatively", "Closer guesses = more points"],
+  location: ["Leaders: don't name the place directly", "Closer guesses score more points"],
+  shikaku: ["Drag to draw rectangles", "Each must contain exactly one number"],
+  pips: ["Drag dominoes onto adjacent cells", "Click or press R to rotate", "Ranked runs use Easy, Medium, and Hard splits"],
+};
 
 function getPageInfo(pathname: string): { title: string; icon: ReactNode; description: string; tips?: string[] } {
-  if (pathname === "/") {
-    return { title: "Home", icon: <FiZap size={16} />, description: "Create a new game or join an existing one with a code.", tips: ["Set your name before joining a game", "Use the join code to hop into a friend's lobby"] };
+  const slug = getGameSlugFromPath(pathname);
+
+  if (slug === "home" && pathname !== "/") {
+    return { title: "Page", icon: <GameIcon game="home" size={16} />, description: "You're on an unknown page." };
   }
-  if (pathname.startsWith("/imposter/")) {
-    return { title: "Imposter", icon: <FiEye size={16} />, description: "Social deduction - everyone gives one-word clues, then votes on who the imposter is.", tips: ["Give clues that prove you know the word", "Vote for who you think is faking it"] };
-  }
-  if (pathname.startsWith("/password/")) {
-    return { title: "Password", icon: <FiShield size={16} />, description: "Team word-guessing. Give one-word clues - first team to target score wins!", tips: ["Clue givers: one word only", "Guessers: type your best guess"] };
-  }
-  if (pathname.startsWith("/chain/")) {
-    return { title: "Chain Reaction", icon: <FiLink size={16} />, description: "1v1 word chain duel. Guess the hidden words between the hints!", tips: ["Tap a word to guess", "Wrong guesses reveal a letter", "Fewer hints = more points"] };
-  }
-  if (pathname.startsWith("/shade/")) {
-    return { title: "Shade Signal", icon: <FiDroplet size={16} />, description: "The leader describes a secret color. Everyone else guesses which cell it is.", tips: ["Leaders: describe the color creatively", "Closer guesses = more points"] };
-  }
-  if (pathname.startsWith("/location/")) {
-    return { title: "Location Signal", icon: <FiMapPin size={16} />, description: "The leader picks a map location and gives text clues. Guess as close as you can!", tips: ["Leaders: don't name the place directly", "5,000 pts for exact, drops with distance"] };
-  }
-  if (/^\/shikaku(\/|$)/.test(pathname)) {
-    return { title: "Shikaku", icon: <FiGrid size={16} />, description: "Divide the grid into rectangles - each with one number equal to its area.", tips: ["Drag to draw rectangles", "Each must contain exactly one number"] };
-  }
-  if (/^\/pips(\/|$)/.test(pathname)) {
-    return { title: "Pips", icon: <GiDominoTiles size={16} />, description: "Place dominoes so every colored region satisfies its rule.", tips: ["Drag dominoes onto adjacent cells", "Click or press R to rotate", "Ranked runs use Easy, Medium, and Hard splits"] };
-  }
-  return { title: "Page", icon: <FiZap size={16} />, description: "You're on an unknown page." };
+
+  const meta = GAME_META[slug];
+  return {
+    title: slug === "home" ? "Home" : meta.title,
+    icon: <GameIcon game={slug} size={16} />,
+    description: slug === "home"
+      ? "Create a new game or join an existing one with a code."
+      : meta.description,
+    tips: pageTips[slug],
+  };
 }

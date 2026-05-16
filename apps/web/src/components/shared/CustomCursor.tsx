@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { useLocation } from "react-router-dom";
+import { GAME_META, getGameSlugFromPath, type GameSlug } from "@games/shared";
 import { useSettings } from "../../lib/settings";
 
 type CursorKind = "default" | "pointer" | "text" | "crosshair" | "slider" | "map" | "grab" | "grabbing" | "help" | "not-allowed" | "resize";
@@ -23,16 +24,6 @@ type CursorAsset =
       hotX: number;
       hotY: number;
     };
-
-const THEME_COLORS: Record<string, string> = {
-  imposter: "#7eb8ff",
-  password: "#a78bfa",
-  chain: "#34d399",
-  shade: "#f472b6",
-  location: "#f59e0b",
-  shikaku: "#34d399",
-  pips: "#fb923c",
-};
 
 const cursorUrl = (path: string) => `${import.meta.env.BASE_URL}${path}`;
 const cursorSize = (value: number) => Math.round(value * 0.51);
@@ -168,18 +159,16 @@ function cursorKindForTarget(el: Element | null, pressed: boolean): CursorKind {
   return "default";
 }
 
-function themeForPathname(pathname: string) {
-  if (pathname.startsWith("/imposter/")) return "imposter";
-  if (pathname.startsWith("/password/")) return "password";
-  if (pathname.startsWith("/chain/")) return "chain";
-  if (pathname.startsWith("/shade/")) return "shade";
-  if (pathname.startsWith("/location/")) return "location";
-  if (/^\/shikaku(\/|$)/.test(pathname)) return "shikaku";
-  if (/^\/pips(\/|$)/.test(pathname)) return "pips";
-  return "";
+function isGameSlug(value: string | undefined): value is GameSlug {
+  return Boolean(value && value in GAME_META);
 }
 
-function themeForHomeCard(el: Element | null) {
+function themeForPathname(pathname: string): GameSlug | "" {
+  const slug = getGameSlugFromPath(pathname);
+  return slug === "home" ? "" : slug;
+}
+
+function themeForHomeCard(el: Element | null): GameSlug | "" {
   if (el?.closest(".home-card--imposter, .m-game-card--imposter")) return "imposter";
   if (el?.closest(".home-card--password, .m-game-card--password")) return "password";
   if (el?.closest(".home-card--chain, .m-game-card--chain")) return "chain";
@@ -193,7 +182,7 @@ function accentForTarget(el: Element | null, pathname: string) {
   const themed = el?.closest("[data-game-theme]");
   const theme = themed instanceof HTMLElement ? themed.dataset.gameTheme : "";
   const fallbackTheme = theme || themeForHomeCard(el) || themeForPathname(pathname);
-  return fallbackTheme ? THEME_COLORS[fallbackTheme] ?? "#7ecbff" : "#7ecbff";
+  return isGameSlug(fallbackTheme) ? GAME_META[fallbackTheme].accent : GAME_META.home.accent;
 }
 
 export function CustomCursor() {

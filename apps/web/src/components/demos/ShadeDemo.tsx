@@ -1,7 +1,8 @@
 import { useRef, useState, FormEvent } from "react";
-import { FiDroplet, FiSend } from "react-icons/fi";
+import { FiSend } from "react-icons/fi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { ColorGrid, generateGridColor } from "../shade/ColorGrid";
+import { GameIcon } from "../shared/GameIcon";
 import "../../styles/game-shared.css";
 import "../../styles/shade-signal.css";
 
@@ -254,7 +255,7 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
   return (
     <DemoModal
       title="Shade Signal"
-      icon={<FiDroplet size={20} />}
+      icon={<GameIcon game="shade" size={20} />}
       color="#f472b6"
       steps={steps}
       currentStep={step}
