@@ -20,15 +20,11 @@ export const queries = defineQueries({
   imposter: {
     byId: defineQuery(
       z.object({ id: z.string() }),
-      ({ args }) => zql.imposter_games.where("id", args.id).limit(1)
+      ({ args }) => zql.imposter_public_games.where("id", args.id).limit(1)
     ),
     byCode: defineQuery(
       z.object({ code: z.string() }),
-      ({ args }) => zql.imposter_games.where("code", args.code).limit(1)
-    ),
-    publicGames: defineQuery(
-      z.object({}),
-      () => zql.imposter_games.where("is_public", true).where("phase", "!=", "ended")
+      ({ args }) => zql.imposter_public_games.where("code", args.code).limit(1)
     )
   },
   password: {
@@ -39,10 +35,6 @@ export const queries = defineQueries({
     byCode: defineQuery(
       z.object({ code: z.string() }),
       ({ args }) => zql.password_games.where("code", args.code).limit(1)
-    ),
-    publicGames: defineQuery(
-      z.object({}),
-      () => zql.password_games.where("is_public", true).where("phase", "!=", "ended")
     )
   },
   chainReaction: {
@@ -53,10 +45,6 @@ export const queries = defineQueries({
     byCode: defineQuery(
       z.object({ code: z.string() }),
       ({ args }) => zql.chain_reaction_games.where("code", args.code).limit(1)
-    ),
-    publicGames: defineQuery(
-      z.object({}),
-      () => zql.chain_reaction_games.where("is_public", true).where("phase", "!=", "ended").where("phase", "!=", "finished")
     )
   },
   shadeSignal: {
@@ -67,10 +55,6 @@ export const queries = defineQueries({
     byCode: defineQuery(
       z.object({ code: z.string() }),
       ({ args }) => zql.shade_signal_games.where("code", args.code).limit(1)
-    ),
-    publicGames: defineQuery(
-      z.object({}),
-      () => zql.shade_signal_games.where("is_public", true).where("phase", "!=", "ended")
     )
   },
   locationSignal: {
@@ -81,10 +65,6 @@ export const queries = defineQueries({
     byCode: defineQuery(
       z.object({ code: z.string() }),
       ({ args }) => zql.location_signal_games.where("code", args.code).limit(1)
-    ),
-    publicGames: defineQuery(
-      z.object({}),
-      () => zql.location_signal_games.where("is_public", true).where("phase", "!=", "ended")
     )
   },
   chat: {
@@ -94,6 +74,16 @@ export const queries = defineQueries({
         zql.chat_messages
           .where("game_type", args.gameType)
           .where("game_id", args.gameId)
+          .where("channel", "all")
+          .orderBy("created_at", "asc")
+    ),
+    imposterByGame: defineQuery(
+      z.object({ gameId: z.string() }),
+      ({ args }) =>
+        zql.chat_messages
+          .where("game_type", "imposter")
+          .where("game_id", args.gameId)
+          .where("channel", "imposter")
           .orderBy("created_at", "asc")
     )
   }

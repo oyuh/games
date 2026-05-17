@@ -140,6 +140,66 @@ describe("Shade Signal — identity enforcement", () => {
     expect(game.kicked).toContain("attacker");
     expect(game.players.find((p: any) => p.sessionId === "attacker")).toBeUndefined();
   });
+
+  it("blocks non-hosts from advancing timers", async () => {
+    tx.seed("shade_signal_games", [
+      makeShadeSignalGame({
+        id: "game2",
+        host_id: "host1",
+        phase: "clue1",
+        leader_id: "host1",
+        players: [
+          { sessionId: "host1", name: "Host", connected: true, totalScore: 0 },
+          { sessionId: "p1", name: "Alice", connected: true, totalScore: 0 },
+          { sessionId: "p2", name: "Bob", connected: true, totalScore: 0 },
+        ],
+        settings: {
+          hardMode: false,
+          clueDurationSec: 45,
+          guessDurationSec: 30,
+          roundsPerPlayer: 1,
+          currentRound: 1,
+          phaseEndsAt: Date.now() - 1_000,
+        },
+      }),
+    ]);
+
+    await expectThrows(
+      () => mutators.advanceTimer({
+        args: { gameId: "game2" },
+        tx,
+        ctx: serverCtx("p1"),
+      }),
+      "Only host can do that"
+    );
+  });
+
+  it("blocks non-hosts from running reveal", async () => {
+    tx.seed("shade_signal_games", [
+      makeShadeSignalGame({
+        id: "game3",
+        host_id: "host1",
+        phase: "reveal",
+        leader_id: "host1",
+        target_row: 2,
+        target_col: 3,
+        players: [
+          { sessionId: "host1", name: "Host", connected: true, totalScore: 0 },
+          { sessionId: "p1", name: "Alice", connected: true, totalScore: 0 },
+          { sessionId: "p2", name: "Bob", connected: true, totalScore: 0 },
+        ],
+      }),
+    ]);
+
+    await expectThrows(
+      () => mutators.reveal({
+        args: { gameId: "game3" },
+        tx,
+        ctx: serverCtx("p1"),
+      }),
+      "Only host can do that"
+    );
+  });
 });
 
 // ───────────────────────────────────────────────────────────

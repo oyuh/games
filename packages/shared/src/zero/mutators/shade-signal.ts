@@ -1,7 +1,45 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
+import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
+import { now, code, shuffle, assertCaller, assertHost, assertHostUser, getGameSecretResolver, isServerTx, sanitizeText, resolvePlayerName } from "./helpers";
+
+async function encryptShadeTarget(ctx: unknown, gameId: string, target: { row: number; col: number }) {
+  const resolver = getGameSecretResolver(ctx);
+  if (!resolver) {
+    return { targetRow: target.row, targetCol: target.col, encryptedTarget: null as string | null };
+  }
+  const key = await resolver("shade_signal", gameId);
+  return {
+    targetRow: null as number | null,
+    targetCol: null as number | null,
+    encryptedTarget: await encryptSecret(JSON.stringify(target), key),
+  };
+}
+
+async function resolveShadeTarget(
+  ctx: unknown,
+  gameId: string,
+  game: { target_row?: number | null; target_col?: number | null; encrypted_target?: string | null }
+) {
+  if (typeof game.target_row === "number" && typeof game.target_col === "number") {
+    return { row: game.target_row, col: game.target_col };
+  }
+  if (!game.encrypted_target || !isEncrypted(game.encrypted_target)) {
+    return null;
+  }
+  const resolver = getGameSecretResolver(ctx);
+  if (!resolver) {
+    return null;
+  }
+  const key = await resolver("shade_signal", gameId);
+  const decrypted = await decryptSecret(game.encrypted_target, key);
+  const parsed = JSON.parse(decrypted) as { row?: unknown; col?: unknown };
+  if (typeof parsed.row !== "number" || typeof parsed.col !== "number") {
+    return null;
+  }
+  return { row: parsed.row, col: parsed.col };
+}
 
 export const shadeSignalMutators = {
   create: defineMutator(
@@ -249,8 +287,14 @@ export const shadeSignalMutators = {
       const rows = game.grid_rows;
       const cols = game.grid_cols;
       const leaderPick = game.settings.leaderPick ?? false;
-      const targetRow = leaderPick ? null : Math.floor(Math.random() * rows);
-      const targetCol = leaderPick ? null : Math.floor(Math.random() * cols);
+      const autoTarget = leaderPick ? null : { row: Math.floor(Math.random() * rows), col: Math.floor(Math.random() * cols) };
+      const encryptedTarget = isServerTx(tx) && autoTarget
+        ? await encryptShadeTarget(ctx, args.gameId, autoTarget)
+        : {
+            targetRow: autoTarget?.row ?? null,
+            targetCol: autoTarget?.col ?? null,
+            encryptedTarget: null as string | null,
+          };
 
       await tx.mutate.shade_signal_games.update({
         id: game.id,
@@ -259,8 +303,9 @@ export const shadeSignalMutators = {
         leader_order: leaderOrder,
         current_leader_index: 0,
         grid_seed: Math.floor(Math.random() * 100000),
-        target_row: targetRow,
-        target_col: targetCol,
+        target_row: encryptedTarget.targetRow,
+        target_col: encryptedTarget.targetCol,
+        encrypted_target: encryptedTarget.encryptedTarget,
         clue1: null,
         clue2: null,
         guesses: [],
@@ -287,12 +332,16 @@ export const shadeSignalMutators = {
       if (!game) throw new Error("Game not found");
       if (game.phase !== "picking") throw new Error("Not in picking phase");
       if (game.leader_id !== args.sessionId) throw new Error("Only the leader can pick the target");
+      const nextTarget = isServerTx(tx)
+        ? await encryptShadeTarget(ctx, args.gameId, { row: args.row, col: args.col })
+        : { targetRow: args.row, targetCol: args.col, encryptedTarget: null as string | null };
 
       await tx.mutate.shade_signal_games.update({
         id: game.id,
         phase: "clue1",
-        target_row: args.row,
-        target_col: args.col,
+        target_row: nextTarget.targetRow,
+        target_col: nextTarget.targetCol,
+        encrypted_target: nextTarget.encryptedTarget,
         settings: {
           ...game.settings,
           phaseEndsAt: now() + game.settings.clueDurationSec * 1000
@@ -414,9 +463,10 @@ export const shadeSignalMutators = {
 
   advanceTimer: defineMutator(
     z.object({ gameId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) return;
+      assertHostUser(tx, ctx, game.host_id);
       const phaseEnd = game.settings.phaseEndsAt;
       if (!phaseEnd || phaseEnd > now()) return;
 
@@ -472,6 +522,14 @@ export const shadeSignalMutators = {
         const rows = game.grid_rows;
         const cols = game.grid_cols;
         const leaderPick = game.settings.leaderPick ?? false;
+        const autoTarget = leaderPick ? null : { row: Math.floor(Math.random() * rows), col: Math.floor(Math.random() * cols) };
+        const encryptedTarget = isServerTx(tx) && autoTarget
+          ? await encryptShadeTarget(ctx, args.gameId, autoTarget)
+          : {
+              targetRow: autoTarget?.row ?? null,
+              targetCol: autoTarget?.col ?? null,
+              encryptedTarget: null as string | null,
+            };
 
         await tx.mutate.shade_signal_games.update({
           id: game.id,
@@ -479,8 +537,9 @@ export const shadeSignalMutators = {
           leader_id: nextLeaderId,
           current_leader_index: nextLeaderIndex,
           grid_seed: Math.floor(Math.random() * 100000),
-          target_row: leaderPick ? null : Math.floor(Math.random() * rows),
-          target_col: leaderPick ? null : Math.floor(Math.random() * cols),
+          target_row: encryptedTarget.targetRow,
+          target_col: encryptedTarget.targetCol,
+          encrypted_target: encryptedTarget.encryptedTarget,
           clue1: null,
           clue2: null,
           guesses: [],
@@ -497,13 +556,15 @@ export const shadeSignalMutators = {
 
   reveal: defineMutator(
     z.object({ gameId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
+      assertHostUser(tx, ctx, game.host_id);
       if (game.phase !== "reveal") throw new Error("Not in reveal phase");
-
-      const targetRow = game.target_row ?? 0;
-      const targetCol = game.target_col ?? 0;
+      const resolvedTarget = await resolveShadeTarget(ctx, args.gameId, game);
+      if (!resolvedTarget) throw new Error("Target is missing");
+      const targetRow = resolvedTarget.row;
+      const targetCol = resolvedTarget.col;
 
       // Score each guesser's best guess (use final guess if exists, else guess1)
       const guesserIds = game.players
@@ -558,6 +619,9 @@ export const shadeSignalMutators = {
 
       await tx.mutate.shade_signal_games.update({
         id: game.id,
+        target_row: targetRow,
+        target_col: targetCol,
+        encrypted_target: null,
         players,
         round_history: [...game.round_history, roundEntry],
         settings: { ...game.settings, phaseEndsAt: now() + 8000 },
@@ -595,6 +659,14 @@ export const shadeSignalMutators = {
       const rows = game.grid_rows;
       const cols = game.grid_cols;
       const leaderPick = game.settings.leaderPick ?? false;
+      const autoTarget = leaderPick ? null : { row: Math.floor(Math.random() * rows), col: Math.floor(Math.random() * cols) };
+      const encryptedTarget = isServerTx(tx) && autoTarget
+        ? await encryptShadeTarget(ctx, args.gameId, autoTarget)
+        : {
+            targetRow: autoTarget?.row ?? null,
+            targetCol: autoTarget?.col ?? null,
+            encryptedTarget: null as string | null,
+          };
 
       await tx.mutate.shade_signal_games.update({
         id: game.id,
@@ -602,8 +674,9 @@ export const shadeSignalMutators = {
         leader_id: nextLeaderId,
         current_leader_index: nextLeaderIndex,
         grid_seed: Math.floor(Math.random() * 100000),
-        target_row: leaderPick ? null : Math.floor(Math.random() * rows),
-        target_col: leaderPick ? null : Math.floor(Math.random() * cols),
+        target_row: encryptedTarget.targetRow,
+        target_col: encryptedTarget.targetCol,
+        encrypted_target: encryptedTarget.encryptedTarget,
         clue1: null,
         clue2: null,
         guesses: [],
@@ -635,6 +708,7 @@ export const shadeSignalMutators = {
         current_leader_index: 0,
         target_row: null,
         target_col: null,
+        encrypted_target: null,
         clue1: null,
         clue2: null,
         guesses: [],

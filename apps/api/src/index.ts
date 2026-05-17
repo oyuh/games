@@ -1,5 +1,5 @@
 import { fallbackPlayerName, mutators, queries, schema } from "@games/shared";
-import { adminNameOverrides, chatMessages, chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
+import { adminNameOverrides, chatMessages, chainReactionGames, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -13,6 +13,7 @@ import { pusher, getCustomStatus, setBanChecker, getBanChecker } from "./broadca
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 import { allowUnrestrictedSessionName, findRestrictedNameMatch } from "./name-rules";
 import { rateLimiter } from "./rate-limit";
+import { authorizeZeroQuery, getZeroMutatorAccessPolicy, resolveGameSecretAccess, type GameType } from "./security-policy";
 import {
   chooseCanonicalSession,
   createSignedSessionCookieValue,
@@ -34,27 +35,72 @@ import { embedRoutes } from "./embed-routes";
 config({ path: "../../.env" });
 
 const app = new Hono();
+const DEFAULT_WEB_ORIGIN = "https://games.lawsonhart.me";
 const DB_STATUS_KEY = process.env.DB_STATUS_KEY?.trim() || "footer";
 const DB_STATUS_EXPECTED_VALUE = process.env.DB_STATUS_EXPECTED_VALUE?.trim() || "ok";
-const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || process.env.PUSHER_SECRET?.trim() || "games-dev-session-secret";
 const DEV_MODE = process.env.NODE_ENV !== "production";
+const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || (DEV_MODE ? "games-dev-session-secret" : "");
+const CLEANUP_SECRET = process.env.CLEANUP_SECRET?.trim() || (DEV_MODE ? "cleanup-local" : "");
+const ALLOWED_WEB_ORIGINS = (process.env.ALLOWED_WEB_ORIGINS?.trim() || DEFAULT_WEB_ORIGIN)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const REQUIRED_ZERO_TABLES = [
+  "imposter_public_games",
+] as const;
+if (!DEV_MODE) {
+  if (!SESSION_COOKIE_SECRET) {
+    throw new Error("SESSION_COOKIE_SECRET is required in production");
+  }
+  if (!CLEANUP_SECRET) {
+    throw new Error("CLEANUP_SECRET is required in production");
+  }
+}
 if (DEV_MODE) {
   console.log("[dev-mode] Security relaxations active — fingerprint binding, session proof, and rate limits are loosened for local testing.");
+}
+
+async function assertRequiredZeroTables() {
+  const requiredTableLiterals = sql.join(
+    REQUIRED_ZERO_TABLES.map((tableName) => sql`${tableName}`),
+    sql`, `
+  );
+  const result = await drizzleClient.execute(sql`
+    select table_name
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name in (${requiredTableLiterals})
+  `);
+  const rows = Array.isArray(result)
+    ? result
+    : (result.rows ?? []);
+  const found = new Set(
+    rows
+      .map((row: any) => row?.table_name)
+      .filter((value: unknown): value is string => typeof value === "string")
+  );
+  const missing = REQUIRED_ZERO_TABLES.filter((tableName) => !found.has(tableName));
+  if (missing.length === 0) {
+    return;
+  }
+
+  const message = `Missing required Zero sync tables: ${missing.join(", ")}. Run \`bun db:push\` before starting sync clients.`;
+  if (DEV_MODE) {
+    console.warn(`[startup] ${message}`);
+    return;
+  }
+  throw new Error(message);
 }
 
 app.use(
   "*",
   cors({
     origin: (origin) => {
-      if (!origin) return "https://games.lawsonhart.me";
-      if (
-        origin.endsWith(".lawsonhart.me") ||
-        origin === "https://games.lawsonhart.me" ||
-        origin.startsWith("http://localhost:")
-      ) {
+      if (!origin) return DEFAULT_WEB_ORIGIN;
+      if (ALLOWED_WEB_ORIGINS.includes(origin) || origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
         return origin;
       }
-      return "https://games.lawsonhart.me";
+      return DEFAULT_WEB_ORIGIN;
     },
     allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "x-zero-user-id", ZERO_SESSION_PROOF_HEADER],
@@ -386,8 +432,13 @@ app.post("/api/pusher/auth", async (c) => {
     return c.json({ error: "Missing socket_id or channel_name" }, 400);
   }
 
+  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, claimedSessionId);
+  if (!verifiedClaimedSessionId) {
+    return c.json({ error: "Invalid session proof" }, 403);
+  }
+
   const resolvedIdentity = await resolveSessionIdentity(c, {
-    claimedSessionId,
+    claimedSessionId: verifiedClaimedSessionId,
     allowCreate: false,
   });
 
@@ -419,6 +470,8 @@ app.post("/api/pusher/auth", async (c) => {
     if (channelSessionId !== sessionId) {
       return c.json({ error: "Unauthorized channel" }, 403);
     }
+  } else if (channelName !== "games-broadcast") {
+    return c.json({ error: "Unauthorized channel" }, 403);
   }
 
   const authResponse = pusher.authorizeChannel(socketId, channelName);
@@ -464,8 +517,13 @@ app.post("/api/presence/heartbeat", async (c) => {
     return c.json({ error: "sessionId required" }, 400);
   }
 
+  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, claimedSessionId);
+  if (!verifiedClaimedSessionId) {
+    return c.json({ error: "Invalid session proof" }, 403);
+  }
+
   const resolvedIdentity = await resolveSessionIdentity(c, {
-    claimedSessionId,
+    claimedSessionId: verifiedClaimedSessionId,
     allowCreate: false,
   });
 
@@ -549,12 +607,15 @@ function getVerifiedClaimedSessionId(
   const proofUserId = getCallerProofUserId(c);
   const normalizedClaimedId = normalizeSessionId(claimedSessionId);
 
-  // In dev mode, trust claimed session IDs without proof verification
   if (DEV_MODE) {
     return proofUserId ?? normalizedClaimedId;
   }
 
-  if (headerUserId !== "anon" && (!proofUserId || headerUserId !== proofUserId)) {
+  if (!proofUserId) {
+    return null;
+  }
+
+  if (headerUserId !== "anon" && headerUserId !== proofUserId) {
     return null;
   }
 
@@ -562,7 +623,7 @@ function getVerifiedClaimedSessionId(
     return null;
   }
 
-  return proofUserId ?? normalizedClaimedId;
+  return proofUserId;
 }
 
 const MAX_ID_LEN = 64;
@@ -583,23 +644,6 @@ function assertCallerValue(userId: string, claimed: unknown, field: string) {
   if (claimed !== userId) {
     throw new Error("Not allowed");
   }
-}
-
-function requiresMutatorSessionProof(name: string, args: unknown) {
-  if (name.startsWith("demo.") && process.env.NODE_ENV !== "production") {
-    return false;
-  }
-  if (args == null || typeof args !== "object") {
-    return false;
-  }
-
-  const payload = args as Record<string, unknown>;
-  const [namespace] = name.split(".");
-  return namespace === "sessions"
-    || "sessionId" in payload
-    || "hostId" in payload
-    || "senderId" in payload
-    || "voterId" in payload;
 }
 
 function applyCanonicalMutatorCaller<T>(userId: string, name: string, args: T): T {
@@ -632,7 +676,11 @@ function applyCanonicalMutatorCaller<T>(userId: string, name: string, args: T): 
 }
 
 function resolveZeroMutatorCaller(userId: string, name: string, args: unknown, proofUserId: string | null) {
-  if (!requiresMutatorSessionProof(name, args)) {
+  const accessPolicy = getZeroMutatorAccessPolicy(name);
+  if (!accessPolicy || accessPolicy === "system") {
+    throw new Error("Forbidden");
+  }
+  if (accessPolicy === "public") {
     return proofUserId ?? userId;
   }
   if (!proofUserId) {
@@ -711,8 +759,6 @@ async function assertAllowedSessionNameMutation(name: string, args: unknown) {
   }
 }
 
-type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
-
 function normalizeGameType(value: unknown): GameType | null {
   if (
     value === "imposter" ||
@@ -724,83 +770,6 @@ function normalizeGameType(value: unknown): GameType | null {
     return value;
   }
   return null;
-}
-
-async function canAccessGameSecret(gameType: GameType, gameId: string, sessionId: string) {
-  if (gameType === "imposter") {
-    const [game] = await drizzleClient
-      .select({ phase: imposterGames.phase, players: imposterGames.players })
-      .from(imposterGames)
-      .where(eq(imposterGames.id, gameId));
-    if (!game) return { allowed: false, reason: "Game not found", status: 404 as const };
-    const me = game.players.find((p) => p.sessionId === sessionId);
-    if (!me) return { allowed: false, reason: "Forbidden", status: 403 as const };
-    const revealPhase = game.phase === "results" || game.phase === "finished" || game.phase === "ended";
-    if (!revealPhase && game.phase !== "playing" && game.phase !== "voting") {
-      return { allowed: false, reason: "Forbidden", status: 403 as const };
-    }
-    if (!revealPhase && me.role === "imposter") {
-      return { allowed: false, reason: "Forbidden", status: 403 as const };
-    }
-    return { allowed: true, myRole: me.role ?? "player" };
-  }
-
-  if (gameType === "password") {
-    const [game] = await drizzleClient
-      .select({ phase: passwordGames.phase, teams: passwordGames.teams, activeRounds: passwordGames.activeRounds })
-      .from(passwordGames)
-      .where(eq(passwordGames.id, gameId));
-    if (!game) return { allowed: false, reason: "Game not found", status: 404 as const };
-    const team = game.teams.find((t) => t.members.includes(sessionId));
-    if (!team) return { allowed: false, reason: "Forbidden", status: 403 as const };
-    const inActiveRound = game.phase === "playing";
-    if (inActiveRound) {
-      const isGuesser = game.activeRounds.some((round) => round.guesserId === sessionId);
-      if (isGuesser) {
-        return { allowed: false, reason: "Forbidden", status: 403 as const };
-      }
-    }
-    return { allowed: true, myRole: "player" as const };
-  }
-
-  if (gameType === "shade_signal") {
-    const [game] = await drizzleClient
-      .select({ phase: shadeSignalGames.phase, leaderId: shadeSignalGames.leaderId, players: shadeSignalGames.players })
-      .from(shadeSignalGames)
-      .where(eq(shadeSignalGames.id, gameId));
-    if (!game) return { allowed: false, reason: "Game not found", status: 404 as const };
-    const isPlayer = game.players.some((p) => p.sessionId === sessionId);
-    if (!isPlayer) return { allowed: false, reason: "Forbidden", status: 403 as const };
-    const revealPhase = game.phase === "reveal" || game.phase === "finished" || game.phase === "ended";
-    if (!revealPhase && game.leaderId !== sessionId) {
-      return { allowed: false, reason: "Forbidden", status: 403 as const };
-    }
-    return { allowed: true, myRole: game.leaderId === sessionId ? "leader" : "player" };
-  }
-
-  if (gameType === "location_signal") {
-    const [game] = await drizzleClient
-      .select({ phase: locationSignalGames.phase, leaderId: locationSignalGames.leaderId, players: locationSignalGames.players })
-      .from(locationSignalGames)
-      .where(eq(locationSignalGames.id, gameId));
-    if (!game) return { allowed: false, reason: "Game not found", status: 404 as const };
-    const isPlayer = game.players.some((p) => p.sessionId === sessionId);
-    if (!isPlayer) return { allowed: false, reason: "Forbidden", status: 403 as const };
-    const revealPhase = game.phase === "reveal" || game.phase === "finished" || game.phase === "ended";
-    if (!revealPhase && game.leaderId !== sessionId) {
-      return { allowed: false, reason: "Forbidden", status: 403 as const };
-    }
-    return { allowed: true, myRole: game.leaderId === sessionId ? "leader" : "player" };
-  }
-
-  const [game] = await drizzleClient
-    .select({ phase: chainReactionGames.phase, players: chainReactionGames.players })
-    .from(chainReactionGames)
-    .where(eq(chainReactionGames.id, gameId));
-  if (!game) return { allowed: false, reason: "Game not found", status: 404 as const };
-  const isPlayer = game.players.some((p) => p.sessionId === sessionId);
-  if (!isPlayer) return { allowed: false, reason: "Forbidden", status: 403 as const };
-  return { allowed: true, myRole: "player" as const };
 }
 
 async function getOrCreateGameKey(gameType: GameType, gameId: string) {
@@ -940,91 +909,6 @@ app.post("/api/game-secret/init", async (c) => {
   return c.json({ ok: true });
 });
 
-app.post("/api/game-secret/pre-reveal", async (c) => {
-  const body = await c.req.json().catch(() => null) as {
-    gameType?: unknown;
-    gameId?: unknown;
-    sessionId?: unknown;
-  } | null;
-
-  const gameType = normalizeGameType(body?.gameType);
-  const gameId = validId(body?.gameId);
-  const claimedSessionId = validId(body?.sessionId);
-  if (!gameType || !gameId || !claimedSessionId) {
-    return c.json({ error: "gameType, gameId, sessionId required" }, 400);
-  }
-
-  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, claimedSessionId);
-  if (!verifiedClaimedSessionId) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const resolvedIdentity = await resolveSessionIdentity(c, {
-    claimedSessionId: verifiedClaimedSessionId,
-    allowCreate: false,
-  });
-  if (!resolvedIdentity) {
-    return c.json({ error: "Invalid session" }, 403);
-  }
-  const sessionId = resolvedIdentity.sessionId;
-
-  if (gameType !== "shade_signal" && gameType !== "location_signal") {
-    return c.json({ error: "Unsupported gameType" }, 400);
-  }
-
-  if (gameType === "shade_signal") {
-    const [game] = await drizzleClient
-      .select({ hostId: shadeSignalGames.hostId, encryptedTarget: shadeSignalGames.encryptedTarget })
-      .from(shadeSignalGames)
-      .where(eq(shadeSignalGames.id, gameId))
-      .limit(1);
-    if (!game) return c.json({ error: "Game not found" }, 404);
-    if (game.hostId !== sessionId) return c.json({ error: "Forbidden" }, 403);
-    if (!game.encryptedTarget) return c.json({ ok: true, alreadyPlain: true });
-
-    const key = await getOrCreateGameKey(gameType, gameId);
-    const decrypted = await decryptSecret(game.encryptedTarget, key);
-    let payload: { row: number; col: number };
-    try {
-      const parsed = JSON.parse(decrypted);
-      if (typeof parsed?.row !== "number" || typeof parsed?.col !== "number") throw new Error("bad payload");
-      payload = parsed;
-    } catch {
-      return c.json({ error: "Corrupted encrypted target" }, 500);
-    }
-    await drizzleClient
-      .update(shadeSignalGames)
-      .set({ targetRow: payload.row, targetCol: payload.col, encryptedTarget: null, updatedAt: Date.now() })
-      .where(eq(shadeSignalGames.id, gameId));
-    return c.json({ ok: true });
-  }
-
-  const [game] = await drizzleClient
-    .select({ hostId: locationSignalGames.hostId, encryptedTarget: locationSignalGames.encryptedTarget })
-    .from(locationSignalGames)
-    .where(eq(locationSignalGames.id, gameId))
-    .limit(1);
-  if (!game) return c.json({ error: "Game not found" }, 404);
-  if (game.hostId !== sessionId) return c.json({ error: "Forbidden" }, 403);
-  if (!game.encryptedTarget) return c.json({ ok: true, alreadyPlain: true });
-
-  const key = await getOrCreateGameKey(gameType, gameId);
-  const decrypted = await decryptSecret(game.encryptedTarget, key);
-  let payload: { lat: number; lng: number };
-  try {
-    const parsed = JSON.parse(decrypted);
-    if (typeof parsed?.lat !== "number" || typeof parsed?.lng !== "number") throw new Error("bad payload");
-    payload = parsed;
-  } catch {
-    return c.json({ error: "Corrupted encrypted target" }, 500);
-  }
-  await drizzleClient
-    .update(locationSignalGames)
-    .set({ targetLat: payload.lat, targetLng: payload.lng, encryptedTarget: null, updatedAt: Date.now() })
-    .where(eq(locationSignalGames.id, gameId));
-  return c.json({ ok: true });
-});
-
 app.post("/api/game-secret/key", async (c) => {
   const body = await c.req.json().catch(() => null) as {
     gameType?: unknown;
@@ -1053,14 +937,14 @@ app.post("/api/game-secret/key", async (c) => {
   }
   const sessionId = resolvedIdentity.sessionId;
 
-  const access = await canAccessGameSecret(gameType, gameId, sessionId);
+  const access = await resolveGameSecretAccess(gameType, gameId, sessionId);
   if (!access.allowed) {
     return c.json({ error: access.reason }, access.status);
   }
 
-  const key = await getOrCreateGameKey(gameType, gameId);
+  const key = access.keyAllowed ? await getOrCreateGameKey(gameType, gameId) : null;
 
-  return c.json({ ok: true, key, myRole: access.myRole ?? null });
+  return c.json({ ok: true, key, myRole: access.myRole, scopes: access.scopes });
 });
 
 function detectPlatform() {
@@ -2337,12 +2221,20 @@ app.get("/debug/build-info", async (c) => {
 
 app.post("/api/zero/query", async (c) => {
   const request = c.req.raw;
-  const callerUserId = getCallerProofUserId(c) ?? getCallerUserId(c);
+  const proofUserId = getCallerProofUserId(c);
+  const headerUserId = getCallerUserId(c);
+  const callerUserId = proofUserId ?? headerUserId;
+  const queryHandler = (async (name: string, args: unknown) => {
+    await authorizeZeroQuery(name, args, {
+      proofUserId,
+      headerUserId: headerUserId === "anon" ? null : headerUserId,
+      allowUnsigned: DEV_MODE,
+    });
+    const query = mustGetQuery(queries, name);
+    return query.fn({ args: args as any, ctx: { userId: callerUserId } });
+  }) as any;
   const result = await handleQueryRequest({
-    handler: (name, args) => {
-      const query = mustGetQuery(queries, name);
-      return query.fn({ args, ctx: { userId: callerUserId } });
-    },
+    handler: queryHandler,
     schema,
     request,
     userID: callerUserId,
@@ -2789,11 +2681,68 @@ async function runActivityReport() {
   return lines.join("\n");
 }
 
+app.get("/api/public-games", async (c) => {
+  const imposterRows = await drizzleClient.select().from(imposterGames).where(and(eq(imposterGames.isPublic, true), ne(imposterGames.phase, "ended")));
+  const passwordRows = await drizzleClient.select().from(passwordGames).where(and(eq(passwordGames.isPublic, true), ne(passwordGames.phase, "ended")));
+  const chainRows = await drizzleClient.select().from(chainReactionGames).where(and(eq(chainReactionGames.isPublic, true), ne(chainReactionGames.phase, "ended"), ne(chainReactionGames.phase, "finished")));
+  const shadeRows = await drizzleClient.select().from(shadeSignalGames).where(and(eq(shadeSignalGames.isPublic, true), ne(shadeSignalGames.phase, "ended")));
+  const locationRows = await drizzleClient.select().from(locationSignalGames).where(and(eq(locationSignalGames.isPublic, true), ne(locationSignalGames.phase, "ended")));
+
+  const payload = {
+    imposter: imposterRows.map((game) => ({
+      id: game.id,
+      code: game.code,
+      phase: game.phase,
+      hostName: game.players.find((player) => player.sessionId === game.hostId)?.name ?? null,
+      playerCount: game.players.length,
+      spectatorCount: game.spectators.length,
+      createdAt: game.createdAt,
+    })),
+    password: passwordRows.map((game) => ({
+      id: game.id,
+      code: game.code,
+      phase: game.phase,
+      hostName: null,
+      playerCount: game.teams.reduce((total, team) => total + team.members.length, 0),
+      spectatorCount: game.spectators.length,
+      createdAt: game.createdAt,
+    })),
+    chain_reaction: chainRows.map((game) => ({
+      id: game.id,
+      code: game.code,
+      phase: game.phase,
+      hostName: game.players.find((player) => player.sessionId === game.hostId)?.name ?? null,
+      playerCount: game.players.length,
+      spectatorCount: game.spectators.length,
+      createdAt: game.createdAt,
+    })),
+    shade_signal: shadeRows.map((game) => ({
+      id: game.id,
+      code: game.code,
+      phase: game.phase,
+      hostName: game.players.find((player) => player.sessionId === game.hostId)?.name ?? null,
+      playerCount: game.players.length,
+      spectatorCount: game.spectators.length,
+      createdAt: game.createdAt,
+    })),
+    location_signal: locationRows.map((game) => ({
+      id: game.id,
+      code: game.code,
+      phase: game.phase,
+      hostName: game.players.find((player) => player.sessionId === game.hostId)?.name ?? null,
+      playerCount: game.players.length,
+      spectatorCount: game.spectators.length,
+      createdAt: game.createdAt,
+    })),
+  };
+
+  return c.json(payload);
+});
+
 // Accept both GET and POST so any cron service works
 app.on(["GET", "POST"], "/api/cleanup", async (c) => {
   const authHeader = c.req.header("Authorization");
-  const expectedToken = process.env.CLEANUP_SECRET ?? "cleanup-local";
-  if (authHeader !== `Bearer ${expectedToken}`) {
+  if (authHeader !== `Bearer ${CLEANUP_SECRET}`) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
@@ -2805,8 +2754,7 @@ app.on(["GET", "POST"], "/api/cleanup", async (c) => {
 // Activity report endpoint (same auth as cleanup)
 app.on(["GET", "POST"], "/api/activity", async (c) => {
   const authHeader = c.req.header("Authorization");
-  const expectedToken = process.env.CLEANUP_SECRET ?? "cleanup-local";
-  if (authHeader !== `Bearer ${expectedToken}`) {
+  if (authHeader !== `Bearer ${CLEANUP_SECRET}`) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
@@ -2816,6 +2764,7 @@ app.on(["GET", "POST"], "/api/activity", async (c) => {
 });
 
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
+await assertRequiredZeroTables();
 const server = Bun.serve({
   fetch: app.fetch,
   port,
