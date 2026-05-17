@@ -17,6 +17,7 @@ import { PublicGamesList, usePublicGameCount } from "../components/shared/Public
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { useZeroConnected } from "../App";
 import { useConnectionDebug } from "../lib/connection-debug";
+import { PENDING_GAME_NAV_STATE, waitForMutationServer } from "../lib/game-page-load-state";
 import { lookupImposterGameByCode } from "../lib/imposter-lookup";
 import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
 
@@ -337,24 +338,22 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const mutation = zero.mutate(
-        mutators.imposter.create({
-          id,
-          hostId: sessionId,
-          category: imposterCategory,
-          rounds: imposterRounds,
-          imposters: imposterImposters,
-        })
+      const result = await waitForMutationServer(
+        zero.mutate(
+          mutators.imposter.create({
+            id,
+            hostId: sessionId,
+            category: imposterCategory,
+            rounds: imposterRounds,
+            imposters: imposterImposters,
+          })
+        )
       );
-      const [, result] = await Promise.all([
-        mutation.client.catch(() => undefined),
-        mutation.server,
-      ]);
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/imposter/${id}`, { state: { pendingImposterCreate: true } });
+      navigate(`/imposter/${id}`, { state: PENDING_GAME_NAV_STATE });
     } finally {
       setPendingAction(null);
     }
@@ -366,12 +365,22 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })).server;
+      const result = await waitForMutationServer(
+        zero.mutate(
+          mutators.password.create({
+            id,
+            hostId: sessionId,
+            teamCount: passwordTeams,
+            targetScore: passwordTargetScore,
+            category: passwordCategory,
+          })
+        )
+      );
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/password/${id}/begin`);
+      navigate(`/password/${id}/begin`, { state: PENDING_GAME_NAV_STATE });
     } finally {
       setPendingAction(null);
     }
@@ -383,12 +392,23 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })).server;
+      const result = await waitForMutationServer(
+        zero.mutate(
+          mutators.chainReaction.create({
+            id,
+            hostId: sessionId,
+            chainLength,
+            rounds: chainRounds,
+            chainMode,
+            category: chainCategory,
+          })
+        )
+      );
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/chain/${id}`);
+      navigate(`/chain/${id}`, { state: PENDING_GAME_NAV_STATE });
     } finally {
       setPendingAction(null);
     }
@@ -400,12 +420,22 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })).server;
+      const result = await waitForMutationServer(
+        zero.mutate(
+          mutators.shadeSignal.create({
+            id,
+            hostId: sessionId,
+            roundsPerPlayer: shadeRoundsPerPlayer,
+            hardMode: shadeHardMode,
+            leaderPick: shadeLeaderPick,
+          })
+        )
+      );
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/shade/${id}`);
+      navigate(`/shade/${id}`, { state: PENDING_GAME_NAV_STATE });
     } finally {
       setPendingAction(null);
     }
@@ -417,12 +447,21 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })).server;
+      const result = await waitForMutationServer(
+        zero.mutate(
+          mutators.locationSignal.create({
+            id,
+            hostId: sessionId,
+            roundsPerPlayer: locRoundsPerPlayer,
+            cluePairs: locCluePairs,
+          })
+        )
+      );
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/location/${id}`);
+      navigate(`/location/${id}`, { state: PENDING_GAME_NAV_STATE });
     } finally {
       setPendingAction(null);
     }

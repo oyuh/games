@@ -20,13 +20,11 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
 import { ImposterDemo } from "../components/demos/ImposterDemo";
 import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
+import { getPendingGameMessage, hasPendingGameCreate, usePendingGamePageLoad } from "../lib/game-page-load-state";
 import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
 import { playVote, playGameStart, playReveal } from "../lib/sounds";
 import { useZeroConnected } from "../App";
 import { useSyncCountdown } from "../lib/sync-wake";
-
-const IMPOSTER_PAGE_CREATE_GRACE_MS = 12_000;
-const IMPOSTER_PAGE_LOOKUP_GRACE_MS = 4_000;
 
 function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
 
@@ -35,14 +33,18 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const pendingCreate = Boolean((location.state as { pendingImposterCreate?: boolean } | null)?.pendingImposterCreate);
   const zeroConnected = useZeroConnected();
   const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.imposter.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "imposter", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const [missingTimedOut, setMissingTimedOut] = useState(false);
+  const pendingCreate = hasPendingGameCreate(location.state);
+  const { missingTimedOut, waitingForGame } = usePendingGamePageLoad({
+    gameFound: Boolean(game),
+    pendingCreate,
+    zeroConnected,
+  });
   const [clue, setClue] = useState("");
   const [showDemo, setShowDemo] = useState(false);
   const [voteTarget, setVoteTarget] = useState("");
@@ -222,35 +224,18 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   }, [game?.announcement, isHost]);
 
   useEffect(() => {
-    if (game) {
-      setMissingTimedOut(false);
-      return;
-    }
-
-    const timer = window.setTimeout(
-      () => setMissingTimedOut(true),
-      pendingCreate || !zeroConnected ? IMPOSTER_PAGE_CREATE_GRACE_MS : IMPOSTER_PAGE_LOOKUP_GRACE_MS
-    );
-    return () => window.clearTimeout(timer);
-  }, [game, pendingCreate, zeroConnected]);
-
-  useEffect(() => {
     if (game || !missingTimedOut) return;
     const timer = window.setTimeout(() => navigate("/"), 3000);
     return () => window.clearTimeout(timer);
   }, [game, missingTimedOut, navigate]);
 
   if (!game) {
-    if (!missingTimedOut) {
+    if (waitingForGame) {
       return (
         <div className="game-page">
           <div className="game-empty">
             <p className="game-empty-title">{pendingCreate ? "Opening your lobby..." : "Loading game..."}</p>
-            <p className="game-empty-sub">
-              {!zeroConnected
-                ? `Sync server is waking${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}.`
-                : "Waiting for the live game state to catch up."}
-            </p>
+            <p className="game-empty-sub">{getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown)}</p>
             <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
           </div>
         </div>

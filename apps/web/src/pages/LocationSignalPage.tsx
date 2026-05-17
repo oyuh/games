@@ -3,15 +3,18 @@ import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/location-signal.css";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiLogOut, FiSend, FiMapPin, FiHelpCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
+import { useZeroConnected } from "../App";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
+import { getPendingGameMessage, hasPendingGameCreate, usePendingGamePageLoad } from "../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
+import { useSyncCountdown } from "../lib/sync-wake";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
@@ -38,13 +41,22 @@ function fitBounds(
 function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
+  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
+  const zeroConnected = useZeroConnected();
+  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.locationSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "location_signal", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
+  const pendingCreate = hasPendingGameCreate(location.state);
+  const { missingTimedOut, waitingForGame } = usePendingGamePageLoad({
+    gameFound: Boolean(game),
+    pendingCreate,
+    zeroConnected,
+  });
 
   const [draftClue, setDraftClue] = useState("");
   const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
@@ -327,12 +339,23 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   }, [game]);
 
   useEffect(() => {
-    if (game) return;
+    if (game || !missingTimedOut) return;
     const timer = setTimeout(() => navigate("/"), 3000);
     return () => clearTimeout(timer);
-  }, [game, navigate]);
+  }, [game, missingTimedOut, navigate]);
 
   if (!game) {
+    if (waitingForGame) {
+      return (
+        <div className="game-page">
+          <div className="game-empty">
+            <p className="game-empty-title">{pendingCreate ? "Opening your lobby..." : "Loading game..."}</p>
+            <p className="game-empty-sub">{getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown)}</p>
+            <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="game-page">
         <div className="game-empty">

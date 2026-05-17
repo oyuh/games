@@ -3,14 +3,17 @@ import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/password.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock, FiHelpCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
+import { useZeroConnected } from "../App";
+import { getPendingGameMessage, hasPendingGameCreate, usePendingGamePageLoad } from "../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
+import { useSyncCountdown } from "../lib/sync-wake";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
@@ -19,13 +22,22 @@ import { PasswordDemo } from "../components/demos/PasswordDemo";
 function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
+  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
+  const zeroConnected = useZeroConnected();
+  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
+  const pendingCreate = hasPendingGameCreate(location.state);
+  const { missingTimedOut, waitingForGame } = usePendingGamePageLoad({
+    gameFound: Boolean(game),
+    pendingCreate,
+    zeroConnected,
+  });
   const prevAnnouncementTs = useRef<number | null>(null);
   const navHandledRef = useRef(false);
   const [showDemo, setShowDemo] = useState(false);
@@ -81,12 +93,23 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
   }, [game?.announcement, isHost]);
 
   useEffect(() => {
-    if (game) return;
+    if (game || !missingTimedOut) return;
     const timer = setTimeout(() => navigate("/"), 3000);
     return () => clearTimeout(timer);
-  }, [game, navigate]);
+  }, [game, missingTimedOut, navigate]);
 
   if (!game) {
+    if (waitingForGame) {
+      return (
+        <div className="game-page">
+          <div className="game-empty">
+            <p className="game-empty-title">{pendingCreate ? "Opening your lobby..." : "Loading game..."}</p>
+            <p className="game-empty-sub">{getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown)}</p>
+            <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="game-page">
         <div className="game-empty">

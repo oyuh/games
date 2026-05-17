@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/shade-signal.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiCopy, FiCheck, FiSend, FiHelpCircle } from "react-icons/fi";
 
 import { ColorGrid, generateGridColor } from "../components/shade/ColorGrid";
@@ -13,8 +13,11 @@ import { RoundCountdown } from "../components/shared/RoundCountdown";
 import { SpectatorBadge, HostBadge } from "../components/shared/SpectatorBadge";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
+import { useZeroConnected } from "../App";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
+import { getPendingGameMessage, hasPendingGameCreate, usePendingGamePageLoad } from "../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
+import { useSyncCountdown } from "../lib/sync-wake";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
@@ -91,13 +94,22 @@ function ScoringLegend() {
 function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
+  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
+  const zeroConnected = useZeroConnected();
+  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.shadeSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "shade_signal", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
+  const pendingCreate = hasPendingGameCreate(location.state);
+  const { missingTimedOut, waitingForGame } = usePendingGamePageLoad({
+    gameFound: Boolean(game),
+    pendingCreate,
+    zeroConnected,
+  });
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [pickingCell, setPickingCell] = useState<{ row: number; col: number } | null>(null);
@@ -378,12 +390,23 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
   }, [game, phase]);
 
   useEffect(() => {
-    if (game) return;
+    if (game || !missingTimedOut) return;
     const timer = setTimeout(() => navigate("/"), 3000);
     return () => clearTimeout(timer);
-  }, [game, navigate]);
+  }, [game, missingTimedOut, navigate]);
 
   if (!game) {
+    if (waitingForGame) {
+      return (
+        <div className="game-page">
+          <div className="game-empty">
+            <p className="game-empty-title">{pendingCreate ? "Opening your lobby..." : "Loading game..."}</p>
+            <p className="game-empty-sub">{getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown)}</p>
+            <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="game-page">
         <div className="game-empty">
