@@ -108,12 +108,13 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
     }, {});
   }, [game]);
 
-  const { decryptValue } = useGameSecret({
+  const { decryptValue, myRole } = useGameSecret({
     gameType: "imposter",
     gameId,
     sessionId,
     enabled: Boolean(game && game.phase !== "lobby")
   });
+  const liveRole = game?.phase === "playing" || game?.phase === "voting" ? (myRole ?? me?.role) : me?.role;
 
   useEffect(() => {
     let cancelled = false;
@@ -186,18 +187,19 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   // Timer auto-advance
   useEffect(() => {
     if (!game) return;
+    if (!isHost) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd || (game.phase !== "playing" && game.phase !== "voting" && game.phase !== "results")) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
-      void zero.mutate(mutators.imposter.advanceTimer({ gameId }));
+      void zero.mutate(mutators.imposter.advanceTimer({ gameId })).server;
       return;
     }
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.imposter.advanceTimer({ gameId }));
+      void zero.mutate(mutators.imposter.advanceTimer({ gameId })).server;
     }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost]);
 
   // Announcement watcher (skip for host - they sent it)
   useEffect(() => {
@@ -345,7 +347,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
         const activePlayers = game.players.filter((p) => !p.eliminated);
         return (
           <ImposterClueSection
-            role={me?.role}
+            role={liveRole === "imposter" || liveRole === "player" ? liveRole : undefined}
             secretWord={visibleSecretWord}
             category={game.category ?? null}
             clue={clue}

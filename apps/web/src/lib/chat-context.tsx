@@ -4,6 +4,7 @@ import { mutators } from "@games/shared";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
 import { getOrCreateSessionId } from "./session";
+import { useGameSecret } from "./game-secrets";
 import { useZero } from "./zero";
 
 type ChatState = {
@@ -69,6 +70,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       ? queries.chat.byGame({ gameType: gameType!, gameId })
       : queries.chat.byGame({ gameType: "imposter", gameId: "__none__" })
   );
+  const [imposterMessages] = useQuery(
+    gameType === "imposter"
+      ? queries.chat.imposterByGame({ gameId })
+      : queries.chat.imposterByGame({ gameId: "__none__" })
+  );
 
   // Baseline = timestamp of the newest message we consider "read".
   // Initialised to Date.now() so pre-existing messages (older timestamps)
@@ -93,6 +99,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [shdGames] = useQuery(gameType === "shade_signal" ? queries.shadeSignal.byId({ id: gameId }) : queries.shadeSignal.byId({ id: "__none__" }));
   const [locGames] = useQuery(gameType === "location_signal" ? queries.locationSignal.byId({ id: gameId }) : queries.locationSignal.byId({ id: "__none__" }));
   const currentGame = gameType === "imposter" ? impGames[0] : gameType === "password" ? pwdGames[0] : gameType === "chain_reaction" ? chrGames[0] : gameType === "shade_signal" ? shdGames[0] : gameType === "location_signal" ? locGames[0] : null;
+  const { myRole, scopes } = useGameSecret({
+    gameType: gameType ?? "imposter",
+    gameId,
+    sessionId,
+    enabled: gameType === "imposter" && Boolean(gameId),
+  });
   const isSpectator = currentGame?.spectators?.some((s: { sessionId: string }) => s.sessionId === sessionId) ?? false;
   const currentPlayers = (currentGame as { players?: unknown[] } | null)?.players;
   const isPlayerFromPlayers = Array.isArray(currentPlayers)
@@ -143,21 +155,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [onGameRoute, gameType, gameId, currentGame, isHost, isPlayer, isSpectator, zero, sessionId]);
 
   // Imposter role detection for private chat channels
-  const imposterGame = impGames[0];
-  const isImposter = gameType === "imposter" && imposterGame?.players?.some((p: { sessionId: string; role?: string }) => p.sessionId === sessionId && p.role === "imposter") || false;
-  const multipleImposters = gameType === "imposter" && (imposterGame?.players?.filter((p: { role?: string }) => p.role === "imposter").length ?? 0) >= 2 || false;
+  const isImposter = gameType === "imposter" && myRole === "imposter";
+  const multipleImposters = gameType === "imposter" && scopes.includes("imposter_chat");
+  const mergedMessages = multipleImposters
+    ? [...messages, ...imposterMessages].sort((left, right) => left.created_at - right.created_at)
+    : messages;
 
   useEffect(() => {
     if (open) {
-      const latest = messages.length > 0 ? messages[messages.length - 1]!.created_at : baselineTs.current;
+      const latest = mergedMessages.length > 0 ? mergedMessages[mergedMessages.length - 1]!.created_at : baselineTs.current;
       baselineTs.current = latest;
       setUnread(0);
     } else {
-      const visible = isImposter ? messages : messages.filter(m => !m.channel || m.channel === "all");
+      const visible = isImposter ? mergedMessages : messages;
       const newCount = visible.filter(m => m.created_at > baselineTs.current && m.sender_id !== sessionId).length;
       setUnread(newCount);
     }
-  }, [messages.length, open, isImposter]);
+  }, [mergedMessages, messages, open, isImposter, sessionId]);
 
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
