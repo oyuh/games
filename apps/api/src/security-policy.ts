@@ -426,6 +426,23 @@ async function assertMember(gameType: GameType, gameId: string, caller: QueryCal
   throw new Error("Forbidden");
 }
 
+async function assertMemberByLookup(gameType: GameType, accessor: { by: "id"; value: string } | { by: "code"; value: string }, caller: QueryCaller) {
+  const sessionId = requireProofUserId(caller);
+  if (!sessionId) {
+    throw new Error("Forbidden");
+  }
+  const access = accessor.by === "id"
+    ? await getAccessByGameId(gameType, accessor.value, sessionId)
+    : await getAccessByCode(gameType, accessor.value, sessionId);
+  if (!access) {
+    throw new Error("Game not found");
+  }
+  if (access.isMember || access.isHost || access.isSpectator) {
+    return;
+  }
+  throw new Error("Forbidden");
+}
+
 export async function authorizeZeroQuery(name: string, args: unknown, caller: QueryCaller) {
   if (name === "sessions.byId") {
     const id = typeof (args as { id?: unknown })?.id === "string" ? (args as { id: string }).id : "";
@@ -486,13 +503,13 @@ export async function authorizeZeroQuery(name: string, args: unknown, caller: Qu
   if (name === "imposter.byId") {
     const id = (args as { id: string }).id;
     if (isDummyLookup(id)) return;
-    await assertMemberOrPublic("imposter", { by: "id", value: id }, caller);
+    await assertMemberByLookup("imposter", { by: "id", value: id }, caller);
     return;
   }
   if (name === "imposter.byCode") {
     const code = (args as { code: string }).code;
     if (isDummyLookup(code)) return;
-    await assertMemberOrPublic("imposter", { by: "code", value: code }, caller);
+    await assertMemberByLookup("imposter", { by: "code", value: code }, caller);
     return;
   }
   if (name === "password.byId") {

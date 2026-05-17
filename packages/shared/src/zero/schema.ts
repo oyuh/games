@@ -282,6 +282,19 @@ export const schema = createSchema({
   tables: [
     sessions,
     imposterGames,
+    passwordGames,
+    chatMessages,
+    chainReactionGames,
+    shadeSignalGames,
+    locationSignalGames
+  ],
+  relationships: [sessionRelationships]
+});
+
+export const serverSchema = createSchema({
+  tables: [
+    sessions,
+    imposterGames,
     imposterPublicGames,
     passwordGames,
     chatMessages,
@@ -293,10 +306,11 @@ export const schema = createSchema({
 });
 
 export type Schema = typeof schema;
-export const zql = createBuilder(schema);
+export type ServerSchema = typeof serverSchema;
+export const zql = createBuilder(serverSchema);
 
 declare module "@rocicorp/zero" {
   interface DefaultTypes {
-    schema: Schema;
+    schema: ServerSchema;
   }
 }

@@ -1,4 +1,4 @@
-import { fallbackPlayerName, mutators, queries, schema } from "@games/shared";
+import { fallbackPlayerName, mutators, queries, serverSchema } from "@games/shared";
 import { adminNameOverrides, chatMessages, chainReactionGames, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
@@ -2235,7 +2235,7 @@ app.post("/api/zero/query", async (c) => {
   }) as any;
   const result = await handleQueryRequest({
     handler: queryHandler,
-    schema,
+    schema: serverSchema,
     request,
     userID: callerUserId,
   });
@@ -2737,6 +2737,37 @@ app.get("/api/public-games", async (c) => {
   };
 
   return c.json(payload);
+});
+
+app.get("/api/imposter/lookup", async (c) => {
+  const code = c.req.query("code")?.trim().toUpperCase() ?? "";
+  if (!code) {
+    return c.json({ error: "Missing code" }, 400);
+  }
+
+  const [game] = await drizzleClient
+    .select()
+    .from(imposterGames)
+    .where(eq(imposterGames.code, code))
+    .limit(1);
+
+  if (!game) {
+    return c.json({ error: "Game not found" }, 404);
+  }
+
+  return c.json({
+    game: {
+      id: game.id,
+      code: game.code,
+      phase: game.phase,
+      category: game.category,
+      isPublic: game.isPublic,
+      hostName: game.players.find((player) => player.sessionId === game.hostId)?.name ?? null,
+      playerCount: game.players.length,
+      spectatorCount: game.spectators.length,
+      createdAt: game.createdAt,
+    },
+  });
 });
 
 // Accept both GET and POST so any cron service works

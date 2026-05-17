@@ -95,7 +95,7 @@ function createZero(sessionId: string, sessionProof: string | null) {
     auth: sessionProof ?? undefined,
     userID: sessionId,
     cacheURL: zeroCacheURL,
-    schema,
+    schema: schema as any,
     mutators,
   });
 }

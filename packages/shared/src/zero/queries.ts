@@ -20,11 +20,11 @@ export const queries = defineQueries({
   imposter: {
     byId: defineQuery(
       z.object({ id: z.string() }),
-      ({ args }) => zql.imposter_public_games.where("id", args.id).limit(1)
+      ({ args }) => zql.imposter_games.where("id", args.id).limit(1)
     ),
     byCode: defineQuery(
       z.object({ code: z.string() }),
-      ({ args }) => zql.imposter_public_games.where("code", args.code).limit(1)
+      ({ args }) => zql.imposter_games.where("code", args.code).limit(1)
     )
   },
   password: {
