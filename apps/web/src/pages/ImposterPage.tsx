@@ -2,7 +2,7 @@ import { isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiHelpCircle } from "react-icons/fi";
 import { ImposterClueSection } from "../components/imposter/ImposterClueSection";
 import { ImposterHeader } from "../components/imposter/ImposterHeader";
@@ -22,17 +22,27 @@ import { ImposterDemo } from "../components/demos/ImposterDemo";
 import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
 import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
 import { playVote, playGameStart, playReveal } from "../lib/sounds";
+import { useZeroConnected } from "../App";
+import { useSyncCountdown } from "../lib/sync-wake";
+
+const IMPOSTER_PAGE_CREATE_GRACE_MS = 12_000;
+const IMPOSTER_PAGE_LOOKUP_GRACE_MS = 4_000;
 
 function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
+  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
+  const pendingCreate = Boolean((location.state as { pendingImposterCreate?: boolean } | null)?.pendingImposterCreate);
+  const zeroConnected = useZeroConnected();
+  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.imposter.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "imposter", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
+  const [missingTimedOut, setMissingTimedOut] = useState(false);
   const [clue, setClue] = useState("");
   const [showDemo, setShowDemo] = useState(false);
   const [voteTarget, setVoteTarget] = useState("");
@@ -212,12 +222,41 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   }, [game?.announcement, isHost]);
 
   useEffect(() => {
-    if (game) return;
-    const timer = setTimeout(() => navigate("/"), 3000);
-    return () => clearTimeout(timer);
-  }, [game, navigate]);
+    if (game) {
+      setMissingTimedOut(false);
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => setMissingTimedOut(true),
+      pendingCreate || !zeroConnected ? IMPOSTER_PAGE_CREATE_GRACE_MS : IMPOSTER_PAGE_LOOKUP_GRACE_MS
+    );
+    return () => window.clearTimeout(timer);
+  }, [game, pendingCreate, zeroConnected]);
+
+  useEffect(() => {
+    if (game || !missingTimedOut) return;
+    const timer = window.setTimeout(() => navigate("/"), 3000);
+    return () => window.clearTimeout(timer);
+  }, [game, missingTimedOut, navigate]);
 
   if (!game) {
+    if (!missingTimedOut) {
+      return (
+        <div className="game-page">
+          <div className="game-empty">
+            <p className="game-empty-title">{pendingCreate ? "Opening your lobby..." : "Loading game..."}</p>
+            <p className="game-empty-sub">
+              {!zeroConnected
+                ? `Sync server is waking${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}.`
+                : "Waiting for the live game state to catch up."}
+            </p>
+            <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="game-page">
         <div className="game-empty">
