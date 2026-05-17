@@ -3,6 +3,7 @@ name: Deploy Hooks
 on:
   push:
     branches:
+      - master
       - main
   workflow_dispatch:
 
@@ -39,9 +40,11 @@ jobs:
 
   deploy-vercel:
     name: Trigger Vercel deploy hook
-    needs: validate
+    needs:
+      - validate
+      - deploy-railway
     runs-on: ubuntu-latest
-    if: ${{ secrets.VERCEL_DEPLOY_HOOK_URL != '' }}
+    if: ${{ needs.validate.result == 'success' && secrets.VERCEL_DEPLOY_HOOK_URL != '' && (secrets.RAILWAY_DEPLOY_HOOK_URL == '' || needs.deploy-railway.result == 'success' || needs.deploy-railway.result == 'skipped') }}
     steps:
       - name: Call Vercel hook
         run: |
