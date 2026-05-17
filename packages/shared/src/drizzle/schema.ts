@@ -410,6 +410,52 @@ export const pipsScores = pgTable(
   })
 );
 
+export const imposterPublicGames = pgTable(
+  "imposter_public_games",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    hostId: text("host_id").notNull(),
+    phase: imposterPhaseEnum("phase").notNull().default("lobby"),
+    category: text("category"),
+    secretWord: text("secret_word"),
+    players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player"; eliminated?: boolean }>>().notNull().default([]),
+    clues: jsonb("clues").$type<Array<{ sessionId: string; text: string; createdAt: number }>>().notNull().default([]),
+    votes: jsonb("votes").$type<Array<{ voterId: string; targetId: string }>>().notNull().default([]),
+    spectators: jsonb("spectators").$type<Array<{ sessionId: string; name: string | null }>>().notNull().default([]),
+    kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
+    roundHistory: jsonb("round_history").$type<Array<{
+      round: number;
+      secretWord: string | null;
+      votedOutId: string | null;
+      votedOutName: string | null;
+      wasImposter: boolean;
+      clues: Array<{ sessionId: string; text: string }>;
+      votes: Array<{ voterId: string; targetId: string }>;
+    }>>().notNull().default([]),
+    announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
+    settings: jsonb("settings").$type<{
+      rounds: number;
+      imposters: number;
+      currentRound: number;
+      roundDurationSec: number;
+      votingDurationSec: number;
+      phaseEndsAt: number | null;
+      skipVotes?: string[];
+    }>().notNull().default({
+      rounds: 3,
+      imposters: 1,
+      currentRound: 1,
+      roundDurationSec: 75,
+      votingDurationSec: 45,
+      phaseEndsAt: null
+    }),
+    isPublic: boolean("is_public").notNull().default(false),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+  }
+);
+
 export const pipsBannedSessions = pgTable(
   "pips_banned_sessions",
   {
@@ -424,6 +470,7 @@ export type DrizzleSchema = {
   sessions: typeof sessions;
   statusTable: typeof statusTable;
   imposterGames: typeof imposterGames;
+  imposterPublicGames: typeof imposterPublicGames;
   passwordGames: typeof passwordGames;
   chatMessages: typeof chatMessages;
   chainReactionGames: typeof chainReactionGames;

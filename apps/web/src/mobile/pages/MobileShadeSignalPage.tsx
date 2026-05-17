@@ -15,7 +15,7 @@ import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
-import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
+import { useGameSecret } from "../../lib/game-secrets";
 
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
@@ -76,6 +76,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const game = games[0];
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
+  const [leaderTarget, setLeaderTarget] = useState<{ row: number; col: number } | null>(null);
   const [guessLocked, setGuessLocked] = useState(false);
   const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
@@ -135,6 +136,12 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       return acc;
     }, {});
   }, [sessions]);
+  const { decryptValue } = useGameSecret({
+    gameType: "shade_signal",
+    gameId,
+    sessionId,
+    enabled: Boolean(game && game.phase !== "lobby"),
+  });
 
   const playerIndexMap = useMemo(() => {
     return game?.players.reduce<Record<string, number>>((acc, player, playerIndex) => {
@@ -170,20 +177,21 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   // Timer auto-advance
   useEffect(() => {
     if (!game) return;
+    if (!isHost) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
     const activePhases: ShadePhase[] = ["clue1", "guess1", "clue2", "guess2", "reveal"];
     if (!activePhases.includes(game.phase as ShadePhase)) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
+      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId })).server;
       return;
     }
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
+      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId })).server;
     }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost]);
 
   useEffect(() => {
     if (!game?.announcement || isHost) return;
@@ -205,13 +213,46 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   }, [game?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    let cancelled = false;
+    if (!game) {
+      setLeaderTarget(null);
+      return;
+    }
+    if (game.target_row != null && game.target_col != null && game.target_row >= 0 && game.target_col >= 0) {
+      setLeaderTarget({ row: game.target_row, col: game.target_col });
+      return;
+    }
+    if (!game.encrypted_target) {
+      setLeaderTarget(null);
+      return;
+    }
+    void decryptValue(game.encrypted_target).then((value) => {
+      if (cancelled || !value) {
+        if (!cancelled) setLeaderTarget(null);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(value) as { row?: unknown; col?: unknown };
+        if (typeof parsed.row === "number" && typeof parsed.col === "number") {
+          setLeaderTarget({ row: parsed.row, col: parsed.col });
+          return;
+        }
+      } catch {
+      }
+      setLeaderTarget(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.encrypted_target, game?.target_row, game?.target_col, decryptValue, game]);
+
+  useEffect(() => {
     if (!game || game.phase !== "reveal") return;
     if (game.host_id !== sessionId) return;
     const latest = game.round_history[game.round_history.length - 1];
     if (latest) return;
     const timer = setTimeout(() => {
-      void callGameSecretPreReveal("shade_signal", gameId, sessionId)
-        .then(() => zero.mutate(mutators.shadeSignal.reveal({ gameId })));
+      void zero.mutate(mutators.shadeSignal.reveal({ gameId })).server;
     }, 600);
     return () => clearTimeout(timer);
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
@@ -233,7 +274,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
 
   const target = game?.target_row != null && game?.target_col != null && game.target_row >= 0 && game.target_col >= 0
     ? { row: game.target_row, col: game.target_col }
-    : null;
+    : leaderTarget;
 
   const targetColor = target && game
     ? generateGridColor(target.row, target.col, game.grid_rows, game.grid_cols, game.grid_seed)

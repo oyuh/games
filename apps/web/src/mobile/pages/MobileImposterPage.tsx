@@ -114,12 +114,13 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     }, {});
   }, [game]);
 
-  const { decryptValue } = useGameSecret({
+  const { decryptValue, myRole } = useGameSecret({
     gameType: "imposter",
     gameId,
     sessionId,
     enabled: Boolean(game && game.phase !== "lobby")
   });
+  const liveRole = game?.phase === "playing" || game?.phase === "voting" ? (myRole ?? me?.role) : me?.role;
 
   useEffect(() => {
     let cancelled = false;
@@ -195,13 +196,14 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!game) return;
+    if (!isHost) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd || (game.phase !== "playing" && game.phase !== "voting" && game.phase !== "results")) return;
     const remaining = phaseEnd - Date.now();
-    if (remaining <= 0) { void zero.mutate(mutators.imposter.advanceTimer({ gameId })); return; }
-    const timer = setTimeout(() => { void zero.mutate(mutators.imposter.advanceTimer({ gameId })); }, remaining + 500);
+    if (remaining <= 0) { void zero.mutate(mutators.imposter.advanceTimer({ gameId })).server; return; }
+    const timer = setTimeout(() => { void zero.mutate(mutators.imposter.advanceTimer({ gameId })).server; }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost]);
 
   useEffect(() => {
     if (!game?.announcement || isHost) return;
@@ -389,7 +391,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
       {/* Playing: Clue section */}
       {!isSpectator && game.phase === "playing" && inGame && !me?.eliminated && (() => {
-        const isImposter = me?.role === "imposter";
+        const isImposter = liveRole === "imposter";
         const hasSubmitted = game.clues.some((c) => c.sessionId === sessionId);
         const othersClues = game.clues.filter((c) => c.sessionId !== sessionId);
 

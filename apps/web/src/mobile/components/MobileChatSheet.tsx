@@ -22,10 +22,17 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
       ? queries.chat.byGame({ gameType, gameId })
       : queries.chat.byGame({ gameType: "imposter", gameId: "__none__" })
   );
+  const [imposterMessages] = useQuery(
+    gameType === "imposter"
+      ? queries.chat.imposterByGame({ gameId })
+      : queries.chat.imposterByGame({ gameId: "__none__" })
+  );
 
   const filteredMessages = showChannels
-    ? messages.filter((m) => (m.channel ?? "all") === channel)
-    : messages.filter((m) => !m.channel || m.channel === "all");
+    ? channel === "imposter"
+      ? imposterMessages
+      : messages
+    : messages;
 
   // Get my session name
   const [sessions] = useQuery(queries.sessions.byId({ id: sessionId }));
@@ -36,8 +43,9 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
   const [passwordGames] = useQuery(gameType === "password" ? queries.password.byId({ id: gameId }) : queries.password.byId({ id: "__none__" }));
   const [chainGames] = useQuery(gameType === "chain_reaction" ? queries.chainReaction.byId({ id: gameId }) : queries.chainReaction.byId({ id: "__none__" }));
   const [shadeGames] = useQuery(gameType === "shade_signal" ? queries.shadeSignal.byId({ id: gameId }) : queries.shadeSignal.byId({ id: "__none__" }));
+  const [locationGames] = useQuery(gameType === "location_signal" ? queries.locationSignal.byId({ id: gameId }) : queries.locationSignal.byId({ id: "__none__" }));
 
-  const hostId = imposterGames[0]?.host_id ?? passwordGames[0]?.host_id ?? chainGames[0]?.host_id ?? shadeGames[0]?.host_id ?? "";
+  const hostId = imposterGames[0]?.host_id ?? passwordGames[0]?.host_id ?? chainGames[0]?.host_id ?? shadeGames[0]?.host_id ?? locationGames[0]?.host_id ?? "";
 
   useEffect(() => {
     if (bodyRef.current) {

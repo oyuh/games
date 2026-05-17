@@ -9,6 +9,7 @@ import {
   MockTx,
   serverCtx,
   makeSession,
+  makeImposterGame,
   expectThrows,
 } from "./test-helpers";
 
@@ -61,6 +62,16 @@ describe("Chat — send message", () => {
 
   beforeEach(() => {
     tx = new MockTx("server");
+    tx.seed("imposter_games", [
+      makeImposterGame({
+        id: "game1",
+        host_id: "host1",
+        players: [
+          { sessionId: "host1", name: "Host", connected: true, role: "player" },
+          { sessionId: "user1", name: "Alice", connected: true, role: "player" },
+        ],
+      }),
+    ]);
   });
 
   it("sends a valid message", async () => {
@@ -171,6 +182,101 @@ describe("Chat — send message", () => {
     const msg = tx.getById("chat_messages", "msg6") as any;
     expect(msg.sender_name).toBe(fallbackPlayerName("user1"));
   });
+
+  it("blocks outsiders from sending messages into a game", async () => {
+    tx.seed("imposter_games", [
+      makeImposterGame({
+        id: "game1",
+        host_id: "host1",
+        players: [
+          { sessionId: "host1", name: "Host", connected: true, role: "player" },
+          { sessionId: "user1", name: "Alice", connected: true, role: "player" },
+        ],
+      }),
+    ]);
+
+    await expectThrows(
+      () =>
+        chat.send({
+          args: {
+            id: "msg7",
+            gameType: "imposter",
+            gameId: "game1",
+            senderId: "attacker",
+            senderName: "Mallory",
+            text: "let me in",
+          },
+          tx,
+          ctx: serverCtx("attacker"),
+        }),
+      "Only game members can chat"
+    );
+  });
+
+  it("allows imposter-only chat for real imposters", async () => {
+    tx.seed("imposter_games", [
+      makeImposterGame({
+        id: "game1",
+        host_id: "host1",
+        players: [
+          { sessionId: "host1", name: "Host", connected: true, role: "player" },
+          { sessionId: "imp1", name: "Ivy", connected: true, role: "imposter" },
+          { sessionId: "imp2", name: "Noah", connected: true, role: "imposter" },
+          { sessionId: "user1", name: "Alice", connected: true, role: "player" },
+        ],
+      }),
+    ]);
+
+    await chat.send({
+      args: {
+        id: "msg8",
+        gameType: "imposter",
+        gameId: "game1",
+        senderId: "imp1",
+        senderName: "Ivy",
+        channel: "imposter",
+        text: "stick with the museum clue",
+      },
+      tx,
+      ctx: serverCtx("imp1"),
+    });
+
+    const msg = tx.getById("chat_messages", "msg8") as any;
+    expect(msg.channel).toBe("imposter");
+  });
+
+  it("blocks non-imposters from using the imposter channel", async () => {
+    tx.seed("imposter_games", [
+      makeImposterGame({
+        id: "game1",
+        host_id: "host1",
+        players: [
+          { sessionId: "host1", name: "Host", connected: true, role: "player" },
+          { sessionId: "imp1", name: "Ivy", connected: true, role: "imposter" },
+          { sessionId: "imp2", name: "Noah", connected: true, role: "imposter" },
+          { sessionId: "user1", name: "Alice", connected: true, role: "player" },
+        ],
+      }),
+    ]);
+
+    await expectThrows(
+      () =>
+        chat.send({
+          args: {
+            id: "msg9",
+            gameType: "imposter",
+            gameId: "game1",
+            senderId: "user1",
+            senderName: "Alice",
+            channel: "imposter",
+            text: "hello fellow imposters",
+          },
+          tx,
+          ctx: serverCtx("user1"),
+        }),
+      "Only imposters can use this channel"
+    );
+  });
 });
 
 // ───────────────────────────────────────────────────────────
@@ -187,6 +293,7 @@ describe("Chat — clearForGame", () => {
   });
 
   it("deletes all messages for the specified game", async () => {
+    tx.seed("imposter_games", [makeImposterGame({ id: "game1", host_id: "host1" })]);
     await chat.clearForGame({
       args: { gameType: "imposter", gameId: "game1" },
       tx,
@@ -197,6 +304,29 @@ describe("Chat — clearForGame", () => {
     expect(tx.getById("chat_messages", "m2")).toBeUndefined();
     // Messages for game2 should remain
     expect(tx.getById("chat_messages", "m3")).toBeDefined();
+  });
+
+  it("blocks non-hosts from clearing a game's chat log", async () => {
+    tx.seed("imposter_games", [
+      makeImposterGame({
+        id: "game1",
+        host_id: "host1",
+        players: [
+          { sessionId: "host1", name: "Host", connected: true, role: "player" },
+          { sessionId: "user1", name: "Alice", connected: true, role: "player" },
+        ],
+      }),
+    ]);
+
+    await expectThrows(
+      () =>
+        chat.clearForGame({
+          args: { gameType: "imposter", gameId: "game1" },
+          tx,
+          ctx: serverCtx("user1"),
+        }),
+      "Only host can do that"
+    );
   });
 });
 
