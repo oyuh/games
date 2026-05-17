@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
-import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
+import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds, assertCaller, assertHost, assertHostUser, sanitizeText, resolvePlayerName } from "./helpers";
 
 async function maybeEncryptPasswordWord(ctx: unknown, gameId: string, word: string | null) {
   if (!word) {
@@ -466,6 +466,7 @@ export const passwordMutators = {
     async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing" || !game.active_rounds.length) return;
+      assertHostUser(tx, ctx, game.host_id);
       const roundEndsAt = game.settings.roundEndsAt;
       if (!roundEndsAt || now() < roundEndsAt) return; // not expired
 

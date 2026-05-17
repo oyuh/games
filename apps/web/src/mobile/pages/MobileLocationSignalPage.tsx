@@ -14,7 +14,7 @@ import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
-import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
+import { callGameSecretInit, useGameSecret } from "../../lib/game-secrets";
 
 import { WorldMap, MapMarker, fitRepeatingMapBounds } from "../../components/location/WorldMap";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
@@ -97,6 +97,12 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   }, [sessions]);
 
   const playerName = (id: string) => sessionById[id] ?? getDisplayName(null, id);
+  const { decryptValue } = useGameSecret({
+    gameType: "location_signal",
+    gameId,
+    sessionId,
+    enabled: Boolean(game && game.phase !== "lobby"),
+  });
 
   // Register host context for MobileHostControlsSheet
   useMobileHostRegister(
@@ -199,6 +205,40 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     setLeaderTarget(null);
   }, [game?.settings.currentRound]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!game) {
+      setLeaderTarget(null);
+      return;
+    }
+    if (game.target_lat != null && game.target_lng != null) {
+      setLeaderTarget({ lat: game.target_lat, lng: game.target_lng });
+      return;
+    }
+    if (!game.encrypted_target) {
+      setLeaderTarget(null);
+      return;
+    }
+    void decryptValue(game.encrypted_target).then((value) => {
+      if (cancelled || !value) {
+        if (!cancelled) setLeaderTarget(null);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(value) as { lat?: unknown; lng?: unknown };
+        if (typeof parsed.lat === "number" && typeof parsed.lng === "number") {
+          setLeaderTarget({ lat: parsed.lat, lng: parsed.lng });
+          return;
+        }
+      } catch {
+      }
+      setLeaderTarget(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.encrypted_target, game?.target_lat, game?.target_lng, decryptValue, game]);
+
   // Auto-zoom map on phase transitions
   const autoZoomKeyRef = useRef("");
   useEffect(() => {
@@ -275,28 +315,17 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!game) return;
     if (!isHost) return;
-    const localCluePairs = (game.settings as { cluePairs?: number }).cluePairs ?? 2;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
     const activePhases: string[] = ["clue1","guess1","clue2","guess2","clue3","guess3","clue4","guess4","reveal"];
     if (!activePhases.includes(game.phase)) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
-      if (game.phase.startsWith("guess") && Number(game.phase.replace("guess", "")) === localCluePairs) {
-        void callGameSecretPreReveal("location_signal", gameId, sessionId)
-          .then(() => zero.mutate(mutators.locationSignal.advanceTimer({ gameId })));
-      } else {
-        void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
-      }
+      void zero.mutate(mutators.locationSignal.advanceTimer({ gameId })).server;
       return;
     }
     const timer = setTimeout(() => {
-      if (game.phase.startsWith("guess") && Number(game.phase.replace("guess", "")) === localCluePairs) {
-        void callGameSecretPreReveal("location_signal", gameId, sessionId)
-          .then(() => zero.mutate(mutators.locationSignal.advanceTimer({ gameId })));
-      } else {
-        void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
-      }
+      void zero.mutate(mutators.locationSignal.advanceTimer({ gameId })).server;
     }, remaining + 500);
     return () => clearTimeout(timer);
   }, [game, game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost, sessionId]);

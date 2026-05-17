@@ -17,6 +17,10 @@ interface UseGameSecretResult {
   loading: boolean;
   /** Non-null if key fetch failed or caller is not authorized (e.g. imposter player). */
   error: string | null;
+  /** Viewer-specific role metadata returned by the API. */
+  myRole: string | null;
+  /** Viewer-specific scopes returned by the API. */
+  scopes: string[];
   /**
    * Decrypts an "enc:<...>" ciphertext string.
    * Returns the original plaintext if the string is not encrypted.
@@ -39,6 +43,8 @@ interface UseGameSecretResult {
 export function useGameSecret({ gameType, gameId, sessionId, enabled = true }: UseGameSecretOptions): UseGameSecretResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [myRole, setMyRole] = useState<string | null>(null);
+  const [scopes, setScopes] = useState<string[]>([]);
   const keyRef = useRef<string | null>(null);
   const fetchedRef = useRef(false);
   const keyFetchPromiseRef = useRef<Promise<string | null> | null>(null);
@@ -49,6 +55,8 @@ export function useGameSecret({ gameType, gameId, sessionId, enabled = true }: U
     keyFetchPromiseRef.current = null;
     setError(null);
     setLoading(false);
+    setMyRole(null);
+    setScopes([]);
   }, [gameType, gameId, sessionId]);
 
   useEffect(() => {
@@ -69,9 +77,11 @@ export function useGameSecret({ gameType, gameId, sessionId, enabled = true }: U
           const body = await res.json().catch(() => ({})) as { error?: string };
           throw new Error(body.error ?? `HTTP ${res.status}`);
         }
-        const data = await res.json() as { key: string };
-        keyRef.current = data.key;
-        return data.key;
+        const data = await res.json() as { key?: string | null; myRole?: string | null; scopes?: string[] };
+        keyRef.current = typeof data.key === "string" ? data.key : null;
+        setMyRole(data.myRole ?? null);
+        setScopes(Array.isArray(data.scopes) ? data.scopes : []);
+        return keyRef.current;
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : String(err));
@@ -96,7 +106,7 @@ export function useGameSecret({ gameType, gameId, sessionId, enabled = true }: U
     }
   }, []);
 
-  return { loading, error, decryptValue };
+  return { loading, error, myRole, scopes, decryptValue };
 }
 
 /**
@@ -125,28 +135,3 @@ export async function callGameSecretInit(
   }
 }
 
-/**
- * Calls the server to decrypt the target back to plaintext BEFORE triggering the
- * reveal/scoring mutator. The scoring mutator reads the plaintext target, so this
- * must be called first. Host-only.
- */
-export async function callGameSecretPreReveal(
-  gameType: "shade_signal" | "location_signal",
-  gameId: string,
-  sessionId: string
-): Promise<void> {
-  try {
-    const res = await fetch(`${API_BASE}/api/game-secret/pre-reveal`, {
-      method: "POST",
-      credentials: "include",
-      headers: getSessionRequestHeaders(sessionId, { "Content-Type": "application/json" }),
-      body: JSON.stringify({ gameId, gameType, sessionId })
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string };
-      console.warn("[game-secret/pre-reveal]", body.error ?? `HTTP ${res.status}`);
-    }
-  } catch (e) {
-    console.warn("[game-secret/pre-reveal failed]", e);
-  }
-}

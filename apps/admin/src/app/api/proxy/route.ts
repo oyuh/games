@@ -2,15 +2,26 @@ import { auth } from "@/auth";
 import { adminFetch } from "@/lib/api";
 import { NextRequest, NextResponse } from "next/server";
 
+function normalizeAdminProxyPath(path: string | null) {
+  if (!path) return null;
+  if (!path.startsWith("/")) return null;
+  if (path.startsWith("//") || path.includes("://")) return null;
+  const segments = path.split("/");
+  if (segments.some((segment) => segment === "." || segment === "..")) {
+    return null;
+  }
+  return path;
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const path = req.nextUrl.searchParams.get("path");
+  const path = normalizeAdminProxyPath(req.nextUrl.searchParams.get("path"));
   if (!path) {
-    return NextResponse.json({ error: "Missing path" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
   const res = await adminFetch(`/api/admin${path}`);
@@ -24,9 +35,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const path = req.nextUrl.searchParams.get("path");
+  const path = normalizeAdminProxyPath(req.nextUrl.searchParams.get("path"));
   if (!path) {
-    return NextResponse.json({ error: "Missing path" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
   const body = await req.text();
@@ -45,9 +56,9 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const path = req.nextUrl.searchParams.get("path");
+  const path = normalizeAdminProxyPath(req.nextUrl.searchParams.get("path"));
   if (!path) {
-    return NextResponse.json({ error: "Missing path" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
   const res = await adminFetch(`/api/admin${path}`, { method: "DELETE" });
@@ -61,9 +72,9 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const path = req.nextUrl.searchParams.get("path");
+  const path = normalizeAdminProxyPath(req.nextUrl.searchParams.get("path"));
   if (!path) {
-    return NextResponse.json({ error: "Missing path" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
   const body = await req.text();
