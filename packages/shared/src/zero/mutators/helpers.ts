@@ -67,6 +67,11 @@ function shouldEnforceServerIdentity(tx: TxLike, ctx: ServerContext) {
   return tx.location === "server" && !!ctx.userId && ctx.userId !== "anon";
 }
 
+export function getServerUserId(ctx: unknown): string | null {
+  const safeCtx = asServerContext(ctx);
+  return typeof safeCtx.userId === "string" && safeCtx.userId !== "anon" ? safeCtx.userId : null;
+}
+
 export function assertCaller(tx: unknown, ctx: unknown, claimedId: string) {
   const safeTx = asTxLike(tx);
   const safeCtx = asServerContext(ctx);
@@ -85,6 +90,17 @@ export function assertHost(tx: unknown, ctx: unknown, claimedHostId: string, act
     return;
   }
   if (safeCtx.userId !== claimedHostId || claimedHostId !== actualHostId) {
+    throw new Error("Only host can do that");
+  }
+}
+
+export function assertHostUser(tx: unknown, ctx: unknown, actualHostId: string) {
+  const safeTx = asTxLike(tx);
+  const safeCtx = asServerContext(ctx);
+  if (!shouldEnforceServerIdentity(safeTx, safeCtx)) {
+    return;
+  }
+  if (safeCtx.userId !== actualHostId) {
     throw new Error("Only host can do that");
   }
 }

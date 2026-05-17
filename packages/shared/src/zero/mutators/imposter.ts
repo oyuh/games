@@ -1,8 +1,79 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
+import { encryptSecret } from "../../crypto";
+import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, assertHostUser, getGameSecretResolver, isServerTx, sanitizeText, resolvePlayerName } from "./helpers";
 import { imposterWordBank } from "./word-banks";
+
+async function maybeEncryptImposterWord(ctx: unknown, gameId: string, word: string) {
+  const resolver = getGameSecretResolver(ctx);
+  if (!resolver) {
+    return word;
+  }
+  const key = await resolver("imposter", gameId);
+  return encryptSecret(word, key);
+}
+
+function redactImposterPlayers(
+  phase: "lobby" | "playing" | "voting" | "results" | "finished" | "ended",
+  players: Array<{ sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player"; eliminated?: boolean }>
+) {
+  if (phase === "results" || phase === "finished" || phase === "ended") {
+    return players;
+  }
+  return players.map(({ role: _role, ...player }) => player);
+}
+
+function redactImposterRoundHistory(
+  phase: "lobby" | "playing" | "voting" | "results" | "finished" | "ended",
+  roundHistory: Array<{
+    round: number;
+    secretWord: string | null;
+    votedOutId: string | null;
+    votedOutName: string | null;
+    wasImposter: boolean;
+    clues: Array<{ sessionId: string; text: string }>;
+    votes: Array<{ voterId: string; targetId: string }>;
+  }>
+) {
+  if (phase === "results" || phase === "finished" || phase === "ended") {
+    return roundHistory;
+  }
+  return roundHistory.map((entry) => ({ ...entry, secretWord: null }));
+}
+
+async function syncImposterPublicGame(tx: any, gameId: string) {
+  const game = await tx.run(zql.imposter_games.where("id", gameId).one());
+  if (!game) {
+    await tx.mutate.imposter_public_games.delete({ id: gameId });
+    return;
+  }
+
+  const publicSecretWord =
+    game.phase === "results" || game.phase === "finished" || game.phase === "ended"
+      ? game.secret_word ?? null
+      : (game.secret_word?.startsWith("enc:") ? game.secret_word : null);
+
+  await tx.mutate.imposter_public_games.upsert({
+    id: game.id,
+    code: game.code,
+    host_id: game.host_id,
+    phase: game.phase,
+    category: game.category,
+    secret_word: publicSecretWord,
+    players: redactImposterPlayers(game.phase, game.players),
+    clues: game.clues,
+    votes: game.votes,
+    spectators: game.spectators,
+    kicked: game.kicked,
+    round_history: redactImposterRoundHistory(game.phase, game.round_history),
+    announcement: game.announcement,
+    settings: game.settings,
+    is_public: game.is_public,
+    created_at: game.created_at,
+    updated_at: game.updated_at,
+  });
+}
 
 export const imposterMutators = {
   create: defineMutator(
@@ -51,6 +122,7 @@ export const imposterMutators = {
         created_at: ts,
         last_seen: ts
       });
+      await syncImposterPublicGame(tx, args.id);
     }
   ),
 
@@ -91,6 +163,7 @@ export const imposterMutators = {
             created_at: now(),
             last_seen: now()
           });
+          await syncImposterPublicGame(tx, game.id);
           return;
         }
         // Add as spectator instead of throwing
@@ -108,6 +181,7 @@ export const imposterMutators = {
           created_at: now(),
           last_seen: now()
         });
+        await syncImposterPublicGame(tx, game.id);
         return;
       }
 
@@ -133,6 +207,7 @@ export const imposterMutators = {
         created_at: now(),
         last_seen: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -162,6 +237,7 @@ export const imposterMutators = {
             last_seen: now()
           });
         }
+        await syncImposterPublicGame(tx, game.id);
         return;
       }
 
@@ -199,6 +275,7 @@ export const imposterMutators = {
         game_id: undefined,
         last_seen: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -215,11 +292,15 @@ export const imposterMutators = {
       const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
       const withRoles = chooseRoles(players, game.settings.imposters);
       const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
+      const secretWord = pickRandom(bank);
+      const nextSecretWord = isServerTx(tx)
+        ? await maybeEncryptImposterWord(ctx, args.gameId, secretWord)
+        : secretWord;
 
       await tx.mutate.imposter_games.update({
         id: game.id,
         phase: "playing",
-        secret_word: pickRandom(bank),
+        secret_word: nextSecretWord,
         players: withRoles.map((p) => ({ ...p, eliminated: false })),
         clues: [],
         votes: [],
@@ -227,6 +308,7 @@ export const imposterMutators = {
         settings: { ...game.settings, currentRound: 1, phaseEndsAt },
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -259,6 +341,7 @@ export const imposterMutators = {
           : game.settings,
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -288,14 +371,16 @@ export const imposterMutators = {
         settings: allVoted ? { ...game.settings, phaseEndsAt: now() + 8000, skipVotes: [] } : game.settings,
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
   advanceTimer: defineMutator(
     z.object({ gameId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game) return;
+      assertHostUser(tx, ctx, game.host_id);
 
       const phaseEnd = game.settings.phaseEndsAt;
       if (!phaseEnd || now() < phaseEnd) return; // not expired yet
@@ -317,6 +402,7 @@ export const imposterMutators = {
           settings: { ...game.settings, phaseEndsAt: now() + game.settings.votingDurationSec * 1000 },
           updated_at: now()
         });
+        await syncImposterPublicGame(tx, game.id);
       } else if (game.phase === "voting") {
         // Move to results with whatever votes exist; start results countdown
         await tx.mutate.imposter_games.update({
@@ -325,6 +411,7 @@ export const imposterMutators = {
           settings: { ...game.settings, phaseEndsAt: now() + 8000, skipVotes: [] },
           updated_at: now()
         });
+        await syncImposterPublicGame(tx, game.id);
       } else if (game.phase === "results") {
         // Tally votes → eliminate most-voted → check win conditions
         const activePlayers = game.players.filter((p) => !p.eliminated);
@@ -387,16 +474,18 @@ export const imposterMutators = {
             settings: { ...game.settings, phaseEndsAt: null },
             updated_at: now()
           });
+          await syncImposterPublicGame(tx, game.id);
           return;
         }
 
         // Continue to next round — new word, same roles, minus eliminated
         const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
         const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
+        const secretWord = pickRandom(bank);
         await tx.mutate.imposter_games.update({
           id: game.id,
           phase: "playing",
-          secret_word: pickRandom(bank),
+          secret_word: isServerTx(tx) ? await maybeEncryptImposterWord(ctx, args.gameId, secretWord) : secretWord,
           clues: [],
           votes: [],
           players: updatedPlayers,
@@ -405,6 +494,7 @@ export const imposterMutators = {
           settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
           updated_at: now()
         });
+        await syncImposterPublicGame(tx, game.id);
       }
     }
   ),
@@ -474,16 +564,18 @@ export const imposterMutators = {
           settings: { ...game.settings, phaseEndsAt: null },
           updated_at: now()
         });
+        await syncImposterPublicGame(tx, game.id);
         return;
       }
 
       // Continue to next round — new word, same roles, minus eliminated
       const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
       const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
+      const secretWord = pickRandom(bank);
       await tx.mutate.imposter_games.update({
         id: game.id,
         phase: "playing",
-        secret_word: pickRandom(bank),
+        secret_word: isServerTx(tx) ? await maybeEncryptImposterWord(ctx, args.gameId, secretWord) : secretWord,
         clues: [],
         votes: [],
         players: updatedPlayers,
@@ -492,6 +584,7 @@ export const imposterMutators = {
         settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -518,6 +611,7 @@ export const imposterMutators = {
         settings: { ...game.settings, currentRound: 1, phaseEndsAt: null },
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
 
       // Clear chat messages
       const msgs = await tx.run(
@@ -542,6 +636,7 @@ export const imposterMutators = {
         announcement: { text: cleanText, ts: now() },
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -562,6 +657,7 @@ export const imposterMutators = {
         kicked,
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
 
       await tx.mutate.sessions.update({
         id: args.targetId,
@@ -585,6 +681,7 @@ export const imposterMutators = {
         settings: { ...game.settings, phaseEndsAt: null },
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
 
       const gameSessions = await tx.run(
         zql.sessions.where("game_type", "imposter").where("game_id", game.id)
@@ -636,6 +733,7 @@ export const imposterMutators = {
         created_at: now(),
         last_seen: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -656,6 +754,7 @@ export const imposterMutators = {
         game_id: undefined,
         last_seen: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -677,6 +776,7 @@ export const imposterMutators = {
         game_id: undefined,
         last_seen: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -707,6 +807,7 @@ export const imposterMutators = {
         },
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   ),
 
@@ -722,6 +823,7 @@ export const imposterMutators = {
         is_public: args.isPublic,
         updated_at: now()
       });
+      await syncImposterPublicGame(tx, game.id);
     }
   )
 };

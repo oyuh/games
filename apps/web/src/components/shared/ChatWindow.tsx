@@ -29,10 +29,17 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
       ? queries.chat.byGame({ gameType, gameId })
       : queries.chat.byGame({ gameType: "imposter", gameId: "__none__" })
   );
+  const [imposterMessages] = useQuery(
+    gameType === "imposter"
+      ? queries.chat.imposterByGame({ gameId })
+      : queries.chat.imposterByGame({ gameId: "__none__" })
+  );
 
   const filteredMessages = showChannels
-    ? messages.filter((m) => (m.channel ?? "all") === channel)
-    : messages.filter((m) => !m.channel || m.channel === "all");
+    ? channel === "imposter"
+      ? imposterMessages
+      : messages
+    : messages;
 
   const [minimized, setMinimized] = useState(false);
   const [input, setInput] = useState("");

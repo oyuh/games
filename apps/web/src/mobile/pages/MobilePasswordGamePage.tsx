@@ -198,12 +198,12 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   }, [game?.rounds, decryptValue]);
 
   useEffect(() => {
-    if (!game || game.phase !== "playing" || !game.settings.roundEndsAt) return;
+    if (!game || !isHost || game.phase !== "playing" || !game.settings.roundEndsAt) return;
     const remaining = game.settings.roundEndsAt - Date.now();
-    if (remaining <= 0) { void zero.mutate(mutators.password.advanceTimer({ gameId })); return; }
-    const timer = setTimeout(() => { void zero.mutate(mutators.password.advanceTimer({ gameId })); }, remaining + 500);
+    if (remaining <= 0) { void zero.mutate(mutators.password.advanceTimer({ gameId })).server; return; }
+    const timer = setTimeout(() => { void zero.mutate(mutators.password.advanceTimer({ gameId })).server; }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.roundEndsAt, game?.phase, gameId, zero]);
+  }, [game?.settings.roundEndsAt, game?.phase, gameId, zero, isHost]);
 
   useEffect(() => { if (game?.phase === "results") navigate(`/password/${game.id}/results`); }, [game?.phase, game?.id, navigate]);
   useEffect(() => {

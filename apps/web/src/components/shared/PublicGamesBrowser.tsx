@@ -1,26 +1,94 @@
-import { queries, mutators } from "@games/shared";
-import { useQuery, useZero } from "../../lib/zero";
+import { mutators } from "@games/shared";
+import { useZero } from "../../lib/zero";
 import { useNavigate } from "react-router-dom";
 import { FiUsers, FiGlobe } from "react-icons/fi";
 import { addRecentGame, ensureName } from "../../lib/session";
 import { showToast } from "../../lib/toast";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 
-/** Lightweight hook: just the count of public games for a given type. */
-export function usePublicGameCount(gameType: GameType): number {
-  const [imposter] = useQuery(queries.imposter.publicGames({}));
-  const [password] = useQuery(queries.password.publicGames({}));
-  const [chain] = useQuery(queries.chainReaction.publicGames({}));
-  const [shade] = useQuery(queries.shadeSignal.publicGames({}));
-  const [location] = useQuery(queries.locationSignal.publicGames({}));
+type NormalizedGame = {
+  id: string;
+  code: string;
+  phase: string;
+  hostName: string | null;
+  playerCount: number;
+  spectatorCount: number;
+  createdAt: number;
+};
 
-  if (gameType === "imposter") return imposter.length;
-  if (gameType === "password") return password.length;
-  if (gameType === "chain_reaction") return chain.length;
-  if (gameType === "shade_signal") return shade.length;
-  return location.length;
+type PublicGamesDirectory = Record<GameType, NormalizedGame[]>;
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+const EMPTY_DIRECTORY: PublicGamesDirectory = {
+  imposter: [],
+  password: [],
+  chain_reaction: [],
+  shade_signal: [],
+  location_signal: [],
+};
+
+let cachedDirectory: PublicGamesDirectory | null = null;
+let cachedAt = 0;
+let inFlightDirectoryPromise: Promise<PublicGamesDirectory> | null = null;
+
+async function loadPublicGamesDirectory(force = false): Promise<PublicGamesDirectory> {
+  const now = Date.now();
+  if (!force && cachedDirectory && now - cachedAt < 15_000) {
+    return cachedDirectory;
+  }
+  if (!force && inFlightDirectoryPromise) {
+    return inFlightDirectoryPromise;
+  }
+
+  inFlightDirectoryPromise = fetch(`${API_BASE}/api/public-games`, {
+    credentials: "include",
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json() as Promise<PublicGamesDirectory>;
+    })
+    .then((payload) => {
+      cachedDirectory = payload;
+      cachedAt = Date.now();
+      return payload;
+    })
+    .finally(() => {
+      inFlightDirectoryPromise = null;
+    });
+
+  return inFlightDirectoryPromise;
+}
+
+function usePublicGamesDirectory() {
+  const [directory, setDirectory] = useState<PublicGamesDirectory>(cachedDirectory ?? EMPTY_DIRECTORY);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadPublicGamesDirectory().then((payload) => {
+      if (!cancelled) {
+        setDirectory(payload);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setDirectory(EMPTY_DIRECTORY);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return directory;
+}
+
+export function usePublicGameCount(gameType: GameType): number {
+  const directory = usePublicGamesDirectory();
+  return directory[gameType].length;
 }
 
 const GAME_TYPE_ROUTES: Record<GameType, (id: string) => string> = {
@@ -37,82 +105,18 @@ function isLobby(phase: string) {
   return LOBBY_PHASES.has(phase);
 }
 
-interface NormalizedGame {
-  id: string;
-  code: string;
-  phase: string;
-  hostName: string | null;
-  playerCount: number;
-  spectatorCount: number;
-  createdAt: number;
-}
-
 function usePublicGames(gameType: GameType): NormalizedGame[] {
-  const [imposterGames] = useQuery(gameType === "imposter" ? queries.imposter.publicGames({}) : queries.imposter.publicGames({}));
-  const [passwordGames] = useQuery(gameType === "password" ? queries.password.publicGames({}) : queries.password.publicGames({}));
-  const [chainGames] = useQuery(gameType === "chain_reaction" ? queries.chainReaction.publicGames({}) : queries.chainReaction.publicGames({}));
-  const [shadeGames] = useQuery(gameType === "shade_signal" ? queries.shadeSignal.publicGames({}) : queries.shadeSignal.publicGames({}));
-  const [locationGames] = useQuery(gameType === "location_signal" ? queries.locationSignal.publicGames({}) : queries.locationSignal.publicGames({}));
-
-  let games: NormalizedGame[] = [];
-
-  if (gameType === "imposter") {
-    games = imposterGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
-      hostName: g.players.find((p) => p.sessionId === g.host_id)?.name ?? null,
-      playerCount: g.players.length,
-      spectatorCount: (g.spectators ?? []).length,
-      createdAt: g.created_at,
-    }));
-  } else if (gameType === "password") {
-    games = passwordGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
-      hostName: null,
-      playerCount: g.teams.reduce((sum, t) => sum + t.members.length, 0),
-      spectatorCount: (g.spectators ?? []).length,
-      createdAt: g.created_at,
-    }));
-  } else if (gameType === "chain_reaction") {
-    games = chainGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
-      hostName: g.players.find((p) => p.sessionId === g.host_id)?.name ?? null,
-      playerCount: g.players.length,
-      spectatorCount: (g.spectators ?? []).length,
-      createdAt: g.created_at,
-    }));
-  } else if (gameType === "shade_signal") {
-    games = shadeGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
-      hostName: g.players.find((p) => p.sessionId === g.host_id)?.name ?? null,
-      playerCount: g.players.length,
-      spectatorCount: (g.spectators ?? []).length,
-      createdAt: g.created_at,
-    }));
-  } else {
-    games = locationGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
-      hostName: g.players.find((p) => p.sessionId === g.host_id)?.name ?? null,
-      playerCount: g.players.length,
-      spectatorCount: (g.spectators ?? []).length,
-      createdAt: g.created_at,
-    }));
-  }
-
-  // Sort: lobby first, then newest first
+  const directory = usePublicGamesDirectory();
+  const games = [...directory[gameType]];
   games.sort((a, b) => {
     const aLobby = isLobby(a.phase) ? 0 : 1;
     const bLobby = isLobby(b.phase) ? 0 : 1;
     if (aLobby !== bLobby) return aLobby - bLobby;
     return b.createdAt - a.createdAt;
   });
-
   return games;
 }
 
-/**
- * Inline public games list for a specific game type.
- * Renders inside a game card when browsing mode is active.
- */
 export function PublicGamesList({
   gameType,
   sessionId,
@@ -147,6 +151,8 @@ export function PublicGamesList({
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       }
       addRecentGame({ id: game.id, code: game.code, gameType });
+      cachedDirectory = null;
+      cachedAt = 0;
       navigate(GAME_TYPE_ROUTES[gameType](game.id));
     } catch {
       showToast("Failed to join game", "error");
