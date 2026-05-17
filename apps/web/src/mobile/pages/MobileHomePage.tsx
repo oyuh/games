@@ -131,9 +131,21 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters })).server;
+      const mutation = zero.mutate(
+        mutators.imposter.create({
+          id,
+          hostId: sessionId,
+          category: imposterCategory,
+          rounds: imposterRounds,
+          imposters: imposterImposters,
+        })
+      );
+      const [, result] = await Promise.all([
+        mutation.client.catch(() => undefined),
+        mutation.server,
+      ]);
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      navigate(`/imposter/${id}`);
+      navigate(`/imposter/${id}`, { state: { pendingImposterCreate: true } });
     } finally { setPendingAction(null); }
   };
 
