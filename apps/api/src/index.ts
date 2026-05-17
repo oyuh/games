@@ -2682,11 +2682,11 @@ async function runActivityReport() {
 }
 
 app.get("/api/public-games", async (c) => {
-  const imposterRows = await drizzleClient.select().from(imposterGames).where(and(eq(imposterGames.isPublic, true), ne(imposterGames.phase, "ended")));
-  const passwordRows = await drizzleClient.select().from(passwordGames).where(and(eq(passwordGames.isPublic, true), ne(passwordGames.phase, "ended")));
+  const imposterRows = await drizzleClient.select().from(imposterGames).where(and(eq(imposterGames.isPublic, true), ne(imposterGames.phase, "ended"), ne(imposterGames.phase, "finished")));
+  const passwordRows = await drizzleClient.select().from(passwordGames).where(and(eq(passwordGames.isPublic, true), ne(passwordGames.phase, "ended"), ne(passwordGames.phase, "results")));
   const chainRows = await drizzleClient.select().from(chainReactionGames).where(and(eq(chainReactionGames.isPublic, true), ne(chainReactionGames.phase, "ended"), ne(chainReactionGames.phase, "finished")));
-  const shadeRows = await drizzleClient.select().from(shadeSignalGames).where(and(eq(shadeSignalGames.isPublic, true), ne(shadeSignalGames.phase, "ended")));
-  const locationRows = await drizzleClient.select().from(locationSignalGames).where(and(eq(locationSignalGames.isPublic, true), ne(locationSignalGames.phase, "ended")));
+  const shadeRows = await drizzleClient.select().from(shadeSignalGames).where(and(eq(shadeSignalGames.isPublic, true), ne(shadeSignalGames.phase, "ended"), ne(shadeSignalGames.phase, "finished")));
+  const locationRows = await drizzleClient.select().from(locationSignalGames).where(and(eq(locationSignalGames.isPublic, true), ne(locationSignalGames.phase, "ended"), ne(locationSignalGames.phase, "finished")));
 
   const payload = {
     imposter: imposterRows.map((game) => ({
@@ -2737,6 +2737,103 @@ app.get("/api/public-games", async (c) => {
   };
 
   return c.json(payload);
+});
+
+app.get("/api/games/lookup", async (c) => {
+  const lookupCode = c.req.query("code")?.trim().toUpperCase() ?? "";
+  if (!lookupCode || lookupCode.length > 6 || !/^[A-Z0-9]+$/.test(lookupCode)) {
+    return c.json({ error: "Invalid code" }, 400);
+  }
+
+  const [imposterRow, passwordRow, chainRow, shadeRow, locationRow] = await Promise.all([
+    drizzleClient.select().from(imposterGames).where(eq(imposterGames.code, lookupCode)).limit(1).then((rows) => rows[0] ?? null),
+    drizzleClient.select().from(passwordGames).where(eq(passwordGames.code, lookupCode)).limit(1).then((rows) => rows[0] ?? null),
+    drizzleClient.select().from(chainReactionGames).where(eq(chainReactionGames.code, lookupCode)).limit(1).then((rows) => rows[0] ?? null),
+    drizzleClient.select().from(shadeSignalGames).where(eq(shadeSignalGames.code, lookupCode)).limit(1).then((rows) => rows[0] ?? null),
+    drizzleClient.select().from(locationSignalGames).where(eq(locationSignalGames.code, lookupCode)).limit(1).then((rows) => rows[0] ?? null),
+  ]);
+
+  if (imposterRow) {
+    return c.json({
+      game: {
+        gameType: "imposter",
+        id: imposterRow.id,
+        code: imposterRow.code,
+        phase: imposterRow.phase,
+        isPublic: imposterRow.isPublic,
+        hostName: imposterRow.players.find((player) => player.sessionId === imposterRow.hostId)?.name ?? null,
+        playerCount: imposterRow.players.length,
+        spectatorCount: imposterRow.spectators.length,
+        createdAt: imposterRow.createdAt,
+      },
+    });
+  }
+
+  if (passwordRow) {
+    return c.json({
+      game: {
+        gameType: "password",
+        id: passwordRow.id,
+        code: passwordRow.code,
+        phase: passwordRow.phase,
+        isPublic: passwordRow.isPublic,
+        hostName: null,
+        playerCount: passwordRow.teams.reduce((total, team) => total + team.members.length, 0),
+        spectatorCount: passwordRow.spectators.length,
+        createdAt: passwordRow.createdAt,
+      },
+    });
+  }
+
+  if (chainRow) {
+    return c.json({
+      game: {
+        gameType: "chain_reaction",
+        id: chainRow.id,
+        code: chainRow.code,
+        phase: chainRow.phase,
+        isPublic: chainRow.isPublic,
+        hostName: chainRow.players.find((player) => player.sessionId === chainRow.hostId)?.name ?? null,
+        playerCount: chainRow.players.length,
+        spectatorCount: chainRow.spectators.length,
+        createdAt: chainRow.createdAt,
+      },
+    });
+  }
+
+  if (shadeRow) {
+    return c.json({
+      game: {
+        gameType: "shade_signal",
+        id: shadeRow.id,
+        code: shadeRow.code,
+        phase: shadeRow.phase,
+        isPublic: shadeRow.isPublic,
+        hostName: shadeRow.players.find((player) => player.sessionId === shadeRow.hostId)?.name ?? null,
+        playerCount: shadeRow.players.length,
+        spectatorCount: shadeRow.spectators.length,
+        createdAt: shadeRow.createdAt,
+      },
+    });
+  }
+
+  if (locationRow) {
+    return c.json({
+      game: {
+        gameType: "location_signal",
+        id: locationRow.id,
+        code: locationRow.code,
+        phase: locationRow.phase,
+        isPublic: locationRow.isPublic,
+        hostName: locationRow.players.find((player) => player.sessionId === locationRow.hostId)?.name ?? null,
+        playerCount: locationRow.players.length,
+        spectatorCount: locationRow.spectators.length,
+        createdAt: locationRow.createdAt,
+      },
+    });
+  }
+
+  return c.json({ error: "Game not found" }, 404);
 });
 
 app.get("/api/imposter/lookup", async (c) => {
