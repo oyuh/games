@@ -1,7 +1,7 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiClock, FiLogIn, FiSend } from "react-icons/fi";
 import { ColorGrid, generateGridColor } from "../../components/shade/ColorGrid";
 import { MobileGameHeader } from "../components/MobileGameHeader";
@@ -12,8 +12,11 @@ import { BorringAvatar } from "../../components/shared/BorringAvatar";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
+import { useZeroConnected } from "../../App";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
+import { getPendingGameMessage, hasPendingGameCreate, usePendingGamePageLoad } from "../../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
+import { useSyncCountdown } from "../../lib/sync-wake";
 import { showToast } from "../../lib/toast";
 import { useGameSecret } from "../../lib/game-secrets";
 
@@ -67,13 +70,22 @@ function MobileScoringLegend() {
 
 export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
+  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
+  const zeroConnected = useZeroConnected();
+  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.shadeSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "shade_signal", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
+  const pendingCreate = hasPendingGameCreate(location.state);
+  const { waitingForGame } = usePendingGamePageLoad({
+    gameFound: Boolean(game),
+    pendingCreate,
+    zeroConnected,
+  });
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [leaderTarget, setLeaderTarget] = useState<{ row: number; col: number } | null>(null);
@@ -327,7 +339,19 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
     }, new Set());
   }, [game, phase]);
 
-  if (!game) return <MobileGameNotFound theme="shade" />;
+  if (!game) {
+    if (waitingForGame) {
+      return (
+        <MobileGameNotFound
+          theme="shade"
+          title={pendingCreate ? "Opening your lobby..." : "Loading game..."}
+          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown)}
+          autoRedirect={false}
+        />
+      );
+    }
+    return <MobileGameNotFound theme="shade" />;
+  }
 
   const isGameActive = phase !== "lobby" && phase !== "ended" && phase !== "finished";
   const leaderName = game.leader_id ? (sessionById[game.leader_id] ?? "???") : "";
