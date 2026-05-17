@@ -1,4 +1,4 @@
-import { schema as zeroSchema } from "@games/shared";
+import { serverSchema as zeroSchema } from "@games/shared";
 import { chainReactionGames, gameEncryptionKeys, imposterGames, passwordGames, shadeSignalGames, locationSignalGames, sessions, statusTable, shikakuScores } from "@games/shared";
 import { zeroDrizzle } from "@rocicorp/zero/server/adapters/drizzle";
 import { resolve, dirname } from "node:path";
