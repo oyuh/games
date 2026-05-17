@@ -5,6 +5,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiEye, FiEyeOff, FiSend, FiCheck, FiArrowRight, FiClock } from "react-icons/fi";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
+import { getPendingGameMessage, hasPendingGameCreate, usePendingGamePageLoad } from "../../lib/game-page-load-state";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
@@ -20,9 +21,6 @@ import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 import { playVote } from "../../lib/sounds";
 import { useZeroConnected } from "../../App";
 import { useSyncCountdown } from "../../lib/sync-wake";
-
-const MOBILE_IMPOSTER_PAGE_CREATE_GRACE_MS = 12_000;
-const MOBILE_IMPOSTER_PAGE_LOOKUP_GRACE_MS = 4_000;
 
 /** Redact a clue showing a contiguous ~65% chunk of each word. */
 function redactClue(text: string): string {
@@ -43,14 +41,18 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const pendingCreate = Boolean((location.state as { pendingImposterCreate?: boolean } | null)?.pendingImposterCreate);
   const zeroConnected = useZeroConnected();
   const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.imposter.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "imposter", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const [missingTimedOut, setMissingTimedOut] = useState(false);
+  const pendingCreate = hasPendingGameCreate(location.state);
+  const { waitingForGame } = usePendingGamePageLoad({
+    gameFound: Boolean(game),
+    pendingCreate,
+    zeroConnected,
+  });
   const [clue, setClue] = useState("");
   const [voteTarget, setVoteTarget] = useState("");
   const [visibleSecretWord, setVisibleSecretWord] = useState<string | null>(null);
@@ -224,33 +226,15 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     showToast(`📢 ${cur.text}`, "info");
   }, [game?.announcement, isHost]);
 
-  useEffect(() => {
-    if (game) {
-      setMissingTimedOut(false);
-      return;
-    }
-
-    const timer = window.setTimeout(
-      () => setMissingTimedOut(true),
-      pendingCreate || !zeroConnected ? MOBILE_IMPOSTER_PAGE_CREATE_GRACE_MS : MOBILE_IMPOSTER_PAGE_LOOKUP_GRACE_MS
-    );
-    return () => window.clearTimeout(timer);
-  }, [game, pendingCreate, zeroConnected]);
-
   if (!game) {
-    if (!missingTimedOut) {
+    if (waitingForGame) {
       return (
-        <div className="m-page" data-game-theme="imposter">
-          <div className="m-empty">
-            <p>{pendingCreate ? "Opening your lobby..." : "Loading game..."}</p>
-            <p style={{ fontSize: "0.8rem", opacity: 0.6, marginTop: "0.5rem" }}>
-              {!zeroConnected
-                ? `Sync server is waking${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}.`
-                : "Waiting for the live game state to catch up."}
-            </p>
-            <button className="m-btn m-btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
-          </div>
-        </div>
+        <MobileGameNotFound
+          theme="imposter"
+          title={pendingCreate ? "Opening your lobby..." : "Loading game..."}
+          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown)}
+          autoRedirect={false}
+        />
       );
     }
     return <MobileGameNotFound theme="imposter" />;
