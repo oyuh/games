@@ -17,6 +17,7 @@ import { PublicGamesList, usePublicGameCount } from "../components/shared/Public
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { useZeroConnected } from "../App";
 import { useConnectionDebug } from "../lib/connection-debug";
+import { lookupImposterGameByCode } from "../lib/imposter-lookup";
 import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
 
 const ImposterDemo = lazy(() => import("../components/demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
@@ -209,7 +210,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const [recentGames, setRecentGames] = useState(() => getRecentGames());
   const [joinCode, setJoinCode] = useState("");
   const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "create-shade" | "create-location" | "join" | null>(null);
-  const [imposterMatches] = useQuery(queries.imposter.byCode({ code: joinCode || "______" }));
   const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
   const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
   const [shadeMatches] = useQuery(queries.shadeSignal.byCode({ code: joinCode || "______" }));
@@ -465,7 +465,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     };
 
     try {
-      const imposterGame = imposterMatches[0];
+      const imposterGame = await lookupImposterGameByCode(normalizedCode);
       if (imposterGame) {
         const target = { gameType: "imposter" as const, gameId: imposterGame.id, code: imposterGame.code, route: `/imposter/${imposterGame.id}` };
         if (queueJoinIfNeeded(target)) return;

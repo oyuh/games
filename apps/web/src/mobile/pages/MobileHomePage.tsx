@@ -9,6 +9,7 @@ import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
 import { GameIcon } from "../../components/shared/GameIcon";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, SessionGameType, setStoredName } from "../../lib/session";
+import { lookupImposterGameByCode } from "../../lib/imposter-lookup";
 import { showToast } from "../../lib/toast";
 import { isNameRestricted } from "../../hooks/useAdminBroadcast";
 
@@ -46,7 +47,6 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [joinCode, setJoinCode] = useState("");
   const [showRecent, setShowRecent] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
-  const [imposterMatches] = useQuery(queries.imposter.byCode({ code: joinCode || "______" }));
   const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
   const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
   const [shadeMatches] = useQuery(queries.shadeSignal.byCode({ code: joinCode || "______" }));
@@ -225,7 +225,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     };
 
     try {
-      const imposterGame = imposterMatches[0];
+      const imposterGame = await lookupImposterGameByCode(normalizedCode);
       if (imposterGame) {
         const target = { gameType: "imposter" as const, gameId: imposterGame.id, code: imposterGame.code, route: `/imposter/${imposterGame.id}` };
         if (queueJoinIfNeeded(target)) return;
