@@ -43,6 +43,10 @@ function redactImposterRoundHistory(
 }
 
 async function syncImposterPublicGame(tx: any, gameId: string) {
+  if (!isServerTx(tx) || !tx?.mutate?.imposter_public_games) {
+    return;
+  }
+
   const game = await tx.run(zql.imposter_games.where("id", gameId).one());
   if (!game) {
     await tx.mutate.imposter_public_games.delete({ id: gameId });
