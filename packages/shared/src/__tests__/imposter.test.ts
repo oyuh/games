@@ -9,6 +9,7 @@ import {
   MockTx,
   serverCtx,
   anonCtx,
+  clientTx,
   makeSession,
   makeImposterGame,
   expectThrows,
@@ -82,6 +83,27 @@ describe("Imposter — lobby phase", () => {
     expect(game.host_id).toBe("host1");
     expect(game.players).toHaveLength(1);
     expect(game.players[0].sessionId).toBe("host1");
+  });
+
+  it("skips public sync on the client when the server-only table is unavailable", async () => {
+    const tx = clientTx() as MockTx & { mutate: any };
+    tx.seed("sessions", [makeSession({ id: "host1", name: "Host" })]);
+
+    const originalMutate = tx.mutate;
+    tx.mutate = new Proxy({}, {
+      get: (_target, tableName: string) => {
+        if (tableName === "imposter_public_games") {
+          return undefined;
+        }
+        return originalMutate[tableName];
+      },
+    });
+
+    await mutators.create({ args: { id: "game-client", hostId: "host1" }, tx, ctx: anonCtx() });
+
+    const game = tx.getById("imposter_games", "game-client") as any;
+    expect(game).toBeDefined();
+    expect(game.host_id).toBe("host1");
   });
 
   it("player can join the lobby", async () => {
