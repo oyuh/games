@@ -18,7 +18,7 @@ import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCar
 import { useZeroConnected } from "../App";
 import { useConnectionDebug } from "../lib/connection-debug";
 import { PENDING_GAME_NAV_STATE, waitForMutationServer } from "../lib/game-page-load-state";
-import { lookupImposterGameByCode } from "../lib/imposter-lookup";
+import { lookupGameByCode, routeForLookupGame } from "../lib/game-lookup";
 import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
 
 const ImposterDemo = lazy(() => import("../components/demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
@@ -211,10 +211,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const [recentGames, setRecentGames] = useState(() => getRecentGames());
   const [joinCode, setJoinCode] = useState("");
   const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "create-shade" | "create-location" | "join" | null>(null);
-  const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
-  const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
-  const [shadeMatches] = useQuery(queries.shadeSignal.byCode({ code: joinCode || "______" }));
-  const [locationMatches] = useQuery(queries.locationSignal.byCode({ code: joinCode || "______" }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
@@ -485,10 +481,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const queueJoinIfNeeded = (target: { gameType: SessionGameType; gameId: string; code: string; route: string }) => {
       const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== target.gameType || activeGameId !== target.gameId));
       if (inAnotherGame) {
-        if (activeGameType && activeGameId) {
-          void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
-            .catch(() => showToast("Couldn't leave previous game cleanly", "error"));
-        }
+        setPendingJoinTarget(target);
+        setShowInSessionModal(true);
+        return true;
       }
       return false;
     };
@@ -516,38 +511,14 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     };
 
     try {
-      const imposterGame = await lookupImposterGameByCode(normalizedCode);
-      if (imposterGame) {
-        const target = { gameType: "imposter" as const, gameId: imposterGame.id, code: imposterGame.code, route: `/imposter/${imposterGame.id}` };
-        if (queueJoinIfNeeded(target)) return;
-        await performJoinTarget(target);
-        return;
-      }
-      const passwordGame = passwordMatches[0];
-      if (passwordGame) {
-        const target = { gameType: "password" as const, gameId: passwordGame.id, code: passwordGame.code, route: `/password/${passwordGame.id}/begin` };
-        if (queueJoinIfNeeded(target)) return;
-        await performJoinTarget(target);
-        return;
-      }
-      const chainGame = chainMatches[0];
-      if (chainGame) {
-        const target = { gameType: "chain_reaction" as const, gameId: chainGame.id, code: chainGame.code, route: `/chain/${chainGame.id}` };
-        if (queueJoinIfNeeded(target)) return;
-        await performJoinTarget(target);
-        return;
-      }
-      const shadeGame = shadeMatches[0];
-      if (shadeGame) {
-        const target = { gameType: "shade_signal" as const, gameId: shadeGame.id, code: shadeGame.code, route: `/shade/${shadeGame.id}` };
-        if (queueJoinIfNeeded(target)) return;
-        await performJoinTarget(target);
-        return;
-      }
-
-      const locationGame = locationMatches[0];
-      if (locationGame) {
-        const target = { gameType: "location_signal" as const, gameId: locationGame.id, code: locationGame.code, route: `/location/${locationGame.id}` };
+      const lookupGame = await lookupGameByCode(normalizedCode);
+      if (lookupGame) {
+        const target = {
+          gameType: lookupGame.gameType,
+          gameId: lookupGame.id,
+          code: lookupGame.code,
+          route: routeForLookupGame(lookupGame.gameType, lookupGame.id)
+        };
         if (queueJoinIfNeeded(target)) return;
         await performJoinTarget(target);
         return;

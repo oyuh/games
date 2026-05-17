@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
-import { code, now, shuffle, assertCaller, assertHost, assertHostUser, getGameSecretResolver, isServerTx, sanitizeText, resolvePlayerName } from "./helpers";
+import { code, now, shuffle, assertCaller, assertHost, assertHostUser, getGameSecretResolver, isServerTx, sanitizeText, resolvePlayerName, clearSessionGameIfCurrent } from "./helpers";
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -129,6 +129,7 @@ export const locationSignalMutators = {
       const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
+      if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");
       if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
       const existing = game.players.find((p) => p.sessionId === args.sessionId);
 
@@ -188,6 +189,17 @@ export const locationSignalMutators = {
           settings: { ...game.settings, phaseEndsAt: null },
           updated_at: ts,
         });
+        const gameSessions = await tx.run(
+          zql.sessions.where("game_type", "location_signal").where("game_id", game.id)
+        );
+        for (const s of gameSessions) {
+          await tx.mutate.sessions.update({
+            id: s.id,
+            game_type: null,
+            game_id: null,
+            last_seen: ts,
+          });
+        }
       } else {
         await tx.mutate.location_signal_games.update({
           id: game.id,
@@ -197,14 +209,8 @@ export const locationSignalMutators = {
         });
       }
 
-      const currentSession = await tx.run(zql.sessions.where("id", args.sessionId).one());
-      if (currentSession) {
-        await tx.mutate.sessions.update({
-          id: args.sessionId,
-          game_type: undefined,
-          game_id: undefined,
-          last_seen: ts,
-        });
+      if (game.host_id !== args.sessionId) {
+        await clearSessionGameIfCurrent(tx, args.sessionId, "location_signal", game.id);
       }
     }
   ),
@@ -665,12 +671,7 @@ export const locationSignalMutators = {
         kicked: [...game.kicked, args.targetId],
         updated_at: now(),
       });
-      await tx.mutate.sessions.update({
-        id: args.targetId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now(),
-      });
+      await clearSessionGameIfCurrent(tx, args.targetId, "location_signal", game.id);
     }
   ),
 
@@ -711,8 +712,8 @@ export const locationSignalMutators = {
       for (const s of gameSessions) {
         await tx.mutate.sessions.update({
           id: s.id,
-          game_type: undefined,
-          game_id: undefined,
+          game_type: null,
+          game_id: null,
           last_seen: now(),
         });
       }
@@ -759,12 +760,7 @@ export const locationSignalMutators = {
         spectators: game.spectators.filter((s) => s.sessionId !== args.sessionId),
         updated_at: now(),
       });
-      await tx.mutate.sessions.update({
-        id: args.sessionId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now(),
-      });
+      await clearSessionGameIfCurrent(tx, args.sessionId, "location_signal", game.id);
     }
   ),
 
@@ -781,12 +777,7 @@ export const locationSignalMutators = {
         spectators: game.spectators.filter((s) => s.sessionId !== args.targetId),
         updated_at: now(),
       });
-      await tx.mutate.sessions.update({
-        id: args.targetId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now(),
-      });
+      await clearSessionGameIfCurrent(tx, args.targetId, "location_signal", game.id);
     }
   ),
 

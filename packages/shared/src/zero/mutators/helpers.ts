@@ -1,4 +1,5 @@
 import { customAlphabet } from "nanoid";
+import { zql } from "../schema";
 export { fallbackPlayerName, randomPlayerName, resolvePlayerName } from "../../player-names";
 import { chainWordBank, passwordWordBank } from "./word-banks";
 
@@ -37,6 +38,7 @@ export function sanitizeId(id: string): string {
 }
 
 type GameSecretResolver = (gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal", gameId: string) => Promise<string>;
+export type MultiplayerGameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 type ServerContext = { userId?: string; resolveGameSecretKey?: GameSecretResolver };
 type TxLike = { location?: string };
 
@@ -112,6 +114,25 @@ export function isServerTx(tx: unknown) {
 export function getGameSecretResolver(ctx: unknown): GameSecretResolver | null {
   const safeCtx = asServerContext(ctx);
   return safeCtx.resolveGameSecretKey ?? null;
+}
+
+export async function clearSessionGameIfCurrent(
+  tx: any,
+  sessionId: string,
+  gameType: MultiplayerGameType,
+  gameId: string
+) {
+  const session = await tx.run(zql.sessions.where("id", sessionId).one());
+  if (!session || session.game_type !== gameType || session.game_id !== gameId) {
+    return;
+  }
+
+  await tx.mutate.sessions.update({
+    id: sessionId,
+    game_type: null,
+    game_id: null,
+    last_seen: now()
+  });
 }
 
 export function pickRandom<T>(values: T[]): T {

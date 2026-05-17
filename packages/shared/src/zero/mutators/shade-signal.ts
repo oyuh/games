@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
-import { now, code, shuffle, assertCaller, assertHost, assertHostUser, getGameSecretResolver, isServerTx, sanitizeText, resolvePlayerName } from "./helpers";
+import { now, code, shuffle, assertCaller, assertHost, assertHostUser, getGameSecretResolver, isServerTx, sanitizeText, resolvePlayerName, clearSessionGameIfCurrent } from "./helpers";
 
 async function encryptShadeTarget(ctx: unknown, gameId: string, target: { row: number; col: number }) {
   const resolver = getGameSecretResolver(ctx);
@@ -176,8 +176,8 @@ export const shadeSignalMutators = {
         for (const s of gameSessions) {
           await tx.mutate.sessions.update({
             id: s.id,
-            game_type: undefined,
-            game_id: undefined,
+            game_type: null,
+            game_id: null,
             last_seen: now()
           });
         }
@@ -190,12 +190,7 @@ export const shadeSignalMutators = {
         players,
         updated_at: now()
       });
-      await tx.mutate.sessions.update({
-        id: args.sessionId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now()
-      });
+      await clearSessionGameIfCurrent(tx, args.sessionId, "shade_signal", game.id);
     }
   ),
 
@@ -216,12 +211,7 @@ export const shadeSignalMutators = {
         kicked,
         updated_at: now()
       });
-      await tx.mutate.sessions.update({
-        id: args.targetId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now()
-      });
+      await clearSessionGameIfCurrent(tx, args.targetId, "shade_signal", game.id);
     }
   ),
 
@@ -744,8 +734,8 @@ export const shadeSignalMutators = {
       for (const s of gameSessions) {
         await tx.mutate.sessions.update({
           id: s.id,
-          game_type: undefined,
-          game_id: undefined,
+          game_type: null,
+          game_id: null,
           last_seen: now()
         });
       }
@@ -792,12 +782,7 @@ export const shadeSignalMutators = {
         spectators: game.spectators.filter((s) => s.sessionId !== args.sessionId),
         updated_at: now()
       });
-      await tx.mutate.sessions.update({
-        id: args.sessionId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now()
-      });
+      await clearSessionGameIfCurrent(tx, args.sessionId, "shade_signal", game.id);
     }
   ),
 
@@ -813,12 +798,7 @@ export const shadeSignalMutators = {
         kicked: [...game.kicked, args.targetId],
         updated_at: now()
       });
-      await tx.mutate.sessions.update({
-        id: args.targetId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now()
-      });
+      await clearSessionGameIfCurrent(tx, args.targetId, "shade_signal", game.id);
     }
   ),
 
