@@ -100,22 +100,22 @@ export type SessionGameType = "imposter" | "password" | "chain_reaction" | "shad
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function leaveCurrentGame(zero: { mutate: any }, sessionId: string, gameType: SessionGameType, gameId: string) {
   if (gameType === "imposter") {
-    await zero.mutate(mutators.imposter.leave({ gameId, sessionId })).client;
+    await zero.mutate(mutators.imposter.leave({ gameId, sessionId })).server;
     return;
   }
   if (gameType === "password") {
-    await zero.mutate(mutators.password.leave({ gameId, sessionId })).client;
+    await zero.mutate(mutators.password.leave({ gameId, sessionId })).server;
     return;
   }
   if (gameType === "chain_reaction") {
-    await zero.mutate(mutators.chainReaction.leave({ gameId, sessionId })).client;
+    await zero.mutate(mutators.chainReaction.leave({ gameId, sessionId })).server;
     return;
   }
   if (gameType === "shade_signal") {
-    await zero.mutate(mutators.shadeSignal.leave({ gameId, sessionId })).client;
+    await zero.mutate(mutators.shadeSignal.leave({ gameId, sessionId })).server;
     return;
   }
-  await zero.mutate(mutators.locationSignal.leave({ gameId, sessionId })).client;
+  await zero.mutate(mutators.locationSignal.leave({ gameId, sessionId })).server;
 }
 
 export type RecentGame = {

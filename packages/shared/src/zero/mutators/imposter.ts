@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { encryptSecret } from "../../crypto";
-import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, assertHostUser, getGameSecretResolver, isServerTx, sanitizeText, resolvePlayerName } from "./helpers";
+import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, assertHostUser, getGameSecretResolver, isServerTx, sanitizeText, resolvePlayerName, clearSessionGameIfCurrent } from "./helpers";
 import { imposterWordBank } from "./word-banks";
 
 async function maybeEncryptImposterWord(ctx: unknown, gameId: string, word: string) {
@@ -236,8 +236,8 @@ export const imposterMutators = {
         for (const s of gameSessions) {
           await tx.mutate.sessions.update({
             id: s.id,
-            game_type: undefined,
-            game_id: undefined,
+            game_type: null,
+            game_id: null,
             last_seen: now()
           });
         }
@@ -273,12 +273,7 @@ export const imposterMutators = {
         updated_at: now()
       });
 
-      await tx.mutate.sessions.update({
-        id: args.sessionId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now()
-      });
+      await clearSessionGameIfCurrent(tx, args.sessionId, "imposter", game.id);
       await syncImposterPublicGame(tx, game.id);
     }
   ),
@@ -663,12 +658,7 @@ export const imposterMutators = {
       });
       await syncImposterPublicGame(tx, game.id);
 
-      await tx.mutate.sessions.update({
-        id: args.targetId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now()
-      });
+      await clearSessionGameIfCurrent(tx, args.targetId, "imposter", game.id);
     }
   ),
 
@@ -693,8 +683,8 @@ export const imposterMutators = {
       for (const s of gameSessions) {
         await tx.mutate.sessions.update({
           id: s.id,
-          game_type: undefined,
-          game_id: undefined,
+          game_type: null,
+          game_id: null,
           last_seen: now()
         });
       }
@@ -752,12 +742,7 @@ export const imposterMutators = {
         spectators: game.spectators.filter((s) => s.sessionId !== args.sessionId),
         updated_at: now()
       });
-      await tx.mutate.sessions.update({
-        id: args.sessionId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now()
-      });
+      await clearSessionGameIfCurrent(tx, args.sessionId, "imposter", game.id);
       await syncImposterPublicGame(tx, game.id);
     }
   ),
@@ -774,12 +759,7 @@ export const imposterMutators = {
         kicked: [...game.kicked, args.targetId],
         updated_at: now()
       });
-      await tx.mutate.sessions.update({
-        id: args.targetId,
-        game_type: undefined,
-        game_id: undefined,
-        last_seen: now()
-      });
+      await clearSessionGameIfCurrent(tx, args.targetId, "imposter", game.id);
       await syncImposterPublicGame(tx, game.id);
     }
   ),
