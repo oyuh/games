@@ -34,6 +34,6 @@ fi
 echo ""
 echo "Pushing schema to production..."
 cd "$ROOT_DIR/packages/shared"
-DATABASE_URL="$PROD_DB_URL" npx drizzle-kit push
+DATABASE_URL="$PROD_DB_URL" bun run db:push
 echo ""
-echo "Done! Schema pushed to production."
+echo "Done! Schema and Zero views pushed to production."

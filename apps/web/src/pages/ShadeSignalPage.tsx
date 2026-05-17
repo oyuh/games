@@ -17,7 +17,7 @@ import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets";
+import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
 
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 import { ShadeDemo } from "../components/demos/ShadeDemo";
@@ -101,6 +101,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [pickingCell, setPickingCell] = useState<{ row: number; col: number } | null>(null);
+  const [leaderTarget, setLeaderTarget] = useState<{ row: number; col: number } | null>(null);
   const [guessLocked, setGuessLocked] = useState(false);
   const [copied, setCopied] = useState(false);
   const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
@@ -173,6 +174,12 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
       return acc;
     }, {}) ?? {};
   }, [game?.players]);
+  const { decryptValue } = useGameSecret({
+    gameType: "shade_signal",
+    gameId,
+    sessionId,
+    enabled: Boolean(game && game.phase !== "lobby"),
+  });
 
   useEffect(() => {
     if (!game) return;
@@ -195,20 +202,21 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
   // Timer auto-advance
   useEffect(() => {
     if (!game) return;
+    if (!isHost) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
     const activePhases: ShadePhase[] = ["clue1", "guess1", "clue2", "guess2", "reveal"];
     if (!activePhases.includes(game.phase as ShadePhase)) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
+      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId })).server;
       return;
     }
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
+      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId })).server;
     }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost]);
 
   // Announcement watcher
   useEffect(() => {
@@ -231,6 +239,40 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
     setGuessLocked(false);
   }, [game?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!game) {
+      setLeaderTarget(null);
+      return;
+    }
+    if (game.target_row != null && game.target_col != null && game.target_row >= 0 && game.target_col >= 0) {
+      setLeaderTarget({ row: game.target_row, col: game.target_col });
+      return;
+    }
+    if (!game.encrypted_target) {
+      setLeaderTarget(null);
+      return;
+    }
+    void decryptValue(game.encrypted_target).then((value) => {
+      if (cancelled || !value) {
+        if (!cancelled) setLeaderTarget(null);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(value) as { row?: unknown; col?: unknown };
+        if (typeof parsed.row === "number" && typeof parsed.col === "number") {
+          setLeaderTarget({ row: parsed.row, col: parsed.col });
+          return;
+        }
+      } catch {
+      }
+      setLeaderTarget(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.encrypted_target, game?.target_row, game?.target_col, decryptValue, game]);
+
   // Auto-reveal: when entering reveal phase, auto-calculate scores
   useEffect(() => {
     if (!game || game.phase !== "reveal") return;
@@ -239,8 +281,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
     const latest = game.round_history[game.round_history.length - 1];
     if (latest && latest.round === game.settings.currentRound) return; // already revealed this round
     const timer = setTimeout(() => {
-      void callGameSecretPreReveal("shade_signal", gameId, sessionId)
-        .then(() => zero.mutate(mutators.shadeSignal.reveal({ gameId })));
+      void zero.mutate(mutators.shadeSignal.reveal({ gameId })).server;
     }, 600);
     return () => clearTimeout(timer);
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
@@ -250,7 +291,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const target = game?.target_row != null && game?.target_col != null && game.target_row >= 0 && game.target_col >= 0
     ? { row: game.target_row, col: game.target_col }
-    : null;
+    : leaderTarget;
 
   const targetColor = target && game
     ? generateGridColor(target.row, target.col, game.grid_rows, game.grid_cols, game.grid_seed)
@@ -604,6 +645,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
               <button
                 className="btn btn-primary game-action-btn"
                 onClick={() => {
+                  setLeaderTarget({ row: pickingCell.row, col: pickingCell.col });
                   void zero.mutate(mutators.shadeSignal.setTarget({
                     gameId, sessionId,
                     row: pickingCell.row, col: pickingCell.col
