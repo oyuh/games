@@ -12,7 +12,7 @@ import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
 import { useZeroConnected } from "../App";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
-import { getPendingGameMessage, hasPendingGameCreate, usePendingGamePageLoad } from "../lib/game-page-load-state";
+import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { useSyncCountdown } from "../lib/sync-wake";
 import { showToast } from "../lib/toast";
@@ -52,9 +52,11 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const pendingCreate = hasPendingGameCreate(location.state);
+  const pendingJoin = hasPendingGameJoin(location.state);
   const { missingTimedOut, waitingForGame } = usePendingGamePageLoad({
     gameFound: Boolean(game),
     pendingCreate,
+    pendingJoin,
     zeroConnected,
   });
 
@@ -349,8 +351,8 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
       return (
         <div className="game-page">
           <div className="game-empty">
-            <p className="game-empty-title">{pendingCreate ? "Opening your lobby..." : "Loading game..."}</p>
-            <p className="game-empty-sub">{getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown)}</p>
+            <p className="game-empty-title">{getPendingGameTitle(pendingCreate, pendingJoin)}</p>
+            <p className="game-empty-sub">{getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}</p>
             <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
           </div>
         </div>

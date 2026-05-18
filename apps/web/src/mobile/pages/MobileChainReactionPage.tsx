@@ -11,7 +11,7 @@ import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/S
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { useZeroConnected } from "../../App";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
-import { getPendingGameMessage, hasPendingGameCreate, usePendingGamePageLoad } from "../../lib/game-page-load-state";
+import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { useSyncCountdown } from "../../lib/sync-wake";
 import { showToast } from "../../lib/toast";
@@ -34,9 +34,11 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const pendingCreate = hasPendingGameCreate(location.state);
+  const pendingJoin = hasPendingGameJoin(location.state);
   const { waitingForGame } = usePendingGamePageLoad({
     gameFound: Boolean(game),
     pendingCreate,
+    pendingJoin,
     zeroConnected,
   });
 
@@ -175,8 +177,8 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
       return (
         <MobileGameNotFound
           theme="chain"
-          title={pendingCreate ? "Opening your lobby..." : "Loading game..."}
-          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown)}
+          title={getPendingGameTitle(pendingCreate, pendingJoin)}
+          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}
           autoRedirect={false}
         />
       );
