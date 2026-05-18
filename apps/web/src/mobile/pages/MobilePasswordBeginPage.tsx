@@ -1,14 +1,11 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogIn, FiLock, FiUnlock, FiArrowRight, FiCheck, FiXCircle } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
-import { useZeroConnected } from "../../App";
-import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
-import { useSyncCountdown } from "../../lib/sync-wake";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
@@ -19,24 +16,13 @@ const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4
 
 export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
-  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const zeroConnected = useZeroConnected();
-  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const pendingCreate = hasPendingGameCreate(location.state);
-  const pendingJoin = hasPendingGameJoin(location.state);
-  const { waitingForGame } = usePendingGamePageLoad({
-    gameFound: Boolean(game),
-    pendingCreate,
-    pendingJoin,
-    zeroConnected,
-  });
   const prevAnnouncementTs = useRef<number | null>(null);
   const isSpectatorRef = useRef(false);
   const navHandledRef = useRef(false);
@@ -88,19 +74,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.announcement, isHost]);
 
-  if (!game) {
-    if (waitingForGame) {
-      return (
-        <MobileGameNotFound
-          theme="password"
-          title={getPendingGameTitle(pendingCreate, pendingJoin)}
-          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}
-          autoRedirect={false}
-        />
-      );
-    }
-    return <MobileGameNotFound theme="password" />;
-  }
+  if (!game) return <MobileGameNotFound theme="password" />;
 
   const inGame = game.teams.some((t) => t.members.includes(sessionId));
   const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;

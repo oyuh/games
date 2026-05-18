@@ -258,8 +258,6 @@ const DIFF_ACCENT: Record<Difficulty, string> = {
 const README_SEED_TTL_MS = 15 * 60 * 1000;
 const README_SEED_COOKIE_MAX_AGE_SECONDS = README_SEED_TTL_MS / 1000;
 const readmeSeedCache = new Map<string, { seed: number; createdAt: number }>();
-const DEFAULT_PUBLIC_API_ORIGIN = "https://api.games.lawsonhart.me";
-const PUBLIC_API_ORIGIN = process.env.PUBLIC_API_ORIGIN?.trim() || DEFAULT_PUBLIC_API_ORIGIN;
 
 type PaddingMode = "normal" | "tight" | "none";
 
@@ -539,7 +537,9 @@ shikakuImageRoutes.get("/puzzle", (c) => {
     rememberReadmeSeed(c, difficulty, readmeScope, seed);
   }
 
-  const baseUrl = PUBLIC_API_ORIGIN.replace(/\/$/, "");
+  const proto = getRequestProto(c);
+  const host = c.req.header("host") || "localhost:3001";
+  const baseUrl = `${proto}://${host}`;
   const puzzlePageUrl = `${baseUrl}/api/shikaku/puzzle?difficulty=${difficulty}&seed=${seed}&theme=${theme}`;
   const pageUrl = showingSolution ? `${puzzlePageUrl}&solution=1` : puzzlePageUrl;
   const solutionUrl = `${puzzlePageUrl}&solution=1`;

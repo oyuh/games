@@ -1,7 +1,7 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiLogOut, FiSend, FiMapPin, FiClock } from "react-icons/fi";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
@@ -10,14 +10,11 @@ import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
-import { useZeroConnected } from "../../App";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
-import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
-import { useSyncCountdown } from "../../lib/sync-wake";
 import { showToast } from "../../lib/toast";
-import { callGameSecretInit, useGameSecret } from "../../lib/game-secrets";
+import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
 
 import { WorldMap, MapMarker, fitRepeatingMapBounds } from "../../components/location/WorldMap";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
@@ -45,24 +42,13 @@ function fitBounds(
 
 export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
-  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const zeroConnected = useZeroConnected();
-  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.locationSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "location_signal", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const pendingCreate = hasPendingGameCreate(location.state);
-  const pendingJoin = hasPendingGameJoin(location.state);
-  const { waitingForGame } = usePendingGamePageLoad({
-    gameFound: Boolean(game),
-    pendingCreate,
-    pendingJoin,
-    zeroConnected,
-  });
 
   const [draftClue, setDraftClue] = useState("");
   const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
@@ -111,12 +97,6 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   }, [sessions]);
 
   const playerName = (id: string) => sessionById[id] ?? getDisplayName(null, id);
-  const { decryptValue } = useGameSecret({
-    gameType: "location_signal",
-    gameId,
-    sessionId,
-    enabled: Boolean(game && game.phase !== "lobby"),
-  });
 
   // Register host context for MobileHostControlsSheet
   useMobileHostRegister(
@@ -219,40 +199,6 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     setLeaderTarget(null);
   }, [game?.settings.currentRound]);
 
-  useEffect(() => {
-    let cancelled = false;
-    if (!game) {
-      setLeaderTarget(null);
-      return;
-    }
-    if (game.target_lat != null && game.target_lng != null) {
-      setLeaderTarget({ lat: game.target_lat, lng: game.target_lng });
-      return;
-    }
-    if (!game.encrypted_target) {
-      setLeaderTarget(null);
-      return;
-    }
-    void decryptValue(game.encrypted_target).then((value) => {
-      if (cancelled || !value) {
-        if (!cancelled) setLeaderTarget(null);
-        return;
-      }
-      try {
-        const parsed = JSON.parse(value) as { lat?: unknown; lng?: unknown };
-        if (typeof parsed.lat === "number" && typeof parsed.lng === "number") {
-          setLeaderTarget({ lat: parsed.lat, lng: parsed.lng });
-          return;
-        }
-      } catch {
-      }
-      setLeaderTarget(null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [game?.encrypted_target, game?.target_lat, game?.target_lng, decryptValue, game]);
-
   // Auto-zoom map on phase transitions
   const autoZoomKeyRef = useRef("");
   useEffect(() => {
@@ -329,17 +275,28 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!game) return;
     if (!isHost) return;
+    const localCluePairs = (game.settings as { cluePairs?: number }).cluePairs ?? 2;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
     const activePhases: string[] = ["clue1","guess1","clue2","guess2","clue3","guess3","clue4","guess4","reveal"];
     if (!activePhases.includes(game.phase)) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
-      void zero.mutate(mutators.locationSignal.advanceTimer({ gameId })).server;
+      if (game.phase.startsWith("guess") && Number(game.phase.replace("guess", "")) === localCluePairs) {
+        void callGameSecretPreReveal("location_signal", gameId, sessionId)
+          .then(() => zero.mutate(mutators.locationSignal.advanceTimer({ gameId })));
+      } else {
+        void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
+      }
       return;
     }
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.locationSignal.advanceTimer({ gameId })).server;
+      if (game.phase.startsWith("guess") && Number(game.phase.replace("guess", "")) === localCluePairs) {
+        void callGameSecretPreReveal("location_signal", gameId, sessionId)
+          .then(() => zero.mutate(mutators.locationSignal.advanceTimer({ gameId })));
+      } else {
+        void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
+      }
     }, remaining + 500);
     return () => clearTimeout(timer);
   }, [game, game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost, sessionId]);
@@ -355,19 +312,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     return map;
   }, [game]);
 
-  if (!game) {
-    if (waitingForGame) {
-      return (
-        <MobileGameNotFound
-          theme="location"
-          title={getPendingGameTitle(pendingCreate, pendingJoin)}
-          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}
-          autoRedirect={false}
-        />
-      );
-    }
-    return <MobileGameNotFound theme="location" />;
-  }
+  if (!game) return <MobileGameNotFound theme="location" />;
 
   const phase = game.phase as LocPhase;
   const leaderName = game.leader_id ? getDisplayName(game.players.find((p) => p.sessionId === game.leader_id)?.name, game.leader_id) : "---";

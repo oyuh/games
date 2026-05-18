@@ -13,9 +13,7 @@
     "test:local": "vitest run --config vitest.local.config.ts --passWithNoTests",
     "test:watch": "vitest --watch",
     "db:generate": "drizzle-kit generate",
-    "db:prepare-zero-sync-schema": "bun run ./scripts/prepare-zero-sync-schema.ts",
-    "db:sync-zero-public-data": "bun run ./scripts/sync-zero-public-data.ts",
-    "db:push": "bun run db:prepare-zero-sync-schema && drizzle-kit push && bun run db:sync-zero-public-data",
+    "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
