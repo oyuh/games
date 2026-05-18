@@ -5,6 +5,8 @@ import { FiUsers, FiGlobe } from "react-icons/fi";
 import { addRecentGame, ensureName } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useEffect, useState } from "react";
+import { PENDING_GAME_JOIN_NAV_STATE } from "../../lib/game-page-load-state";
+import { waitForJoinedGameAccess } from "../../lib/game-lookup";
 
 type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 
@@ -153,7 +155,12 @@ export function PublicGamesList({
       addRecentGame({ id: game.id, code: game.code, gameType });
       cachedDirectory = null;
       cachedAt = 0;
-      navigate(GAME_TYPE_ROUTES[gameType](game.id));
+      const joined = await waitForJoinedGameAccess(gameType, game.id, sessionId).catch(() => false);
+      if (!joined) {
+        showToast("Joined game is still syncing. Try again in a moment.", "error");
+        return;
+      }
+      navigate(GAME_TYPE_ROUTES[gameType](game.id), { state: PENDING_GAME_JOIN_NAV_STATE });
     } catch {
       showToast("Failed to join game", "error");
     } finally {

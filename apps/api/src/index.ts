@@ -13,7 +13,7 @@ import { pusher, getCustomStatus, setBanChecker, getBanChecker } from "./broadca
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 import { allowUnrestrictedSessionName, findRestrictedNameMatch } from "./name-rules";
 import { rateLimiter } from "./rate-limit";
-import { authorizeZeroQuery, getZeroMutatorAccessPolicy, resolveGameSecretAccess, type GameType } from "./security-policy";
+import { authorizeZeroQuery, getGameAccessById, getZeroMutatorAccessPolicy, resolveGameSecretAccess, type GameType } from "./security-policy";
 import {
   chooseCanonicalSession,
   createSignedSessionCookieValue,
@@ -2737,6 +2737,40 @@ app.get("/api/public-games", async (c) => {
   };
 
   return c.json(payload);
+});
+
+app.get("/api/games/access", async (c) => {
+  const gameType = normalizeGameType(c.req.query("type"));
+  const gameId = validId(c.req.query("id"));
+  const claimedSessionId = validId(c.req.query("sessionId"));
+  if (!gameType || !gameId || !claimedSessionId) {
+    return c.json({ error: "type, id, sessionId required" }, 400);
+  }
+
+  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, claimedSessionId);
+  if (!verifiedClaimedSessionId) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const resolvedIdentity = await resolveSessionIdentity(c, {
+    claimedSessionId: verifiedClaimedSessionId,
+    allowCreate: false,
+  });
+  if (!resolvedIdentity) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+
+  const access = await getGameAccessById(gameType, gameId, resolvedIdentity.sessionId);
+  if (!access) {
+    return c.json({ error: "Game not found" }, 404);
+  }
+
+  return c.json({
+    ok: true,
+    canRead: access.isPublic || access.isMember || access.isHost || access.isSpectator,
+    isAttached: access.isMember || access.isHost || access.isSpectator,
+    isPublic: access.isPublic,
+  });
 });
 
 app.get("/api/games/lookup", async (c) => {

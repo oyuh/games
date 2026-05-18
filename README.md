@@ -932,13 +932,17 @@ NODE_ENV=production
 ZERO_UPSTREAM_DB=<postgres_url>
 ZERO_QUERY_URL=https://<api-domain>/api/zero/query
 ZERO_MUTATE_URL=https://<api-domain>/api/zero/mutate
+ZERO_QUERY_ALLOWED_CLIENT_HEADERS=x-zero-user-id,x-zero-session-proof
+ZERO_MUTATE_ALLOWED_CLIENT_HEADERS=x-zero-user-id,x-zero-session-proof
 ZERO_ADMIN_PASSWORD=<strong_secret>
 ```
 
 Optional variables:
 
-- `ZERO_MUTATE_ALLOWED_CLIENT_HEADERS=...`
-  Only needed if you intentionally rely on custom client-provided mutate headers. The current session-proof flow uses Zero's auth token path for mutations, so this is no longer required for normal production setup.
+- `ZERO_QUERY_ALLOWED_CLIENT_HEADERS` and `ZERO_MUTATE_ALLOWED_CLIENT_HEADERS`
+  are shown above with the session headers the app sends. Keep them in place so
+  the API can still identify the caller if Zero's auth-token forwarding is
+  delayed or unavailable during custom query/mutate work.
 
 ```bash
 ZERO_CVR_DB=<postgres_url>

@@ -3,7 +3,7 @@ import { mutators, randomPlayerName, resolvePlayerName, sanitizePlayerName } fro
 
 const SESSION_KEY = "games:user-id";
 const SESSION_PROOF_KEY = "games:session-proof";
-const SESSION_PROOF_HEADER = "x-zero-session-proof";
+export const SESSION_PROOF_HEADER = "x-zero-session-proof";
 const NAME_KEY = "games:user-name";
 const RECENT_GAMES_KEY = "games:recent-games";
 const VISITED_KEY = "games:has-visited";
