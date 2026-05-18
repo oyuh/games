@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Dice5, Edit3, Search, TimerReset, Trash2, Trophy } from "lucide-react";
+import { Copy, Dice5, Edit3, PlusCircle, Search, TimerReset, Trash2, Trophy } from "lucide-react";
 import { api } from "@/lib/client-api";
 import {
   formatDateTime,
@@ -15,6 +15,7 @@ import { useToast } from "@/components/Toast";
 import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ScoreCreateDialog } from "@/components/admin/score-create-dialog";
 import {
   Dialog,
   DialogContent,
@@ -94,6 +95,7 @@ export default function PipsAdminPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedScore, setSelectedScore] = useState<PipsScoreRecord | null>(null);
   const [draft, setDraft] = useState<ScoreDraft | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   useEffect(() => {
@@ -368,15 +370,25 @@ export default function PipsAdminPage() {
             />
           </div>
 
-          <Button
-            variant="destructive"
-            className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
-            disabled={pendingAction === "clear"}
-            onClick={() => void clearScores()}
-          >
-            <Trash2 className="size-4" />
-            Clear all runs
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              className="bg-orange-300 text-orange-950 hover:bg-orange-200"
+              onClick={() => setCreateOpen(true)}
+            >
+              <PlusCircle className="size-4" />
+              Add run
+            </Button>
+            <Button
+              variant="destructive"
+              className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
+              disabled={pendingAction === "clear"}
+              onClick={() => void clearScores()}
+            >
+              <Trash2 className="size-4" />
+              Clear all runs
+            </Button>
+          </div>
         </div>
       </Surface>
 
@@ -490,6 +502,16 @@ export default function PipsAdminPage() {
           />
         </div>
       </Surface>
+
+      <ScoreCreateDialog
+        game="pips"
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => {
+          setPage(1);
+          setRefreshKey((value) => value + 1);
+        }}
+      />
 
       <Dialog open={Boolean(selectedScore && draft)} onOpenChange={(open) => !open && closeEditor()}>
         <DialogContent className="[--dialog-content-width:66rem] 2xl:[--dialog-content-width:72rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">

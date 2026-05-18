@@ -3522,3 +3522,102 @@ button.pips-mode-card:hover {
     display: none;
   }
 }
+
+/* -- Pips menu/end cascade parity with Shikaku ---------------- */
+.pips-menu-hero h1.pips-title {
+  color: #fb923c;
+  font-size: 3.2rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow: none;
+  animation: pips-title-glow 3s ease-in-out infinite;
+}
+
+.pips-menu-hero p.pips-subtitle {
+  max-width: 440px;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+
+.pips-menu-hero,
+.pips-end-header {
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pips-end-header p.pips-end-title {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.pips-end-header p.pips-end-sub {
+  max-width: none;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.pips-end-tile .pips-end-tile-label {
+  color: var(--muted-foreground);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pips-end-tile .pips-end-tile-value {
+  color: var(--foreground);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.pips-end-list-row > span {
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.pips-end-list-tile .pips-end-list-empty {
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.pips-end-tile--seed .pips-seed-copy-btn {
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--secondary) 20%, transparent);
+}
+
+@media (max-width: 900px) {
+  .pips-end-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .pips-end-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -23,6 +23,7 @@ import "../styles/game-shared.css";
 import "../styles/shikaku.css";
 import { ShikakuDemo } from "../components/demos/ShikakuDemo";
 import { GameIcon } from "../components/shared/GameIcon";
+import { AdminScoreModal } from "../components/shared/AdminScoreModal";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
@@ -123,6 +124,7 @@ export function ShikakuPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showAdminScoreModal, setShowAdminScoreModal] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
   const [personalBest, setPersonalBest] = useState<PersonalBest | null>(null);
   const [endListTab, setEndListTab] = useState<"times" | "scores">("times");
@@ -893,8 +895,13 @@ export function ShikakuPage() {
         return !v;
       });
     };
+    const adminHandler = () => setShowAdminScoreModal(true);
     window.addEventListener("shikaku-toggle-leaderboard", handler);
-    return () => window.removeEventListener("shikaku-toggle-leaderboard", handler);
+    window.addEventListener("shikaku-open-admin-score", adminHandler);
+    return () => {
+      window.removeEventListener("shikaku-toggle-leaderboard", handler);
+      window.removeEventListener("shikaku-open-admin-score", adminHandler);
+    };
   }, [difficulty, fetchLeaderboard, lbView]);
 
   // Listen for sidebar infinite mode toggle
@@ -1136,6 +1143,25 @@ export function ShikakuPage() {
     />
   ) : null;
 
+  const adminScoreModal = showAdminScoreModal ? (
+    <AdminScoreModal
+      apiBase={API_BASE}
+      game="shikaku"
+      shikakuDefaults={{
+        ...(seed > 0 ? { seed: String(seed) } : {}),
+        difficulty,
+        timeMs: String(finalTimeMs || 150_000),
+        score: String(finalScore || calculateScore(finalTimeMs || 150_000, difficulty)),
+        puzzleCount: String(PUZZLES_PER_RUN),
+      }}
+      onClose={() => setShowAdminScoreModal(false)}
+      onCreated={() => {
+        setLbDifficulty(difficulty);
+        void fetchLeaderboard(difficulty, 1, lbView);
+      }}
+    />
+  ) : null;
+
   /* ═══════════════════════════════════════════════════════════
    *  RENDER
    * ═══════════════════════════════════════════════════════════ */
@@ -1156,6 +1182,7 @@ export function ShikakuPage() {
           </div>
         </div>
         {leaderboardPanel}
+        {adminScoreModal}
       </>
     );
   }
@@ -1177,6 +1204,7 @@ export function ShikakuPage() {
           </div>
         </div>
         {leaderboardPanel}
+        {adminScoreModal}
       </>
     );
   }
@@ -1353,6 +1381,7 @@ export function ShikakuPage() {
         </div>
         </div>
         {leaderboardPanel}
+        {adminScoreModal}
       </>
     );
   }
@@ -1426,6 +1455,7 @@ export function ShikakuPage() {
             </div>
           </div>
         </div>
+        {adminScoreModal}
       </>
     );
   }
@@ -1655,6 +1685,7 @@ export function ShikakuPage() {
         </div>
         </div>
         {leaderboardPanel}
+        {adminScoreModal}
       </>
     );
   }
@@ -1823,6 +1854,7 @@ export function ShikakuPage() {
         </div>
       </div>
       {leaderboardPanel}
+      {adminScoreModal}
     </>
   );
 }
