@@ -5,7 +5,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiEye, FiEyeOff, FiSend, FiCheck, FiArrowRight, FiClock } from "react-icons/fi";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
-import { getPendingGameMessage, hasPendingGameCreate, usePendingGamePageLoad } from "../../lib/game-page-load-state";
+import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../../lib/game-page-load-state";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
@@ -48,9 +48,11 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
   const pendingCreate = hasPendingGameCreate(location.state);
+  const pendingJoin = hasPendingGameJoin(location.state);
   const { waitingForGame } = usePendingGamePageLoad({
     gameFound: Boolean(game),
     pendingCreate,
+    pendingJoin,
     zeroConnected,
   });
   const [clue, setClue] = useState("");
@@ -231,8 +233,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       return (
         <MobileGameNotFound
           theme="imposter"
-          title={pendingCreate ? "Opening your lobby..." : "Loading game..."}
-          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown)}
+          title={getPendingGameTitle(pendingCreate, pendingJoin)}
+          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}
           autoRedirect={false}
         />
       );

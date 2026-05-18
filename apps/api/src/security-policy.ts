@@ -170,15 +170,19 @@ type GameAccess = {
   isSpectator: boolean;
 };
 
-function getCallerUserId(caller: QueryCaller) {
-  return caller.proofUserId ?? (caller.allowUnsigned ? caller.headerUserId : null);
+function getGameQueryUserId(caller: QueryCaller) {
+  // Zero's userID is forwarded separately from the auth token. During joins the
+  // token-backed proof can lag or be absent on custom query hydration, but the
+  // game page still needs to remain subscribed after the server mutator has
+  // attached this user to the room.
+  return caller.proofUserId ?? caller.headerUserId ?? (caller.allowUnsigned ? caller.headerUserId : null);
 }
 
 function isDummyLookup(value: string | undefined) {
   return value === "__none__" || value === "______";
 }
 
-async function getAccessByGameId(gameType: GameType, gameId: string, sessionId: string | null): Promise<GameAccess | null> {
+export async function getGameAccessById(gameType: GameType, gameId: string, sessionId: string | null): Promise<GameAccess | null> {
   if (gameType === "imposter") {
     const [game] = await drizzleClient
       .select({
@@ -398,9 +402,9 @@ function requireProofUserId(caller: QueryCaller) {
 }
 
 async function assertMemberOrPublic(gameType: GameType, accessor: { by: "id"; value: string } | { by: "code"; value: string }, caller: QueryCaller) {
-  const sessionId = getCallerUserId(caller);
+  const sessionId = getGameQueryUserId(caller);
   const access = accessor.by === "id"
-    ? await getAccessByGameId(gameType, accessor.value, sessionId)
+    ? await getGameAccessById(gameType, accessor.value, sessionId)
     : await getAccessByCode(gameType, accessor.value, sessionId);
   if (!access) {
     throw new Error("Game not found");
@@ -412,11 +416,11 @@ async function assertMemberOrPublic(gameType: GameType, accessor: { by: "id"; va
 }
 
 async function assertMember(gameType: GameType, gameId: string, caller: QueryCaller) {
-  const sessionId = requireProofUserId(caller);
+  const sessionId = getGameQueryUserId(caller);
   if (!sessionId) {
     throw new Error("Forbidden");
   }
-  const access = await getAccessByGameId(gameType, gameId, sessionId);
+  const access = await getGameAccessById(gameType, gameId, sessionId);
   if (!access) {
     throw new Error("Game not found");
   }
@@ -427,12 +431,12 @@ async function assertMember(gameType: GameType, gameId: string, caller: QueryCal
 }
 
 async function assertMemberByLookup(gameType: GameType, accessor: { by: "id"; value: string } | { by: "code"; value: string }, caller: QueryCaller) {
-  const sessionId = requireProofUserId(caller);
+  const sessionId = getGameQueryUserId(caller);
   if (!sessionId) {
     throw new Error("Forbidden");
   }
   const access = accessor.by === "id"
-    ? await getAccessByGameId(gameType, accessor.value, sessionId)
+    ? await getGameAccessById(gameType, accessor.value, sessionId)
     : await getAccessByCode(gameType, accessor.value, sessionId);
   if (!access) {
     throw new Error("Game not found");

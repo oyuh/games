@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { lookupGameByCode, routeForLookupGame } from "../lib/game-lookup";
+import { lookupGameByCode, routeForLookupGame, waitForJoinedGameAccess } from "../lib/game-lookup";
+import { resetStoredIdentityForTests } from "../lib/session";
 
 afterEach(() => {
+  resetStoredIdentityForTests();
   vi.unstubAllGlobals();
 });
 
@@ -45,5 +47,33 @@ describe("game lookup", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 404 })));
 
     await expect(lookupGameByCode("NOPE")).resolves.toBeNull();
+  });
+
+  it("waits for the API to confirm the joined session is attached", async () => {
+    vi.stubGlobal("localStorage", {
+      getItem: vi.fn((key: string) => key === "games:session-proof" ? "proof-1" : null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    });
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ isAttached: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(waitForJoinedGameAccess("password", "game1", "session1")).resolves.toBe(true);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/games/access?type=password&id=game1&sessionId=session1"),
+      {
+        credentials: "include",
+        headers: {
+          "x-zero-session-proof": "proof-1",
+          "x-zero-user-id": "session1",
+        },
+      }
+    );
   });
 });

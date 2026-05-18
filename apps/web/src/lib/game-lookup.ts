@@ -1,3 +1,5 @@
+import { getSessionRequestHeaders } from "./session";
+
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 export type GameLookupType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
@@ -42,4 +44,39 @@ export async function lookupGameByCode(code: string): Promise<GameLookupResult |
 
   const payload = await response.json() as { game?: GameLookupResult | null };
   return payload.game ?? null;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+export async function waitForJoinedGameAccess(
+  gameType: GameLookupType,
+  gameId: string,
+  sessionId: string,
+  {
+    timeoutMs = 8_000,
+    intervalMs = 250,
+  }: { timeoutMs?: number; intervalMs?: number } = {}
+) {
+  const deadline = Date.now() + timeoutMs;
+  const params = new URLSearchParams({ type: gameType, id: gameId, sessionId });
+
+  while (Date.now() < deadline) {
+    const response = await fetch(`${API_BASE}/api/games/access?${params.toString()}`, {
+      credentials: "include",
+      headers: getSessionRequestHeaders(sessionId),
+    });
+
+    if (response.ok) {
+      const payload = await response.json() as { isAttached?: boolean };
+      if (payload.isAttached) {
+        return true;
+      }
+    }
+
+    await wait(intervalMs);
+  }
+
+  return false;
 }

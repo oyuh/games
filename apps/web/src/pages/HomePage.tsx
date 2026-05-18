@@ -17,8 +17,8 @@ import { PublicGamesList, usePublicGameCount } from "../components/shared/Public
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { useZeroConnected } from "../App";
 import { useConnectionDebug } from "../lib/connection-debug";
-import { PENDING_GAME_NAV_STATE, waitForMutationServer } from "../lib/game-page-load-state";
-import { lookupGameByCode, routeForLookupGame } from "../lib/game-lookup";
+import { PENDING_GAME_JOIN_NAV_STATE, PENDING_GAME_NAV_STATE, waitForMutationServer } from "../lib/game-page-load-state";
+import { lookupGameByCode, routeForLookupGame, waitForJoinedGameAccess } from "../lib/game-lookup";
 import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
 
 const ImposterDemo = lazy(() => import("../components/demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
@@ -507,7 +507,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       }
       addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
       setRecentGames(getRecentGames());
-      navigate(target.route);
+      const joined = await waitForJoinedGameAccess(target.gameType, target.gameId, sessionId).catch(() => false);
+      if (!joined) {
+        showToast("Joined game is still syncing. Try again in a moment.", "error");
+        return;
+      }
+      navigate(target.route, { state: PENDING_GAME_JOIN_NAV_STATE });
     };
 
     try {
@@ -565,7 +570,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         }
         addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
         setRecentGames(getRecentGames());
-        navigate(target.route);
+        const joined = await waitForJoinedGameAccess(target.gameType, target.gameId, sessionId).catch(() => false);
+        if (!joined) {
+          showToast("Joined game is still syncing. Try again in a moment.", "error");
+          return;
+        }
+        navigate(target.route, { state: PENDING_GAME_JOIN_NAV_STATE });
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => {

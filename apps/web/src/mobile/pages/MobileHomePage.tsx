@@ -8,9 +8,9 @@ import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
 import { GameIcon } from "../../components/shared/GameIcon";
-import { PENDING_GAME_NAV_STATE, waitForMutationServer } from "../../lib/game-page-load-state";
+import { PENDING_GAME_JOIN_NAV_STATE, PENDING_GAME_NAV_STATE, waitForMutationServer } from "../../lib/game-page-load-state";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, SessionGameType, setStoredName } from "../../lib/session";
-import { lookupGameByCode, routeForLookupGame } from "../../lib/game-lookup";
+import { lookupGameByCode, routeForLookupGame, waitForJoinedGameAccess } from "../../lib/game-lookup";
 import { showToast } from "../../lib/toast";
 import { isNameRestricted } from "../../hooks/useAdminBroadcast";
 
@@ -267,7 +267,12 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       }
       addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
       setRecentGames(getRecentGames());
-      navigate(target.route);
+      const joined = await waitForJoinedGameAccess(target.gameType, target.gameId, sessionId).catch(() => false);
+      if (!joined) {
+        showToast("Joined game is still syncing. Try again in a moment.", "error");
+        return;
+      }
+      navigate(target.route, { state: PENDING_GAME_JOIN_NAV_STATE });
     };
 
     try {
@@ -323,7 +328,12 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         }
         addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
         setRecentGames(getRecentGames());
-        navigate(target.route);
+        const joined = await waitForJoinedGameAccess(target.gameType, target.gameId, sessionId).catch(() => false);
+        if (!joined) {
+          showToast("Joined game is still syncing. Try again in a moment.", "error");
+          return;
+        }
+        navigate(target.route, { state: PENDING_GAME_JOIN_NAV_STATE });
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => {
