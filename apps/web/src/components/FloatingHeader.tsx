@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward } from "react-icons/fi";
+import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward, FiPlusCircle } from "react-icons/fi";
 import { FaCrown } from "react-icons/fa";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
@@ -418,6 +418,14 @@ export function Sidebar() {
                 setMobileOpen(false);
               }}
             />
+            <SidebarButton
+              icon={<FiPlusCircle size={24} />}
+              label="Add Score"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("shikaku-open-admin-score"));
+                setMobileOpen(false);
+              }}
+            />
           </>
         )}
         {isPips && (
@@ -455,6 +463,15 @@ export function Sidebar() {
               className="sidebar-link--pips"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("pips-toggle-leaderboard"));
+                setMobileOpen(false);
+              }}
+            />
+            <SidebarButton
+              icon={<FiPlusCircle size={24} />}
+              label="Add Score"
+              className="sidebar-link--pips"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("pips-open-admin-score"));
                 setMobileOpen(false);
               }}
             />
