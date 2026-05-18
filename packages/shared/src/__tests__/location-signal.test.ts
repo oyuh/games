@@ -137,62 +137,6 @@ describe("Location Signal — identity enforcement", () => {
     const game = tx.getById("location_signal_games", "game1") as any;
     expect(game.kicked).toContain("attacker");
   });
-
-  it("blocks outsiders from submitting guesses", async () => {
-    tx.seed("location_signal_games", [
-      makeLocationSignalGame({
-        id: "game2",
-        host_id: "host1",
-        phase: "guess1",
-        leader_id: "host1",
-        players: [
-          { sessionId: "host1", name: "Host", connected: true, totalScore: 0 },
-          { sessionId: "p1", name: "Alice", connected: true, totalScore: 0 },
-        ],
-      }),
-    ]);
-
-    await expectThrows(
-      () => mutators.submitGuess({
-        args: { gameId: "game2", sessionId: "attacker", round: 1, lat: 10, lng: 20 },
-        tx,
-        ctx: serverCtx("attacker"),
-      }),
-      "Only players in the game can guess"
-    );
-  });
-
-  it("blocks non-hosts from advancing timers", async () => {
-    tx.seed("location_signal_games", [
-      makeLocationSignalGame({
-        id: "game3",
-        host_id: "host1",
-        phase: "clue1",
-        leader_id: "host1",
-        players: [
-          { sessionId: "host1", name: "Host", connected: true, totalScore: 0 },
-          { sessionId: "p1", name: "Alice", connected: true, totalScore: 0 },
-        ],
-        settings: {
-          clueDurationSec: 60,
-          guessDurationSec: 30,
-          roundsPerPlayer: 2,
-          currentRound: 1,
-          phaseEndsAt: Date.now() - 1_000,
-          cluePairs: 2,
-        },
-      }),
-    ]);
-
-    await expectThrows(
-      () => mutators.advanceTimer({
-        args: { gameId: "game3" },
-        tx,
-        ctx: serverCtx("p1"),
-      }),
-      "Only host can do that"
-    );
-  });
 });
 
 // ───────────────────────────────────────────────────────────

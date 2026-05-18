@@ -17,8 +17,6 @@ import { PublicGamesList, usePublicGameCount } from "../components/shared/Public
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { useZeroConnected } from "../App";
 import { useConnectionDebug } from "../lib/connection-debug";
-import { PENDING_GAME_JOIN_NAV_STATE, PENDING_GAME_NAV_STATE, waitForMutationServer } from "../lib/game-page-load-state";
-import { lookupGameByCode, routeForLookupGame, waitForJoinedGameAccess } from "../lib/game-lookup";
 import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
 
 const ImposterDemo = lazy(() => import("../components/demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
@@ -211,6 +209,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const [recentGames, setRecentGames] = useState(() => getRecentGames());
   const [joinCode, setJoinCode] = useState("");
   const [pendingAction, setPendingAction] = useState<"create-imposter" | "create-password" | "create-chain" | "create-shade" | "create-location" | "join" | null>(null);
+  const [imposterMatches] = useQuery(queries.imposter.byCode({ code: joinCode || "______" }));
+  const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
+  const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
+  const [shadeMatches] = useQuery(queries.shadeSignal.byCode({ code: joinCode || "______" }));
+  const [locationMatches] = useQuery(queries.locationSignal.byCode({ code: joinCode || "______" }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
@@ -334,22 +337,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await waitForMutationServer(
-        zero.mutate(
-          mutators.imposter.create({
-            id,
-            hostId: sessionId,
-            category: imposterCategory,
-            rounds: imposterRounds,
-            imposters: imposterImposters,
-          })
-        )
-      );
+      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/imposter/${id}`, { state: PENDING_GAME_NAV_STATE });
+      navigate(`/imposter/${id}`);
     } finally {
       setPendingAction(null);
     }
@@ -361,22 +354,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await waitForMutationServer(
-        zero.mutate(
-          mutators.password.create({
-            id,
-            hostId: sessionId,
-            teamCount: passwordTeams,
-            targetScore: passwordTargetScore,
-            category: passwordCategory,
-          })
-        )
-      );
+      const result = await zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/password/${id}/begin`, { state: PENDING_GAME_NAV_STATE });
+      navigate(`/password/${id}/begin`);
     } finally {
       setPendingAction(null);
     }
@@ -388,23 +371,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await waitForMutationServer(
-        zero.mutate(
-          mutators.chainReaction.create({
-            id,
-            hostId: sessionId,
-            chainLength,
-            rounds: chainRounds,
-            chainMode,
-            category: chainCategory,
-          })
-        )
-      );
+      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/chain/${id}`, { state: PENDING_GAME_NAV_STATE });
+      navigate(`/chain/${id}`);
     } finally {
       setPendingAction(null);
     }
@@ -416,22 +388,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await waitForMutationServer(
-        zero.mutate(
-          mutators.shadeSignal.create({
-            id,
-            hostId: sessionId,
-            roundsPerPlayer: shadeRoundsPerPlayer,
-            hardMode: shadeHardMode,
-            leaderPick: shadeLeaderPick,
-          })
-        )
-      );
+      const result = await zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/shade/${id}`, { state: PENDING_GAME_NAV_STATE });
+      navigate(`/shade/${id}`);
     } finally {
       setPendingAction(null);
     }
@@ -443,21 +405,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await waitForMutationServer(
-        zero.mutate(
-          mutators.locationSignal.create({
-            id,
-            hostId: sessionId,
-            roundsPerPlayer: locRoundsPerPlayer,
-            cluePairs: locCluePairs,
-          })
-        )
-      );
+      const result = await zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
       }
-      navigate(`/location/${id}`, { state: PENDING_GAME_NAV_STATE });
+      navigate(`/location/${id}`);
     } finally {
       setPendingAction(null);
     }
@@ -481,9 +434,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const queueJoinIfNeeded = (target: { gameType: SessionGameType; gameId: string; code: string; route: string }) => {
       const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== target.gameType || activeGameId !== target.gameId));
       if (inAnotherGame) {
-        setPendingJoinTarget(target);
-        setShowInSessionModal(true);
-        return true;
+        if (activeGameType && activeGameId) {
+          void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+            .catch(() => showToast("Couldn't leave previous game cleanly", "error"));
+        }
       }
       return false;
     };
@@ -507,23 +461,42 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       }
       addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
       setRecentGames(getRecentGames());
-      const joined = await waitForJoinedGameAccess(target.gameType, target.gameId, sessionId).catch(() => false);
-      if (!joined) {
-        showToast("Joined game is still syncing. Try again in a moment.", "error");
-        return;
-      }
-      navigate(target.route, { state: PENDING_GAME_JOIN_NAV_STATE });
+      navigate(target.route);
     };
 
     try {
-      const lookupGame = await lookupGameByCode(normalizedCode);
-      if (lookupGame) {
-        const target = {
-          gameType: lookupGame.gameType,
-          gameId: lookupGame.id,
-          code: lookupGame.code,
-          route: routeForLookupGame(lookupGame.gameType, lookupGame.id)
-        };
+      const imposterGame = imposterMatches[0];
+      if (imposterGame) {
+        const target = { gameType: "imposter" as const, gameId: imposterGame.id, code: imposterGame.code, route: `/imposter/${imposterGame.id}` };
+        if (queueJoinIfNeeded(target)) return;
+        await performJoinTarget(target);
+        return;
+      }
+      const passwordGame = passwordMatches[0];
+      if (passwordGame) {
+        const target = { gameType: "password" as const, gameId: passwordGame.id, code: passwordGame.code, route: `/password/${passwordGame.id}/begin` };
+        if (queueJoinIfNeeded(target)) return;
+        await performJoinTarget(target);
+        return;
+      }
+      const chainGame = chainMatches[0];
+      if (chainGame) {
+        const target = { gameType: "chain_reaction" as const, gameId: chainGame.id, code: chainGame.code, route: `/chain/${chainGame.id}` };
+        if (queueJoinIfNeeded(target)) return;
+        await performJoinTarget(target);
+        return;
+      }
+      const shadeGame = shadeMatches[0];
+      if (shadeGame) {
+        const target = { gameType: "shade_signal" as const, gameId: shadeGame.id, code: shadeGame.code, route: `/shade/${shadeGame.id}` };
+        if (queueJoinIfNeeded(target)) return;
+        await performJoinTarget(target);
+        return;
+      }
+
+      const locationGame = locationMatches[0];
+      if (locationGame) {
+        const target = { gameType: "location_signal" as const, gameId: locationGame.id, code: locationGame.code, route: `/location/${locationGame.id}` };
         if (queueJoinIfNeeded(target)) return;
         await performJoinTarget(target);
         return;
@@ -570,12 +543,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         }
         addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
         setRecentGames(getRecentGames());
-        const joined = await waitForJoinedGameAccess(target.gameType, target.gameId, sessionId).catch(() => false);
-        if (!joined) {
-          showToast("Joined game is still syncing. Try again in a moment.", "error");
-          return;
-        }
-        navigate(target.route, { state: PENDING_GAME_JOIN_NAV_STATE });
+        navigate(target.route);
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => {

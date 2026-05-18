@@ -42,11 +42,11 @@ Write-Host "Pushing schema to production..." -ForegroundColor Cyan
 $env:DATABASE_URL = $PROD_DB_URL
 Push-Location (Join-Path $ROOT_DIR "packages\shared")
 try {
-    bun run db:push
+    npx drizzle-kit push
 } finally {
     Pop-Location
     Remove-Item Env:\DATABASE_URL
 }
 
 Write-Host ""
-Write-Host "Done! Schema and Zero views pushed to production." -ForegroundColor Green
+Write-Host "Done! Schema pushed to production." -ForegroundColor Green

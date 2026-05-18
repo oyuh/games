@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName, clearSessionGameIfCurrent } from "./helpers";
+import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
 
 export const chainReactionMutators = {
   create: defineMutator(
@@ -135,8 +135,8 @@ export const chainReactionMutators = {
         for (const s of gameSessions) {
           await tx.mutate.sessions.update({
             id: s.id,
-            game_type: null,
-            game_id: null,
+            game_type: undefined,
+            game_id: undefined,
             last_seen: now()
           });
         }
@@ -157,7 +157,12 @@ export const chainReactionMutators = {
         settings: { ...game.settings, phaseEndsAt: null },
         updated_at: now()
       });
-      await clearSessionGameIfCurrent(tx, args.sessionId, "chain_reaction", game.id);
+      await tx.mutate.sessions.update({
+        id: args.sessionId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   ),
 
@@ -208,7 +213,12 @@ export const chainReactionMutators = {
         kicked,
         updated_at: now()
       });
-      await clearSessionGameIfCurrent(tx, args.targetId, "chain_reaction", game.id);
+      await tx.mutate.sessions.update({
+        id: args.targetId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   ),
 
@@ -678,8 +688,8 @@ export const chainReactionMutators = {
       for (const s of gameSessions) {
         await tx.mutate.sessions.update({
           id: s.id,
-          game_type: null,
-          game_id: null,
+          game_type: undefined,
+          game_id: undefined,
           last_seen: now()
         });
       }
@@ -726,7 +736,12 @@ export const chainReactionMutators = {
         spectators: game.spectators.filter((s) => s.sessionId !== args.sessionId),
         updated_at: now()
       });
-      await clearSessionGameIfCurrent(tx, args.sessionId, "chain_reaction", game.id);
+      await tx.mutate.sessions.update({
+        id: args.sessionId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   ),
 
@@ -758,7 +773,12 @@ export const chainReactionMutators = {
         kicked: [...game.kicked, args.targetId],
         updated_at: now()
       });
-      await clearSessionGameIfCurrent(tx, args.targetId, "chain_reaction", game.id);
+      await tx.mutate.sessions.update({
+        id: args.targetId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   ),
 

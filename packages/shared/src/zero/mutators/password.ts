@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
-import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds, assertCaller, assertHost, assertHostUser, sanitizeText, resolvePlayerName, clearSessionGameIfCurrent } from "./helpers";
+import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
 
 async function maybeEncryptPasswordWord(ctx: unknown, gameId: string, word: string | null) {
   if (!word) {
@@ -99,7 +99,7 @@ export const passwordMutators = {
       const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
-      if (game.phase === "ended" || game.phase === "results") throw new Error("Game has ended");
+      if (game.phase === "ended") throw new Error("Game has ended");
       if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
       // Only allow joining during lobby; mid-game visitors join as spectators
       if (game.phase !== "lobby") {
@@ -174,8 +174,8 @@ export const passwordMutators = {
         for (const s of gameSessions) {
           await tx.mutate.sessions.update({
             id: s.id,
-            game_type: null,
-            game_id: null,
+            game_type: undefined,
+            game_id: undefined,
             last_seen: now()
           });
         }
@@ -193,7 +193,12 @@ export const passwordMutators = {
         updated_at: now()
       });
 
-      await clearSessionGameIfCurrent(tx, args.sessionId, "password", game.id);
+      await tx.mutate.sessions.update({
+        id: args.sessionId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   ),
 
@@ -461,7 +466,6 @@ export const passwordMutators = {
     async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game || game.phase !== "playing" || !game.active_rounds.length) return;
-      assertHostUser(tx, ctx, game.host_id);
       const roundEndsAt = game.settings.roundEndsAt;
       if (!roundEndsAt || now() < roundEndsAt) return; // not expired
 
@@ -627,7 +631,12 @@ export const passwordMutators = {
 
       await tx.mutate.password_games.update({ id: game.id, teams, kicked, updated_at: now() });
 
-      await clearSessionGameIfCurrent(tx, args.targetId, "password", game.id);
+      await tx.mutate.sessions.update({
+        id: args.targetId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   ),
 
@@ -652,8 +661,8 @@ export const passwordMutators = {
       for (const s of gameSessions) {
         await tx.mutate.sessions.update({
           id: s.id,
-          game_type: null,
-          game_id: null,
+          game_type: undefined,
+          game_id: undefined,
           last_seen: now()
         });
       }
@@ -676,7 +685,7 @@ export const passwordMutators = {
       const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.password_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
-      if (game.phase === "ended" || game.phase === "results") throw new Error("Game has ended");
+      if (game.phase === "ended") throw new Error("Game has ended");
       if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
       const allMembers = new Set(game.teams.flatMap((t) => t.members));
       if (allMembers.has(args.sessionId)) throw new Error("Already in game as player");
@@ -709,7 +718,12 @@ export const passwordMutators = {
         spectators: game.spectators.filter((s) => s.sessionId !== args.sessionId),
         updated_at: now()
       });
-      await clearSessionGameIfCurrent(tx, args.sessionId, "password", game.id);
+      await tx.mutate.sessions.update({
+        id: args.sessionId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   ),
 
@@ -724,7 +738,12 @@ export const passwordMutators = {
         kicked: [...game.kicked, args.targetId],
         updated_at: now()
       });
-      await clearSessionGameIfCurrent(tx, args.targetId, "password", game.id);
+      await tx.mutate.sessions.update({
+        id: args.targetId,
+        game_type: undefined,
+        game_id: undefined,
+        last_seen: now()
+      });
     }
   ),
 

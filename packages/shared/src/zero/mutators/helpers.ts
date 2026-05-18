@@ -1,5 +1,4 @@
 import { customAlphabet } from "nanoid";
-import { zql } from "../schema";
 export { fallbackPlayerName, randomPlayerName, resolvePlayerName } from "../../player-names";
 import { chainWordBank, passwordWordBank } from "./word-banks";
 
@@ -38,7 +37,6 @@ export function sanitizeId(id: string): string {
 }
 
 type GameSecretResolver = (gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal", gameId: string) => Promise<string>;
-export type MultiplayerGameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 type ServerContext = { userId?: string; resolveGameSecretKey?: GameSecretResolver };
 type TxLike = { location?: string };
 
@@ -69,11 +67,6 @@ function shouldEnforceServerIdentity(tx: TxLike, ctx: ServerContext) {
   return tx.location === "server" && !!ctx.userId && ctx.userId !== "anon";
 }
 
-export function getServerUserId(ctx: unknown): string | null {
-  const safeCtx = asServerContext(ctx);
-  return typeof safeCtx.userId === "string" && safeCtx.userId !== "anon" ? safeCtx.userId : null;
-}
-
 export function assertCaller(tx: unknown, ctx: unknown, claimedId: string) {
   const safeTx = asTxLike(tx);
   const safeCtx = asServerContext(ctx);
@@ -96,17 +89,6 @@ export function assertHost(tx: unknown, ctx: unknown, claimedHostId: string, act
   }
 }
 
-export function assertHostUser(tx: unknown, ctx: unknown, actualHostId: string) {
-  const safeTx = asTxLike(tx);
-  const safeCtx = asServerContext(ctx);
-  if (!shouldEnforceServerIdentity(safeTx, safeCtx)) {
-    return;
-  }
-  if (safeCtx.userId !== actualHostId) {
-    throw new Error("Only host can do that");
-  }
-}
-
 export function isServerTx(tx: unknown) {
   return asTxLike(tx).location === "server";
 }
@@ -114,25 +96,6 @@ export function isServerTx(tx: unknown) {
 export function getGameSecretResolver(ctx: unknown): GameSecretResolver | null {
   const safeCtx = asServerContext(ctx);
   return safeCtx.resolveGameSecretKey ?? null;
-}
-
-export async function clearSessionGameIfCurrent(
-  tx: any,
-  sessionId: string,
-  gameType: MultiplayerGameType,
-  gameId: string
-) {
-  const session = await tx.run(zql.sessions.where("id", sessionId).one());
-  if (!session || session.game_type !== gameType || session.game_id !== gameId) {
-    return;
-  }
-
-  await tx.mutate.sessions.update({
-    id: sessionId,
-    game_type: null,
-    game_id: null,
-    last_seen: now()
-  });
 }
 
 export function pickRandom<T>(values: T[]): T {

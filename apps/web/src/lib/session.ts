@@ -3,7 +3,7 @@ import { mutators, randomPlayerName, resolvePlayerName, sanitizePlayerName } fro
 
 const SESSION_KEY = "games:user-id";
 const SESSION_PROOF_KEY = "games:session-proof";
-export const SESSION_PROOF_HEADER = "x-zero-session-proof";
+const SESSION_PROOF_HEADER = "x-zero-session-proof";
 const NAME_KEY = "games:user-name";
 const RECENT_GAMES_KEY = "games:recent-games";
 const VISITED_KEY = "games:has-visited";
@@ -100,22 +100,22 @@ export type SessionGameType = "imposter" | "password" | "chain_reaction" | "shad
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function leaveCurrentGame(zero: { mutate: any }, sessionId: string, gameType: SessionGameType, gameId: string) {
   if (gameType === "imposter") {
-    await zero.mutate(mutators.imposter.leave({ gameId, sessionId })).server;
+    await zero.mutate(mutators.imposter.leave({ gameId, sessionId })).client;
     return;
   }
   if (gameType === "password") {
-    await zero.mutate(mutators.password.leave({ gameId, sessionId })).server;
+    await zero.mutate(mutators.password.leave({ gameId, sessionId })).client;
     return;
   }
   if (gameType === "chain_reaction") {
-    await zero.mutate(mutators.chainReaction.leave({ gameId, sessionId })).server;
+    await zero.mutate(mutators.chainReaction.leave({ gameId, sessionId })).client;
     return;
   }
   if (gameType === "shade_signal") {
-    await zero.mutate(mutators.shadeSignal.leave({ gameId, sessionId })).server;
+    await zero.mutate(mutators.shadeSignal.leave({ gameId, sessionId })).client;
     return;
   }
-  await zero.mutate(mutators.locationSignal.leave({ gameId, sessionId })).server;
+  await zero.mutate(mutators.locationSignal.leave({ gameId, sessionId })).client;
 }
 
 export type RecentGame = {

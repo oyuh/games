@@ -1,7 +1,7 @@
 import { mutators, queries, chainCategoryLabels } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle, FiEye, FiClock } from "react-icons/fi";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
@@ -9,11 +9,8 @@ import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
-import { useZeroConnected } from "../../App";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
-import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
-import { useSyncCountdown } from "../../lib/sync-wake";
 import { showToast } from "../../lib/toast";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 import { playHint } from "../../lib/sounds";
@@ -23,24 +20,13 @@ type ChainViewTarget = "self" | "opponent";
 
 export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
-  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const zeroConnected = useZeroConnected();
-  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.chainReaction.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "chain_reaction", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const pendingCreate = hasPendingGameCreate(location.state);
-  const pendingJoin = hasPendingGameJoin(location.state);
-  const { waitingForGame } = usePendingGamePageLoad({
-    gameFound: Boolean(game),
-    pendingCreate,
-    pendingJoin,
-    zeroConnected,
-  });
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [guess, setGuess] = useState("");
@@ -172,19 +158,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     }
   }, [editingIndex]);
 
-  if (!game) {
-    if (waitingForGame) {
-      return (
-        <MobileGameNotFound
-          theme="chain"
-          title={getPendingGameTitle(pendingCreate, pendingJoin)}
-          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}
-          autoRedirect={false}
-        />
-      );
-    }
-    return <MobileGameNotFound theme="chain" />;
-  }
+  if (!game) return <MobileGameNotFound theme="chain" />;
 
   const myChain: ChainSlot[] = game.chain[sessionId] ?? [];
   const opponentId = opponent?.sessionId;

@@ -16,7 +16,7 @@ import {
   startGlobalConnectionDebugCapture,
   useConnectionDebug
 } from "./lib/connection-debug";
-import { SESSION_PROOF_HEADER, syncSessionIdentity } from "./lib/session";
+import { syncSessionIdentity } from "./lib/session";
 import { markSyncConnecting, markSyncConnected, useSyncCountdown, useSyncTimedOut } from "./lib/sync-wake";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { useButtonSounds } from "./hooks/useButtonSounds";
@@ -91,21 +91,12 @@ const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/lawsonhart";
 let lastSyncWakeNoticeShownAt = 0;
 
 function createZero(sessionId: string, sessionProof: string | null) {
-  const sessionHeaders: Record<string, string> = {
-    "x-zero-user-id": sessionId,
-  };
-  if (sessionProof) {
-    sessionHeaders[SESSION_PROOF_HEADER] = sessionProof;
-  }
-
   return new Zero({
     auth: sessionProof ?? undefined,
     userID: sessionId,
     cacheURL: zeroCacheURL,
-    schema: schema as any,
+    schema,
     mutators,
-    mutateHeaders: sessionHeaders,
-    queryHeaders: sessionHeaders,
   });
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import Pusher from "pusher-js";
 import { showToast } from "../lib/toast";
-import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, getStoredName, setStoredName } from "../lib/session";
+import { getDisplayName, getOrCreateSessionId, getStoredName, setStoredName } from "../lib/session";
 
 type CustomStatusPayload = {
   text: string;
@@ -75,7 +75,6 @@ function getPusherInstance(): Pusher {
       endpoint: `${apiBase}/api/pusher/auth`,
       transport: "ajax",
       params: { session_id: sessionId },
-      headers: getSessionRequestHeaders(sessionId),
     },
   });
 

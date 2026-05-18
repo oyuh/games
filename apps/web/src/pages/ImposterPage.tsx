@@ -2,7 +2,7 @@ import { isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiHelpCircle } from "react-icons/fi";
 import { ImposterClueSection } from "../components/imposter/ImposterClueSection";
 import { ImposterHeader } from "../components/imposter/ImposterHeader";
@@ -20,33 +20,19 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
 import { ImposterDemo } from "../components/demos/ImposterDemo";
 import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
-import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../lib/game-page-load-state";
 import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
 import { playVote, playGameStart, playReveal } from "../lib/sounds";
-import { useZeroConnected } from "../App";
-import { useSyncCountdown } from "../lib/sync-wake";
 
 function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
-  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const zeroConnected = useZeroConnected();
-  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.imposter.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "imposter", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const pendingCreate = hasPendingGameCreate(location.state);
-  const pendingJoin = hasPendingGameJoin(location.state);
-  const { missingTimedOut, waitingForGame } = usePendingGamePageLoad({
-    gameFound: Boolean(game),
-    pendingCreate,
-    pendingJoin,
-    zeroConnected,
-  });
   const [clue, setClue] = useState("");
   const [showDemo, setShowDemo] = useState(false);
   const [voteTarget, setVoteTarget] = useState("");
@@ -122,13 +108,12 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
     }, {});
   }, [game]);
 
-  const { decryptValue, myRole } = useGameSecret({
+  const { decryptValue } = useGameSecret({
     gameType: "imposter",
     gameId,
     sessionId,
     enabled: Boolean(game && game.phase !== "lobby")
   });
-  const liveRole = game?.phase === "playing" || game?.phase === "voting" ? (myRole ?? me?.role) : me?.role;
 
   useEffect(() => {
     let cancelled = false;
@@ -201,19 +186,18 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   // Timer auto-advance
   useEffect(() => {
     if (!game) return;
-    if (!isHost) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd || (game.phase !== "playing" && game.phase !== "voting" && game.phase !== "results")) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
-      void zero.mutate(mutators.imposter.advanceTimer({ gameId })).server;
+      void zero.mutate(mutators.imposter.advanceTimer({ gameId }));
       return;
     }
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.imposter.advanceTimer({ gameId })).server;
+      void zero.mutate(mutators.imposter.advanceTimer({ gameId }));
     }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost]);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
 
   // Announcement watcher (skip for host - they sent it)
   useEffect(() => {
@@ -226,24 +210,12 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   }, [game?.announcement, isHost]);
 
   useEffect(() => {
-    if (game || !missingTimedOut) return;
-    const timer = window.setTimeout(() => navigate("/"), 3000);
-    return () => window.clearTimeout(timer);
-  }, [game, missingTimedOut, navigate]);
+    if (game) return;
+    const timer = setTimeout(() => navigate("/"), 3000);
+    return () => clearTimeout(timer);
+  }, [game, navigate]);
 
   if (!game) {
-    if (waitingForGame) {
-      return (
-        <div className="game-page">
-          <div className="game-empty">
-            <p className="game-empty-title">{getPendingGameTitle(pendingCreate, pendingJoin)}</p>
-            <p className="game-empty-sub">{getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}</p>
-            <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="game-page">
         <div className="game-empty">
@@ -373,7 +345,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
         const activePlayers = game.players.filter((p) => !p.eliminated);
         return (
           <ImposterClueSection
-            role={liveRole === "imposter" || liveRole === "player" ? liveRole : undefined}
+            role={me?.role}
             secretWord={visibleSecretWord}
             category={game.category ?? null}
             clue={clue}

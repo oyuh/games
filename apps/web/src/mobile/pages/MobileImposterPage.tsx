@@ -1,11 +1,10 @@
 import { imposterCategoryLabels, isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiEye, FiEyeOff, FiSend, FiCheck, FiArrowRight, FiClock } from "react-icons/fi";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
-import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../../lib/game-page-load-state";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { BorringAvatar } from "../../components/shared/BorringAvatar";
@@ -19,8 +18,6 @@ import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { callGameSecretInit, useGameSecret } from "../../lib/game-secrets";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 import { playVote } from "../../lib/sounds";
-import { useZeroConnected } from "../../App";
-import { useSyncCountdown } from "../../lib/sync-wake";
 
 /** Redact a clue showing a contiguous ~65% chunk of each word. */
 function redactClue(text: string): string {
@@ -37,24 +34,13 @@ function redactClue(text: string): string {
 
 export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
-  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const zeroConnected = useZeroConnected();
-  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.imposter.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "imposter", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const pendingCreate = hasPendingGameCreate(location.state);
-  const pendingJoin = hasPendingGameJoin(location.state);
-  const { waitingForGame } = usePendingGamePageLoad({
-    gameFound: Boolean(game),
-    pendingCreate,
-    pendingJoin,
-    zeroConnected,
-  });
   const [clue, setClue] = useState("");
   const [voteTarget, setVoteTarget] = useState("");
   const [visibleSecretWord, setVisibleSecretWord] = useState<string | null>(null);
@@ -128,13 +114,12 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     }, {});
   }, [game]);
 
-  const { decryptValue, myRole } = useGameSecret({
+  const { decryptValue } = useGameSecret({
     gameType: "imposter",
     gameId,
     sessionId,
     enabled: Boolean(game && game.phase !== "lobby")
   });
-  const liveRole = game?.phase === "playing" || game?.phase === "voting" ? (myRole ?? me?.role) : me?.role;
 
   useEffect(() => {
     let cancelled = false;
@@ -210,14 +195,13 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!game) return;
-    if (!isHost) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd || (game.phase !== "playing" && game.phase !== "voting" && game.phase !== "results")) return;
     const remaining = phaseEnd - Date.now();
-    if (remaining <= 0) { void zero.mutate(mutators.imposter.advanceTimer({ gameId })).server; return; }
-    const timer = setTimeout(() => { void zero.mutate(mutators.imposter.advanceTimer({ gameId })).server; }, remaining + 500);
+    if (remaining <= 0) { void zero.mutate(mutators.imposter.advanceTimer({ gameId })); return; }
+    const timer = setTimeout(() => { void zero.mutate(mutators.imposter.advanceTimer({ gameId })); }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost]);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
 
   useEffect(() => {
     if (!game?.announcement || isHost) return;
@@ -228,19 +212,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     showToast(`📢 ${cur.text}`, "info");
   }, [game?.announcement, isHost]);
 
-  if (!game) {
-    if (waitingForGame) {
-      return (
-        <MobileGameNotFound
-          theme="imposter"
-          title={getPendingGameTitle(pendingCreate, pendingJoin)}
-          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}
-          autoRedirect={false}
-        />
-      );
-    }
-    return <MobileGameNotFound theme="imposter" />;
-  }
+  if (!game) return <MobileGameNotFound theme="imposter" />;
 
   const submitClue = async (event: FormEvent) => {
     event.preventDefault();
@@ -417,7 +389,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
       {/* Playing: Clue section */}
       {!isSpectator && game.phase === "playing" && inGame && !me?.eliminated && (() => {
-        const isImposter = liveRole === "imposter";
+        const isImposter = me?.role === "imposter";
         const hasSubmitted = game.clues.some((c) => c.sessionId === sessionId);
         const othersClues = game.clues.filter((c) => c.sessionId !== sessionId);
 

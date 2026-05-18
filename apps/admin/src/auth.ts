@@ -40,12 +40,12 @@ if (isDev && devSecret) {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
   callbacks: {
-    async signIn({ account }) {
+    async signIn({ account, profile }) {
       if (account?.provider === "dev-login") return true;
-      const githubId = account?.providerAccountId?.trim();
-      if (!githubId) return false;
+      const login = (profile as Record<string, unknown>)?.login;
+      if (typeof login !== "string") return false;
       if (ALLOWED_GITHUB_IDS.length === 0) return false;
-      return ALLOWED_GITHUB_IDS.includes(githubId);
+      return ALLOWED_GITHUB_IDS.includes(login);
     },
     async session({ session, token }) {
       if (session.user && token.sub) {

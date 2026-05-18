@@ -1,5 +1,4 @@
 import type { MiddlewareHandler } from "hono";
-import { extractClientIp } from "./client-info";
 
 interface RateLimitOptions {
   windowMs: number;
@@ -25,8 +24,9 @@ setInterval(() => {
 }, 5 * 60_000).unref();
 
 function getClientIP(c: { req: { header: (name: string) => string | undefined } }): string {
-  const ip = extractClientIp(c.req);
-  return ip.length <= 45 ? ip : ip.slice(0, 45);
+  const raw = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  // Cap length to prevent memory abuse from spoofed headers
+  return raw.length <= 45 ? raw : raw.slice(0, 45);
 }
 
 export function rateLimiter(options: RateLimitOptions): MiddlewareHandler {
@@ -60,18 +60,10 @@ export function rateLimiter(options: RateLimitOptions): MiddlewareHandler {
       );
     }
 
-    // Fail closed once the limiter reaches capacity instead of silently
-    // skipping limits for newly-spoofed identities.
+    // Prevent unbounded memory growth from many unique IPs
     if (!store.has(bucketKey) && store.size >= MAX_BUCKETS) {
-      return c.json(
-        {
-          error: "Too many requests",
-          code: "RATE_LIMIT_CAPACITY",
-          message: "Rate limiter capacity reached. Please retry shortly.",
-          scope,
-        },
-        429
-      );
+      await next();
+      return;
     }
 
     timestamps.push(now);

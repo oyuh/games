@@ -12,10 +12,6 @@ export type ClientInfo = {
 
 const UNKNOWN_IP = "unknown";
 const UNKNOWN_REGION = "unknown";
-const TRUST_PROXY_HEADERS =
-  process.env.TRUST_PROXY_HEADERS === "1"
-  || process.env.TRUST_PROXY_HEADERS === "true"
-  || process.env.NODE_ENV === "test";
 const GEOIP_SUCCESS_TTL_MS = 12 * 60 * 60 * 1000;
 const GEOIP_FAILURE_TTL_MS = 10 * 60 * 1000;
 const GEOIP_TIMEOUT_MS = 2_000;
@@ -189,27 +185,19 @@ async function lookupRegionFromIpApi(ip: string) {
 }
 
 export function extractClientInfo(headers: HeaderReader): ClientInfo {
-  const ip = TRUST_PROXY_HEADERS
-    ? firstNonEmpty([
-        normalizeIpCandidate(headers.header("cf-connecting-ip")),
-        normalizeIpCandidate(headers.header("x-real-ip")),
-        normalizeIpCandidate(headers.header("x-client-ip")),
-        normalizeIpCandidate(headers.header("x-forwarded-for")),
-        normalizeIpCandidate(headers.header("x-vercel-forwarded-for")),
-      ])
-    : "";
+  const ip = firstNonEmpty([
+    normalizeIpCandidate(headers.header("cf-connecting-ip")),
+    normalizeIpCandidate(headers.header("x-real-ip")),
+    normalizeIpCandidate(headers.header("x-client-ip")),
+    normalizeIpCandidate(headers.header("x-forwarded-for")),
+    normalizeIpCandidate(headers.header("x-vercel-forwarded-for")),
+  ]);
 
   return {
     ip: ip || UNKNOWN_IP,
-    region: sanitizeRegion(
-      TRUST_PROXY_HEADERS ? firstNonEmpty([headers.header("cf-ipcountry"), headers.header("x-vercel-ip-country")]) : undefined
-    ),
+    region: sanitizeRegion(firstNonEmpty([headers.header("cf-ipcountry"), headers.header("x-vercel-ip-country")])),
     userAgent: sanitizeUserAgent(headers.header("user-agent")),
   };
-}
-
-export function extractClientIp(headers: HeaderReader): string {
-  return extractClientInfo(headers).ip;
 }
 
 export async function resolveRegionForIp(ip: string, fallbackRegion = UNKNOWN_REGION) {
