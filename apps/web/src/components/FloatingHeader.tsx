@@ -418,14 +418,14 @@ export function Sidebar() {
                 setMobileOpen(false);
               }}
             />
-            <SidebarButton
+            {/* <SidebarButton
               icon={<FiPlusCircle size={24} />}
               label="Add Score"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("shikaku-open-admin-score"));
                 setMobileOpen(false);
               }}
-            />
+            /> */}
           </>
         )}
         {isPips && (
@@ -466,7 +466,7 @@ export function Sidebar() {
                 setMobileOpen(false);
               }}
             />
-            <SidebarButton
+            {/* <SidebarButton
               icon={<FiPlusCircle size={24} />}
               label="Add Score"
               className="sidebar-link--pips"
@@ -474,7 +474,7 @@ export function Sidebar() {
                 window.dispatchEvent(new CustomEvent("pips-open-admin-score"));
                 setMobileOpen(false);
               }}
-            />
+            /> */}
             {pipsState.showDevTools && (
               <>
                 <span className="sidebar-separator" aria-hidden="true" />
