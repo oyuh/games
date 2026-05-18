@@ -1,7 +1,7 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FiClock, FiLogIn, FiSend } from "react-icons/fi";
 import { ColorGrid, generateGridColor } from "../../components/shade/ColorGrid";
 import { MobileGameHeader } from "../components/MobileGameHeader";
@@ -12,13 +12,10 @@ import { BorringAvatar } from "../../components/shared/BorringAvatar";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
-import { useZeroConnected } from "../../App";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
-import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
-import { useSyncCountdown } from "../../lib/sync-wake";
 import { showToast } from "../../lib/toast";
-import { useGameSecret } from "../../lib/game-secrets";
+import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
 
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
@@ -70,27 +67,15 @@ function MobileScoringLegend() {
 
 export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
-  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const zeroConnected = useZeroConnected();
-  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.shadeSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "shade_signal", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const pendingCreate = hasPendingGameCreate(location.state);
-  const pendingJoin = hasPendingGameJoin(location.state);
-  const { waitingForGame } = usePendingGamePageLoad({
-    gameFound: Boolean(game),
-    pendingCreate,
-    pendingJoin,
-    zeroConnected,
-  });
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-  const [leaderTarget, setLeaderTarget] = useState<{ row: number; col: number } | null>(null);
   const [guessLocked, setGuessLocked] = useState(false);
   const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
@@ -150,12 +135,6 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       return acc;
     }, {});
   }, [sessions]);
-  const { decryptValue } = useGameSecret({
-    gameType: "shade_signal",
-    gameId,
-    sessionId,
-    enabled: Boolean(game && game.phase !== "lobby"),
-  });
 
   const playerIndexMap = useMemo(() => {
     return game?.players.reduce<Record<string, number>>((acc, player, playerIndex) => {
@@ -191,21 +170,20 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   // Timer auto-advance
   useEffect(() => {
     if (!game) return;
-    if (!isHost) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
     const activePhases: ShadePhase[] = ["clue1", "guess1", "clue2", "guess2", "reveal"];
     if (!activePhases.includes(game.phase as ShadePhase)) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId })).server;
+      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
       return;
     }
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId })).server;
+      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
     }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost]);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
 
   useEffect(() => {
     if (!game?.announcement || isHost) return;
@@ -227,46 +205,13 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   }, [game?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    let cancelled = false;
-    if (!game) {
-      setLeaderTarget(null);
-      return;
-    }
-    if (game.target_row != null && game.target_col != null && game.target_row >= 0 && game.target_col >= 0) {
-      setLeaderTarget({ row: game.target_row, col: game.target_col });
-      return;
-    }
-    if (!game.encrypted_target) {
-      setLeaderTarget(null);
-      return;
-    }
-    void decryptValue(game.encrypted_target).then((value) => {
-      if (cancelled || !value) {
-        if (!cancelled) setLeaderTarget(null);
-        return;
-      }
-      try {
-        const parsed = JSON.parse(value) as { row?: unknown; col?: unknown };
-        if (typeof parsed.row === "number" && typeof parsed.col === "number") {
-          setLeaderTarget({ row: parsed.row, col: parsed.col });
-          return;
-        }
-      } catch {
-      }
-      setLeaderTarget(null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [game?.encrypted_target, game?.target_row, game?.target_col, decryptValue, game]);
-
-  useEffect(() => {
     if (!game || game.phase !== "reveal") return;
     if (game.host_id !== sessionId) return;
     const latest = game.round_history[game.round_history.length - 1];
     if (latest) return;
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.reveal({ gameId })).server;
+      void callGameSecretPreReveal("shade_signal", gameId, sessionId)
+        .then(() => zero.mutate(mutators.shadeSignal.reveal({ gameId })));
     }, 600);
     return () => clearTimeout(timer);
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
@@ -288,7 +233,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
 
   const target = game?.target_row != null && game?.target_col != null && game.target_row >= 0 && game.target_col >= 0
     ? { row: game.target_row, col: game.target_col }
-    : leaderTarget;
+    : null;
 
   const targetColor = target && game
     ? generateGridColor(target.row, target.col, game.grid_rows, game.grid_cols, game.grid_seed)
@@ -341,19 +286,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
     }, new Set());
   }, [game, phase]);
 
-  if (!game) {
-    if (waitingForGame) {
-      return (
-        <MobileGameNotFound
-          theme="shade"
-          title={getPendingGameTitle(pendingCreate, pendingJoin)}
-          subtitle={getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}
-          autoRedirect={false}
-        />
-      );
-    }
-    return <MobileGameNotFound theme="shade" />;
-  }
+  if (!game) return <MobileGameNotFound theme="shade" />;
 
   const isGameActive = phase !== "lobby" && phase !== "ended" && phase !== "finished";
   const leaderName = game.leader_id ? (sessionById[game.leader_id] ?? "???") : "";

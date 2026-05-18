@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/shade-signal.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiCopy, FiCheck, FiSend, FiHelpCircle } from "react-icons/fi";
 
 import { ColorGrid, generateGridColor } from "../components/shade/ColorGrid";
@@ -13,14 +13,11 @@ import { RoundCountdown } from "../components/shared/RoundCountdown";
 import { SpectatorBadge, HostBadge } from "../components/shared/SpectatorBadge";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
-import { useZeroConnected } from "../App";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
-import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
-import { useSyncCountdown } from "../lib/sync-wake";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
+import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets";
 
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 import { ShadeDemo } from "../components/demos/ShadeDemo";
@@ -94,28 +91,16 @@ function ScoringLegend() {
 function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
-  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const zeroConnected = useZeroConnected();
-  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.shadeSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "shade_signal", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const pendingCreate = hasPendingGameCreate(location.state);
-  const pendingJoin = hasPendingGameJoin(location.state);
-  const { missingTimedOut, waitingForGame } = usePendingGamePageLoad({
-    gameFound: Boolean(game),
-    pendingCreate,
-    pendingJoin,
-    zeroConnected,
-  });
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [pickingCell, setPickingCell] = useState<{ row: number; col: number } | null>(null);
-  const [leaderTarget, setLeaderTarget] = useState<{ row: number; col: number } | null>(null);
   const [guessLocked, setGuessLocked] = useState(false);
   const [copied, setCopied] = useState(false);
   const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
@@ -188,12 +173,6 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
       return acc;
     }, {}) ?? {};
   }, [game?.players]);
-  const { decryptValue } = useGameSecret({
-    gameType: "shade_signal",
-    gameId,
-    sessionId,
-    enabled: Boolean(game && game.phase !== "lobby"),
-  });
 
   useEffect(() => {
     if (!game) return;
@@ -216,21 +195,20 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
   // Timer auto-advance
   useEffect(() => {
     if (!game) return;
-    if (!isHost) return;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
     const activePhases: ShadePhase[] = ["clue1", "guess1", "clue2", "guess2", "reveal"];
     if (!activePhases.includes(game.phase as ShadePhase)) return;
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId })).server;
+      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
       return;
     }
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId })).server;
+      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
     }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost]);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
 
   // Announcement watcher
   useEffect(() => {
@@ -253,40 +231,6 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
     setGuessLocked(false);
   }, [game?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    let cancelled = false;
-    if (!game) {
-      setLeaderTarget(null);
-      return;
-    }
-    if (game.target_row != null && game.target_col != null && game.target_row >= 0 && game.target_col >= 0) {
-      setLeaderTarget({ row: game.target_row, col: game.target_col });
-      return;
-    }
-    if (!game.encrypted_target) {
-      setLeaderTarget(null);
-      return;
-    }
-    void decryptValue(game.encrypted_target).then((value) => {
-      if (cancelled || !value) {
-        if (!cancelled) setLeaderTarget(null);
-        return;
-      }
-      try {
-        const parsed = JSON.parse(value) as { row?: unknown; col?: unknown };
-        if (typeof parsed.row === "number" && typeof parsed.col === "number") {
-          setLeaderTarget({ row: parsed.row, col: parsed.col });
-          return;
-        }
-      } catch {
-      }
-      setLeaderTarget(null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [game?.encrypted_target, game?.target_row, game?.target_col, decryptValue, game]);
-
   // Auto-reveal: when entering reveal phase, auto-calculate scores
   useEffect(() => {
     if (!game || game.phase !== "reveal") return;
@@ -295,7 +239,8 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
     const latest = game.round_history[game.round_history.length - 1];
     if (latest && latest.round === game.settings.currentRound) return; // already revealed this round
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.reveal({ gameId })).server;
+      void callGameSecretPreReveal("shade_signal", gameId, sessionId)
+        .then(() => zero.mutate(mutators.shadeSignal.reveal({ gameId })));
     }, 600);
     return () => clearTimeout(timer);
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
@@ -305,7 +250,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const target = game?.target_row != null && game?.target_col != null && game.target_row >= 0 && game.target_col >= 0
     ? { row: game.target_row, col: game.target_col }
-    : leaderTarget;
+    : null;
 
   const targetColor = target && game
     ? generateGridColor(target.row, target.col, game.grid_rows, game.grid_cols, game.grid_seed)
@@ -392,23 +337,12 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
   }, [game, phase]);
 
   useEffect(() => {
-    if (game || !missingTimedOut) return;
+    if (game) return;
     const timer = setTimeout(() => navigate("/"), 3000);
     return () => clearTimeout(timer);
-  }, [game, missingTimedOut, navigate]);
+  }, [game, navigate]);
 
   if (!game) {
-    if (waitingForGame) {
-      return (
-        <div className="game-page">
-          <div className="game-empty">
-            <p className="game-empty-title">{getPendingGameTitle(pendingCreate, pendingJoin)}</p>
-            <p className="game-empty-sub">{getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}</p>
-            <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
-          </div>
-        </div>
-      );
-    }
     return (
       <div className="game-page">
         <div className="game-empty">
@@ -670,7 +604,6 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
               <button
                 className="btn btn-primary game-action-btn"
                 onClick={() => {
-                  setLeaderTarget({ row: pickingCell.row, col: pickingCell.col });
                   void zero.mutate(mutators.shadeSignal.setTarget({
                     gameId, sessionId,
                     row: pickingCell.row, col: pickingCell.col

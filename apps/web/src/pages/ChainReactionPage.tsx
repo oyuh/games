@@ -3,17 +3,14 @@ import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/chain-reaction.css";
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FiEye, FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { useZeroConnected } from "../App";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
-import { getPendingGameMessage, getPendingGameTitle, hasPendingGameCreate, hasPendingGameJoin, usePendingGamePageLoad } from "../lib/game-page-load-state";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
-import { useSyncCountdown } from "../lib/sync-wake";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileChainReactionPage } from "../mobile/pages/MobileChainReactionPage";
@@ -28,24 +25,13 @@ type ChainViewTarget = "self" | "opponent";
 function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
-  const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const gameId = params.id ?? "";
-  const zeroConnected = useZeroConnected();
-  const syncCountdown = useSyncCountdown();
   const [games] = useQuery(queries.chainReaction.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "chain_reaction", gameId }));
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
-  const pendingCreate = hasPendingGameCreate(location.state);
-  const pendingJoin = hasPendingGameJoin(location.state);
-  const { missingTimedOut, waitingForGame } = usePendingGamePageLoad({
-    gameFound: Boolean(game),
-    pendingCreate,
-    pendingJoin,
-    zeroConnected,
-  });
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [guess, setGuess] = useState("");
@@ -179,23 +165,12 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   }, [editingIndex]);
 
   useEffect(() => {
-    if (game || !missingTimedOut) return;
+    if (game) return;
     const timer = setTimeout(() => navigate("/"), 3000);
     return () => clearTimeout(timer);
-  }, [game, missingTimedOut, navigate]);
+  }, [game, navigate]);
 
   if (!game) {
-    if (waitingForGame) {
-      return (
-        <div className="game-page">
-          <div className="game-empty">
-            <p className="game-empty-title">{getPendingGameTitle(pendingCreate, pendingJoin)}</p>
-            <p className="game-empty-sub">{getPendingGameMessage(pendingCreate, zeroConnected, syncCountdown, pendingJoin)}</p>
-            <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
-          </div>
-        </div>
-      );
-    }
     return (
       <div className="game-page">
         <div className="game-empty">

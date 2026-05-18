@@ -186,17 +186,17 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
 
   // Auto-advance timer
   useEffect(() => {
-    if (!game || !isHost || game.phase !== "playing" || !game.settings.roundEndsAt) return;
+    if (!game || game.phase !== "playing" || !game.settings.roundEndsAt) return;
     const remaining = game.settings.roundEndsAt - Date.now();
     if (remaining <= 0) {
-      void zero.mutate(mutators.password.advanceTimer({ gameId })).server;
+      void zero.mutate(mutators.password.advanceTimer({ gameId }));
       return;
     }
     const timer = setTimeout(() => {
-      void zero.mutate(mutators.password.advanceTimer({ gameId })).server;
+      void zero.mutate(mutators.password.advanceTimer({ gameId }));
     }, remaining + 500);
     return () => clearTimeout(timer);
-  }, [game?.settings.roundEndsAt, game?.phase, gameId, zero, isHost]);
+  }, [game?.settings.roundEndsAt, game?.phase, gameId, zero]);
 
   // Auto-navigate to results when game ends
   useEffect(() => {

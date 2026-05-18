@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { getSessionRequestHeaders } from "../lib/session";
 import {
   addConnectionDebugEvent,
   setPresenceConnectLatency,
@@ -42,7 +41,7 @@ export function usePresenceSocket({
       try {
         const res = await fetch(`${apiBase}/api/presence/heartbeat`, {
           method: "POST",
-          headers: getSessionRequestHeaders(sessionId, { "Content-Type": "application/json" }),
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ sessionId, gameId, gameType }),
         });
