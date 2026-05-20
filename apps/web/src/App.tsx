@@ -179,6 +179,8 @@ function SyncWakeToast() {
   const [showHostingInfo, setShowHostingInfo] = useState(false);
   const wakeNoticeTimerRef = useRef<number | null>(null);
   const showUnavailable = needsSync && (syncTimedOut || zeroState === "needs-auth");
+  const showNeedsAuth = needsSync && zeroState === "needs-auth";
+  const syncWakeVisible = showWakeNotice || showUnavailable;
 
   useEffect(() => {
     const clearWakeTimer = () => {
@@ -217,7 +219,14 @@ function SyncWakeToast() {
     setShowHostingInfo(false);
   }, [location.pathname]);
 
-  if (!showWakeNotice && !showUnavailable) return null;
+  useEffect(() => {
+    document.body.classList.toggle("has-sync-wake-toast", syncWakeVisible);
+    return () => {
+      document.body.classList.remove("has-sync-wake-toast");
+    };
+  }, [syncWakeVisible]);
+
+  if (!syncWakeVisible) return null;
 
   return (
     <>
@@ -226,7 +235,7 @@ function SyncWakeToast() {
           <div className="sync-wake-toast-main">
             {!showUnavailable && <span className="sync-wake-spinner" />}
             <span className="sync-wake-msg">
-              {showUnavailable ? "Multiplayer sync is unavailable" : "Sync server is waking up"}
+              {showNeedsAuth ? "Multiplayer sync is reconnecting" : showUnavailable ? "Sync server is still waking up" : "Sync server is waking up"}
             </span>
             {!showUnavailable && countdown != null && (
               <button
