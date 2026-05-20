@@ -82,6 +82,7 @@ html[data-custom-cursor="on"] .boot-status-action {
   font-size: 0.82rem;
   font-weight: 700;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .boot-status-overall--checking {
@@ -94,6 +95,19 @@ html[data-custom-cursor="on"] .boot-status-action {
   color: #fca5a5;
   background: rgba(248, 113, 113, 0.08);
   border-color: rgba(248, 113, 113, 0.22);
+}
+
+.boot-status-overall--contact {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.boot-status-overall--contact:hover {
+  color: color-mix(in srgb, var(--primary) 88%, white);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 42%, transparent);
 }
 
 .boot-status-spinner {
