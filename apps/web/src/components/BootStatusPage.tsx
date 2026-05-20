@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
-import { FiActivity, FiDatabase, FiExternalLink, FiGrid, FiRefreshCw, FiServer, FiShield, FiZap } from "react-icons/fi";
+import { FiActivity, FiDatabase, FiExternalLink, FiGrid, FiMail, FiRefreshCw, FiServer, FiShield, FiZap } from "react-icons/fi";
 import "../styles/boot-status.css";
 
 type ServiceState = "idle" | "checking" | "ok" | "warn" | "error";
@@ -317,9 +317,10 @@ export function BootStatusPage({
               while the server comes back.
             </p>
           </div>
-          <div className="boot-status-overall boot-status-overall--error">
-            <span>Action needed</span>
-          </div>
+          <a className="boot-status-overall boot-status-overall--contact" href="mailto:me@lawsonhart.me">
+            <FiMail size={14} />
+            <span>Keep in touch!</span>
+          </a>
         </div>
 
         <div className="boot-status-grid">
