@@ -147,8 +147,23 @@ body.has-sync-wake-toast .shell > .toast-container {
   font-weight: 900;
 }
 
+.sync-wake-toast--idle {
+  border-color: color-mix(in srgb, var(--secondary) 35%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--secondary) 10%, transparent), transparent 55%),
+    var(--card);
+  color: var(--foreground);
+}
+
 .sync-wake-msg {
+  flex: 0 1 auto;
+  line-height: 1.35;
+}
+
+.sync-wake-detail {
   flex: 1;
+  color: var(--secondary);
+  font-size: 0.78rem;
   line-height: 1.35;
 }
 
@@ -193,6 +208,19 @@ body.has-sync-wake-toast .shell > .toast-container {
 
 @keyframes sync-wake-spin {
   to { transform: rotate(360deg); }
+}
+
+body.has-sync-paused-controls .shell-main :where(button, input, select, textarea, [role="button"], .btn),
+body.has-sync-paused-controls .m-shell-content :where(button, input, select, textarea, [role="button"], .m-btn, .btn) {
+  opacity: 0.45;
+  filter: grayscale(0.65);
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+body.has-sync-paused-controls .shell-main :where(button, input, select, textarea, [role="button"], .btn):focus-visible,
+body.has-sync-paused-controls .m-shell-content :where(button, input, select, textarea, [role="button"], .m-btn, .btn):focus-visible {
+  outline-color: color-mix(in srgb, var(--secondary) 50%, transparent);
 }
 
 .sync-hosting-modal {

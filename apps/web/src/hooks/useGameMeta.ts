@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 const SITE_NAME = "Games · Lawson Hart";
+const DEFAULT_FAVICON = "/favicon.ico";
 
 function setMetaByName(name: string, content: string) {
   let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
@@ -44,7 +45,7 @@ export function useGameMeta() {
     const title = meta.pageTitle;
 
     document.title = title;
-    setLink("icon", svgToDataUri(renderGameFaviconSvg(slug)));
+    setLink("icon", slug === "home" ? DEFAULT_FAVICON : svgToDataUri(renderGameFaviconSvg(slug)));
     setLink("canonical", pageUrl);
 
     setMetaByName("theme-color", meta.themeColor);
