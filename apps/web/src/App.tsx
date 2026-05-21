@@ -18,6 +18,11 @@ import {
 } from "./lib/connection-debug";
 import { syncSessionIdentity } from "./lib/session";
 import { markSyncConnecting, markSyncConnected, useSyncCountdown, useSyncTimedOut } from "./lib/sync-wake";
+import {
+  useSyncSessionActivityState,
+  useSyncSessionActivityTracker,
+  useSyncSessionResumeCountdown
+} from "./lib/sync-session-activity";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { useButtonSounds } from "./hooks/useButtonSounds";
 
@@ -173,14 +178,24 @@ function SyncWakeToast() {
   const debug = useConnectionDebug();
   const zeroState = debug.zeroState;
   const needsSync = !isSyncFreePath(location.pathname);
+  const zeroConnected = zeroState === "connected";
   const countdown = useSyncCountdown();
   const syncTimedOut = useSyncTimedOut();
+  const syncActivity = useSyncSessionActivityState();
+  const resumeCountdown = useSyncSessionResumeCountdown();
   const [showWakeNotice, setShowWakeNotice] = useState(false);
   const [showHostingInfo, setShowHostingInfo] = useState(false);
   const wakeNoticeTimerRef = useRef<number | null>(null);
-  const showUnavailable = needsSync && (syncTimedOut || zeroState === "needs-auth");
-  const showNeedsAuth = needsSync && zeroState === "needs-auth";
-  const syncWakeVisible = showWakeNotice || showUnavailable;
+  const syncIdle = needsSync && syncActivity.status === "idle";
+  const syncResuming = needsSync && syncActivity.status === "resuming";
+  const idleRelated = syncIdle || syncResuming;
+  const showNeedsAuth = needsSync && !idleRelated && zeroState === "needs-auth";
+  const showColdStartDelayed = needsSync && !idleRelated && !showNeedsAuth && syncTimedOut;
+  const showUnavailable = showNeedsAuth || showColdStartDelayed;
+  const syncWakeVisible = syncIdle || syncResuming || showWakeNotice || showUnavailable;
+  const controlsPaused = syncIdle || syncResuming;
+
+  useSyncSessionActivityTracker({ needsSync, zeroConnected });
 
   useEffect(() => {
     const clearWakeTimer = () => {
@@ -189,6 +204,13 @@ function SyncWakeToast() {
         wakeNoticeTimerRef.current = null;
       }
     };
+
+    if (idleRelated) {
+      clearWakeTimer();
+      setShowWakeNotice(false);
+      markSyncConnected();
+      return clearWakeTimer;
+    }
 
     const isWaitingForSync = needsSync && zeroState !== "connected" && !showUnavailable;
 
@@ -213,7 +235,7 @@ function SyncWakeToast() {
     }
 
     return clearWakeTimer;
-  }, [needsSync, showUnavailable, showWakeNotice, zeroState]);
+  }, [idleRelated, needsSync, showUnavailable, showWakeNotice, zeroState]);
 
   useEffect(() => {
     setShowHostingInfo(false);
@@ -221,23 +243,43 @@ function SyncWakeToast() {
 
   useEffect(() => {
     document.body.classList.toggle("has-sync-wake-toast", syncWakeVisible);
+    document.body.classList.toggle("has-sync-paused-controls", controlsPaused);
     return () => {
       document.body.classList.remove("has-sync-wake-toast");
+      document.body.classList.remove("has-sync-paused-controls");
     };
-  }, [syncWakeVisible]);
+  }, [controlsPaused, syncWakeVisible]);
 
   if (!syncWakeVisible) return null;
+
+  const toastTone = showColdStartDelayed ? "warn" : syncIdle ? "idle" : "info";
+  const showSpinner = syncResuming || showNeedsAuth || (!showUnavailable && !syncIdle);
+  const message = syncIdle
+    ? "Session set to idle"
+    : syncResuming
+    ? "Sync reconnecting after idle"
+    : showNeedsAuth
+    ? "Multiplayer sync is reconnecting"
+    : showColdStartDelayed
+    ? "Sync server is still waking up"
+    : "Sync server is waking up";
 
   return (
     <>
       <div className="sync-wake-toast-container">
-        <div className={`sync-wake-toast ${showUnavailable ? "sync-wake-toast--warn" : "sync-wake-toast--info"}`}>
+        <div className={`sync-wake-toast sync-wake-toast--${toastTone}`}>
           <div className="sync-wake-toast-main">
-            {!showUnavailable && <span className="sync-wake-spinner" />}
+            {showSpinner && <span className="sync-wake-spinner" />}
             <span className="sync-wake-msg">
-              {showNeedsAuth ? "Multiplayer sync is reconnecting" : showUnavailable ? "Sync server is still waking up" : "Sync server is waking up"}
+              {message}
             </span>
-            {!showUnavailable && countdown != null && (
+            {syncIdle && <span className="sync-wake-detail">Move, click, or press a key to resume.</span>}
+            {syncResuming && resumeCountdown != null && (
+              <span className="sync-wake-countdown-link">
+                ~{resumeCountdown}s
+              </span>
+            )}
+            {!idleRelated && !showUnavailable && countdown != null && (
               <button
                 type="button"
                 className="sync-wake-countdown-link"
@@ -247,7 +289,7 @@ function SyncWakeToast() {
               </button>
             )}
           </div>
-          {showUnavailable && (
+          {showColdStartDelayed && (
             <button type="button" className="sync-wake-link" onClick={() => setShowHostingInfo(true)}>
               Why does it sleep?
             </button>

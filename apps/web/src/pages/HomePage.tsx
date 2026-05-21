@@ -18,6 +18,7 @@ import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCar
 import { useZeroConnected } from "../App";
 import { useConnectionDebug } from "../lib/connection-debug";
 import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
+import { useSyncSessionActivityState, useSyncSessionResumeCountdown } from "../lib/sync-session-activity";
 
 const ImposterDemo = lazy(() => import("../components/demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
 const PasswordDemo = lazy(() => import("../components/demos/PasswordDemo").then(({ PasswordDemo }) => ({ default: PasswordDemo })));
@@ -185,13 +186,22 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const debug = useConnectionDebug();
   const zeroConnected = useZeroConnected();
   const syncTimedOut = useSyncTimedOut();
-  const syncNeedsAuth = !zeroConnected && debug.zeroState === "needs-auth";
-  const syncDelayed = !zeroConnected && syncTimedOut && !syncNeedsAuth;
-  const syncPending = !zeroConnected && !syncDelayed && !syncNeedsAuth;
-  const syncOffline = !zeroConnected;
-  const syncAttention = syncNeedsAuth || syncDelayed;
   const syncCountdown = useSyncCountdown();
-  const syncStatusTooltip = syncNeedsAuth
+  const syncActivity = useSyncSessionActivityState();
+  const resumeCountdown = useSyncSessionResumeCountdown();
+  const syncIdle = syncActivity.status === "idle";
+  const syncResuming = syncActivity.status === "resuming";
+  const syncNeedsAuth = !zeroConnected && !syncIdle && !syncResuming && debug.zeroState === "needs-auth";
+  const syncDelayed = !zeroConnected && !syncIdle && !syncResuming && syncTimedOut && !syncNeedsAuth;
+  const syncPending = syncResuming || (!zeroConnected && !syncIdle && !syncDelayed && !syncNeedsAuth);
+  const syncOffline = !zeroConnected || syncIdle || syncResuming;
+  const syncAttention = syncNeedsAuth || syncDelayed || syncIdle;
+  const resumeEstimate = resumeCountdown != null ? ` (~${resumeCountdown}s)` : "";
+  const syncStatusTooltip = syncIdle
+    ? "Session is idle. Move, click, or press a key to resume multiplayer controls."
+    : syncResuming
+    ? `Sync is reconnecting after idle${resumeEstimate}. Controls unlock automatically.`
+    : syncNeedsAuth
     ? "Multiplayer sync is reconnecting. Controls unlock automatically when it is ready."
     : syncDelayed
     ? "Sync server is taking longer than usual. Controls unlock automatically when it connects."
@@ -201,6 +211,14 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const blockSyncAction = useCallback((actionLabel: string) => {
     if (syncNeedsAuth) {
       showDedupedToast("Multiplayer sync is reconnecting. Controls will unlock automatically when it is ready.", "info");
+      return true;
+    }
+    if (syncIdle) {
+      showDedupedToast("Your multiplayer session is idle. Move, click, or press a key to resume controls.", "info");
+      return true;
+    }
+    if (syncResuming) {
+      showDedupedToast(`Sync is reconnecting after idle${resumeEstimate}. Try ${actionLabel} again when controls unlock.`, "info");
       return true;
     }
     if (syncDelayed) {
@@ -215,7 +233,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       return true;
     }
     return false;
-  }, [syncCountdown, syncDelayed, syncNeedsAuth, syncPending]);
+  }, [resumeEstimate, syncCountdown, syncDelayed, syncIdle, syncNeedsAuth, syncPending, syncResuming]);
   const [name, setName] = useState(() => getOrCreateStoredName(sessionId));
   const [savedName, setSavedName] = useState(() => getOrCreateStoredName(sessionId));
   const [firstVisit, setFirstVisit] = useState(() => !hasVisited());
