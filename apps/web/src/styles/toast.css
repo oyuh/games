@@ -100,12 +100,13 @@ body.has-sync-wake-toast .shell > .toast-container {
 }
 
 .sync-wake-toast {
+  position: relative;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 0.45rem;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 2.65rem 0.75rem 1rem;
   border-radius: 0.75rem;
   background: var(--card);
   border: 1px solid var(--border);
@@ -196,6 +197,29 @@ body.has-sync-wake-toast .shell > .toast-container {
   align-self: flex-start;
 }
 
+.sync-wake-dismiss {
+  appearance: none;
+  position: absolute;
+  top: 0.55rem;
+  right: 0.65rem;
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sync-wake-dismiss:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--foreground);
+}
+
 .sync-wake-spinner {
   width: 16px;
   height: 16px;
@@ -208,6 +232,16 @@ body.has-sync-wake-toast .shell > .toast-container {
 
 @keyframes sync-wake-spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .sync-wake-toast-container {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 3.5rem;
+    width: auto;
+    max-width: none;
+  }
 }
 
 body.has-sync-paused-controls .shell-main :where(button, input, select, textarea, [role="button"], .btn),
