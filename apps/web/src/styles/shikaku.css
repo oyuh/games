@@ -608,6 +608,7 @@
   backface-visibility: hidden;
   transform: translateZ(0);
 }
+
 .shikaku-cell:hover {
   background: color-mix(in srgb, #34d399 6%, transparent);
 }
