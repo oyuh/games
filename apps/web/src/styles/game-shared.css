@@ -233,21 +233,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--muted-foreground);
-  opacity: 0.5;
-  cursor: default;
-  transition: opacity 0.15s;
-  padding-right: 10px
-}
-.spectator-indicator:hover {
-  opacity: 0.85;
-}
-
-/* ── Host crown indicator (golden crown beside code) ── */
-.host-crown-indicator {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   color: #f59e0b;
   filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.35));
   cursor: default;
@@ -256,6 +241,20 @@
 }
 .host-crown-indicator:hover {
   filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.55));
+}
+
+/* ── Host crown indicator (golden crown beside code) ── */
+.host-crown-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f59e0b;
+  cursor: default;
+  transition: opacity 0.15s;
+  padding-right: 10px;
+}
+.host-crown-indicator:hover {
+  opacity: 0.9;
 }
 
 /* ── Game sections ─────────────────────────────────── */

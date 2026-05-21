@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(3px);
   animation: modal-fade-in 0.18s ease-out;
 }
 
@@ -483,6 +483,12 @@
   padding: 0;
   min-height: auto;
   background: transparent;
+}
+
+.demo-modal-body .game-page[data-game-theme]::before,
+.demo-modal-body .game-page[data-game-theme]::after {
+  content: none;
+  display: none;
 }
 
 .demo-modal-body .game-header {

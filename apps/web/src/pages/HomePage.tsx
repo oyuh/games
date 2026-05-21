@@ -24,6 +24,8 @@ const PasswordDemo = lazy(() => import("../components/demos/PasswordDemo").then(
 const ChainDemo = lazy(() => import("../components/demos/ChainDemo").then(({ ChainDemo }) => ({ default: ChainDemo })));
 const ShadeDemo = lazy(() => import("../components/demos/ShadeDemo").then(({ ShadeDemo }) => ({ default: ShadeDemo })));
 const LocationDemo = lazy(() => import("../components/demos/LocationDemo").then(({ LocationDemo }) => ({ default: LocationDemo })));
+const ShikakuDemo = lazy(() => import("../components/demos/ShikakuDemo").then(({ ShikakuDemo }) => ({ default: ShikakuDemo })));
+const PipsDemo = lazy(() => import("../components/demos/PipsDemo").then(({ PipsDemo }) => ({ default: PipsDemo })));
 
 const isDev = import.meta.env.DEV;
 const SHADE_PREVIEW_CELLS = Array.from({ length: 20 }, (_, index) => ({
@@ -55,6 +57,7 @@ function SoloPipsFace({ value }: { value: number }) {
 const SOLO_GAMES: SoloGameDef[] = [
   {
     id: "shikaku", gameSlug: "shikaku", title: shikakuMeta.title,
+    demoId: "shikaku",
     description: shikakuMeta.shortDescription,
     accent: shikakuMeta.accent,
     bgGradient: "linear-gradient(160deg, #1a2e26 0%, #1a1a1a 100%)",
@@ -83,6 +86,7 @@ const SOLO_GAMES: SoloGameDef[] = [
   },
   {
     id: "pips", gameSlug: "pips", title: pipsMeta.title,
+    demoId: "pips",
     description: pipsMeta.shortDescription,
     accent: pipsMeta.accent,
     bgGradient: "linear-gradient(160deg, #2e2218 0%, #1a1a1a 100%)",
@@ -104,21 +108,25 @@ const SOLO_GAMES: SoloGameDef[] = [
     ),
   },
   {
-    id: "nexus", title: "Nexus",
-    description: "Connect nodes to complete the circuit.",
+    id: "nexus", title: "Coming Soon!",
+    description: "Submit a suggestion for a new game! or create it yourself!",
     accent: "#38bdf8",
     bgGradient: "linear-gradient(160deg, #182530 0%, #1a1a1a 100%)",
+    href: NEW_GAME_ISSUE_URL,
+    actionLabel: "Suggest a new game",
+    comingSoon: true,
     preview: (
-      <div className="solo-preview-nexus">
-        <div className="solo-nexus-node solo-nexus-node--lit" />
-        <div className="solo-nexus-edge" />
-        <div className="solo-nexus-node" />
-        <div className="solo-nexus-edge solo-nexus-edge--v" />
-        <div />
-        <div className="solo-nexus-edge solo-nexus-edge--v" />
-        <div className="solo-nexus-node" />
-        <div className="solo-nexus-edge" />
-        <div className="solo-nexus-node solo-nexus-node--lit" />
+      <div className="solo-preview-suggestion" aria-hidden="true">
+        <div className="solo-suggestion-doc">
+          <span className="solo-suggestion-title-line" />
+          <span className="solo-suggestion-line solo-suggestion-line--one" />
+          <span className="solo-suggestion-line solo-suggestion-line--two" />
+          <span className="solo-suggestion-line solo-suggestion-line--three" />
+          <span className="solo-suggestion-check-row">
+            <span className="solo-suggestion-check" />
+            <span className="solo-suggestion-short-line" />
+          </span>
+        </div>
       </div>
     ),
   },
@@ -830,8 +838,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                     </div>
                     <div className="hc-mini-row hc-mini-row--suspect">
                       <span className="hc-mini-avatar hc-mini-avatar--suspect">C</span>
-                      <span className="hc-mini-clue">&quot;Uhh&hellip;&quot;</span>
-                      <span className="hc-mini-badge hc-mini-badge--caught">🕵️</span>
+                      <span className="hc-mini-clue hc-mini-clue--wrong">&quot;Meow?&quot;</span>
+                      <span className="hc-mini-badge hc-mini-badge--wrong">Wrong</span>
                     </div>
                   </div>
                 </div>
@@ -971,7 +979,14 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                       <span className="hc-pw-team-score">1</span>
                     </div>
                   </div>
-                  <div className="hc-pw-word">? ? ? ? ?</div>
+                  <div className="hc-pw-word">
+                    <span className="hc-pw-word-label">Target</span>
+                    <span className="hc-pw-letter">O</span>
+                    <span className="hc-pw-letter">C</span>
+                    <span className="hc-pw-letter">E</span>
+                    <span className="hc-pw-letter">A</span>
+                    <span className="hc-pw-letter">N</span>
+                  </div>
                   <div className="hc-pw-flow">
                     <span className="hc-pw-flow-clue">"Waves"</span>
                     <span className="hc-pw-flow-arrow">→</span>
@@ -1118,8 +1133,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               <div className="hc-coming-preview">
                 <div className="hc-chain-example">
                   <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
-                  <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
-                  <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
+                  <span className="hc-chain-word hc-chain-word--wrong">SMOKE ✕</span>
+                  <span className="hc-chain-word hc-chain-word--wrong">SPARK ✕</span>
                   <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
                   <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
                 </div>
@@ -1466,7 +1481,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       {/* ── Solo section ───────────────────────────────────── */}
       <div className="home-section-solo">
         {SOLO_GAMES.map((game) => (
-          <SoloGameCard key={game.id} game={game} />
+          <SoloGameCard
+            key={game.id}
+            game={game}
+            onDemo={(demoId) => setActiveDemo(demoId)}
+          />
         ))}
       </div>
 
@@ -1505,6 +1524,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       {activeDemo === "chain" && <ChainDemo onClose={() => setActiveDemo(null)} />}
       {activeDemo === "shade" && <ShadeDemo onClose={() => setActiveDemo(null)} />}
       {activeDemo === "location" && <LocationDemo onClose={() => setActiveDemo(null)} />}
+      {activeDemo === "shikaku" && <ShikakuDemo onClose={() => setActiveDemo(null)} />}
+      {activeDemo === "pips" && <PipsDemo onClose={() => setActiveDemo(null)} />}
     </Suspense>
     </>
   );

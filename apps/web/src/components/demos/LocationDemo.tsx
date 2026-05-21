@@ -377,7 +377,9 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
       onStepChange={setStep}
       onClose={onClose}
     >
-      {renderStep()}
+      <div className="game-page" data-game-theme="location">
+        {renderStep()}
+      </div>
     </DemoModal>
   );
 }
