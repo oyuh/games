@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { DemoModal, type DemoStep } from "./DemoModal";
 import { GameIcon } from "../shared/GameIcon";
+import "../../styles/game-shared.css";
 import "../../styles/shikaku.css";
 
 /* ── Steps ──────────────────────────────────────────────── */
@@ -158,7 +159,9 @@ export function ShikakuDemo({ onClose, initialStep = 0 }: { onClose: () => void;
       onStepChange={setStep}
       onClose={onClose}
     >
-      <DemoGrid step={step} />
+      <div className="game-page" data-game-theme="shikaku">
+        <DemoGrid step={step} />
+      </div>
     </DemoModal>
   );
 }

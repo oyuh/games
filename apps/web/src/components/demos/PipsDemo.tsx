@@ -2,6 +2,7 @@ import { type CSSProperties, useMemo, useRef, useState } from "react";
 import { FiCheck, FiClock, FiMove, FiRotateCw } from "react-icons/fi";
 import { DemoModal, type DemoStep } from "./DemoModal";
 import { GameIcon } from "../shared/GameIcon";
+import "../../styles/game-shared.css";
 import "../../styles/pips.css";
 
 const steps: DemoStep[] = [
@@ -311,7 +312,9 @@ export function PipsDemo({ onClose, initialStep = 0 }: { onClose: () => void; in
       onStepChange={setStep}
       onClose={onClose}
     >
-      <MiniPipsBoard step={step} />
+      <div className="game-page" data-game-theme="pips">
+        <MiniPipsBoard step={step} />
+      </div>
     </DemoModal>
   );
 }

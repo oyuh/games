@@ -59,6 +59,7 @@
   font-weight: 600;
   color: #fff;
   pointer-events: none;
+  will-change: transform;
 }
 .locsig-marker-tooltip-coords {
   font-size: 0.6rem;
@@ -113,7 +114,6 @@
   width: 0;
   height: 0;
   pointer-events: none;
-  will-change: transform;
 }
 
 .locsig-zoom-controls {
@@ -141,7 +141,6 @@
 }
 
 .locsig-zoom-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--locsig-accent) 70%, white 20%);
   background: color-mix(in srgb, var(--locsig-accent) 24%, rgba(6, 12, 22, 0.88));
 }
@@ -290,7 +289,7 @@ body.locsig-map-expanded .app-footer {
   font-size: 0.78rem;
   font-weight: 650;
   text-align: center;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
   backdrop-filter: blur(10px);
 }
 
@@ -298,7 +297,7 @@ body.locsig-map-expanded .app-footer {
 .locsig-map-expanded-actions .m-btn {
   min-width: min(100%, 12rem);
   justify-content: center;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+  box-shadow: none;
 }
 
 .locsig-map-expanded-actions .btn:disabled,

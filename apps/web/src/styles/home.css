@@ -94,16 +94,59 @@
   flex-direction: column;
   border-radius: 1.25rem;
   border: 1px solid color-mix(in srgb, var(--solo-accent, var(--primary)) 18%, transparent);
-  background: var(--solo-bg, linear-gradient(160deg, #232323 0%, #1a1a1a 100%));
+  background:
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--solo-accent, var(--primary)) 13%, transparent), transparent 26%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 26px),
+    var(--solo-bg, linear-gradient(160deg, #232323 0%, #1a1a1a 100%));
   box-shadow: 0 8px 36px rgba(0, 0, 0, 0.45);
   transition: border-color 0.2s, box-shadow 0.2s;
   position: relative;
   overflow: hidden;
 }
 
-.solo-card:hover {
+.solo-card--playable {
+  cursor: pointer;
+}
+
+.solo-card--disabled {
+  opacity: 0.7;
+}
+
+.solo-card--playable:hover,
+.solo-card--playable:focus-visible,
+.solo-card--playable:focus-within {
   border-color: color-mix(in srgb, var(--solo-accent, var(--primary)) 35%, transparent);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--solo-accent, var(--primary)) 18%, transparent),
+    0 14px 48px rgba(0, 0, 0, 0.58),
+    inset 0 0 22px color-mix(in srgb, var(--solo-accent, var(--primary)) 5%, transparent);
+}
+
+.solo-card--playable:focus-visible {
+  outline: 2px solid var(--solo-accent, var(--primary));
+  outline-offset: 3px;
+}
+
+.solo-card--playable:active {
+  border-color: color-mix(in srgb, var(--solo-accent, var(--primary)) 45%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--solo-accent, var(--primary)) 22%, transparent),
+    0 8px 28px rgba(0, 0, 0, 0.5),
+    inset 0 0 26px color-mix(in srgb, var(--solo-accent, var(--primary)) 8%, transparent);
+}
+
+.solo-card-hit-area {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  color: inherit;
+}
+
+.solo-card-hit-area:focus-visible {
+  outline: 2px solid var(--solo-accent, var(--primary));
+  outline-offset: -4px;
 }
 
 .solo-card-body {
@@ -113,9 +156,8 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 0.4rem;
+  gap: 0.55rem;
   position: relative;
-  z-index: 1;
 }
 
 .solo-card-title-row {
@@ -124,11 +166,23 @@
   justify-content: center;
   gap: 0.4rem;
   color: var(--foreground);
+  position: relative;
+  z-index: 3;
 }
 
-.solo-card-title-row > svg {
-  color: var(--solo-accent, var(--primary));
-  flex: 0 0 auto;
+.solo-card-title-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: inherit;
+  text-decoration: none;
+  position: relative;
+  z-index: 4;
+}
+
+a.solo-card-title-link {
+  cursor: pointer;
 }
 
 .solo-card-title {
@@ -139,8 +193,42 @@
   margin: 0;
 }
 
-.solo-card:has(.solo-preview-pips) .solo-card-title-row {
-  color: var(--solo-accent);
+.solo-card-help {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin-left: -0.08rem;
+  border-radius: 999px;
+  position: relative;
+  z-index: 4;
+  border: 0;
+  background: transparent;
+  color: var(--solo-accent, var(--primary));
+  cursor: help;
+  opacity: 0.74;
+  pointer-events: auto;
+  font: inherit;
+  line-height: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.solo-card-help svg {
+  display: block;
+}
+
+.solo-card-help:hover,
+.solo-card-help:focus-visible {
+  opacity: 1;
+  background: transparent;
+}
+
+.solo-card-help:focus-visible {
+  outline: none;
+  color: var(--foreground);
 }
 
 .solo-card-desc {
@@ -158,35 +246,14 @@
   justify-content: center;
   width: 100%;
   min-height: 0;
-  padding: 0.35rem 0;
+  padding: 0.35rem 0 0.15rem;
 }
 
-.solo-card-play {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.65rem 1.2rem;
-  font-size: 0.92rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  border-radius: 0.65rem;
-  background: var(--solo-accent, var(--primary));
-  color: #111;
-  border: none;
-  cursor: pointer;
-  margin-top: auto;
-  transition: filter 0.2s, transform 0.15s;
-}
-
-.solo-card-play:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.1);
-}
-
-.solo-card-play:active {
-  transform: translateY(0);
+.solo-card--playable:hover .solo-shikaku-cell,
+.solo-card--playable:hover .solo-pips-domino--board,
+.solo-card--playable:hover .solo-suggestion-line,
+.solo-card--playable:hover .solo-suggestion-check {
+  animation-play-state: paused;
 }
 
 /* ── Shikaku preview ─────────────────────────────────────────── */
@@ -211,20 +278,72 @@
   color: var(--muted-foreground);
 }
 
+.solo-preview-shikaku .solo-shikaku-cell {
+  animation: solo-shikaku-grid-rest 7.2s ease-in-out infinite;
+}
+
 .solo-shikaku-num {
   color: var(--solo-accent);
   font-weight: 900;
   font-size: 0.65rem;
 }
 
-.solo-shikaku-cell--filled-a {
+.solo-preview-shikaku .solo-shikaku-cell--filled-a {
   background: color-mix(in srgb, var(--solo-accent) 18%, transparent);
   border-color: color-mix(in srgb, var(--solo-accent) 35%, transparent);
+  animation-name: solo-shikaku-fill-a;
 }
 
-.solo-shikaku-cell--filled-b {
+.solo-preview-shikaku .solo-shikaku-cell--filled-b {
   background: color-mix(in srgb, #38bdf8 14%, transparent);
   border-color: color-mix(in srgb, #38bdf8 28%, transparent);
+  animation-name: solo-shikaku-fill-b;
+}
+
+.solo-preview-shikaku .solo-shikaku-cell:nth-child(7),
+.solo-preview-shikaku .solo-shikaku-cell:nth-child(10),
+.solo-preview-shikaku .solo-shikaku-cell:nth-child(11) {
+  animation-name: solo-shikaku-fill-c;
+}
+
+@keyframes solo-shikaku-grid-rest {
+  0%, 100% {
+    background: color-mix(in srgb, var(--secondary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--secondary) 16%, transparent);
+  }
+}
+
+@keyframes solo-shikaku-fill-a {
+  0%, 10%, 88%, 100% {
+    background: color-mix(in srgb, var(--secondary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--secondary) 16%, transparent);
+  }
+  20%, 76% {
+    background: color-mix(in srgb, var(--solo-accent) 18%, transparent);
+    border-color: color-mix(in srgb, var(--solo-accent) 35%, transparent);
+  }
+}
+
+@keyframes solo-shikaku-fill-b {
+  0%, 24%, 88%, 100% {
+    background: color-mix(in srgb, var(--secondary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--secondary) 16%, transparent);
+  }
+  34%, 76% {
+    background: color-mix(in srgb, #38bdf8 14%, transparent);
+    border-color: color-mix(in srgb, #38bdf8 28%, transparent);
+  }
+}
+
+@keyframes solo-shikaku-fill-c {
+  0%, 40%, 88%, 100% {
+    background: color-mix(in srgb, var(--secondary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--secondary) 16%, transparent);
+  }
+  50%, 76% {
+    background: color-mix(in srgb, #a78bfa 15%, transparent);
+    border-color: color-mix(in srgb, #a78bfa 32%, transparent);
+  }
 }
 
 /* ── Pips preview ────────────────────────────────────────────── */
@@ -357,6 +476,23 @@
   min-height: 0;
   top: 0.1rem;
   left: 0.1rem;
+  transform-origin: 50% 50%;
+  animation: solo-pips-domino-tour 7.2s ease-in-out infinite;
+}
+
+@keyframes solo-pips-domino-tour {
+  0%, 12%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25%, 36% {
+    transform: translate(calc(var(--solo-pips-cell) * 0.5), calc(var(--solo-pips-cell) * 0.5)) rotate(90deg);
+  }
+  50%, 62% {
+    transform: translate(0, calc(var(--solo-pips-cell) * 1)) rotate(0deg);
+  }
+  75%, 86% {
+    transform: translate(calc(var(--solo-pips-cell) * -0.5), calc(var(--solo-pips-cell) * 0.5)) rotate(90deg);
+  }
 }
 
 .solo-pips-face {
@@ -424,41 +560,93 @@
   color: var(--solo-accent);
 }
 
-/* ── Nexus preview ───────────────────────────────────────────── */
-.solo-preview-nexus {
+/* ── Coming soon suggestion preview ──────────────────────────── */
+.solo-preview-suggestion {
   display: grid;
-  grid-template-columns: 2rem 1.5rem 2rem;
-  grid-template-rows: 2rem 1.5rem 2rem;
-  gap: 0;
+  place-items: center;
+  width: 100%;
+}
+
+.solo-suggestion-doc {
+  width: min(118px, 62%);
+  aspect-ratio: 0.78;
+  display: grid;
+  align-content: center;
+  gap: 0.42rem;
+  padding: 0.82rem 0.78rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--solo-accent) 28%, transparent);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04)),
+    color-mix(in srgb, var(--solo-accent) 7%, transparent);
+  box-shadow: 0 16px 24px rgba(0, 0, 0, 0.24);
+}
+
+.solo-suggestion-title-line,
+.solo-suggestion-line,
+.solo-suggestion-short-line {
+  display: block;
+  height: 0.38rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--solo-accent) 26%, transparent);
+}
+
+.solo-suggestion-title-line {
+  width: 62%;
+  height: 0.48rem;
+  background: color-mix(in srgb, var(--solo-accent) 46%, transparent);
+}
+
+.solo-suggestion-line {
+  width: 100%;
+  animation: solo-suggestion-fill-line 5.8s ease-in-out infinite;
+}
+
+.solo-suggestion-line--two {
+  animation-delay: 0.75s;
+}
+
+.solo-suggestion-line--three {
+  width: 78%;
+  animation-delay: 1.5s;
+}
+
+.solo-suggestion-check-row {
+  display: flex;
   align-items: center;
-  justify-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 140px;
+  gap: 0.38rem;
+  margin-top: 0.12rem;
 }
-.solo-nexus-node {
-  width: 1.4rem;
-  height: 1.4rem;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--solo-accent) 40%, transparent);
-  background: color-mix(in srgb, var(--solo-accent) 8%, transparent);
+
+.solo-suggestion-check {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--solo-accent) 42%, transparent);
+  background: color-mix(in srgb, var(--solo-accent) 9%, transparent);
+  animation: solo-suggestion-check-fill 5.8s ease-in-out infinite;
 }
-.solo-nexus-node--lit {
-  background: color-mix(in srgb, var(--solo-accent) 25%, transparent);
-  border-color: var(--solo-accent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--solo-accent) 30%, transparent);
+
+.solo-suggestion-short-line {
+  flex: 1;
 }
-.solo-nexus-edge {
-  width: 100%;
-  height: 2px;
-  background: color-mix(in srgb, var(--solo-accent) 25%, transparent);
-  border-radius: 1px;
+
+@keyframes solo-suggestion-fill-line {
+  0%, 15%, 100% {
+    background: color-mix(in srgb, var(--solo-accent) 16%, transparent);
+  }
+  32%, 70% {
+    background: color-mix(in srgb, var(--solo-accent) 42%, transparent);
+  }
 }
-.solo-nexus-edge--v {
-  width: 2px;
-  height: 100%;
-  background: color-mix(in srgb, var(--solo-accent) 25%, transparent);
-  border-radius: 1px;
+
+@keyframes solo-suggestion-check-fill {
+  0%, 54%, 100% {
+    background: color-mix(in srgb, var(--solo-accent) 9%, transparent);
+  }
+  68%, 82% {
+    background: color-mix(in srgb, var(--solo-accent) 38%, transparent);
+  }
 }
 
 .home-cards-dots {
@@ -768,10 +956,21 @@
   gap: 0.4rem;
   padding: 0.25rem 0.55rem;
   background: color-mix(in srgb, var(--secondary) 3%, transparent);
+  position: relative;
 }
 
 .hc-mini-row--suspect {
   background: color-mix(in srgb, #f87171 6%, transparent);
+}
+
+.hc-mini-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  opacity: 0;
+  background: var(--hc-row-scan, var(--card-accent, var(--primary)));
+  pointer-events: none;
 }
 
 .hc-mini-avatar {
@@ -845,6 +1044,50 @@
   background: color-mix(in srgb, #4ade80 6%, transparent);
 }
 
+/* ── Lightweight multiplayer preview motion ─────────────────── */
+.hc-mini-clue--wrong {
+  color: #fca5a5;
+}
+
+.hc-mini-badge--wrong {
+  background: color-mix(in srgb, #f87171 12%, transparent);
+  color: #fca5a5;
+  border: 1px solid color-mix(in srgb, #f87171 24%, transparent);
+}
+
+.home-card--imposter .hc-mini-row--suspect {
+  animation: hc-imposter-wrong-clue 7.2s ease-in-out infinite;
+}
+
+.home-card--imposter .hc-mini-row--suspect::before {
+  --hc-row-scan: #f87171;
+  animation: hc-imposter-suspect-marker 7.2s ease-in-out infinite;
+}
+
+.home-card--imposter .hc-mini-clue--wrong,
+.home-card--imposter .hc-mini-badge--wrong {
+  animation: hc-imposter-wrong-text 7.2s ease-in-out infinite;
+}
+
+@keyframes hc-imposter-suspect-marker {
+  0%, 30%, 100% { opacity: 0; }
+  42%, 72% { opacity: 0.9; }
+}
+
+@keyframes hc-imposter-wrong-clue {
+  0%, 30%, 100% {
+    background: color-mix(in srgb, #f87171 6%, transparent);
+  }
+  42%, 72% {
+    background: color-mix(in srgb, #f87171 15%, transparent);
+  }
+}
+
+@keyframes hc-imposter-wrong-text {
+  0%, 30%, 100% { opacity: 0.72; }
+  42%, 72% { opacity: 1; }
+}
+
 /* ── Password team-vs preview ────────────────────────────────── */
 .hc-pw-preview {
   display: flex;
@@ -872,11 +1115,13 @@
 }
 
 .hc-pw-team--red {
+  --team-preview-color: #f87171;
   background: color-mix(in srgb, #f87171 10%, transparent);
   border: 1px solid color-mix(in srgb, #f87171 25%, transparent);
 }
 
 .hc-pw-team--blue {
+  --team-preview-color: #60a5fa;
   background: color-mix(in srgb, #60a5fa 10%, transparent);
   border: 1px solid color-mix(in srgb, #60a5fa 25%, transparent);
 }
@@ -897,6 +1142,22 @@
   color: var(--foreground);
 }
 
+.home-card--password .hc-pw-team {
+  animation: hc-password-team-ready 6.8s ease-in-out infinite;
+}
+
+.home-card--password .hc-pw-team--blue {
+  animation-delay: 1.7s;
+}
+
+.home-card--password .hc-pw-team-score {
+  animation: hc-password-score-tick 6.8s ease-in-out infinite;
+}
+
+.home-card--password .hc-pw-team--blue .hc-pw-team-score {
+  animation-delay: 1.7s;
+}
+
 .hc-pw-vs {
   font-size: 0.6rem;
   font-weight: 700;
@@ -906,15 +1167,45 @@
 }
 
 .hc-pw-word {
-  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 0.18rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0;
   color: var(--muted-foreground);
-  padding: 0.25rem 0.7rem;
+  padding: 0.28rem 0.5rem;
   border-radius: 0.35rem;
   border: 1px dashed color-mix(in srgb, #a78bfa 30%, transparent);
   background: color-mix(in srgb, #a78bfa 6%, transparent);
 }
+
+.hc-pw-word-label {
+  margin-right: 0.18rem;
+  font-size: 0.52rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, #a78bfa 72%, var(--secondary));
+}
+
+.hc-pw-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1.25rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, #a78bfa 8%, transparent);
+  color: var(--muted-foreground);
+  border: 1px solid color-mix(in srgb, #a78bfa 16%, transparent);
+  animation: hc-password-letter-guess 6.8s ease-in-out infinite;
+}
+
+.home-card--password .hc-pw-letter:nth-child(3) { animation-delay: 0.45s; }
+.home-card--password .hc-pw-letter:nth-child(4) { animation-delay: 0.9s; }
+.home-card--password .hc-pw-letter:nth-child(5) { animation-delay: 1.35s; }
+.home-card--password .hc-pw-letter:nth-child(6) { animation-delay: 1.8s; }
 
 .hc-pw-flow {
   display: flex;
@@ -943,6 +1234,47 @@
 .hc-pw-flow-result {
   color: #4ade80;
   font-weight: 800;
+}
+
+.home-card--password .hc-pw-flow > span {
+  animation: hc-password-flow-step 6.8s ease-in-out infinite;
+}
+
+.home-card--password .hc-pw-flow-arrow { animation-delay: 0.85s; }
+.home-card--password .hc-pw-flow-guess { animation-delay: 1.7s; }
+.home-card--password .hc-pw-flow-result { animation-delay: 2.55s; }
+
+@keyframes hc-password-team-ready {
+  0%, 18%, 100% {
+    background: color-mix(in srgb, var(--team-preview-color, var(--card-accent)) 10%, transparent);
+  }
+  28%, 42% {
+    background: color-mix(in srgb, var(--team-preview-color, var(--card-accent)) 18%, transparent);
+  }
+}
+
+@keyframes hc-password-score-tick {
+  0%, 22%, 100% { color: var(--foreground); }
+  30%, 44% { color: var(--team-preview-color, var(--card-accent)); }
+}
+
+@keyframes hc-password-flow-step {
+  0%, 16% { opacity: 0.42; }
+  24%, 42% { opacity: 1; }
+  56%, 100% { opacity: 0.42; }
+}
+
+@keyframes hc-password-letter-guess {
+  0%, 18%, 100% {
+    color: var(--muted-foreground);
+    border-color: color-mix(in srgb, #a78bfa 16%, transparent);
+    background: color-mix(in srgb, #a78bfa 8%, transparent);
+  }
+  28%, 56% {
+    color: #c4b5fd;
+    border-color: color-mix(in srgb, #a78bfa 42%, transparent);
+    background: color-mix(in srgb, #a78bfa 16%, transparent);
+  }
 }
 
 /* ── Location map preview ────────────────────────────────────── */
@@ -979,37 +1311,45 @@
   position: absolute;
   inset: 0;
   opacity: 0;
-  animation: hc-loc-map-cycle 9s ease-in-out infinite;
 }
 
 .hc-loc-map-panel--america {
   background:
     radial-gradient(circle at 72% 70%, rgba(14, 165, 233, 0.14), transparent 30%),
     linear-gradient(135deg, #0f2b3f, #102a38);
-  animation-delay: 0s;
+  animation: hc-loc-map-america 12s ease-in-out infinite;
 }
 
 .hc-loc-map-panel--europe {
   background:
     radial-gradient(circle at 44% 58%, rgba(56, 189, 248, 0.13), transparent 28%),
     linear-gradient(135deg, #102a3a, #162b37);
-  animation-delay: 3s;
+  animation: hc-loc-map-europe 12s ease-in-out infinite;
 }
 
 .hc-loc-map-panel--asia {
   background:
     radial-gradient(circle at 70% 66%, rgba(14, 165, 233, 0.16), transparent 34%),
     linear-gradient(135deg, #112a35, #172e32);
-  animation-delay: 6s;
+  animation: hc-loc-map-asia 12s ease-in-out infinite;
 }
 
-@keyframes hc-loc-map-cycle {
-  0%, 28% {
-    opacity: 1;
-  }
-  33%, 100% {
-    opacity: 0;
-  }
+@keyframes hc-loc-map-america {
+  0%, 24% { opacity: 1; }
+  33%, 90% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes hc-loc-map-europe {
+  0%, 24% { opacity: 0; }
+  33%, 57% { opacity: 1; }
+  66%, 100% { opacity: 0; }
+}
+
+@keyframes hc-loc-map-asia {
+  0%, 57% { opacity: 0; }
+  66%, 90% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .hc-loc-land,
@@ -1081,7 +1421,12 @@
   transform: translate(-50%, -50%);
   z-index: 3;
   border: 1px solid rgba(255, 255, 255, 0.58);
+  animation: hc-loc-dot-signal 3.2s ease-in-out infinite;
 }
+
+.hc-loc-dot:nth-of-type(4n) { animation-delay: 0.35s; }
+.hc-loc-dot:nth-of-type(4n + 1) { animation-delay: 0.7s; }
+.hc-loc-dot:nth-of-type(4n + 2) { animation-delay: 1.05s; }
 
 .hc-loc-dot:nth-of-type(3n) {
   background: #60a5fa;
@@ -1130,6 +1475,11 @@
   font-weight: 800;
 }
 
+@keyframes hc-loc-dot-signal {
+  0%, 100% { opacity: 0.72; }
+  38%, 58% { opacity: 1; }
+}
+
 /* ── Chain word example ──────────────────────────────────────── */
 .hc-chain-example {
   display: flex;
@@ -1160,6 +1510,59 @@
   color: var(--muted-foreground);
   border: 1px dashed color-mix(in srgb, var(--secondary) 25%, transparent);
   font-family: monospace;
+  animation: hc-chain-slot-wait 7.6s ease-in-out infinite;
+}
+
+.hc-chain-word--wrong {
+  background: color-mix(in srgb, #f87171 7%, transparent);
+  color: #fca5a5;
+  border: 1px solid color-mix(in srgb, #f87171 22%, transparent);
+  animation: hc-chain-wrong-guess 7.6s ease-in-out infinite;
+}
+
+.home-card--chain .hc-chain-word--revealed {
+  animation: hc-chain-anchor-breathe 7.6s ease-in-out infinite;
+}
+
+.home-card--chain .hc-chain-word--wrong:nth-child(3) {
+  animation-delay: 1.45s;
+}
+
+@keyframes hc-chain-slot-wait {
+  0%, 60%, 100% {
+    color: var(--muted-foreground);
+    background: color-mix(in srgb, var(--secondary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--secondary) 25%, transparent);
+  }
+  70%, 82% {
+    color: color-mix(in srgb, var(--secondary) 72%, #34d399);
+    background: color-mix(in srgb, #34d399 7%, transparent);
+    border-color: color-mix(in srgb, #34d399 28%, transparent);
+  }
+}
+
+@keyframes hc-chain-wrong-guess {
+  0%, 16%, 64%, 100% {
+    opacity: 0.48;
+    color: var(--muted-foreground);
+    background: color-mix(in srgb, var(--secondary) 7%, transparent);
+    border-color: color-mix(in srgb, var(--secondary) 18%, transparent);
+  }
+  26%, 44% {
+    opacity: 1;
+    color: #fca5a5;
+    background: color-mix(in srgb, #f87171 13%, transparent);
+    border-color: color-mix(in srgb, #f87171 36%, transparent);
+  }
+}
+
+@keyframes hc-chain-anchor-breathe {
+  0%, 100% {
+    background: color-mix(in srgb, #34d399 15%, transparent);
+  }
+  46%, 58% {
+    background: color-mix(in srgb, #34d399 22%, transparent);
+  }
 }
 
 
@@ -1185,11 +1588,62 @@
   aspect-ratio: 1;
   border-radius: 3px;
   opacity: 0.75;
+  outline: 1px solid transparent;
+  outline-offset: -1px;
   transition: opacity 0.2s;
 }
 
 .home-card--shade:hover .hc-shade-cell {
   opacity: 1;
+}
+
+.home-card--shade .hc-shade-cell:nth-child(7),
+.home-card--shade .hc-shade-cell:nth-child(12),
+.home-card--shade .hc-shade-cell:nth-child(13),
+.home-card--shade .hc-shade-cell:nth-child(18) {
+  animation: hc-shade-guess-trace 8s ease-in-out infinite;
+}
+
+.home-card--shade .hc-shade-cell:nth-child(12) { animation-delay: 0.7s; }
+.home-card--shade .hc-shade-cell:nth-child(13) { animation-delay: 1.4s; }
+.home-card--shade .hc-shade-cell:nth-child(18) { animation-delay: 2.1s; }
+
+@keyframes hc-shade-guess-trace {
+  0%, 18%, 100% {
+    opacity: 0.75;
+    outline-color: transparent;
+  }
+  30%, 46% {
+    opacity: 1;
+    outline-color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-card--imposter .hc-mini-row,
+  .home-card--imposter .hc-mini-row::before,
+  .home-card--imposter .hc-mini-clue--wrong,
+  .home-card--imposter .hc-mini-badge--wrong,
+  .home-card--password .hc-pw-team,
+  .home-card--password .hc-pw-team-score,
+  .home-card--password .hc-pw-letter,
+  .home-card--password .hc-pw-flow > span,
+  .home-card--chain .hc-chain-word,
+  .home-card--shade .hc-shade-cell,
+  .solo-suggestion-line,
+  .solo-suggestion-check,
+  .hc-loc-map-panel,
+  .hc-loc-dot {
+    animation: none !important;
+  }
+
+  .hc-loc-map-panel {
+    opacity: 0;
+  }
+
+  .hc-loc-map-panel--europe {
+    opacity: 1;
+  }
 }
 
 /* ── Inner sections ──────────────────────────────────────────── */
