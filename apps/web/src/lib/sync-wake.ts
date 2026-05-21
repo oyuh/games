@@ -14,6 +14,21 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+}
+
+function getConnectingStartedAt() {
+  return connectingStartedAt;
+}
+
+function getElapsedSeconds(startedAt: number) {
+  return Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+}
+
 export function markSyncConnecting() {
   if (connectingStartedAt === null) {
     connectingStartedAt = Date.now();
@@ -28,13 +43,8 @@ export function markSyncConnected() {
 
 export function useSyncCountdown(): number | null {
   const startedAt = useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => {
-        listeners.delete(cb);
-      };
-    },
-    () => connectingStartedAt,
+    subscribe,
+    getConnectingStartedAt,
   );
 
   const [remaining, setRemaining] = useState<number | null>(() => {
@@ -61,15 +71,39 @@ export function useSyncCountdown(): number | null {
   return remaining;
 }
 
+export function useSyncElapsedSeconds(): number | null {
+  const startedAt = useSyncExternalStore(
+    subscribe,
+    getConnectingStartedAt,
+  );
+
+  const [elapsed, setElapsed] = useState<number | null>(() => {
+    if (startedAt === null) return null;
+    return getElapsedSeconds(startedAt);
+  });
+
+  useEffect(() => {
+    if (startedAt === null) {
+      setElapsed(null);
+      return;
+    }
+
+    const update = () => {
+      setElapsed(getElapsedSeconds(startedAt));
+    };
+
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt]);
+
+  return elapsed;
+}
+
 export function useSyncTimedOut(): boolean {
   const startedAt = useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => {
-        listeners.delete(cb);
-      };
-    },
-    () => connectingStartedAt,
+    subscribe,
+    getConnectingStartedAt,
   );
 
   const [timedOut, setTimedOut] = useState(() => {
