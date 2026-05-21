@@ -2,7 +2,7 @@ import { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
-import { Component, lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useRef, useState, type CSSProperties } from "react";
 import { FiExternalLink, FiInfo, FiX } from "react-icons/fi";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
@@ -17,7 +17,7 @@ import {
   useConnectionDebug
 } from "./lib/connection-debug";
 import { syncSessionIdentity } from "./lib/session";
-import { markSyncConnecting, markSyncConnected, useSyncCountdown, useSyncTimedOut } from "./lib/sync-wake";
+import { markSyncConnecting, markSyncConnected, useSyncElapsedSeconds, useSyncTimedOut } from "./lib/sync-wake";
 import {
   useSyncSessionActivityState,
   useSyncSessionActivityTracker,
@@ -132,6 +132,24 @@ function isSyncFreePath(pathname: string) {
   return SYNC_FREE_ROUTES.some((prefix) => pathname.startsWith(prefix));
 }
 
+function formatElapsedTimer(elapsedSeconds: number | null) {
+  const totalSeconds = Math.max(0, elapsedSeconds ?? 0);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function getSyncWakeProgress(elapsedSeconds: number | null) {
+  const elapsed = Math.max(0, elapsedSeconds ?? 0);
+
+  if (elapsed <= 20) {
+    return Math.min(0.84, (elapsed / 20) * 0.84);
+  }
+
+  const slowedTail = 1 - Math.exp(-(elapsed - 20) / 55);
+  return Math.min(0.985, 0.84 + slowedTail * 0.145);
+}
+
 function HostingInfoModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -179,7 +197,7 @@ function SyncWakeToast() {
   const zeroState = debug.zeroState;
   const needsSync = !isSyncFreePath(location.pathname);
   const zeroConnected = zeroState === "connected";
-  const countdown = useSyncCountdown();
+  const elapsedSeconds = useSyncElapsedSeconds();
   const syncTimedOut = useSyncTimedOut();
   const syncActivity = useSyncSessionActivityState();
   const resumeCountdown = useSyncSessionResumeCountdown();
@@ -235,6 +253,7 @@ function SyncWakeToast() {
         }, SYNC_WAKE_NOTICE_DELAY_MS);
       }
     } else if (showUnavailable) {
+      markSyncConnecting();
       clearWakeTimer();
       if (!wakeNoticeDismissed) {
         setShowWakeNotice(true);
@@ -267,6 +286,10 @@ function SyncWakeToast() {
 
   const toastTone = showColdStartDelayed ? "warn" : syncIdle ? "idle" : "info";
   const showSpinner = syncResuming || showNeedsAuth || showConnectionDelayed || (!showUnavailable && !syncIdle);
+  const showElapsedTimer = !idleRelated;
+  const elapsedLabel = formatElapsedTimer(elapsedSeconds);
+  const progress = getSyncWakeProgress(elapsedSeconds);
+  const progressStyle = { "--sync-wake-progress": progress } as CSSProperties;
   const message = syncIdle
     ? "Session set to idle"
     : syncResuming
@@ -280,8 +303,11 @@ function SyncWakeToast() {
     : backendHealthy
     ? "Multiplayer sync is connecting"
     : "Sync server is waking up";
-
-  const dismissWakeNotice = () => {
+  const handleDismiss = () => {
+    if (wakeNoticeTimerRef.current !== null) {
+      window.clearTimeout(wakeNoticeTimerRef.current);
+      wakeNoticeTimerRef.current = null;
+    }
     setShowWakeNotice(false);
     setShowHostingInfo(false);
     setDismissedWakeNoticeKey(wakeNoticeKey);
@@ -291,39 +317,38 @@ function SyncWakeToast() {
     <>
       <div className="sync-wake-toast-container">
         <div className={`sync-wake-toast sync-wake-toast--${toastTone}`}>
-          <div className="sync-wake-toast-main">
-            {showSpinner && <span className="sync-wake-spinner" />}
-            <span className="sync-wake-msg">
-              {message}
-            </span>
+          <button
+            type="button"
+            className="sync-wake-toast-hitarea"
+            onClick={() => setShowHostingInfo(true)}
+            aria-label="Open why the server sleeps info"
+          />
+          <div className="sync-wake-toast-content">
+            <div className="sync-wake-toast-main">
+              {showSpinner && <span className="sync-wake-spinner" />}
+              <span className="sync-wake-msg">
+                {message}
+              </span>
+              {showElapsedTimer && (
+                <span className="sync-wake-timer" aria-label={`Sync wait time ${elapsedLabel}`}>
+                  {elapsedLabel}
+                </span>
+              )}
+            </div>
             {syncIdle && <span className="sync-wake-detail">Move, click, or press a key to resume.</span>}
             {syncResuming && resumeCountdown != null && (
-              <span className="sync-wake-countdown-link">
-                ~{resumeCountdown}s
+              <span className="sync-wake-detail">
+                Controls unlock in ~{resumeCountdown}s.
               </span>
             )}
-            {!idleRelated && !showUnavailable && !backendHealthy && countdown != null && (
-              <button
-                type="button"
-                className="sync-wake-countdown-link"
-                onClick={() => setShowHostingInfo(true)}
-              >
-                ~{countdown}s
-              </button>
+            {showElapsedTimer && (
+              <span className="sync-wake-progress" style={progressStyle} aria-hidden="true">
+                <span className="sync-wake-progress-bar" />
+              </span>
             )}
           </div>
-          {showColdStartDelayed && (
-            <button type="button" className="sync-wake-link" onClick={() => setShowHostingInfo(true)}>
-              Why does it sleep?
-            </button>
-          )}
           {!idleRelated && (
-            <button
-              type="button"
-              className="sync-wake-dismiss"
-              onClick={dismissWakeNotice}
-              aria-label="Dismiss sync notice"
-            >
+            <button type="button" className="toast-dismiss sync-wake-dismiss" onClick={handleDismiss} aria-label="Dismiss sync status">
               <FiX size={14} />
             </button>
           )}
