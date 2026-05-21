@@ -191,6 +191,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const resumeCountdown = useSyncSessionResumeCountdown();
   const syncIdle = syncActivity.status === "idle";
   const syncResuming = syncActivity.status === "resuming";
+  const syncBackendHealthy = debug.apiMetaState === "ok" && debug.dbState === "ok";
   const syncNeedsAuth = !zeroConnected && !syncIdle && !syncResuming && debug.zeroState === "needs-auth";
   const syncDelayed = !zeroConnected && !syncIdle && !syncResuming && syncTimedOut && !syncNeedsAuth;
   const syncPending = syncResuming || (!zeroConnected && !syncIdle && !syncDelayed && !syncNeedsAuth);
@@ -204,9 +205,13 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     : syncNeedsAuth
     ? "Multiplayer sync is reconnecting. Controls unlock automatically when it is ready."
     : syncDelayed
-    ? "Sync server is taking longer than usual. Controls unlock automatically when it connects."
+    ? syncBackendHealthy
+      ? "Multiplayer sync is taking longer than usual. Controls unlock automatically when it connects."
+      : "Sync server is taking longer than usual. Controls unlock automatically when it connects."
     : syncOffline
-    ? `Sync server is waking${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}`
+    ? syncBackendHealthy
+      ? `Multiplayer sync is connecting${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}`
+      : `Sync server is waking${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}`
     : "Browse Public Games";
   const blockSyncAction = useCallback((actionLabel: string) => {
     if (syncNeedsAuth) {
@@ -222,18 +227,24 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       return true;
     }
     if (syncDelayed) {
-      showDedupedToast(`Sync server is still waking up. Try ${actionLabel} again when it connects.`, "info");
+      const message = syncBackendHealthy
+        ? `Multiplayer sync is still connecting. Try ${actionLabel} again when it connects.`
+        : `Sync server is still waking up. Try ${actionLabel} again when it connects.`;
+      showDedupedToast(message, "info");
       return true;
     }
     if (syncPending) {
+      const message = syncBackendHealthy
+        ? `Multiplayer sync is connecting${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}. Try ${actionLabel} again in a moment.`
+        : `Sync server is waking up${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}. Try ${actionLabel} again in a moment.`;
       showDedupedToast(
-        `Sync server is waking up${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}. Try ${actionLabel} again in a moment.`,
+        message,
         "info"
       );
       return true;
     }
     return false;
-  }, [resumeEstimate, syncCountdown, syncDelayed, syncIdle, syncNeedsAuth, syncPending, syncResuming]);
+  }, [resumeEstimate, syncBackendHealthy, syncCountdown, syncDelayed, syncIdle, syncNeedsAuth, syncPending, syncResuming]);
   const [name, setName] = useState(() => getOrCreateStoredName(sessionId));
   const [savedName, setSavedName] = useState(() => getOrCreateStoredName(sessionId));
   const [firstVisit, setFirstVisit] = useState(() => !hasVisited());
