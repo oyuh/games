@@ -6,6 +6,8 @@
 }
 
 .site-cursor {
+  --site-cursor-x: -100px;
+  --site-cursor-y: -100px;
   --cursor-w: 30px;
   --cursor-h: 47px;
   --cursor-hot-x: 5px;
@@ -16,22 +18,23 @@
   --cursor-body-end: #e9eef5;
   --cursor-outline: #172638;
   position: fixed;
-  left: var(--site-cursor-x);
-  top: var(--site-cursor-y);
+  left: 0;
+  top: 0;
   z-index: 2147483647;
   width: var(--cursor-w);
   height: var(--cursor-h);
   pointer-events: none;
   opacity: 0;
-  transform: translate(calc(var(--cursor-hot-x) * -1), calc(var(--cursor-hot-y) * -1)) scale(var(--cursor-scale));
+  transform: translate3d(
+    calc(var(--site-cursor-x) - var(--cursor-hot-x)),
+    calc(var(--site-cursor-y) - var(--cursor-hot-y)),
+    0
+  );
   transform-origin: var(--cursor-hot-x) var(--cursor-hot-y);
-  transition:
-    opacity 0.1s ease,
-    transform 0.14s cubic-bezier(0.2, 0.8, 0.2, 1),
-    width 0.12s ease,
-    height 0.12s ease;
+  transition: opacity 0.08s ease;
   filter: drop-shadow(0 2px 2px rgba(15, 23, 42, 0.24));
-  will-change: left, top, transform, opacity;
+  will-change: transform, opacity;
+  contain: layout paint style;
 }
 
 [data-theme="light"] .site-cursor {
@@ -60,11 +63,11 @@
   width: 100%;
   height: 100%;
   transform-origin: inherit;
+  transform: scale(var(--cursor-scale));
   transition:
     opacity 0.12s ease,
     filter 0.16s ease,
     transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
-  animation: site-cursor-enter 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .site-cursor__asset {
@@ -104,25 +107,13 @@
 .site-cursor--pressed .site-cursor__asset,
 .site-cursor--pressed .site-cursor__cross,
 .site-cursor--pressed .site-cursor__slider {
-  transform: scale(0.96);
+  transform: scale(0.9);
 }
 
 .site-cursor--grabbing.site-cursor--pressed .site-cursor__asset,
 .site-cursor--grabbing.site-cursor--pressed .site-cursor__cross,
 .site-cursor--grabbing.site-cursor--pressed .site-cursor__slider {
-  transform: translateY(1px) scale(0.92, 0.88);
-}
-
-@keyframes site-cursor-enter {
-  from {
-    opacity: 0.45;
-    transform: scale(0.82) rotate(-3deg);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1) rotate(0);
-  }
+  transform: translateY(1px) scale(0.88, 0.84);
 }
 
 @media (prefers-reduced-motion: reduce) {

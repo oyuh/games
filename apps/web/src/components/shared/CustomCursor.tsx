@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useLocation } from "react-router-dom";
 import { GAME_META, getGameSlugFromPath, type GameSlug } from "@games/shared";
@@ -25,7 +25,7 @@ type CursorAsset =
       hotY: number;
     };
 
-const cursorUrl = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+const cursorUrl = (path: string) => `${import.meta.env.BASE_URL.replace(/\/?$/, "/")}${path}`;
 const cursorSize = (value: number) => Math.round(value * 0.51);
 const crossCursorSize = (value: number) => Math.round(value * 0.69);
 
@@ -136,8 +136,56 @@ const CURSOR_ASSETS = {
   },
 } satisfies Record<CursorKind, CursorAsset>;
 
+type CursorPosition = {
+  x: number;
+  y: number;
+};
+
+type CursorState = {
+  visible: boolean;
+  pressed: boolean;
+  kind: CursorKind;
+  accent: string;
+};
+
+const INITIAL_CURSOR_POSITION: CursorPosition = {
+  x: -100,
+  y: -100,
+};
+
+const INITIAL_CURSOR_STATE: CursorState = {
+  visible: false,
+  pressed: false,
+  kind: "default",
+  accent: "#7ecbff",
+};
+
+const CURSOR_IMAGE_URLS = Array.from(
+  new Set(
+    Object.values(CURSOR_ASSETS).flatMap((asset) => (asset.type === "image" ? [asset.base, asset.mask] : [])),
+  ),
+);
+
 function closestElement(target: EventTarget | null) {
   return target instanceof Element ? target : null;
+}
+
+function cursorTargetForPoint(event: PointerEvent) {
+  return closestElement(document.elementFromPoint(event.clientX, event.clientY) ?? event.target);
+}
+
+function isVisiblePointerEvent(event: PointerEvent) {
+  return event.pointerType === "mouse" || event.pointerType === "pen" || event.pointerType === "";
+}
+
+function preloadCursorImages() {
+  return CURSOR_IMAGE_URLS.map((src) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = src;
+    void image.decode?.().catch(() => undefined);
+    return image;
+  });
 }
 
 function isClickable(el: Element) {
@@ -188,28 +236,60 @@ function accentForTarget(el: Element | null, pathname: string) {
 export function CustomCursor() {
   const { customCursor, customCursorScale } = useSettings();
   const { pathname } = useLocation();
-  const [state, setState] = useState({
-    x: -100,
-    y: -100,
-    visible: false,
-    pressed: false,
-    kind: "default" as CursorKind,
-    accent: "#7ecbff",
-  });
+  const cursorRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const positionRef = useRef<CursorPosition>(INITIAL_CURSOR_POSITION);
+  const stateRef = useRef<CursorState>(INITIAL_CURSOR_STATE);
+  const [state, setState] = useState<CursorState>(INITIAL_CURSOR_STATE);
 
   useEffect(() => {
     if (!customCursor || !window.matchMedia("(pointer: fine)").matches) {
-      setState((current) => ({ ...current, visible: false }));
+      const hiddenState = { ...stateRef.current, visible: false, pressed: false };
+      stateRef.current = hiddenState;
+      setState(hiddenState);
       return;
     }
 
+    const preloadedImages = preloadCursorImages();
     let pressed = false;
 
+    const applyPosition = () => {
+      frameRef.current = null;
+      const cursor = cursorRef.current;
+      if (!cursor) return;
+
+      cursor.style.setProperty("--site-cursor-x", `${positionRef.current.x}px`);
+      cursor.style.setProperty("--site-cursor-y", `${positionRef.current.y}px`);
+    };
+
+    const queuePosition = (x: number, y: number) => {
+      positionRef.current = { x, y };
+      if (frameRef.current === null) {
+        frameRef.current = window.requestAnimationFrame(applyPosition);
+      }
+    };
+
+    const setCursorState = (nextState: CursorState) => {
+      const current = stateRef.current;
+      if (
+        current.visible === nextState.visible &&
+        current.pressed === nextState.pressed &&
+        current.kind === nextState.kind &&
+        current.accent === nextState.accent
+      ) {
+        return;
+      }
+
+      stateRef.current = nextState;
+      setState(nextState);
+    };
+
     const update = (event: PointerEvent) => {
-      const el = closestElement(event.target);
-      setState({
-        x: event.clientX,
-        y: event.clientY,
+      if (!isVisiblePointerEvent(event)) return;
+
+      queuePosition(event.clientX, event.clientY);
+      const el = cursorTargetForPoint(event);
+      setCursorState({
         visible: true,
         pressed,
         kind: cursorKindForTarget(el, pressed),
@@ -225,17 +305,52 @@ export function CustomCursor() {
       pressed = false;
       update(event);
     };
-    const onPointerLeave = () => setState((current) => ({ ...current, visible: false, pressed: false }));
+    const hide = () => {
+      pressed = false;
+      setCursorState({ ...stateRef.current, visible: false, pressed: false });
+    };
+    const onPointerOut = (event: PointerEvent) => {
+      const outsideViewport =
+        event.clientX <= 0 ||
+        event.clientY <= 0 ||
+        event.clientX >= window.innerWidth ||
+        event.clientY >= window.innerHeight;
+
+      if (!event.relatedTarget && outsideViewport) {
+        hide();
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        hide();
+      }
+    };
 
     window.addEventListener("pointermove", update, { passive: true });
+    window.addEventListener("pointerover", update, { passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
-    document.documentElement.addEventListener("pointerleave", onPointerLeave, { passive: true });
+    window.addEventListener("pointercancel", hide, { passive: true });
+    window.addEventListener("pointerout", onPointerOut, { passive: true });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    document.documentElement.addEventListener("pointerleave", hide, { passive: true });
     return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
       window.removeEventListener("pointermove", update);
+      window.removeEventListener("pointerover", update);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
-      document.documentElement.removeEventListener("pointerleave", onPointerLeave);
+      window.removeEventListener("pointercancel", hide);
+      window.removeEventListener("pointerout", onPointerOut);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      document.documentElement.removeEventListener("pointerleave", hide);
+      preloadedImages.forEach((image) => {
+        image.onload = null;
+        image.onerror = null;
+      });
     };
   }, [customCursor, pathname]);
 
@@ -245,8 +360,8 @@ export function CustomCursor() {
 
   const asset = CURSOR_ASSETS[state.kind];
   const cursorStyle = {
-    "--site-cursor-x": `${state.x}px`,
-    "--site-cursor-y": `${state.y}px`,
+    "--site-cursor-x": `${positionRef.current.x}px`,
+    "--site-cursor-y": `${positionRef.current.y}px`,
     "--site-cursor-accent": state.accent,
     "--tip-color": state.accent,
     "--cursor-w": `${asset.width * customCursorScale}px`,
@@ -263,17 +378,18 @@ export function CustomCursor() {
 
   return (
     <div
+      ref={cursorRef}
       className={`site-cursor site-cursor--${state.kind} site-cursor--asset-${asset.name}${state.visible ? " site-cursor--visible" : ""}${state.pressed ? " site-cursor--pressed" : ""}`}
       style={cursorStyle}
       aria-hidden="true"
     >
       {asset.type === "image" ? (
         <>
-          <span key={`${asset.name}-base`} className="site-cursor__asset site-cursor__asset--base" />
-          <span key={`${asset.name}-tip`} className="site-cursor__asset site-cursor__asset--tip" />
+          <span className="site-cursor__asset site-cursor__asset--base" />
+          <span className="site-cursor__asset site-cursor__asset--tip" />
         </>
       ) : asset.type === "cross" ? (
-        <svg key={asset.name} className="site-cursor__cross" viewBox="0 0 104 104" role="img" aria-label="selection cursor">
+        <svg className="site-cursor__cross" viewBox="0 0 104 104" role="img" aria-label="selection cursor">
           <defs>
             <linearGradient id="site-cursor-cross-body" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--cursor-body-start)" />
@@ -298,7 +414,7 @@ export function CustomCursor() {
           </g>
         </svg>
       ) : (
-        <svg key={asset.name} className="site-cursor__slider" viewBox="0 0 116 80" role="img" aria-label="slider cursor">
+        <svg className="site-cursor__slider" viewBox="0 0 116 80" role="img" aria-label="slider cursor">
           <defs>
             <linearGradient id="site-cursor-slider-body" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--cursor-body-start)" />
