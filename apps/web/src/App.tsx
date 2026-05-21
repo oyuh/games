@@ -185,14 +185,20 @@ function SyncWakeToast() {
   const resumeCountdown = useSyncSessionResumeCountdown();
   const [showWakeNotice, setShowWakeNotice] = useState(false);
   const [showHostingInfo, setShowHostingInfo] = useState(false);
+  const [dismissedWakeNoticeKey, setDismissedWakeNoticeKey] = useState<string | null>(null);
   const wakeNoticeTimerRef = useRef<number | null>(null);
   const syncIdle = needsSync && syncActivity.status === "idle";
   const syncResuming = needsSync && syncActivity.status === "resuming";
   const idleRelated = syncIdle || syncResuming;
   const showNeedsAuth = needsSync && !idleRelated && zeroState === "needs-auth";
-  const showColdStartDelayed = needsSync && !idleRelated && !showNeedsAuth && syncTimedOut;
-  const showUnavailable = showNeedsAuth || showColdStartDelayed;
-  const syncWakeVisible = syncIdle || syncResuming || showWakeNotice || showUnavailable;
+  const backendHealthy = debug.apiMetaState === "ok" && debug.dbState === "ok";
+  const syncConnectionDelayed = needsSync && !idleRelated && !showNeedsAuth && syncTimedOut;
+  const showColdStartDelayed = syncConnectionDelayed && !backendHealthy;
+  const showConnectionDelayed = syncConnectionDelayed && backendHealthy;
+  const showUnavailable = showNeedsAuth || showColdStartDelayed || showConnectionDelayed;
+  const wakeNoticeKey = `${location.pathname}:${zeroState}:${showUnavailable ? "delayed" : "connecting"}:${backendHealthy ? "backend-ok" : "backend-not-ok"}`;
+  const wakeNoticeDismissed = !idleRelated && dismissedWakeNoticeKey === wakeNoticeKey;
+  const syncWakeVisible = syncIdle || syncResuming || ((showWakeNotice || showUnavailable) && !wakeNoticeDismissed);
   const controlsPaused = syncIdle || syncResuming;
 
   useSyncSessionActivityTracker({ needsSync, zeroConnected });
@@ -208,6 +214,7 @@ function SyncWakeToast() {
     if (idleRelated) {
       clearWakeTimer();
       setShowWakeNotice(false);
+      setDismissedWakeNoticeKey(null);
       markSyncConnected();
       return clearWakeTimer;
     }
@@ -216,7 +223,9 @@ function SyncWakeToast() {
 
     if (isWaitingForSync) {
       markSyncConnecting();
-      if (!showWakeNotice && wakeNoticeTimerRef.current === null) {
+      if (wakeNoticeDismissed) {
+        clearWakeTimer();
+      } else if (!showWakeNotice && wakeNoticeTimerRef.current === null) {
         wakeNoticeTimerRef.current = window.setTimeout(() => {
           wakeNoticeTimerRef.current = null;
           if (Date.now() - lastSyncWakeNoticeShownAt >= SYNC_WAKE_NOTICE_COOLDOWN_MS) {
@@ -227,18 +236,22 @@ function SyncWakeToast() {
       }
     } else if (showUnavailable) {
       clearWakeTimer();
-      setShowWakeNotice(true);
+      if (!wakeNoticeDismissed) {
+        setShowWakeNotice(true);
+      }
     } else {
       clearWakeTimer();
       setShowWakeNotice(false);
+      setDismissedWakeNoticeKey(null);
       markSyncConnected();
     }
 
     return clearWakeTimer;
-  }, [idleRelated, needsSync, showUnavailable, showWakeNotice, zeroState]);
+  }, [idleRelated, needsSync, showUnavailable, showWakeNotice, wakeNoticeDismissed, zeroState]);
 
   useEffect(() => {
     setShowHostingInfo(false);
+    setDismissedWakeNoticeKey(null);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -253,7 +266,7 @@ function SyncWakeToast() {
   if (!syncWakeVisible) return null;
 
   const toastTone = showColdStartDelayed ? "warn" : syncIdle ? "idle" : "info";
-  const showSpinner = syncResuming || showNeedsAuth || (!showUnavailable && !syncIdle);
+  const showSpinner = syncResuming || showNeedsAuth || showConnectionDelayed || (!showUnavailable && !syncIdle);
   const message = syncIdle
     ? "Session set to idle"
     : syncResuming
@@ -262,7 +275,17 @@ function SyncWakeToast() {
     ? "Multiplayer sync is reconnecting"
     : showColdStartDelayed
     ? "Sync server is still waking up"
+    : showConnectionDelayed
+    ? "Multiplayer sync is still connecting"
+    : backendHealthy
+    ? "Multiplayer sync is connecting"
     : "Sync server is waking up";
+
+  const dismissWakeNotice = () => {
+    setShowWakeNotice(false);
+    setShowHostingInfo(false);
+    setDismissedWakeNoticeKey(wakeNoticeKey);
+  };
 
   return (
     <>
@@ -279,7 +302,7 @@ function SyncWakeToast() {
                 ~{resumeCountdown}s
               </span>
             )}
-            {!idleRelated && !showUnavailable && countdown != null && (
+            {!idleRelated && !showUnavailable && !backendHealthy && countdown != null && (
               <button
                 type="button"
                 className="sync-wake-countdown-link"
@@ -292,6 +315,16 @@ function SyncWakeToast() {
           {showColdStartDelayed && (
             <button type="button" className="sync-wake-link" onClick={() => setShowHostingInfo(true)}>
               Why does it sleep?
+            </button>
+          )}
+          {!idleRelated && (
+            <button
+              type="button"
+              className="sync-wake-dismiss"
+              onClick={dismissWakeNotice}
+              aria-label="Dismiss sync notice"
+            >
+              <FiX size={14} />
             </button>
           )}
         </div>
