@@ -6,6 +6,8 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { BroadcastControlsDialog } from "@/components/admin/broadcast-controls-dialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
+import { ThemeBootstrapScript } from "@/components/theme-bootstrap-script";
+import { geistMono, geistSans } from "../fonts";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -24,8 +26,13 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable}`}
+    >
       <body>
+        <ThemeBootstrapScript />
         <ToastProvider>
           <ConfirmDialogProvider>
             <AdminShell
@@ -42,7 +49,7 @@ export default async function RootLayout({
                     <Button
                       type="submit"
                       variant="outline"
-                      className="min-w-[112px] justify-center border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                      className="min-w-[112px] justify-center"
                     >
                       Sign out
                     </Button>

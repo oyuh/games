@@ -1,10 +1,14 @@
 param(
   [switch]$SkipDocker,
   [switch]$SkipDbPush,
-  [switch]$SkipDev
+  [switch]$SkipDev,
+  [switch]$SkipPorts,
+  [switch]$PreserveDbData
 )
 
 $ErrorActionPreference = "Stop"
+$ROOT_DIR = Split-Path -Parent $PSScriptRoot
+$DEV_PORTS = @(5173, 3002, 3001)
 
 function Assert-CommandAvailable {
   param([string]$CommandName)
@@ -41,12 +45,105 @@ function Wait-ForPort {
   throw "Timed out waiting for $HostName`:$Port"
 }
 
+function Stop-ListeningProcess {
+  param([int]$Port)
+
+  $connections = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+  if (-not $connections) {
+    return
+  }
+
+  $pids = $connections | Select-Object -ExpandProperty OwningProcess -Unique
+  foreach ($procId in $pids) {
+    if ($procId -eq $PID) {
+      continue
+    }
+
+    try {
+      $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+      if ($proc) {
+        Write-Host ([string]::Format("Stopping process on port {0} - {1} ({2})", $Port, $proc.ProcessName, $procId)) -ForegroundColor Yellow
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+      }
+    } catch {
+    }
+  }
+}
+
+function Stop-DevPorts {
+  Write-Host "Clearing local dev ports 5173, 3002, 3001..." -ForegroundColor Cyan
+  foreach ($port in $DEV_PORTS) {
+    Stop-ListeningProcess -Port $port
+  }
+}
+
+function Get-DotEnvValue {
+  param([string]$Name)
+
+  $envFile = Join-Path $ROOT_DIR ".env"
+  if (-not (Test-Path $envFile)) {
+    return $null
+  }
+
+  foreach ($line in Get-Content $envFile) {
+    if ($line -match "^\s*$Name\s*=\s*(.+?)\s*$") {
+      return ($matches[1] -replace '^["'']|["'']$', "")
+    }
+  }
+
+  return $null
+}
+
+function Test-LocalDatabaseUrl {
+  param([string]$DatabaseUrl)
+
+  if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
+    return $true
+  }
+
+  try {
+    $uri = [System.Uri]$DatabaseUrl
+    return @("localhost", "127.0.0.1", "::1").Contains($uri.Host)
+  } catch {
+    return $false
+  }
+}
+
+function Invoke-LocalDbPush {
+  $databaseUrl = $env:DATABASE_URL
+  if ([string]::IsNullOrWhiteSpace($databaseUrl)) {
+    $databaseUrl = Get-DotEnvValue -Name "DATABASE_URL"
+  }
+
+  $sharedDir = Join-Path $ROOT_DIR "packages\shared"
+  if ((-not $PreserveDbData) -and (Test-LocalDatabaseUrl -DatabaseUrl $databaseUrl)) {
+    Write-Host "Auto-approving local Drizzle data-loss prompts." -ForegroundColor Yellow
+    Push-Location $sharedDir
+    try {
+      bun run drizzle-kit push --force
+    } finally {
+      Pop-Location
+    }
+    return
+  }
+
+  if (-not (Test-LocalDatabaseUrl -DatabaseUrl $databaseUrl)) {
+    throw "DATABASE_URL does not point at a local database. Refusing to auto-approve schema changes. Run 'bun db:push' manually or rerun local-dev with -SkipDbPush."
+  }
+
+  bun db:push
+}
+
 Write-Host "Checking required tools..." -ForegroundColor Cyan
 if (-not $SkipDocker) {
   Assert-CommandAvailable -CommandName "docker"
 }
 if ((-not $SkipDbPush) -or (-not $SkipDev)) {
   Assert-CommandAvailable -CommandName "bun"
+}
+
+if ((-not $SkipDev) -and (-not $SkipPorts)) {
+  Stop-DevPorts
 }
 
 if (-not $SkipDocker) {
@@ -60,7 +157,7 @@ if (-not $SkipDocker) {
 
 if (-not $SkipDbPush) {
   Write-Host "Pushing database schema..." -ForegroundColor Cyan
-  bun db:push
+  Invoke-LocalDbPush
 }
 
 if (-not $SkipDocker) {

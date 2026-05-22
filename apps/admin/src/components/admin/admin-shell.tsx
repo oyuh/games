@@ -11,6 +11,7 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -57,7 +58,8 @@ function resolvePageMeta(pathname: string) {
     return {
       eyebrow: "Client Monitoring",
       title: "Client Watch",
-      description: "Search live sessions, inspect their current room, and apply moderation without context switching.",
+      description:
+        "Search live sessions, inspect their current room, and apply moderation without context switching.",
     };
   }
 
@@ -65,7 +67,8 @@ function resolvePageMeta(pathname: string) {
     return {
       eyebrow: "Game Control",
       title: "Live Rooms",
-      description: "Track active rooms by type, inspect raw state, and intervene from one surface.",
+      description:
+        "Track active rooms by type, inspect raw state, and intervene from one surface.",
     };
   }
 
@@ -73,7 +76,8 @@ function resolvePageMeta(pathname: string) {
     return {
       eyebrow: "Moderation Desk",
       title: "Restrictions",
-      description: "Manage bans, restricted names, and forced overrides with the same enforcement path the live site uses.",
+      description:
+        "Manage bans, restricted names, and forced overrides with the same enforcement path the live site uses.",
     };
   }
 
@@ -81,7 +85,8 @@ function resolvePageMeta(pathname: string) {
     return {
       eyebrow: "Records",
       title: "Shikaku Scores",
-      description: "Edit persisted score data, filter suspicious runs, and clean leaderboard entries without touching the database.",
+      description:
+        "Edit persisted score data, filter suspicious runs, and clean leaderboard entries without touching the database.",
     };
   }
 
@@ -89,14 +94,16 @@ function resolvePageMeta(pathname: string) {
     return {
       eyebrow: "Records",
       title: "Pips Runs",
-      description: "Inspect ranked run splits, edit leaderboard entries, and clean Pips score records from the admin console.",
+      description:
+        "Inspect ranked run splits, edit leaderboard entries, and clean Pips score records from the admin console.",
     };
   }
 
   return {
     eyebrow: "Live Operations",
     title: "Operations Overview",
-    description: "Current health, game activity, moderation pressure, and site messaging in one admin surface.",
+    description:
+      "Current health, game activity, moderation pressure, and site messaging in one admin surface.",
   };
 }
 
@@ -109,11 +116,7 @@ function isActivePath(pathname: string, href: string) {
 }
 
 function getInitials(value: string) {
-  const parts = value
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2);
+  const parts = value.trim().split(/\s+/).filter(Boolean).slice(0, 2);
 
   if (parts.length === 0) {
     return "AD";
@@ -137,17 +140,17 @@ export function AdminShell({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex min-h-screen">
-        <aside className="hidden w-[250px] shrink-0 flex-col border-r border-white/8 bg-[#0d1624] lg:flex xl:w-[268px]">
-          <div className="border-b border-white/8 p-6">
+        <aside className="hidden w-[250px] shrink-0 flex-col border-r border-border bg-card lg:flex xl:w-[268px]">
+          <div className="border-b border-border p-6">
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-2xl border border-white/10 bg-[#101b2d] text-zinc-100">
+              <div className="flex size-11 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
                 <RadioTower className="size-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+                <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
                   Games.lawsonhart.me
                 </div>
-                <div className="mt-1 truncate text-lg font-semibold tracking-[-0.04em] text-white">
+                <div className="mt-1 truncate text-lg font-semibold tracking-normal text-foreground">
                   Admin Console
                 </div>
               </div>
@@ -155,7 +158,7 @@ export function AdminShell({
           </div>
 
           <div className="flex-1 px-4 py-6">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+            <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
               Navigation
             </div>
             <nav className="mt-4 space-y-1.5">
@@ -168,25 +171,27 @@ export function AdminShell({
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "group flex items-center gap-3 rounded-[18px] border p-3 transition-colors",
+                      "group flex items-center gap-3 rounded-lg border p-3 transition-colors",
                       active
-                        ? "border-[#38589a] bg-[#13223a] text-white"
-                        : "border-transparent text-zinc-300 hover:border-white/8 hover:bg-white/[0.03] hover:text-white"
+                        ? "border-border bg-muted text-foreground"
+                        : "border-transparent text-muted-foreground hover:border-border hover:bg-accent hover:text-foreground",
                     )}
                   >
                     <div
                       className={cn(
-                        "flex size-10 shrink-0 items-center justify-center rounded-[14px] border",
+                        "flex size-10 shrink-0 items-center justify-center rounded-lg border",
                         active
-                          ? "border-[#4567af] bg-[#1a2e4d] text-zinc-50"
-                          : "border-white/8 bg-[#101927] text-zinc-400 group-hover:text-zinc-100"
+                          ? "border-border bg-background text-foreground"
+                          : "border-border bg-card text-muted-foreground group-hover:text-foreground",
                       )}
                     >
                       <Icon className="size-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-medium tracking-tight">{item.label}</div>
-                      <div className="mt-0.5 truncate text-xs text-zinc-400 group-hover:text-zinc-300">
+                      <div className="text-sm font-medium tracking-normal">
+                        {item.label}
+                      </div>
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground group-hover:text-muted-foreground">
                         {item.description}
                       </div>
                     </div>
@@ -196,18 +201,22 @@ export function AdminShell({
             </nav>
           </div>
 
-          <div className="border-t border-white/8 px-4 py-5">
-            <div className="rounded-[20px] border border-white/8 bg-[#101927] p-4">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+          <div className="border-t border-border px-4 py-5">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
                 Signed In
               </div>
               <div className="mt-3 flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-[14px] bg-[#17263c] text-sm font-semibold text-zinc-100">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-muted text-sm font-semibold text-foreground">
                   {getInitials(sessionLabel)}
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-white">{sessionLabel}</div>
-                  <div className="mt-0.5 text-xs text-zinc-400">Authenticated admin session</div>
+                  <div className="truncate text-sm font-medium text-foreground">
+                    {sessionLabel}
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    Authenticated admin session
+                  </div>
                 </div>
               </div>
             </div>
@@ -215,16 +224,16 @@ export function AdminShell({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="border-b border-white/8 bg-background/96 backdrop-blur-xl">
+          <header className="border-b border-border bg-background/96 ">
             <div className="flex flex-col gap-4 p-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:py-6">
               <div className="min-w-0">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
+                <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
                   {page.eyebrow}
                 </div>
-                <div className="mt-2 text-[1.8rem] font-semibold tracking-[-0.05em] text-white sm:text-[2.2rem]">
+                <div className="mt-2 text-[1.8rem] font-semibold tracking-normal text-foreground sm:text-[2.2rem]">
                   {page.title}
                 </div>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
                   {page.description}
                 </p>
               </div>
@@ -236,15 +245,17 @@ export function AdminShell({
                   </div>
                 ) : null}
 
-                <div className="flex items-center gap-3 rounded-[20px] border border-white/8 bg-[#101927] px-3.5 py-3">
-                  <div className="flex size-10 items-center justify-center rounded-[14px] bg-[#17263c] text-sm font-semibold text-zinc-100">
+                <ThemeToggle />
+
+                <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-3">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-muted text-sm font-semibold text-foreground">
                     {getInitials(sessionLabel)}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                    <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
                       Admin
                     </div>
-                    <div className="max-w-[180px] truncate text-sm font-medium text-white">
+                    <div className="max-w-[180px] truncate text-sm font-medium text-foreground">
                       {sessionLabel}
                     </div>
                   </div>
@@ -252,7 +263,7 @@ export function AdminShell({
               </div>
             </div>
 
-            <div className="border-t border-white/8 px-5 py-3 lg:hidden sm:px-8">
+            <div className="border-t border-border px-5 py-3 lg:hidden sm:px-8">
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {NAV_ITEMS.map((item) => {
                   const Icon = item.icon;
@@ -263,10 +274,10 @@ export function AdminShell({
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors",
+                        "inline-flex shrink-0 items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors",
                         active
-                          ? "border-[#38589a] bg-[#13223a] text-white"
-                          : "border-white/8 bg-[#101927] text-zinc-300"
+                          ? "border-border bg-muted text-foreground"
+                          : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground",
                       )}
                     >
                       <Icon className="size-4" />
@@ -279,8 +290,10 @@ export function AdminShell({
           </header>
 
           <main className="flex-1 px-5 py-6 sm:px-8 sm:py-8">
-            <div className="mb-6 rounded-[20px] border border-white/8 bg-[#0f1826] px-4 py-3 text-sm text-zinc-300 sm:px-5">
-              Live admin state updates continuously. Use the overview for fast triage, then drill into clients, rooms, moderation, or score records from the left rail.
+            <div className="mb-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground sm:px-5">
+              Live admin state updates continuously. Use the overview for fast
+              triage, then drill into clients, rooms, moderation, or score
+              records from the left rail.
             </div>
             {children}
           </main>

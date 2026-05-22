@@ -1,855 +1,552 @@
 # Games
 
-![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)
 ![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
-![Node](https://img.shields.io/badge/Node-Server-5FA04E?logo=node.js&logoColor=white)
+![Next.js](https://img.shields.io/badge/Admin-Next.js%2015-000000?logo=nextdotjs&logoColor=white)
+![Bun](https://img.shields.io/badge/Runtime-Bun-F9F1E1?logo=bun&logoColor=111827)
 ![Hono](https://img.shields.io/badge/API-Hono-E36002)
-![Zero](https://img.shields.io/badge/Realtime-Rocicorp%20Zero-111827)
-![Pusher](https://img.shields.io/badge/Broadcast-Pusher%20Channels-300D4F?logo=pusher&logoColor=white)
-![Postgres](https://img.shields.io/badge/Database-Postgres-4169E1?logo=postgresql&logoColor=white)
-![Drizzle](https://img.shields.io/badge/ORM-Drizzle-C5F74F&logoColor=111827)
+![Zero](https://img.shields.io/badge/Realtime-Rocicorp%20Zero%201.5-111827)
+![Postgres](https://img.shields.io/badge/Database-Postgres%2016-4169E1?logo=postgresql&logoColor=white)
+![Drizzle](https://img.shields.io/badge/ORM-Drizzle-C5F74F)
 ![Turbo](https://img.shields.io/badge/Monorepo-Turbo-000000?logo=turborepo&logoColor=white)
-![pnpm](https://img.shields.io/badge/Package%20Manager-pnpm-F69220?logo=pnpm&logoColor=white)
-![Deploy](https://img.shields.io/badge/Deploy-Vercel%20%2B%20Railway-0F172A)
 
-This is a complete refactor/rewrite of a similar website I created. Here's the repo: https://github.com/oyuh/games-arch
+Games is a TypeScript monorepo for browser-based party games and logic puzzles. It includes a React + Vite player app, a Bun/Hono API, a Next.js admin dashboard, shared Drizzle/Zero contracts, and a local Postgres + Zero development stack.
 
-Games is a TypeScript monorepo for browser-based party games. The frontend is a React 19 + Vite single-page app, the backend is a Hono-powered Node service, realtime state replication is handled through Rocicorp Zero, admin broadcasts and targeted messages flow through Pusher Channels, presence is tracked via periodic HTTP heartbeats, and persistent state lives in Postgres via Drizzle schema definitions.
+This project is a full refactor of an earlier version: [oyuh/games-arch](https://github.com/oyuh/games-arch).
 
-This repository contains six implemented game flows:
+Live links:
 
-**Multiplayer (Zero-synced):**
-- Imposter — social deduction
-- Password — team word guessing
-- Chain Reaction — competitive word-chain puzzle
-- Shade Signal — color-guessing party game
-- Location Signal — GeoGuessr-style map guessing
+- Web app: [games.lawsonhart.me](https://games.lawsonhart.me)
+- Shikaku puzzle SVG endpoint: [api.games.lawsonhart.me/api/shikaku/puzzle](https://api.games.lawsonhart.me/api/shikaku/puzzle)
 
-**Single-player:**
-- Shikaku — timed grid logic puzzle with leaderboard
+## Contents
 
----
-
-### 🧩 Random Shikaku Puzzle
-
-<a href="https://games.lawsonhart.me/shikaku">
-  <img src="https://api.games.lawsonhart.me/api/shikaku/puzzle.svg?difficulty=medium&bg=transparent" alt="Random Shikaku Puzzle" width="500">
-</a>
-
-<sub>↑ A fresh puzzle every time you load the page. <a href="https://games.lawsonhart.me/shikaku">Click to play</a> · <a href="https://api.games.lawsonhart.me/api/shikaku/puzzle">Full viewer with download</a></sub>
-
----
-
-## Table of Contents
-
-- [Project Summary](#project-summary)
-- [Monorepo Layout](#monorepo-layout)
-- [Technology Stack](#technology-stack)
-- [How the System Works](#how-the-system-works)
-- [Data Model and Shared Contracts](#data-model-and-shared-contracts)
+- [Games Included](#games-included)
+- [Game Docs](#game-docs)
+- [Repository Layout](#repository-layout)
+- [Architecture](#architecture)
 - [Local Development](#local-development)
 - [Environment Variables](#environment-variables)
-- [Build, Typecheck, Test, and Database Tasks](#build-typecheck-test-and-database-tasks)
+- [Common Commands](#common-commands)
+- [Data Model](#data-model)
+- [API Surface](#api-surface)
+- [Admin Dashboard](#admin-dashboard)
+- [Mobile UI](#mobile-ui)
 - [Deployment](#deployment)
 - [Operational Notes](#operational-notes)
 - [Known Constraints](#known-constraints)
-- [Mobile UI](#mobile-ui)
-- [Admin Dashboard](#admin-dashboard)
-- [Reference Docs](#reference-docs)
 
-## Project Summary
+## Games Included
 
-The core idea of the repo is simple:
+The app currently exposes seven playable experiences.
 
-1. The browser loads a React SPA from `apps/web`.
-2. The app creates or restores a local session ID in the browser.
-3. The browser connects to Rocicorp Zero for synchronized query/mutation state.
-4. Zero forwards query and mutation work to the API service in `apps/api`.
-5. The API service executes queries and mutators backed by Postgres.
-6. In parallel, the browser sends periodic HTTP heartbeats to the API so the server can keep session `lastSeen` values fresh.
-7. The browser subscribes to Pusher Channels to receive admin broadcasts (toasts, kicks, status updates).
-8. Game state updates are persisted in Postgres and reflected back into the UI through Zero subscriptions.
+| Game | Mode | Players | Route | State model |
+|------|------|---------|-------|-------------|
+| Imposter | Social deduction | 3-12 | `/imposter/:id` | Multiplayer, Zero-synced |
+| Password | Team word guessing | 4+ | `/password/:id/begin`, `/password/:id`, `/password/:id/results` | Multiplayer, Zero-synced |
+| Chain Reaction | Competitive word-chain duel | 2 | `/chain/:id` | Multiplayer, Zero-synced |
+| Shade Signal | Color clue guessing | 3-8 | `/shade/:id` | Multiplayer, Zero-synced |
+| Location Signal | Map clue guessing | 3-8 | `/location/:id` | Multiplayer, Zero-synced |
+| Shikaku | Timed rectangle logic puzzle | Solo | `/shikaku` | Client-side engine + REST leaderboard |
+| Pips | Timed domino logic run | Solo | `/pips` | Client-side engine + REST leaderboard |
 
-This architecture gives the project a fairly clean separation:
+Multiplayer games share room creation, join codes, public lobby visibility, spectators, host controls, chat, session presence, admin kicks, and synchronized state through Rocicorp Zero.
 
-- `apps/web` is responsible for rendering, routing, local session persistence, and client-side subscriptions.
-- `apps/api` is responsible for HTTP endpoints, Zero query/mutation handling, Pusher event triggers, presence heartbeats, and cleanup jobs.
-- `packages/shared` is the contract layer used by both apps: schema, types, queries, and mutators.
+Solo games do not require the Zero cache to be awake. Shikaku and Pips run their puzzle engines in the browser and call REST endpoints only for eligibility checks, leaderboard reads, and score submission.
 
-## Monorepo Layout
+## Game Docs
+
+Each game has its own document with rules, flow, scoring, and implementation notes.
+
+| Game | What it covers | Doc |
+|------|----------------|-----|
+| Imposter | Clue phase, voting, categories, round history | [docs/game-imposter.md](docs/game-imposter.md) |
+| Password | Teams, clue givers, guessers, target score | [docs/game-password.md](docs/game-password.md) |
+| Chain Reaction | Word chains, turns, scoring, chain generation | [docs/game-chain-reaction.md](docs/game-chain-reaction.md) |
+| Shade Signal | Color grid, leader rotation, clues, proximity scoring | [docs/game-shade-signal.md](docs/game-shade-signal.md) |
+| Location Signal | Map picking, clues, distance scoring, leader rounds | [docs/game-location-signal.md](docs/game-location-signal.md) |
+| Shikaku | Puzzle generation, run modes, scoring, leaderboard validation | [docs/game-shikaku.md](docs/game-shikaku.md) |
+| Pips | Domino placement, seeded runs, split timing, leaderboard design | [docs/game-pips.md](docs/game-pips.md) |
+
+## Repository Layout
 
 ```text
 .
-├─ apps/
-│  ├─ api/              # Hono + Node server, Zero query/mutate endpoints, Pusher broadcast
-│  └─ web/              # React 19 + Vite frontend
-├─ packages/
-│  └─ shared/           # Shared schema, types, Zero queries, Zero mutators (modular), Drizzle config
-├─ docs/                # Deployment notes and game design docs
-├─ docker-compose.yml   # Local Postgres + Zero cache container stack
-├─ turbo.json           # Monorepo task orchestration
-├─ pnpm-workspace.yaml  # Workspace package discovery
-├─ vercel.json          # Web deployment config
-└─ railway.toml         # API deployment config
++-- apps/
+|   +-- web/            # React 19 + Vite player app
+|   +-- api/            # Bun/Hono API, Zero handlers, REST endpoints
+|   +-- admin/          # Next.js 15 admin dashboard
++-- packages/
+|   +-- shared/         # Drizzle schema, Zero schema, queries, mutators, metadata
++-- docs/              # Game docs and maintenance notes
++-- scripts/           # Local stack and production DB helper scripts
++-- docker-compose.yml # Local Postgres + Zero cache stack for Windows script path
++-- Dockerfile         # API container image
++-- railway.toml       # API Railway deployment config
++-- vercel.json        # Web Vercel deployment config with SPA + bot preview rewrites
++-- turbo.json         # Workspace task orchestration
++-- package.json       # Bun workspace scripts
 ```
 
-### apps/web
+## Architecture
 
-This is the client application. It is a Vite-built React SPA with React Router. The frontend does not contain a traditional REST data layer; instead it consumes Rocicorp Zero queries and mutators from the shared package, which keeps the client and server contract aligned.
+### Player App: `apps/web`
 
-Important responsibilities in the web app:
+The web app is a React 19 single-page application built by Vite. It owns the public game experience.
 
-- Bootstrap React and mount the SPA
-- Configure a singleton Zero client
-- Generate or restore a persistent browser session ID
-- Maintain local display name and recent-game history in `localStorage`
-- Send periodic HTTP presence heartbeats to the API service
-- Subscribe to Pusher Channels for admin broadcasts and targeted messages
-- Render game routes and game-specific UI
-- Expose connection/debug state for Zero, API metadata, and presence connectivity
+Main responsibilities:
 
-### apps/api
+- Browser routes for the home page, multiplayer rooms, Shikaku, Pips, and score admin helper route.
+- A module-scoped Zero client for realtime multiplayer sync.
+- Local browser identity, recent games, display name, and first-visit state.
+- HTTP session sync and presence heartbeats against the API.
+- Pusher subscriptions for global admin broadcasts and targeted user events.
+- Lazy-loaded game pages and vendor chunks for smaller initial loads.
+- Sync wake/idle messaging when the multiplayer Zero cache is cold or paused.
+- Mobile-specific pages and bottom sheets for the multiplayer experience.
 
-This is the backend service. It uses Hono on Node, exposes health and debug endpoints, receives Zero query/mutate requests, triggers Pusher events for admin broadcasts, and periodically cleans stale games and sessions.
+Key files:
 
-Important responsibilities in the API app:
+- `apps/web/src/App.tsx`
+- `apps/web/src/pages/`
+- `apps/web/src/mobile/`
+- `apps/web/src/lib/zero.ts`
+- `apps/web/src/lib/session.ts`
+- `apps/web/src/lib/shikaku-engine.ts`
+- `apps/web/src/lib/pips-engine.ts`
 
-- Handle `POST /api/zero/query`
-- Handle `POST /api/zero/mutate`
-- Handle `GET /health`
-- Handle `GET /debug/build-info`
-- Handle `GET|POST /api/cleanup` with bearer auth
-- Handle `POST /api/pusher/auth` for Pusher channel authentication
-- Handle `POST /api/presence/heartbeat` for session liveness
-- Handle `POST /api/presence/heartbeat` for session liveness
-- Handle `GET /api/shikaku/leaderboard` for single-player scores
-- Handle `POST /api/shikaku/score` for score submission with server-side validation
-- Handle `GET /api/maps/config` and `GET /api/maps/geocode` for Location Signal map tiles
-- Handle `POST /api/game-secret/init|pre-reveal|key` for game secret encryption
-- Trigger Pusher events for admin broadcasts (toasts, kicks, status, name restrictions)
-- Run scheduled stale-session / stale-game cleanup
+### API App: `apps/api`
 
-### packages/shared
+The API is a Bun-powered Hono service. It handles REST endpoints, Zero query/mutation forwarding, admin operations, signed session identity, score validation, and cleanup work.
 
-This package is the technical center of the system. It contains the shared contracts used everywhere else.
+Main responsibilities:
 
-Important contents:
+- `POST /api/zero/query` and `POST /api/zero/mutate`
+- Signed session cookies and signed Zero session proofs.
+- Session sync and presence heartbeat updates.
+- Pusher private-channel auth and admin event triggers.
+- Server-held secret keys for hidden game data.
+- Shikaku and Pips leaderboard, eligibility, and score validation.
+- Location Signal map tile config and geocode proxy.
+- Admin dashboard API under `/api/admin/*`.
+- Scheduled and manual cleanup of stale games and sessions.
+- `/health` and `/debug/build-info` diagnostics.
 
-- Drizzle Postgres schema definitions
-- Zero schema and query definitions
-- Zero mutator implementations (modular — see structure below)
-- Shared TypeScript types for game state
-- Drizzle migration configuration
+Key files:
 
-This design keeps the frontend and backend from drifting. The web app imports the same mutators and query definitions that the backend resolves and executes.
+- `apps/api/src/index.ts`
+- `apps/api/src/admin-routes.ts`
+- `apps/api/src/broadcast-server.ts`
+- `apps/api/src/session-identity.ts`
+- `apps/api/src/db-provider.ts`
 
-#### Mutators directory structure
+### Admin App: `apps/admin`
 
-The Zero mutators live in `packages/shared/src/zero/mutators/` and are split by domain:
+The admin dashboard is a Next.js 16 app protected by NextAuth. It proxies admin requests to the API with `ADMIN_SECRET`.
+
+Main responsibilities:
+
+- Dashboard summary and recent activity.
+- Connected client/session browsing.
+- Active game inspection, ending, and kicking.
+- Session, IP, and region bans.
+- Restricted name patterns and forced name overrides.
+- Global broadcasts, refresh commands, update warnings, and custom status banners.
+- Shikaku score management.
+- Pips score management.
+
+Key files:
+
+- `apps/admin/src/auth.ts`
+- `apps/admin/src/lib/api.ts`
+- `apps/admin/src/app/(dashboard)/`
+- `apps/admin/src/components/admin/`
+
+### Shared Package: `packages/shared`
+
+The shared package is the contract layer used by the web app and API.
+
+It contains:
+
+- Drizzle Postgres schema.
+- Zero schema.
+- Shared query definitions.
+- Domain-split Zero mutators.
+- Shared game types and game metadata.
+- Drizzle Kit config and migrations.
+
+Mutators live under `packages/shared/src/zero/mutators/`:
 
 ```text
 packages/shared/src/zero/mutators/
-├─ index.ts              # Barrel — composes defineMutators, re-exports public symbols
-├─ word-banks.ts         # Word banks and category data (imposter, chain reaction, password)
-├─ helpers.ts            # Shared utility functions (now, code, shuffle, pickRandom, etc.)
-├─ sessions.ts           # Session mutators (upsert, setName, attachGame, touchPresence)
-├─ imposter.ts           # Imposter game mutators (12 mutators)
-├─ password.ts           # Password game mutators (15 mutators)
-├─ chat.ts               # Chat mutators (send, clearForGame)
-├─ chain-reaction.ts     # Chain Reaction game mutators (12 mutators)
-├─ shade-signal.ts       # Shade Signal game mutators (15 mutators)
-├─ location-signal.ts    # Location Signal game mutators
-└─ demo.ts               # Dev-only demo seeders (4 seeders)
++-- index.ts
++-- helpers.ts
++-- word-banks.ts
++-- sessions.ts
++-- chat.ts
++-- imposter.ts
++-- password.ts
++-- chain-reaction.ts
++-- shade-signal.ts
++-- location-signal.ts
++-- demo.ts
 ```
-
-The barrel `index.ts` imports all domain-specific mutator objects and composes them into a single `mutators` export via `defineMutators()`. Consumers still import everything from `@games/shared` — the split is internal to the shared package.
-
-## Technology Stack
-
-### Core platform
-
-- TypeScript 5.8 across the entire monorepo
-- pnpm workspaces for package management
-- Turbo for cross-package task orchestration
-
-### Frontend
-
-- React 19
-- React Router 7
-- Vite 6
-- Tailwind CSS 4 via `@tailwindcss/vite`
-- Flowbite / Flowbite React for some UI building blocks
-- `react-icons` for iconography
-
-### Realtime and state sync
-
-- Rocicorp Zero `0.25.13`
-- Zero React bindings in the frontend
-- Zero server request handlers in the API service
-- A separate Zero cache service in deployment and Docker-based development
-
-### Backend
-
-- Hono 4 for HTTP routing
-- `@hono/node-server` for Node-based serving
-- `pusher` for server-side Pusher Channels event triggers
-- `dotenv` for local environment loading
-
-### Database and schema management
-
-- PostgreSQL 16 in local Docker setup
-- Drizzle ORM for typed schema access
-- Drizzle Kit for schema generation, push, and studio
-- `pg` for database connections
-
-### Deployment targets
-
-- Vercel for the frontend SPA
-- Railway for the Node API service
-- Railway for the Zero cache service
-- Railway Postgres or Neon for the database
-
-## How the System Works
-
-This section focuses on technical flow rather than UX flow.
-
-### 1. Browser boot
-
-When the web app starts:
-
-- React mounts from `apps/web/src/main.tsx`
-- `App.tsx` creates a module-scoped Zero singleton exactly once per page load
-- the app resolves a browser session ID from `localStorage` or creates one with `nanoid`
-- the app reads the user display name from `localStorage`
-- the app upserts the session into the shared `sessions` table through a Zero mutator
-
-Why the Zero instance is module-scoped:
-
-- recreating the Zero client can reset mutation counters and destabilize synchronization
-- keeping one client per page load produces more stable realtime behavior
-
-### 2. Routing model
-
-The frontend is a single-page application using browser routing. The major routes are:
-
-- `/` for the home screen and game creation/join flow
-- `/imposter/:id` for Imposter games
-- `/password/:id/begin` for Password pre-round setup
-- `/password/:id` for active Password rounds
-- `/password/:id/results` for Password results
-- `/chain/:id` for Chain Reaction
-- `/shade/:id` for Shade Signal
-- `/location/:id` for Location Signal
-- `/shikaku` for the single-player Shikaku puzzle
-
-Because this is an SPA, production hosting requires a rewrite rule that sends unknown paths back to `index.html`. That is already configured in [vercel.json](vercel.json).
-
-### 3. Session persistence
-
-The browser stores lightweight identity and convenience state locally:
-
-- session ID
-- player name
-- recent games
-- a visited flag
-
-This is handled client-side so a returning browser tab behaves like the same player identity without requiring account auth.
-
-Server-side, the `sessions` table stores:
-
-- session ID
-- name
-- current game type and game ID
-- created timestamp
-- `lastSeen` timestamp
-
-That means session presence is a hybrid model:
-
-- identity originates in browser local storage
-- liveliness is maintained server-side through HTTP heartbeat updates
-
-### 4. Query and mutation flow with Zero
-
-The app uses Rocicorp Zero as the main synchronization layer.
-
-High-level flow:
-
-1. The frontend imports shared query and mutator definitions from `@games/shared`.
-2. The frontend issues `useQuery(...)` calls and `zero.mutate(...)` calls.
-3. Zero sends those requests to the Zero cache service.
-4. The Zero cache service forwards query requests to the API service at `/api/zero/query`.
-5. The Zero cache service forwards mutation requests to the API service at `/api/zero/mutate`.
-6. The API service resolves query names and mutator names against the shared definitions.
-7. Drizzle-backed database operations run against Postgres.
-8. Updated data becomes visible to subscribers through Zero.
-
-This is the main reason the app feels realtime without the frontend manually polling game state.
-
-### 5. Presence flow
-
-Presence is not handled by Zero directly in this repo. It is handled with periodic HTTP heartbeats from the client to the API service.
-
-Flow:
-
-1. A game page calls the `usePresenceSocket` hook.
-2. The hook sends a `POST /api/presence/heartbeat` request with the session ID, game ID, and game type.
-3. Every 60 seconds the client sends another heartbeat request.
-4. The API service updates the `sessions` row `lastSeen` field and game association.
-
-This lets the system infer connected/disconnected state from `lastSeen` freshness.
-
-### 6. Admin broadcast flow
-
-Admin broadcasts (toasts, kicks, custom status messages, restricted names) are delivered through Pusher Channels.
-
-Flow:
-
-1. The admin dashboard triggers an action (e.g. broadcast toast, kick user, set custom status).
-2. The API service calls `pusher.trigger()` to send the event on the appropriate channel.
-3. Global events go on the `games-broadcast` channel.
-4. Targeted events (e.g. kicks) go on `private-user-{sessionId}` channels.
-5. The client subscribes to both channels via the `useAdminBroadcast` hook using `pusher-js`.
-6. Pusher channel authentication is handled through `POST /api/pusher/auth`, which validates session ownership and checks bans.
-
-### 7. Cleanup flow
-
-The API service has two cleanup paths:
-
-- scheduled cleanup every 15 minutes
-- manual cleanup through `/api/cleanup` with a bearer token
-
-Cleanup behavior includes:
-
-- marking stale games as `ended`
-- detaching stale sessions from ended games
-- deleting old ended game rows
-- deleting very stale session rows
-
-This matters operationally because multiplayer game rows are long-lived enough to support reconnects, but not intended to accumulate forever.
-
-### 8. API diagnostics flow
-
-The frontend periodically probes `/debug/build-info` on the API service. That endpoint exposes:
-
-- deployment platform hint
-- commit SHA / branch metadata when available
-- build timestamp metadata when available
-- service start time
-- uptime
-- Node version
-- environment name
-
-This is used for connection diagnostics and for understanding which backend build a browser is currently talking to.
-
-## Data Model and Shared Contracts
-
-The main persistent entities are defined in `packages/shared/src/drizzle/schema.ts`.
-
-### sessions
-
-Tracks browser-backed users and their current association with a game.
-
-Key fields:
-
-- `id`
-- `name`
-- `gameType`
-- `gameId`
-- `createdAt`
-- `lastSeen`
-
-### imposter_games
-
-Stores the full state machine for an Imposter match.
-
-Notable data stored directly in JSON columns:
-
-- players
-- clues
-- votes
-- kicked players
-- round history
-- announcement
-- settings
-
-This is a denormalized game-state model. It is intentionally optimized more for simple state snapshots and mutation logic than for highly normalized relational analysis.
-
-### password_games
-
-Stores Password game state, including:
-
-- teams
-- rounds
-- scores
-- active rounds
-- kicked players
-- settings
-
-### chain_reaction_games
-
-Stores Chain Reaction game state, including:
-
-- players
-- current chain data
-- submitted custom chains
-- current turn
-- scores
-- round history
-- kicked players
-- settings
-
-### shade_signal_games
-
-Stores Shade Signal game state, including:
-
-- players (with cumulative scores)
-- leader rotation order
-- grid seed, target coordinates
-- clues (two per round)
-- guesses per round
-- round history with scoring
-- kicked players
-- settings (hard mode, leader pick, durations, rounds per player)
-
-### location_signal_games
-
-Stores Location Signal game state, including:
-
-- players (with cumulative penalty scores)
-- leader rotation order
-- encrypted target coordinates and map scope
-- clues (up to 4 per round)
-- guess coordinates per player per round
-- round history with distance scoring
-- kicked players
-- settings (rounds, guess timer, clue timer, map scope)
-
-### shikaku_scores
-
-Stores Shikaku leaderboard entries, including:
-
-- session ID and player name
-- seed, difficulty, score, time in ms
-- puzzle count and replay data
-- server-side validated (minimum time, max score cap, duplicate seed protection, ban check)
-
-### game_encryption_keys
-
-Stores server-side encryption keys used for game secrets (imposter secret words, shade signal targets, location signal coordinates).
-
-### admin_bans
-
-Stores session, IP, and region-based bans managed through the admin dashboard.
-
-### admin_restricted_names / admin_name_overrides
-
-Stores blocked name patterns and per-session forced name overrides.
-
-### chat_messages
-
-Stores per-game chat history keyed by game type and game ID.
-
-### Query definitions
-
-Shared query definitions cover:
-
-- sessions by ID
-- sessions by game
-- Imposter by ID and join code
-- Password by ID and join code
-- Chain Reaction by ID and join code
-- Shade Signal by ID and join code
-- Location Signal by ID and join code
-- chat messages by game
-
-Because these definitions live in the shared package, the browser and server reference the same query names and argument contracts.
-
-### Mutator definitions
-
-Shared mutators cover:
-
-- session upsert / naming / attachment / presence touch
-- game creation
-- join / leave flows
-- game-phase transitions
-- per-game action flows such as clue submission, voting, guessing, scoring, and progression
-
-The mutators are the real source of game-state transitions. If you are changing behavior, this is usually the first place to inspect.
-
-Mutators are organized into separate files by game domain under `packages/shared/src/zero/mutators/`. Each game has its own file (e.g. `imposter.ts`, `password.ts`, `chain-reaction.ts`, `shade-signal.ts`, `location-signal.ts`), with shared utilities in `helpers.ts` and word bank data in `word-banks.ts`. The barrel `index.ts` composes them all via `defineMutators()`.
-
-Note: Shikaku does not have Zero mutators — it uses REST API endpoints for leaderboard and score submission, with all game logic running client-side.
 
 ## Local Development
 
 ### Prerequisites
 
-Install the following before starting:
+- Bun 1.3.x or newer
+- Docker Desktop, OrbStack, Colima, or another Docker daemon
+- Git
 
-- Node.js 20+ recommended
-- pnpm 10.x or really any node
-- Docker Desktop or a compatible Docker runtime
-
-### 1. Install dependencies
+### Quick Start
 
 ```bash
-pnpm install
+bun install
+bun run local:up
 ```
 
-### 2. Start Postgres and Zero cache
+Then open:
 
-The repo includes [docker-compose.yml](docker-compose.yml), which starts:
+- Web app: `http://localhost:5173`
+- API: `http://localhost:3001`
+- Admin app: `http://localhost:3002`
+- Zero cache: `http://localhost:4848`
 
-- Postgres 16 with `wal_level=logical`
-- a Zero cache service
+`bun run local:up` starts local Postgres, pushes the Drizzle schema, resets the Zero replica, starts Zero cache, and launches the workspace dev servers.
 
-Start it with:
+### Manual Local Start
+
+If you want to run each piece yourself:
 
 ```bash
+bun install
 docker compose up -d
+bun run db:push
+bun run dev
 ```
 
-Why `wal_level=logical` matters:
-
-- Zero relies on logical replication semantics
-- if this is not enabled on the upstream Postgres instance, Zero will fail or behave incorrectly
-
-### 3. Create a local environment file
-
-At the repository root, create `.env` with at least:
+### Stop Local Services
 
 ```bash
+# Windows
+bun run local:down
+
+# macOS
+bun run local:down:mac
+
+# Linux
+bun run local:down:linux
+```
+
+### Platform-Specific Helpers
+
+```bash
+# Windows
+bun run local:up
+bun run local:reset
+
+# macOS
+bun run local:up:mac
+bun run local:reset:mac
+
+# Linux
+bun run local:up:linux
+bun run local:up:linux:host
+bun run local:reset:linux
+```
+
+The Linux/macOS script uses standalone Docker containers and volumes. The Windows script uses `docker compose`.
+
+## Environment Variables
+
+### Root `.env`
+
+The API and shared database tooling load the repository root `.env`. For local development, this is the practical minimum:
+
+```bash
+NODE_ENV=development
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/games
-PORT=3001
-API_PORT=3001
+ZERO_UPSTREAM_DB=postgres://postgres:postgres@localhost:5432/games
+ZERO_CVR_DB=postgres://postgres:postgres@localhost:5432/games
+ZERO_CHANGE_DB=postgres://postgres:postgres@localhost:5432/games
+ZERO_ADMIN_PASSWORD=dev-password
 CLEANUP_SECRET=cleanup-local
+SESSION_COOKIE_SECRET=games-dev-session-secret
 ```
 
-The API service explicitly loads `../../.env`, so the root `.env` file is the expected local configuration source.
-
-### 4. Push the schema to the database
-
-```bash
-pnpm db:push
-```
-
-### 5. Run the web app and API app together
-
-```bash
-pnpm dev
-```
-
-If you want one command that starts local Docker services, waits for Postgres, pushes the schema, refreshes the Zero replica, and then launches the dev servers:
-
-```bash
-# Windows
-pnpm local:up
-
-# macOS
-pnpm local:up:mac
-
-# Linux
-pnpm local:up:linux
-```
-
-These shell scripts use plain Docker commands, so Docker Desktop, OrbStack, Colima, or another Docker daemon must already be running.
-
-To stop the local stack and clear the Zero replica volume:
-
-```bash
-# Windows
-pnpm local:down
-
-# macOS
-pnpm local:down:mac
-
-# Linux
-pnpm local:down:linux
-```
-
-This runs the workspace `dev` scripts in parallel through Turbo.
-
-Expected local endpoints:
-
-- web: `http://localhost:5173`
-- api: `http://localhost:3001`
-- zero cache: `http://localhost:4848`
-
-### 6. Local frontend environment
-
-The web app defaults to local endpoints if environment variables are not set:
-
-- `VITE_ZERO_CACHE_URL=http://localhost:4848`
-- `VITE_API_URL=http://localhost:3001`
-
-If you want to be explicit, create `apps/web/.env.local`:
-
-```bash
-VITE_ZERO_CACHE_URL=http://localhost:4848
-VITE_API_URL=http://localhost:3001
-```
-
-For Pusher Channels to work locally, you also need:
-
-```bash
-VITE_PUSHER_KEY=<your_pusher_key>
-VITE_PUSHER_CLUSTER=<your_pusher_cluster>
-```
-
-And in the root `.env` for the API:
+Optional local Pusher variables:
 
 ```bash
 PUSHER_APP_ID=<your_pusher_app_id>
 PUSHER_KEY=<your_pusher_key>
 PUSHER_SECRET=<your_pusher_secret>
 PUSHER_CLUSTER=<your_pusher_cluster>
-SESSION_COOKIE_SECRET=<long_random_session_secret>
 ```
 
-## Environment Variables
-
-### Frontend variables
-
-The frontend only exposes Vite-prefixed variables to browser code.
-
-#### `VITE_ZERO_CACHE_URL`
-
-- Required for production
-- URL of the Zero cache service
-- Example local value: `http://localhost:4848`
-- Example production value: `https://<zero-domain>`
-
-#### `VITE_API_URL`
-
-- Required for production
-- Base URL of the API service (used for Pusher auth, presence heartbeats, admin status)
-- Example local value: `http://localhost:3001`
-- Example production value: `https://<api-domain>`
-
-#### `VITE_PUSHER_KEY`
-
-- Required for production
-- Pusher Channels app key (from dashboard.pusher.com)
-
-#### `VITE_PUSHER_CLUSTER`
-
-- Required for production
-- Pusher Channels cluster (e.g. `us2`, `eu`, `ap1`)
-
-#### `VITE_STYLE_ONLY`
-
-- Optional
-- If set to `true`, the app renders the style preview route instead of the full realtime app
-
-### API variables
-
-#### `DATABASE_URL`
-
-- Primary Postgres connection string for the API service
-
-#### `ZERO_UPSTREAM_DB`
-
-- Fallback DB source used by the API database provider if `DATABASE_URL` is absent
-- also required by the Zero service itself
-
-#### `PORT` / `API_PORT`
-
-- API listen port
-- `PORT` is preferred by many hosting platforms
-
-#### `NODE_ENV`
-
-- Standard runtime environment hint
-
-#### `CLEANUP_SECRET`
-
-- Bearer token required for manual cleanup endpoint access
-
-#### `PUSHER_APP_ID`
-
-- Pusher Channels app ID (from dashboard.pusher.com)
-
-#### `PUSHER_KEY`
-
-- Pusher Channels app key
-
-#### `PUSHER_SECRET`
-
-- Pusher Channels app secret
-
-#### `PUSHER_CLUSTER`
-
-- Pusher Channels cluster (e.g. `us2`, `eu`, `ap1`)
-
-#### `SESSION_COOKIE_SECRET`
-
-- Recommended for production
-- Secret used to sign the session cookie and `x-zero-session-proof` header
-- If omitted, the API falls back to `PUSHER_SECRET`
-- Use a separate long random value if you want the session signing key decoupled from Pusher
-
-#### `DB_STATUS_KEY`
-
-- Optional database sentinel key checked by the footer status probe
-- Defaults to `footer`
-
-#### `DB_STATUS_EXPECTED_VALUE`
-
-- Optional database sentinel value checked by the footer status probe
-- Defaults to `ok`
-- If the row exists but the value does not match, the footer shows `Unknown`
-
-### Zero service variables
-
-For deployed Zero cache:
-
-- `ZERO_UPSTREAM_DB`
-- `ZERO_QUERY_URL`
-- `ZERO_MUTATE_URL`
-- `ZERO_ADMIN_PASSWORD`
-- optionally `ZERO_CVR_DB`
-- optionally `ZERO_CHANGE_DB`
-
-Important constraint:
-
-- do not define `ZERO_PORT` as the literal string `"$PORT"` on Railway
-- Railway does not shell-expand env values in that way
-
-## Build, Typecheck, Test, and Database Tasks
-
-At the repository root:
+Optional map variables:
 
 ```bash
-pnpm dev
-pnpm local:up
-pnpm local:up:mac
-pnpm local:up:linux
-pnpm build
-pnpm typecheck
-pnpm test
-pnpm lint
-pnpm db:push
-pnpm db:generate
-pnpm db:studio
+MAP_TILE_URL_TEMPLATE=https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
+MAP_TILE_ATTRIBUTION=(c) OpenStreetMap contributors
+MAP_GEOCODE_URL=https://nominatim.openstreetmap.org/search
 ```
 
-### What these do
+### Web App Variables
 
-#### `pnpm dev`
-
-Runs the `dev` script in workspace packages in parallel through Turbo.
-
-#### `pnpm build`
-
-Runs workspace builds through Turbo.
-
-- web: Vite production build
-- api: TypeScript compile to `dist`
-- shared: TypeScript type validation through its build script
-
-#### `pnpm typecheck`
-
-Runs package-level TypeScript checks.
-
-#### `pnpm test`
-
-Runs package `vitest` scripts through Turbo.
-
-#### `pnpm lint`
-
-Currently present at the workspace level, but linting is effectively a placeholder right now. The package scripts currently print `No lint configured yet` rather than running a real linter.
-
-#### Database tasks
-
-- `pnpm db:push` applies schema changes to the target database
-- `pnpm db:generate` generates Drizzle migration artifacts
-- `pnpm db:studio` opens Drizzle Studio
-
-### Footer database status sentinel
-
-The footer status now checks the API's `/debug/build-info` response, and that API route performs a direct Postgres read against a sentinel row in the `status` table.
-
-The status logic is:
-
-- `Operational` when the database is reachable and `status.key = DB_STATUS_KEY` matches `DB_STATUS_EXPECTED_VALUE`
-- `Unknown` when the database is reachable but the row is missing or the value does not match
-- `Offline` when the API cannot reach Postgres at all
-
-Recommended setup:
-
-1. Push the latest schema:
+The web app defaults to local endpoints when these are omitted:
 
 ```bash
-pnpm db:push
+VITE_ZERO_CACHE_URL=http://localhost:4848
+VITE_API_URL=http://localhost:3001
+VITE_STYLE_ONLY=false
 ```
 
-2. Insert or upsert the sentinel row:
-
-```sql
-INSERT INTO status (key, value, updated_at)
-VALUES ('footer', 'ok', EXTRACT(EPOCH FROM NOW())::bigint * 1000)
-ON CONFLICT (key)
-DO UPDATE SET
-  value = EXCLUDED.value,
-  updated_at = EXCLUDED.updated_at;
-```
-
-3. Set API environment variables:
+Pusher broadcasts in the browser require:
 
 ```bash
-DB_STATUS_KEY=footer
-DB_STATUS_EXPECTED_VALUE=ok
+VITE_PUSHER_KEY=<your_pusher_key>
+VITE_PUSHER_CLUSTER=<your_pusher_cluster>
 ```
 
-If you want to force the footer into the `Unknown` state for testing, update the row to a different value than `DB_STATUS_EXPECTED_VALUE`.
+### Admin App Variables
+
+The admin app talks to the API through a proxy route and sends `ADMIN_SECRET` as a bearer token.
+
+```bash
+GAMES_API_URL=http://localhost:3001
+ADMIN_SECRET=<same_secret_used_by_api>
+AUTH_SECRET=<long_random_secret>
+# NEXTAUTH_SECRET can also be used if the deployment already relies on it.
+GITHUB_CLIENT_ID=<github_oauth_client_id>
+GITHUB_CLIENT_SECRET=<github_oauth_client_secret>
+ADMIN_GITHUB_IDS=<comma_separated_allowed_github_logins>
+```
+
+For local development, a credentials login can be enabled:
+
+```bash
+ADMIN_DEV_SECRET=<local_admin_password>
+```
+
+The API must also have:
+
+```bash
+ADMIN_SECRET=<same_secret_used_by_admin_app>
+```
+
+### Zero Service Variables
+
+For a deployed Zero cache service:
+
+```bash
+NODE_ENV=production
+ZERO_UPSTREAM_DB=<postgres_url>
+ZERO_QUERY_URL=https://<api-domain>/api/zero/query
+ZERO_MUTATE_URL=https://<api-domain>/api/zero/mutate
+ZERO_ADMIN_PASSWORD=<strong_secret>
+```
+
+Optional:
+
+```bash
+ZERO_CVR_DB=<postgres_url>
+ZERO_CHANGE_DB=<postgres_url>
+```
+
+For Zero 1.5, keep the Zero cache version aligned with `@rocicorp/zero` in the workspace. A cache/server version mismatch can pass health checks while breaking browser sync connections.
+
+## Common Commands
+
+Run from the repository root.
+
+| Command | Purpose |
+|---------|---------|
+| `bun run dev` | Start all workspace dev servers through Turbo |
+| `bun run local:up` | Start local DB/Zero, push schema, run dev servers on Windows |
+| `bun run local:up:mac` | Start local DB/Zero, push schema, run dev servers on macOS |
+| `bun run local:up:linux` | Start local DB/Zero, push schema, run dev servers on Linux |
+| `bun run local:down` | Stop local dev ports and Docker services on Windows |
+| `bun run build` | Build all workspaces |
+| `bun run typecheck` | Typecheck all workspaces |
+| `bun run test` | Run Vitest suites |
+| `bun run test:ci` | Run CI-style Vitest suites |
+| `bun run test:local` | Run shared local integration tests |
+| `bun run lint` | Placeholder lint scripts |
+| `bun run db:push` | Push Drizzle schema to the configured database |
+| `bun run db:generate` | Generate Drizzle migration files |
+| `bun run db:studio` | Open Drizzle Studio |
+| `bun run db:push:prod` | Push schema to `PROD_DB_URL` after confirmation |
+
+Package-scoped examples:
+
+```bash
+bun --filter @games/web build
+bun --filter @games/web test
+bun --filter @games/api test
+bun --filter @games/admin typecheck
+bun --filter @games/shared db:push
+```
+
+React Doctor commands are documented in [docs/react-doctor-guide.md](docs/react-doctor-guide.md).
+
+## Data Model
+
+The primary schema lives in `packages/shared/src/drizzle/schema.ts`.
+
+Important tables:
+
+| Table | Purpose |
+|-------|---------|
+| `sessions` | Browser-backed player identity, current game attachment, IP/region/fingerprint, last seen |
+| `status` | Footer/database health sentinel |
+| `imposter_games` | Imposter room state, players, clues, votes, history, settings |
+| `password_games` | Password teams, rounds, active rounds, scores, settings |
+| `chain_reaction_games` | Word-chain state, submitted chains, turn, scores, round history |
+| `shade_signal_games` | Color-grid target, leader rotation, clues, guesses, scores |
+| `location_signal_games` | Map target, leader rotation, clues, guesses, distance scoring |
+| `chat_messages` | Per-game chat history |
+| `game_encryption_keys` | Server-held keys for hidden game secrets |
+| `shikaku_scores` | Shikaku leaderboard entries and replay metadata |
+| `shikaku_banned_sessions` | Shikaku abuse bans |
+| `pips_scores` | Pips leaderboard entries with easy/medium/hard splits |
+| `pips_banned_sessions` | Pips abuse bans |
+| `admin_bans` | Session, IP, and region bans |
+| `admin_restricted_names` | Restricted display-name patterns |
+| `admin_name_overrides` | Forced display names by session |
+
+The multiplayer game tables intentionally store much of their live state in JSON columns. That keeps room snapshots simple and keeps game transitions close to the mutator logic.
+
+## API Surface
+
+### Public and Runtime Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /health` | Railway/API healthcheck |
+| `GET /debug/build-info` | API build, uptime, platform, and database sentinel status |
+| `POST /api/session/sync` | Resolve or create signed browser session identity |
+| `POST /api/presence/heartbeat` | Refresh session/game presence |
+| `POST /api/pusher/auth` | Authenticate private Pusher channels |
+| `GET /api/admin-status` | Current site-wide admin status payload |
+| `GET /api/public/names/restricted` | Public restricted-name pattern list |
+| `GET /api/embed/html` | Rich social/bot preview HTML |
+| `GET /api/shikaku/puzzle` | Shikaku puzzle viewer page |
+| `GET /api/shikaku/puzzle.svg` | Dynamic Shikaku puzzle SVG |
+| `GET /api/maps/config` | Location Signal map tile configuration |
+| `GET /api/maps/geocode` | Location Signal geocoding proxy |
+| `POST /api/game-secret/init` | Initialize server-held game secret material |
+| `POST /api/game-secret/pre-reveal` | Prepare hidden data before reveal |
+| `POST /api/game-secret/key` | Resolve game secret key for authorized reveal paths |
+| `GET/POST /api/cleanup` | Run authenticated stale-game/session cleanup |
+| `GET/POST /api/activity` | Run authenticated activity report |
+
+### Zero Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/zero/query` | Resolve shared Zero query requests |
+| `POST /api/zero/mutate` | Resolve shared Zero mutation requests |
+
+### Solo Game Score Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/shikaku/leaderboard` | Read Shikaku leaderboard |
+| `POST /api/shikaku/score/eligibility` | Check Shikaku score eligibility |
+| `POST /api/shikaku/score` | Submit Shikaku score |
+| `GET /api/pips/leaderboard` | Read Pips leaderboard |
+| `POST /api/pips/score/eligibility` | Check Pips run eligibility |
+| `POST /api/pips/score` | Submit Pips run |
+
+### Admin API
+
+Admin routes are mounted under `/api/admin/*` and require `Authorization: Bearer <ADMIN_SECRET>`.
+
+Major groups:
+
+- `/clients`
+- `/games`
+- `/bans`
+- `/broadcast/*`
+- `/status`
+- `/names/*`
+- `/shikaku/scores`
+- `/pips/scores`
+
+## Admin Dashboard
+
+The admin app lives in `apps/admin` and runs locally on port `3002`.
+
+Pages:
+
+| Route | Purpose |
+|-------|---------|
+| `/login` | GitHub or local dev login |
+| `/` | Dashboard summary |
+| `/clients` | Connected sessions and client actions |
+| `/games` | Active room inspection and moderation |
+| `/bans` | Session/IP/region bans, restricted names, name overrides |
+| `/names` | Redirects to `/bans` |
+| `/shikaku` | Shikaku leaderboard management |
+| `/pips` | Pips leaderboard management |
+
+Capabilities:
+
+- Use broadcast controls from the dashboard shell.
+- View live sessions, names, fingerprints, regions, and game attachments.
+- Inspect active games by type and phase.
+- End one game or all games.
+- Kick a player from a game.
+- Ban by session ID, IP address, or region.
+- Send global or targeted toast messages.
+- Force refresh all clients.
+- Publish custom site-wide status.
+- Schedule update warnings.
+- Override player names and maintain restricted name patterns.
+- Create, edit, delete, and bulk-clear Shikaku and Pips score records.
+
+## Mobile UI
+
+The web app has a separate mobile surface under `apps/web/src/mobile`.
+
+Mobile routing is selected by the desktop page components through `useIsMobile()` at the `768px` breakpoint. Mobile pages use their own app shell, bottom navigation, sheets, and `m-` prefixed CSS classes so desktop and mobile changes stay isolated.
+
+Current mobile-specific pages include:
+
+- Home
+- Imposter
+- Password begin/game/results
+- Chain Reaction
+- Shade Signal
+- Location Signal
+
+Solo games render their own pages. Shikaku is documented as desktop-only; Pips owns its own responsive puzzle interface rather than a separate `MobilePipsPage`.
 
 ## Deployment
 
-The intended production architecture is:
+Production is split across separate services:
 
-- frontend on Vercel
-- API service on Railway
-- Zero cache on Railway as a separate service
-- Postgres on Railway Postgres or Neon
+- Vercel: `apps/web`
+- Railway: `apps/api`
+- Railway: Zero cache
+- Railway Postgres or Neon: database
+- Pusher Channels: admin broadcasts and targeted events
 
-### Architecture at deploy time
+### Vercel Web App
 
-```text
-Browser
-  |
-  |  HTTPS (static SPA)
-  v
-Vercel: apps/web
-  |                          Pusher Channels
-  |  HTTPS for presence       (admin broadcasts,
-  |  heartbeat + Pusher auth   targeted messages)
-  |  Zero cache URL for          |
-  |  realtime sync               v
-  v                          Pusher Cloud
-Railway API -----------------------> Postgres
-  ^                                    ^
-  |                                    |
-  +----------- Railway Zero -----------+
-```
+`vercel.json` currently uses Bun:
 
-### Deploying the frontend on Vercel
+- install: `bun install --frozen-lockfile`
+- build: `bun run --filter @games/web build`
+- output: `apps/web/dist`
 
-The repo already includes [vercel.json](vercel.json) with the correct monorepo settings.
+It also includes:
 
-Current Vercel config:
-
-- install command: `pnpm install --frozen-lockfile`
-- build command: `pnpm --filter @games/web build`
-- output directory: `apps/web/dist`
-- SPA rewrite to `/index.html`
-
-#### Vercel setup steps
-
-1. Import the GitHub repository into Vercel.
-2. Keep the project root at the repository root.
-3. Confirm the build settings match [vercel.json](vercel.json).
-4. Add the required environment variables.
+- SPA rewrite to `/index.html`.
+- Bot/social-preview rewrite to the API embed endpoint.
 
 Required Vercel variables:
 
@@ -860,72 +557,46 @@ VITE_PUSHER_KEY=<pusher_key>
 VITE_PUSHER_CLUSTER=<pusher_cluster>
 ```
 
-#### Why the rewrite matters
+### Railway API
 
-Without the rewrite, deep links like `/imposter/<id>` or `/chain/<id>` will 404 when refreshed directly in the browser.
+`railway.toml` builds from `Dockerfile` and starts:
 
-### Deploying the API on Railway
+```bash
+bun apps/api/src/index.ts
+```
 
-The repo includes [railway.toml](railway.toml).
-
-Current Railway config in the repo:
-
-- builder: Dockerfile
-- Dockerfile path: [Dockerfile](Dockerfile)
-- start command: `bun apps/api/src/index.ts`
-- healthcheck path: `/health`
-
-That means the current Railway deployment starts the TypeScript entrypoint through Bun even though a compiled `dist` build is also available. This works, but you should be aware of it because it differs from a stricter `node dist/index.js` production model.
-
-#### Railway API environment variables
+Required API variables:
 
 ```bash
 NODE_ENV=production
 DATABASE_URL=<postgres_url>
 CLEANUP_SECRET=<strong_secret>
+SESSION_COOKIE_SECRET=<long_random_secret>
+ADMIN_SECRET=<strong_admin_secret>
 PUSHER_APP_ID=<pusher_app_id>
 PUSHER_KEY=<pusher_key>
 PUSHER_SECRET=<pusher_secret>
 PUSHER_CLUSTER=<pusher_cluster>
-SESSION_COOKIE_SECRET=<long_random_session_secret>
 ```
 
-#### API service validation checklist
+Useful API checks after deploy:
 
-After deploy, verify:
+```bash
+GET https://<api-domain>/health
+GET https://<api-domain>/debug/build-info
+```
 
-- `GET https://<api-domain>/health` returns `{ "ok": true }`
-- `GET https://<api-domain>/debug/build-info` returns metadata JSON
-- Pusher auth endpoint `POST https://<api-domain>/api/pusher/auth` is reachable
+### Railway Zero Cache
 
-### Deploying Zero cache on Railway
-
-Zero should be deployed as its own service, separate from the API service.
+Deploy Zero cache as a separate service. Keep it on the same `@rocicorp/zero` version used by the workspace (`1.5.0`).
 
 Recommended start command:
 
 ```bash
-pnpm dlx @rocicorp/zero@1.5.0 zero-cache --port "$PORT"
+bunx @rocicorp/zero@1.5.0 zero-cache --port "$PORT"
 ```
 
-Keep this version in lockstep with the `@rocicorp/zero` version used by the
-web, API, and shared packages. A mismatched Zero cache can still answer HTTP
-health checks while failing the browser WebSocket handshake, which shows up in
-production as `/sync/v50/connect` timing out after 10 seconds. For Zero 1.5,
-deploy `zero-cache` before the API server because the 1.5 query/mutate helper
-response shape is not understood by 1.4 `zero-cache`.
-
-Recommended Railway healthcheck path:
-
-```bash
-/
-```
-
-Do not use `/keepalive` as a casual external healthcheck. In Zero, that endpoint
-starts an opt-in heartbeat monitor and can cause the service to drain if
-follow-up heartbeats do not arrive on its expected cadence.
-
-Required Zero service environment variables:
+Required Zero variables:
 
 ```bash
 NODE_ENV=production
@@ -935,199 +606,84 @@ ZERO_MUTATE_URL=https://<api-domain>/api/zero/mutate
 ZERO_ADMIN_PASSWORD=<strong_secret>
 ```
 
-Optional variables:
+Do not set `ZERO_PORT` to the literal string `"$PORT"` on Railway. Railway does not shell-expand environment variable values in that field.
 
-- `ZERO_MUTATE_ALLOWED_CLIENT_HEADERS=...`
-  Only needed if you intentionally rely on custom client-provided mutate headers. The current session-proof flow uses Zero's auth token path for mutations, so this is no longer required for normal production setup.
+### Database Requirements
+
+Zero needs a direct Postgres connection with logical replication support. For local development, `docker-compose.yml` starts Postgres 16 with:
 
 ```bash
-ZERO_CVR_DB=<postgres_url>
-ZERO_CHANGE_DB=<postgres_url>
+postgres -c wal_level=logical
 ```
 
-#### Zero deployment requirements
-
-- the upstream Postgres endpoint must support `wal_level=logical`
-- use a direct Postgres endpoint rather than a transaction pooler for `ZERO_UPSTREAM_DB`
-- `VITE_ZERO_CACHE_URL` in Vercel must point at the Zero public domain
-
-### Database deployment notes
-
-You can use either:
-
-- Railway Postgres
-- Neon
-
-Requirements regardless of provider:
-
-- direct connection string available to the API
-- direct connection string available to Zero
-- logical replication support for the Zero upstream DB path
-
-### End-to-end production setup sequence
-
-1. Push the repository to GitHub.
-2. Provision Postgres.
-3. Deploy the API service to Railway.
-4. Deploy the Zero cache service to Railway.
-5. Configure the Zero service with the API query and mutate URLs.
-6. Deploy the web app to Vercel.
-7. Configure Vercel with the Zero cache URL, API URL, and Pusher key/cluster.
-8. Open the web app and run smoke tests.
-
-### Smoke test checklist after deploy
-
-1. Open the production web app.
-2. Create an Imposter room.
-3. Create a Password room.
-4. Create a Chain Reaction room.
-5. Create a Shade Signal room.
-6. Create a Location Signal room.
-7. Play a Shikaku run and verify leaderboard submission.
-8. Join from a second browser tab or second device.
-9. Verify that player presence updates.
-10. Verify that game actions propagate in near realtime.
-11. Verify `/health` and `/debug/build-info` on the API.
-12. Verify the Zero service is reachable and not returning 502s.
-
-### Rollback approach
-
-- Vercel: promote the previous successful frontend deployment
-- Railway API: rollback to the previous working deployment
-- Railway Zero: rollback independently if only the cache service broke
-- Database: restore from backup if the issue is schema or data related
+For production, use a direct Postgres URL for `ZERO_UPSTREAM_DB`; avoid transaction poolers for the Zero upstream connection.
 
 ## Operational Notes
 
-### Connection debugging
+### Session Identity
 
-The frontend includes connection-debug plumbing that tracks:
+The app uses browser-local identity rather than user accounts for public gameplay. The API signs a long-lived `games_session` cookie and issues a signed Zero session proof. Mutations are checked so one browser session cannot submit actions for another player.
 
-- Zero connection state
-- Zero online/offline events
-- API heartbeat latency
-- API metadata probe status and latency
+### Presence
 
-This is useful when diagnosing issues that otherwise look like generic “realtime is broken” symptoms.
+Presence is inferred from HTTP heartbeats, not WebSockets. Game pages periodically call `POST /api/presence/heartbeat`, and the API updates `sessions.lastSeen` plus the current game attachment.
 
-### Presence semantics
+### Admin Broadcasts
 
-Presence is inferred from recent HTTP heartbeats (every 60 seconds) rather than a durable authentication/session framework. If you change the heartbeat cadence or timeout assumptions, make sure to update both:
+Admin broadcasts use Pusher Channels:
 
-- client heartbeat timing in `usePresenceSocket`
-- backend stale/presence cutoff logic
+- `games-broadcast` for global messages.
+- `private-user-{sessionId}` for targeted kicks, name changes, and direct toasts.
 
-### Cleanup semantics
+### Cleanup
 
-The cleanup job uses two broad windows:
+The API can clean stale games and sessions in two ways:
 
-- a stale window that ends abandoned games
-- a delete window that removes older ended games and stale sessions
+- scheduled cleanup inside the API process
+- manual `GET` or `POST /api/cleanup` with bearer auth from `CLEANUP_SECRET`
 
-If you extend reconnect tolerance, you will likely also want to revisit those cleanup constants.
+Cleanup marks abandoned games as ended, detaches stale sessions, and removes old ended rows.
+
+### Footer Database Status
+
+`/debug/build-info` reads the `status` table and reports whether the configured sentinel exists and matches.
+
+Default values:
+
+```bash
+DB_STATUS_KEY=footer
+DB_STATUS_EXPECTED_VALUE=ok
+```
+
+Seed or repair the row with:
+
+```sql
+INSERT INTO status (key, value, updated_at)
+VALUES ('footer', 'ok', EXTRACT(EPOCH FROM NOW())::bigint * 1000)
+ON CONFLICT (key)
+DO UPDATE SET
+  value = EXCLUDED.value,
+  updated_at = EXCLUDED.updated_at;
+```
+
+### Smoke Test Checklist
+
+After a deploy:
+
+1. Open the web app.
+2. Create one room for each multiplayer game.
+3. Join a room from a second tab or device.
+4. Confirm chat, presence, phase transitions, and host controls.
+5. Play one Shikaku run and verify leaderboard submission.
+6. Play one Pips run and verify leaderboard submission.
+7. Open the admin dashboard and verify clients, games, broadcasts, bans, Shikaku scores, and Pips scores.
+8. Check `/health`, `/debug/build-info`, and the Zero cache public URL.
 
 ## Known Constraints
 
-- Authentication is browser-local identity only; there is no account system.
-- Linting is not fully configured yet even though `lint` scripts exist.
-- Game state is heavily JSON-column based, which is pragmatic for mutable party-game state but less ideal for analytical querying.
-- The Railway config currently starts the API through `tsx src/index.ts` instead of `node dist/index.js`.
-- Shade Signal is fully implemented with desktop and mobile UI, including leader picking, hard mode, and auto-advance timers.
-- Location Signal is fully implemented with desktop and mobile UI, including interactive map, distance scoring, and geocode proxy.
-- Shikaku is a single-player puzzle with no multiplayer sync — it uses REST endpoints for leaderboard only.
-
-## Mobile UI
-
-The application includes a fully separate mobile UI that activates automatically on screens 768px or narrower. The mobile UI lives entirely under `apps/web/src/mobile/` and does not share any page components with the desktop UI — this is intentional to prevent mobile changes from regressing the desktop experience.
-
-### Architecture
-
-- **Detection**: A `useIsMobile` hook (in `apps/web/src/hooks/useIsMobile.ts`) uses `matchMedia` via `useSyncExternalStore` to detect viewport width at the 768px breakpoint.
-- **Routing**: Each desktop page component checks `useIsMobile()` and returns the corresponding mobile component early if true. The desktop code path is never reached on mobile.
-- **Layout**: `MobileLayout.tsx` provides the mobile app shell with a bottom navigation bar (Home, Chat, Info, Options) and bottom-sheet modals.
-- **Styling**: All mobile CSS is in `apps/web/src/mobile/mobile.css`, using the `m-` prefix for all class names. No Tailwind utility classes are used in mobile components — all styling is custom CSS with the same CSS variables as desktop.
-
-### File Structure
-
-```text
-apps/web/src/mobile/
-├─ MobileLayout.tsx              # App shell with bottom nav + sheet modals
-├─ mobile.css                    # All mobile-specific CSS (~2100+ lines, m-* prefix)
-├─ components/
-│  ├─ BottomSheet.tsx            # Reusable bottom sheet overlay
-│  ├─ MobileChatSheet.tsx        # Chat bottom sheet
-│  ├─ MobileGameHeader.tsx       # Compact game header with code + phase
-│  ├─ MobileInfoSheet.tsx        # Info/rules bottom sheet
-│  └─ MobileOptionsSheet.tsx     # Options + dev demo tools
-└─ pages/
-   ├─ MobileHomePage.tsx         # Home, join, create game
-   ├─ MobileImposterPage.tsx     # Imposter game (all phases)
-   ├─ MobilePasswordBeginPage.tsx # Password pre-round
-   ├─ MobilePasswordGamePage.tsx  # Password active rounds
-   ├─ MobilePasswordResultsPage.tsx # Password results
-   ├─ MobileChainReactionPage.tsx # Chain Reaction (all phases)
-   ├─ MobileShadeSignalPage.tsx   # Shade Signal (all phases)
-   └─ MobileLocationSignalPage.tsx # Location Signal (all phases)
-```
-
-### Development Guidelines
-
-- **Never** modify desktop components to accommodate mobile. Mobile gets its own components.
-- All mobile class names use the `m-` prefix to avoid collisions with desktop CSS.
-- When adding a new game, create a corresponding `Mobile<Game>Page.tsx` in the mobile pages directory.
-- Shikaku is currently desktop-only and does not have a mobile page.
-- Use the dev demo buttons in the mobile Options sheet (visible in `DEV` mode only) to quickly test any game phase on mobile.
-- Run `npx vite build` to verify both desktop and mobile code compile cleanly.
-
-## Admin Dashboard
-
-The admin app lives in `apps/admin/` and is a Next.js application with authentication.
-
-### Pages
-
-| Route | Purpose |
-|-------|--------|
-| `/login` | Admin authentication |
-| `/` | Dashboard home |
-| `/clients` | Connected clients / active sessions |
-| `/games` | Active games management (view, end, kick) |
-| `/bans` | Session / IP / region ban management |
-| `/broadcast` | Global toast, force refresh, custom status, update warnings |
-| `/names` | Name overrides + restricted name patterns |
-| `/shikaku` | Shikaku leaderboard management (view, edit, delete scores) |
-
-### Capabilities
-
-- View all connected sessions and their current game associations
-- End individual games or all games at once
-- Kick players from games
-- Ban by session ID, IP address, or region
-- Broadcast toast messages globally or to specific users
-- Force browser refresh across all clients
-- Set a custom status banner shown site-wide
-- Send timed update warnings
-- Override player display names
-- Block name patterns via regex
-- Manage Shikaku leaderboard entries (edit scores, delete entries, wipe by difficulty)
-
-## Reference Docs
-
-- [docs/game-imposter.md](docs/game-imposter.md)
-- [docs/game-password.md](docs/game-password.md)
-- [docs/game-chain-reaction.md](docs/game-chain-reaction.md)
-- [docs/game-shade-signal.md](docs/game-shade-signal.md)
-- [docs/game-location-signal.md](docs/game-location-signal.md)
-- [docs/game-shikaku.md](docs/game-shikaku.md)
-
-## Quick Start
-
-If you just want to get the repo running locally:
-
-```bash
-pnpm install
-docker compose up -d
-pnpm db:push
-pnpm dev
-```
-
-Then open `http://localhost:5173`.
+- Public gameplay has browser-local identity only; there is no player account system.
+- Lint scripts are placeholders.
+- Multiplayer game state is mostly JSON-column snapshots by design.
+- The API runs TypeScript directly through Bun in production instead of a compiled `dist` entry.
+- The Zero cache and workspace `@rocicorp/zero` versions should stay aligned.
+- Shikaku and Pips are not Zero-synced multiplayer games; they use REST only for leaderboard flows.

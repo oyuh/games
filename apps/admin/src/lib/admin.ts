@@ -1,4 +1,9 @@
-export type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
+export type GameType =
+  | "imposter"
+  | "password"
+  | "chain_reaction"
+  | "shade_signal"
+  | "location_signal";
 
 export type FooterStatus = {
   text: string;
@@ -151,7 +156,10 @@ const GAME_TYPE_LABELS: Record<GameType, string> = {
   location_signal: "Location Signal",
 };
 
-export const GAME_TYPE_OPTIONS: Array<{ value: GameType | "all"; label: string }> = [
+export const GAME_TYPE_OPTIONS: Array<{
+  value: GameType | "all";
+  label: string;
+}> = [
   { value: "all", label: "All games" },
   { value: "imposter", label: GAME_TYPE_LABELS.imposter },
   { value: "password", label: GAME_TYPE_LABELS.password },
@@ -179,7 +187,10 @@ export function formatRelativeTime(timestamp: number | null | undefined) {
     return "--";
   }
 
-  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - timestamp) / 1000),
+  );
   if (elapsedSeconds < 60) {
     return `${elapsedSeconds}s ago`;
   }

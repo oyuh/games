@@ -33,7 +33,7 @@ if (isDev && devSecret) {
           email: "dev@localhost",
         };
       },
-    })
+    }),
   );
 }
 

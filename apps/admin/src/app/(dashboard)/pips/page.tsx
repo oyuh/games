@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Dice5, Edit3, PlusCircle, Search, TimerReset, Trash2, Trophy } from "lucide-react";
+import {
+  Copy,
+  Dice5,
+  Edit3,
+  PlusCircle,
+  Search,
+  TimerReset,
+  Trash2,
+  Trophy,
+} from "lucide-react";
 import { api } from "@/lib/client-api";
 import {
   formatDateTime,
@@ -54,7 +63,9 @@ function Surface({
   className?: string;
 }) {
   return (
-    <section className={`rounded-[24px] border border-white/8 bg-[#0f1826] p-5 ${className}`}>
+    <section
+      className={`rounded-lg border border-border bg-card p-5 ${className}`}
+    >
       {children}
     </section>
   );
@@ -79,7 +90,9 @@ function formatPreciseTime(milliseconds: number) {
   const minutes = Math.floor(safeMs / 60_000);
   const seconds = Math.floor((safeMs % 60_000) / 1000);
   const tenths = Math.floor((safeMs % 1000) / 100);
-  return minutes > 0 ? `${minutes}:${String(seconds).padStart(2, "0")}.${tenths}` : `${seconds}.${tenths}s`;
+  return minutes > 0
+    ? `${minutes}:${String(seconds).padStart(2, "0")}.${tenths}`
+    : `${seconds}.${tenths}s`;
 }
 
 export default function PipsAdminPage() {
@@ -93,7 +106,9 @@ export default function PipsAdminPage() {
   const [pageSize, setPageSize] = useState(50);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedScore, setSelectedScore] = useState<PipsScoreRecord | null>(null);
+  const [selectedScore, setSelectedScore] = useState<PipsScoreRecord | null>(
+    null,
+  );
   const [draft, setDraft] = useState<ScoreDraft | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -118,7 +133,12 @@ export default function PipsAdminPage() {
         setTotalPages(Math.max(1, response.totalPages ?? 1));
       } catch (error) {
         if (!cancelled) {
-          show(error instanceof Error ? error.message : "Unable to load Pips runs.", "error");
+          show(
+            error instanceof Error
+              ? error.message
+              : "Unable to load Pips runs.",
+            "error",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -141,24 +161,36 @@ export default function PipsAdminPage() {
       if (!normalizedSearch) {
         return true;
       }
-      return [score.name, score.sessionId, String(score.seed), String(score.totalMs), String(score.easyMs), String(score.mediumMs), String(score.hardMs)].some((value) =>
-        normalizeSearchText(value).includes(normalizedSearch)
-      );
+      return [
+        score.name,
+        score.sessionId,
+        String(score.seed),
+        String(score.totalMs),
+        String(score.easyMs),
+        String(score.mediumMs),
+        String(score.hardMs),
+      ].some((value) => normalizeSearchText(value).includes(normalizedSearch));
     });
   }, [normalizedSearch, scores]);
 
   const summary = useMemo(() => {
     const fastestTotal = visibleScores.reduce(
       (fastest, score) => Math.min(fastest, score.totalMs),
-      Number.POSITIVE_INFINITY
+      Number.POSITIVE_INFINITY,
     );
     const averageTotal =
       visibleScores.length > 0
-        ? Math.round(visibleScores.reduce((sum, score) => sum + score.totalMs, 0) / visibleScores.length)
+        ? Math.round(
+            visibleScores.reduce((sum, score) => sum + score.totalMs, 0) /
+              visibleScores.length,
+          )
         : 0;
     const averageHard =
       visibleScores.length > 0
-        ? Math.round(visibleScores.reduce((sum, score) => sum + score.hardMs, 0) / visibleScores.length)
+        ? Math.round(
+            visibleScores.reduce((sum, score) => sum + score.hardMs, 0) /
+              visibleScores.length,
+          )
         : 0;
 
     return {
@@ -210,19 +242,39 @@ export default function PipsAdminPage() {
     if (nextName && nextName !== selectedScore.name) {
       payload.name = nextName;
     }
-    if (Number.isInteger(nextSeed) && nextSeed >= 0 && nextSeed !== selectedScore.seed) {
+    if (
+      Number.isInteger(nextSeed) &&
+      nextSeed >= 0 &&
+      nextSeed !== selectedScore.seed
+    ) {
       payload.seed = nextSeed;
     }
-    if (Number.isFinite(nextTotalMs) && nextTotalMs >= 0 && nextTotalMs !== selectedScore.totalMs) {
+    if (
+      Number.isFinite(nextTotalMs) &&
+      nextTotalMs >= 0 &&
+      nextTotalMs !== selectedScore.totalMs
+    ) {
       payload.totalMs = Math.floor(nextTotalMs);
     }
-    if (Number.isFinite(nextEasyMs) && nextEasyMs >= 0 && nextEasyMs !== selectedScore.easyMs) {
+    if (
+      Number.isFinite(nextEasyMs) &&
+      nextEasyMs >= 0 &&
+      nextEasyMs !== selectedScore.easyMs
+    ) {
       payload.easyMs = Math.floor(nextEasyMs);
     }
-    if (Number.isFinite(nextMediumMs) && nextMediumMs >= 0 && nextMediumMs !== selectedScore.mediumMs) {
+    if (
+      Number.isFinite(nextMediumMs) &&
+      nextMediumMs >= 0 &&
+      nextMediumMs !== selectedScore.mediumMs
+    ) {
       payload.mediumMs = Math.floor(nextMediumMs);
     }
-    if (Number.isFinite(nextHardMs) && nextHardMs >= 0 && nextHardMs !== selectedScore.hardMs) {
+    if (
+      Number.isFinite(nextHardMs) &&
+      nextHardMs >= 0 &&
+      nextHardMs !== selectedScore.hardMs
+    ) {
       payload.hardMs = Math.floor(nextHardMs);
     }
     if (
@@ -251,7 +303,10 @@ export default function PipsAdminPage() {
       closeEditor();
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to update Pips run.", "error");
+      show(
+        error instanceof Error ? error.message : "Unable to update Pips run.",
+        "error",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -278,7 +333,10 @@ export default function PipsAdminPage() {
       }
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to delete Pips run.", "error");
+      show(
+        error instanceof Error ? error.message : "Unable to delete Pips run.",
+        "error",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -287,7 +345,8 @@ export default function PipsAdminPage() {
   const clearScores = async () => {
     const confirmed = await confirm({
       title: "Delete all Pips runs?",
-      description: "This clears every persisted Pips leaderboard entry and cannot be undone.",
+      description:
+        "This clears every persisted Pips leaderboard entry and cannot be undone.",
       confirmLabel: "Clear runs",
       tone: "destructive",
     });
@@ -307,7 +366,10 @@ export default function PipsAdminPage() {
       setPage(1);
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to clear Pips runs.", "error");
+      show(
+        error instanceof Error ? error.message : "Unable to clear Pips runs.",
+        "error",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -333,23 +395,32 @@ export default function PipsAdminPage() {
             },
             {
               label: "Average total",
-              value: summary.averageTotal > 0 ? formatPreciseTime(summary.averageTotal) : "--",
+              value:
+                summary.averageTotal > 0
+                  ? formatPreciseTime(summary.averageTotal)
+                  : "--",
               icon: Dice5,
             },
             {
               label: "Average hard",
-              value: summary.averageHard > 0 ? formatPreciseTime(summary.averageHard) : "--",
+              value:
+                summary.averageHard > 0
+                  ? formatPreciseTime(summary.averageHard)
+                  : "--",
               icon: Search,
             },
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.label} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+              <div
+                key={item.label}
+                className="rounded-lg border border-border bg-muted/40 p-4"
+              >
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                   <Icon className="size-4" />
                   {item.label}
                 </div>
-                <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">
+                <div className="mt-3 text-2xl font-semibold tracking-normal text-foreground">
                   {item.value}
                 </div>
               </div>
@@ -361,19 +432,19 @@ export default function PipsAdminPage() {
       <Surface className="mt-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative w-full max-w-2xl">
-            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by player, session, seed, or split time"
-              className="border-white/8 bg-[#0d1624] pl-11 text-zinc-50"
+              className="border-border bg-card pl-11 text-foreground"
             />
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              className="bg-orange-300 text-orange-950 hover:bg-orange-200"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => setCreateOpen(true)}
             >
               <PlusCircle className="size-4" />
@@ -381,7 +452,7 @@ export default function PipsAdminPage() {
             </Button>
             <Button
               variant="destructive"
-              className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
+              className="border border-border bg-muted text-foreground hover:bg-accent"
               disabled={pendingAction === "clear"}
               onClick={() => void clearScores()}
             >
@@ -393,56 +464,80 @@ export default function PipsAdminPage() {
       </Surface>
 
       <Surface className="mt-4">
-        <div className="overflow-hidden rounded-[20px] border border-white/8 bg-[#0d1624]">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-zinc-400">Rank</TableHead>
-                <TableHead className="text-zinc-400">Player</TableHead>
-                <TableHead className="text-zinc-400">Total</TableHead>
-                <TableHead className="text-zinc-400">Easy</TableHead>
-                <TableHead className="text-zinc-400">Medium</TableHead>
-                <TableHead className="text-zinc-400">Hard</TableHead>
-                <TableHead className="text-zinc-400">Seed</TableHead>
-                <TableHead className="text-zinc-400">Session</TableHead>
-                <TableHead className="text-zinc-400">Submitted</TableHead>
-                <TableHead className="text-zinc-400">Actions</TableHead>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">Rank</TableHead>
+                <TableHead className="text-muted-foreground">Player</TableHead>
+                <TableHead className="text-muted-foreground">Total</TableHead>
+                <TableHead className="text-muted-foreground">Easy</TableHead>
+                <TableHead className="text-muted-foreground">Medium</TableHead>
+                <TableHead className="text-muted-foreground">Hard</TableHead>
+                <TableHead className="text-muted-foreground">Seed</TableHead>
+                <TableHead className="text-muted-foreground">Session</TableHead>
+                <TableHead className="text-muted-foreground">
+                  Submitted
+                </TableHead>
+                <TableHead className="text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && scores.length === 0 ? (
-                <TableRow className="border-white/10 hover:bg-transparent">
+                <TableRow className="border-border hover:bg-transparent">
                   <TableCell colSpan={10} className="px-4 py-5">
                     <div className="space-y-2">
                       {Array.from({ length: 6 }).map((_, index) => (
-                        <Skeleton key={index} className="h-12 bg-white/5" />
+                        <Skeleton key={index} className="h-12 bg-muted" />
                       ))}
                     </div>
                   </TableCell>
                 </TableRow>
               ) : visibleScores.length === 0 ? (
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={10} className="px-4 py-12 text-center text-sm text-zinc-500">
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableCell
+                    colSpan={10}
+                    className="px-4 py-12 text-center text-sm text-muted-foreground"
+                  >
                     No Pips runs match the current search.
                   </TableCell>
                 </TableRow>
               ) : (
                 visibleScores.map((score, index) => (
-                  <TableRow key={score.id} className="border-white/8 hover:bg-[#142033]">
-                    <TableCell className="text-zinc-400">{(page - 1) * pageSize + index + 1}</TableCell>
-                    <TableCell>
-                      <div className="font-medium text-white">{score.name}</div>
-                      <div className="mt-1 text-xs text-zinc-500">{shortId(score.id, 14)}</div>
+                  <TableRow
+                    key={score.id}
+                    className="border-border hover:bg-accent"
+                  >
+                    <TableCell className="text-muted-foreground">
+                      {(page - 1) * pageSize + index + 1}
                     </TableCell>
-                    <TableCell className="font-semibold text-orange-100">{formatPreciseTime(score.totalMs)}</TableCell>
-                    <TableCell className="text-zinc-200">{formatPreciseTime(score.easyMs)}</TableCell>
-                    <TableCell className="text-zinc-200">{formatPreciseTime(score.mediumMs)}</TableCell>
-                    <TableCell className="text-zinc-200">{formatPreciseTime(score.hardMs)}</TableCell>
+                    <TableCell>
+                      <div className="font-medium text-foreground">
+                        {score.name}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {shortId(score.id, 14)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-semibold text-foreground">
+                      {formatPreciseTime(score.totalMs)}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {formatPreciseTime(score.easyMs)}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {formatPreciseTime(score.mediumMs)}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {formatPreciseTime(score.hardMs)}
+                    </TableCell>
                     <TableCell>
                       <button
-                        className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 font-mono text-sm text-zinc-300 transition-colors hover:bg-white/[0.08]"
+                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-sm text-muted-foreground transition-colors hover:bg-accent"
                         type="button"
-                        onClick={() => void copyText(String(score.seed), "Seed")}
+                        onClick={() =>
+                          void copyText(String(score.seed), "Seed")
+                        }
                       >
                         <Copy className="size-3" />
                         {score.seed}
@@ -450,21 +545,25 @@ export default function PipsAdminPage() {
                     </TableCell>
                     <TableCell>
                       <button
-                        className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 font-mono text-sm text-zinc-300 transition-colors hover:bg-white/[0.08]"
+                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-sm text-muted-foreground transition-colors hover:bg-accent"
                         type="button"
-                        onClick={() => void copyText(score.sessionId, "Session id")}
+                        onClick={() =>
+                          void copyText(score.sessionId, "Session id")
+                        }
                       >
                         <Copy className="size-3" />
                         {shortId(score.sessionId, 14)}
                       </button>
                     </TableCell>
-                    <TableCell className="text-sm text-zinc-400">{formatDateTime(score.createdAt)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatDateTime(score.createdAt)}
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                          className="border-border bg-card text-foreground hover:bg-accent"
                           onClick={() => openEditor(score)}
                         >
                           <Edit3 className="size-4" />
@@ -473,7 +572,7 @@ export default function PipsAdminPage() {
                         <Button
                           variant="destructive"
                           size="sm"
-                          className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
+                          className="border border-border bg-muted text-foreground hover:bg-accent"
                           disabled={pendingAction === `delete-${score.id}`}
                           onClick={() => void deleteScore(score)}
                         >
@@ -513,12 +612,18 @@ export default function PipsAdminPage() {
         }}
       />
 
-      <Dialog open={Boolean(selectedScore && draft)} onOpenChange={(open) => !open && closeEditor()}>
-        <DialogContent className="[--dialog-content-width:66rem] 2xl:[--dialog-content-width:72rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
+      <Dialog
+        open={Boolean(selectedScore && draft)}
+        onOpenChange={(open) => !open && closeEditor()}
+      >
+        <DialogContent className="[--dialog-content-width:66rem] 2xl:[--dialog-content-width:72rem] border-border bg-card text-foreground shadow-none">
           <DialogHeader>
-            <DialogTitle className="text-xl text-white">Edit Pips run</DialogTitle>
-            <DialogDescription className="text-zinc-300/74">
-              Adjust the persisted run, including total time, individual splits, seed, player name, and source session.
+            <DialogTitle className="text-xl text-foreground">
+              Edit Pips run
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Adjust the persisted run, including total time, individual splits,
+              seed, player name, and source session.
             </DialogDescription>
           </DialogHeader>
 
@@ -526,33 +631,50 @@ export default function PipsAdminPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="pips-session-id" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="pips-session-id"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Session id
                   </label>
                   <Input
                     id="pips-session-id"
                     value={draft.sessionId}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, sessionId: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, sessionId: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label htmlFor="pips-player-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="pips-player-name"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Player name
                   </label>
                   <Input
                     id="pips-player-name"
                     value={draft.name}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, name: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, name: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label htmlFor="pips-seed" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="pips-seed"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Seed
                   </label>
                   <Input
@@ -561,13 +683,20 @@ export default function PipsAdminPage() {
                     min={0}
                     value={draft.seed}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, seed: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, seed: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label htmlFor="pips-created-at" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="pips-created-at"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Submitted at
                   </label>
                   <Input
@@ -575,9 +704,13 @@ export default function PipsAdminPage() {
                     type="datetime-local"
                     value={draft.createdAt}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, createdAt: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, createdAt: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
               </div>
@@ -591,7 +724,10 @@ export default function PipsAdminPage() {
                   ["pips-puzzle-count", "Puzzle count", "puzzleCount"],
                 ].map(([id, label, key]) => (
                   <div key={id}>
-                    <label htmlFor={id} className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                    <label
+                      htmlFor={id}
+                      className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                    >
                       {label}
                     </label>
                     <Input
@@ -600,9 +736,13 @@ export default function PipsAdminPage() {
                       min={0}
                       value={draft[key as keyof ScoreDraft]}
                       onChange={(event) =>
-                        setDraft((current) => (current ? { ...current, [key]: event.target.value } : current))
+                        setDraft((current) =>
+                          current
+                            ? { ...current, [key]: event.target.value }
+                            : current,
+                        )
                       }
-                      className="border-white/8 bg-[#0d1624] text-zinc-50"
+                      className="border-border bg-card text-foreground"
                     />
                   </div>
                 ))}
@@ -613,8 +753,11 @@ export default function PipsAdminPage() {
           <div className="flex flex-wrap justify-between gap-2">
             <Button
               variant="destructive"
-              className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
-              disabled={!selectedScore || pendingAction === `delete-${selectedScore?.id}`}
+              className="border border-border bg-muted text-foreground hover:bg-accent"
+              disabled={
+                !selectedScore ||
+                pendingAction === `delete-${selectedScore?.id}`
+              }
               onClick={() => selectedScore && void deleteScore(selectedScore)}
             >
               <Trash2 className="size-4" />
@@ -624,13 +767,17 @@ export default function PipsAdminPage() {
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                className="border-border bg-card text-foreground hover:bg-accent"
                 onClick={closeEditor}
               >
                 Cancel
               </Button>
               <Button
-                disabled={!selectedScore || !draft || pendingAction === `save-${selectedScore?.id}`}
+                disabled={
+                  !selectedScore ||
+                  !draft ||
+                  pendingAction === `save-${selectedScore?.id}`
+                }
                 onClick={() => void saveScore()}
               >
                 Save changes

@@ -7,10 +7,14 @@ zero_container_name="games-local-zero-cache"
 docker_network_name="games-local-dev"
 postgres_volume_name="games-pg-data"
 zero_volume_name="games-zero-data"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+root_dir="$(cd "$script_dir/.." && pwd)"
 
 skip_docker=false
 skip_db_push=false
 skip_dev=false
+skip_ports=false
+preserve_db_data=false
 use_host=false
 
 while [[ $# -gt 0 ]]; do
@@ -23,6 +27,12 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-dev)
       skip_dev=true
+      ;;
+    --skip-ports)
+      skip_ports=true
+      ;;
+    --preserve-db-data)
+      preserve_db_data=true
       ;;
     --host)
       use_host=true
@@ -67,6 +77,83 @@ wait_for_port() {
 
   echo "Timed out waiting for ${host_name}:${port}" >&2
   exit 1
+}
+
+stop_listening_process() {
+  local port="$1"
+  local process_ids=""
+
+  if command -v lsof >/dev/null 2>&1; then
+    process_ids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+  elif command -v fuser >/dev/null 2>&1; then
+    process_ids="$(fuser "${port}/tcp" 2>/dev/null || true)"
+  else
+    echo "Cannot clear port ${port}: install lsof or fuser, or run local:down first." >&2
+    return 0
+  fi
+
+  if [[ -z "$process_ids" ]]; then
+    return 0
+  fi
+
+  while IFS= read -r process_id; do
+    [[ -z "$process_id" ]] && continue
+    [[ "$process_id" == "$$" ]] && continue
+
+    local process_name
+    process_name="$(ps -p "$process_id" -o comm= 2>/dev/null | xargs || true)"
+    echo "Stopping process on port ${port} - ${process_name:-unknown} (${process_id})"
+    kill "$process_id" >/dev/null 2>&1 || true
+    sleep 1
+    kill -9 "$process_id" >/dev/null 2>&1 || true
+  done <<< "$process_ids"
+}
+
+stop_dev_ports() {
+  echo "Clearing local dev ports 5173, 3002, 3001..."
+  stop_listening_process 5173
+  stop_listening_process 3002
+  stop_listening_process 3001
+}
+
+get_dotenv_value() {
+  local name="$1"
+  local env_file="$root_dir/.env"
+
+  [[ -f "$env_file" ]] || return 0
+  grep -E "^[[:space:]]*${name}[[:space:]]*=" "$env_file" | tail -n 1 | sed -E "s/^[^=]+=//; s/^[\"']//; s/[\"']$//"
+}
+
+is_local_database_url() {
+  local database_url="$1"
+  [[ -z "$database_url" ]] && return 0
+  [[ "$database_url" =~ @localhost(:|/) ]] && return 0
+  [[ "$database_url" =~ @127\.0\.0\.1(:|/) ]] && return 0
+  [[ "$database_url" =~ @\[::1\](:|/) ]] && return 0
+  [[ "$database_url" =~ ^postgres://localhost(:|/) ]] && return 0
+  [[ "$database_url" =~ ^postgres://127\.0\.0\.1(:|/) ]] && return 0
+  return 1
+}
+
+push_local_db_schema() {
+  local database_url="${DATABASE_URL:-}"
+  if [[ -z "$database_url" ]]; then
+    database_url="$(get_dotenv_value DATABASE_URL || true)"
+  fi
+
+  if [[ "$preserve_db_data" == false ]] && is_local_database_url "$database_url"; then
+    echo "Auto-approving local Drizzle data-loss prompts."
+    (cd "$root_dir/packages/shared" && bun run drizzle-kit push --force)
+    return 0
+  fi
+
+  if ! is_local_database_url "$database_url"; then
+    echo "DATABASE_URL does not point at a local database. Refusing to auto-approve schema changes." >&2
+    echo "Run 'bun db:push' manually or rerun local-dev with --skip-db-push." >&2
+    exit 1
+  fi
+
+  bun db:push
 }
 
 ensure_docker_network() {
@@ -148,6 +235,10 @@ if [[ "$skip_db_push" == false || "$skip_dev" == false ]]; then
 fi
 assert_command_available nc
 
+if [[ "$skip_dev" == false && "$skip_ports" == false ]]; then
+  stop_dev_ports
+fi
+
 if [[ "$skip_docker" == false ]]; then
   echo "Starting Postgres..."
   start_postgres_container
@@ -158,7 +249,7 @@ fi
 
 if [[ "$skip_db_push" == false ]]; then
   echo "Pushing database schema..."
-  bun db:push
+  push_local_db_schema
 fi
 
 if [[ "$skip_docker" == false ]]; then

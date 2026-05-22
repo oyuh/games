@@ -1,6 +1,6 @@
 export async function api(
   path: string,
-  options: { method?: string; body?: unknown } = {}
+  options: { method?: string; body?: unknown } = {},
 ) {
   const method = options.method ?? "GET";
   const url = `/api/proxy?path=${encodeURIComponent(path)}`;

@@ -35,11 +35,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Unable to complete that action.";
+  return error instanceof Error
+    ? error.message
+    : "Unable to complete that action.";
 }
 
 function Surface({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-[24px] border border-white/8 bg-[#111b2a] p-5">{children}</div>;
+  return (
+    <div className="rounded-lg border border-border bg-muted/40 p-5">
+      {children}
+    </div>
+  );
 }
 
 export function ClientDetailDialog({
@@ -62,8 +68,12 @@ export function ClientDetailDialog({
   const [nameInput, setNameInput] = useState("");
   const [nameReason, setNameReason] = useState("");
   const [toastMessage, setToastMessage] = useState("");
-  const [toastLevel, setToastLevel] = useState<"info" | "success" | "error">("info");
-  const [restrictionType, setRestrictionType] = useState<"session" | "ip" | "region">("session");
+  const [toastLevel, setToastLevel] = useState<"info" | "success" | "error">(
+    "info",
+  );
+  const [restrictionType, setRestrictionType] = useState<
+    "session" | "ip" | "region"
+  >("session");
   const [restrictionReason, setRestrictionReason] = useState("");
 
   useEffect(() => {
@@ -133,11 +143,14 @@ export function ClientDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="[--dialog-content-width:80rem] 2xl:[--dialog-content-width:86rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
+      <DialogContent className="[--dialog-content-width:80rem] 2xl:[--dialog-content-width:86rem] border-border bg-card text-foreground shadow-none">
         <DialogHeader>
-          <DialogTitle className="text-xl text-white">Client controls</DialogTitle>
-          <DialogDescription className="text-zinc-300/74">
-            Open a live session, inspect what they are attached to, and take action without bouncing through separate admin pages.
+          <DialogTitle className="text-xl text-foreground">
+            Client controls
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Open a live session, inspect what they are attached to, and take
+            action without bouncing through separate admin pages.
           </DialogDescription>
         </DialogHeader>
 
@@ -146,87 +159,115 @@ export function ClientDetailDialog({
             <Surface>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">Session</div>
-                  <div className="mt-2 text-2xl font-semibold tracking-tight text-white">
+                  <div className="text-xs uppercase tracking-normal text-muted-foreground">
+                    Session
+                  </div>
+                  <div className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
                     {activeClient.name || "Anonymous"}
                   </div>
                 </div>
-                <Badge className="border border-white/10 bg-white/10 text-zinc-100">
+                <Badge className="border border-border bg-muted text-foreground">
                   {formatRelativeTime(activeClient.lastSeen)}
                 </Badge>
               </div>
 
               <div className="mt-4 space-y-3 text-sm">
-                <div className="rounded-[20px] border border-white/8 bg-[#0d1624] p-4">
-                  <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Identity</div>
-                  <div className="mt-3 space-y-2 text-zinc-100">
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="text-[11px] uppercase tracking-normal text-muted-foreground">
+                    Identity
+                  </div>
+                  <div className="mt-3 space-y-2 text-foreground">
                     <div>Session: {shortId(activeClient.sessionId, 18)}</div>
-                    <div>Connected: {formatDateTime(activeClient.connectedAt)}</div>
-                    <div>Last seen: {formatDateTime(activeClient.lastSeen)}</div>
+                    <div>
+                      Connected: {formatDateTime(activeClient.connectedAt)}
+                    </div>
+                    <div>
+                      Last seen: {formatDateTime(activeClient.lastSeen)}
+                    </div>
                   </div>
                 </div>
 
-                <div className="rounded-[20px] border border-white/8 bg-[#0d1624] p-4">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-zinc-500">
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-normal text-muted-foreground">
                     <Globe2 className="size-4" />
                     Network
                   </div>
-                  <div className="mt-3 space-y-2 text-zinc-100">
+                  <div className="mt-3 space-y-2 text-foreground">
                     <div>IP: {activeClient.ip || "Unknown"}</div>
                     <div>Region: {activeClient.region || "Unknown"}</div>
-                    <div className="break-all">UA: {activeClient.userAgent || "Unknown"}</div>
+                    <div className="break-all">
+                      UA: {activeClient.userAgent || "Unknown"}
+                    </div>
                   </div>
                 </div>
 
-                <div className="rounded-[20px] border border-white/8 bg-[#0d1624] p-4">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-zinc-500">
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-normal text-muted-foreground">
                     <Fingerprint className="size-4" />
                     Client fingerprint
                   </div>
-                  <div className="mt-3 break-all text-zinc-100">
+                  <div className="mt-3 break-all text-foreground">
                     {activeClient.fingerprint || "Unavailable"}
                   </div>
                 </div>
 
-                <div className="rounded-[20px] border border-white/8 bg-[#0d1624] p-4">
+                <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Current game</div>
-                      <div className="mt-2 text-zinc-100">
-                        {activeClient.gameId && activeClient.gameType ? formatGameType(activeClient.gameType) : "Not in a game"}
+                      <div className="text-[11px] uppercase tracking-normal text-muted-foreground">
+                        Current game
+                      </div>
+                      <div className="mt-2 text-foreground">
+                        {activeClient.gameId && activeClient.gameType
+                          ? formatGameType(activeClient.gameType)
+                          : "Not in a game"}
                       </div>
                     </div>
-                    {activeClient.gameId && activeClient.gameType && onViewGame && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-white/8 bg-[#162131] text-zinc-100 hover:bg-white/6"
-                        onClick={() => {
-                          onOpenChange(false);
-                          onViewGame({ id: activeClient.gameId!, type: activeClient.gameType! });
-                        }}
-                      >
-                        <Orbit className="size-4" />
-                        Open state
-                      </Button>
-                    )}
+                    {activeClient.gameId &&
+                      activeClient.gameType &&
+                      onViewGame && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-border bg-card text-foreground hover:bg-accent"
+                          onClick={() => {
+                            onOpenChange(false);
+                            onViewGame({
+                              id: activeClient.gameId!,
+                              type: activeClient.gameType!,
+                            });
+                          }}
+                        >
+                          <Orbit className="size-4" />
+                          Open state
+                        </Button>
+                      )}
                   </div>
                   {activeClient.gameId && (
-                    <div className="mt-2 text-sm text-zinc-400">{shortId(activeClient.gameId, 16)}</div>
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      {shortId(activeClient.gameId, 16)}
+                    </div>
                   )}
                 </div>
 
                 {detail?.matchedBans?.length ? (
-                  <div className="rounded-[24px] border border-red-300/16 bg-red-300/8 p-4">
-                    <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-red-100/75">
+                  <div className="rounded-lg border border-border bg-muted p-4">
+                    <div className="flex items-center gap-2 text-[11px] uppercase tracking-normal text-foreground/75">
                       <Shield className="size-4" />
                       Active bans touching this client
                     </div>
                     <div className="mt-3 space-y-2">
                       {detail.matchedBans.map((ban) => (
-                        <div key={ban.id} className="rounded-2xl border border-red-300/14 px-3 py-2 text-sm text-red-50">
-                          <div className="font-medium">{ban.type.toUpperCase()}</div>
-                          <div className="mt-1 text-red-50/75">{ban.value}</div>
+                        <div
+                          key={ban.id}
+                          className="rounded-lg border border-border px-3 py-2 text-sm text-foreground"
+                        >
+                          <div className="font-medium">
+                            {ban.type.toUpperCase()}
+                          </div>
+                          <div className="mt-1 text-foreground/75">
+                            {ban.value}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -237,9 +278,12 @@ export function ClientDetailDialog({
 
             <div className="space-y-4">
               <Surface>
-                <div className="text-sm font-semibold text-white">Name override</div>
-                <div className="mt-1 text-sm text-zinc-300/72">
-                  Force a specific display name for this session or clear the override to hand control back.
+                <div className="text-sm font-semibold text-foreground">
+                  Name override
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  Force a specific display name for this session or clear the
+                  override to hand control back.
                 </div>
 
                 <Input
@@ -247,25 +291,32 @@ export function ClientDetailDialog({
                   onChange={(event) => setNameInput(event.target.value)}
                   placeholder="Forced name"
                   maxLength={20}
-                  className="mt-4 border-white/8 bg-[#0d1624] text-zinc-50"
+                  className="mt-4 border-border bg-card text-foreground"
                 />
                 <Textarea
                   value={nameReason}
                   onChange={(event) => setNameReason(event.target.value)}
                   placeholder="Reason (optional)"
                   maxLength={200}
-                  className="mt-3 border-white/8 bg-[#0d1624] text-zinc-50"
+                  className="mt-3 border-border bg-card text-foreground"
                 />
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button
-                    disabled={!activeClient.sessionId || !nameInput.trim() || pendingAction !== null}
+                    disabled={
+                      !activeClient.sessionId ||
+                      !nameInput.trim() ||
+                      pendingAction !== null
+                    }
                     onClick={() =>
                       activeClient.sessionId &&
                       runAction("name", async () => {
                         await api(`/clients/${activeClient.sessionId}/name`, {
                           method: "POST",
-                          body: { name: nameInput.trim(), reason: nameReason.trim() },
+                          body: {
+                            name: nameInput.trim(),
+                            reason: nameReason.trim(),
+                          },
                         });
                         show("Name override saved.", "success");
                       })
@@ -276,11 +327,13 @@ export function ClientDetailDialog({
                   {detail?.nameOverride && activeClient.sessionId && (
                     <Button
                       variant="outline"
-                      className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
+                      className="border-border bg-card text-foreground hover:bg-accent"
                       disabled={pendingAction !== null}
                       onClick={() =>
                         runAction("clear-override", async () => {
-                          await api(`/clients/${activeClient.sessionId}/name`, { method: "DELETE" });
+                          await api(`/clients/${activeClient.sessionId}/name`, {
+                            method: "DELETE",
+                          });
                           show("Name override cleared.", "success");
                           setNameReason("");
                         })
@@ -293,18 +346,28 @@ export function ClientDetailDialog({
               </Surface>
 
               <Surface>
-                <div className="text-sm font-semibold text-white">Direct moderation</div>
+                <div className="text-sm font-semibold text-foreground">
+                  Direct moderation
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {([
-                    ["session", "Session"],
-                    ["ip", "IP"],
-                    ["region", "Region"],
-                  ] as const).map(([value, label]) => (
+                  {(
+                    [
+                      ["session", "Session"],
+                      ["ip", "IP"],
+                      ["region", "Region"],
+                    ] as const
+                  ).map(([value, label]) => (
                     <Button
                       key={value}
                       type="button"
-                      variant={restrictionType === value ? "default" : "outline"}
-                      className={restrictionType === value ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"}
+                      variant={
+                        restrictionType === value ? "default" : "outline"
+                      }
+                      className={
+                        restrictionType === value
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "border-border bg-card text-foreground hover:bg-accent"
+                      }
                       onClick={() => setRestrictionType(value)}
                     >
                       {label}
@@ -317,36 +380,45 @@ export function ClientDetailDialog({
                   onChange={(event) => setRestrictionReason(event.target.value)}
                   placeholder="Reason for the ban or restriction"
                   maxLength={200}
-                  className="mt-4 border-white/8 bg-[#0d1624] text-zinc-50"
+                  className="mt-4 border-border bg-card text-foreground"
                 />
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button
                     variant="destructive"
-                    className="rounded-full border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
+                    className="rounded-lg border border-border bg-muted text-foreground hover:bg-accent"
                     disabled={!activeClient.sessionId || pendingAction !== null}
                     onClick={() =>
                       activeClient.sessionId &&
                       runAction("restrict", async () => {
-                        const value = restrictionType === "session"
-                          ? undefined
-                          : restrictionType === "ip"
-                            ? activeClient.ip
-                            : activeClient.region;
+                        const value =
+                          restrictionType === "session"
+                            ? undefined
+                            : restrictionType === "ip"
+                              ? activeClient.ip
+                              : activeClient.region;
 
                         if (restrictionType !== "session" && !value) {
-                          throw new Error(`This client has no ${restrictionType.toUpperCase()} value to ban.`);
+                          throw new Error(
+                            `This client has no ${restrictionType.toUpperCase()} value to ban.`,
+                          );
                         }
 
-                        await api(`/clients/${activeClient.sessionId}/restrict`, {
-                          method: "POST",
-                          body: {
-                            type: restrictionType,
-                            value,
-                            reason: restrictionReason.trim(),
+                        await api(
+                          `/clients/${activeClient.sessionId}/restrict`,
+                          {
+                            method: "POST",
+                            body: {
+                              type: restrictionType,
+                              value,
+                              reason: restrictionReason.trim(),
+                            },
                           },
-                        });
-                        show(`Applied ${restrictionType} restriction.`, "success");
+                        );
+                        show(
+                          `Applied ${restrictionType} restriction.`,
+                          "success",
+                        );
                       })
                     }
                   >
@@ -357,15 +429,21 @@ export function ClientDetailDialog({
                   {activeClient.name && (
                     <Button
                       variant="outline"
-                      className="rounded-full border-white/10 bg-white/3 text-zinc-100 hover:bg-white/8"
+                      className="rounded-lg border-border bg-card text-foreground hover:bg-accent"
                       disabled={pendingAction !== null}
                       onClick={() =>
                         runAction("ban-name", async () => {
                           await api("/names/restricted", {
                             method: "POST",
-                            body: { pattern: activeClient.name, reason: restrictionReason.trim() },
+                            body: {
+                              pattern: activeClient.name,
+                              reason: restrictionReason.trim(),
+                            },
                           });
-                          show(`Restricted the name \"${activeClient.name}\".`, "success");
+                          show(
+                            `Restricted the name \"${activeClient.name}\".`,
+                            "success",
+                          );
                         })
                       }
                     >
@@ -377,26 +455,34 @@ export function ClientDetailDialog({
               </Surface>
 
               <Surface>
-                <div className="text-sm font-semibold text-white">Targeted toast</div>
+                <div className="text-sm font-semibold text-foreground">
+                  Targeted toast
+                </div>
                 <Input
                   value={toastMessage}
                   onChange={(event) => setToastMessage(event.target.value)}
                   placeholder="Message this client"
                   maxLength={300}
-                  className="mt-4 rounded-full border-white/10 bg-white/4 text-zinc-50"
+                  className="mt-4 rounded-lg border-border bg-muted text-foreground"
                 />
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {([
-                    ["info", "Info"],
-                    ["success", "Success"],
-                    ["error", "Error"],
-                  ] as const).map(([value, label]) => (
+                  {(
+                    [
+                      ["info", "Info"],
+                      ["success", "Success"],
+                      ["error", "Error"],
+                    ] as const
+                  ).map(([value, label]) => (
                     <Button
                       key={value}
                       type="button"
                       variant={toastLevel === value ? "default" : "outline"}
-                      className={toastLevel === value ? "rounded-full bg-white text-zinc-900 hover:bg-white/90" : "rounded-full border-white/10 bg-white/3 text-zinc-100 hover:bg-white/8"}
+                      className={
+                        toastLevel === value
+                          ? "rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "rounded-lg border-border bg-card text-foreground hover:bg-accent"
+                      }
                       onClick={() => setToastLevel(value)}
                     >
                       {label}
@@ -405,14 +491,21 @@ export function ClientDetailDialog({
                 </div>
 
                 <Button
-                  className="mt-4 rounded-full"
-                  disabled={!activeClient.sessionId || !toastMessage.trim() || pendingAction !== null}
+                  className="mt-4 rounded-lg"
+                  disabled={
+                    !activeClient.sessionId ||
+                    !toastMessage.trim() ||
+                    pendingAction !== null
+                  }
                   onClick={() =>
                     activeClient.sessionId &&
                     runAction("toast", async () => {
                       await api(`/clients/${activeClient.sessionId}/toast`, {
                         method: "POST",
-                        body: { message: toastMessage.trim(), level: toastLevel },
+                        body: {
+                          message: toastMessage.trim(),
+                          level: toastLevel,
+                        },
                       });
                       show("Toast delivered.", "success");
                       setToastMessage("");
@@ -430,15 +523,15 @@ export function ClientDetailDialog({
         {loading && !detail ? (
           <div className="grid gap-5 xl:grid-cols-[minmax(23rem,0.9fr)_minmax(30rem,1.1fr)] xl:items-start 2xl:grid-cols-[minmax(25rem,0.86fr)_minmax(34rem,1.14fr)]">
             <div className="space-y-4">
-              <Skeleton className="h-28 bg-white/5" />
-              <Skeleton className="h-28 bg-white/5" />
-              <Skeleton className="h-28 bg-white/5" />
-              <Skeleton className="h-28 bg-white/5" />
+              <Skeleton className="h-28 bg-muted" />
+              <Skeleton className="h-28 bg-muted" />
+              <Skeleton className="h-28 bg-muted" />
+              <Skeleton className="h-28 bg-muted" />
             </div>
             <div className="space-y-4">
-              <Skeleton className="h-44 bg-white/5" />
-              <Skeleton className="h-44 bg-white/5" />
-              <Skeleton className="h-36 bg-white/5" />
+              <Skeleton className="h-44 bg-muted" />
+              <Skeleton className="h-44 bg-muted" />
+              <Skeleton className="h-36 bg-muted" />
             </div>
           </div>
         ) : null}
