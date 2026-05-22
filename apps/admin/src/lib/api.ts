@@ -3,7 +3,7 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "";
 
 export async function adminFetch(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> {
   const url = `${API_URL}${path}`;
   return fetch(url, {

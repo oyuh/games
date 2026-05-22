@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Ban,
-  Search,
-  Shield,
-  Sparkles,
-  UserRoundX,
-} from "lucide-react";
+import { Ban, Search, Shield, Sparkles, UserRoundX } from "lucide-react";
 import { api } from "@/lib/client-api";
 import {
   BanRecord,
@@ -50,13 +44,18 @@ function Surface({
   className?: string;
 }) {
   return (
-    <section className={`rounded-[24px] border border-white/8 bg-[#0f1826] p-5 ${className}`}>
+    <section
+      className={`rounded-lg border border-border bg-card p-5 ${className}`}
+    >
       {children}
     </section>
   );
 }
 
-function matchesSearch(values: Array<string | null | undefined>, query: string) {
+function matchesSearch(
+  values: Array<string | null | undefined>,
+  query: string,
+) {
   if (!query) {
     return true;
   }
@@ -65,12 +64,12 @@ function matchesSearch(values: Array<string | null | undefined>, query: string) 
 
 function banTone(type: BanRecord["type"]) {
   if (type === "ip") {
-    return "border-red-300/20 bg-red-300/10 text-red-50";
+    return "border-border bg-muted text-foreground";
   }
   if (type === "region") {
-    return "border-amber-300/20 bg-amber-300/10 text-amber-50";
+    return "border-border bg-muted text-foreground";
   }
-  return "border-sky-300/20 bg-sky-300/10 text-sky-50";
+  return "border-border bg-muted text-foreground";
 }
 
 export default function BansPage() {
@@ -78,10 +77,14 @@ export default function BansPage() {
   const confirm = useConfirmDialog();
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [overview, setOverview] = useState<DashboardSummaryResponse["summary"]["moderation"] | null>(null);
+  const [overview, setOverview] = useState<
+    DashboardSummaryResponse["summary"]["moderation"] | null
+  >(null);
 
   const [bans, setBans] = useState<BanRecord[]>([]);
-  const [restrictedNames, setRestrictedNames] = useState<RestrictedNameRecord[]>([]);
+  const [restrictedNames, setRestrictedNames] = useState<
+    RestrictedNameRecord[]
+  >([]);
   const [overrides, setOverrides] = useState<NameOverrideRecord[]>([]);
 
   const [banPage, setBanPage] = useState(1);
@@ -120,12 +123,19 @@ export default function BansPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [overviewResponse, banResponse, ruleResponse, overrideResponse] = await Promise.all([
-          api("/dashboard/summary"),
-          api(`/bans?${new URLSearchParams({ page: String(banPage), pageSize: String(banPageSize) })}`),
-          api(`/names/restricted?${new URLSearchParams({ page: String(rulePage), pageSize: String(rulePageSize) })}`),
-          api(`/names/overrides?${new URLSearchParams({ page: String(overridePage), pageSize: String(overridePageSize) })}`),
-        ]);
+        const [overviewResponse, banResponse, ruleResponse, overrideResponse] =
+          await Promise.all([
+            api("/dashboard/summary"),
+            api(
+              `/bans?${new URLSearchParams({ page: String(banPage), pageSize: String(banPageSize) })}`,
+            ),
+            api(
+              `/names/restricted?${new URLSearchParams({ page: String(rulePage), pageSize: String(rulePageSize) })}`,
+            ),
+            api(
+              `/names/overrides?${new URLSearchParams({ page: String(overridePage), pageSize: String(overridePageSize) })}`,
+            ),
+          ]);
 
         if (cancelled) {
           return;
@@ -138,16 +148,25 @@ export default function BansPage() {
         setBanTotal(banResponse.total ?? 0);
         setBanTotalPages(Math.max(1, banResponse.totalPages ?? 1));
 
-        setRestrictedNames((ruleResponse.restricted ?? []) as RestrictedNameRecord[]);
+        setRestrictedNames(
+          (ruleResponse.restricted ?? []) as RestrictedNameRecord[],
+        );
         setRuleTotal(ruleResponse.total ?? 0);
         setRuleTotalPages(Math.max(1, ruleResponse.totalPages ?? 1));
 
-        setOverrides((overrideResponse.overrides ?? []) as NameOverrideRecord[]);
+        setOverrides(
+          (overrideResponse.overrides ?? []) as NameOverrideRecord[],
+        );
         setOverrideTotal(overrideResponse.total ?? 0);
         setOverrideTotalPages(Math.max(1, overrideResponse.totalPages ?? 1));
       } catch (error) {
         if (!cancelled) {
-          show(error instanceof Error ? error.message : "Unable to load moderation desk.", "error");
+          show(
+            error instanceof Error
+              ? error.message
+              : "Unable to load moderation desk.",
+            "error",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -161,7 +180,16 @@ export default function BansPage() {
     return () => {
       cancelled = true;
     };
-  }, [banPage, banPageSize, overridePage, overridePageSize, refreshKey, rulePage, rulePageSize, show]);
+  }, [
+    banPage,
+    banPageSize,
+    overridePage,
+    overridePageSize,
+    refreshKey,
+    rulePage,
+    rulePageSize,
+    show,
+  ]);
 
   const normalizedSearch = normalizeSearchText(search);
 
@@ -176,13 +204,16 @@ export default function BansPage() {
 
   const visibleRestrictedNames = useMemo(() => {
     return restrictedNames.filter((entry) =>
-      matchesSearch([entry.pattern, entry.reason], normalizedSearch)
+      matchesSearch([entry.pattern, entry.reason], normalizedSearch),
     );
   }, [normalizedSearch, restrictedNames]);
 
   const visibleOverrides = useMemo(() => {
     return overrides.filter((override) =>
-      matchesSearch([override.sessionId, override.forcedName, override.reason], normalizedSearch)
+      matchesSearch(
+        [override.sessionId, override.forcedName, override.reason],
+        normalizedSearch,
+      ),
     );
   }, [normalizedSearch, overrides]);
 
@@ -192,7 +223,12 @@ export default function BansPage() {
       await action();
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to complete that action.", "error");
+      show(
+        error instanceof Error
+          ? error.message
+          : "Unable to complete that action.",
+        "error",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -220,7 +256,8 @@ export default function BansPage() {
   const removeBan = async (id: string) => {
     const confirmed = await confirm({
       title: "Remove restriction?",
-      description: "This will immediately delete the selected ban entry from the moderation list.",
+      description:
+        "This will immediately delete the selected ban entry from the moderation list.",
       confirmLabel: "Remove restriction",
       tone: "destructive",
     });
@@ -256,7 +293,8 @@ export default function BansPage() {
   const removeRestrictedName = async (id: string) => {
     const confirmed = await confirm({
       title: "Remove name rule?",
-      description: "This pattern will stop being enforced for future name validation.",
+      description:
+        "This pattern will stop being enforced for future name validation.",
       confirmLabel: "Remove rule",
       tone: "warning",
     });
@@ -274,7 +312,8 @@ export default function BansPage() {
   const removeOverride = async (sessionId: string) => {
     const confirmed = await confirm({
       title: "Clear forced name override?",
-      description: "The affected session will go back to using its normal naming flow.",
+      description:
+        "The affected session will go back to using its normal naming flow.",
       confirmLabel: "Clear override",
       tone: "warning",
     });
@@ -322,12 +361,15 @@ export default function BansPage() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.label} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+              <div
+                key={item.label}
+                className="rounded-lg border border-border bg-muted/40 p-4"
+              >
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                   <Icon className="size-4" />
                   {item.label}
                 </div>
-                <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">
+                <div className="mt-3 text-2xl font-semibold tracking-normal text-foreground">
                   {item.value}
                 </div>
               </div>
@@ -341,12 +383,12 @@ export default function BansPage() {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search restrictions, names, overrides, or reasons"
-                  className="border-white/8 bg-[#0d1624] pl-11 text-zinc-50"
+                  className="border-border bg-card pl-11 text-foreground"
                 />
               </div>
 
@@ -359,7 +401,7 @@ export default function BansPage() {
                     className={
                       banFilter === value
                         ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                        : "border-border bg-card text-foreground hover:bg-accent"
                     }
                     onClick={() => setBanFilter(value as typeof banFilter)}
                   >
@@ -369,58 +411,79 @@ export default function BansPage() {
               </div>
             </div>
 
-            <Badge variant="outline" className="w-fit border-white/8 bg-white/[0.03] text-zinc-200">
+            <Badge
+              variant="outline"
+              className="w-fit border-border bg-card text-foreground"
+            >
               {visibleBans.length} visible on this page
             </Badge>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-[20px] border border-white/8 bg-[#0d1624]">
+          <div className="mt-4 overflow-hidden rounded-lg border border-border bg-card">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-zinc-400">Type</TableHead>
-                  <TableHead className="text-zinc-400">Value</TableHead>
-                  <TableHead className="text-zinc-400">Reason</TableHead>
-                  <TableHead className="text-zinc-400">Created</TableHead>
-                  <TableHead className="text-zinc-400">Actions</TableHead>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">Type</TableHead>
+                  <TableHead className="text-muted-foreground">Value</TableHead>
+                  <TableHead className="text-muted-foreground">
+                    Reason
+                  </TableHead>
+                  <TableHead className="text-muted-foreground">
+                    Created
+                  </TableHead>
+                  <TableHead className="text-muted-foreground">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading && bans.length === 0 ? (
-                  <TableRow className="border-white/10 hover:bg-transparent">
+                  <TableRow className="border-border hover:bg-transparent">
                     <TableCell colSpan={5} className="px-4 py-5">
                       <div className="space-y-2">
                         {Array.from({ length: 5 }).map((_, index) => (
-                          <Skeleton key={index} className="h-12 bg-white/5" />
+                          <Skeleton key={index} className="h-12 bg-muted" />
                         ))}
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : visibleBans.length === 0 ? (
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableCell colSpan={5} className="px-4 py-12 text-center text-sm text-zinc-500">
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableCell
+                      colSpan={5}
+                      className="px-4 py-12 text-center text-sm text-muted-foreground"
+                    >
                       No restrictions match the current search.
                     </TableCell>
                   </TableRow>
                 ) : (
                   visibleBans.map((ban) => (
-                    <TableRow key={ban.id} className="border-white/8 hover:bg-[#142033]">
+                    <TableRow
+                      key={ban.id}
+                      className="border-border hover:bg-accent"
+                    >
                       <TableCell>
                         <Badge className={`border ${banTone(ban.type)}`}>
                           {ban.type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-zinc-100">{ban.value}</TableCell>
-                      <TableCell className="max-w-md text-sm text-zinc-300/80">{ban.reason || "No reason provided"}</TableCell>
-                      <TableCell className="text-sm text-zinc-400">
+                      <TableCell className="font-mono text-sm text-foreground">
+                        {ban.value}
+                      </TableCell>
+                      <TableCell className="max-w-md text-sm text-muted-foreground">
+                        {ban.reason || "No reason provided"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
                         <div>{formatRelativeTime(ban.createdAt)}</div>
-                        <div className="mt-1 text-xs text-zinc-500">{formatDateTime(ban.createdAt)}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {formatDateTime(ban.createdAt)}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Button
                           variant="destructive"
                           size="sm"
-                          className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
+                          className="border border-border bg-muted text-foreground hover:bg-accent"
                           disabled={pendingAction === `remove-ban-${ban.id}`}
                           onClick={() => void removeBan(ban.id)}
                         >
@@ -450,9 +513,12 @@ export default function BansPage() {
         </Surface>
 
         <Surface>
-          <div className="text-sm font-semibold text-white">Add restriction</div>
-          <div className="mt-1 text-sm leading-6 text-zinc-400">
-            Session bans disconnect immediately. IP and region bans block re-entry on the next auth cycle.
+          <div className="text-sm font-semibold text-foreground">
+            Add restriction
+          </div>
+          <div className="mt-1 text-sm leading-6 text-muted-foreground">
+            Session bans disconnect immediately. IP and region bans block
+            re-entry on the next auth cycle.
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -464,9 +530,11 @@ export default function BansPage() {
                 className={
                   newBan.type === option.value
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                    : "border-border bg-card text-foreground hover:bg-accent"
                 }
-                onClick={() => setNewBan((current) => ({ ...current, type: option.value }))}
+                onClick={() =>
+                  setNewBan((current) => ({ ...current, type: option.value }))
+                }
               >
                 {option.label}
               </Button>
@@ -475,7 +543,12 @@ export default function BansPage() {
 
           <Input
             value={newBan.value}
-            onChange={(event) => setNewBan((current) => ({ ...current, value: event.target.value }))}
+            onChange={(event) =>
+              setNewBan((current) => ({
+                ...current,
+                value: event.target.value,
+              }))
+            }
             placeholder={
               newBan.type === "session"
                 ? "Session id"
@@ -483,14 +556,19 @@ export default function BansPage() {
                   ? "IP address"
                   : "Region code"
             }
-            className="mt-4 border-white/8 bg-[#0d1624] text-zinc-50"
+            className="mt-4 border-border bg-card text-foreground"
           />
           <Textarea
             value={newBan.reason}
-            onChange={(event) => setNewBan((current) => ({ ...current, reason: event.target.value }))}
+            onChange={(event) =>
+              setNewBan((current) => ({
+                ...current,
+                reason: event.target.value,
+              }))
+            }
             placeholder="Reason for this restriction"
             maxLength={200}
-            className="mt-3 border-white/8 bg-[#0d1624] text-zinc-50"
+            className="mt-3 border-border bg-card text-foreground"
           />
 
           <Button
@@ -501,8 +579,10 @@ export default function BansPage() {
             Create restriction
           </Button>
 
-          <div className="mt-5 rounded-[20px] border border-white/8 bg-[#111b2a] p-4 text-sm text-zinc-400">
-            Name rules are enforced server-side now. Forced name overrides are best created from the client modal when you need to correct a single session without banning the pattern globally.
+          <div className="mt-5 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+            Name rules are enforced server-side now. Forced name overrides are
+            best created from the client modal when you need to correct a single
+            session without banning the pattern globally.
           </div>
         </Surface>
       </div>
@@ -511,12 +591,18 @@ export default function BansPage() {
         <Surface>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-sm font-semibold text-white">Restricted names</div>
-              <div className="mt-1 text-sm leading-6 text-zinc-400">
-                Supports exact matches and wildcard patterns like <span className="mono text-zinc-200">admin*</span>.
+              <div className="text-sm font-semibold text-foreground">
+                Restricted names
+              </div>
+              <div className="mt-1 text-sm leading-6 text-muted-foreground">
+                Supports exact matches and wildcard patterns like{" "}
+                <span className="mono text-foreground">admin*</span>.
               </div>
             </div>
-            <Badge variant="outline" className="border-white/8 bg-white/[0.03] text-zinc-200">
+            <Badge
+              variant="outline"
+              className="border-border bg-card text-foreground"
+            >
               {ruleTotal} total
             </Badge>
           </div>
@@ -524,19 +610,31 @@ export default function BansPage() {
           <div className="mt-4 grid gap-3">
             <Input
               value={newRule.pattern}
-              onChange={(event) => setNewRule((current) => ({ ...current, pattern: event.target.value }))}
+              onChange={(event) =>
+                setNewRule((current) => ({
+                  ...current,
+                  pattern: event.target.value,
+                }))
+              }
               placeholder="Restricted pattern"
-              className="border-white/8 bg-[#0d1624] text-zinc-50"
+              className="border-border bg-card text-foreground"
             />
             <Textarea
               value={newRule.reason}
-              onChange={(event) => setNewRule((current) => ({ ...current, reason: event.target.value }))}
+              onChange={(event) =>
+                setNewRule((current) => ({
+                  ...current,
+                  reason: event.target.value,
+                }))
+              }
               placeholder="Why this name is blocked"
-              className="border-white/8 bg-[#0d1624] text-zinc-50"
+              className="border-border bg-card text-foreground"
             />
             <Button
               className="w-fit"
-              disabled={!newRule.pattern.trim() || pendingAction === "add-name-rule"}
+              disabled={
+                !newRule.pattern.trim() || pendingAction === "add-name-rule"
+              }
               onClick={() => void addRestrictedName()}
             >
               Add name rule
@@ -545,25 +643,32 @@ export default function BansPage() {
 
           <div className="mt-4 space-y-3">
             {visibleRestrictedNames.length === 0 ? (
-              <div className="rounded-[20px] border border-dashed border-white/8 px-4 py-8 text-sm text-zinc-500">
+              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
                 No name rules on this page match the current search.
               </div>
             ) : (
               visibleRestrictedNames.map((entry) => (
-                <div key={entry.id} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
+                <div
+                  key={entry.id}
+                  className="rounded-lg border border-border bg-muted/40 p-4"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <div className="font-mono text-sm text-white">{entry.pattern}</div>
-                      <div className="mt-2 text-sm text-zinc-400">{entry.reason || "No reason provided"}</div>
+                      <div className="font-mono text-sm text-foreground">
+                        {entry.pattern}
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground">
+                        {entry.reason || "No reason provided"}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+                      <div className="text-xs uppercase tracking-normal text-muted-foreground">
                         {formatRelativeTime(entry.createdAt)}
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                        className="border-border bg-card text-foreground hover:bg-accent"
                         disabled={pendingAction === `remove-rule-${entry.id}`}
                         onClick={() => void removeRestrictedName(entry.id)}
                       >
@@ -594,39 +699,57 @@ export default function BansPage() {
         <Surface>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-sm font-semibold text-white">Forced name overrides</div>
-              <div className="mt-1 text-sm leading-6 text-zinc-400">
-                Create overrides from the client list when a single session needs intervention without adding a global rule.
+              <div className="text-sm font-semibold text-foreground">
+                Forced name overrides
+              </div>
+              <div className="mt-1 text-sm leading-6 text-muted-foreground">
+                Create overrides from the client list when a single session
+                needs intervention without adding a global rule.
               </div>
             </div>
-            <Badge variant="outline" className="border-white/8 bg-white/[0.03] text-zinc-200">
+            <Badge
+              variant="outline"
+              className="border-border bg-card text-foreground"
+            >
               {overrideTotal} total
             </Badge>
           </div>
 
           <div className="mt-4 space-y-3">
             {visibleOverrides.length === 0 ? (
-              <div className="rounded-[20px] border border-dashed border-white/8 px-4 py-8 text-sm text-zinc-500">
+              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
                 No name overrides on this page match the current search.
               </div>
             ) : (
               visibleOverrides.map((override) => (
-                <div key={override.sessionId} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
+                <div
+                  key={override.sessionId}
+                  className="rounded-lg border border-border bg-muted/40 p-4"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <div className="font-medium text-white">{override.forcedName}</div>
-                      <div className="mt-1 text-sm text-zinc-400">{shortId(override.sessionId, 18)}</div>
-                      <div className="mt-2 text-sm text-zinc-400">{override.reason || "No reason provided"}</div>
+                      <div className="font-medium text-foreground">
+                        {override.forcedName}
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {shortId(override.sessionId, 18)}
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground">
+                        {override.reason || "No reason provided"}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+                      <div className="text-xs uppercase tracking-normal text-muted-foreground">
                         {formatRelativeTime(override.updatedAt)}
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
-                        disabled={pendingAction === `remove-override-${override.sessionId}`}
+                        className="border-border bg-card text-foreground hover:bg-accent"
+                        disabled={
+                          pendingAction ===
+                          `remove-override-${override.sessionId}`
+                        }
                         onClick={() => void removeOverride(override.sessionId)}
                       >
                         Clear override

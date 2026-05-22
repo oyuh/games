@@ -37,7 +37,9 @@ export function BroadcastControlsDialog() {
   const confirm = useConfirmDialog();
   const [open, setOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-  const [toastLevel, setToastLevel] = useState<"info" | "success" | "error">("info");
+  const [toastLevel, setToastLevel] = useState<"info" | "success" | "error">(
+    "info",
+  );
   const [warningMinutes, setWarningMinutes] = useState(5);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
 
@@ -76,7 +78,8 @@ export function BroadcastControlsDialog() {
   const forceRefresh = async () => {
     const confirmed = await confirm({
       title: "Force-refresh all clients?",
-      description: "This will immediately reload every connected client session.",
+      description:
+        "This will immediately reload every connected client session.",
       confirmLabel: "Force refresh",
       tone: "warning",
     });
@@ -94,7 +97,8 @@ export function BroadcastControlsDialog() {
   const endAllAndWarn = async () => {
     const confirmed = await confirm({
       title: "End all live games?",
-      description: "Every active game will be terminated and a five-minute refresh warning will be sent to clients right after.",
+      description:
+        "Every active game will be terminated and a five-minute refresh warning will be sent to clients right after.",
       confirmLabel: "End games and warn",
       tone: "destructive",
     });
@@ -109,42 +113,56 @@ export function BroadcastControlsDialog() {
         method: "POST",
         body: { minutes: 5 },
       });
-      show(`Ended ${response.ended?.total ?? 0} games and scheduled refresh.`, "success");
+      show(
+        `Ended ${response.ended?.total ?? 0} games and scheduled refresh.`,
+        "success",
+      );
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className={cn("border-[#38589a] bg-[#16305a] text-zinc-50 hover:bg-[#1c3969]")}>
+        <Button
+          className={cn(
+            "border-border bg-primary text-primary-foreground hover:bg-primary/90",
+          )}
+        >
           <Megaphone className="size-4" />
           Broadcast
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="[--dialog-content-width:74rem] 2xl:[--dialog-content-width:78rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
+      <DialogContent className="[--dialog-content-width:74rem] 2xl:[--dialog-content-width:78rem] border-border bg-card text-foreground shadow-none">
         <DialogHeader>
-          <DialogTitle className="text-xl text-white">Broadcast controls</DialogTitle>
-          <DialogDescription className="text-zinc-300/74">
-            Keep the messaging actions together without forcing a separate admin page.
+          <DialogTitle className="text-xl text-foreground">
+            Broadcast controls
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Keep the messaging actions together without forcing a separate admin
+            page.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-[24px] border border-white/8 bg-[#111b2a] p-5 lg:col-span-2">
+          <section className="rounded-lg border border-border bg-muted/40 p-5 lg:col-span-2">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                   Global Toast
                 </div>
-                <div className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white">
+                <div className="mt-2 text-xl font-semibold tracking-normal text-foreground">
                   Broadcast a live system message
                 </div>
-                <div className="mt-2 max-w-2xl text-sm leading-6 text-zinc-300/72">
-                  Send one message to every connected client without leaving the header flow.
+                <div className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  Send one message to every connected client without leaving the
+                  header flow.
                 </div>
               </div>
-              <Badge variant="secondary" className="w-fit border border-white/8 bg-[#0d1624] text-zinc-100">
+              <Badge
+                variant="secondary"
+                className="w-fit border border-border bg-card text-foreground"
+              >
                 Live
               </Badge>
             </div>
@@ -153,17 +171,19 @@ export function BroadcastControlsDialog() {
               value={toastMessage}
               onChange={(event) => setToastMessage(event.target.value)}
               placeholder="Tell everyone what is happening..."
-              className="mt-5 min-h-32 border-white/8 bg-[#0d1624] text-zinc-50 placeholder:text-zinc-400"
+              className="mt-5 min-h-32 border-border bg-card text-foreground placeholder:text-muted-foreground"
               maxLength={300}
             />
 
             <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex flex-wrap gap-2">
-                {([
-                  ["info", "Info"],
-                  ["success", "Success"],
-                  ["error", "Error"],
-                ] as const).map(([value, label]) => (
+                {(
+                  [
+                    ["info", "Info"],
+                    ["success", "Success"],
+                    ["error", "Error"],
+                  ] as const
+                ).map(([value, label]) => (
                   <Button
                     key={value}
                     type="button"
@@ -171,7 +191,7 @@ export function BroadcastControlsDialog() {
                     className={
                       toastLevel === value
                         ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
+                        : "border-border bg-card text-foreground hover:bg-accent"
                     }
                     onClick={() => setToastLevel(value)}
                   >
@@ -181,7 +201,7 @@ export function BroadcastControlsDialog() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="text-xs uppercase tracking-[0.28em] text-zinc-400">
+                <div className="text-xs uppercase tracking-normal text-muted-foreground">
                   {toastMessage.length}/300
                 </div>
                 <Button
@@ -190,7 +210,10 @@ export function BroadcastControlsDialog() {
                     runAction("toast", async () => {
                       await api("/broadcast/toast", {
                         method: "POST",
-                        body: { message: toastMessage.trim(), level: toastLevel },
+                        body: {
+                          message: toastMessage.trim(),
+                          level: toastLevel,
+                        },
                       });
                       show("Broadcast sent.", "success");
                       setToastMessage("");
@@ -204,20 +227,21 @@ export function BroadcastControlsDialog() {
             </div>
           </section>
 
-          <section className="rounded-[24px] border border-white/8 bg-[#111b2a] p-5">
+          <section className="rounded-lg border border-border bg-muted/40 p-5">
             <div className="flex items-start gap-3">
-              <div className="mt-1 flex size-10 items-center justify-center rounded-[16px] border border-amber-300/20 bg-amber-300/10 text-amber-100">
+              <div className="mt-1 flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
                 <BellRing className="size-4" />
               </div>
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                   Update Countdown
                 </div>
-                <div className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
+                <div className="mt-2 text-lg font-semibold tracking-normal text-foreground">
                   Stage a controlled refresh warning
                 </div>
-                <div className="mt-2 text-sm leading-6 text-zinc-300/72">
-                  Clients get the start notice, one-minute reminder, and ten-second countdown.
+                <div className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Clients get the start notice, one-minute reminder, and
+                  ten-second countdown.
                 </div>
               </div>
             </div>
@@ -228,14 +252,16 @@ export function BroadcastControlsDialog() {
                 min={1}
                 max={30}
                 value={warningMinutes}
-                onChange={(event) => setWarningMinutes(Number(event.target.value) || 1)}
-                className="max-w-28 border-white/8 bg-[#0d1624] text-zinc-50"
+                onChange={(event) =>
+                  setWarningMinutes(Number(event.target.value) || 1)
+                }
+                className="max-w-28 border-border bg-card text-foreground"
               />
-              <div className="text-sm text-zinc-300/72">minutes</div>
+              <div className="text-sm text-muted-foreground">minutes</div>
             </div>
 
             <Button
-              className="mt-5 w-full justify-center border border-amber-300/20 bg-amber-300/12 text-amber-50 hover:bg-amber-300/20"
+              className="mt-5 w-full justify-center border border-border bg-muted text-foreground hover:bg-accent"
               disabled={pendingAction !== null}
               onClick={() => void sendCountdown()}
             >
@@ -244,20 +270,21 @@ export function BroadcastControlsDialog() {
             </Button>
           </section>
 
-          <section className="rounded-[24px] border border-white/8 bg-[#111b2a] p-5">
+          <section className="rounded-lg border border-border bg-muted/40 p-5">
             <div className="flex items-start gap-3">
-              <div className="mt-1 flex size-10 items-center justify-center rounded-[16px] border border-red-300/20 bg-red-300/10 text-red-100">
+              <div className="mt-1 flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
                 <TriangleAlert className="size-4" />
               </div>
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                   Fast Actions
                 </div>
-                <div className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
+                <div className="mt-2 text-lg font-semibold tracking-normal text-foreground">
                   Immediate operational controls
                 </div>
-                <div className="mt-2 text-sm leading-6 text-zinc-300/72">
-                  Use these when you need an instant refresh or a hard stop before rollout.
+                <div className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Use these when you need an instant refresh or a hard stop
+                  before rollout.
                 </div>
               </div>
             </div>
@@ -265,7 +292,7 @@ export function BroadcastControlsDialog() {
             <div className="mt-5 space-y-3">
               <Button
                 variant="outline"
-                className="w-full justify-start border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
+                className="w-full justify-start border-border bg-card text-foreground hover:bg-accent"
                 disabled={pendingAction !== null}
                 onClick={() => void forceRefresh()}
               >
@@ -275,7 +302,7 @@ export function BroadcastControlsDialog() {
 
               <Button
                 variant="destructive"
-                className="w-full justify-start border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
+                className="w-full justify-start border border-border bg-muted text-foreground hover:bg-accent"
                 disabled={pendingAction !== null}
                 onClick={() => void endAllAndWarn()}
               >

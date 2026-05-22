@@ -82,7 +82,12 @@ function calculateShikakuScore(timeMs: number, difficulty: DifficultyValue) {
   const puzzleCount = 5;
   const totalParMs = PAR_TIMES[difficulty] * puzzleCount;
   const timeBonus = Math.max(0.1, 2 - timeMs / totalParMs);
-  return Math.max(0, Math.round(1000 * puzzleCount * DIFFICULTY_MULTIPLIER[difficulty] * timeBonus));
+  return Math.max(
+    0,
+    Math.round(
+      1000 * puzzleCount * DIFFICULTY_MULTIPLIER[difficulty] * timeBonus,
+    ),
+  );
 }
 
 function formatPreciseTime(value: string) {
@@ -110,7 +115,9 @@ function displayClientName(client: ClientRecord) {
   return name || `Player ${shortId(client.sessionId, 12)}`;
 }
 
-function createShikakuDraft(difficulty: DifficultyValue = "easy"): ShikakuCreateDraft {
+function createShikakuDraft(
+  difficulty: DifficultyValue = "easy",
+): ShikakuCreateDraft {
   const timeMs = 150_000;
   return {
     sessionId: "",
@@ -153,11 +160,16 @@ export function ScoreCreateDialog({
   const [selectedSessionId, setSelectedSessionId] = useState("");
   const [loadingClients, setLoadingClients] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [shikakuDraft, setShikakuDraft] = useState(() => createShikakuDraft(defaultDifficulty));
+  const [shikakuDraft, setShikakuDraft] = useState(() =>
+    createShikakuDraft(defaultDifficulty),
+  );
   const [pipsDraft, setPipsDraft] = useState(() => createPipsDraft());
 
   const usableClients = useMemo(
-    () => clients.filter((client): client is ClientRecord & { sessionId: string } => Boolean(client.sessionId)),
+    () =>
+      clients.filter((client): client is ClientRecord & { sessionId: string } =>
+        Boolean(client.sessionId),
+      ),
     [clients],
   );
 
@@ -181,7 +193,12 @@ export function ScoreCreateDialog({
       const response = await api("/clients?pageSize=200");
       setClients((response.clients ?? []) as ClientRecord[]);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to load active sessions.", "error");
+      show(
+        error instanceof Error
+          ? error.message
+          : "Unable to load active sessions.",
+        "error",
+      );
     } finally {
       setLoadingClients(false);
     }
@@ -195,8 +212,16 @@ export function ScoreCreateDialog({
     }
 
     const name = displayClientName(client);
-    setShikakuDraft((current) => ({ ...current, sessionId: client.sessionId, name }));
-    setPipsDraft((current) => ({ ...current, sessionId: client.sessionId, name }));
+    setShikakuDraft((current) => ({
+      ...current,
+      sessionId: client.sessionId,
+      name,
+    }));
+    setPipsDraft((current) => ({
+      ...current,
+      sessionId: client.sessionId,
+      name,
+    }));
   };
 
   const updateShikakuTime = (timeMs: string) => {
@@ -205,9 +230,12 @@ export function ScoreCreateDialog({
       return {
         ...current,
         timeMs,
-        score: Number.isFinite(parsed) && parsed >= 0
-          ? String(calculateShikakuScore(Math.floor(parsed), current.difficulty))
-          : current.score,
+        score:
+          Number.isFinite(parsed) && parsed >= 0
+            ? String(
+                calculateShikakuScore(Math.floor(parsed), current.difficulty),
+              )
+            : current.score,
       };
     });
   };
@@ -218,9 +246,10 @@ export function ScoreCreateDialog({
       return {
         ...current,
         difficulty,
-        score: Number.isFinite(parsed) && parsed >= 0
-          ? String(calculateShikakuScore(Math.floor(parsed), difficulty))
-          : current.score,
+        score:
+          Number.isFinite(parsed) && parsed >= 0
+            ? String(calculateShikakuScore(Math.floor(parsed), difficulty))
+            : current.score,
       };
     });
   };
@@ -245,14 +274,23 @@ export function ScoreCreateDialog({
     });
   };
 
-  const updatePipsSplit = (key: "easyMs" | "mediumMs" | "hardMs", value: string) => {
+  const updatePipsSplit = (
+    key: "easyMs" | "mediumMs" | "hardMs",
+    value: string,
+  ) => {
     setPipsDraft((current) => {
       const next = { ...current, [key]: value };
       const easyMs = Number(next.easyMs);
       const mediumMs = Number(next.mediumMs);
       const hardMs = Number(next.hardMs);
-      if ([easyMs, mediumMs, hardMs].every((item) => Number.isFinite(item) && item >= 0)) {
-        next.totalMs = String(Math.floor(easyMs) + Math.floor(mediumMs) + Math.floor(hardMs));
+      if (
+        [easyMs, mediumMs, hardMs].every(
+          (item) => Number.isFinite(item) && item >= 0,
+        )
+      ) {
+        next.totalMs = String(
+          Math.floor(easyMs) + Math.floor(mediumMs) + Math.floor(hardMs),
+        );
       }
       return next;
     });
@@ -287,7 +325,10 @@ export function ScoreCreateDialog({
             difficulty: shikakuDraft.difficulty,
             score: requireWholeNumber(shikakuDraft.score, "Score"),
             timeMs: requireWholeNumber(shikakuDraft.timeMs, "Time"),
-            puzzleCount: requireWholeNumber(shikakuDraft.puzzleCount, "Puzzle count"),
+            puzzleCount: requireWholeNumber(
+              shikakuDraft.puzzleCount,
+              "Puzzle count",
+            ),
             createdAt: fromLocalDateTimeValue(shikakuDraft.createdAt),
           },
         });
@@ -306,7 +347,10 @@ export function ScoreCreateDialog({
             mediumMs,
             hardMs,
             totalMs: easyMs + mediumMs + hardMs,
-            puzzleCount: requireWholeNumber(pipsDraft.puzzleCount, "Puzzle count"),
+            puzzleCount: requireWholeNumber(
+              pipsDraft.puzzleCount,
+              "Puzzle count",
+            ),
             createdAt: fromLocalDateTimeValue(pipsDraft.createdAt),
           },
         });
@@ -316,36 +360,42 @@ export function ScoreCreateDialog({
       onCreated();
       onOpenChange(false);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to add score.", "error");
+      show(
+        error instanceof Error ? error.message : "Unable to add score.",
+        "error",
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   const title = game === "shikaku" ? "Add Shikaku score" : "Add Pips run";
-  const description = game === "shikaku"
-    ? "Create a leaderboard row with the same persisted fields used by Shikaku submissions."
-    : "Create a ranked Pips run. Total is calculated from the easy, medium, and hard splits.";
+  const description =
+    game === "shikaku"
+      ? "Create a leaderboard row with the same persisted fields used by Shikaku submissions."
+      : "Create a ranked Pips run. Total is calculated from the easy, medium, and hard splits.";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="[--dialog-content-width:66rem] 2xl:[--dialog-content-width:72rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
+      <DialogContent className="[--dialog-content-width:66rem] 2xl:[--dialog-content-width:72rem] border-border bg-card text-foreground shadow-none">
         <DialogHeader>
-          <DialogTitle className="text-xl text-white">{title}</DialogTitle>
-          <DialogDescription className="text-zinc-300/74">{description}</DialogDescription>
+          <DialogTitle className="text-xl text-foreground">{title}</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            {description}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <section className="rounded-[20px] border border-white/8 bg-white/[0.03] p-4">
+          <section className="rounded-lg border border-border bg-card p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+              <div className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                 Active session
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                className="border-border bg-card text-foreground hover:bg-accent"
                 disabled={loadingClients}
                 onClick={() => void loadClients()}
               >
@@ -356,28 +406,29 @@ export function ScoreCreateDialog({
             <select
               value={selectedSessionId}
               onChange={(event) => applySession(event.target.value)}
-              className="h-10 w-full rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-zinc-50 outline-none"
+              className="h-10 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
             >
               <option value="">Choose active session</option>
               {usableClients.map((client) => (
                 <option key={client.sessionId} value={client.sessionId}>
-                  {displayClientName(client)} - {shortId(client.sessionId, 14)} - {formatGameType(client.gameType)}
+                  {displayClientName(client)} - {shortId(client.sessionId, 14)}{" "}
+                  - {formatGameType(client.gameType)}
                 </option>
               ))}
             </select>
           </section>
 
           {game === "shikaku" ? (
-            <section className="rounded-[20px] border border-emerald-300/12 bg-emerald-300/[0.04] p-4">
+            <section className="rounded-lg border border-border bg-muted p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                <div className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                   Score fields
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="border-emerald-300/20 bg-emerald-300/10 text-emerald-50 hover:bg-emerald-300/16"
+                  className="border-border bg-muted text-foreground hover:bg-accent"
                   onClick={randomizeShikaku}
                 >
                   <Shuffle className="size-4" />
@@ -385,18 +436,47 @@ export function ScoreCreateDialog({
                 </Button>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <CreateField label="Session id" value={shikakuDraft.sessionId} onChange={(value) => setShikakuDraft((current) => ({ ...current, sessionId: value }))} />
-                <CreateField label="Player name" value={shikakuDraft.name} onChange={(value) => setShikakuDraft((current) => ({ ...current, name: value }))} />
-                <CreateField label="Seed" type="number" value={shikakuDraft.seed} onChange={(value) => setShikakuDraft((current) => ({ ...current, seed: value }))} />
+                <CreateField
+                  label="Session id"
+                  value={shikakuDraft.sessionId}
+                  onChange={(value) =>
+                    setShikakuDraft((current) => ({
+                      ...current,
+                      sessionId: value,
+                    }))
+                  }
+                />
+                <CreateField
+                  label="Player name"
+                  value={shikakuDraft.name}
+                  onChange={(value) =>
+                    setShikakuDraft((current) => ({ ...current, name: value }))
+                  }
+                />
+                <CreateField
+                  label="Seed"
+                  type="number"
+                  value={shikakuDraft.seed}
+                  onChange={(value) =>
+                    setShikakuDraft((current) => ({ ...current, seed: value }))
+                  }
+                />
                 <div>
-                  <label htmlFor="new-shikaku-difficulty" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="new-shikaku-difficulty"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Difficulty
                   </label>
                   <select
                     id="new-shikaku-difficulty"
                     value={shikakuDraft.difficulty}
-                    onChange={(event) => updateShikakuDifficulty(event.target.value as DifficultyValue)}
-                    className="h-10 w-full rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-zinc-50 outline-none"
+                    onChange={(event) =>
+                      updateShikakuDifficulty(
+                        event.target.value as DifficultyValue,
+                      )
+                    }
+                    className="h-10 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
                   >
                     {DIFFICULTIES.map((difficulty) => (
                       <option key={difficulty} value={difficulty}>
@@ -405,23 +485,56 @@ export function ScoreCreateDialog({
                     ))}
                   </select>
                 </div>
-                <CreateField label="Time in ms" type="number" value={shikakuDraft.timeMs} onChange={updateShikakuTime} hint={formatPreciseTime(shikakuDraft.timeMs)} />
-                <CreateField label="Score" type="number" value={shikakuDraft.score} onChange={(value) => setShikakuDraft((current) => ({ ...current, score: value }))} />
-                <CreateField label="Puzzle count" type="number" value={shikakuDraft.puzzleCount} onChange={(value) => setShikakuDraft((current) => ({ ...current, puzzleCount: value }))} />
-                <CreateField label="Submitted at" type="datetime-local" value={shikakuDraft.createdAt} onChange={(value) => setShikakuDraft((current) => ({ ...current, createdAt: value }))} />
+                <CreateField
+                  label="Time in ms"
+                  type="number"
+                  value={shikakuDraft.timeMs}
+                  onChange={updateShikakuTime}
+                  hint={formatPreciseTime(shikakuDraft.timeMs)}
+                />
+                <CreateField
+                  label="Score"
+                  type="number"
+                  value={shikakuDraft.score}
+                  onChange={(value) =>
+                    setShikakuDraft((current) => ({ ...current, score: value }))
+                  }
+                />
+                <CreateField
+                  label="Puzzle count"
+                  type="number"
+                  value={shikakuDraft.puzzleCount}
+                  onChange={(value) =>
+                    setShikakuDraft((current) => ({
+                      ...current,
+                      puzzleCount: value,
+                    }))
+                  }
+                />
+                <CreateField
+                  label="Submitted at"
+                  type="datetime-local"
+                  value={shikakuDraft.createdAt}
+                  onChange={(value) =>
+                    setShikakuDraft((current) => ({
+                      ...current,
+                      createdAt: value,
+                    }))
+                  }
+                />
               </div>
             </section>
           ) : (
-            <section className="rounded-[20px] border border-orange-300/12 bg-orange-300/[0.04] p-4">
+            <section className="rounded-lg border border-border bg-muted p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                <div className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                   Run fields
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="border-orange-300/20 bg-orange-300/10 text-orange-50 hover:bg-orange-300/16"
+                  className="border-border bg-muted text-foreground hover:bg-accent"
                   onClick={randomizePips}
                 >
                   <Shuffle className="size-4" />
@@ -429,15 +542,82 @@ export function ScoreCreateDialog({
                 </Button>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <CreateField label="Session id" value={pipsDraft.sessionId} onChange={(value) => setPipsDraft((current) => ({ ...current, sessionId: value }))} />
-                <CreateField label="Player name" value={pipsDraft.name} onChange={(value) => setPipsDraft((current) => ({ ...current, name: value }))} />
-                <CreateField label="Seed" type="number" value={pipsDraft.seed} onChange={(value) => setPipsDraft((current) => ({ ...current, seed: value }))} />
-                <CreateField label="Easy split in ms" type="number" value={pipsDraft.easyMs} onChange={(value) => updatePipsSplit("easyMs", value)} hint={formatPreciseTime(pipsDraft.easyMs)} />
-                <CreateField label="Medium split in ms" type="number" value={pipsDraft.mediumMs} onChange={(value) => updatePipsSplit("mediumMs", value)} hint={formatPreciseTime(pipsDraft.mediumMs)} />
-                <CreateField label="Hard split in ms" type="number" value={pipsDraft.hardMs} onChange={(value) => updatePipsSplit("hardMs", value)} hint={formatPreciseTime(pipsDraft.hardMs)} />
-                <CreateField label="Total in ms" type="number" value={pipsDraft.totalMs} onChange={() => undefined} hint={`Total: ${formatPreciseTime(pipsDraft.totalMs)}`} readOnly />
-                <CreateField label="Puzzle count" type="number" value={pipsDraft.puzzleCount} onChange={(value) => setPipsDraft((current) => ({ ...current, puzzleCount: value }))} />
-                <CreateField label="Submitted at" type="datetime-local" value={pipsDraft.createdAt} onChange={(value) => setPipsDraft((current) => ({ ...current, createdAt: value }))} />
+                <CreateField
+                  label="Session id"
+                  value={pipsDraft.sessionId}
+                  onChange={(value) =>
+                    setPipsDraft((current) => ({
+                      ...current,
+                      sessionId: value,
+                    }))
+                  }
+                />
+                <CreateField
+                  label="Player name"
+                  value={pipsDraft.name}
+                  onChange={(value) =>
+                    setPipsDraft((current) => ({ ...current, name: value }))
+                  }
+                />
+                <CreateField
+                  label="Seed"
+                  type="number"
+                  value={pipsDraft.seed}
+                  onChange={(value) =>
+                    setPipsDraft((current) => ({ ...current, seed: value }))
+                  }
+                />
+                <CreateField
+                  label="Easy split in ms"
+                  type="number"
+                  value={pipsDraft.easyMs}
+                  onChange={(value) => updatePipsSplit("easyMs", value)}
+                  hint={formatPreciseTime(pipsDraft.easyMs)}
+                />
+                <CreateField
+                  label="Medium split in ms"
+                  type="number"
+                  value={pipsDraft.mediumMs}
+                  onChange={(value) => updatePipsSplit("mediumMs", value)}
+                  hint={formatPreciseTime(pipsDraft.mediumMs)}
+                />
+                <CreateField
+                  label="Hard split in ms"
+                  type="number"
+                  value={pipsDraft.hardMs}
+                  onChange={(value) => updatePipsSplit("hardMs", value)}
+                  hint={formatPreciseTime(pipsDraft.hardMs)}
+                />
+                <CreateField
+                  label="Total in ms"
+                  type="number"
+                  value={pipsDraft.totalMs}
+                  onChange={() => undefined}
+                  hint={`Total: ${formatPreciseTime(pipsDraft.totalMs)}`}
+                  readOnly
+                />
+                <CreateField
+                  label="Puzzle count"
+                  type="number"
+                  value={pipsDraft.puzzleCount}
+                  onChange={(value) =>
+                    setPipsDraft((current) => ({
+                      ...current,
+                      puzzleCount: value,
+                    }))
+                  }
+                />
+                <CreateField
+                  label="Submitted at"
+                  type="datetime-local"
+                  value={pipsDraft.createdAt}
+                  onChange={(value) =>
+                    setPipsDraft((current) => ({
+                      ...current,
+                      createdAt: value,
+                    }))
+                  }
+                />
               </div>
             </section>
           )}
@@ -447,14 +627,22 @@ export function ScoreCreateDialog({
           <Button
             type="button"
             variant="outline"
-            className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+            className="border-border bg-card text-foreground hover:bg-accent"
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="button" disabled={submitting} onClick={() => void submit()}>
+          <Button
+            type="button"
+            disabled={submitting}
+            onClick={() => void submit()}
+          >
             <UploadCloud className="size-4" />
-            {submitting ? "Adding..." : game === "shikaku" ? "Add score" : "Add run"}
+            {submitting
+              ? "Adding..."
+              : game === "shikaku"
+                ? "Add score"
+                : "Add run"}
           </Button>
         </div>
       </DialogContent>
@@ -480,7 +668,10 @@ function CreateField({
   const id = `create-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+      <label
+        htmlFor={id}
+        className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+      >
         {label}
       </label>
       <Input
@@ -490,9 +681,11 @@ function CreateField({
         value={value}
         readOnly={readOnly}
         onChange={(event) => onChange(event.target.value)}
-        className={`border-white/8 bg-[#0d1624] text-zinc-50 ${readOnly ? "text-zinc-400" : ""}`}
+        className={`border-border bg-card text-foreground ${readOnly ? "text-muted-foreground" : ""}`}
       />
-      {hint ? <div className="mt-1 text-xs text-zinc-500">{hint}</div> : null}
+      {hint ? (
+        <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
+      ) : null}
     </div>
   );
 }

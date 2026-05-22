@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Edit3, PlusCircle, Search, TimerReset, Trophy, Trash2 } from "lucide-react";
+import {
+  Edit3,
+  PlusCircle,
+  Search,
+  TimerReset,
+  Trophy,
+  Trash2,
+} from "lucide-react";
 import { api } from "@/lib/client-api";
 import {
   formatDateTime,
@@ -41,7 +48,12 @@ const DIFFICULTIES = ["all", "easy", "medium", "hard", "expert"] as const;
 type DifficultyFilter = (typeof DIFFICULTIES)[number];
 type DifficultyValue = ShikakuScoreRecord["difficulty"];
 
-const EDITABLE_DIFFICULTIES: readonly DifficultyValue[] = ["easy", "medium", "hard", "expert"];
+const EDITABLE_DIFFICULTIES: readonly DifficultyValue[] = [
+  "easy",
+  "medium",
+  "hard",
+  "expert",
+];
 
 type ScoreDraft = {
   sessionId: string;
@@ -62,7 +74,9 @@ function Surface({
   className?: string;
 }) {
   return (
-    <section className={`rounded-[24px] border border-white/8 bg-[#0f1826] p-5 ${className}`}>
+    <section
+      className={`rounded-lg border border-border bg-card p-5 ${className}`}
+    >
       {children}
     </section>
   );
@@ -83,10 +97,10 @@ function createDraft(score: ShikakuScoreRecord): ScoreDraft {
 
 function difficultyTone(difficulty: DifficultyValue) {
   if (difficulty === "easy") {
-    return "border-emerald-300/20 bg-emerald-300/10 text-emerald-50";
+    return "border-border bg-muted text-foreground";
   }
   if (difficulty === "medium") {
-    return "border-amber-300/20 bg-amber-300/10 text-amber-50";
+    return "border-border bg-muted text-foreground";
   }
   if (difficulty === "hard") {
     return "border-rose-300/20 bg-rose-300/10 text-rose-50";
@@ -106,7 +120,9 @@ export default function ShikakuPage() {
   const [pageSize, setPageSize] = useState(50);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedScore, setSelectedScore] = useState<ShikakuScoreRecord | null>(null);
+  const [selectedScore, setSelectedScore] = useState<ShikakuScoreRecord | null>(
+    null,
+  );
   const [draft, setDraft] = useState<ScoreDraft | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -139,7 +155,12 @@ export default function ShikakuPage() {
         setTotalPages(Math.max(1, response.totalPages ?? 1));
       } catch (error) {
         if (!cancelled) {
-          show(error instanceof Error ? error.message : "Unable to load Shikaku scores.", "error");
+          show(
+            error instanceof Error
+              ? error.message
+              : "Unable to load Shikaku scores.",
+            "error",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -162,22 +183,29 @@ export default function ShikakuPage() {
       if (!normalizedSearch) {
         return true;
       }
-      return [score.name, score.sessionId, score.difficulty, String(score.seed)].some((value) =>
-        normalizeSearchText(value).includes(normalizedSearch)
-      );
+      return [
+        score.name,
+        score.sessionId,
+        score.difficulty,
+        String(score.seed),
+      ].some((value) => normalizeSearchText(value).includes(normalizedSearch));
     });
   }, [normalizedSearch, scores]);
 
   const summary = useMemo(() => {
-    const bestScore = visibleScores.reduce((max, score) => Math.max(max, score.score), 0);
+    const bestScore = visibleScores.reduce(
+      (max, score) => Math.max(max, score.score),
+      0,
+    );
     const fastestTime = visibleScores.reduce(
       (fastest, score) => Math.min(fastest, score.timeMs),
-      Number.POSITIVE_INFINITY
+      Number.POSITIVE_INFINITY,
     );
     const puzzleAverage =
       visibleScores.length > 0
         ? Math.round(
-            visibleScores.reduce((sum, score) => sum + score.puzzleCount, 0) / visibleScores.length
+            visibleScores.reduce((sum, score) => sum + score.puzzleCount, 0) /
+              visibleScores.length,
           )
         : 0;
 
@@ -219,16 +247,28 @@ export default function ShikakuPage() {
     if (nextName && nextName !== selectedScore.name) {
       payload.name = nextName;
     }
-    if (Number.isInteger(nextSeed) && nextSeed >= 0 && nextSeed !== selectedScore.seed) {
+    if (
+      Number.isInteger(nextSeed) &&
+      nextSeed >= 0 &&
+      nextSeed !== selectedScore.seed
+    ) {
       payload.seed = nextSeed;
     }
     if (draft.difficulty !== selectedScore.difficulty) {
       payload.difficulty = draft.difficulty;
     }
-    if (Number.isFinite(nextScore) && nextScore >= 0 && nextScore !== selectedScore.score) {
+    if (
+      Number.isFinite(nextScore) &&
+      nextScore >= 0 &&
+      nextScore !== selectedScore.score
+    ) {
       payload.score = nextScore;
     }
-    if (Number.isFinite(nextTimeMs) && nextTimeMs >= 0 && nextTimeMs !== selectedScore.timeMs) {
+    if (
+      Number.isFinite(nextTimeMs) &&
+      nextTimeMs >= 0 &&
+      nextTimeMs !== selectedScore.timeMs
+    ) {
       payload.timeMs = nextTimeMs;
     }
     if (
@@ -257,7 +297,12 @@ export default function ShikakuPage() {
       closeEditor();
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to update Shikaku entry.", "error");
+      show(
+        error instanceof Error
+          ? error.message
+          : "Unable to update Shikaku entry.",
+        "error",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -284,7 +329,12 @@ export default function ShikakuPage() {
       }
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to delete Shikaku entry.", "error");
+      show(
+        error instanceof Error
+          ? error.message
+          : "Unable to delete Shikaku entry.",
+        "error",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -294,7 +344,8 @@ export default function ShikakuPage() {
     const label = difficulty === "all" ? "all scores" : `${difficulty} scores`;
     const confirmed = await confirm({
       title: `Delete ${label}?`,
-      description: "This clears the selected score set permanently and cannot be undone.",
+      description:
+        "This clears the selected score set permanently and cannot be undone.",
       confirmLabel: "Clear scores",
       tone: "destructive",
     });
@@ -314,7 +365,10 @@ export default function ShikakuPage() {
       setPage(1);
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to clear scores.", "error");
+      show(
+        error instanceof Error ? error.message : "Unable to clear scores.",
+        "error",
+      );
     } finally {
       setPendingAction(null);
     }
@@ -351,12 +405,15 @@ export default function ShikakuPage() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.label} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+              <div
+                key={item.label}
+                className="rounded-lg border border-border bg-muted/40 p-4"
+              >
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                   <Icon className="size-4" />
                   {item.label}
                 </div>
-                <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">
+                <div className="mt-3 text-2xl font-semibold tracking-normal text-foreground">
                   {item.value}
                 </div>
               </div>
@@ -369,12 +426,12 @@ export default function ShikakuPage() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by player, session, seed, or difficulty"
-                className="border-white/8 bg-[#0d1624] pl-11 text-zinc-50"
+                className="border-border bg-card pl-11 text-foreground"
               />
             </div>
 
@@ -387,7 +444,7 @@ export default function ShikakuPage() {
                   className={
                     difficulty === value
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                      : "border-border bg-card text-foreground hover:bg-accent"
                   }
                   onClick={() => setDifficulty(value)}
                 >
@@ -400,7 +457,7 @@ export default function ShikakuPage() {
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              className="bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => setCreateOpen(true)}
             >
               <PlusCircle className="size-4" />
@@ -408,7 +465,7 @@ export default function ShikakuPage() {
             </Button>
             <Button
               variant="destructive"
-              className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
+              className="border border-border bg-muted text-foreground hover:bg-accent"
               disabled={pendingAction === "clear"}
               onClick={() => void clearScores()}
             >
@@ -420,64 +477,94 @@ export default function ShikakuPage() {
       </Surface>
 
       <Surface className="mt-4">
-        <div className="overflow-hidden rounded-[20px] border border-white/8 bg-[#0d1624]">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-zinc-400">Rank</TableHead>
-                <TableHead className="text-zinc-400">Player</TableHead>
-                <TableHead className="text-zinc-400">Difficulty</TableHead>
-                <TableHead className="text-zinc-400">Score</TableHead>
-                <TableHead className="text-zinc-400">Time</TableHead>
-                <TableHead className="text-zinc-400">Puzzles</TableHead>
-                <TableHead className="text-zinc-400">Seed</TableHead>
-                <TableHead className="text-zinc-400">Session</TableHead>
-                <TableHead className="text-zinc-400">Submitted</TableHead>
-                <TableHead className="text-zinc-400">Actions</TableHead>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">Rank</TableHead>
+                <TableHead className="text-muted-foreground">Player</TableHead>
+                <TableHead className="text-muted-foreground">
+                  Difficulty
+                </TableHead>
+                <TableHead className="text-muted-foreground">Score</TableHead>
+                <TableHead className="text-muted-foreground">Time</TableHead>
+                <TableHead className="text-muted-foreground">Puzzles</TableHead>
+                <TableHead className="text-muted-foreground">Seed</TableHead>
+                <TableHead className="text-muted-foreground">Session</TableHead>
+                <TableHead className="text-muted-foreground">
+                  Submitted
+                </TableHead>
+                <TableHead className="text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && scores.length === 0 ? (
-                <TableRow className="border-white/10 hover:bg-transparent">
+                <TableRow className="border-border hover:bg-transparent">
                   <TableCell colSpan={10} className="px-4 py-5">
                     <div className="space-y-2">
                       {Array.from({ length: 6 }).map((_, index) => (
-                        <Skeleton key={index} className="h-12 bg-white/5" />
+                        <Skeleton key={index} className="h-12 bg-muted" />
                       ))}
                     </div>
                   </TableCell>
                 </TableRow>
               ) : visibleScores.length === 0 ? (
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableCell colSpan={10} className="px-4 py-12 text-center text-sm text-zinc-500">
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableCell
+                    colSpan={10}
+                    className="px-4 py-12 text-center text-sm text-muted-foreground"
+                  >
                     No Shikaku entries match the current search.
                   </TableCell>
                 </TableRow>
               ) : (
                 visibleScores.map((score, index) => (
-                  <TableRow key={score.id} className="border-white/8 hover:bg-[#142033]">
-                    <TableCell className="text-zinc-400">{(page - 1) * pageSize + index + 1}</TableCell>
-                    <TableCell>
-                      <div className="font-medium text-white">{score.name}</div>
-                      <div className="mt-1 text-xs text-zinc-500">{shortId(score.id, 14)}</div>
+                  <TableRow
+                    key={score.id}
+                    className="border-border hover:bg-accent"
+                  >
+                    <TableCell className="text-muted-foreground">
+                      {(page - 1) * pageSize + index + 1}
                     </TableCell>
                     <TableCell>
-                      <Badge className={`border ${difficultyTone(score.difficulty)}`}>
+                      <div className="font-medium text-foreground">
+                        {score.name}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {shortId(score.id, 14)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={`border ${difficultyTone(score.difficulty)}`}
+                      >
                         {score.difficulty}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-zinc-200">{score.score.toLocaleString()}</TableCell>
-                    <TableCell className="text-zinc-200">{formatDurationMs(score.timeMs)}</TableCell>
-                    <TableCell className="text-zinc-200">{score.puzzleCount}</TableCell>
-                    <TableCell className="font-mono text-sm text-zinc-300">{score.seed}</TableCell>
-                    <TableCell className="font-mono text-sm text-zinc-300">{shortId(score.sessionId, 14)}</TableCell>
-                    <TableCell className="text-sm text-zinc-400">{formatDateTime(score.createdAt)}</TableCell>
+                    <TableCell className="text-foreground">
+                      {score.score.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {formatDurationMs(score.timeMs)}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {score.puzzleCount}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {score.seed}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {shortId(score.sessionId, 14)}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatDateTime(score.createdAt)}
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                          className="border-border bg-card text-foreground hover:bg-accent"
                           onClick={() => openEditor(score)}
                         >
                           <Edit3 className="size-4" />
@@ -486,7 +573,7 @@ export default function ShikakuPage() {
                         <Button
                           variant="destructive"
                           size="sm"
-                          className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
+                          className="border border-border bg-muted text-foreground hover:bg-accent"
                           disabled={pendingAction === `delete-${score.id}`}
                           onClick={() => void deleteScore(score)}
                         >
@@ -527,12 +614,18 @@ export default function ShikakuPage() {
         }}
       />
 
-      <Dialog open={Boolean(selectedScore && draft)} onOpenChange={(open) => !open && closeEditor()}>
-        <DialogContent className="[--dialog-content-width:66rem] 2xl:[--dialog-content-width:72rem] border-white/8 bg-[#0d1624]/96 text-foreground shadow-[0_36px_120px_-52px_rgba(0,0,0,0.96)]">
+      <Dialog
+        open={Boolean(selectedScore && draft)}
+        onOpenChange={(open) => !open && closeEditor()}
+      >
+        <DialogContent className="[--dialog-content-width:66rem] 2xl:[--dialog-content-width:72rem] border-border bg-card text-foreground shadow-none">
           <DialogHeader>
-            <DialogTitle className="text-xl text-white">Edit Shikaku entry</DialogTitle>
-            <DialogDescription className="text-zinc-300/74">
-              Every persisted field on the score record is editable here, including the timestamp and source session id.
+            <DialogTitle className="text-xl text-foreground">
+              Edit Shikaku entry
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Every persisted field on the score record is editable here,
+              including the timestamp and source session id.
             </DialogDescription>
           </DialogHeader>
 
@@ -540,33 +633,50 @@ export default function ShikakuPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="score-session-id" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="score-session-id"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Session id
                   </label>
                   <Input
                     id="score-session-id"
                     value={draft.sessionId}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, sessionId: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, sessionId: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label htmlFor="score-player-name" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="score-player-name"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Player name
                   </label>
                   <Input
                     id="score-player-name"
                     value={draft.name}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, name: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, name: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label htmlFor="score-difficulty" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="score-difficulty"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Difficulty
                   </label>
                   <select
@@ -574,10 +684,15 @@ export default function ShikakuPage() {
                     value={draft.difficulty}
                     onChange={(event) =>
                       setDraft((current) =>
-                        current ? { ...current, difficulty: event.target.value as DifficultyValue } : current
+                        current
+                          ? {
+                              ...current,
+                              difficulty: event.target.value as DifficultyValue,
+                            }
+                          : current,
                       )
                     }
-                    className="h-10 w-full rounded-xl border border-white/8 bg-[#0d1624] px-4 text-sm text-zinc-50 outline-none"
+                    className="h-10 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
                   >
                     {EDITABLE_DIFFICULTIES.map((value) => (
                       <option key={value} value={value}>
@@ -587,7 +702,10 @@ export default function ShikakuPage() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="score-created-at" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="score-created-at"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Submitted at
                   </label>
                   <Input
@@ -595,16 +713,23 @@ export default function ShikakuPage() {
                     type="datetime-local"
                     value={draft.createdAt}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, createdAt: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, createdAt: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="score-seed" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="score-seed"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Seed
                   </label>
                   <Input
@@ -613,13 +738,20 @@ export default function ShikakuPage() {
                     min={0}
                     value={draft.seed}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, seed: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, seed: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label htmlFor="score-score" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="score-score"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Score
                   </label>
                   <Input
@@ -628,13 +760,20 @@ export default function ShikakuPage() {
                     min={0}
                     value={draft.score}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, score: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, score: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label htmlFor="score-time-ms" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="score-time-ms"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Time in ms
                   </label>
                   <Input
@@ -643,13 +782,20 @@ export default function ShikakuPage() {
                     min={0}
                     value={draft.timeMs}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, timeMs: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, timeMs: event.target.value }
+                          : current,
+                      )
                     }
-                    className="border-white/8 bg-[#0d1624] text-zinc-50"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label htmlFor="score-puzzle-count" className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                  <label
+                    htmlFor="score-puzzle-count"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                  >
                     Puzzle count
                   </label>
                   <Input
@@ -658,9 +804,13 @@ export default function ShikakuPage() {
                     min={0}
                     value={draft.puzzleCount}
                     onChange={(event) =>
-                      setDraft((current) => (current ? { ...current, puzzleCount: event.target.value } : current))
+                      setDraft((current) =>
+                        current
+                          ? { ...current, puzzleCount: event.target.value }
+                          : current,
+                      )
                     }
-                    className="rounded-full border-white/10 bg-white/4 text-zinc-50"
+                    className="rounded-lg border-border bg-muted text-foreground"
                   />
                 </div>
               </div>
@@ -670,8 +820,11 @@ export default function ShikakuPage() {
           <div className="flex flex-wrap justify-between gap-2">
             <Button
               variant="destructive"
-              className="border border-red-300/20 bg-red-400/12 text-red-50 hover:bg-red-400/22"
-              disabled={!selectedScore || pendingAction === `delete-${selectedScore?.id}`}
+              className="border border-border bg-muted text-foreground hover:bg-accent"
+              disabled={
+                !selectedScore ||
+                pendingAction === `delete-${selectedScore?.id}`
+              }
               onClick={() => selectedScore && void deleteScore(selectedScore)}
             >
               <Trash2 className="size-4" />
@@ -681,13 +834,17 @@ export default function ShikakuPage() {
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/[0.06]"
+                className="border-border bg-card text-foreground hover:bg-accent"
                 onClick={closeEditor}
               >
                 Cancel
               </Button>
               <Button
-                disabled={!selectedScore || !draft || pendingAction === `save-${selectedScore?.id}`}
+                disabled={
+                  !selectedScore ||
+                  !draft ||
+                  pendingAction === `save-${selectedScore?.id}`
+                }
                 onClick={() => void saveScore()}
               >
                 Save changes
