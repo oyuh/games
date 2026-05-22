@@ -38,8 +38,8 @@ export function Pagination({
   if (totalPages > 1) pages.push(totalPages);
 
   return (
-    <div className="flex flex-col gap-3 rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-zinc-200 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-zinc-400">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-muted-foreground">
         {startItem}–{endItem} of {total.toLocaleString()}
       </span>
 
@@ -47,7 +47,7 @@ export function Pagination({
         <Button
           variant="outline"
           size="sm"
-          className="rounded-full border-white/10 bg-white/[0.03] text-zinc-100 hover:bg-white/[0.08]"
+          className="rounded-lg border-border bg-card text-foreground hover:bg-accent"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
         >
@@ -57,24 +57,30 @@ export function Pagination({
 
         {pages.map((p) =>
           typeof p === "string" ? (
-            <span key={p} className="px-1 text-zinc-500">…</span>
+            <span key={p} className="px-1 text-muted-foreground">
+              …
+            </span>
           ) : (
             <Button
               key={p}
               variant={p === page ? "default" : "outline"}
               size="sm"
-              className={p === page ? "min-w-9 rounded-full bg-white text-zinc-900 hover:bg-white/90" : "min-w-9 rounded-full border-white/10 bg-white/[0.03] text-zinc-100 hover:bg-white/[0.08]"}
+              className={
+                p === page
+                  ? "min-w-9 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "min-w-9 rounded-lg border-border bg-card text-foreground hover:bg-accent"
+              }
               onClick={() => onPageChange(p)}
             >
               {p}
             </Button>
-          )
+          ),
         )}
 
         <Button
           variant="outline"
           size="sm"
-          className="rounded-full border-white/10 bg-white/[0.03] text-zinc-100 hover:bg-white/[0.08]"
+          className="rounded-lg border-border bg-card text-foreground hover:bg-accent"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
         >
@@ -84,15 +90,17 @@ export function Pagination({
       </div>
 
       {onPageSizeChange && (
-        <div className="flex items-center gap-2 text-sm text-zinc-400">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Per page:</span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="h-9 rounded-full border border-white/10 bg-white/[0.03] px-3 text-sm text-zinc-50 outline-none"
+            className="h-9 rounded-lg border border-border bg-card px-3 text-sm text-foreground outline-none"
           >
             {pageSizeOptions.map((size) => (
-              <option key={size} value={size}>{size}</option>
+              <option key={size} value={size}>
+                {size}
+              </option>
             ))}
           </select>
         </div>

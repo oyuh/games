@@ -18,6 +18,7 @@ node_modules
 
 # Test / coverage
 coverage
+docs\react-doctor-guide.md
 
 # Zero
 zero-data

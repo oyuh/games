@@ -30,8 +30,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { ClientDetailDialog } from "@/components/admin/client-detail-dialog";
 import { GameStateDialog } from "@/components/admin/game-state-dialog";
 
-function Surface({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`rounded-[24px] border border-white/8 bg-[#0f1826] p-5 ${className}`}>{children}</section>;
+function Surface({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-lg border border-border bg-card p-5 ${className}`}
+    >
+      {children}
+    </section>
+  );
 }
 
 function StatCard({
@@ -46,17 +58,21 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <Surface className="bg-[#111b2a] p-4">
+    <Surface className="bg-muted/40 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">{label}</div>
-          <div className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-white">{value}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+            {label}
+          </div>
+          <div className="mt-3 text-3xl font-semibold tracking-normal text-foreground">
+            {value}
+          </div>
         </div>
-        <div className="flex size-11 items-center justify-center rounded-[16px] border border-white/8 bg-[#18253a] text-zinc-100">
+        <div className="flex size-11 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
           <Icon className="size-5" />
         </div>
       </div>
-      <div className="mt-3 text-sm leading-6 text-zinc-400">{hint}</div>
+      <div className="mt-3 text-sm leading-6 text-muted-foreground">{hint}</div>
     </Surface>
   );
 }
@@ -76,33 +92,33 @@ function DashboardSkeleton() {
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Surface key={index} className="bg-[#111b2a] p-4">
-            <Skeleton className="h-4 w-28 bg-white/6" />
-            <Skeleton className="mt-4 h-10 w-24 bg-white/6" />
-            <Skeleton className="mt-4 h-4 w-full bg-white/5" />
-            <Skeleton className="mt-2 h-4 w-3/4 bg-white/5" />
+          <Surface key={index} className="bg-muted/40 p-4">
+            <Skeleton className="h-4 w-28 bg-muted" />
+            <Skeleton className="mt-4 h-10 w-24 bg-muted" />
+            <Skeleton className="mt-4 h-4 w-full bg-muted" />
+            <Skeleton className="mt-2 h-4 w-3/4 bg-muted" />
           </Surface>
         ))}
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
         <Surface className="overflow-hidden">
-          <Skeleton className="h-5 w-40 bg-white/6" />
-          <Skeleton className="mt-3 h-8 w-72 bg-white/6" />
-          <Skeleton className="mt-3 h-4 w-full bg-white/5" />
-          <Skeleton className="mt-2 h-4 w-3/4 bg-white/5" />
+          <Skeleton className="h-5 w-40 bg-muted" />
+          <Skeleton className="mt-3 h-8 w-72 bg-muted" />
+          <Skeleton className="mt-3 h-4 w-full bg-muted" />
+          <Skeleton className="mt-2 h-4 w-3/4 bg-muted" />
           <div className="mt-5 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
-            <Skeleton className="h-85 bg-white/5" />
+            <Skeleton className="h-85 bg-muted" />
             <div className="grid gap-4">
-              <Skeleton className="h-40 bg-white/5" />
-              <Skeleton className="h-40 bg-white/5" />
+              <Skeleton className="h-40 bg-muted" />
+              <Skeleton className="h-40 bg-muted" />
             </div>
           </div>
         </Surface>
 
         <div className="grid gap-4">
-          <Skeleton className="h-55 bg-white/5" />
-          <Skeleton className="h-55 bg-white/5" />
+          <Skeleton className="h-55 bg-muted" />
+          <Skeleton className="h-55 bg-muted" />
         </div>
       </div>
     </>
@@ -114,14 +130,21 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null);
-  const [selectedGame, setSelectedGame] = useState<{ id: string; type: GameType } | null>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(
+    null,
+  );
+  const [selectedGame, setSelectedGame] = useState<{
+    id: string;
+    type: GameType;
+  } | null>(null);
   const [statusInput, setStatusInput] = useState("");
   const [linkInput, setLinkInput] = useState("");
   const [colorInput, setColorInput] = useState("");
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [statusSignature, setStatusSignature] = useState<string | null>(null);
-  const [pendingStatusAction, setPendingStatusAction] = useState<string | null>(null);
+  const [pendingStatusAction, setPendingStatusAction] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -134,7 +157,12 @@ export default function DashboardPage() {
         }
       } catch (error) {
         if (!cancelled) {
-          show(error instanceof Error ? error.message : "Unable to load dashboard.", "error");
+          show(
+            error instanceof Error
+              ? error.message
+              : "Unable to load dashboard.",
+            "error",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -182,7 +210,10 @@ export default function DashboardPage() {
   }, [roomMix]);
 
   const namedRatio = data
-    ? Math.round((data.summary.clients.named / Math.max(1, data.summary.clients.total)) * 100)
+    ? Math.round(
+        (data.summary.clients.named / Math.max(1, data.summary.clients.total)) *
+          100,
+      )
     : 0;
 
   const updateStatus = async () => {
@@ -197,10 +228,18 @@ export default function DashboardPage() {
           flash: flashEnabled,
         },
       });
-      show(statusInput.trim() ? "Footer status updated." : "Footer status cleared.", "success");
+      show(
+        statusInput.trim()
+          ? "Footer status updated."
+          : "Footer status cleared.",
+        "success",
+      );
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to update status.", "error");
+      show(
+        error instanceof Error ? error.message : "Unable to update status.",
+        "error",
+      );
     } finally {
       setPendingStatusAction(null);
     }
@@ -213,7 +252,10 @@ export default function DashboardPage() {
       show("Footer status cleared.", "success");
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      show(error instanceof Error ? error.message : "Unable to clear status.", "error");
+      show(
+        error instanceof Error ? error.message : "Unable to clear status.",
+        "error",
+      );
     } finally {
       setPendingStatusAction(null);
     }
@@ -225,7 +267,7 @@ export default function DashboardPage() {
 
   if (!data) {
     return (
-      <Surface className="border-dashed bg-transparent px-5 py-16 text-center text-sm text-zinc-500">
+      <Surface className="border-dashed bg-transparent px-5 py-16 text-center text-sm text-muted-foreground">
         Dashboard data is unavailable right now.
       </Surface>
     );
@@ -264,37 +306,59 @@ export default function DashboardPage() {
         <Surface className="overflow-hidden">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Activity Snapshot</div>
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white">Live traffic and room distribution</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                The overview below keeps the busiest metrics above the fold: who is connected, where they are, and which game types are carrying traffic.
+              <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                Activity Snapshot
+              </div>
+              <h2 className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
+                Live traffic and room distribution
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                The overview below keeps the busiest metrics above the fold: who
+                is connected, where they are, and which game types are carrying
+                traffic.
               </p>
             </div>
-            <Badge variant="outline" className="w-fit border-white/8 bg-white/3 text-zinc-200">
+            <Badge
+              variant="outline"
+              className="w-fit border-border bg-card text-foreground"
+            >
               Auto-refresh 8s
             </Badge>
           </div>
 
           <div className="mt-5 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
-            <div className="rounded-[22px] border border-white/8 bg-[#111b2a] p-5">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Population</div>
-              <div className="mt-3 text-5xl font-semibold tracking-[-0.08em] text-white">
+            <div className="rounded-lg border border-border bg-muted/40 p-5">
+              <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                Population
+              </div>
+              <div className="mt-3 text-5xl font-semibold tracking-normal text-foreground">
                 {data.summary.clients.total.toLocaleString()}
               </div>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                {data.summary.clients.inGame.toLocaleString()} clients are seated in rooms, with {data.summary.games.activePlayers.toLocaleString()} active players generating the current session load.
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                {data.summary.clients.inGame.toLocaleString()} clients are
+                seated in rooms, with{" "}
+                {data.summary.games.activePlayers.toLocaleString()} active
+                players generating the current session load.
               </p>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {[
                   { label: "Players", value: data.summary.games.activePlayers },
-                  { label: "Spectators", value: data.summary.games.activeSpectators },
+                  {
+                    label: "Spectators",
+                    value: data.summary.games.activeSpectators,
+                  },
                   { label: "Named", value: data.summary.clients.named },
                   { label: "Anonymous", value: data.summary.clients.anonymous },
                 ].map((item) => (
-                  <div key={item.label} className="rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-3">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.26em] text-zinc-500">{item.label}</div>
-                    <div className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white">
+                  <div
+                    key={item.label}
+                    className="rounded-lg border border-border bg-card px-4 py-3"
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
+                      {item.label}
+                    </div>
+                    <div className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
                       {item.value.toLocaleString()}
                     </div>
                   </div>
@@ -303,13 +367,20 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid gap-4">
-              <div className="rounded-[22px] border border-white/8 bg-[#111b2a] p-5">
+              <div className="rounded-lg border border-border bg-muted/40 p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Room Mix</div>
-                    <div className="mt-1 text-sm text-zinc-300">Current room volume by game type</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                      Room Mix
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Current room volume by game type
+                    </div>
                   </div>
-                  <Badge variant="outline" className="border-white/8 bg-white/3 text-zinc-200">
+                  <Badge
+                    variant="outline"
+                    className="border-border bg-card text-foreground"
+                  >
                     {data.summary.games.total} live
                   </Badge>
                 </div>
@@ -317,14 +388,18 @@ export default function DashboardPage() {
                 <div className="mt-4 space-y-3">
                   {roomMix.map((entry) => (
                     <div key={entry.type}>
-                      <div className="mb-1.5 flex items-center justify-between gap-3 text-sm text-zinc-300">
+                      <div className="mb-1.5 flex items-center justify-between gap-3 text-sm text-muted-foreground">
                         <span>{formatGameType(entry.type)}</span>
-                        <span className="text-zinc-400">{entry.total}</span>
+                        <span className="text-muted-foreground">
+                          {entry.total}
+                        </span>
                       </div>
-                      <div className="h-2 rounded-full bg-[#0c1420]">
+                      <div className="h-2 rounded-lg bg-muted">
                         <div
-                          className="h-2 rounded-full bg-[#4f7cff]"
-                          style={{ width: `${(entry.total / maxRoomMix) * 100}%` }}
+                          className="h-2 rounded-lg bg-foreground"
+                          style={{
+                            width: `${(entry.total / maxRoomMix) * 100}%`,
+                          }}
                         />
                       </div>
                     </div>
@@ -332,17 +407,24 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-[22px] border border-white/8 bg-[#111b2a] p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Regional Spread</div>
+              <div className="rounded-lg border border-border bg-muted/40 p-5">
+                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                  Regional Spread
+                </div>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {data.summary.clients.topRegions.slice(0, 6).map((entry) => (
-                    <div key={entry.region} className="rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-3">
+                    <div
+                      key={entry.region}
+                      className="rounded-lg border border-border bg-card px-4 py-3"
+                    >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 text-sm text-zinc-200">
-                          <Globe2 className="size-4 text-zinc-400" />
+                        <div className="flex items-center gap-2 text-sm text-foreground">
+                          <Globe2 className="size-4 text-muted-foreground" />
                           {entry.region}
                         </div>
-                        <div className="text-sm font-medium text-white">{entry.total}</div>
+                        <div className="text-sm font-medium text-foreground">
+                          {entry.total}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -353,33 +435,54 @@ export default function DashboardPage() {
         </Surface>
 
         <div className="grid gap-4">
-          <Surface className="bg-[#111b2a]">
+          <Surface className="bg-muted/40">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Site Message</div>
-                <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white">Footer status control</h2>
+                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                  Site Message
+                </div>
+                <h2 className="mt-2 text-xl font-semibold tracking-normal text-foreground">
+                  Footer status control
+                </h2>
               </div>
-              <div className="flex size-10 items-center justify-center rounded-[16px] border border-white/8 bg-[#18253a] text-zinc-100">
+              <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
                 <Waves className="size-4.5" />
               </div>
             </div>
 
-            <div className="mt-4 rounded-[20px] border border-white/8 bg-[#0d1624] p-4 text-sm text-zinc-300">
+            <div className="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
               {currentStatus ? (
                 <>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="border border-[#36559a] bg-[#15274a] text-zinc-100">Live</Badge>
+                    <Badge className="border border-[#36559a] bg-muted text-foreground">
+                      Live
+                    </Badge>
                     {currentStatus.flash ? (
-                      <Badge variant="outline" className="border-white/8 bg-white/3 text-zinc-200">
+                      <Badge
+                        variant="outline"
+                        className="border-border bg-card text-foreground"
+                      >
                         Flashing
                       </Badge>
                     ) : null}
                   </div>
-                  <div className="mt-3 font-medium text-white" style={currentStatus.color ? { color: currentStatus.color } : undefined}>
+                  <div
+                    className="mt-3 font-medium text-foreground"
+                    style={
+                      currentStatus.color
+                        ? { color: currentStatus.color }
+                        : undefined
+                    }
+                  >
                     {currentStatus.text}
                   </div>
                   {currentStatus.link ? (
-                    <a href={currentStatus.link} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 text-zinc-300 underline underline-offset-4">
+                    <a
+                      href={currentStatus.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-flex items-center gap-2 text-muted-foreground underline underline-offset-4"
+                    >
                       <Link2 className="size-4" />
                       {currentStatus.link}
                     </a>
@@ -387,8 +490,15 @@ export default function DashboardPage() {
                 </>
               ) : (
                 <>
-                  <Badge variant="outline" className="border-white/8 bg-white/3 text-zinc-200">Default</Badge>
-                  <div className="mt-3 text-zinc-400">No custom footer status is active.</div>
+                  <Badge
+                    variant="outline"
+                    className="border-border bg-card text-foreground"
+                  >
+                    Default
+                  </Badge>
+                  <div className="mt-3 text-muted-foreground">
+                    No custom footer status is active.
+                  </div>
                 </>
               )}
             </div>
@@ -398,7 +508,7 @@ export default function DashboardPage() {
               onChange={(event) => setStatusInput(event.target.value)}
               placeholder="Short footer status message"
               maxLength={200}
-              className="mt-4 min-h-24 border-white/8 bg-[#0d1624] text-zinc-50"
+              className="mt-4 min-h-24 border-border bg-card text-foreground"
             />
 
             <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -407,26 +517,26 @@ export default function DashboardPage() {
                 onChange={(event) => setLinkInput(event.target.value)}
                 placeholder="Optional https:// link"
                 maxLength={500}
-                className="border-white/8 bg-[#0d1624] text-zinc-50"
+                className="border-border bg-card text-foreground"
               />
 
               <div className="flex gap-3">
-                <label className="flex items-center gap-2 rounded-xl border border-white/8 bg-[#0d1624] px-3 text-sm text-zinc-200">
+                <label className="flex items-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground">
                   <span>Accent</span>
                   <input
                     type="color"
                     value={colorInput || "#4f7cff"}
                     onChange={(event) => setColorInput(event.target.value)}
-                    className="size-8 rounded-lg border border-white/8 bg-transparent p-0"
+                    className="size-8 rounded-lg border border-border bg-transparent p-0"
                   />
                 </label>
 
-                <label className="flex items-center gap-2 rounded-xl border border-white/8 bg-[#0d1624] px-3 text-sm text-zinc-200">
+                <label className="flex items-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground">
                   <input
                     type="checkbox"
                     checked={flashEnabled}
                     onChange={(event) => setFlashEnabled(event.target.checked)}
-                    className="size-4 rounded border-white/20 bg-transparent"
+                    className="size-4 rounded border-border bg-transparent"
                   />
                   Flash
                 </label>
@@ -434,12 +544,15 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button disabled={pendingStatusAction !== null} onClick={() => void updateStatus()}>
+              <Button
+                disabled={pendingStatusAction !== null}
+                onClick={() => void updateStatus()}
+              >
                 Save status
               </Button>
               <Button
                 variant="outline"
-                className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
+                className="border-border bg-card text-foreground hover:bg-accent"
                 disabled={pendingStatusAction !== null}
                 onClick={() => void clearStatus()}
               >
@@ -448,46 +561,71 @@ export default function DashboardPage() {
             </div>
           </Surface>
 
-          <Surface className="bg-[#111b2a]">
+          <Surface className="bg-muted/40">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Moderation Health</div>
-                <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white">Current enforcement pressure</h2>
+                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                  Moderation Health
+                </div>
+                <h2 className="mt-2 text-xl font-semibold tracking-normal text-foreground">
+                  Current enforcement pressure
+                </h2>
               </div>
-              <div className="flex size-10 items-center justify-center rounded-[16px] border border-white/8 bg-[#18253a] text-zinc-100">
+              <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
                 <Ban className="size-4.5" />
               </div>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {[
-                { label: "Session", value: data.summary.moderation.sessionBans },
+                {
+                  label: "Session",
+                  value: data.summary.moderation.sessionBans,
+                },
                 { label: "IP", value: data.summary.moderation.ipBans },
                 { label: "Region", value: data.summary.moderation.regionBans },
               ].map((item) => (
-                <div key={item.label} className="rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.26em] text-zinc-500">{item.label}</div>
-                  <div className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white">{item.value}</div>
+                <div
+                  key={item.label}
+                  className="rounded-lg border border-border bg-card px-4 py-3"
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
+                    {item.label}
+                  </div>
+                  <div className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
+                    {item.value}
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Recent Bans</div>
+                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                  Recent Bans
+                </div>
                 <div className="mt-3 space-y-2.5">
                   {data.recentBans.length === 0 ? (
-                    <div className="rounded-[18px] border border-dashed border-white/8 px-4 py-5 text-sm text-zinc-500">
+                    <div className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
                       No active bans.
                     </div>
                   ) : (
                     data.recentBans.slice(0, 3).map((ban) => (
-                      <div key={ban.id} className="rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-3">
+                      <div
+                        key={ban.id}
+                        className="rounded-lg border border-border bg-card px-4 py-3"
+                      >
                         <div className="flex items-center justify-between gap-3 text-sm">
-                          <div className="font-medium text-zinc-100">{ban.type.toUpperCase()}</div>
-                          <div className="text-zinc-400">{formatRelativeTime(ban.createdAt)}</div>
+                          <div className="font-medium text-foreground">
+                            {ban.type.toUpperCase()}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {formatRelativeTime(ban.createdAt)}
+                          </div>
                         </div>
-                        <div className="mt-1 truncate text-sm text-zinc-300">{ban.value}</div>
+                        <div className="mt-1 truncate text-sm text-muted-foreground">
+                          {ban.value}
+                        </div>
                       </div>
                     ))
                   )}
@@ -495,17 +633,26 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Restricted Names</div>
+                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                  Restricted Names
+                </div>
                 <div className="mt-3 space-y-2.5">
                   {data.nameRules.length === 0 ? (
-                    <div className="rounded-[18px] border border-dashed border-white/8 px-4 py-5 text-sm text-zinc-500">
+                    <div className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
                       No restricted names configured.
                     </div>
                   ) : (
                     data.nameRules.slice(0, 3).map((rule) => (
-                      <div key={rule.id} className="rounded-[18px] border border-white/8 bg-[#0d1624] px-4 py-3">
-                        <div className="font-medium text-zinc-100">{rule.pattern}</div>
-                        <div className="mt-1 text-sm text-zinc-400">{rule.reason || "No reason provided"}</div>
+                      <div
+                        key={rule.id}
+                        className="rounded-lg border border-border bg-card px-4 py-3"
+                      >
+                        <div className="font-medium text-foreground">
+                          {rule.pattern}
+                        </div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          {rule.reason || "No reason provided"}
+                        </div>
                       </div>
                     ))
                   )}
@@ -520,32 +667,59 @@ export default function DashboardPage() {
         <Surface>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Recent Clients</div>
-              <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white">Newest visible sessions</h2>
+              <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                Recent Clients
+              </div>
+              <h2 className="mt-2 text-xl font-semibold tracking-normal text-foreground">
+                Newest visible sessions
+              </h2>
             </div>
-            <Badge variant="outline" className="border-white/8 bg-white/3 text-zinc-200">
+            <Badge
+              variant="outline"
+              className="border-border bg-card text-foreground"
+            >
               {data.summary.clients.inGame} in-game
             </Badge>
           </div>
 
           <div className="mt-4 space-y-3">
             {data.recentClients.length === 0 ? (
-              <div className="rounded-[18px] border border-dashed border-white/8 px-4 py-8 text-sm text-zinc-500">
+              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
                 No recent clients are visible right now.
               </div>
             ) : (
               data.recentClients.map((client) => (
-                <div key={client.sessionId ?? client.fingerprint ?? String(client.lastSeen)} className="rounded-[20px] border border-white/8 bg-[#111b2a] p-4">
+                <div
+                  key={
+                    client.sessionId ??
+                    client.fingerprint ??
+                    String(client.lastSeen)
+                  }
+                  className="rounded-lg border border-border bg-muted/40 p-4"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <button type="button" className="min-w-0 text-left" onClick={() => setSelectedClient(client)}>
-                      <div className="font-medium text-white">{client.name || "Anonymous"}</div>
-                      <div className="mt-1 text-sm text-zinc-400">{shortId(client.sessionId, 16)}</div>
-                      <div className="mt-2 text-sm text-zinc-500">Seen {formatRelativeTime(client.lastSeen)}</div>
+                    <button
+                      type="button"
+                      className="min-w-0 text-left"
+                      onClick={() => setSelectedClient(client)}
+                    >
+                      <div className="font-medium text-foreground">
+                        {client.name || "Anonymous"}
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {shortId(client.sessionId, 16)}
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground">
+                        Seen {formatRelativeTime(client.lastSeen)}
+                      </div>
                     </button>
 
                     <div className="flex flex-wrap items-center gap-2">
                       {client.region ? (
-                        <Badge variant="outline" className="border-white/8 bg-[#0d1624] text-zinc-200">
+                        <Badge
+                          variant="outline"
+                          className="border-border bg-card text-foreground"
+                        >
                           <Globe2 className="size-3.5" />
                           {client.region}
                         </Badge>
@@ -554,8 +728,13 @@ export default function DashboardPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-white/8 bg-[#0d1624] text-zinc-100 hover:bg-white/6"
-                          onClick={() => setSelectedGame({ id: client.gameId!, type: client.gameType! })}
+                          className="border-border bg-card text-foreground hover:bg-accent"
+                          onClick={() =>
+                            setSelectedGame({
+                              id: client.gameId!,
+                              type: client.gameType!,
+                            })
+                          }
                         >
                           <Activity className="size-4" />
                           {formatGameType(client.gameType)}
@@ -572,17 +751,24 @@ export default function DashboardPage() {
         <Surface>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">Hot Rooms</div>
-              <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white">Most recently touched games</h2>
+              <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                Hot Rooms
+              </div>
+              <h2 className="mt-2 text-xl font-semibold tracking-normal text-foreground">
+                Most recently touched games
+              </h2>
             </div>
-            <Badge variant="outline" className="border-white/8 bg-white/3 text-zinc-200">
+            <Badge
+              variant="outline"
+              className="border-border bg-card text-foreground"
+            >
               {data.summary.games.activePlayers} players
             </Badge>
           </div>
 
           <div className="mt-4 space-y-3">
             {data.recentGames.length === 0 ? (
-              <div className="rounded-[18px] border border-dashed border-white/8 px-4 py-8 text-sm text-zinc-500">
+              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
                 No active games right now.
               </div>
             ) : (
@@ -590,26 +776,35 @@ export default function DashboardPage() {
                 <button
                   key={game.id}
                   type="button"
-                  onClick={() => setSelectedGame({ id: game.id, type: game.type })}
-                  className="flex w-full items-center justify-between gap-4 rounded-[20px] border border-white/8 bg-[#111b2a] p-4 text-left transition-colors hover:border-white/12 hover:bg-[#142033]"
+                  onClick={() =>
+                    setSelectedGame({ id: game.id, type: game.type })
+                  }
+                  className="flex w-full items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 p-4 text-left transition-colors hover:border-foreground/20 hover:bg-accent"
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <div className="font-medium text-white">{game.code}</div>
-                      <Badge variant="outline" className="border-white/8 bg-[#0d1624] text-zinc-200">
+                      <div className="font-medium text-foreground">
+                        {game.code}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="border-border bg-card text-foreground"
+                      >
                         {formatGameType(game.type)}
                       </Badge>
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span>{game.playerCount} players</span>
                       <span>{game.spectatorCount} spectators</span>
                       <span>{game.roundCount} tracked rounds</span>
                     </div>
                   </div>
 
-                  <div className="shrink-0 text-right text-sm text-zinc-400">
-                    <div className="text-zinc-200">{game.phase}</div>
-                    <div className="mt-1">{formatRelativeTime(game.updatedAt)}</div>
+                  <div className="shrink-0 text-right text-sm text-muted-foreground">
+                    <div className="text-foreground">{game.phase}</div>
+                    <div className="mt-1">
+                      {formatRelativeTime(game.updatedAt)}
+                    </div>
                   </div>
                 </button>
               ))

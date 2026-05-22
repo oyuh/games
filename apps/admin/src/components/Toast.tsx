@@ -20,13 +20,16 @@ const ToastContext = createContext<{
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const show = useCallback((message: string, level: ToastItem["level"] = "info") => {
-    const id = ++nextId;
-    setToasts((prev) => [...prev, { id, message, level }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
-  }, []);
+  const show = useCallback(
+    (message: string, level: ToastItem["level"] = "info") => {
+      const id = ++nextId;
+      setToasts((prev) => [...prev, { id, message, level }]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 4000);
+    },
+    [],
+  );
 
   return (
     <ToastContext.Provider value={{ toasts, show }}>
@@ -36,10 +39,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <div
             key={t.id}
             className={cn(
-              "rounded-[24px] border px-4 py-3 shadow-[0_24px_60px_-34px_rgba(0,0,0,0.95)] backdrop-blur-xl",
-              t.level === "success" && "border-emerald-300/20 bg-emerald-300/10 text-emerald-50",
-              t.level === "error" && "border-red-300/20 bg-red-300/10 text-red-50",
-              t.level === "info" && "border-cyan-300/20 bg-cyan-300/10 text-cyan-50"
+              "rounded-lg border px-4 py-3 shadow-none ",
+              t.level === "success" && "border-border bg-muted text-foreground",
+              t.level === "error" && "border-border bg-muted text-foreground",
+              t.level === "info" && "border-border bg-muted text-foreground",
             )}
           >
             <div className="flex items-start gap-3">
