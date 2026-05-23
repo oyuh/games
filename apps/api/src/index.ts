@@ -7,6 +7,15 @@ import { config } from "dotenv";
 import { lt, and, asc, count, desc, eq, gt, inArray, ne, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import {
+  PUZZLES_PER_RUN as ENGINE_SHIKAKU_PUZZLES,
+  calculateScore as calculateShikakuScore,
+  validateRankedShikakuRun,
+} from "@games/shared/games/shikaku-engine";
+import {
+  PIPS_PUZZLES_PER_RUN as ENGINE_PIPS_PUZZLES,
+  validateRankedPipsRun,
+} from "@games/shared/games/pips-engine";
 import { dbProvider } from "./db-provider";
 import { drizzleClient } from "./db-provider";
 import { pusher, getCustomStatus, setBanChecker, getBanChecker } from "./broadcast-server";
@@ -1138,10 +1147,8 @@ async function probeDatabaseStatus(): Promise<DatabaseProbe> {
 
 // ─── Shikaku solo game endpoints ─────────────────────────────
 
-// Server-side score calculation (mirrors the client formula exactly)
-const SHIKAKU_DIFF_MULT: Record<string, number> = { easy: 1, medium: 1.5, hard: 2.2, expert: 3 };
-const SHIKAKU_PAR_MS: Record<string, number> = { easy: 30_000, medium: 60_000, hard: 90_000, expert: 120_000 };
-const SHIKAKU_PUZZLES = 5;
+// Server-side score calculation uses the shared engine formula exactly.
+const SHIKAKU_PUZZLES = ENGINE_SHIKAKU_PUZZLES;
 const SHIKAKU_MIN_TIME_MS: Record<string, number> = {
   easy: 10_000,   // 2 s per puzzle
   medium: 20_000, // 4 s per puzzle
@@ -1156,10 +1163,7 @@ const SHIKAKU_AUTO_BAN_MIN_TIME_MS: Record<string, number> = {
 };
 
 function shikakuMaxScore(timeMs: number, difficulty: string): number {
-  const totalParMs = (SHIKAKU_PAR_MS[difficulty] ?? 30_000) * SHIKAKU_PUZZLES;
-  const timeBonus = Math.max(0.1, 2 - timeMs / totalParMs);
-  const basePoints = 1000 * SHIKAKU_PUZZLES;
-  return Math.max(0, Math.round(basePoints * (SHIKAKU_DIFF_MULT[difficulty] ?? 1) * timeBonus));
+  return isShikakuDifficulty(difficulty) ? calculateShikakuScore(timeMs, difficulty) : 0;
 }
 
 // ── Max play time per difficulty ────────────────────────────
@@ -1184,6 +1188,7 @@ type ShikakuScoreRequestBody = {
   score?: number;
   timeMs?: number;
   puzzleCount?: number;
+  replayData?: unknown;
 };
 
 type ShikakuScoreCandidate = {
@@ -1194,6 +1199,7 @@ type ShikakuScoreCandidate = {
   score: number;
   timeMs: number;
   puzzleCount: number;
+  replayData: unknown;
   callerIp: string;
   callerRegion: string;
   callerUA: string;
@@ -1213,6 +1219,9 @@ type ShikakuScoreErrorCode =
   | "too-fast"
   | "too-slow"
   | "inflated-score"
+  | "invalid-replay"
+  | "invalid-generated-run"
+  | "non-canonical-solution"
   | "duplicate";
 
 type ShikakuScoreValidationResult =
@@ -1234,7 +1243,7 @@ type ShikakuScoreAssessment =
       status: number;
       error: string;
       reason: string;
-      code: Extract<ShikakuScoreErrorCode, "banned" | "too-fast" | "too-slow" | "inflated-score" | "duplicate">;
+      code: ShikakuScoreErrorCode;
     }
   | {
       kind: "accepted-no-store";
@@ -1244,6 +1253,7 @@ type ShikakuScoreAssessment =
       kind: "eligible";
       willReplace: boolean;
       lowestScoreId: string | null;
+      replayData: unknown;
     };
 
 function isShikakuDifficulty(value: unknown): value is ShikakuDifficulty {
@@ -1264,7 +1274,7 @@ async function buildShikakuScoreCandidate(
     };
   }
 
-  const { sessionId, name, seed, difficulty, score, timeMs, puzzleCount } = body;
+  const { sessionId, name, seed, difficulty, score, timeMs, puzzleCount, replayData } = body;
   const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, sessionId);
   if (!verifiedClaimedSessionId) {
     return {
@@ -1371,6 +1381,7 @@ async function buildShikakuScoreCandidate(
       score,
       timeMs,
       puzzleCount,
+      replayData,
       callerIp,
       callerRegion,
       callerUA,
@@ -1432,6 +1443,24 @@ async function assessShikakuScoreCandidate(candidate: ShikakuScoreCandidate): Pr
     };
   }
 
+  const rankedValidation = validateRankedShikakuRun({
+    seed: candidate.seed,
+    difficulty: candidate.difficulty,
+    score: candidate.score,
+    timeMs: candidate.timeMs,
+    puzzleCount: candidate.puzzleCount,
+    replayData: candidate.replayData,
+  });
+  if (!rankedValidation.ok) {
+    return {
+      kind: "error",
+      status: 400,
+      error: "Score rejected",
+      reason: rankedValidation.reason,
+      code: rankedValidation.code,
+    };
+  }
+
   const [existing] = await drizzleClient
     .select({ id: shikakuScores.id })
     .from(shikakuScores)
@@ -1470,6 +1499,7 @@ async function assessShikakuScoreCandidate(candidate: ShikakuScoreCandidate): Pr
       kind: "eligible",
       willReplace: Boolean(lowest),
       lowestScoreId: lowest?.id ?? null,
+      replayData: rankedValidation.replayData,
     };
   }
 
@@ -1477,6 +1507,7 @@ async function assessShikakuScoreCandidate(candidate: ShikakuScoreCandidate): Pr
     kind: "eligible",
     willReplace: false,
     lowestScoreId: null,
+    replayData: rankedValidation.replayData,
   };
 }
 
@@ -1730,6 +1761,14 @@ app.post("/api/shikaku/score", async (c) => {
       }
     }
 
+    if (assessment.code === "invalid-replay" || assessment.code === "invalid-generated-run" || assessment.code === "non-canonical-solution") {
+      const shouldBan = recordStrike(candidate.effectiveSessionId, `shikaku replay validation failed: ${assessment.code}`);
+      if (shouldBan) {
+        const entry = abuseStrikes.get(candidate.effectiveSessionId);
+        await autoBanSession(candidate.effectiveSessionId, entry?.reasons ?? ["replay manipulation"]);
+      }
+    }
+
     return c.json({ error: assessment.error }, { status: assessment.status as 400 | 403 | 409 });
   }
 
@@ -1753,6 +1792,7 @@ app.post("/api/shikaku/score", async (c) => {
     score: candidate.score,
     timeMs: candidate.timeMs,
     puzzleCount: candidate.puzzleCount,
+    replayData: assessment.replayData,
     createdAt: Date.now(),
   });
 
@@ -1761,7 +1801,7 @@ app.post("/api/shikaku/score", async (c) => {
 
 // ─── Pips solo game endpoints ────────────────────────────────
 
-const PIPS_PUZZLES = 3;
+const PIPS_PUZZLES = ENGINE_PIPS_PUZZLES;
 const PIPS_MIN_TOTAL_TIME_MS = 12_000;
 const PIPS_MIN_SPLIT_TIME_MS = 1_500;
 const PIPS_AUTO_BAN_MIN_TIME_MS = 4_000;
@@ -1778,6 +1818,7 @@ type PipsScoreRequestBody = {
   mediumMs?: number;
   hardMs?: number;
   puzzleCount?: number;
+  replayData?: unknown;
 };
 
 type PipsScoreCandidate = {
@@ -1789,6 +1830,7 @@ type PipsScoreCandidate = {
   mediumMs: number;
   hardMs: number;
   puzzleCount: number;
+  replayData: unknown;
   callerIp: string;
   callerRegion: string;
   callerUA: string;
@@ -1806,6 +1848,9 @@ type PipsScoreErrorCode =
   | "banned"
   | "too-fast"
   | "too-slow"
+  | "invalid-replay"
+  | "invalid-generated-run"
+  | "non-canonical-solution"
   | "duplicate";
 
 type PipsScoreValidationResult =
@@ -1827,7 +1872,7 @@ type PipsScoreAssessment =
       status: number;
       error: string;
       reason: string;
-      code: Extract<PipsScoreErrorCode, "banned" | "too-fast" | "too-slow" | "duplicate">;
+      code: PipsScoreErrorCode;
     }
   | {
       kind: "accepted-no-store";
@@ -1837,6 +1882,7 @@ type PipsScoreAssessment =
       kind: "eligible";
       willReplace: boolean;
       worstScoreId: string | null;
+      replayData: unknown;
     };
 
 function isValidPipsTime(value: unknown): value is number {
@@ -1857,7 +1903,7 @@ async function buildPipsScoreCandidate(
     };
   }
 
-  const { sessionId, name, seed, totalMs, easyMs, mediumMs, hardMs, puzzleCount } = body;
+  const { sessionId, name, seed, totalMs, easyMs, mediumMs, hardMs, puzzleCount, replayData } = body;
   const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, sessionId);
   if (!verifiedClaimedSessionId) {
     return {
@@ -1967,6 +2013,7 @@ async function buildPipsScoreCandidate(
       mediumMs,
       hardMs,
       puzzleCount,
+      replayData,
       callerIp,
       callerRegion,
       callerUA,
@@ -2042,6 +2089,25 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
     };
   }
 
+  const rankedValidation = validateRankedPipsRun({
+    seed: candidate.seed,
+    totalMs: candidate.totalMs,
+    easyMs: candidate.easyMs,
+    mediumMs: candidate.mediumMs,
+    hardMs: candidate.hardMs,
+    puzzleCount: candidate.puzzleCount,
+    replayData: candidate.replayData,
+  });
+  if (!rankedValidation.ok) {
+    return {
+      kind: "error",
+      status: 400,
+      error: "Score rejected",
+      reason: rankedValidation.reason,
+      code: rankedValidation.code,
+    };
+  }
+
   const [existing] = await drizzleClient
     .select({ id: pipsScores.id })
     .from(pipsScores)
@@ -2076,6 +2142,7 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
       kind: "eligible",
       willReplace: Boolean(worst),
       worstScoreId: worst?.id ?? null,
+      replayData: rankedValidation.replayData,
     };
   }
 
@@ -2083,6 +2150,7 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
     kind: "eligible",
     willReplace: false,
     worstScoreId: null,
+    replayData: rankedValidation.replayData,
   };
 }
 
@@ -2249,6 +2317,13 @@ app.post("/api/pips/score", async (c) => {
         await autoBanPipsSession(candidate.effectiveSessionId, entry?.reasons ?? ["speed abuse"]);
       }
     }
+    if (assessment.code === "invalid-replay" || assessment.code === "invalid-generated-run" || assessment.code === "non-canonical-solution") {
+      const shouldBan = recordStrike(candidate.effectiveSessionId, `pips replay validation failed: ${assessment.code}`);
+      if (shouldBan) {
+        const entry = abuseStrikes.get(candidate.effectiveSessionId);
+        await autoBanPipsSession(candidate.effectiveSessionId, entry?.reasons ?? ["replay manipulation"]);
+      }
+    }
     return c.json({ error: assessment.error }, { status: assessment.status as 400 | 403 | 409 });
   }
 
@@ -2273,6 +2348,7 @@ app.post("/api/pips/score", async (c) => {
     mediumMs: candidate.mediumMs,
     hardMs: candidate.hardMs,
     puzzleCount: candidate.puzzleCount,
+    replayData: assessment.replayData,
     createdAt: Date.now(),
   });
 

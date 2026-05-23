@@ -5,6 +5,11 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./games/shikaku-engine": "./src/games/shikaku-engine.ts",
+    "./games/pips-engine": "./src/games/pips-engine.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",

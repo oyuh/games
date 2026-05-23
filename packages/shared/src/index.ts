@@ -2,6 +2,8 @@ export * from "./types/game";
 export * from "./player-names";
 export * from "./crypto";
 export * from "./game-metadata";
+export * as pipsEngine from "./games/pips-engine";
+export * as shikakuEngine from "./games/shikaku-engine";
 export * from "./drizzle/schema";
 export * from "./zero/schema";
 export * from "./zero/queries";
