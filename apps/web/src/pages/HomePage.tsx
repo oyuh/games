@@ -887,9 +887,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {imposterBrowsing ? (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setImposterBrowsing(false)}>
-                  Back
+              <div className="hc-row hc-browse-back-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Imposter options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setImposterBrowsing(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
               </div>
             ) : !imposterExpanded ? (
@@ -908,12 +908,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
               </>
             ) : (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setImposterExpanded(false)}>
-                  Back
+              <div className="hc-row hc-create-action-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Imposter preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setImposterExpanded(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
                 <button
-                  className="btn btn-primary flex-1 hc-go-btn"
+                  className="btn btn-primary flex-1 hc-go-btn hc-create-it-btn"
                   onClick={() => void createImposter()}
                   disabled={pendingAction !== null}
                   data-creating={pendingAction === "create-imposter" ? "true" : "false"}
@@ -922,7 +922,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 >
                   {pendingAction === "create-imposter" ? "Creating…" : (
                     <span className="hc-sync-button-content">
-                      Go
+                      Create It!
                       {syncPending && <SyncMiniSpinner />}
                       {syncAttention && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>
@@ -1038,9 +1038,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {passwordBrowsing ? (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setPasswordBrowsing(false)}>
-                  Back
+              <div className="hc-row hc-browse-back-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Password options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setPasswordBrowsing(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
               </div>
             ) : !passwordExpanded ? (
@@ -1059,12 +1059,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
               </>
             ) : (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setPasswordExpanded(false)}>
-                  Back
+              <div className="hc-row hc-create-action-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Password preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setPasswordExpanded(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
                 <button
-                  className="btn btn-primary flex-1 hc-go-btn"
+                  className="btn btn-primary flex-1 hc-go-btn hc-create-it-btn"
                   onClick={() => void createPassword()}
                   disabled={pendingAction !== null}
                   data-creating={pendingAction === "create-password" ? "true" : "false"}
@@ -1073,7 +1073,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 >
                   {pendingAction === "create-password" ? "Creating…" : (
                     <span className="hc-sync-button-content">
-                      Go
+                      Create It!
                       {syncPending && <SyncMiniSpinner />}
                       {syncAttention && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>
@@ -1183,9 +1183,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {chainBrowsing ? (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setChainBrowsing(false)}>
-                  Back
+              <div className="hc-row hc-browse-back-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Chain Reaction options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setChainBrowsing(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
               </div>
             ) : !chainExpanded ? (
@@ -1204,12 +1204,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
               </>
             ) : (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setChainExpanded(false)}>
-                  Back
+              <div className="hc-row hc-create-action-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Chain Reaction preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setChainExpanded(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
                 <button
-                  className="btn btn-primary flex-1 hc-go-btn"
+                  className="btn btn-primary flex-1 hc-go-btn hc-create-it-btn"
                   onClick={() => void createChainReaction()}
                   disabled={pendingAction !== null}
                   data-creating={pendingAction === "create-chain" ? "true" : "false"}
@@ -1218,7 +1218,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 >
                   {pendingAction === "create-chain" ? "Creating…" : (
                     <span className="hc-sync-button-content">
-                      Go
+                      Create It!
                       {syncPending && <SyncMiniSpinner />}
                       {syncAttention && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>
@@ -1308,9 +1308,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {shadeBrowsing ? (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setShadeBrowsing(false)}>
-                  Back
+              <div className="hc-row hc-browse-back-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Shade Signal options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setShadeBrowsing(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
               </div>
             ) : !shadeExpanded ? (
@@ -1329,12 +1329,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
               </>
             ) : (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setShadeExpanded(false)}>
-                  Back
+              <div className="hc-row hc-create-action-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Shade Signal preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setShadeExpanded(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
                 <button
-                  className="btn btn-primary flex-1 hc-go-btn"
+                  className="btn btn-primary flex-1 hc-go-btn hc-create-it-btn"
                   onClick={() => void createShadeSignal()}
                   disabled={pendingAction !== null}
                   data-creating={pendingAction === "create-shade" ? "true" : "false"}
@@ -1343,7 +1343,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 >
                   {pendingAction === "create-shade" ? "Creating…" : (
                     <span className="hc-sync-button-content">
-                      Go
+                      Create It!
                       {syncPending && <SyncMiniSpinner />}
                       {syncAttention && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>
@@ -1447,9 +1447,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {locationBrowsing ? (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setLocationBrowsing(false)}>
-                  Back
+              <div className="hc-row hc-browse-back-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Location Signal options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setLocationBrowsing(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
               </div>
             ) : !locationExpanded ? (
@@ -1468,12 +1468,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
               </>
             ) : (
-              <div className="hc-row">
-                <button className="btn btn-muted flex-1" onClick={() => setLocationExpanded(false)}>
-                  Back
+              <div className="hc-row hc-create-action-row">
+                <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Location Signal preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setLocationExpanded(false)}>
+                  <FiChevronLeft size={18} aria-hidden="true" />
                 </button>
                 <button
-                  className="btn btn-primary flex-1 hc-go-btn"
+                  className="btn btn-primary flex-1 hc-go-btn hc-create-it-btn"
                   onClick={() => void createLocationSignal()}
                   disabled={pendingAction !== null}
                   data-creating={pendingAction === "create-location" ? "true" : "false"}
@@ -1482,7 +1482,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 >
                   {pendingAction === "create-location" ? "Creating…" : (
                     <span className="hc-sync-button-content">
-                      Go
+                      Create It!
                       {syncPending && <SyncMiniSpinner />}
                       {syncAttention && <FiWifiOff className="hc-sync-offline-icon" size={16} />}
                     </span>

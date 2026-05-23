@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGithub } from "react-icons/fi";
+import { FiSearch, FiChevronDown, FiChevronUp, FiChevronLeft, FiShare, FiGlobe, FiGithub } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
@@ -423,8 +423,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           browsing === "imposter" ? (
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="imposter" sessionId={sessionId} />
-              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
-                Back
+              <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Imposter options" onClick={() => setBrowsing(null)}>
+                <FiChevronLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -451,18 +451,17 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <div className="m-create-actions">
               <button className={`m-btn m-browse-globe${imposterPublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("imposter"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                 <FiGlobe size={16} />
                 {imposterPublicCount > 0 && <span className="hc-globe-badge">{imposterPublicCount}</span>}
               </button>
               <button
-                className="m-btn m-btn-primary"
-                style={{ flex: 1 }}
+                className="m-btn m-btn-primary m-create-it-btn"
                 onClick={() => void createImposter()}
                 disabled={pendingAction !== null}
               >
-                {pendingAction === "create-imposter" ? "Creating…" : "Create Imposter Game"}
+                {pendingAction === "create-imposter" ? "Creating…" : "Create It!"}
               </button>
             </div>
           </div>
@@ -491,8 +490,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           browsing === "password" ? (
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="password" sessionId={sessionId} />
-              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
-                Back
+              <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Password options" onClick={() => setBrowsing(null)}>
+                <FiChevronLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -519,18 +518,17 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <div className="m-create-actions">
               <button className={`m-btn m-browse-globe${passwordPublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("password"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                 <FiGlobe size={16} />
                 {passwordPublicCount > 0 && <span className="hc-globe-badge">{passwordPublicCount}</span>}
               </button>
               <button
-                className="m-btn m-btn-primary"
-                style={{ flex: 1 }}
+                className="m-btn m-btn-primary m-create-it-btn"
                 onClick={() => void createPassword()}
                 disabled={pendingAction !== null}
               >
-                {pendingAction === "create-password" ? "Creating…" : "Create Password Game"}
+                {pendingAction === "create-password" ? "Creating…" : "Create It!"}
               </button>
             </div>
           </div>
@@ -559,8 +557,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           browsing === "chain" ? (
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="chain_reaction" sessionId={sessionId} />
-              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
-                Back
+              <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Chain Reaction options" onClick={() => setBrowsing(null)}>
+                <FiChevronLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -594,18 +592,17 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 <option value="custom">Custom (write your own)</option>
               </select>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <div className="m-create-actions">
               <button className={`m-btn m-browse-globe${chainPublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("chain"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                 <FiGlobe size={16} />
                 {chainPublicCount > 0 && <span className="hc-globe-badge">{chainPublicCount}</span>}
               </button>
               <button
-                className="m-btn m-btn-primary"
-                style={{ flex: 1 }}
+                className="m-btn m-btn-primary m-create-it-btn"
                 onClick={() => void createChainReaction()}
                 disabled={pendingAction !== null}
               >
-                {pendingAction === "create-chain" ? "Creating…" : "Create Chain Reaction"}
+                {pendingAction === "create-chain" ? "Creating…" : "Create It!"}
               </button>
             </div>
           </div>
@@ -634,8 +631,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           browsing === "shade" ? (
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="shade_signal" sessionId={sessionId} />
-              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
-                Back
+              <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Shade Signal options" onClick={() => setBrowsing(null)}>
+                <FiChevronLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -665,18 +662,17 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
               />
               🎨 Leader picks their own color
             </label>
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <div className="m-create-actions">
               <button className={`m-btn m-browse-globe${shadePublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("shade"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                 <FiGlobe size={16} />
                 {shadePublicCount > 0 && <span className="hc-globe-badge">{shadePublicCount}</span>}
               </button>
               <button
-                className="m-btn m-btn-primary"
-                style={{ flex: 1 }}
+                className="m-btn m-btn-primary m-create-it-btn"
                 onClick={() => void createShadeSignal()}
                 disabled={pendingAction !== null}
               >
-                {pendingAction === "create-shade" ? "Creating…" : "Create Shade Signal"}
+                {pendingAction === "create-shade" ? "Creating…" : "Create It!"}
               </button>
             </div>
           </div>
@@ -704,8 +700,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           browsing === "location" ? (
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="location_signal" sessionId={sessionId} />
-              <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setBrowsing(null)}>
-                Back
+              <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Location Signal options" onClick={() => setBrowsing(null)}>
+                <FiChevronLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -729,18 +725,17 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <div className="m-create-actions">
               <button className={`m-btn m-browse-globe${locationPublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("location"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                 <FiGlobe size={16} />
                 {locationPublicCount > 0 && <span className="hc-globe-badge">{locationPublicCount}</span>}
               </button>
               <button
-                className="m-btn m-btn-primary"
-                style={{ flex: 1 }}
+                className="m-btn m-btn-primary m-create-it-btn"
                 onClick={() => void createLocationSignal()}
                 disabled={pendingAction !== null}
               >
-                {pendingAction === "create-location" ? "Creating…" : "Create Location Signal"}
+                {pendingAction === "create-location" ? "Creating…" : "Create It!"}
               </button>
             </div>
           </div>
