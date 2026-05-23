@@ -1,15 +1,8 @@
 # Games
 
+[![CI](https://github.com/oyuh/games/actions/workflows/ci.yml/badge.svg)](https://github.com/oyuh/games/actions/workflows/ci.yml)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)
-![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
-![Next.js](https://img.shields.io/badge/Admin-Next.js%2015-000000?logo=nextdotjs&logoColor=white)
-![Bun](https://img.shields.io/badge/Runtime-Bun-F9F1E1?logo=bun&logoColor=111827)
-![Hono](https://img.shields.io/badge/API-Hono-E36002)
-![Zero](https://img.shields.io/badge/Realtime-Rocicorp%20Zero%201.5-111827)
-![Postgres](https://img.shields.io/badge/Database-Postgres%2016-4169E1?logo=postgresql&logoColor=white)
-![Drizzle](https://img.shields.io/badge/ORM-Drizzle-C5F74F)
-![Turbo](https://img.shields.io/badge/Monorepo-Turbo-000000?logo=turborepo&logoColor=white)
+[![License](https://img.shields.io/badge/license-source--available-blue)](LICENSE)
 
 Games is a TypeScript monorepo for browser-based party games and logic puzzles. It includes a React + Vite player app, a Bun/Hono API, a Next.js admin dashboard, shared Drizzle/Zero contracts, and a local Postgres + Zero development stack.
 
@@ -29,6 +22,7 @@ Live links:
 - [Local Development](#local-development)
 - [Environment Variables](#environment-variables)
 - [Common Commands](#common-commands)
+- [CI and Deployment Gates](#ci-and-deployment-gates)
 - [Data Model](#data-model)
 - [API Surface](#api-surface)
 - [Admin Dashboard](#admin-dashboard)
@@ -36,6 +30,13 @@ Live links:
 - [Deployment](#deployment)
 - [Operational Notes](#operational-notes)
 - [Known Constraints](#known-constraints)
+
+Community files:
+
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Contributing](CONTRIBUTING.md)
+- [License](LICENSE)
+- [Security](SECURITY.md)
 
 ## Games Included
 
@@ -401,6 +402,31 @@ bun --filter @games/shared db:push
 
 React Doctor commands are documented in [docs/react-doctor-guide.md](docs/react-doctor-guide.md).
 
+## CI and Deployment Gates
+
+GitHub Actions runs the `CI` workflow on pull requests, pushes to `main` or `master`, and merge queue checks. The required job is named `Quality Gate` and runs:
+
+```bash
+bun run lint
+bun run typecheck
+bun run test:ci
+bun run build
+```
+
+The `Deploy Hooks` workflow listens for successful `CI` runs on `main` or `master`. It only calls deploy hooks after CI passes. Add these repository secrets if you want GitHub Actions to trigger deployments:
+
+```bash
+VERCEL_DEPLOY_HOOK_URL=<vercel_deploy_hook_url>
+RAILWAY_DEPLOY_HOOK_URL=<optional_custom_or_platform_deploy_trigger_url>
+```
+
+To keep production from deploying failing commits, protect the production branch in GitHub and require `Quality Gate` before merging. Also configure the hosts themselves:
+
+- Vercel: use Deployment Checks for the production project and select the GitHub Actions `Quality Gate` check, or disable automatic Git production deploys and rely on the post-CI deploy hook.
+- Railway: enable Wait for CI on each GitHub-connected service, or disable automatic deploys and trigger Railway from a post-CI workflow.
+
+Keep the CI job name stable. GitHub, Vercel, and Railway use check names to identify which result should gate a merge or deployment.
+
 ## Data Model
 
 The primary schema lives in `packages/shared/src/drizzle/schema.ts`.
@@ -544,6 +570,8 @@ Production is split across separate services:
 - Railway Postgres or Neon: database
 - Pusher Channels: admin broadcasts and targeted events
 
+`vercel.json` disables automatic Git deploys from `main` and `master`. The default production web path is the post-CI deploy hook, not a raw push that has not passed `Quality Gate`. If you prefer Vercel's built-in Deployment Checks flow, remove or adjust that `git.deploymentEnabled` block and configure `Quality Gate` as the required deployment check in Vercel.
+
 ### Vercel Web App
 
 `vercel.json` currently uses Bun:
@@ -566,6 +594,8 @@ VITE_PUSHER_KEY=<pusher_key>
 VITE_PUSHER_CLUSTER=<pusher_cluster>
 ```
 
+If Vercel Git auto-deploys are enabled again, configure Vercel Deployment Checks so production is not promoted until `Quality Gate` passes. The current repo config disables `main` and `master` Git autodeploys, so the safer default is to store a Vercel deploy hook as `VERCEL_DEPLOY_HOOK_URL` and let GitHub Actions call it after CI passes.
+
 ### Railway API
 
 `railway.toml` builds from `Dockerfile` and starts:
@@ -587,6 +617,8 @@ PUSHER_KEY=<pusher_key>
 PUSHER_SECRET=<pusher_secret>
 PUSHER_CLUSTER=<pusher_cluster>
 ```
+
+If Railway GitHub autodeploys are enabled, turn on Wait for CI in the Railway service settings so Railway waits for GitHub Actions before deploying. If using a manual/API trigger instead, disable automatic deploys and trigger it from the post-CI workflow after `Quality Gate` passes.
 
 Useful API checks after deploy:
 
