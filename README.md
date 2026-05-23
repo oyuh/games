@@ -48,12 +48,12 @@ The app currently exposes seven playable experiences.
 | Chain Reaction | Competitive word-chain duel | 2 | `/chain/:id` | Multiplayer, Zero-synced |
 | Shade Signal | Color clue guessing | 3-8 | `/shade/:id` | Multiplayer, Zero-synced |
 | Location Signal | Map clue guessing | 3-8 | `/location/:id` | Multiplayer, Zero-synced |
-| Shikaku | Timed rectangle logic puzzle | Solo | `/shikaku` | Client-side engine + REST leaderboard |
-| Pips | Timed domino logic run | Solo | `/pips` | Client-side engine + REST leaderboard |
+| Shikaku | Timed rectangle logic puzzle | Solo | `/shikaku` | Shared seeded engine + REST leaderboard |
+| Pips | Timed domino logic run | Solo | `/pips` | Shared seeded engine + REST leaderboard |
 
 Multiplayer games share room creation, join codes, public lobby visibility, spectators, host controls, chat, session presence, admin kicks, and synchronized state through Rocicorp Zero.
 
-Solo games do not require the Zero cache to be awake. Shikaku and Pips run their puzzle engines in the browser and call REST endpoints only for eligibility checks, leaderboard reads, and score submission.
+Solo games do not require the Zero cache to be awake. Shikaku and Pips run their puzzle engines in the browser and call REST endpoints only for eligibility checks, leaderboard reads, and score submission. Ranked submissions include replay data, and the API reuses the same shared engines to regenerate the public seed and verify the submitted solve before storing leaderboard rows.
 
 ## Game Docs
 
@@ -78,7 +78,7 @@ Each game has its own document with rules, flow, scoring, and implementation not
 |   +-- api/            # Bun/Hono API, Zero handlers, REST endpoints
 |   +-- admin/          # Next.js 15 admin dashboard
 +-- packages/
-|   +-- shared/         # Drizzle schema, Zero schema, queries, mutators, metadata
+|   +-- shared/         # Drizzle/Zero contracts, metadata, shared solo puzzle engines
 +-- docs/              # Game docs and maintenance notes
 +-- scripts/           # Local stack and production DB helper scripts
 +-- docker-compose.yml # Local Postgres + Zero cache stack for Windows script path
@@ -113,8 +113,17 @@ Key files:
 - `apps/web/src/mobile/`
 - `apps/web/src/lib/zero.ts`
 - `apps/web/src/lib/session.ts`
-- `apps/web/src/lib/shikaku-engine.ts`
-- `apps/web/src/lib/pips-engine.ts`
+- `packages/shared/src/games/shikaku-engine.ts`
+- `packages/shared/src/games/pips-engine.ts`
+
+### Shared Solo Puzzle Engines
+
+Shikaku and Pips use shared TypeScript engine modules so the browser and API agree on the exact same ranked rules even when the API is not needed for local play. The web app imports the engines through thin wrappers in `apps/web/src/lib/*-engine.ts`; the API imports the shared modules directly for leaderboard validation.
+
+- `packages/shared/src/games/shikaku-engine.ts` owns seeded Shikaku generation, rectangle validation, scoring, auto-filled `1x1` detection, and ranked replay verification.
+- `packages/shared/src/games/pips-engine.ts` owns seeded Pips generation, board/region validation, domino placement validation, solver utilities, run time scoring, and ranked replay verification.
+- Ranked score requests include replay payloads: Shikaku sends solved rectangles for each of the five puzzles, and Pips sends solved domino placements for Easy, Medium, and Hard.
+- On the server, the API regenerates the canonical run from the submitted seed, validates the replay against those generated puzzles, recalculates or checks score/time invariants, then applies duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
 
 ### API App: `apps/api`
 
@@ -455,11 +464,11 @@ The multiplayer game tables intentionally store much of their live state in JSON
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /api/shikaku/leaderboard` | Read Shikaku leaderboard |
-| `POST /api/shikaku/score/eligibility` | Check Shikaku score eligibility |
-| `POST /api/shikaku/score` | Submit Shikaku score |
+| `POST /api/shikaku/score/eligibility` | Check Shikaku score eligibility and canonical replay validity |
+| `POST /api/shikaku/score` | Submit Shikaku score with solved-rectangle replay |
 | `GET /api/pips/leaderboard` | Read Pips leaderboard |
-| `POST /api/pips/score/eligibility` | Check Pips run eligibility |
-| `POST /api/pips/score` | Submit Pips run |
+| `POST /api/pips/score/eligibility` | Check Pips run eligibility and canonical replay validity |
+| `POST /api/pips/score` | Submit Pips run with solved-domino replay |
 
 ### Admin API
 
