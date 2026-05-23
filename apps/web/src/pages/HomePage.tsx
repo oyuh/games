@@ -2,7 +2,7 @@ import { GAME_META, imposterCategories, imposterCategoryLabels, chainCategories,
 import { useQuery, useZero } from "../lib/zero";
 import "../styles/home.css";
 import { nanoid } from "nanoid";
-import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
 import { FiArrowLeft, FiBookOpen, FiCheck, FiChevronDown, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
@@ -15,6 +15,7 @@ import { InSessionModal } from "../components/shared/InSessionModal";
 import { ActiveGameModal } from "../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../components/shared/PublicGamesBrowser";
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
+import { GameIcon } from "../components/shared/GameIcon";
 import { useZeroConnected } from "../App";
 import { useConnectionDebug } from "../lib/connection-debug";
 import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
@@ -684,12 +685,14 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           {/* Recent games - collapsible */}
           {recentGames.length > 0 && (
             <>
-              <div className="hc-divider" />
-              <section className="hc-section">
+              <div className={`hc-divider hc-recent-divider${!recentCollapsed ? " hc-recent-divider--open" : ""}`} />
+              <section className={`hc-section hc-recent-section${!recentCollapsed ? " hc-recent-section--open" : ""}`}>
                 <div className="hc-recent-header">
-                  <button className="hc-collapse-toggle" onClick={() => setRecentCollapsed(!recentCollapsed)}>
-                    <span className="hc-label" data-tooltip="Games you've recently played or joined" data-tooltip-variant="info">Recent</span>
-                    <FiChevronDown size={14} className={`hc-collapse-icon${!recentCollapsed ? " hc-collapse-icon--open" : ""}`} />
+                  <button className={`hc-collapse-toggle${recentCollapsed ? " hc-collapse-toggle--collapsed" : " hc-collapse-toggle--open"}`} onClick={() => setRecentCollapsed(!recentCollapsed)}>
+                    <span className={`hc-label${recentCollapsed ? "" : " hc-label--recent-open"}`} data-tooltip="Games you've recently played or joined" data-tooltip-variant="info">
+                      {recentCollapsed ? "Recent Games" : "Recents"} ({recentGames.length})
+                    </span>
+                    <FiChevronDown size={recentCollapsed ? 18 : 14} className={`hc-collapse-icon${!recentCollapsed ? " hc-collapse-icon--open" : ""}${recentCollapsed ? " hc-collapse-icon--collapsed" : ""}`} />
                   </button>
                   {!recentCollapsed && (
                     <ClearRecentButton onClear={() => { clearRecentGames(); setRecentGames([]); }} />
@@ -1885,7 +1888,21 @@ function ClearRecentButton({ onClear }: { onClear: () => void }) {
   );
 }
 
-/* ── Recent game item with deleted check + hover results ───── */
+/* ── Recent game item with status color + two-click removal ─── */
+
+type RecentGameStyle = CSSProperties & {
+  "--recent-accent": string;
+  "--recent-status": string;
+  "--recent-icon": string;
+};
+
+function formatRecentPhase(phase: string | null | undefined) {
+  if (!phase) return "Unknown";
+  return phase
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessionId: string; onRemove: () => void }) {
   const [imposterResults] = useQuery(game.gameType === "imposter" ? queries.imposter.byId({ id: game.id }) : queries.imposter.byId({ id: "__none__" }));
@@ -1893,6 +1910,8 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
   const [chainResults] = useQuery(game.gameType === "chain_reaction" ? queries.chainReaction.byId({ id: game.id }) : queries.chainReaction.byId({ id: "__none__" }));
   const [shadeResults] = useQuery(game.gameType === "shade_signal" ? queries.shadeSignal.byId({ id: game.id }) : queries.shadeSignal.byId({ id: "__none__" }));
   const [locationResults] = useQuery(game.gameType === "location_signal" ? queries.locationSignal.byId({ id: game.id }) : queries.locationSignal.byId({ id: "__none__" }));
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const removeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const gameData = game.gameType === "imposter" ? imposterResults[0]
     : game.gameType === "password" ? passwordResults[0]
@@ -1901,7 +1920,7 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
     : locationResults[0];
 
   const isDeleted = !gameData;
-  const isEnded = gameData && (gameData.phase === "finished" || gameData.phase === "ended");
+  const isEnded = Boolean(gameData && (gameData.phase === "finished" || gameData.phase === "ended"));
 
   const link = game.gameType === "imposter"
     ? `/imposter/${game.id}`
@@ -1913,10 +1932,20 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
     ? `/location/${game.id}`
     : `/chain/${game.id}`;
 
-  const typeLabel = GAME_META[multiplayerTypeToGameSlug(game.gameType)].title.toLowerCase();
+  const gameSlug = multiplayerTypeToGameSlug(game.gameType);
+  const meta = GAME_META[gameSlug];
+  const statusColor = isDeleted || isEnded ? "var(--muted-foreground)" : meta.accent;
+  const iconColor = isDeleted ? "var(--muted-foreground)" : meta.accent;
+  const recentStyle: RecentGameStyle = {
+    "--recent-accent": meta.accent,
+    "--recent-status": statusColor,
+    "--recent-icon": iconColor,
+  };
+  const phaseLabel = formatRecentPhase(gameData?.phase);
+  const rowLabel = `${meta.title} ${game.code}`;
 
   // Tooltip content for finished games
-  const tooltip = useMemo(() => {
+  const resultTooltip = useMemo(() => {
     if (!isEnded || !gameData) return null;
 
     if (game.gameType === "imposter" && "round_history" in gameData) {
@@ -1934,14 +1963,15 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
     if (game.gameType === "password" && "teams" in gameData) {
       const g = gameData as typeof passwordResults[0];
       if (!g) return null;
-      const lines: string[] = [];
       const teams = g.teams ?? [];
       const teamByName = new Map(teams.map((team) => [team.name, team]));
-      for (const [teamKey, score] of Object.entries(g.scores ?? {})) {
-        const team = teamByName.get(teamKey);
-        const teamName = team?.name ?? teamKey;
-        lines.push(`${teamName}: ${score} pts`);
-      }
+      const lines = Object.entries(g.scores ?? {})
+        .sort(([, a], [, b]) => b - a)
+        .map(([teamKey, score]) => {
+          const team = teamByName.get(teamKey);
+          const teamName = team?.name ?? teamKey;
+          return `${teamName}: ${score} pts`;
+        });
       return lines.join("\n") || "No scores";
     }
 
@@ -1950,12 +1980,17 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
       if (!g) return null;
       const players = g.players ?? [];
       const playerBySessionId = new Map(players.map((player) => [player.sessionId, player]));
-      const nameOf = (id: string) => getDisplayName(playerBySessionId.get(id)?.name, id);
+      const nameOf = (id: string) => {
+        const label = getDisplayName(playerBySessionId.get(id)?.name, id);
+        return id === sessionId ? `${label} (you)` : label;
+      };
       const lines: string[] = [];
 
       // Final scores
       const sorted = Object.entries(g.scores ?? {}).sort(([, a], [, b]) => b - a);
-      lines.push(sorted.map(([id, s]) => `${nameOf(id)}: ${s}`).join(" vs "));
+      if (sorted.length > 0) {
+        lines.push(sorted.map(([id, s]) => `${nameOf(id)}: ${s}`).join(" vs "));
+      }
 
       // Per round
       for (const r of g.round_history ?? []) {
@@ -1967,38 +2002,111 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
       return lines.join("\n") || "No rounds played";
     }
 
+    if (game.gameType === "shade_signal" && "players" in gameData) {
+      const g = gameData as typeof shadeResults[0];
+      if (!g) return null;
+      const players = g.players ?? [];
+      const scoreLines = players
+        .slice()
+        .sort((a, b) => b.totalScore - a.totalScore)
+        .map((player) => {
+          const label = getDisplayName(player.name, player.sessionId);
+          return `${player.sessionId === sessionId ? `${label} (you)` : label}: ${player.totalScore} pts`;
+        });
+      const roundCount = g.round_history?.length ?? 0;
+      return [
+        scoreLines.length > 0 ? scoreLines.join("\n") : "No scores",
+        roundCount > 0 ? `${roundCount} rounds played` : null,
+      ].filter(Boolean).join("\n");
+    }
+
+    if (game.gameType === "location_signal" && "players" in gameData) {
+      const g = gameData as typeof locationResults[0];
+      if (!g) return null;
+      const players = g.players ?? [];
+      const scoreLines = players
+        .slice()
+        .sort((a, b) => b.totalScore - a.totalScore)
+        .map((player) => {
+          const label = getDisplayName(player.name, player.sessionId);
+          return `${player.sessionId === sessionId ? `${label} (you)` : label}: ${player.totalScore} pts`;
+        });
+      const roundCount = g.round_history?.length ?? 0;
+      return [
+        scoreLines.length > 0 ? scoreLines.join("\n") : "No scores",
+        roundCount > 0 ? `${roundCount} rounds played` : null,
+      ].filter(Boolean).join("\n");
+    }
+
     return null;
-  }, [isEnded, gameData, game.gameType]);
+  }, [isEnded, gameData, game.gameType, sessionId]);
 
-  if (isDeleted) {
-    return (
-      <div className="hc-recent-item hc-recent-item--deleted">
-        <span className="hc-recent-type">{typeLabel}</span>
-        <span className="hc-recent-code">{game.code}</span>
-        <span className="hc-recent-badge hc-recent-badge--deleted">deleted</span>
-        <button className="hc-recent-edge" onClick={onRemove} aria-label="Remove from list" />
-      </div>
-    );
-  }
+  const tooltip = useMemo(() => {
+    if (confirmRemove) return `${rowLabel}\nClick again to remove it from recent games.`;
+    if (isDeleted) return `${rowLabel}\nThis game is no longer available.\nClick once to mark it for removal.`;
+    if (isEnded) return `${rowLabel}\n${phaseLabel}\n${resultTooltip ? `${resultTooltip}\nClick once to mark it for removal.` : "Click once to mark it for removal."}`;
+    return `${rowLabel}\n${phaseLabel}\nClick to rejoin. Recent games can be removed after they end.`;
+  }, [confirmRemove, isDeleted, isEnded, phaseLabel, resultTooltip, rowLabel]);
 
-  if (isEnded) {
+  useEffect(() => {
+    if (isDeleted || isEnded) return;
+    setConfirmRemove(false);
+    clearTimeout(removeTimerRef.current);
+  }, [isDeleted, isEnded]);
+
+  useEffect(() => () => clearTimeout(removeTimerRef.current), []);
+
+  const handleInactiveClick = () => {
+    if (confirmRemove) {
+      clearTimeout(removeTimerRef.current);
+      setConfirmRemove(false);
+      onRemove();
+      return;
+    }
+
+    setConfirmRemove(true);
+    clearTimeout(removeTimerRef.current);
+    removeTimerRef.current = setTimeout(() => setConfirmRemove(false), 3000);
+  };
+
+  const content = (
+    <>
+      <span className="hc-recent-icon" aria-hidden="true">
+        <GameIcon game={gameSlug} size={16} />
+      </span>
+      <span className="hc-recent-code">{game.code}</span>
+    </>
+  );
+
+  if (!isDeleted && !isEnded) {
     return (
-      <Link to={link} className="hc-recent-item hc-recent-item--ended" data-tooltip={tooltip ?? undefined} data-tooltip-variant="info">
-        <span className="hc-recent-type">{typeLabel}</span>
-        <span className="hc-recent-code">{game.code}</span>
-        <span className="hc-recent-badge hc-recent-badge--ended">{gameData.phase}</span>
-        <button className="hc-recent-edge" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }} aria-label="Remove from list" />
+      <Link
+        to={link}
+        className="hc-recent-item hc-recent-item--active"
+        style={recentStyle}
+        aria-label={`Rejoin ${rowLabel}`}
+        data-tooltip={tooltip}
+        data-tooltip-pos="right"
+        data-tooltip-variant="info"
+      >
+        {content}
       </Link>
     );
   }
 
   return (
-    <Link to={link} className="hc-recent-item">
-      <span className="hc-recent-type">{typeLabel}</span>
-      <span className="hc-recent-code">{game.code}</span>
-      <span className="hc-recent-badge">{gameData.phase}</span>
-      <button className="hc-recent-edge" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }} aria-label="Remove from list" />
-    </Link>
+    <button
+      type="button"
+      className={`hc-recent-item hc-recent-item--inactive${isDeleted ? " hc-recent-item--deleted" : " hc-recent-item--ended"}${confirmRemove ? " hc-recent-item--confirm-remove" : ""}`}
+      style={recentStyle}
+      onClick={handleInactiveClick}
+      aria-label={confirmRemove ? `Remove ${rowLabel} from recent games` : `Mark ${rowLabel} for removal`}
+      data-tooltip={tooltip}
+      data-tooltip-pos="right"
+      data-tooltip-variant={confirmRemove ? "danger" : "info"}
+    >
+      {content}
+    </button>
   );
 }
 
