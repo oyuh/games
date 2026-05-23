@@ -3,7 +3,7 @@ import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch, FiChevronDown, FiChevronUp, FiChevronLeft, FiShare, FiGlobe, FiGithub } from "react-icons/fi";
+import { FiArrowLeft, FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGithub } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
@@ -424,7 +424,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="imposter" sessionId={sessionId} />
               <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Imposter options" onClick={() => setBrowsing(null)}>
-                <FiChevronLeft size={18} aria-hidden="true" />
+                <FiArrowLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -491,7 +491,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="password" sessionId={sessionId} />
               <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Password options" onClick={() => setBrowsing(null)}>
-                <FiChevronLeft size={18} aria-hidden="true" />
+                <FiArrowLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -558,7 +558,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="chain_reaction" sessionId={sessionId} />
               <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Chain Reaction options" onClick={() => setBrowsing(null)}>
-                <FiChevronLeft size={18} aria-hidden="true" />
+                <FiArrowLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -632,7 +632,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="shade_signal" sessionId={sessionId} />
               <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Shade Signal options" onClick={() => setBrowsing(null)}>
-                <FiChevronLeft size={18} aria-hidden="true" />
+                <FiArrowLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -701,7 +701,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             <div className="m-game-card-config hc-card-anim" key="browse">
               <PublicGamesList gameType="location_signal" sessionId={sessionId} />
               <button className="m-btn m-btn-muted m-home-back-icon" aria-label="Back to Location Signal options" onClick={() => setBrowsing(null)}>
-                <FiChevronLeft size={18} aria-hidden="true" />
+                <FiArrowLeft size={18} aria-hidden="true" />
               </button>
             </div>
           ) : (

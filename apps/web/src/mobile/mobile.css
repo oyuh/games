@@ -1722,57 +1722,7 @@
 }
 
 .m-create-it-btn {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
   flex: 1 1 auto;
-  min-height: 3.15rem;
-  padding: 0.78rem 1.1rem;
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #0f1115;
-  background:
-    linear-gradient(135deg,
-      color-mix(in srgb, var(--card-accent, var(--primary)) 78%, #fff) 0%,
-      var(--card-accent, var(--primary)) 48%,
-      color-mix(in srgb, var(--card-accent, var(--primary)) 76%, #7dd3fc) 100%);
-  background-size: 180% 180%;
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--card-accent, var(--primary)) 24%, transparent);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.22);
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, filter 0.22s ease, background-position 0.28s ease;
-}
-
-.m-create-it-btn::before {
-  content: "";
-  position: absolute;
-  inset: -55%;
-  z-index: -1;
-  opacity: 0;
-  transform: scale(0.72);
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.42) 0%, transparent 58%);
-  transition: opacity 0.18s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.m-create-it-btn:hover:not(:disabled),
-.m-create-it-btn:focus-visible:not(:disabled) {
-  background-position: 100% 50%;
-  box-shadow:
-    0 16px 32px color-mix(in srgb, var(--card-accent, var(--primary)) 32%, transparent),
-    0 0 0 1px color-mix(in srgb, #fff 20%, var(--card-accent, var(--primary)) 20%);
-  filter: saturate(1.12) brightness(1.03);
-  transform: translateY(-2px) scale(1.025);
-}
-
-.m-create-it-btn:hover:not(:disabled)::before,
-.m-create-it-btn:focus-visible:not(:disabled)::before {
-  opacity: 0.45;
-  transform: scale(1.08);
-}
-
-.m-create-it-btn:active:not(:disabled) {
-  box-shadow: 0 6px 14px color-mix(in srgb, var(--card-accent, var(--primary)) 18%, transparent);
-  filter: saturate(1.04) brightness(0.98);
-  transform: translateY(1px) scale(0.975);
 }
 
 .m-home-back-icon {
@@ -1781,24 +1731,6 @@
   height: 2.65rem;
   padding: 0;
   margin-top: 0.5rem;
-  border-radius: 999px;
-  color: color-mix(in srgb, var(--card-accent, var(--primary)) 82%, var(--foreground));
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 11%, transparent);
-  border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 24%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.m-home-back-icon:hover:not(:disabled),
-.m-home-back-icon:focus-visible:not(:disabled) {
-  color: #fff;
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 24%, transparent);
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--card-accent, var(--primary)) 18%, transparent);
-  transform: translateX(-2px);
-}
-
-.m-home-back-icon:active:not(:disabled) {
-  transform: translateX(-3px) scale(0.94);
 }
 
 .m-text-btn {
