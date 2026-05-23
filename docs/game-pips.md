@@ -1,6 +1,6 @@
 # Pips - Game Design Document
 
-> **Status:** Planned
+> **Status:** Implemented
 > **Players:** 1 (single-player)
 > **Type:** Timed domino logic run
 
@@ -179,9 +179,21 @@ runSeed
 - Single leaderboard for ranked runs.
 - Sort by `timeMs` ascending.
 - Store split times for auditing and display.
-- Store seed and replay metadata for validation.
+- Store seed and solved-placement replay metadata for validation.
 - Custom seed runs are unranked.
-- Duplicate seed submissions can be handled like Shikaku: accept only eligible ranked seeds and reject suspicious repeats if needed.
+- Duplicate seed submissions are rejected per session.
+
+---
+
+## Technical Engine Flow
+
+The Pips engine lives in `packages/shared/src/games/pips-engine.ts` and is imported by both the web app and API. The browser uses it for offline/local generation, placement checks, region progress, and solve detection. The API uses the same engine for ranked replay validation before accepting leaderboard rows.
+
+For generation, one public run seed is passed through `mulberry32` and used to generate Easy, Medium, and Hard in order. Each puzzle grows an irregular connected board as domino-sized cell pairs, trims the shape to compact bounds, chooses a seeded subset of standard `0-6` dominoes, records a hidden solved placement, derives a solved pip grid, partitions cells into visible regions, and chooses region rules that the hidden solution satisfies.
+
+For validation, `validatePuzzleShape` checks that active cells are in bounds, unique, covered by exactly one region, and match the supplied domino count. `validateSolution` checks that every submitted placement uses a real domino exactly once, covers two active adjacent cells, avoids overlaps, fills the board, and satisfies every region rule through `evaluateRegionRule`.
+
+For ranked validation, the finished client sends seed, total time, Easy/Medium/Hard splits, and solved placements for each difficulty. The API calls `validateRankedPipsRun`, regenerates the canonical run from the seed, verifies the split total, checks each generated puzzle against engine invariants, and validates the submitted placements against the canonical Easy, Medium, and Hard puzzles before storing `replayData` in `pips_scores`.
 
 ---
 
@@ -190,30 +202,22 @@ runSeed
 - **Route:** `/pips`
 - **State:** Client-side React state, like Shikaku.
 - **API:** REST endpoints for leaderboard and score submission.
-- **Schema:** `pips_scores` table should store sessionId, name, seed, timeMs, easyTimeMs, mediumTimeMs, hardTimeMs, completedAt, and replayData.
-- **Engine:** Add `apps/web/src/lib/pips-engine.ts` for seeded RNG, generation, validation, solve checking, and serialization.
-- **UI:** Add `PipsPage`, `PipsBoard`, `PipsDominoTray`, `PipsRunHeader`, `PipsResults`, and `PipsLeaderboard`.
+- **Schema:** `pips_scores` stores sessionId, name, seed, totalMs, easyMs, mediumMs, hardMs, puzzleCount, replayData, and createdAt.
+- **Engine:** `packages/shared/src/games/pips-engine.ts` contains seeded RNG, generation, validation, solver utilities, run scoring, and replay verification. `apps/web/src/lib/pips-engine.ts` re-exports it for the web app.
+- **UI:** `PipsPage` renders the board, tray, run header, results, leaderboard, seeded/infinite modes, and admin score helper.
 
 ---
 
-## Implementation Plan
+## Implementation Checklist
 
-1. Build the engine types: cells, dominoes, regions, clues, placements, and run payloads.
-2. Implement placement validation and region evaluation.
-3. Build a solver that can verify solvability and count solutions.
-4. Add the seeded generator with fixed difficulty targets.
-5. Build the desktop page and board interactions.
-6. Add mobile tap placement and responsive board scaling.
-7. Add run timer, split tracking, and results screen.
-8. Add leaderboard API/schema.
-9. Add demo/how-to-play modal.
-10. Add tests for clue evaluation, tiling validity, deterministic seeds, and solver sanity.
+1. [x] Build the engine types: cells, dominoes, regions, rules, placements, and run payloads.
+2. [x] Implement placement validation and region evaluation.
+3. [x] Build solver utilities that can verify solvability and count solutions.
+4. [x] Add the seeded generator with fixed difficulty targets.
+5. [x] Build the desktop page and board interactions.
+6. [x] Add run timer, split tracking, and results screen.
+7. [x] Add leaderboard API/schema and replay validation.
+8. [x] Add demo/how-to-play modal.
+9. [x] Add tests for rule evaluation, tiling validity, deterministic seeds, solver sanity, and ranked replay validation.
 
 ---
-
-## Open Questions
-
-- Should Hard require unique solutions, or is "all valid completions accepted" enough?
-- Should the tray show dominoes sorted by value, shuffled by seed, or grouped by doubles/high pips?
-- Should reset-current-puzzle keep the run timer going? Recommended: yes.
-- Should hints exist? Recommended: no ranked hints at launch; maybe unranked practice hints later.

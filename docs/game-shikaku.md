@@ -29,8 +29,8 @@ Shikaku is a grid-based logic puzzle. The board has numbered cells — each numb
 
 - 5 puzzles per run, timed.
 - Score is calculated from total solve time and difficulty multiplier.
-- Score is submitted to the server-side leaderboard on completion.
-- Giving up early submits a penalized partial score (50% penalty on top of the partial completion ratio).
+- A completed run can be submitted to the server-side leaderboard.
+- Giving up early ends the run unranked and shows a penalized local score only.
 
 ### Infinite Mode
 
@@ -86,8 +86,8 @@ Invalid rectangles (wrong area, no number, multiple numbers) flash red and are a
 
 - Top 10 scores displayed per difficulty level.
 - Personal best rank and score shown.
-- Scores submitted automatically on standard run completion.
-- Server-side validation: minimum time checks, max score caps, duplicate seed protection, ban checks.
+- Completed standard runs are checked for eligibility before submission.
+- Server-side validation: session proof, canonical replay verification, minimum time checks, exact score recalculation, duplicate seed protection, top-20 replacement, rate limits, and ban checks.
 - Accessible from the sidebar trophy button or the finished screen.
 
 ---
@@ -100,11 +100,23 @@ Invalid rectangles (wrong area, no number, multiple numbers) flash red and are a
 
 ---
 
+## Technical Engine Flow
+
+The Shikaku engine lives in `packages/shared/src/games/shikaku-engine.ts` and is imported by both the web app and API. The browser still generates and validates puzzles locally, so Shikaku can be played when the API is unavailable; ranked leaderboard writes simply wait until the REST API can verify the run.
+
+For generation, the engine feeds a public run seed into `mulberry32`, picks the configured grid size for the difficulty, and creates five puzzles. Each puzzle is built by partitioning the grid into non-overlapping rectangles, placing one numeric clue inside each rectangle, validating the hidden solution, then running a bounded backtracking solver to prefer uniquely solvable boards. If generation ever falls back to an all-`1x1` board, that board remains playable but is rejected for ranked scoring.
+
+For solving, `validateSolution` builds a coverage grid from submitted rectangles. It rejects out-of-bounds rectangles, overlaps, uncovered cells, rectangles with zero or multiple clues, and rectangles whose area does not match the contained clue.
+
+For ranked validation, the finished client sends the seed, difficulty, time, score, five puzzle split times, and the solved rectangles for each puzzle. The API calls the shared `validateRankedShikakuRun` helper, regenerates the canonical five-puzzle run from the seed, recalculates the score, checks split-time consistency, and validates every submitted rectangle set against the canonical puzzle before inserting `replayData` into `shikaku_scores`.
+
+---
+
 ## Technical Notes
 
 - **Route:** `/shikaku` (no game ID — single-player, no Zero sync)
 - **State:** Entirely client-side React state. No multiplayer data model.
 - **API:** REST endpoints for leaderboard (`GET /api/shikaku/leaderboard`) and score submission (`POST /api/shikaku/score`).
 - **Schema:** `shikaku_scores` table stores sessionId, name, seed, difficulty, score, timeMs, puzzleCount, and replayData.
-- **Engine:** `apps/web/src/lib/shikaku-engine.ts` contains generation, validation, scoring, and seeded PRNG.
+- **Engine:** `packages/shared/src/games/shikaku-engine.ts` contains generation, validation, scoring, replay verification, and seeded PRNG. `apps/web/src/lib/shikaku-engine.ts` re-exports it for the web app.
 - **No mobile version** — desktop only.

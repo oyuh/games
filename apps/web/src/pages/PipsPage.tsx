@@ -29,6 +29,7 @@ import {
   type PipsDomino,
   type PipsPlacement,
   type PipsPuzzle,
+  type PipsRankedReplayData,
   type PipsRegion,
   type PipsRegionRule,
 } from "../lib/pips-engine";
@@ -182,6 +183,7 @@ export function PipsPage() {
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
   const [puzzleStartedAt, setPuzzleStartedAt] = useState(() => Date.now());
   const [runSplits, setRunSplits] = useState<PipsRunSplits>({});
+  const rankedReplayPlacementsRef = useRef<Partial<Record<PipsDifficulty, PipsPlacement[]>>>({});
   const [infiniteTimes, setInfiniteTimes] = useState<number[]>([]);
   const [infiniteSolved, setInfiniteSolved] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -410,6 +412,35 @@ export function PipsPage() {
     });
   }, [puzzle.dominoes, usedDominoIds]);
 
+  const resetRankedReplayData = () => {
+    rankedReplayPlacementsRef.current = {};
+  };
+
+  const recordRankedReplayPlacements = (difficulty: PipsDifficulty, solvedPlacements: PipsPlacement[]) => {
+    rankedReplayPlacementsRef.current = {
+      ...rankedReplayPlacementsRef.current,
+      [difficulty]: solvedPlacements.map((placement) => ({ ...placement })),
+    };
+  };
+
+  const makeRankedReplayData = (splits: PipsRunSplits = runSplits): PipsRankedReplayData | null => {
+    const placements = rankedReplayPlacementsRef.current;
+    if (!PIPS_DIFFICULTIES.every((difficulty) => placements[difficulty])) return null;
+
+    return {
+      placements: {
+        easy: placements.easy!.map((placement) => ({ ...placement })),
+        medium: placements.medium!.map((placement) => ({ ...placement })),
+        hard: placements.hard!.map((placement) => ({ ...placement })),
+      },
+      splits: {
+        ...(splits.easy != null ? { easy: getRunScoreTime(splits.easy) } : {}),
+        ...(splits.medium != null ? { medium: getRunScoreTime(splits.medium) } : {}),
+        ...(splits.hard != null ? { hard: getRunScoreTime(splits.hard) } : {}),
+      },
+    };
+  };
+
   const beginRun = (
     nextRun: PipsPuzzleRun,
     nextSeed: number,
@@ -433,6 +464,7 @@ export function PipsPage() {
     setFinishedAt(null);
     setPuzzleStartedAt(Date.now());
     setRunSplits({});
+    resetRankedReplayData();
     setInfiniteTimes([]);
     setInfiniteSolved(0);
     setScoreSubmitted(false);
@@ -883,6 +915,9 @@ export function PipsPage() {
       setInfiniteTimes((current) => [...current, solvedMs]);
       setInfiniteSolved((current) => current + 1);
     } else {
+      if (runMode === "ranked") {
+        recordRankedReplayPlacements(puzzle.difficulty, placements);
+      }
       setRunSplits((current) => {
         if (current[puzzle.difficulty] != null) return current;
         return { ...current, [puzzle.difficulty]: solvedMs };
@@ -901,7 +936,7 @@ export function PipsPage() {
     }
     setAdvanceCountdown("solved");
     showToast(`${difficultyLabel(puzzle.difficulty)} solved`, "success");
-  }, [solved, phase, devSolutionPreview, seed, puzzleIndex, puzzle.difficulty, puzzleStartedAt, run.puzzles.length, runMode, leaderboardView]);
+  }, [solved, phase, devSolutionPreview, seed, puzzleIndex, puzzle.difficulty, puzzleStartedAt, run.puzzles.length, runMode, leaderboardView, placements]);
 
   useEffect(() => {
     if (advanceCountdown == null) return;
@@ -936,6 +971,15 @@ export function PipsPage() {
         message: "Only fully completed ranked runs can be submitted.",
       };
     }
+    const replayData = makeRankedReplayData(runSplits);
+    if (!replayData) {
+      return {
+        canSubmit: false,
+        pending: false,
+        tone: "error",
+        message: "This run could not be verified locally. Start a fresh ranked run and try again.",
+      };
+    }
 
     try {
       const identity = await syncSessionIdentity(API_BASE, { allowCreate: true, reason: "pips-eligibility" });
@@ -956,6 +1000,7 @@ export function PipsPage() {
           mediumMs: runSplits.medium,
           hardMs: runSplits.hard,
           puzzleCount: PIPS_DIFFICULTIES.length,
+          replayData,
         }),
       });
       const data = await res.json().catch(() => null) as ScoreEligibilityResponse | null;
@@ -988,6 +1033,16 @@ export function PipsPage() {
       return;
     }
     if (submittingScore || scoreSubmitted || !scoreSubmissionStatus?.canSubmit || !hasAllRankedSplits(runSplits)) return;
+    const replayData = makeRankedReplayData(runSplits);
+    if (!replayData) {
+      setScoreSubmissionStatus({
+        canSubmit: false,
+        pending: false,
+        tone: "error",
+        message: "This run could not be verified locally. Start a fresh ranked run and try again.",
+      });
+      return;
+    }
 
     setSubmittingScore(true);
     setScoreSubmissionStatus({
@@ -1016,6 +1071,7 @@ export function PipsPage() {
           mediumMs: runSplits.medium,
           hardMs: runSplits.hard,
           puzzleCount: PIPS_DIFFICULTIES.length,
+          replayData,
         }),
       });
       if (res.ok) {
