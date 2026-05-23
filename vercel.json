@@ -3,6 +3,12 @@
   "installCommand": "bun install --frozen-lockfile",
   "buildCommand": "bun run --filter @games/web build",
   "outputDirectory": "apps/web/dist",
+  "git": {
+    "deploymentEnabled": {
+      "main": false,
+      "master": false
+    }
+  },
   "rewrites": [
     {
       "source": "/:path*",
