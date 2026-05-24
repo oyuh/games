@@ -8,6 +8,7 @@ import { FiAward, FiTag } from "react-icons/fi";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
 import { getDisplayName } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { playGameOver } from "../lib/sounds";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordResultsPage } from "../mobile/pages/MobilePasswordResultsPage";
 import { GameIcon } from "../components/shared/GameIcon";
@@ -23,6 +24,7 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
   const navHandledRef = useRef(false);
+  const playedResultsSoundRef = useRef(false);
 
   const names = useMemo(() => {
     return sessions.reduce<Record<string, string>>((acc, s) => {
@@ -61,6 +63,14 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
     const timer = setTimeout(() => navigate("/"), 3000);
     return () => clearTimeout(timer);
   }, [game, navigate]);
+
+  useEffect(() => {
+    if (!game || playedResultsSoundRef.current || game.phase !== "results") {
+      return;
+    }
+    playedResultsSoundRef.current = true;
+    playGameOver();
+  }, [game?.phase, game]);
 
   if (!game) {
     return (
