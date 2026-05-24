@@ -7,6 +7,8 @@ import {
   Layers3,
   RefreshCcw,
   Search,
+  ShieldAlert,
+  Trash2,
   Users,
 } from "lucide-react";
 
@@ -16,6 +18,7 @@ import {
   formatRelativeTime,
   GAME_TYPE_OPTIONS,
   GameSummary,
+  GameType,
 } from "@/lib/admin";
 import { useToast } from "@/components/Toast";
 import { GameStateDialog } from "@/components/admin/game-state-dialog";
@@ -55,8 +58,9 @@ function GamesPageSkeleton() {
       <div className="space-y-4">
         <Surface>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_180px_180px] xl:flex-1">
-              <Skeleton className="h-10 bg-muted sm:col-span-3 xl:col-span-1" />
+            <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-[minmax(0,1fr)_160px_160px_160px] xl:flex-1">
+              <Skeleton className="h-10 bg-muted sm:col-span-4 xl:col-span-1" />
+              <Skeleton className="h-10 bg-muted" />
               <Skeleton className="h-10 bg-muted" />
               <Skeleton className="h-10 bg-muted" />
             </div>
@@ -96,6 +100,11 @@ function GamesPageSkeleton() {
 type GamesResponse = {
   games: Record<string, GameSummary[]>;
   totals: Record<string, number>;
+  lifecycleTotals?: {
+    active: number;
+    ended: number;
+    total: number;
+  };
 };
 
 const GAME_TYPE_FILTER_OPTIONS = GAME_TYPE_OPTIONS.filter(
@@ -110,11 +119,12 @@ export default function GamesPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
-  const [gameType, setGameType] = useState<"all" | any>("all");
+  const [gameType, setGameType] = useState<GameType | "all">("all");
+  const [status, setStatus] = useState<"all" | "active" | "ended">("all");
   const [phase, setPhase] = useState("all");
   const [selectedGame, setSelectedGame] = useState<{
     id: string;
-    type: any;
+    type: GameType;
   } | null>(null);
 
   useEffect(() => {
@@ -170,6 +180,12 @@ export default function GamesPage() {
       if (phase !== "all" && game.phase !== phase) {
         return false;
       }
+      if (status === "active" && game.phase === "ended") {
+        return false;
+      }
+      if (status === "ended" && game.phase !== "ended") {
+        return false;
+      }
       if (!deferredSearch.trim()) {
         return true;
       }
@@ -179,7 +195,7 @@ export default function GamesPage() {
         (value) => value.toLowerCase().includes(query),
       );
     });
-  }, [deferredSearch, gameType, games, phase]);
+  }, [deferredSearch, gameType, games, phase, status]);
 
   const phaseOptions = useMemo(
     () => Array.from(new Set(games.map((game) => game.phase))).sort(),
@@ -204,6 +220,11 @@ export default function GamesPage() {
     () => filteredGames.reduce((sum, game) => sum + game.spectatorCount, 0),
     [filteredGames],
   );
+  const visibleEnded = useMemo(
+    () => filteredGames.filter((game) => game.phase === "ended").length,
+    [filteredGames],
+  );
+  const visibleActive = filteredGames.length - visibleEnded;
   const maxTypeTotal = useMemo(() => {
     let maxTotal = 1;
     for (const option of GAME_TYPE_FILTER_OPTIONS) {
@@ -236,6 +257,30 @@ export default function GamesPage() {
     }
   };
 
+  const deleteGame = async (game: GameSummary) => {
+    const confirmed = await confirm({
+      title: "Delete persisted game?",
+      description: `Delete ${formatGameType(game.type)} room ${game.code}, along with its chat messages and saved encryption key.`,
+      confirmLabel: "Delete game",
+      tone: "destructive",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await api(`/games/${game.type}/${game.id}`, { method: "DELETE" });
+      show("Game deleted.", "success");
+      setRefreshKey((value) => value + 1);
+    } catch (error) {
+      show(
+        error instanceof Error ? error.message : "Unable to delete game.",
+        "error",
+      );
+    }
+  };
+
   if (loading && !response) {
     return <GamesPageSkeleton />;
   }
@@ -246,8 +291,8 @@ export default function GamesPage() {
         <div className="space-y-4">
           <Surface>
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_180px_180px] xl:flex-1">
-                <div className="relative sm:col-span-3 xl:col-span-1">
+              <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-[minmax(0,1fr)_160px_160px_160px] xl:flex-1">
+                <div className="relative sm:col-span-4 xl:col-span-1">
                   <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={search}
@@ -259,7 +304,9 @@ export default function GamesPage() {
 
                 <select
                   value={gameType}
-                  onChange={(event) => setGameType(event.target.value as any)}
+                  onChange={(event) =>
+                    setGameType(event.target.value as GameType | "all")
+                  }
                   className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
                 >
                   {GAME_TYPE_OPTIONS.map((option) => (
@@ -267,6 +314,18 @@ export default function GamesPage() {
                       {option.label}
                     </option>
                   ))}
+                </select>
+
+                <select
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(event.target.value as "all" | "active" | "ended")
+                  }
+                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="active">Active only</option>
+                  <option value="ended">Ended only</option>
                 </select>
 
                 <select
@@ -290,6 +349,14 @@ export default function GamesPage() {
                 >
                   {filteredGames.length} visible
                 </Badge>
+                {visibleEnded > 0 ? (
+                  <Badge
+                    variant="outline"
+                    className="border-border bg-card text-foreground"
+                  >
+                    {visibleEnded} ended
+                  </Badge>
+                ) : null}
                 <Button
                   variant="outline"
                   className="border-border bg-card text-foreground hover:bg-accent"
@@ -309,11 +376,11 @@ export default function GamesPage() {
                   Room List
                 </div>
                 <div className="mt-2 text-lg font-semibold tracking-normal text-foreground">
-                  Active game sessions
+                  Game sessions
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
-                Open any room to inspect live state and attached people.
+                Ended rooms remain visible here until they are deleted.
               </div>
             </div>
 
@@ -343,7 +410,7 @@ export default function GamesPage() {
                       colSpan={6}
                       className="px-4 py-16 text-center text-sm text-muted-foreground"
                     >
-                      No active games match the current search.
+                      No games match the current search.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -390,14 +457,27 @@ export default function GamesPage() {
                             <Activity className="size-4" />
                             View
                           </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="border border-border bg-muted text-foreground hover:bg-accent"
-                            onClick={() => void endGame(game)}
-                          >
-                            End
-                          </Button>
+                          {game.phase === "ended" ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="border border-border bg-muted text-foreground hover:bg-accent"
+                              onClick={() => void deleteGame(game)}
+                            >
+                              <Trash2 className="size-4" />
+                              Delete
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="border border-border bg-muted text-foreground hover:bg-accent"
+                              onClick={() => void endGame(game)}
+                            >
+                              <ShieldAlert className="size-4" />
+                              End
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -421,14 +501,24 @@ export default function GamesPage() {
                   icon: Layers3,
                 },
                 {
+                  label: "Active rooms",
+                  value: visibleActive.toLocaleString(),
+                  icon: Users,
+                },
+                {
+                  label: "Ended cleanup",
+                  value: visibleEnded.toLocaleString(),
+                  icon: Trash2,
+                },
+                {
                   label: "Visible players",
                   value: visiblePlayers.toLocaleString(),
-                  icon: Users,
+                  icon: Activity,
                 },
                 {
                   label: "Visible spectators",
                   value: visibleSpectators.toLocaleString(),
-                  icon: Activity,
+                  icon: Users,
                 },
                 {
                   label: "Active phases",

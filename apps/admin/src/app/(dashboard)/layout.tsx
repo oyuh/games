@@ -9,6 +9,7 @@ import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { ThemeBootstrapScript } from "@/components/theme-bootstrap-script";
 import { geistMono, geistSans } from "../fonts";
 import "../globals.css";
+import { LogOut } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Games Admin",
@@ -51,6 +52,7 @@ export default async function RootLayout({
                       variant="outline"
                       className="min-w-[112px] justify-center"
                     >
+                      <LogOut className="size-4" />
                       Sign out
                     </Button>
                   </form>
