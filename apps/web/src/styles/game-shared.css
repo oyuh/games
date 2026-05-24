@@ -123,6 +123,53 @@
   z-index: 1;
 }
 
+/* ── Shared intro countdown ───────────────────────── */
+.game-start-countdown {
+  --countdown-accent: var(--game-accent, var(--primary));
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  min-height: min(50vh, 420px);
+  text-align: center;
+}
+
+.game-start-countdown-kicker {
+  margin: 0;
+  color: var(--countdown-accent);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.game-start-countdown-number {
+  color: var(--countdown-accent);
+  font-size: clamp(5.5rem, 16vw, 8.75rem);
+  font-weight: 950;
+  line-height: 0.86;
+  text-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.78),
+    0 0 42px color-mix(in srgb, var(--countdown-accent) 62%, transparent);
+  animation: game-start-countdown-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.game-start-countdown-label {
+  margin: 0;
+  max-width: 32rem;
+  color: var(--muted-foreground);
+  font-size: 0.92rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+@keyframes game-start-countdown-pop {
+  0% { transform: scale(2.5); opacity: 0; }
+  50% { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* Per-game icon patterns (filled SVGs for visibility through blur) */
 .game-page[data-game-theme="imposter"]::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%237eb8ff' stroke='%237eb8ff' stroke-width='1'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3' fill='%231d2430'/%3E%3C/svg%3E");

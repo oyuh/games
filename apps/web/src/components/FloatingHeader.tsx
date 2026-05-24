@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward, FiPlusCircle } from "react-icons/fi";
+import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward, FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight, FiTrash2 } from "react-icons/fi";
 import { FaCrown } from "react-icons/fa";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
@@ -192,8 +192,10 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [modal, setModal] = useState<"options" | "info" | "host" | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [shikakuConfirmAction, setShikakuConfirmAction] = useState<"restart" | "give-up" | null>(null);
   const [pipsConfirmAction, setPipsConfirmAction] = useState<"restart" | "give-up" | null>(null);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shikakuConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pipsConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -213,9 +215,36 @@ export function Sidebar() {
 
   // Track full game state for game-mode indicator
   const [shikakuState, setShikakuState] = useState<{
-    phase: string; infiniteMode: boolean; customMode: boolean;
-    showSeedInput: boolean; difficulty: string; seed: number | null;
-  }>({ phase: "menu", infiniteMode: false, customMode: false, showSeedInput: false, difficulty: "easy", seed: null });
+    phase: string;
+    infiniteMode: boolean;
+    customMode: boolean;
+    challengeMode: boolean;
+    showSeedInput: boolean;
+    difficulty: string;
+    seed: number | null;
+    canUndo: boolean;
+    canClear: boolean;
+    canRestart: boolean;
+    canGiveUp: boolean;
+    canLeaderboard: boolean;
+    showScrollControls: boolean;
+    canScroll: { up: boolean; down: boolean; left: boolean; right: boolean };
+  }>({
+    phase: "menu",
+    infiniteMode: false,
+    customMode: false,
+    challengeMode: false,
+    showSeedInput: false,
+    difficulty: "easy",
+    seed: null,
+    canUndo: false,
+    canClear: false,
+    canRestart: false,
+    canGiveUp: false,
+    canLeaderboard: true,
+    showScrollControls: false,
+    canScroll: { up: false, down: false, left: false, right: false },
+  });
   const [pipsState, setPipsState] = useState<{
     phase: string;
     runMode: string;
@@ -276,6 +305,7 @@ export function Sidebar() {
   useEffect(() => {
     setMobileOpen(false);
     setConfirmLeave(false);
+    setShikakuConfirmAction(null);
     setPipsConfirmAction(null);
   }, [pathname]);
 
@@ -286,6 +316,13 @@ export function Sidebar() {
       return () => { if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current); };
     }
   }, [confirmLeave]);
+
+  useEffect(() => {
+    if (shikakuConfirmAction) {
+      shikakuConfirmTimerRef.current = setTimeout(() => setShikakuConfirmAction(null), 3000);
+      return () => { if (shikakuConfirmTimerRef.current) clearTimeout(shikakuConfirmTimerRef.current); };
+    }
+  }, [shikakuConfirmAction]);
 
   useEffect(() => {
     if (pipsConfirmAction) {
@@ -322,6 +359,18 @@ export function Sidebar() {
     setPipsConfirmAction(action);
     showToast(action === "restart" ? "Click restart again to start a fresh seed" : "Click give up again to abandon this run", "info");
   }, [pipsConfirmAction]);
+
+  const handleShikakuConfirmedAction = useCallback((action: "restart" | "give-up") => {
+    if (shikakuConfirmAction === action) {
+      setShikakuConfirmAction(null);
+      window.dispatchEvent(new CustomEvent(action === "restart" ? "shikaku-restart-run" : "shikaku-give-up"));
+      setMobileOpen(false);
+      return;
+    }
+
+    setShikakuConfirmAction(action);
+    showToast(action === "restart" ? "Click restart again to restart this run" : "Click give up again to abandon this run", "info");
+  }, [shikakuConfirmAction]);
 
   const isTop = settings.sidebarPosition === "top";
 
@@ -380,7 +429,9 @@ export function Sidebar() {
             <button
               className={`sidebar-link shikaku-mode-indicator${shikakuState.phase !== "menu" ? " shikaku-mode-indicator--active" : ""}`}
               data-tooltip={
-                shikakuState.customMode
+                shikakuState.challengeMode
+                  ? `Challenge - ${shikakuState.difficulty} - seed ${shikakuState.seed}`
+                  : shikakuState.customMode
                   ? `Seeded - ${shikakuState.difficulty} - seed ${shikakuState.seed}`
                   : shikakuState.infiniteMode
                     ? `Infinite - ${shikakuState.difficulty}`
@@ -388,44 +439,122 @@ export function Sidebar() {
               }
               data-tooltip-pos="right"
               onClick={() => {
-                const mode = shikakuState.customMode ? "Seeded" : shikakuState.infiniteMode ? "Infinite" : "Regular";
+                const mode = shikakuState.challengeMode ? "Challenge" : shikakuState.customMode ? "Seeded" : shikakuState.infiniteMode ? "Infinite" : "Regular";
                 const diff = shikakuState.difficulty.charAt(0).toUpperCase() + shikakuState.difficulty.slice(1);
                 const phase = shikakuState.phase.charAt(0).toUpperCase() + shikakuState.phase.slice(1);
                 const parts = [`${mode} - ${diff}`, `Phase: ${phase}`];
                 if (shikakuState.seed) parts.push(`Seed: ${shikakuState.seed}`);
-                if (shikakuState.customMode) parts.push("Unranked");
+                if (shikakuState.challengeMode) parts.push("Challenge");
+                else if (shikakuState.customMode) parts.push("Unranked");
                 else if (shikakuState.infiniteMode) parts.push("Unranked");
                 else parts.push("Ranked");
                 showToast(parts.join(" - "), "info");
                 setMobileOpen(false);
               }}
             >
-              {shikakuState.customMode || shikakuState.showSeedInput
+              {shikakuState.challengeMode
+                ? <FiFlag size={24} />
+                : shikakuState.customMode || shikakuState.showSeedInput
                 ? <FiHash size={24} />
                 : shikakuState.infiniteMode
                   ? <FiRepeat size={24} />
                   : <GameIcon game="shikaku" size={24} />
               }
               <span className="sidebar-link-label">
-                {shikakuState.customMode || shikakuState.showSeedInput ? "Seed" : shikakuState.infiniteMode ? "Infinite" : "Regular"}
+                {shikakuState.challengeMode ? "Challenge" : shikakuState.customMode || shikakuState.showSeedInput ? "Seed" : shikakuState.infiniteMode ? "Infinite" : "Regular"}
               </span>
             </button>
             <SidebarButton
+              icon={<FiCornerUpLeft size={24} />}
+              label="Undo"
+              disabled={!shikakuState.canUndo}
+              className="sidebar-link--shikaku"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("shikaku-undo"));
+                setMobileOpen(false);
+              }}
+            />
+            <SidebarButton
+              icon={<FiTrash2 size={24} />}
+              label="Clear"
+              disabled={!shikakuState.canClear}
+              className="sidebar-link--shikaku"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("shikaku-clear-board"));
+                setMobileOpen(false);
+              }}
+            />
+            <SidebarButton
+              icon={<FiRepeat size={24} />}
+              label={shikakuConfirmAction === "restart" ? "Confirm Restart" : "Restart"}
+              disabled={!shikakuState.canRestart}
+              className={`sidebar-link--shikaku${shikakuConfirmAction === "restart" ? " sidebar-link--shikaku-confirm" : ""}`}
+              tooltipVariant={shikakuConfirmAction === "restart" ? "danger" : undefined}
+              onClick={() => handleShikakuConfirmedAction("restart")}
+            />
+            <SidebarButton
+              icon={<FiFlag size={24} />}
+              label={shikakuConfirmAction === "give-up" ? "Confirm Give Up" : "Give Up"}
+              disabled={!shikakuState.canGiveUp}
+              className={`sidebar-link--shikaku${shikakuConfirmAction === "give-up" ? " sidebar-link--shikaku-confirm" : ""}`}
+              tooltipVariant={shikakuConfirmAction === "give-up" ? "danger" : undefined}
+              onClick={() => handleShikakuConfirmedAction("give-up")}
+            />
+            <SidebarButton
               icon={<FiAward size={24} />}
               label="Leaderboard"
+              disabled={!shikakuState.canLeaderboard}
+              className="sidebar-link--shikaku"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("shikaku-toggle-leaderboard"));
                 setMobileOpen(false);
               }}
             />
-            {/* <SidebarButton
-              icon={<FiPlusCircle size={24} />}
-              label="Add Score"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("shikaku-open-admin-score"));
-                setMobileOpen(false);
-              }}
-            /> */}
+            {shikakuState.showScrollControls && (
+              <>
+                <span className="sidebar-separator" aria-hidden="true" />
+                <SidebarButton
+                  icon={<FiChevronUp size={24} />}
+                  label="Scroll Up"
+                  disabled={!shikakuState.canScroll.up}
+                  className="sidebar-link--shikaku"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("shikaku-scroll-up"));
+                    setMobileOpen(false);
+                  }}
+                />
+                <SidebarButton
+                  icon={<FiChevronDown size={24} />}
+                  label="Scroll Down"
+                  disabled={!shikakuState.canScroll.down}
+                  className="sidebar-link--shikaku"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("shikaku-scroll-down"));
+                    setMobileOpen(false);
+                  }}
+                />
+                <SidebarButton
+                  icon={<FiChevronLeft size={24} />}
+                  label="Scroll Left"
+                  disabled={!shikakuState.canScroll.left}
+                  className="sidebar-link--shikaku"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("shikaku-scroll-left"));
+                    setMobileOpen(false);
+                  }}
+                />
+                <SidebarButton
+                  icon={<FiChevronRight size={24} />}
+                  label="Scroll Right"
+                  disabled={!shikakuState.canScroll.right}
+                  className="sidebar-link--shikaku"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("shikaku-scroll-right"));
+                    setMobileOpen(false);
+                  }}
+                />
+              </>
+            )}
           </>
         )}
         {isPips && (

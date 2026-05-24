@@ -166,6 +166,14 @@ const CURSOR_IMAGE_URLS = Array.from(
   ),
 );
 
+function setCustomCursorRuntime(value: "ready" | "fallback" | null) {
+  if (value) {
+    document.documentElement.setAttribute("data-custom-cursor-runtime", value);
+  } else {
+    document.documentElement.removeAttribute("data-custom-cursor-runtime");
+  }
+}
+
 function closestElement(target: EventTarget | null) {
   return target instanceof Element ? target : null;
 }
@@ -174,18 +182,76 @@ function cursorTargetForPoint(event: PointerEvent) {
   return closestElement(document.elementFromPoint(event.clientX, event.clientY) ?? event.target);
 }
 
+function isScrollableWithScrollbar(el: Element, axis: "x" | "y") {
+  if (!(el instanceof HTMLElement)) return false;
+  const style = window.getComputedStyle(el);
+  const overflow = axis === "y" ? style.overflowY : style.overflowX;
+  if (!/(auto|scroll|overlay)/.test(overflow)) return false;
+  return axis === "y" ? el.scrollHeight > el.clientHeight : el.scrollWidth > el.clientWidth;
+}
+
+function isPointerOverScrollbar(event: PointerEvent) {
+  const root = document.documentElement;
+  if (
+    window.innerWidth > root.clientWidth &&
+    event.clientX >= root.clientWidth
+  ) {
+    return true;
+  }
+  if (
+    window.innerHeight > root.clientHeight &&
+    event.clientY >= root.clientHeight
+  ) {
+    return true;
+  }
+
+  let el = cursorTargetForPoint(event);
+  while (el && el instanceof HTMLElement) {
+    const rect = el.getBoundingClientRect();
+    const verticalScrollbarWidth = el.offsetWidth - el.clientWidth;
+    const horizontalScrollbarHeight = el.offsetHeight - el.clientHeight;
+    const overVerticalScrollbar =
+      verticalScrollbarWidth > 0 &&
+      isScrollableWithScrollbar(el, "y") &&
+      event.clientX >= rect.right - verticalScrollbarWidth &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom;
+    const overHorizontalScrollbar =
+      horizontalScrollbarHeight > 0 &&
+      isScrollableWithScrollbar(el, "x") &&
+      event.clientY >= rect.bottom - horizontalScrollbarHeight &&
+      event.clientY <= rect.bottom &&
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right;
+
+    if (overVerticalScrollbar || overHorizontalScrollbar) return true;
+    el = el.parentElement;
+  }
+
+  return false;
+}
+
 function isVisiblePointerEvent(event: PointerEvent) {
   return event.pointerType === "mouse" || event.pointerType === "pen" || event.pointerType === "";
 }
 
-function preloadCursorImages() {
-  return CURSOR_IMAGE_URLS.map((src) => {
+function loadCursorImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Failed to load cursor image: ${src}`));
     image.src = src;
-    void image.decode?.().catch(() => undefined);
-    return image;
+
+    if (image.decode) {
+      void image.decode().then(() => resolve(image), reject);
+    }
   });
+}
+
+function preloadCursorImages() {
+  return Promise.all(CURSOR_IMAGE_URLS.map(loadCursorImage));
 }
 
 function isClickable(el: Element) {
@@ -241,16 +307,52 @@ export function CustomCursor() {
   const positionRef = useRef<CursorPosition>(INITIAL_CURSOR_POSITION);
   const stateRef = useRef<CursorState>(INITIAL_CURSOR_STATE);
   const [state, setState] = useState<CursorState>(INITIAL_CURSOR_STATE);
+  const [runtimeReady, setRuntimeReady] = useState(false);
 
   useEffect(() => {
     if (!customCursor || !window.matchMedia("(pointer: fine)").matches) {
       const hiddenState = { ...stateRef.current, visible: false, pressed: false };
       stateRef.current = hiddenState;
       setState(hiddenState);
+      setRuntimeReady(false);
+      setCustomCursorRuntime(customCursor ? "fallback" : null);
       return;
     }
 
-    const preloadedImages = preloadCursorImages();
+    let cancelled = false;
+    setRuntimeReady(false);
+    setCustomCursorRuntime("fallback");
+
+    void preloadCursorImages()
+      .then(() => {
+        if (cancelled) return;
+        setCustomCursorRuntime("ready");
+        setRuntimeReady(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const hiddenState = { ...stateRef.current, visible: false, pressed: false };
+        stateRef.current = hiddenState;
+        setState(hiddenState);
+        setRuntimeReady(false);
+        setCustomCursorRuntime("fallback");
+      });
+
+    return () => {
+      cancelled = true;
+      setRuntimeReady(false);
+      setCustomCursorRuntime(null);
+    };
+  }, [customCursor]);
+
+  useEffect(() => {
+    if (!customCursor || !runtimeReady) {
+      const hiddenState = { ...stateRef.current, visible: false, pressed: false };
+      stateRef.current = hiddenState;
+      setState(hiddenState);
+      return;
+    }
+
     let pressed = false;
 
     const applyPosition = () => {
@@ -284,9 +386,23 @@ export function CustomCursor() {
       setState(nextState);
     };
 
+    const hide = (fallbackToNative = false) => {
+      pressed = false;
+      setCursorState({ ...stateRef.current, visible: false, pressed: false });
+      if (fallbackToNative) {
+        setCustomCursorRuntime("fallback");
+      }
+    };
+    const hideToNative = () => hide(true);
     const update = (event: PointerEvent) => {
       if (!isVisiblePointerEvent(event)) return;
 
+      if (isPointerOverScrollbar(event)) {
+        hideToNative();
+        return;
+      }
+
+      setCustomCursorRuntime("ready");
       queuePosition(event.clientX, event.clientY);
       const el = cursorTargetForPoint(event);
       setCursorState({
@@ -296,18 +412,18 @@ export function CustomCursor() {
         accent: accentForTarget(el, pathname),
       });
     };
-
     const onPointerDown = (event: PointerEvent) => {
+      if (!isVisiblePointerEvent(event)) return;
+      if (event.button !== 0) {
+        hideToNative();
+        return;
+      }
       pressed = true;
       update(event);
     };
     const onPointerUp = (event: PointerEvent) => {
       pressed = false;
       update(event);
-    };
-    const hide = () => {
-      pressed = false;
-      setCursorState({ ...stateRef.current, visible: false, pressed: false });
     };
     const onPointerOut = (event: PointerEvent) => {
       const outsideViewport =
@@ -316,13 +432,13 @@ export function CustomCursor() {
         event.clientX >= window.innerWidth ||
         event.clientY >= window.innerHeight;
 
-      if (!event.relatedTarget && outsideViewport) {
-        hide();
+      if (!event.relatedTarget || outsideViewport) {
+        hideToNative();
       }
     };
     const onVisibilityChange = () => {
       if (document.visibilityState !== "visible") {
-        hide();
+        hideToNative();
       }
     };
 
@@ -330,10 +446,14 @@ export function CustomCursor() {
     window.addEventListener("pointerover", update, { passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
-    window.addEventListener("pointercancel", hide, { passive: true });
+    window.addEventListener("pointercancel", hideToNative, { passive: true });
     window.addEventListener("pointerout", onPointerOut, { passive: true });
+    window.addEventListener("contextmenu", hideToNative, { passive: true });
+    window.addEventListener("blur", hideToNative);
+    window.addEventListener("mouseleave", hideToNative, { passive: true });
+    window.addEventListener("dragstart", hideToNative, { passive: true });
     document.addEventListener("visibilitychange", onVisibilityChange);
-    document.documentElement.addEventListener("pointerleave", hide, { passive: true });
+    document.documentElement.addEventListener("pointerleave", hideToNative, { passive: true });
     return () => {
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
@@ -343,18 +463,18 @@ export function CustomCursor() {
       window.removeEventListener("pointerover", update);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
-      window.removeEventListener("pointercancel", hide);
+      window.removeEventListener("pointercancel", hideToNative);
       window.removeEventListener("pointerout", onPointerOut);
+      window.removeEventListener("contextmenu", hideToNative);
+      window.removeEventListener("blur", hideToNative);
+      window.removeEventListener("mouseleave", hideToNative);
+      window.removeEventListener("dragstart", hideToNative);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      document.documentElement.removeEventListener("pointerleave", hide);
-      preloadedImages.forEach((image) => {
-        image.onload = null;
-        image.onerror = null;
-      });
+      document.documentElement.removeEventListener("pointerleave", hideToNative);
     };
-  }, [customCursor, pathname]);
+  }, [customCursor, pathname, runtimeReady]);
 
-  if (!customCursor) {
+  if (!customCursor || !runtimeReady) {
     return null;
   }
 
