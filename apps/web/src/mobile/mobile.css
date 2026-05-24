@@ -979,6 +979,11 @@
 .m-recent-collapsible--open {
   max-height: 16rem;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.m-recent-collapsible--open::-webkit-scrollbar {
+  display: none;
 }
 
 .m-recent-list {
