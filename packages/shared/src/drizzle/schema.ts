@@ -104,16 +104,59 @@ export const passwordGames = pgTable(
     hostId: text("host_id").notNull(),
     phase: passwordPhaseEnum("phase").notNull().default("lobby"),
     teams: jsonb("teams").$type<Array<{ name: string; members: string[] }>>().notNull().default([]),
-    rounds: jsonb("rounds").$type<Array<{ round: number; teamIndex: number; guesserId: string; word: string; clues: Array<{ sessionId: string; text: string }>; guess: string | null; correct: boolean }>>().notNull().default([]),
+    rounds: jsonb("rounds").$type<Array<{
+      round: number;
+      teamIndex: number;
+      guesserId: string;
+      roundId: string;
+      word: string;
+      clues: Array<{
+        id: string;
+        sessionId: string;
+        text: string;
+        ts: number;
+        clueNumber: number;
+        repeatedText?: boolean;
+      }>;
+      guesses: Array<{
+        id: string;
+        sessionId: string;
+        text: string;
+        ts: number;
+        correct: boolean;
+        guessNumber: number;
+      }>;
+      guess: string | null;
+      guessCount: number;
+      points: number;
+      correct: boolean;
+    }>>().notNull().default([]),
     scores: jsonb("scores").$type<Record<string, number>>().notNull().default({}),
     currentRound: integer("current_round").notNull().default(0),
     activeRounds: jsonb("active_rounds").$type<Array<{
       teamIndex: number;
       guesserId: string;
+      roundId: string;
       word: string | null;
       encryptedWord?: string | null;
-      clues: Array<{ sessionId: string; text: string }>;
+      clues: Array<{
+        id: string;
+        sessionId: string;
+        text: string;
+        ts: number;
+        clueNumber: number;
+        repeatedText?: boolean;
+      }>;
+      guesses: Array<{
+        id: string;
+        sessionId: string;
+        text: string;
+        ts: number;
+        correct: boolean;
+        guessNumber: number;
+      }>;
       guess: string | null;
+      guessCount: number;
     }>>().notNull().default([]),
     spectators: jsonb("spectators").$type<Array<{ sessionId: string; name: string | null }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),

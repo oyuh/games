@@ -18,7 +18,16 @@ import {
 } from "@games/shared/games/pips-engine";
 import { dbProvider } from "./db-provider";
 import { drizzleClient } from "./db-provider";
-import { pusher, getCustomStatus, setBanChecker, getBanChecker } from "./broadcast-server";
+import {
+  attachRealtimeServer,
+  getCustomStatus,
+  setBanChecker,
+  getBanChecker,
+  onRealtimeClose,
+  onRealtimeMessage,
+  onRealtimeOpen,
+  type RealtimeSocketData,
+} from "./broadcast-server";
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 import { allowUnrestrictedSessionName, findRestrictedNameMatch } from "./name-rules";
 import { rateLimiter } from "./rate-limit";
@@ -45,26 +54,79 @@ config({ path: "../../.env" });
 const app = new Hono();
 const DB_STATUS_KEY = process.env.DB_STATUS_KEY?.trim() || "footer";
 const DB_STATUS_EXPECTED_VALUE = process.env.DB_STATUS_EXPECTED_VALUE?.trim() || "ok";
-const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || process.env.PUSHER_SECRET?.trim() || "games-dev-session-secret";
+const DEFAULT_PUBLIC_ORIGIN = "https://games.lawsonhart.me";
+const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || "games-dev-session-secret";
 const DEV_MODE = process.env.NODE_ENV !== "production";
 if (DEV_MODE) {
   console.log("[dev-mode] Security relaxations active — fingerprint binding, session proof, and rate limits are loosened for local testing.");
 }
 
+function parseOriginList(value: string | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function compileOriginPattern(pattern: string) {
+  if (!pattern.includes("*")) {
+    return null;
+  }
+
+  const source = `^${pattern.split("*").map(escapeRegex).join(".*")}$`;
+  return new RegExp(source);
+}
+
+const configuredOriginEntries = [
+  DEFAULT_PUBLIC_ORIGIN,
+  ...parseOriginList(process.env.CORS_ALLOWED_ORIGINS),
+  ...(DEV_MODE ? ["http://localhost:5173", "http://127.0.0.1:5173"] : []),
+];
+
+const configuredAllowedOrigins = new Set<string>(
+  configuredOriginEntries.filter((entry) => !entry.includes("*"))
+);
+
+const configuredAllowedOriginPatterns = configuredOriginEntries
+  .map(compileOriginPattern)
+  .filter((pattern): pattern is RegExp => Boolean(pattern));
+
+function isAllowedOrigin(origin: string | undefined) {
+  if (!origin) {
+    return DEV_MODE;
+  }
+
+  if (configuredAllowedOrigins.has(origin)) {
+    return true;
+  }
+
+  if (origin.endsWith(".lawsonhart.me")) {
+    return true;
+  }
+
+  if (configuredAllowedOriginPatterns.some((pattern) => pattern.test(origin))) {
+    return true;
+  }
+
+  if (DEV_MODE && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"))) {
+    return true;
+  }
+
+  return false;
+}
+
+function resolveCorsOrigin(origin: string | undefined) {
+  return isAllowedOrigin(origin) ? origin ?? DEFAULT_PUBLIC_ORIGIN : DEFAULT_PUBLIC_ORIGIN;
+}
+
 app.use(
   "*",
   cors({
-    origin: (origin) => {
-      if (!origin) return "https://games.lawsonhart.me";
-      if (
-        origin.endsWith(".lawsonhart.me") ||
-        origin === "https://games.lawsonhart.me" ||
-        origin.startsWith("http://localhost:")
-      ) {
-        return origin;
-      }
-      return "https://games.lawsonhart.me";
-    },
+    origin: resolveCorsOrigin,
     allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "x-zero-user-id", ZERO_SESSION_PROOF_HEADER],
     credentials: true,
@@ -87,15 +149,6 @@ app.use(
     windowMs: 60_000,
     maxRequests: 10,
     scope: "maps_geocode"
-  })
-);
-
-app.use(
-  "/api/pusher/auth",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 30,
-    scope: "pusher_auth"
   })
 );
 
@@ -384,55 +437,67 @@ async function resolveSessionIdentity(
   };
 }
 
-// ─── Pusher auth endpoint ───────────────────────────────────
-app.post("/api/pusher/auth", async (c) => {
-  const body = await c.req.parseBody();
-  const socketId = body["socket_id"] as string;
-  const channelName = body["channel_name"] as string;
-  const claimedSessionId = (body["session_id"] as string) || "";
+function readRealtimeSessionId(req: Request) {
+  const url = new URL(req.url);
+  const claimedSessionId = normalizeSessionId(url.searchParams.get("sessionId"));
+  const proofSessionId = readSignedSessionProof(url.searchParams.get("sessionProof") ?? undefined, SESSION_COOKIE_SECRET);
+  const cookieSessionId = readSignedSessionCookie(req.headers.get("cookie") ?? undefined, SESSION_COOKIE_SECRET);
 
-  if (!socketId || !channelName) {
-    return c.json({ error: "Missing socket_id or channel_name" }, 400);
+  if (DEV_MODE) {
+    return (proofSessionId ?? claimedSessionId) || cookieSessionId;
   }
 
-  const resolvedIdentity = await resolveSessionIdentity(c, {
-    claimedSessionId,
-    allowCreate: false,
-  });
-
-  if (!resolvedIdentity) {
-    return c.json({ error: "Invalid session" }, 403);
+  if (proofSessionId && claimedSessionId && proofSessionId !== claimedSessionId) {
+    return null;
   }
 
-  const sessionId = resolvedIdentity.sessionId;
+  const resolvedSessionId = proofSessionId ?? cookieSessionId;
+  if (!resolvedSessionId) {
+    return null;
+  }
 
-  // Ban check on auth — banned users can't subscribe
-  if (sessionId) {
-    const { ip, region, userAgent } = await getClientInfo(c.req);
-    const checker = getBanChecker();
-    if (checker) {
-      const ban = checker(sessionId, ip, region);
-      if (ban) {
-        return c.json({ error: "Banned" }, 403);
-      }
+  if (claimedSessionId && claimedSessionId !== resolvedSessionId) {
+    return null;
+  }
+
+  return resolvedSessionId;
+}
+
+async function authorizeRealtimeUpgrade(req: Request) {
+  const origin = req.headers.get("origin") ?? undefined;
+  if (!isAllowedOrigin(origin)) {
+    return { ok: false as const, status: 403, error: "Unauthorized origin" };
+  }
+
+  const sessionId = readRealtimeSessionId(req);
+  if (!sessionId) {
+    return { ok: false as const, status: 403, error: "Invalid session proof" };
+  }
+
+  const session = await loadSessionCandidate(sessionId);
+  if (!session) {
+    return { ok: false as const, status: 403, error: "Unknown session" };
+  }
+
+  const requestHeaders = {
+    header(name: string) {
+      return req.headers.get(name) ?? undefined;
+    },
+  };
+  const { ip, region, userAgent } = await getClientInfo(requestHeaders);
+  const checker = getBanChecker();
+  if (checker) {
+    const ban = checker(sessionId, ip, region);
+    if (ban) {
+      return { ok: false as const, status: 403, error: "Banned" };
     }
-
-    // Track session client info on every auth
-    const fp = computeFingerprint(ip, userAgent);
-    updateSessionTracking(sessionId, ip, region, userAgent, fp);
   }
 
-  // Only allow private-user-{sessionId} channels where sessionId matches
-  if (channelName.startsWith("private-user-")) {
-    const channelSessionId = channelName.replace("private-user-", "");
-    if (channelSessionId !== sessionId) {
-      return c.json({ error: "Unauthorized channel" }, 403);
-    }
-  }
+  const fingerprint = computeFingerprint(ip, userAgent);
+  updateSessionTracking(sessionId, ip, region, userAgent, fingerprint);
 
-  const authResponse = pusher.authorizeChannel(socketId, channelName);
-  return c.json(authResponse);
-});
+  return { ok: true as const, sessionId };
+}
 
 app.post("/api/session/sync", async (c) => {
   const body = await c.req.json().catch(() => null) as {
@@ -2892,14 +2957,43 @@ app.on(["GET", "POST"], "/api/activity", async (c) => {
 });
 
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
-const server = Bun.serve({
-  fetch: app.fetch,
+const server = Bun.serve<RealtimeSocketData>({
+  fetch: async (req, bunServer) => {
+    const url = new URL(req.url);
+    if (url.pathname === "/ws") {
+      const authorized = await authorizeRealtimeUpgrade(req);
+      if (!authorized.ok) {
+        return new Response(authorized.error, { status: authorized.status });
+      }
+
+      const upgraded = bunServer.upgrade(req, {
+        data: {
+          sessionId: authorized.sessionId,
+          subscriptions: new Set<string>(),
+        },
+      });
+
+      if (upgraded) {
+        return;
+      }
+
+      return new Response("WebSocket upgrade failed", { status: 500 });
+    }
+
+    return app.fetch(req);
+  },
+  websocket: {
+    open: onRealtimeOpen,
+    close: onRealtimeClose,
+    message: onRealtimeMessage,
+  },
   port,
 });
+attachRealtimeServer(server);
 console.log(`API listening on http://localhost:${server.port}`);
 
 setBanChecker(isBanned);
-console.log("Pusher broadcast configured (no WebSocket servers)");
+console.log("Realtime WebSocket transport configured");
 
 // ─── Auto-cleanup: run every 15 minutes ────────────────────
 async function scheduledCleanup() {

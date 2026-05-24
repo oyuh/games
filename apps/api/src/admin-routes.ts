@@ -861,7 +861,7 @@ adminRoutes.post("/bans", async (c) => {
     disconnectSession(value);
   }
 
-  // For IP/region bans, the ban check happens at Pusher auth time.
+  // For IP/region bans, the ban check happens during the realtime WebSocket upgrade.
   // The user won't be able to re-subscribe on their next auth attempt.
 
   return c.json({ ok: true, ban });

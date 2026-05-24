@@ -111,14 +111,14 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
           <h3 className="m-card-title">Rounds</h3>
           <div className="m-data-table-wrap">
             <table className="m-data-table">
-              <thead><tr><th>#</th><th>Team</th><th>Word</th><th>Result</th></tr></thead>
+              <thead><tr><th>#</th><th>Team</th><th>Word</th><th>Pts</th></tr></thead>
               <tbody>
                 {game.rounds.map((r) => (
-                  <tr key={r.round}>
+                  <tr key={r.roundId ?? `${r.round}-${r.teamIndex}`}>
                     <td>{r.round}</td>
                     <td>{game.teams[r.teamIndex]?.name ?? `Team ${r.teamIndex + 1}`}</td>
                     <td style={{ color: "var(--primary)", fontWeight: 600 }}>{r.word}</td>
-                    <td style={{ color: r.correct ? "#4ade80" : "#f87171" }}>{r.correct ? "✓" : "✗"}</td>
+                    <td style={{ color: r.correct ? "#4ade80" : "#f87171" }}>{r.correct ? `+${r.points ?? 1}` : "0"}</td>
                   </tr>
                 ))}
               </tbody>

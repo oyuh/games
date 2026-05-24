@@ -215,3 +215,87 @@ describe("Password — spectator during active game", () => {
     expect(game.spectators[0].sessionId).toBe("late");
   });
 });
+
+describe("Password — live round gameplay", () => {
+  let tx: MockTx;
+
+  beforeEach(() => {
+    tx = new MockTx("server");
+    tx.seed("sessions", [
+      makeSession({ id: "host1", name: "Host" }),
+      makeSession({ id: "p1", name: "Alice" }),
+      makeSession({ id: "p2", name: "Bob" }),
+      makeSession({ id: "p3", name: "Charlie" }),
+    ]);
+    tx.seed("password_games", [
+      makePasswordGame({
+        id: "game1",
+        host_id: "host1",
+        phase: "playing",
+        teams: [
+          { name: "Team A", members: ["host1", "p1"] },
+          { name: "Team B", members: ["p2", "p3"] },
+        ],
+        current_round: 1,
+        active_rounds: [
+          {
+            teamIndex: 0,
+            guesserId: "host1",
+            roundId: "round-a1",
+            word: "piano",
+            clues: [],
+            guesses: [],
+            guess: null,
+            guessCount: 0,
+          },
+          {
+            teamIndex: 1,
+            guesserId: "p2",
+            roundId: "round-b1",
+            word: "sunset",
+            clues: [],
+            guesses: [],
+            guess: null,
+            guessCount: 0,
+          },
+        ],
+        settings: {
+          targetScore: 10,
+          roundDurationSec: 120,
+          roundEndsAt: Date.now() + 60_000,
+          category: "animals",
+        },
+      }),
+    ]);
+  });
+
+  it("lets a clue giver submit more than one clue in the same round", async () => {
+    await mutators.submitClue({ args: { gameId: "game1", sessionId: "p1", clue: "keys" }, tx, ctx: serverCtx("p1") });
+    await mutators.submitClue({ args: { gameId: "game1", sessionId: "p1", clue: "music" }, tx, ctx: serverCtx("p1") });
+
+    const game = tx.getById("password_games", "game1") as any;
+    const round = game.active_rounds[0];
+    expect(round.clues).toHaveLength(2);
+    expect(round.clues[0].clueNumber).toBe(1);
+    expect(round.clues[1].clueNumber).toBe(2);
+  });
+
+  it("blocks duplicate guesses and awards fewer points on later solves", async () => {
+    await mutators.submitClue({ args: { gameId: "game1", sessionId: "p1", clue: "keys" }, tx, ctx: serverCtx("p1") });
+    await mutators.submitGuess({ args: { gameId: "game1", sessionId: "host1", guess: "drums" }, tx, ctx: serverCtx("host1") });
+
+    await expectThrows(
+      () => mutators.submitGuess({ args: { gameId: "game1", sessionId: "host1", guess: "drums" }, tx, ctx: serverCtx("host1") }),
+      "already guessed"
+    );
+
+    await mutators.submitGuess({ args: { gameId: "game1", sessionId: "host1", guess: "piano" }, tx, ctx: serverCtx("host1") });
+
+    const game = tx.getById("password_games", "game1") as any;
+    expect(game.scores["Team A"]).toBe(2);
+    expect(game.rounds).toHaveLength(1);
+    expect(game.rounds[0].guessCount).toBe(2);
+    expect(game.rounds[0].points).toBe(2);
+    expect(game.rounds[0].guesses.map((entry: any) => entry.text)).toEqual(["drums", "piano"]);
+  });
+});
