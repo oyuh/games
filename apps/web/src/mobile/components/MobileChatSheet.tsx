@@ -107,7 +107,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
         <input
           className="m-input"
           style={{ flex: 1 }}
-          placeholder="Type a message\u2026"
+          placeholder="Type a message..."
           value={input}
           maxLength={500}
           onChange={(e) => setInput(e.target.value)}
