@@ -65,27 +65,9 @@ export const demoMutators = {
       phase: z.enum(["lobby", "playing", "results"]),
       teams: z.array(z.object({ name: z.string(), members: z.array(z.string()) })),
       scores: z.record(z.string(), z.number()),
-      rounds: z.array(
-        z.object({
-          round: z.number(),
-          teamIndex: z.number(),
-          guesserId: z.string(),
-          word: z.string(),
-          clues: z.array(z.object({ sessionId: z.string(), text: z.string() })),
-          guess: z.string().nullable(),
-          correct: z.boolean()
-        })
-      ),
+      rounds: z.array(z.any()),
       currentRound: z.number(),
-      activeRounds: z.array(
-        z.object({
-          teamIndex: z.number(),
-          guesserId: z.string(),
-          word: z.string().nullable(),
-          clues: z.array(z.object({ sessionId: z.string(), text: z.string() })),
-          guess: z.string().nullable()
-        })
-      ),
+      activeRounds: z.array(z.any()),
       targetScore: z.number(),
       roundEndsAt: z.number().nullable()
     }),

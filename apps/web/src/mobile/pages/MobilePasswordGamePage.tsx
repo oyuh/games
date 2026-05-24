@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiSend, FiClock, FiSkipForward } from "react-icons/fi";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
+import { usePasswordLiveTyping } from "../../hooks/usePasswordLiveTyping";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
@@ -74,6 +75,16 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
     if (!game || !game.active_rounds.length || myTeamIndex === -1) return undefined;
     return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
   }, [game?.active_rounds, myTeamIndex]);
+  const activeRoundId = myActiveRound?.roundId ?? (myTeamIndex >= 0 && game ? `legacy-${game.current_round}-${myTeamIndex}` : null);
+  const isSpectator = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
+
+  const { liveEntries, publishDraft, clearDraft } = usePasswordLiveTyping({
+    enabled: Boolean(game?.phase === "playing" && myTeamIndex >= 0 && !isSpectator),
+    gameId,
+    teamIndex: myTeamIndex,
+    sessionId,
+    roundId: activeRoundId,
+  });
 
   useGameSounds({
     phase: game?.phase,
@@ -172,6 +183,13 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   }, [myActiveRound?.word, myActiveRound?.encryptedWord, decryptValue, fallbackKey]);
 
   useEffect(() => {
+    setClue("");
+    setGuess("");
+    clearDraft("clue");
+    clearDraft("guess");
+  }, [activeRoundId, clearDraft]);
+
+  useEffect(() => {
     let cancelled = false;
     const rounds = game?.rounds ?? [];
     if (rounds.length === 0) {
@@ -235,21 +253,30 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
 
   if (!game) return <MobileGameNotFound theme="password" />;
 
-  const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
   const myTeam = myTeamIndex >= 0 ? game.teams[myTeamIndex] : undefined;
   const myTeamMembers = myTeam?.members ?? [];
+
+  const handleClueChange = (value: string) => {
+    setClue(value);
+    publishDraft("clue", value);
+  };
+
+  const handleGuessChange = (value: string) => {
+    setGuess(value);
+    publishDraft("guess", value);
+  };
 
   const submitClue = async (event: FormEvent) => {
     event.preventDefault();
     if (!clue.trim()) return;
-    try { await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server; setClue(""); playSoundSubmit(); }
+    try { await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server; setClue(""); clearDraft("clue"); playSoundSubmit(); }
     catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit clue", "error"); }
   };
 
   const submitGuess = async (event: FormEvent) => {
     event.preventDefault();
     if (!guess.trim()) return;
-    try { await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server; setGuess(""); playSoundSubmit(); }
+    try { await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server; setGuess(""); clearDraft("guess"); playSoundSubmit(); }
     catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit guess", "error"); }
   };
 
@@ -259,6 +286,38 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   };
 
   const myTeamSkips = myTeam ? (game.settings.skipsRemaining?.[myTeam.name] ?? 0) : 0;
+  const activeRoundView = myActiveRound
+    ? {
+        ...myActiveRound,
+        roundId: activeRoundId ?? myActiveRound.roundId,
+        clues: myActiveRound.clues ?? [],
+        guesses: myActiveRound.guesses ?? [],
+        guessCount: myActiveRound.guessCount ?? myActiveRound.guesses?.length ?? 0,
+        word: decryptedActiveWord ?? (myActiveRound.word && !isEncrypted(myActiveRound.word) ? myActiveRound.word : null),
+      }
+    : undefined;
+  const roundsForView = game.rounds.map((round, index) => ({
+    ...round,
+    roundId: round.roundId ?? `legacy-${round.round}-${round.teamIndex}`,
+    clues: round.clues ?? [],
+    guesses: round.guesses ?? [],
+    guessCount: round.guessCount ?? round.guesses?.length ?? 0,
+    points: round.points ?? (round.correct ? 1 : 0),
+    word: decryptedRoundWords[index] ?? (isEncrypted(round.word) ? "••••" : round.word),
+  }));
+
+  const formatEntryTime = (ts: number) => new Date(ts).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const scoreForNextGuess = (guessCount: number) => {
+    const nextGuessNumber = guessCount + 1;
+    if (nextGuessNumber <= 1) return 3;
+    if (nextGuessNumber === 2) return 2;
+    return 1;
+  };
+  const normalized = (value: string) => value.trim().toLowerCase();
 
   return (
     <div className="m-page" data-game-theme="password">
@@ -295,100 +354,203 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* Active Round */}
-      {!isSpectator && game.phase === "playing" && myActiveRound && (() => {
-        const ar = myActiveRound;
-        const activeRoundWord = decryptedActiveWord ?? (ar.word && !isEncrypted(ar.word) ? ar.word : null);
+      {!isSpectator && game.phase === "playing" && activeRoundView && (() => {
+        const ar = activeRoundView;
         const guesserName = names[ar.guesserId] ?? getDisplayName(null, ar.guesserId);
         const isGuesser = ar.guesserId === sessionId;
-        const isOnTeam = myTeamMembers.includes(sessionId);
-        const isClueGiver = isOnTeam && !isGuesser;
-        const alreadyClued = ar.clues.some((c) => c.sessionId === sessionId);
-        const clueGiverCount = myTeamMembers.filter((m) => m !== ar.guesserId).length;
-        const allCluesIn = ar.clues.length >= clueGiverCount;
-        const hasWrongGuess = ar.guess !== null && ar.clues.length === 0;
+        const isClueGiver = myTeamMembers.includes(sessionId) && !isGuesser;
+        const clueDrafts = liveEntries.filter((entry) => entry.role === "clue" && entry.text.trim());
+        const guessDraft = liveEntries.find((entry) => entry.role === "guess" && entry.text.trim());
+        const duplicateGuess = Boolean(guess.trim() && ar.guesses.some((entry) => normalized(entry.text) === normalized(guess)));
+        const latestGuess = ar.guesses[ar.guesses.length - 1] ?? null;
+        const timeline = [...ar.clues, ...ar.guesses]
+          .map((entry) => {
+            if ("correct" in entry) {
+              return {
+                ...entry,
+                type: "guess" as const,
+                playerName: names[entry.sessionId] ?? getDisplayName(null, entry.sessionId),
+              };
+            }
+            return {
+              ...entry,
+              type: "clue" as const,
+              playerName: names[entry.sessionId] ?? getDisplayName(null, entry.sessionId),
+            };
+          })
+          .sort((a, b) => a.ts - b.ts);
 
         return (
-          <div className="m-card">
-            <div className="m-round-role">
-              <span style={{ opacity: 0.6, fontSize: "0.8rem" }}>Guesser:</span>
-              <span style={{ fontWeight: 600, color: isGuesser ? "var(--primary)" : "inherit" }}>
-                {guesserName}{isGuesser ? " (you)" : ""}
-              </span>
+          <>
+            <div className="m-card">
+              <div className="m-round-role" style={{ justifyContent: "space-between" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                  <span style={{ opacity: 0.6, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Guesser</span>
+                  <span style={{ fontWeight: 700, color: isGuesser ? "var(--primary)" : "inherit" }}>
+                    {guesserName}{isGuesser ? " (you)" : ""}
+                  </span>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ opacity: 0.6, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em", display: "block" }}>Next Solve</span>
+                  <span style={{ fontWeight: 700 }}>{scoreForNextGuess(ar.guesses.length)} pts</span>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gap: "0.75rem", marginTop: "0.75rem" }}>
+                <div style={{ border: "1px solid color-mix(in srgb, var(--primary) 18%, transparent)", borderRadius: "0.9rem", padding: "0.9rem", background: "color-mix(in srgb, var(--primary) 6%, transparent)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.65rem" }}>
+                    <div>
+                      <p style={{ margin: 0, opacity: 0.65, fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Clue Givers</p>
+                      <h3 style={{ margin: "0.2rem 0 0", fontSize: "1rem" }}>Clues stay live the whole round</h3>
+                    </div>
+                    <span className="m-badge m-badge--primary">{ar.clues.length} clues</span>
+                  </div>
+
+                  {isClueGiver && ar.word ? (
+                    <>
+                      <div className="m-secret-word">
+                        <span style={{ opacity: 0.6, fontSize: "0.75rem" }}>Secret Word</span>
+                        <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)" }}>{ar.word}</span>
+                      </div>
+                      <form className="m-input-row" onSubmit={submitClue}>
+                        <input className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={clue} onChange={(e) => handleClueChange(e.target.value)} placeholder={ar.clues.length > 0 ? "Another clue..." : "Enter clue..."} maxLength={80} />
+                        <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}><FiSend size={14} /></button>
+                      </form>
+                    </>
+                  ) : isClueGiver ? (
+                    <div className="m-waiting">
+                      <div className="m-waiting-pulse" />
+                      <p>Loading secret word…</p>
+                      <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setFallbackRetryNonce((n) => n + 1)}>
+                        Retry Sync
+                      </button>
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, opacity: 0.75, fontSize: "0.92rem" }}>
+                      {isGuesser ? "Your teammates can keep sending clues while you guess." : "Watch new clues appear as your teammates type."}
+                    </p>
+                  )}
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginTop: "0.75rem" }}>
+                    {ar.clues.length === 0 && clueDrafts.length === 0 && (
+                      <span style={{ opacity: 0.6, fontSize: "0.88rem" }}>No clues locked in yet.</span>
+                    )}
+                    {ar.clues.map((entry) => {
+                      const repeated = entry.clueNumber > 1 || entry.repeatedText;
+                      return (
+                        <span key={entry.id} className={`m-badge ${repeated ? "m-badge--warn" : "m-badge--primary"}`} style={{ padding: "0.35rem 0.65rem", display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem" }}>
+                          <strong>{entry.text}</strong>
+                          <span style={{ fontSize: "0.7rem", opacity: 0.75 }}>
+                            {names[entry.sessionId] ?? getDisplayName(null, entry.sessionId)}{entry.clueNumber > 1 ? ` • clue ${entry.clueNumber}` : ""}
+                          </span>
+                        </span>
+                      );
+                    })}
+                    {clueDrafts.map((entry) => (
+                      <span key={entry.clientId ?? `${entry.sessionId}-${entry.updatedAt}`} className="m-badge" style={{ padding: "0.35rem 0.65rem", borderStyle: "dashed", opacity: 0.9 }}>
+                        {(names[entry.sessionId] ?? getDisplayName(null, entry.sessionId))}: {entry.text}...
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ border: "1px solid color-mix(in srgb, var(--accent-warning) 20%, transparent)", borderRadius: "0.9rem", padding: "0.9rem", background: "color-mix(in srgb, var(--accent-warning) 7%, transparent)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.65rem" }}>
+                    <div>
+                      <p style={{ margin: 0, opacity: 0.65, fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Guesses</p>
+                      <h3 style={{ margin: "0.2rem 0 0", fontSize: "1rem" }}>Guess whenever you want</h3>
+                    </div>
+                    <span className="m-badge">{ar.guesses.length} guesses</span>
+                  </div>
+
+                  {latestGuess && !latestGuess.correct && (
+                    <div className="m-alert m-alert--danger" style={{ marginBottom: "0.75rem" }}>
+                      <strong>Latest miss:</strong> "{latestGuess.text}"
+                    </div>
+                  )}
+
+                  {isGuesser ? (
+                    <>
+                      <form className="m-input-row" onSubmit={submitGuess}>
+                        <input className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={guess} onChange={(e) => handleGuessChange(e.target.value)} placeholder="Type your guess..." maxLength={80} />
+                        <button type="submit" className="m-btn m-btn-primary" disabled={!guess.trim() || duplicateGuess}><FiSend size={14} /> Guess</button>
+                      </form>
+                      {duplicateGuess && (
+                        <p style={{ margin: "0.5rem 0 0", color: "#f59e0b", fontSize: "0.82rem" }}>You already guessed that one.</p>
+                      )}
+                    </>
+                  ) : (
+                    <p style={{ margin: 0, opacity: 0.75, fontSize: "0.92rem" }}>
+                      Watch {guesserName}'s guesses appear live, including their draft while they type.
+                    </p>
+                  )}
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginTop: "0.75rem" }}>
+                    {ar.guesses.length === 0 && !guessDraft && (
+                      <span style={{ opacity: 0.6, fontSize: "0.88rem" }}>No guesses sent yet.</span>
+                    )}
+                    {ar.guesses.map((entry) => (
+                      <span key={entry.id} className={`m-badge ${entry.correct ? "m-badge--success" : ""}`} style={{ padding: "0.35rem 0.65rem", display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem" }}>
+                        <strong>{entry.text}</strong>
+                        <span style={{ fontSize: "0.7rem", opacity: 0.75 }}>Guess {entry.guessNumber}{entry.correct ? " • solved" : ""}</span>
+                      </span>
+                    ))}
+                    {guessDraft && (
+                      <span className="m-badge" style={{ padding: "0.35rem 0.65rem", borderStyle: "dashed", opacity: 0.9 }}>
+                        {(names[guessDraft.sessionId] ?? getDisplayName(null, guessDraft.sessionId))}: {guessDraft.text}...
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {myTeamSkips > 0 && (
+                <div style={{ marginTop: "0.75rem" }}>
+                  <button className="m-btn m-btn-muted" style={{ width: "100%" }} onClick={() => void skipWord()}>
+                    <FiSkipForward size={14} /> Skip Word ({myTeamSkips} left)
+                  </button>
+                </div>
+              )}
             </div>
 
-            {hasWrongGuess && (
-              <div className="m-alert m-alert--danger" style={{ marginBottom: "0.75rem" }}>
-                <strong>Incorrect!</strong> "{ar.guess}" was wrong - new clues needed!
-              </div>
-            )}
-
-            {/* Clue giver: submit clue */}
-            {activeRoundWord && !allCluesIn && isClueGiver && !alreadyClued && (
-              <>
-                <div className="m-secret-word">
-                  <span style={{ opacity: 0.6, fontSize: "0.75rem" }}>Secret Word</span>
-                  <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)" }}>{activeRoundWord}</span>
-                </div>
-                <form className="m-input-row" onSubmit={submitClue}>
-                  <input className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={clue} onChange={(e) => setClue(e.target.value)} placeholder="Enter clue…" maxLength={80} />
-                  <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}><FiSend size={14} /></button>
-                </form>
-                <p className="m-progress-text">Clues: {ar.clues.length} / {clueGiverCount}</p>
-              </>
-            )}
-
-            {!activeRoundWord && !allCluesIn && isClueGiver && !alreadyClued && (
-              <div className="m-waiting">
-                <div className="m-waiting-pulse" />
-                <p>Loading secret word…</p>
-                <button
-                  className="m-btn m-btn-muted"
-                  style={{ width: "100%", marginTop: "0.5rem" }}
-                  onClick={() => setFallbackRetryNonce((n) => n + 1)}
-                >
-                  Retry Sync
-                </button>
-              </div>
-            )}
-
-            {/* Waiting states */}
-            {activeRoundWord && !allCluesIn && isClueGiver && alreadyClued && (
-              <div className="m-waiting"><div className="m-waiting-pulse" /><p>Waiting for teammates… ({ar.clues.length}/{clueGiverCount})</p></div>
-            )}
-            {activeRoundWord && !allCluesIn && isGuesser && (
-              <div className="m-waiting"><div className="m-waiting-pulse" /><p>Teammates are writing clues… ({ar.clues.length}/{clueGiverCount})</p></div>
-            )}
-            {activeRoundWord && !allCluesIn && !isOnTeam && (
-              <div className="m-waiting"><div className="m-waiting-pulse" /><p>Clue givers submitting… ({ar.clues.length}/{clueGiverCount})</p></div>
-            )}
-
-            {/* All clues in - guesser guesses */}
-            {activeRoundWord && allCluesIn && (
-              <>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-                  {ar.clues.map((c) => (
-                    <span key={c.sessionId} className="m-badge m-badge--primary" style={{ fontSize: "0.95rem", padding: "0.3rem 0.6rem" }}>{c.text}</span>
-                  ))}
-                </div>
-                {isGuesser ? (
-                  <form className="m-input-row" onSubmit={submitGuess}>
-                    <input className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Your guess…" maxLength={80} />
-                    <button type="submit" className="m-btn m-btn-primary" disabled={!guess.trim()}><FiSend size={14} /> Guess</button>
-                  </form>
-                ) : (
-                  <div className="m-waiting"><div className="m-waiting-pulse" /><p>Waiting for {guesserName} to guess…</p></div>
+            <div className="m-card">
+              <h3 className="m-card-title">Round Timeline</h3>
+              <div style={{ display: "grid", gap: "0.65rem" }}>
+                {timeline.length === 0 && (
+                  <p style={{ margin: 0, opacity: 0.65, fontSize: "0.9rem" }}>The timeline fills in as clues and guesses land.</p>
                 )}
-              </>
-            )}
-
-            {isOnTeam && myTeamSkips > 0 && (
-              <div style={{ marginTop: "0.5rem", textAlign: "center" }}>
-                <button className="m-btn m-btn-muted" style={{ width: "100%" }} onClick={() => void skipWord()}>
-                  <FiSkipForward size={14} /> Skip Word ({myTeamSkips} left)
-                </button>
+                {timeline.map((entry) => (
+                  <div
+                    key={entry.id}
+                    style={{
+                      border: `1px solid ${entry.type === "guess" && entry.correct ? "color-mix(in srgb, #4ade80 30%, transparent)" : entry.type === "clue" && (entry.clueNumber > 1 || entry.repeatedText) ? "color-mix(in srgb, #f59e0b 35%, transparent)" : "var(--border)"}`,
+                      borderRadius: "0.85rem",
+                      padding: "0.75rem",
+                      background: entry.type === "guess" && entry.correct
+                        ? "color-mix(in srgb, #4ade80 10%, var(--card))"
+                        : entry.type === "clue" && (entry.clueNumber > 1 || entry.repeatedText)
+                          ? "color-mix(in srgb, #f59e0b 10%, var(--card))"
+                          : "var(--card)",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.35rem" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.7 }}>
+                        {entry.type === "clue" ? "Clue" : "Guess"}
+                      </span>
+                      <span style={{ fontSize: "0.74rem", opacity: 0.65 }}>{formatEntryTime(entry.ts)}</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>{entry.text}</p>
+                    <p style={{ margin: "0.35rem 0 0", opacity: 0.7, fontSize: "0.78rem" }}>
+                      {entry.playerName}
+                      {entry.type === "clue" && entry.clueNumber > 1 ? ` • clue ${entry.clueNumber}` : ""}
+                      {entry.type === "clue" && entry.repeatedText ? " • repeated word" : ""}
+                      {entry.type === "guess" ? ` • guess ${entry.guessNumber}${entry.correct ? " • correct" : ""}` : ""}
+                    </p>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+            </div>
+          </>
         );
       })()}
 
@@ -410,19 +572,19 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* Rounds history */}
-      {game.rounds.length > 0 && (
+      {roundsForView.length > 0 && (
         <div className="m-card">
           <h3 className="m-card-title">Rounds</h3>
           <div className="m-data-table-wrap">
             <table className="m-data-table">
-              <thead><tr><th>#</th><th>Team</th><th>Word</th><th>Result</th></tr></thead>
+              <thead><tr><th>#</th><th>Team</th><th>Word</th><th>Pts</th></tr></thead>
               <tbody>
-                {game.rounds.map((r, i) => (
-                  <tr key={r.round}>
+                {roundsForView.map((r) => (
+                  <tr key={r.roundId}>
                     <td>{r.round}</td>
                     <td>{game.teams[r.teamIndex]?.name ?? `Team ${r.teamIndex + 1}`}</td>
-                    <td style={{ color: "var(--primary)", fontWeight: 600 }}>{decryptedRoundWords[i] ?? (isEncrypted(r.word) ? "••••" : r.word)}</td>
-                    <td style={{ color: r.correct ? "#4ade80" : "#f87171" }}>{r.correct ? "✓" : "✗"}</td>
+                    <td style={{ color: "var(--primary)", fontWeight: 600 }}>{r.word}</td>
+                    <td style={{ color: r.correct ? "#4ade80" : "#f87171" }}>{r.correct ? `+${r.points}` : "0"}</td>
                   </tr>
                 ))}
               </tbody>

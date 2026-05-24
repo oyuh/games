@@ -10,6 +10,7 @@ import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable"
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
+import { usePasswordLiveTyping } from "../hooks/usePasswordLiveTyping";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordGamePage } from "../mobile/pages/MobilePasswordGamePage";
@@ -61,6 +62,16 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     if (!game || !game.active_rounds.length || myTeamIndex === -1) return undefined;
     return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
   }, [game?.active_rounds, myTeamIndex]);
+  const activeRoundId = myActiveRound?.roundId ?? (myTeamIndex >= 0 && game ? `legacy-${game.current_round}-${myTeamIndex}` : null);
+  const isSpectator = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
+
+  const { liveEntries, publishDraft, clearDraft } = usePasswordLiveTyping({
+    enabled: Boolean(game?.phase === "playing" && myTeamIndex >= 0 && !isSpectator),
+    gameId,
+    teamIndex: myTeamIndex,
+    sessionId,
+    roundId: activeRoundId,
+  });
 
   useGameSounds({
     phase: game?.phase,
@@ -159,6 +170,13 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
   }, [myActiveRound?.word, myActiveRound?.encryptedWord, decryptValue, fallbackKey]);
 
   useEffect(() => {
+    setClue("");
+    setGuess("");
+    clearDraft("clue");
+    clearDraft("guess");
+  }, [activeRoundId, clearDraft]);
+
+  useEffect(() => {
     let cancelled = false;
     const rounds = game?.rounds ?? [];
     if (rounds.length === 0) {
@@ -252,12 +270,23 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
   const myTeam = myTeamIndex >= 0 ? game.teams[myTeamIndex] : undefined;
   const myTeamMembers = myTeam?.members ?? [];
 
+  const handleClueChange = (value: string) => {
+    setClue(value);
+    publishDraft("clue", value);
+  };
+
+  const handleGuessChange = (value: string) => {
+    setGuess(value);
+    publishDraft("guess", value);
+  };
+
   const submitClue = async (event: FormEvent) => {
     event.preventDefault();
     if (!clue.trim()) return;
     try {
       await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server;
       setClue("");
+      clearDraft("clue");
       playSoundSubmit();
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Couldn't submit clue", "error");
@@ -270,6 +299,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     try {
       await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server;
       setGuess("");
+      clearDraft("guess");
       playSoundSubmit();
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Couldn't submit guess", "error");
@@ -285,10 +315,13 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
   };
 
   const myTeamSkips = myTeam ? (game.settings.skipsRemaining?.[myTeam.name] ?? 0) : 0;
-  const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
   const activeRoundView = myActiveRound
     ? {
         ...myActiveRound,
+        roundId: activeRoundId ?? myActiveRound.roundId,
+        clues: myActiveRound.clues ?? [],
+        guesses: myActiveRound.guesses ?? [],
+        guessCount: myActiveRound.guessCount ?? myActiveRound.guesses?.length ?? 0,
         word:
           decryptedActiveWord ??
           (myActiveRound.word && !isEncrypted(myActiveRound.word) ? myActiveRound.word : null),
@@ -296,6 +329,11 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     : undefined;
   const roundsForView = game.rounds.map((round, index) => ({
     ...round,
+    roundId: round.roundId ?? `legacy-${round.round}-${round.teamIndex}`,
+    clues: round.clues ?? [],
+    guesses: round.guesses ?? [],
+    guessCount: round.guessCount ?? round.guesses?.length ?? 0,
+    points: round.points ?? (round.correct ? 1 : 0),
     word: decryptedRoundWords[index] ?? (isEncrypted(round.word) ? "••••" : round.word)
   }));
 
@@ -338,9 +376,10 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
           teamMembers={myTeamMembers}
           clue={clue}
           guess={guess}
+          liveEntries={liveEntries}
           skipsRemaining={myTeamSkips}
-          onClueChange={setClue}
-          onGuessChange={setGuess}
+          onClueChange={handleClueChange}
+          onGuessChange={handleGuessChange}
           onSubmitClue={submitClue}
           onSubmitGuess={submitGuess}
           onSkip={skipWord}
