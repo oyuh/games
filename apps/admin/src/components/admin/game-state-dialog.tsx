@@ -5,8 +5,10 @@ import {
   Activity,
   Clock3,
   Layers3,
+  MessageSquare,
   RefreshCcw,
   ShieldAlert,
+  Trash2,
   Users,
 } from "lucide-react";
 import { api } from "@/lib/client-api";
@@ -242,6 +244,7 @@ export function GameStateDialog({
   }, [open, show, target]);
 
   const game = detail?.game;
+  const gameEnded = String(game?.phase ?? "").toLowerCase() === "ended";
 
   const refresh = async () => {
     if (!target) {
@@ -280,6 +283,35 @@ export function GameStateDialog({
       show("Game ended.", "success");
       onChanged?.();
       await refresh();
+    } catch (error) {
+      show(getErrorMessage(error), "error");
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const deleteGame = async () => {
+    if (!target) {
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: "Delete persisted game?",
+      description: `Delete this ${formatGameType(target.type)} room, its chat messages, and saved encryption key. This removes it from admin cleanup lists.`,
+      confirmLabel: "Delete game",
+      tone: "destructive",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPendingAction("delete");
+    try {
+      await api(`/games/${target.type}/${target.id}`, { method: "DELETE" });
+      show("Game deleted.", "success");
+      onChanged?.();
+      onOpenChange(false);
     } catch (error) {
       show(getErrorMessage(error), "error");
     } finally {
@@ -385,11 +417,19 @@ export function GameStateDialog({
               <Button
                 variant="destructive"
                 className="border border-border bg-muted text-foreground hover:bg-accent"
-                onClick={() => void endGame()}
-                disabled={!target || pendingAction === "end"}
+                onClick={() => void (gameEnded ? deleteGame() : endGame())}
+                disabled={
+                  !target ||
+                  pendingAction === "end" ||
+                  pendingAction === "delete"
+                }
               >
-                <ShieldAlert className="size-4" />
-                End game
+                {gameEnded ? (
+                  <Trash2 className="size-4" />
+                ) : (
+                  <ShieldAlert className="size-4" />
+                )}
+                {gameEnded ? "Delete game" : "End game"}
               </Button>
             </div>
           </div>
@@ -417,11 +457,12 @@ export function GameStateDialog({
             <TabsList className="rounded-md bg-muted/40">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="people">People</TabsTrigger>
+              <TabsTrigger value="chat">Chat</TabsTrigger>
               <TabsTrigger value="raw">Raw state</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 {[
                   {
                     label: "Players",
@@ -442,6 +483,11 @@ export function GameStateDialog({
                     label: "Attached sessions",
                     value: detail.sessions.length.toLocaleString(),
                     icon: Clock3,
+                  },
+                  {
+                    label: "Chat messages",
+                    value: detail.chatMessages.length.toLocaleString(),
+                    icon: MessageSquare,
                   },
                 ].map((metric) => {
                   const Icon = metric.icon;
@@ -774,6 +820,70 @@ export function GameStateDialog({
                   </div>
                 </Surface>
               </div>
+            </TabsContent>
+
+            <TabsContent value="chat">
+              <Surface>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm font-semibold text-foreground">
+                    Game chat messages
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="w-fit border-border text-foreground"
+                  >
+                    Read only
+                  </Badge>
+                </div>
+
+                <div className="mt-4 max-h-[52vh] space-y-3 overflow-y-auto pr-1">
+                  {detail.chatMessages.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+                      No chat messages have been sent in this room.
+                    </div>
+                  ) : (
+                    detail.chatMessages.map((message) => (
+                      <div
+                        key={message.id}
+                        className="rounded-lg border border-border bg-muted/40 p-4 text-sm"
+                      >
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-foreground">
+                                {message.senderName || "Anonymous"}
+                              </span>
+                              {message.badge ? (
+                                <Badge
+                                  variant="outline"
+                                  className="border-border text-foreground"
+                                >
+                                  {message.badge}
+                                </Badge>
+                              ) : null}
+                              <Badge
+                                variant="outline"
+                                className="border-border text-foreground"
+                              >
+                                #{message.channel || "all"}
+                              </Badge>
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {shortId(message.senderId, 14)}
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-xs text-muted-foreground">
+                            {formatDateTime(message.createdAt)}
+                          </div>
+                        </div>
+                        <p className="mt-3 whitespace-pre-wrap break-words text-foreground">
+                          {message.text}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Surface>
             </TabsContent>
 
             <TabsContent value="raw">

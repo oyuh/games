@@ -38,6 +38,18 @@ export type GameSummary = {
   roundCount: number;
 };
 
+export type GameChatMessage = {
+  id: string;
+  gameType: GameType;
+  gameId: string;
+  senderId: string;
+  senderName: string;
+  badge: string | null;
+  channel: string;
+  text: string;
+  createdAt: number;
+};
+
 export type BanRecord = {
   id: string;
   type: "session" | "ip" | "region";
@@ -121,6 +133,7 @@ export type GameDetailResponse = {
     hostId?: string;
   };
   sessions: ClientRecord[];
+  chatMessages: GameChatMessage[];
 };
 
 export type ShikakuScoreRecord = {
