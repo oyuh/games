@@ -182,6 +182,56 @@ function cursorTargetForPoint(event: PointerEvent) {
   return closestElement(document.elementFromPoint(event.clientX, event.clientY) ?? event.target);
 }
 
+function isScrollableWithScrollbar(el: Element, axis: "x" | "y") {
+  if (!(el instanceof HTMLElement)) return false;
+  const style = window.getComputedStyle(el);
+  const overflow = axis === "y" ? style.overflowY : style.overflowX;
+  if (!/(auto|scroll|overlay)/.test(overflow)) return false;
+  return axis === "y" ? el.scrollHeight > el.clientHeight : el.scrollWidth > el.clientWidth;
+}
+
+function isPointerOverScrollbar(event: PointerEvent) {
+  const root = document.documentElement;
+  if (
+    window.innerWidth > root.clientWidth &&
+    event.clientX >= root.clientWidth
+  ) {
+    return true;
+  }
+  if (
+    window.innerHeight > root.clientHeight &&
+    event.clientY >= root.clientHeight
+  ) {
+    return true;
+  }
+
+  let el = cursorTargetForPoint(event);
+  while (el && el instanceof HTMLElement) {
+    const rect = el.getBoundingClientRect();
+    const verticalScrollbarWidth = el.offsetWidth - el.clientWidth;
+    const horizontalScrollbarHeight = el.offsetHeight - el.clientHeight;
+    const overVerticalScrollbar =
+      verticalScrollbarWidth > 0 &&
+      isScrollableWithScrollbar(el, "y") &&
+      event.clientX >= rect.right - verticalScrollbarWidth &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom;
+    const overHorizontalScrollbar =
+      horizontalScrollbarHeight > 0 &&
+      isScrollableWithScrollbar(el, "x") &&
+      event.clientY >= rect.bottom - horizontalScrollbarHeight &&
+      event.clientY <= rect.bottom &&
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right;
+
+    if (overVerticalScrollbar || overHorizontalScrollbar) return true;
+    el = el.parentElement;
+  }
+
+  return false;
+}
+
 function isVisiblePointerEvent(event: PointerEvent) {
   return event.pointerType === "mouse" || event.pointerType === "pen" || event.pointerType === "";
 }
@@ -336,8 +386,21 @@ export function CustomCursor() {
       setState(nextState);
     };
 
+    const hide = (fallbackToNative = false) => {
+      pressed = false;
+      setCursorState({ ...stateRef.current, visible: false, pressed: false });
+      if (fallbackToNative) {
+        setCustomCursorRuntime("fallback");
+      }
+    };
+    const hideToNative = () => hide(true);
     const update = (event: PointerEvent) => {
       if (!isVisiblePointerEvent(event)) return;
+
+      if (isPointerOverScrollbar(event)) {
+        hideToNative();
+        return;
+      }
 
       setCustomCursorRuntime("ready");
       queuePosition(event.clientX, event.clientY);
@@ -349,15 +412,6 @@ export function CustomCursor() {
         accent: accentForTarget(el, pathname),
       });
     };
-
-    const hide = (fallbackToNative = false) => {
-      pressed = false;
-      setCursorState({ ...stateRef.current, visible: false, pressed: false });
-      if (fallbackToNative) {
-        setCustomCursorRuntime("fallback");
-      }
-    };
-    const hideToNative = () => hide(true);
     const onPointerDown = (event: PointerEvent) => {
       if (!isVisiblePointerEvent(event)) return;
       if (event.button !== 0) {
