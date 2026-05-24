@@ -35,20 +35,62 @@ const SCORES_MID: Record<string, number> = { Red: 2, Blue: 1 };
 const ROUND_CLUE_PHASE = {
   teamIndex: 0,
   guesserId: P.alice,
+  roundId: "demo-round-1",
   word: "Piano",
-  clues: [] as Array<{ sessionId: string; text: string }>,
+  clues: [] as Array<{ id: string; sessionId: string; text: string; ts: number; clueNumber: number; repeatedText?: boolean }>,
+  guesses: [] as Array<{ id: string; sessionId: string; text: string; ts: number; correct: boolean; guessNumber: number }>,
   guess: null as string | null,
+  guessCount: 0,
 };
 
 const ROUND_GUESS_PHASE = {
   ...ROUND_CLUE_PHASE,
-  clues: [{ sessionId: P.you, text: "Keys" }],
+  clues: [{ id: "demo-clue-1", sessionId: P.you, text: "Keys", ts: Date.now() - 2_000, clueNumber: 1 }],
 };
 
 const ROUNDS_HISTORY = [
-  { round: 1, teamIndex: 0, guesserId: P.alice, word: "Piano", clues: [{ sessionId: P.you, text: "Keys" }], guess: "Piano", correct: true },
-  { round: 2, teamIndex: 1, guesserId: P.charlie, word: "Sunset", clues: [{ sessionId: P.bob, text: "Evening" }], guess: "Sunrise", correct: false },
-  { round: 3, teamIndex: 1, guesserId: P.charlie, word: "Sunset", clues: [{ sessionId: P.bob, text: "Horizon" }], guess: "Sunset", correct: true },
+  {
+    round: 1,
+    teamIndex: 0,
+    guesserId: P.alice,
+    roundId: "demo-history-1",
+    word: "Piano",
+    clues: [{ id: "demo-history-clue-1", sessionId: P.you, text: "Keys", ts: Date.now() - 30_000, clueNumber: 1 }],
+    guesses: [{ id: "demo-history-guess-1", sessionId: P.alice, text: "Piano", ts: Date.now() - 26_000, correct: true, guessNumber: 1 }],
+    guess: "Piano",
+    guessCount: 1,
+    points: 3,
+    correct: true
+  },
+  {
+    round: 2,
+    teamIndex: 1,
+    guesserId: P.charlie,
+    roundId: "demo-history-2",
+    word: "Sunset",
+    clues: [{ id: "demo-history-clue-2", sessionId: P.bob, text: "Evening", ts: Date.now() - 24_000, clueNumber: 1 }],
+    guesses: [{ id: "demo-history-guess-2", sessionId: P.charlie, text: "Sunrise", ts: Date.now() - 20_000, correct: false, guessNumber: 1 }],
+    guess: "Sunrise",
+    guessCount: 1,
+    points: 0,
+    correct: false
+  },
+  {
+    round: 3,
+    teamIndex: 1,
+    guesserId: P.charlie,
+    roundId: "demo-history-3",
+    word: "Sunset",
+    clues: [
+      { id: "demo-history-clue-3", sessionId: P.bob, text: "Horizon", ts: Date.now() - 18_000, clueNumber: 1 },
+      { id: "demo-history-clue-4", sessionId: P.bob, text: "Orange", ts: Date.now() - 16_000, clueNumber: 2 },
+    ],
+    guesses: [{ id: "demo-history-guess-3", sessionId: P.charlie, text: "Sunset", ts: Date.now() - 12_000, correct: true, guessNumber: 2 }],
+    guess: "Sunset",
+    guessCount: 2,
+    points: 2,
+    correct: true
+  },
 ];
 
 /* ── Steps ──────────────────────────────────────────────── */
@@ -61,18 +103,18 @@ const steps: DemoStep[] = [
   },
   {
     label: "Give Clues",
-    description: "Clue givers see the secret word and each submit a one-word clue. The guesser waits and can't see the word.",
-    hint: "Make your clue descriptive but not too obvious - only one word allowed!",
+    description: "Clue givers see the secret word and can keep feeding one-word clues while the guesser watches the live round unfold.",
+    hint: "Make each clue descriptive but not too obvious - follow-up clues are allowed now.",
   },
   {
     label: "Guess the Word",
-    description: "Once all clues are in, the guesser sees them and tries to guess the secret word.",
-    hint: "If the guess is wrong, the team goes again with new clues for the same word.",
+    description: "The guesser can start guessing at any time and everyone sees the live clue-and-guess timeline update together.",
+    hint: "Repeated guesses are blocked, so every new try needs to be genuinely different.",
   },
   {
     label: "Scoring & Results",
-    description: "Correct guesses earn a point. All teams play simultaneously - first team to the target score wins!",
-    hint: "Check the round history at the bottom to see every word, clue, and guess.",
+    description: "Correct solves are worth more when your team needs fewer guesses. All teams play simultaneously - first team to the target score wins!",
+    hint: "Check the round history at the bottom to see every clue, guess, and solve timeline.",
   },
 ];
 
@@ -127,6 +169,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 teamMembers={TEAMS[0]!.members}
                 clue={clue}
                 guess=""
+                liveEntries={[]}
                 skipsRemaining={2}
                 onClueChange={setClue}
                 onGuessChange={() => {}}
@@ -159,6 +202,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 teamMembers={TEAMS[0]!.members}
                 clue=""
                 guess={guess}
+                liveEntries={[]}
                 skipsRemaining={2}
                 onClueChange={() => {}}
                 onGuessChange={setGuess}
