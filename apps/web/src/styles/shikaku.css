@@ -708,7 +708,7 @@
 .shikaku-playing-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
   gap: 0.5rem;
   flex-wrap: wrap;
@@ -716,8 +716,8 @@
 .shikaku-hint {
   font-size: 0.72rem;
   color: var(--muted-foreground);
-  flex: 1;
-  min-width: 0;
+  text-align: center;
+  max-width: 100%;
 }
 .shikaku-footer-btns {
   display: flex;
@@ -1712,7 +1712,7 @@
 
   /* Playing footer — compact, never allowed to be pushed offscreen */
   .shikaku-hint {
-    display: none;
+    font-size: 0.68rem;
   }
   .shikaku-playing-footer {
     justify-content: center;
