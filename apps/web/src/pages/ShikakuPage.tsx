@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FiAward, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiClipboard, FiClock, FiCopy, FiCornerUpLeft, FiFlag, FiHash, FiHelpCircle, FiPlay, FiRepeat, FiTrash2, FiUploadCloud, FiX } from "react-icons/fi";
+import { FiAward, FiCheck, FiClipboard, FiClock, FiCopy, FiFlag, FiHash, FiHelpCircle, FiPlay, FiRepeat, FiUploadCloud, FiX } from "react-icons/fi";
 import { ShikakuLeaderboard, LeaderboardEntry, LeaderboardView, PersonalBest } from "../components/ShikakuLeaderboard";
 import {
   calculateScore,
@@ -114,9 +114,6 @@ export function ShikakuPage() {
 
   // Undo stack
   const [undoStack, setUndoStack] = useState<PlacedRect[][]>([]);
-
-  // Give-up confirmation
-  const [confirmGiveUp, setConfirmGiveUp] = useState(false);
 
   // Scroll API from grid wrapper (for expert scroll buttons in footer)
   const [scrollApi, setScrollApi] = useState<ScrollApi | null>(null);
@@ -422,6 +419,20 @@ export function ShikakuPage() {
   const isAutoFilledRect = useCallback((rect: Rect): boolean => {
     return rect.w === 1 && rect.h === 1 && autoFilledCellKeys.has(`${rect.r},${rect.c}`);
   }, [autoFilledCellKeys]);
+  const hasClearableRects = useMemo(
+    () => placedRects.some((rect) => !isAutoFilledRect(rect)),
+    [placedRects, isAutoFilledRect],
+  );
+  const canUndo = phase === "playing" && !showPuzzleSolvedAnim && undoStack.length > 0;
+  const canClear = phase === "playing" && !showPuzzleSolvedAnim && hasClearableRects;
+  const canRestart = (phase === "countdown" || phase === "playing" || phase === "finished") && !showPuzzleSolvedAnim;
+  const canGiveUp = phase === "playing" && !showPuzzleSolvedAnim;
+  const canLeaderboard = phase !== "generating";
+  const canScroll = useMemo(
+    () => scrollApi?.canScroll ?? { up: false, down: false, left: false, right: false },
+    [scrollApi],
+  );
+  const showScrollControls = phase === "playing" && isMobile && Boolean(scrollApi?.isLarge);
 
   const autoCompleteCheckedRef = useRef<string>("");
   // Ref to latest handlePuzzleSolved to avoid TDZ (it's declared later)
@@ -764,6 +775,31 @@ export function ShikakuPage() {
     setFlashingRects(nextFlashing);
   }, [undoStack, isRectValid]);
 
+  const clearPlacedRects = useCallback(() => {
+    if (!hasClearableRects) return;
+    setUndoStack((prev) => [...prev, placedRects]);
+    setPlacedRects(autoFilledRects);
+    setColorCounter(autoFilledRects.length);
+    setFlashingRects(new Set());
+  }, [autoFilledRects, hasClearableRects, placedRects]);
+
+  const restartCurrentRun = useCallback(() => {
+    if (challengeMode && seed > 0) {
+      startChallenge(difficulty, seed);
+      showToast("Challenge restarted", "info");
+      return;
+    }
+
+    if (customMode && seed > 0) {
+      startCustomRun(difficulty, seed);
+      showToast(infiniteMode ? "Seeded infinite run restarted" : "Seeded run restarted", "info");
+      return;
+    }
+
+    startRun(difficulty);
+    showToast(infiniteMode ? "New infinite seed generated" : "New run generated", "info");
+  }, [challengeMode, customMode, difficulty, infiniteMode, seed, startChallenge, startCustomRun, startRun]);
+
   // Track whether mouse moved during press (to distinguish click vs drag)
   const didDrag = useRef(false);
   // Track which rect index was under the initial mousedown (for click-to-remove)
@@ -873,10 +909,7 @@ export function ShikakuPage() {
   }, [isDragging, dragStart, dragEnd]);
 
   /* ── Give up / finish run early ─────────────────────────── */
-  const openGiveUp = useCallback(() => setConfirmGiveUp(true), []);
-  const cancelGiveUp = useCallback(() => setConfirmGiveUp(false), []);
   const giveUp = useCallback(() => {
-    setConfirmGiveUp(false);
     const now = Date.now();
     const currentPause = pauseStartRef.current ? now - pauseStartRef.current : 0;
     const totalTime = now - startTime - pausedMsRef.current - currentPause;
@@ -911,22 +944,63 @@ export function ShikakuPage() {
     }
   }, [startTime, puzzleTimes, difficulty, puzzleStartTime, infiniteMode, infiniteSolved, fetchLeaderboard, lbView]);
 
-  // Listen for sidebar leaderboard toggle
+  // Listen for sidebar controls
   useEffect(() => {
-    const handler = () => {
+    const handleUndo = () => {
+      if (canUndo) undo();
+    };
+    const handleClear = () => {
+      if (canClear) clearPlacedRects();
+    };
+    const handleRestart = () => {
+      if (canRestart) restartCurrentRun();
+    };
+    const handleGiveUp = () => {
+      if (canGiveUp) giveUp();
+    };
+    const handleLeaderboard = () => {
       setShowLeaderboard((v) => {
         if (!v) { setLbDifficulty(difficulty); fetchLeaderboard(difficulty, 1, lbView); }
         return !v;
       });
     };
-    const adminHandler = () => setShowAdminScoreModal(true);
-    window.addEventListener("shikaku-toggle-leaderboard", handler);
-    window.addEventListener("shikaku-open-admin-score", adminHandler);
-    return () => {
-      window.removeEventListener("shikaku-toggle-leaderboard", handler);
-      window.removeEventListener("shikaku-open-admin-score", adminHandler);
+    const handleAdminScore = () => setShowAdminScoreModal(true);
+    const handleScrollUp = () => {
+      if (showScrollControls) scrollApi?.doScroll(0, -160);
     };
-  }, [difficulty, fetchLeaderboard, lbView]);
+    const handleScrollDown = () => {
+      if (showScrollControls) scrollApi?.doScroll(0, 160);
+    };
+    const handleScrollLeft = () => {
+      if (showScrollControls) scrollApi?.doScroll(-160, 0);
+    };
+    const handleScrollRight = () => {
+      if (showScrollControls) scrollApi?.doScroll(160, 0);
+    };
+
+    window.addEventListener("shikaku-undo", handleUndo);
+    window.addEventListener("shikaku-clear-board", handleClear);
+    window.addEventListener("shikaku-restart-run", handleRestart);
+    window.addEventListener("shikaku-give-up", handleGiveUp);
+    window.addEventListener("shikaku-toggle-leaderboard", handleLeaderboard);
+    window.addEventListener("shikaku-open-admin-score", handleAdminScore);
+    window.addEventListener("shikaku-scroll-up", handleScrollUp);
+    window.addEventListener("shikaku-scroll-down", handleScrollDown);
+    window.addEventListener("shikaku-scroll-left", handleScrollLeft);
+    window.addEventListener("shikaku-scroll-right", handleScrollRight);
+    return () => {
+      window.removeEventListener("shikaku-undo", handleUndo);
+      window.removeEventListener("shikaku-clear-board", handleClear);
+      window.removeEventListener("shikaku-restart-run", handleRestart);
+      window.removeEventListener("shikaku-give-up", handleGiveUp);
+      window.removeEventListener("shikaku-toggle-leaderboard", handleLeaderboard);
+      window.removeEventListener("shikaku-open-admin-score", handleAdminScore);
+      window.removeEventListener("shikaku-scroll-up", handleScrollUp);
+      window.removeEventListener("shikaku-scroll-down", handleScrollDown);
+      window.removeEventListener("shikaku-scroll-left", handleScrollLeft);
+      window.removeEventListener("shikaku-scroll-right", handleScrollRight);
+    };
+  }, [canClear, canGiveUp, canRestart, canUndo, clearPlacedRects, difficulty, fetchLeaderboard, giveUp, lbView, restartCurrentRun, scrollApi, showScrollControls, undo]);
 
   // Listen for sidebar infinite mode toggle
   useEffect(() => {
@@ -949,12 +1023,20 @@ export function ShikakuPage() {
         phase,
         infiniteMode,
         customMode,
+        challengeMode,
         showSeedInput,
         difficulty,
         seed: seed ?? null,
+        canUndo,
+        canClear,
+        canRestart,
+        canGiveUp,
+        canLeaderboard,
+        showScrollControls,
+        canScroll,
       },
     }));
-  }, [infiniteMode, phase, customMode, showSeedInput, difficulty, seed]);
+  }, [infiniteMode, phase, customMode, challengeMode, showSeedInput, difficulty, seed, canUndo, canClear, canRestart, canGiveUp, canLeaderboard, showScrollControls, canScroll]);
 
   useEffect(() => {
     if (phase !== "finished" || scoreSubmitted) {
@@ -1219,12 +1301,15 @@ export function ShikakuPage() {
       <>
         <div className="game-page shikaku-page" data-game-theme="shikaku">
           <div className="shikaku-container">
-            <div className="shikaku-countdown">
-              <div className="shikaku-countdown-number" key={countdownNum}>
+            <div className="game-start-countdown">
+              <p className="game-start-countdown-kicker">
+                {challengeMode ? "Challenge Puzzle" : customMode ? "Seeded Run" : infiniteMode ? "Infinite Run" : "Regular Run"}
+              </p>
+              <div className="game-start-countdown-number" key={countdownNum}>
                 {countdownNum > 0 ? countdownNum : "GO!"}
               </div>
-              <p className="shikaku-countdown-label">
-                {difficulty} - {customMode ? "custom seed" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
+              <p className="game-start-countdown-label">
+                {difficulty} - {challengeMode ? "1 puzzle challenge" : customMode ? "seeded run" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
               </p>
             </div>
           </div>
@@ -1784,99 +1869,7 @@ export function ShikakuPage() {
 
         <div className="shikaku-playing-footer">
           <p className="shikaku-hint">Drag to draw - click to remove - right-click to remove</p>
-          <div className="shikaku-footer-btns">
-            {/* Scroll left / down - shown on mobile for expert */}
-            {scrollApi?.isLarge && (
-              <div className="shikaku-scroll-pair">
-                <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.left ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(-160, 0)} aria-label="Scroll left">
-                  <FiChevronLeft size={16} />
-                </button>
-                <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.down ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(0, 160)} aria-label="Scroll down">
-                  <FiChevronDown size={16} />
-                </button>
-              </div>
-            )}
-            <button
-              className="shikaku-icon-btn"
-              onClick={undo}
-              disabled={undoStack.length === 0}
-              data-tooltip="Undo"
-            >
-              <FiCornerUpLeft size={16} />
-            </button>
-            <button
-              className="shikaku-icon-btn"
-              onClick={() => {
-                setUndoStack((s) => [...s, placedRects]);
-                setPlacedRects(autoFilledRects);
-                setColorCounter(autoFilledRects.length);
-                setFlashingRects(new Set());
-              }}
-              data-tooltip="Clear all"
-            >
-              <FiTrash2 size={16} />
-            </button>
-            <button
-              className="shikaku-icon-btn shikaku-icon-btn--danger"
-              onClick={() => { setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView); }}
-              data-tooltip="Leaderboard"
-            >
-              <FiAward size={16} />
-            </button>
-            <button
-              className="shikaku-icon-btn shikaku-icon-btn--restart"
-              onClick={() => startRun(difficulty)}
-              disabled={showPuzzleSolvedAnim}
-              data-tooltip="Restart"
-            >
-              <FiRepeat size={16} />
-            </button>
-            <button
-              className="shikaku-icon-btn shikaku-icon-btn--danger"
-              onClick={openGiveUp}
-              data-tooltip="Give up"
-            >
-              <FiFlag size={16} />
-            </button>
-            {/* Scroll up / right - shown on mobile for expert */}
-            {scrollApi?.isLarge && (
-              <div className="shikaku-scroll-pair">
-                <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.up ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(0, -160)} aria-label="Scroll up">
-                  <FiChevronUp size={16} />
-                </button>
-                <button className={`shikaku-icon-btn shikaku-icon-btn--scroll${scrollApi.canScroll.right ? " shikaku-icon-btn--scroll-active" : ""}`} onClick={() => scrollApi.doScroll(160, 0)} aria-label="Scroll right">
-                  <FiChevronRight size={16} />
-                </button>
-              </div>
-            )}
-          </div>
         </div>
-
-        {confirmGiveUp && (
-          <div
-            className="shikaku-giveup-overlay"
-            onClick={(e) => { if (e.target === e.currentTarget) cancelGiveUp(); }}
-            onKeyDown={(e) => { if (e.key === "Escape") cancelGiveUp(); }}
-            role="presentation"
-            tabIndex={-1}
-          >
-            <div className="shikaku-giveup-modal">
-              <div className="shikaku-giveup-icon"><FiFlag /></div>
-              <p className="shikaku-giveup-title">{challengeMode ? "Abandon Puzzle?" : infiniteMode ? "End Run?" : "Give Up?"}</p>
-              <p className="shikaku-giveup-sub">
-                {challengeMode
-                  ? "You haven't finished this challenge puzzle yet."
-                  : infiniteMode
-                  ? `You've solved ${infiniteSolved} puzzle${infiniteSolved !== 1 ? "s" : ""} so far. End and see your results?`
-                  : <>You&apos;ve completed {puzzleTimes.length} of {PUZZLES_PER_RUN} puzzles. Your score will be penalized.</>}
-              </p>
-              <div className="shikaku-giveup-btns">
-                <button className="btn btn-primary" style={{ background: "#f87171", borderColor: "#f87171" }} onClick={giveUp}>Give Up</button>
-                <button className="btn btn-muted" onClick={cancelGiveUp}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
         </div>
       </div>
       {leaderboardPanel}

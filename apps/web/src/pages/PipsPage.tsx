@@ -1266,12 +1266,12 @@ export function PipsPage() {
       <>
         <div className="game-page pips-page pips-page--countdown" data-game-theme="pips" data-phase={phase}>
           <div className="pips-container pips-container--countdown">
-            <div className="pips-start-countdown">
-              <p className="pips-start-countdown-kicker">{runModeLabel(runMode)} Run</p>
-              <div className="pips-start-countdown-number" key={countdownNum}>
+            <div className="game-start-countdown">
+              <p className="game-start-countdown-kicker">{runModeLabel(runMode)} Run</p>
+              <div className="game-start-countdown-number" key={countdownNum}>
                 {countdownNum > 0 ? countdownNum : "GO!"}
               </div>
-              <p className="pips-start-countdown-label">
+              <p className="game-start-countdown-label">
                 {runMode === "infinite"
                   ? `${difficultyLabel(infiniteDifficulty)} forever`
                   : runMode === "seeded"
