@@ -15,21 +15,51 @@ Live links:
 
 ## Contents
 
-- [Games Included](#games-included)
-- [Game Docs](#game-docs)
-- [Repository Layout](#repository-layout)
-- [Architecture](#architecture)
-- [Local Development](#local-development)
-- [Environment Variables](#environment-variables)
-- [Common Commands](#common-commands)
-- [CI and Deployment Gates](#ci-and-deployment-gates)
-- [Data Model](#data-model)
-- [API Surface](#api-surface)
-- [Admin Dashboard](#admin-dashboard)
-- [Mobile UI](#mobile-ui)
-- [Deployment](#deployment)
-- [Operational Notes](#operational-notes)
-- [Known Constraints](#known-constraints)
+- [Games](#games)
+  - [Contents](#contents)
+  - [Games Included](#games-included)
+  - [Game Docs](#game-docs)
+  - [Repository Layout](#repository-layout)
+  - [Architecture](#architecture)
+    - [Player App: `apps/web`](#player-app-appsweb)
+    - [Shared Solo Puzzle Engines](#shared-solo-puzzle-engines)
+    - [API App: `apps/api`](#api-app-appsapi)
+    - [Admin App: `apps/admin`](#admin-app-appsadmin)
+    - [Shared Package: `packages/shared`](#shared-package-packagesshared)
+  - [Local Development](#local-development)
+    - [Prerequisites](#prerequisites)
+    - [Quick Start](#quick-start)
+    - [Manual Local Start](#manual-local-start)
+    - [Stop Local Services](#stop-local-services)
+    - [Platform-Specific Helpers](#platform-specific-helpers)
+  - [Environment Variables](#environment-variables)
+    - [Root `.env`](#root-env)
+    - [Web App Variables](#web-app-variables)
+    - [Admin App Variables](#admin-app-variables)
+    - [Zero Service Variables](#zero-service-variables)
+  - [Common Commands](#common-commands)
+  - [CI and Deployment Gates](#ci-and-deployment-gates)
+  - [Data Model](#data-model)
+  - [API Surface](#api-surface)
+    - [Public and Runtime Endpoints](#public-and-runtime-endpoints)
+    - [Zero Endpoints](#zero-endpoints)
+    - [Solo Game Score Endpoints](#solo-game-score-endpoints)
+    - [Admin API](#admin-api)
+  - [Admin Dashboard](#admin-dashboard)
+  - [Mobile UI](#mobile-ui)
+  - [Deployment](#deployment)
+    - [Vercel Web App](#vercel-web-app)
+    - [Railway API](#railway-api)
+    - [Railway Zero Cache](#railway-zero-cache)
+    - [Database Requirements](#database-requirements)
+  - [Operational Notes](#operational-notes)
+    - [Session Identity](#session-identity)
+    - [Presence](#presence)
+    - [Admin Broadcasts](#admin-broadcasts)
+    - [Cleanup](#cleanup)
+    - [Footer Database Status](#footer-database-status)
+    - [Smoke Test Checklist](#smoke-test-checklist)
+  - [Known Constraints](#known-constraints)
 
 Community files:
 
@@ -70,6 +100,7 @@ Each game has its own document with rules, flow, scoring, and implementation not
 | Shikaku | Puzzle generation, run modes, scoring, leaderboard validation | [docs/game-shikaku.md](docs/game-shikaku.md) |
 | Pips | Domino placement, seeded runs, split timing, leaderboard design | [docs/game-pips.md](docs/game-pips.md) |
 
+
 ## Repository Layout
 
 ```text
@@ -102,7 +133,7 @@ Main responsibilities:
 - A module-scoped Zero client for realtime multiplayer sync.
 - Local browser identity, recent games, display name, and first-visit state.
 - HTTP session sync and presence heartbeats against the API.
-- Pusher subscriptions for global admin broadcasts and targeted user events.
+- Bun WebSocket subscriptions for global admin broadcasts, targeted user events, and live Password typing.
 - Lazy-loaded game pages and vendor chunks for smaller initial loads.
 - Sync wake/idle messaging when the multiplayer Zero cache is cold or paused.
 - Mobile-specific pages and bottom sheets for the multiplayer experience.
@@ -135,7 +166,7 @@ Main responsibilities:
 - `POST /api/zero/query` and `POST /api/zero/mutate`
 - Signed session cookies and signed Zero session proofs.
 - Session sync and presence heartbeat updates.
-- Pusher private-channel auth and admin event triggers.
+- Bun WebSocket upgrade auth and admin event triggers.
 - Server-held secret keys for hidden game data.
 - Shikaku and Pips leaderboard, eligibility, and score validation.
 - Location Signal map tile config and geocode proxy.
@@ -285,15 +316,7 @@ ZERO_CHANGE_DB=postgres://postgres:postgres@localhost:5432/games
 ZERO_ADMIN_PASSWORD=dev-password
 CLEANUP_SECRET=cleanup-local
 SESSION_COOKIE_SECRET=games-dev-session-secret
-```
-
-Optional local Pusher variables:
-
-```bash
-PUSHER_APP_ID=<your_pusher_app_id>
-PUSHER_KEY=<your_pusher_key>
-PUSHER_SECRET=<your_pusher_secret>
-PUSHER_CLUSTER=<your_pusher_cluster>
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
 Optional map variables:
@@ -311,15 +334,11 @@ The web app defaults to local endpoints when these are omitted:
 ```bash
 VITE_ZERO_CACHE_URL=http://localhost:4848
 VITE_API_URL=http://localhost:3001
+VITE_WS_URL=ws://localhost:3001/ws
 VITE_STYLE_ONLY=false
 ```
 
-Pusher broadcasts in the browser require:
-
-```bash
-VITE_PUSHER_KEY=<your_pusher_key>
-VITE_PUSHER_CLUSTER=<your_pusher_cluster>
-```
+`VITE_WS_URL` is optional if it is just the API URL plus `/ws`; the client can derive it from `VITE_API_URL`.
 
 ### Admin App Variables
 
@@ -464,7 +483,7 @@ The multiplayer game tables intentionally store much of their live state in JSON
 | `GET /debug/build-info` | API build, uptime, platform, and database sentinel status |
 | `POST /api/session/sync` | Resolve or create signed browser session identity |
 | `POST /api/presence/heartbeat` | Refresh session/game presence |
-| `POST /api/pusher/auth` | Authenticate private Pusher channels |
+| `GET /ws` | Upgrade to the authenticated Bun WebSocket transport |
 | `GET /api/admin-status` | Current site-wide admin status payload |
 | `GET /api/public/names/restricted` | Public restricted-name pattern list |
 | `GET /api/embed/html` | Rich social/bot preview HTML |
@@ -568,7 +587,7 @@ Production is split across separate services:
 - Railway: `apps/api`
 - Railway: Zero cache
 - Railway Postgres or Neon: database
-- Pusher Channels: admin broadcasts and targeted events
+- Bun WebSockets: admin broadcasts, targeted events, and live Password typing
 
 `vercel.json` disables automatic Git deploys from `main` and `master`. The default production web path is the post-CI deploy hook, not a raw push that has not passed `Quality Gate`. If you prefer Vercel's built-in Deployment Checks flow, remove or adjust that `git.deploymentEnabled` block and configure `Quality Gate` as the required deployment check in Vercel.
 
@@ -590,8 +609,7 @@ Required Vercel variables:
 ```bash
 VITE_ZERO_CACHE_URL=https://<zero-domain>
 VITE_API_URL=https://<api-domain>
-VITE_PUSHER_KEY=<pusher_key>
-VITE_PUSHER_CLUSTER=<pusher_cluster>
+VITE_WS_URL=wss://<api-domain>/ws
 ```
 
 If Vercel Git auto-deploys are enabled again, configure Vercel Deployment Checks so production is not promoted until `Quality Gate` passes. The current repo config disables `main` and `master` Git autodeploys, so the safer default is to store a Vercel deploy hook as `VERCEL_DEPLOY_HOOK_URL` and let GitHub Actions call it after CI passes.
@@ -612,10 +630,7 @@ DATABASE_URL=<postgres_url>
 CLEANUP_SECRET=<strong_secret>
 SESSION_COOKIE_SECRET=<long_random_secret>
 ADMIN_SECRET=<strong_admin_secret>
-PUSHER_APP_ID=<pusher_app_id>
-PUSHER_KEY=<pusher_key>
-PUSHER_SECRET=<pusher_secret>
-PUSHER_CLUSTER=<pusher_cluster>
+CORS_ALLOWED_ORIGINS=https://<web-domain>
 ```
 
 If Railway GitHub autodeploys are enabled, turn on Wait for CI in the Railway service settings so Railway waits for GitHub Actions before deploying. If using a manual/API trigger instead, disable automatic deploys and trigger it from the post-CI workflow after `Quality Gate` passes.
@@ -671,10 +686,11 @@ Presence is inferred from HTTP heartbeats, not WebSockets. Game pages periodical
 
 ### Admin Broadcasts
 
-Admin broadcasts use Pusher Channels:
+Admin broadcasts use the API's Bun WebSocket service:
 
-- `games-broadcast` for global messages.
-- `private-user-{sessionId}` for targeted kicks, name changes, and direct toasts.
+- `broadcast` for global messages.
+- `user:{sessionId}` for targeted kicks, name changes, and direct toasts.
+- `password-team:{gameId}:{teamIndex}` for team-only Password live typing.
 
 ### Cleanup
 

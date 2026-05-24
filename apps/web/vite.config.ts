@@ -32,10 +32,6 @@ export default defineConfig({
             return "vendor-zero";
           }
 
-          if (normalized.includes("/pusher-js/")) {
-            return "vendor-realtime";
-          }
-
           if (normalized.includes("/react-icons/")) {
             return "vendor-icons";
           }

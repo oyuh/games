@@ -24,10 +24,10 @@ This project currently uses:
 - GitHub Actions CI for lint, typecheck, tests, and builds before changes are merged or deployed.
 - Signed browser session cookies and signed Zero session proofs.
 - Server-side checks that prevent one session from submitting multiplayer actions for another session.
-- Rate limits on Zero mutation/query paths, presence, Pusher auth, cleanup, maps, game-secret, and admin routes.
+- Rate limits on Zero mutation/query paths, presence, cleanup, maps, game-secret, and admin routes.
 - CORS restrictions for trusted production domains and local development.
 - Admin API bearer-secret protection, with the admin dashboard gated by GitHub OAuth or a local development credential.
-- Private Pusher channels for targeted user actions.
+- Private Bun WebSocket topics for targeted user actions.
 - Server-held game secret material for hidden multiplayer game data.
 - Server-side replay validation for ranked Shikaku and Pips score submissions.
 - Health and build-info endpoints for deployment verification.
