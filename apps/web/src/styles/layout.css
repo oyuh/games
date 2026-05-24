@@ -108,6 +108,18 @@
   animation: sidebar-confirm-pulse 0.6s ease;
 }
 
+.sidebar-link--shikaku:hover:not(:disabled),
+.sidebar-link--shikaku.sidebar-link--active {
+  color: #34d399;
+  background: color-mix(in srgb, #34d399 13%, transparent);
+}
+
+.sidebar-link--shikaku-confirm {
+  color: #34d399;
+  background: color-mix(in srgb, #34d399 16%, transparent);
+  animation: sidebar-confirm-pulse 0.6s ease;
+}
+
 @keyframes sidebar-confirm-pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
