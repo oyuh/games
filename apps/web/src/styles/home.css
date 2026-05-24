@@ -1926,17 +1926,12 @@ a.solo-card-title-link {
   max-height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 0.18rem;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--secondary) 35%, transparent) transparent;
-  -ms-overflow-style: auto;
+  padding-right: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .hc-recent-list--scrollable::-webkit-scrollbar {
-  width: 0.35rem;
-}
-.hc-recent-list--scrollable::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--secondary) 35%, transparent);
+  display: none;
 }
 
 /* Trash icon clear button next to "Recent" */
