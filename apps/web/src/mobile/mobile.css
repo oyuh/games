@@ -155,6 +155,7 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
+  gap: 0.15rem;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -164,8 +165,13 @@
   backdrop-filter: blur(12px) saturate(1.3);
   -webkit-backdrop-filter: blur(12px) saturate(1.3);
   border-top: 1px solid var(--border);
-  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  padding: 0 0.25rem calc(1rem + env(safe-area-inset-bottom, 0px));
   height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.m-bottomnav::-webkit-scrollbar {
+  display: none;
 }
 
 .m-nav-item {
@@ -175,6 +181,8 @@
   justify-content: center;
   gap: 0.15rem;
   flex: 1;
+  min-width: 3.45rem;
+  max-width: 5.5rem;
   height: 3.5rem;
   border: none;
   background: transparent;
@@ -3148,7 +3156,8 @@
   z-index: 200;
   animation: m-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.m-sheet-backdrop--closing {
+.m-sheet-backdrop--closing,
+.m-sheet-backdrop[data-state="closed"] {
   animation: m-fade-out 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
@@ -3169,10 +3178,11 @@
   animation: m-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   will-change: transform;
-  /* Prevent overscroll bounce from interfering with swipe gesture */
   overscroll-behavior: contain;
+  outline: none;
 }
-.m-sheet--closing {
+.m-sheet--closing,
+.m-sheet[data-state="closed"] {
   animation: m-slide-down 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
@@ -3184,7 +3194,6 @@
   margin: 0.5rem auto 0.35rem;
   flex-shrink: 0;
   opacity: 0.6;
-  /* Larger invisible touch area for handle dragging */
   padding: 0.5rem 2rem;
   background-clip: content-box;
   cursor: grab;
@@ -3228,6 +3237,176 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 1rem;
+}
+
+/* ── Mobile Game Actions Drawer ──────────────────────────── */
+.m-game-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.m-game-action-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 48%),
+    color-mix(in srgb, var(--card) 82%, transparent);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+}
+
+.m-game-actions--shikaku .m-game-action-status {
+  border-color: color-mix(in srgb, #34d399 28%, var(--border));
+  background:
+    radial-gradient(circle at 10% 0%, rgba(52, 211, 153, 0.18), transparent 48%),
+    color-mix(in srgb, var(--card) 84%, transparent);
+}
+
+.m-game-actions--pips .m-game-action-status {
+  border-color: color-mix(in srgb, #f59e0b 30%, var(--border));
+  background:
+    radial-gradient(circle at 10% 0%, rgba(245, 158, 11, 0.18), transparent 48%),
+    color-mix(in srgb, var(--card) 84%, transparent);
+}
+
+.m-game-action-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  flex: 0 0 auto;
+  border-radius: 0.85rem;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 13%, transparent);
+}
+
+.m-game-actions--shikaku .m-game-action-status-icon {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.m-game-actions--pips .m-game-action-status-icon {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.13);
+}
+
+.m-game-action-status-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.m-game-action-status-copy span,
+.m-game-action-status-copy small {
+  color: var(--secondary);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.m-game-action-status-copy strong {
+  color: var(--foreground);
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.m-game-action-grid,
+.m-game-scroll-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.m-game-action {
+  min-height: 4.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--card) 78%, transparent);
+  color: var(--foreground);
+  text-align: left;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+}
+
+.m-game-action:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
+.m-game-action:disabled {
+  opacity: 0.42;
+}
+
+.m-game-action--danger {
+  border-color: color-mix(in srgb, var(--destructive) 28%, var(--border));
+}
+
+.m-game-action--confirm {
+  border-color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 13%, var(--card));
+}
+
+.m-game-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  border-radius: 0.7rem;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+}
+
+.m-game-action--danger .m-game-action-icon,
+.m-game-action--confirm .m-game-action-icon {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+}
+
+.m-game-action-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.m-game-action-label {
+  color: var(--foreground);
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+.m-game-action-detail {
+  color: var(--secondary);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.m-game-actions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.m-game-actions-section h3 {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 @keyframes m-slide-up {

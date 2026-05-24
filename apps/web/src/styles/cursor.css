@@ -1,7 +1,13 @@
 @media (pointer: fine) {
-  html[data-custom-cursor="on"],
-  html[data-custom-cursor="on"] * {
+  html[data-custom-cursor="on"][data-custom-cursor-runtime="ready"],
+  html[data-custom-cursor="on"][data-custom-cursor-runtime="ready"] * {
     cursor: none !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .site-cursor {
+    display: none !important;
   }
 }
 
