@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
-import Pusher from "pusher-js";
+import { useEffect } from "react";
 import { showToast } from "../lib/toast";
-import { getDisplayName, getOrCreateSessionId, getStoredName, setStoredName } from "../lib/session";
+import { getDisplayName, getOrCreateSessionId, setStoredName } from "../lib/session";
+import { buildRealtimeUserTopic, subscribeToRealtimeEvent } from "../lib/realtime";
 
 type CustomStatusPayload = {
   text: string;
@@ -60,27 +60,6 @@ export function isNameRestricted(name: string): boolean {
   });
 }
 
-// Singleton Pusher instance so multiple components share one connection
-let pusherInstance: Pusher | null = null;
-
-function getPusherInstance(): Pusher {
-  if (pusherInstance) return pusherInstance;
-
-  const sessionId = getOrCreateSessionId();
-  const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
-
-  pusherInstance = new Pusher(import.meta.env.VITE_PUSHER_KEY ?? "", {
-    cluster: import.meta.env.VITE_PUSHER_CLUSTER ?? "us2",
-    channelAuthorization: {
-      endpoint: `${apiBase}/api/pusher/auth`,
-      transport: "ajax",
-      params: { session_id: sessionId },
-    },
-  });
-
-  return pusherInstance;
-}
-
 function handleMessage(msg: AdminBroadcastMessage) {
   const sessionId = getOrCreateSessionId();
 
@@ -128,12 +107,7 @@ function handleMessage(msg: AdminBroadcastMessage) {
 }
 
 export function useAdminBroadcast() {
-  const initialized = useRef(false);
-
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
     const sessionId = getOrCreateSessionId();
     const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
@@ -158,21 +132,18 @@ export function useAdminBroadcast() {
       })
       .catch(() => {});
 
-    const pusher = getPusherInstance();
+    const cleanup = [
+      subscribeToRealtimeEvent<AdminBroadcastMessage>("broadcast", "admin:toast", handleMessage),
+      subscribeToRealtimeEvent<AdminBroadcastMessage>("broadcast", "admin:refresh", handleMessage),
+      subscribeToRealtimeEvent<AdminBroadcastMessage>("broadcast", "admin:status", handleMessage),
+      subscribeToRealtimeEvent<AdminBroadcastMessage>("broadcast", "admin:name-restricted", handleMessage),
+      subscribeToRealtimeEvent<AdminBroadcastMessage>(buildRealtimeUserTopic(sessionId), "admin:toast", handleMessage),
+      subscribeToRealtimeEvent<AdminBroadcastMessage>(buildRealtimeUserTopic(sessionId), "admin:kick", handleMessage),
+      subscribeToRealtimeEvent<AdminBroadcastMessage>(buildRealtimeUserTopic(sessionId), "admin:name-changed", handleMessage),
+    ];
 
-    // Subscribe to global broadcast channel
-    const broadcastChannel = pusher.subscribe("games-broadcast");
-    broadcastChannel.bind("admin:toast", (data: any) => handleMessage(data));
-    broadcastChannel.bind("admin:refresh", (data: any) => handleMessage(data));
-    broadcastChannel.bind("admin:status", (data: any) => handleMessage(data));
-    broadcastChannel.bind("admin:name-restricted", (data: any) => handleMessage(data));
-
-    // Subscribe to private user channel for targeted messages
-    const userChannel = pusher.subscribe(`private-user-${sessionId}`);
-    userChannel.bind("admin:toast", (data: any) => handleMessage(data));
-    userChannel.bind("admin:kick", (data: any) => handleMessage(data));
-    userChannel.bind("admin:name-changed", (data: any) => handleMessage(data));
-
-    // No cleanup — this is app-level, stays active for the entire session
+    return () => {
+      cleanup.forEach((unsubscribe) => unsubscribe());
+    };
   }, []);
 }

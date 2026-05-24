@@ -176,6 +176,16 @@ export function pickPasswordWord(usedWords?: string[], category?: string) {
   return pickRandom(pool);
 }
 
+export function scorePasswordGuessCount(guessCount: number) {
+  if (guessCount <= 1) return 3;
+  if (guessCount === 2) return 2;
+  return 1;
+}
+
+export function buildPasswordRoundId(roundNum: number, teamIndex: number) {
+  return `pw-${roundNum}-${teamIndex + 1}-${code()}`;
+}
+
 export function buildTeamRound(team: { name: string; members: string[] }, teamIndex: number, roundNum: number, word: string) {
   if (team.members.length < 2) {
     throw new Error(`${team.name} needs at least 2 players`);
@@ -185,9 +195,26 @@ export function buildTeamRound(team: { name: string; members: string[] }, teamIn
   return {
     teamIndex,
     guesserId,
+    roundId: buildPasswordRoundId(roundNum, teamIndex),
     word,
-    clues: [] as Array<{ sessionId: string; text: string }>,
+    clues: [] as Array<{
+      id: string;
+      sessionId: string;
+      text: string;
+      ts: number;
+      clueNumber: number;
+      repeatedText?: boolean;
+    }>,
+    guesses: [] as Array<{
+      id: string;
+      sessionId: string;
+      text: string;
+      ts: number;
+      correct: boolean;
+      guessNumber: number;
+    }>,
     guess: null as string | null,
+    guessCount: 0,
   };
 }
 

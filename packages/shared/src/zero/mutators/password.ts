@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
-import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, pickPasswordWord, buildTeamRound, buildAllTeamRounds, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
+import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, isOneWord, pickPasswordWord, buildTeamRound, buildAllTeamRounds, scorePasswordGuessCount, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
 
 async function maybeEncryptPasswordWord(ctx: unknown, gameId: string, word: string | null) {
   if (!word) {
@@ -40,6 +40,57 @@ async function resolveUsedWords(
 ) {
   const values = await Promise.all(rounds.map((round) => maybeDecryptPasswordWord(ctx, gameId, round.word)));
   return values.filter((value): value is string => Boolean(value));
+}
+
+function buildPasswordClueEntry(
+  round: {
+    clues: Array<{
+      id: string;
+      sessionId: string;
+      text: string;
+      ts: number;
+      clueNumber: number;
+      repeatedText?: boolean;
+    }>;
+  },
+  sessionId: string,
+  clue: string
+) {
+  const clueNumber = round.clues.filter((entry) => entry.sessionId === sessionId).length + 1;
+  const repeatedText = round.clues.some((entry) => normalized(entry.text) === normalized(clue));
+  return {
+    id: code(),
+    sessionId,
+    text: clue,
+    ts: now(),
+    clueNumber,
+    ...(repeatedText ? { repeatedText: true } : {})
+  };
+}
+
+function buildPasswordGuessEntry(
+  round: {
+    guesses?: Array<{
+      id: string;
+      sessionId: string;
+      text: string;
+      ts: number;
+      correct: boolean;
+      guessNumber: number;
+    }>;
+  },
+  sessionId: string,
+  guess: string,
+  correct: boolean
+) {
+  return {
+    id: code(),
+    sessionId,
+    text: guess,
+    ts: now(),
+    correct,
+    guessNumber: (round.guesses?.length ?? 0) + 1
+  };
 }
 
 export const passwordMutators = {
@@ -272,14 +323,12 @@ export const passwordMutators = {
       if (isServerTx(tx) && !roundWord) throw new Error("Word hasn't been set yet");
       const cleanClue = sanitizeText(args.clue);
       if (!cleanClue) throw new Error("Clue cannot be empty");
+      if (!isOneWord(cleanClue)) throw new Error("Clue must be one word");
       if (roundWord && isClueTooSimilar(cleanClue, roundWord)) {
         throw new Error("Clue is too similar to the word");
       }
-      if (round.clues.some((c) => c.sessionId === args.sessionId)) {
-        throw new Error("You already submitted a clue");
-      }
 
-      const nextClues = [...round.clues, { sessionId: args.sessionId, text: cleanClue }];
+      const nextClues = [...(round.clues ?? []), buildPasswordClueEntry(round, args.sessionId, cleanClue)];
       const nextRounds = game.active_rounds.map((r, i) =>
         i === roundIdx ? { ...r, clues: nextClues } : r
       );
@@ -316,20 +365,22 @@ export const passwordMutators = {
         return;
       }
       const resolvedRoundWord = roundWord;
-
-      const team = game.teams[round.teamIndex];
-      const clueGiverCount = team ? team.members.filter((m) => m !== round.guesserId).length : 0;
-      if (round.clues.length < clueGiverCount) {
-        throw new Error("Waiting for all clues to be submitted");
+      const cleanGuess = sanitizeText(args.guess);
+      if (!cleanGuess) throw new Error("Guess cannot be empty");
+      if (!isOneWord(cleanGuess)) throw new Error("Guess must be one word");
+      const normalizedGuess = normalized(cleanGuess);
+      if ((round.guesses ?? []).some((entry) => normalized(entry.text) === normalizedGuess)) {
+        throw new Error("You already guessed that");
       }
 
-      const correct = normalized(args.guess) === normalized(resolvedRoundWord);
+      const correct = normalizedGuess === normalized(resolvedRoundWord);
+      const nextGuesses = [...(round.guesses ?? []), buildPasswordGuessEntry(round, args.sessionId, cleanGuess, correct)];
+      const guessCount = nextGuesses.length;
+      const nextRounds = game.active_rounds.map((r, i) =>
+        i === roundIdx ? { ...r, guesses: nextGuesses, guess: cleanGuess, guessCount } : r
+      );
 
       if (!correct) {
-        // Wrong → same team retries with new set of clues, timer keeps running
-        const nextRounds = game.active_rounds.map((r, i) =>
-          i === roundIdx ? { ...r, clues: [], guess: args.guess.trim() } : r
-        );
         await tx.mutate.password_games.update({
           id: game.id,
           active_rounds: nextRounds,
@@ -338,10 +389,12 @@ export const passwordMutators = {
         return;
       }
 
-      // Correct → record round, +1 score, give team a fresh round entry
+      // Correct → record round, award points by guess count, give team a fresh round entry
+      const team = game.teams[round.teamIndex];
       const teamName = team?.name ?? `Team ${round.teamIndex + 1}`;
       const currentScore = game.scores[teamName] ?? 0;
-      const nextScores = { ...game.scores, [teamName]: currentScore + 1 };
+      const pointsAwarded = scorePasswordGuessCount(guessCount);
+      const nextScores = { ...game.scores, [teamName]: currentScore + pointsAwarded };
 
       const historyWord = isServerTx(tx)
         ? (await maybeEncryptPasswordWord(ctx, args.gameId, resolvedRoundWord)).encryptedWord ?? resolvedRoundWord
@@ -353,9 +406,13 @@ export const passwordMutators = {
           round: game.current_round,
           teamIndex: round.teamIndex,
           guesserId: round.guesserId,
+          roundId: round.roundId,
           word: historyWord,
-          clues: round.clues,
-          guess: args.guess.trim(),
+          clues: round.clues ?? [],
+          guesses: nextGuesses,
+          guess: cleanGuess,
+          guessCount,
+          points: pointsAwarded,
           correct: true
         }
       ];
@@ -397,7 +454,7 @@ export const passwordMutators = {
           }
         : null;
 
-      const nextRounds = game.active_rounds.map((r, i) =>
+      const nextActiveRounds = game.active_rounds.map((r, i) =>
         i === roundIdx ? (freshRound ?? r) : r
       );
 
@@ -406,7 +463,7 @@ export const passwordMutators = {
         rounds: nextHistory,
         scores: nextScores,
         current_round: nextRoundNum,
-        active_rounds: nextRounds,
+        active_rounds: nextActiveRounds,
         updated_at: now()
       });
     }
@@ -443,13 +500,22 @@ export const passwordMutators = {
         ...activeRoundWords.filter((value): value is string => Boolean(value))
       ];
       const newWord = pickPasswordWord(allUsedWords, game.settings.category);
-      const encryptedReplacement = isServerTx(tx)
-        ? await maybeEncryptPasswordWord(ctx, args.gameId, newWord)
-        : { word: newWord, encryptedWord: null as string | null };
+      const replacementBase = team
+        ? buildTeamRound(team, teamIdx, game.current_round, newWord)
+        : null;
+      const encryptedReplacement = replacementBase
+        ? {
+            ...replacementBase,
+            ...(isServerTx(tx)
+              ? await maybeEncryptPasswordWord(ctx, args.gameId, replacementBase.word)
+              : { encryptedWord: null as string | null })
+          }
+        : null;
 
-      const nextRounds = game.active_rounds.map((r, i) =>
-        i === roundIdx ? { ...r, ...encryptedReplacement, clues: [], guess: null } : r
-      );
+      const nextRounds = game.active_rounds.map((r, i) => {
+        if (i !== roundIdx) return r;
+        return encryptedReplacement ?? { ...r, guesses: [], guess: null, guessCount: 0, clues: [] };
+      });
       const nextSkips = { ...skips, [teamName]: remaining - 1 };
 
       await tx.mutate.password_games.update({
@@ -483,9 +549,13 @@ export const passwordMutators = {
           round: game.current_round,
           teamIndex: round.teamIndex,
           guesserId: round.guesserId,
+          roundId: round.roundId,
           word: historyWord,
-          clues: round.clues,
-          guess: null as string | null,
+          clues: round.clues ?? [],
+          guesses: round.guesses ?? [],
+          guess: round.guess ?? null,
+          guessCount: round.guesses?.length ?? round.guessCount ?? 0,
+          points: 0,
           correct: false
         });
       }
