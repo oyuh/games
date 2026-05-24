@@ -7,6 +7,7 @@ import {
   chainReactionGames,
   shadeSignalGames,
   locationSignalGames,
+  gameEncryptionKeys,
   chatMessages,
   adminBans,
   adminRestrictedNames,
@@ -271,6 +272,84 @@ async function selectActiveGames() {
   };
 }
 
+async function selectAllGames() {
+  const [imposter, password, chain, shade, location] = await Promise.all([
+    drizzleClient
+      .select({
+        id: imposterGames.id,
+        code: imposterGames.code,
+        hostId: imposterGames.hostId,
+        phase: imposterGames.phase,
+        players: imposterGames.players,
+        spectators: imposterGames.spectators,
+        roundHistory: imposterGames.roundHistory,
+        createdAt: imposterGames.createdAt,
+        updatedAt: imposterGames.updatedAt,
+      })
+      .from(imposterGames),
+    drizzleClient
+      .select({
+        id: passwordGames.id,
+        code: passwordGames.code,
+        hostId: passwordGames.hostId,
+        phase: passwordGames.phase,
+        teams: passwordGames.teams,
+        spectators: passwordGames.spectators,
+        rounds: passwordGames.rounds,
+        createdAt: passwordGames.createdAt,
+        updatedAt: passwordGames.updatedAt,
+      })
+      .from(passwordGames),
+    drizzleClient
+      .select({
+        id: chainReactionGames.id,
+        code: chainReactionGames.code,
+        hostId: chainReactionGames.hostId,
+        phase: chainReactionGames.phase,
+        players: chainReactionGames.players,
+        spectators: chainReactionGames.spectators,
+        roundHistory: chainReactionGames.roundHistory,
+        createdAt: chainReactionGames.createdAt,
+        updatedAt: chainReactionGames.updatedAt,
+      })
+      .from(chainReactionGames),
+    drizzleClient
+      .select({
+        id: shadeSignalGames.id,
+        code: shadeSignalGames.code,
+        hostId: shadeSignalGames.hostId,
+        phase: shadeSignalGames.phase,
+        players: shadeSignalGames.players,
+        spectators: shadeSignalGames.spectators,
+        roundHistory: shadeSignalGames.roundHistory,
+        createdAt: shadeSignalGames.createdAt,
+        updatedAt: shadeSignalGames.updatedAt,
+      })
+      .from(shadeSignalGames),
+    drizzleClient
+      .select({
+        id: locationSignalGames.id,
+        code: locationSignalGames.code,
+        hostId: locationSignalGames.hostId,
+        phase: locationSignalGames.phase,
+        players: locationSignalGames.players,
+        spectators: locationSignalGames.spectators,
+        roundHistory: locationSignalGames.roundHistory,
+        createdAt: locationSignalGames.createdAt,
+        updatedAt: locationSignalGames.updatedAt,
+      })
+      .from(locationSignalGames),
+  ]);
+
+  return {
+    imposter: imposter.map((game) => withGameMetrics({ ...game, type: "imposter" as const })),
+    password: password.map((game) => withGameMetrics({ ...game, type: "password" as const })),
+    chain_reaction: chain.map((game) => withGameMetrics({ ...game, type: "chain_reaction" as const })),
+    shade_signal: shade.map((game) => withGameMetrics({ ...game, type: "shade_signal" as const })),
+    location_signal: location.map((game) => withGameMetrics({ ...game, type: "location_signal" as const })),
+  };
+}
+
 function flattenActiveGames(games: Awaited<ReturnType<typeof selectActiveGames>>) {
   return [
     ...games.imposter,
@@ -387,9 +466,18 @@ adminRoutes.get("/clients/:sessionId", async (c) => {
   });
 });
 
-// ─── Active games list ──────────────────────────────────────
+// ─── Games list, including ended-but-not-deleted rooms ──────
 adminRoutes.get("/games", async (c) => {
-  const games = await selectActiveGames();
+  const games = await selectAllGames();
+  const allGames = [
+    ...games.imposter,
+    ...games.password,
+    ...games.chain_reaction,
+    ...games.shade_signal,
+    ...games.location_signal,
+  ];
+  const activeTotal = allGames.filter((game) => game.phase !== "ended").length;
+  const endedTotal = allGames.length - activeTotal;
 
   return c.json({
     ok: true,
@@ -406,6 +494,11 @@ adminRoutes.get("/games", async (c) => {
         games.chain_reaction.length +
         games.shade_signal.length +
         games.location_signal.length,
+    },
+    lifecycleTotals: {
+      active: activeTotal,
+      ended: endedTotal,
+      total: allGames.length,
     },
   });
 });
@@ -526,7 +619,13 @@ adminRoutes.get("/games/:type/:id", async (c) => {
     .from(sessions)
     .where(and(eq(sessions.gameId, id), eq(sessions.gameType, type as any)));
 
-  return c.json({ ok: true, game: { ...game, type }, sessions: gameSessions });
+  const messages = await drizzleClient
+    .select()
+    .from(chatMessages)
+    .where(and(eq(chatMessages.gameId, id), eq(chatMessages.gameType, type as any)))
+    .orderBy(asc(chatMessages.createdAt));
+
+  return c.json({ ok: true, game: { ...game, type }, sessions: gameSessions, chatMessages: messages });
 });
 
 // ─── End a specific game ────────────────────────────────────
@@ -563,6 +662,56 @@ adminRoutes.post("/games/:type/:id/end", async (c) => {
   }
 
   return c.json({ ok: true, sessionsDetached: attached.length });
+});
+
+// ─── Delete a persisted game row and its admin-visible residue ─
+adminRoutes.delete("/games/:type/:id", async (c) => {
+  const { type, id } = c.req.param();
+  const gameType = type as AdminGameType;
+
+  let deletedGame: Array<{ id: string }> = [];
+  if (type === "imposter") {
+    deletedGame = await drizzleClient.delete(imposterGames).where(eq(imposterGames.id, id)).returning({ id: imposterGames.id });
+  } else if (type === "password") {
+    deletedGame = await drizzleClient.delete(passwordGames).where(eq(passwordGames.id, id)).returning({ id: passwordGames.id });
+  } else if (type === "chain_reaction") {
+    deletedGame = await drizzleClient.delete(chainReactionGames).where(eq(chainReactionGames.id, id)).returning({ id: chainReactionGames.id });
+  } else if (type === "shade_signal") {
+    deletedGame = await drizzleClient.delete(shadeSignalGames).where(eq(shadeSignalGames.id, id)).returning({ id: shadeSignalGames.id });
+  } else if (type === "location_signal") {
+    deletedGame = await drizzleClient.delete(locationSignalGames).where(eq(locationSignalGames.id, id)).returning({ id: locationSignalGames.id });
+  } else {
+    return c.json({ error: "Invalid game type" }, 400);
+  }
+
+  if (deletedGame.length === 0) {
+    return c.json({ error: "Game not found" }, 404);
+  }
+
+  const now = Date.now();
+  const detachedSessions = await drizzleClient
+    .update(sessions)
+    .set({ gameType: null, gameId: null, lastSeen: now })
+    .where(and(eq(sessions.gameId, id), eq(sessions.gameType, gameType as any)))
+    .returning({ id: sessions.id });
+
+  const deletedMessages = await drizzleClient
+    .delete(chatMessages)
+    .where(and(eq(chatMessages.gameId, id), eq(chatMessages.gameType, gameType as any)))
+    .returning({ id: chatMessages.id });
+
+  const deletedKeys = await drizzleClient
+    .delete(gameEncryptionKeys)
+    .where(and(eq(gameEncryptionKeys.gameId, id), eq(gameEncryptionKeys.gameType, gameType as any)))
+    .returning({ id: gameEncryptionKeys.id });
+
+  return c.json({
+    ok: true,
+    deleted: id,
+    sessionsDetached: detachedSessions.length,
+    chatMessagesDeleted: deletedMessages.length,
+    encryptionKeysDeleted: deletedKeys.length,
+  });
 });
 
 // ─── End ALL games ──────────────────────────────────────────

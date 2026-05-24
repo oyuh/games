@@ -3,6 +3,7 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "games-admin-theme";
 
@@ -35,7 +36,13 @@ function applyTheme(theme: Theme) {
   document.documentElement.style.colorScheme = theme;
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({
+  className,
+  showLabel = false,
+}: {
+  className?: string;
+  showLabel?: boolean;
+}) {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
@@ -55,6 +62,7 @@ export function ThemeToggle() {
       aria-label={`Switch to ${nextTheme} mode`}
       aria-pressed={theme === "dark"}
       title={`Switch to ${nextTheme} mode`}
+      className={cn(showLabel && "h-9 w-auto gap-2 px-3", className)}
       onClick={() => {
         setTheme(nextTheme);
         try {
@@ -66,6 +74,9 @@ export function ThemeToggle() {
       }}
     >
       <Icon className="size-4" />
+      {showLabel ? (
+        <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+      ) : null}
     </Button>
   );
 }

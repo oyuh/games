@@ -19,6 +19,7 @@ import {
 } from "../lib/shikaku-engine";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { playCountdownTick, playGameOver } from "../lib/sounds";
 import { useIsMobile } from "../hooks/useIsMobile";
 import "../styles/game-shared.css";
 import "../styles/shikaku.css";
@@ -86,6 +87,7 @@ export function ShikakuPage() {
   const [lbDifficulty, setLbDifficulty] = useState<Difficulty>("easy");
   const [lbView, setLbView] = useState<LeaderboardView>("all");
   const [countdownNum, setCountdownNum] = useState(3);
+  const previousPhaseRef = useRef<GamePhase | null>(null);
 
   // Game state
   const [seed, setSeed] = useState<number>(0);
@@ -466,9 +468,18 @@ export function ShikakuPage() {
       setPuzzleStartTime(Date.now());
       return;
     }
+    playCountdownTick();
     const t = setTimeout(() => setCountdownNum((n) => n - 1), 700);
     return () => clearTimeout(t);
   }, [phase, countdownNum]);
+
+  useEffect(() => {
+    const previousPhase = previousPhaseRef.current;
+    previousPhaseRef.current = phase;
+    if (previousPhase && previousPhase !== "finished" && phase === "finished") {
+      playGameOver();
+    }
+  }, [phase]);
 
   /* ── Start a new run ────────────────────────────────────── */
   const pendingGenRef = useRef<{ diff: Difficulty; newSeed: number; custom: boolean; challenge?: boolean } | null>(null);

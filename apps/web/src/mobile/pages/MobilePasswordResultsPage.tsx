@@ -7,6 +7,7 @@ import { showToast } from "../../lib/toast";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { getDisplayName } from "../../lib/session";
+import { playGameOver } from "../../lib/sounds";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
@@ -20,6 +21,7 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
   const navHandledRef = useRef(false);
+  const playedResultsSoundRef = useRef(false);
 
   const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = getDisplayName(s.name, s.id); return acc; }, {}), [sessions]);
 
@@ -37,6 +39,12 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
       if (game.host_id !== sessionId) showToast(`📢 ${game.announcement.text}`, "info");
     }
   }, [game?.announcement, game?.host_id, sessionId]);
+
+  useEffect(() => {
+    if (!game || playedResultsSoundRef.current || game.phase !== "results") return;
+    playedResultsSoundRef.current = true;
+    playGameOver();
+  }, [game?.phase, game]);
 
   if (!game) return <MobileGameNotFound theme="password" />;
 
