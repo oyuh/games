@@ -89,7 +89,7 @@ export const demoMutators = {
         announcement: null,
         settings: {
           targetScore: args.targetScore,
-          roundDurationSec: 45,
+          roundDurationSec: 300,
           roundEndsAt: args.roundEndsAt,
           teamsLocked: false
         },
