@@ -364,8 +364,8 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
             const isMyTeam = myTeamIndex === i;
             return (
               <div key={team.name} className={`m-score-chip${isMyTeam ? " m-score-chip--mine" : ""}`} style={{ borderColor: color }}>
-                <span style={{ color, fontWeight: 600, fontSize: "0.8rem" }}>{team.name}</span>
-                <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>{score} / {game.settings.targetScore}</span>
+                <span className="m-score-chip-name" style={{ color }}>{team.name}</span>
+                <span className="m-score-chip-value">{score} / {game.settings.targetScore}</span>
               </div>
             );
           })}
@@ -534,9 +534,9 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
               )}
             </div>
 
-            <div className="m-card">
-              <h3 className="m-card-title">Round Timeline</h3>
-              <div style={{ display: "grid", gap: "0.65rem" }}>
+            <details className="m-card m-pw-timeline" open={timeline.length <= 2}>
+              <summary>Round Timeline</summary>
+              <div className="m-pw-timeline-body">
                 {timeline.length === 0 && <p style={{ margin: 0, opacity: 0.65, fontSize: "0.9rem" }}>Waiting...</p>}
                 {timeline.map((entry) => (
                   <div
@@ -568,7 +568,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                   </div>
                 ))}
               </div>
-            </div>
+            </details>
           </>
         );
       })()}
@@ -592,7 +592,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
 
       {/* Rounds history */}
       {roundsForView.length > 0 && (
-        <div className="m-card">
+        <div className="m-card m-bottom-safe">
           <h3 className="m-card-title">Rounds</h3>
           <div className="m-data-table-wrap">
             <table className="m-data-table">
@@ -614,7 +614,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
 
       {/* Host: reset */}
       {!isSpectator && isHost && game.phase === "results" && (
-        <div className="m-card">
+        <div className="m-card m-bottom-safe">
           <button
             className="m-btn m-btn-muted"
             style={{ width: "100%" }}
