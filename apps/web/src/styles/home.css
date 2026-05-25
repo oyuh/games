@@ -2770,7 +2770,7 @@ a.solo-card-title-link {
 .hc-card-anim:has(> .hc-config) {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   flex: 1;
   gap: 0.55rem;
   width: 100%;
