@@ -103,6 +103,7 @@
   transition: border-color 0.2s, box-shadow 0.2s;
   position: relative;
   overflow: hidden;
+  overflow: clip;
 }
 
 .solo-card--playable {
@@ -666,7 +667,7 @@ a.solo-card-title-link {
   border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
   background: linear-gradient(to bottom right, #232323, #1a1a1a);
   box-shadow: 0 8px 36px rgba(0, 0, 0, 0.45);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.4s, filter 0.4s;
   position: relative;
   overflow: hidden;
 }
@@ -846,6 +847,34 @@ a.solo-card-title-link {
   opacity: 0.55;
   filter: grayscale(0.3) brightness(0.85);
   transition: opacity 0.4s, filter 0.4s;
+}
+
+.home-card--route-highlight {
+  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 62%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--card-accent, var(--primary)) 36%, transparent),
+    0 0 26px color-mix(in srgb, var(--card-accent, var(--primary)) 18%, transparent),
+    0 14px 48px rgba(0, 0, 0, 0.52);
+  transform: translateY(-3px);
+  z-index: 3;
+  animation: route-card-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes route-card-pulse {
+  0%, 100% {
+    border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 54%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--card-accent, var(--primary)) 30%, transparent),
+      0 0 22px color-mix(in srgb, var(--card-accent, var(--primary)) 15%, transparent),
+      0 14px 48px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 72%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--card-accent, var(--primary)) 44%, transparent),
+      0 0 34px color-mix(in srgb, var(--card-accent, var(--primary)) 24%, transparent),
+      0 16px 52px rgba(0, 0, 0, 0.55);
+  }
 }
 
 /* ── Coming Soon badge ───────────────────────────────────────── */
@@ -1630,6 +1659,7 @@ a.solo-card-title-link {
   .home-card--password .hc-pw-flow > span,
   .home-card--chain .hc-chain-word,
   .home-card--shade .hc-shade-cell,
+  .home-card--route-highlight,
   .solo-suggestion-line,
   .solo-suggestion-check,
   .hc-loc-map-panel,
@@ -2257,7 +2287,7 @@ a.solo-card-title-link {
 
 .hc-summary-row {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 0.6rem;
   align-items: center;
   justify-content: center;
@@ -2301,6 +2331,7 @@ a.solo-card-title-link {
 .hc-config-back-btn {
   width: 100%;
   min-width: 0;
+  min-height: 2.35rem;
   padding: 0;
 }
 
@@ -2739,9 +2770,9 @@ a.solo-card-title-link {
 .hc-card-anim:has(> .hc-config) {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   flex: 1;
-  gap: 0.75rem;
+  gap: 0.55rem;
   width: 100%;
   min-height: 0;
 }

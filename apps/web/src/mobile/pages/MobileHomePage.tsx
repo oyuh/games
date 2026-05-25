@@ -1,8 +1,8 @@
-import { GAME_META, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
+import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, GAME_META, IMPOSTER_CLUE_VISIBILITY_OPTIONS, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGithub } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
@@ -11,6 +11,7 @@ import { GameIcon } from "../../components/shared/GameIcon";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, SessionGameType, setStoredName } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { isNameRestricted } from "../../hooks/useAdminBroadcast";
+import { getHomeRouteGame, type HomeRouteGame } from "../../lib/home-route-highlight";
 
 /** Scroll-wheel on a <select> cycles through its options */
 function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
@@ -22,14 +23,23 @@ function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
   };
 }
 
+function formatClueVisibility(value: number) {
+  if (value <= 0) return "No hints";
+  if (value >= 1) return "Full clues";
+  return `${Math.round(value * 100)}% shown`;
+}
+
 const NEW_GAME_ISSUE_URL = "https://github.com/oyuh/games/issues/new?template=new-game.md&title=%5BNew%20Game%5D%20";
 
 export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const zero = useZero();
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeHighlight = useMemo(() => getHomeRouteGame(location.search), [location.search]);
   const [name, setName] = useState(() => getOrCreateStoredName(sessionId));
   const [savedName, setSavedName] = useState(() => getOrCreateStoredName(sessionId));
   const [firstVisit, setFirstVisit] = useState(() => !hasVisited());
+  const [activeRouteHighlight, setActiveRouteHighlight] = useState<HomeRouteGame | null>(routeHighlight);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -68,6 +78,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [imposterCategory, setImposterCategory] = useState("animals");
   const [imposterImposters, setImposterImposters] = useState(1);
   const [imposterRounds, setImposterRounds] = useState(3);
+  const [imposterClueVisibility, setImposterClueVisibility] = useState(DEFAULT_IMPOSTER_CLUE_VISIBILITY);
   const [passwordTeams, setPasswordTeams] = useState(2);
   const [passwordTargetScore, setPasswordTargetScore] = useState(10);
   const [passwordCategory, setPasswordCategory] = useState("animals");
@@ -80,6 +91,38 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [shadeLeaderPick, setShadeLeaderPick] = useState(false);
   const [locCluePairs, setLocCluePairs] = useState(2);
   const [locRoundsPerPlayer, setLocRoundsPerPlayer] = useState(1);
+
+  useEffect(() => {
+    setActiveRouteHighlight(routeHighlight);
+  }, [routeHighlight]);
+
+  const dismissRouteHighlight = useCallback(() => {
+    setActiveRouteHighlight(null);
+  }, []);
+
+  useEffect(() => {
+    if (!activeRouteHighlight) return;
+    const options = { once: true } as AddEventListenerOptions;
+    window.addEventListener("pointermove", dismissRouteHighlight, options);
+    window.addEventListener("pointerdown", dismissRouteHighlight, options);
+    window.addEventListener("keydown", dismissRouteHighlight, options);
+    window.addEventListener("touchstart", dismissRouteHighlight, options);
+    return () => {
+      window.removeEventListener("pointermove", dismissRouteHighlight);
+      window.removeEventListener("pointerdown", dismissRouteHighlight);
+      window.removeEventListener("keydown", dismissRouteHighlight);
+      window.removeEventListener("touchstart", dismissRouteHighlight);
+    };
+  }, [activeRouteHighlight, dismissRouteHighlight]);
+
+  useEffect(() => {
+    if (!activeRouteHighlight) return;
+    const animationFrame = window.requestAnimationFrame(() => {
+      const card = document.querySelector<HTMLElement>(`[data-home-game-card="${activeRouteHighlight}"]`);
+      card?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [activeRouteHighlight]);
 
   useEffect(() => {
     if (firstVisit && nameInputRef.current) nameInputRef.current.focus();
@@ -126,12 +169,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const routeHighlightClass = (game: HomeRouteGame) =>
+    activeRouteHighlight === game ? " m-game-card--route-highlight" : "";
+
   const createImposter = async () => {
     setPendingAction("create-imposter");
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters })).server;
+      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters, clueVisibility: imposterClueVisibility })).server;
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       navigate(`/imposter/${id}`);
     } finally { setPendingAction(null); }
@@ -403,7 +449,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <h3 className="m-home-games-heading">Create a Game</h3>
 
       {/* Imposter */}
-      <div className="m-game-card m-game-card--imposter">
+      <div className={`m-game-card m-game-card--imposter${routeHighlightClass("imposter")}`} data-home-game-card="imposter">
         <button className="m-game-card-header" onClick={() => toggle("imposter")}>
           <div className="m-game-card-info">
             <GameIcon game="imposter" size={18} />
@@ -451,6 +497,20 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 </select>
               </div>
             </div>
+            <div className="m-config-field">
+              <label htmlFor="mobile-home-imposter-clue-visibility" className="m-config-label">Hint Visibility</label>
+              <select
+                id="mobile-home-imposter-clue-visibility"
+                className="m-input"
+                value={imposterClueVisibility}
+                onChange={(e) => setImposterClueVisibility(Number(e.target.value))}
+                onWheel={wheelSelect(imposterClueVisibility, IMPOSTER_CLUE_VISIBILITY_OPTIONS, setImposterClueVisibility)}
+              >
+                {IMPOSTER_CLUE_VISIBILITY_OPTIONS.map((value) => (
+                  <option key={value} value={value}>{formatClueVisibility(value)}</option>
+                ))}
+              </select>
+            </div>
             <div className="m-create-actions">
               <button className={`m-btn m-browse-globe${imposterPublicCount === 0 ? " m-globe-empty" : ""}`} onClick={() => { setBrowsing("imposter"); setExpanded(null); }} data-tooltip="Browse Public Games" data-tooltip-variant="info">
                 <FiGlobe size={16} />
@@ -470,7 +530,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* Password */}
-      <div className="m-game-card m-game-card--password">
+      <div className={`m-game-card m-game-card--password${routeHighlightClass("password")}`} data-home-game-card="password">
         <button className="m-game-card-header" onClick={() => toggle("password")}>
           <div className="m-game-card-info">
             <GameIcon game="password" size={18} />
@@ -537,7 +597,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* Chain Reaction */}
-      <div className="m-game-card m-game-card--chain">
+      <div className={`m-game-card m-game-card--chain${routeHighlightClass("chain")}`} data-home-game-card="chain">
         <button className="m-game-card-header" onClick={() => toggle("chain")}>
           <div className="m-game-card-info">
             <GameIcon game="chain" size={18} />
@@ -611,7 +671,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* Shade Signal */}
-      <div className="m-game-card m-game-card--shade">
+      <div className={`m-game-card m-game-card--shade${routeHighlightClass("shade")}`} data-home-game-card="shade">
         <button className="m-game-card-header" onClick={() => toggle("shade")}>
           <div className="m-game-card-info">
             <GameIcon game="shade" size={18} />
@@ -680,7 +740,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         )}
       </div>
 
-      <div className="m-game-card m-game-card--location">
+      <div className={`m-game-card m-game-card--location${routeHighlightClass("location")}`} data-home-game-card="location">
         <button className="m-game-card-header" onClick={() => toggle("location")}>
           <div className="m-game-card-info">
             <GameIcon game="location" size={18} />

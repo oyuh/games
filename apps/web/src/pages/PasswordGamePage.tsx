@@ -311,6 +311,10 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
   };
 
   const myTeamSkips = myTeam ? (game.settings.skipsRemaining?.[myTeam.name] ?? 0) : 0;
+  const gameProgress = Math.min(
+    1,
+    Math.max(0, ...Object.values(game.scores)) / Math.max(1, game.settings.targetScore)
+  );
   const activeRoundView = myActiveRound
     ? {
         ...myActiveRound,
@@ -374,6 +378,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
           guess={guess}
           liveEntries={liveEntries}
           skipsRemaining={myTeamSkips}
+          gameProgress={gameProgress}
           onClueChange={handleClueChange}
           onGuessChange={handleGuessChange}
           onSubmitClue={submitClue}

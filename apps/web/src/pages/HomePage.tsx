@@ -1,9 +1,9 @@
-import { GAME_META, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
+import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, GAME_META, IMPOSTER_CLUE_VISIBILITY_OPTIONS, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import "../styles/home.css";
 import { nanoid } from "nanoid";
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
 import { FiArrowLeft, FiBookOpen, FiCheck, FiChevronDown, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
@@ -20,6 +20,7 @@ import { useZeroConnected } from "../App";
 import { useConnectionDebug } from "../lib/connection-debug";
 import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
 import { useSyncSessionActivityState, useSyncSessionResumeCountdown } from "../lib/sync-session-activity";
+import { getHomeRouteGame, type HomeRouteGame } from "../lib/home-route-highlight";
 
 const ImposterDemo = lazy(() => import("../components/demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
 const PasswordDemo = lazy(() => import("../components/demos/PasswordDemo").then(({ PasswordDemo }) => ({ default: PasswordDemo })));
@@ -145,6 +146,12 @@ function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
   };
 }
 
+function formatClueVisibility(value: number) {
+  if (value <= 0) return "No hints";
+  if (value >= 1) return "Full clues";
+  return `${Math.round(value * 100)}% shown`;
+}
+
 type SummaryItem = { value: string; icon: IconType; label?: string; accent?: string };
 
 function ConfigSummary({ items }: { items: SummaryItem[] }) {
@@ -184,6 +191,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
   const zero = useZero();
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeHighlight = useMemo(() => getHomeRouteGame(location.search), [location.search]);
   const debug = useConnectionDebug();
   const zeroConnected = useZeroConnected();
   const syncTimedOut = useSyncTimedOut();
@@ -249,6 +258,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const [name, setName] = useState(() => getOrCreateStoredName(sessionId));
   const [savedName, setSavedName] = useState(() => getOrCreateStoredName(sessionId));
   const [firstVisit, setFirstVisit] = useState(() => !hasVisited());
+  const [activeRouteHighlight, setActiveRouteHighlight] = useState<HomeRouteGame | null>(routeHighlight);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Sync when name is changed externally (e.g. welcome modal)
@@ -293,6 +303,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const [imposterCategory, setImposterCategory] = useState("animals");
   const [imposterImposters, setImposterImposters] = useState(1);
   const [imposterRounds, setImposterRounds] = useState(3);
+  const [imposterClueVisibility, setImposterClueVisibility] = useState(DEFAULT_IMPOSTER_CLUE_VISIBILITY);
 
   // Password config
   const [passwordExpanded, setPasswordExpanded] = useState(false);
@@ -321,6 +332,38 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   // Mobile scroll dot tracking
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeDot, setActiveDot] = useState(0);
+
+  useEffect(() => {
+    setActiveRouteHighlight(routeHighlight);
+  }, [routeHighlight]);
+
+  const dismissRouteHighlight = useCallback(() => {
+    setActiveRouteHighlight(null);
+  }, []);
+
+  useEffect(() => {
+    if (!activeRouteHighlight) return;
+    const options = { once: true } as AddEventListenerOptions;
+    window.addEventListener("pointermove", dismissRouteHighlight, options);
+    window.addEventListener("pointerdown", dismissRouteHighlight, options);
+    window.addEventListener("keydown", dismissRouteHighlight, options);
+    window.addEventListener("touchstart", dismissRouteHighlight, options);
+    return () => {
+      window.removeEventListener("pointermove", dismissRouteHighlight);
+      window.removeEventListener("pointerdown", dismissRouteHighlight);
+      window.removeEventListener("keydown", dismissRouteHighlight);
+      window.removeEventListener("touchstart", dismissRouteHighlight);
+    };
+  }, [activeRouteHighlight, dismissRouteHighlight]);
+
+  useEffect(() => {
+    if (!activeRouteHighlight) return;
+    const animationFrame = window.requestAnimationFrame(() => {
+      const card = scrollRef.current?.querySelector<HTMLElement>(`[data-home-game-card="${activeRouteHighlight}"]`);
+      card?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    });
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [activeRouteHighlight]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -392,7 +435,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters })).server;
+      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters, clueVisibility: imposterClueVisibility })).server;
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -609,6 +652,12 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       });
   };
 
+  const firstVisitGlowClass = firstVisit && !activeRouteHighlight ? " home-card--glow" : "";
+  const dimmedClass = (game: HomeRouteGame) =>
+    firstVisit && activeRouteHighlight !== game ? " home-card--dimmed" : "";
+  const routeHighlightClass = (game: HomeRouteGame) =>
+    activeRouteHighlight === game ? " home-card--route-highlight" : "";
+
   return (
     <>
     <ActiveGameModal sessionId={sessionId} suppress={pendingAction !== null} />
@@ -619,7 +668,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       <div className="home-section-multi">
 
       {/* ── Card 1: Utils ──────────────────────────────────── */}
-      <div className={`home-card home-card--utils${firstVisit ? " home-card--glow" : ""}`}>
+      <div className={`home-card home-card--utils${firstVisitGlowClass}`}>
         <div className="home-card-body">
           {/* First-visit hint */}
           {firstVisit && (
@@ -792,7 +841,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 2: Imposter ───────────────────────────────── */}
-      <div className={`home-card home-card--imposter${firstVisit ? " home-card--dimmed" : ""}`}>
+      <div
+        className={`home-card home-card--imposter${dimmedClass("imposter")}${routeHighlightClass("imposter")}`}
+        data-home-game-card="imposter"
+      >
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${imposterExpanded || imposterBrowsing ? " hc-game-title-lg--compact" : ""}`}>Imposter</h2>
 
@@ -847,6 +899,20 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                     </select>
                   </div>
                 </div>
+                <div className="hc-config-field">
+                  <label htmlFor="home-imposter-clue-visibility" className="hc-config-label" data-tooltip="How much of submitted clues the imposter can peek at before sending their clue." data-tooltip-variant="info">Hint Visibility</label>
+                  <select
+                    id="home-imposter-clue-visibility"
+                    className="input"
+                    value={imposterClueVisibility}
+                    onChange={(e) => setImposterClueVisibility(Number(e.target.value))}
+                    onWheel={wheelSelect(imposterClueVisibility, IMPOSTER_CLUE_VISIBILITY_OPTIONS, setImposterClueVisibility)}
+                  >
+                    {IMPOSTER_CLUE_VISIBILITY_OPTIONS.map((value) => (
+                      <option key={value} value={value}>{formatClueVisibility(value)}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           ) : (
@@ -885,7 +951,8 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 items={[
                   { value: imposterCategoryLabels[imposterCategory] ?? imposterCategory, icon: FiBookOpen, accent: "var(--card-accent)", label: "Category" },
                   { value: `${imposterImposters}×`, icon: FiUserCheck, label: "Imposters" },
-                  { value: `${imposterRounds}r`, icon: FiClock, label: "Rounds" }
+                  { value: `${imposterRounds}r`, icon: FiClock, label: "Rounds" },
+                  { value: formatClueVisibility(imposterClueVisibility).replace(" shown", ""), icon: FiSliders, label: "Hint visibility" }
                 ]}
               />
             )}
@@ -938,7 +1005,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 3: Password ───────────────────────────────── */}
-      <div className={`home-card home-card--password${firstVisit ? " home-card--dimmed" : ""}`}>
+      <div
+        className={`home-card home-card--password${dimmedClass("password")}${routeHighlightClass("password")}`}
+        data-home-game-card="password"
+      >
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${passwordExpanded || passwordBrowsing ? " hc-game-title-lg--compact" : ""}`}>Password</h2>
 
@@ -1089,7 +1159,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 4: Chain Reaction ─────────────────────────── */}
-      <div className={`home-card home-card--chain${firstVisit ? " home-card--dimmed" : ""}`}>
+      <div
+        className={`home-card home-card--chain${dimmedClass("chain")}${routeHighlightClass("chain")}`}
+        data-home-game-card="chain"
+      >
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${chainExpanded || chainBrowsing ? " hc-game-title-lg--compact" : ""}`}>Chain Reaction</h2>
 
@@ -1234,7 +1307,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 5: Shade Signal ──────────────────────────── */}
-      <div className={`home-card home-card--shade${firstVisit ? " home-card--dimmed" : ""}`}>
+      <div
+        className={`home-card home-card--shade${dimmedClass("shade")}${routeHighlightClass("shade")}`}
+        data-home-game-card="shade"
+      >
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${shadeExpanded || shadeBrowsing ? " hc-game-title-lg--compact" : ""}`}>Shade Signal</h2>
 
@@ -1359,7 +1435,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* ── Card 6: Location Signal ──────────────────────────── */}
-      <div className={`home-card home-card--location${firstVisit ? " home-card--dimmed" : ""}`}>
+      <div
+        className={`home-card home-card--location${dimmedClass("location")}${routeHighlightClass("location")}`}
+        data-home-game-card="location"
+      >
         <div className="home-card-body hc-centered">
           <h2 className={`hc-game-title-lg${locationExpanded || locationBrowsing ? " hc-game-title-lg--compact" : ""}`}>Location Signal</h2>
 
