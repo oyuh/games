@@ -902,6 +902,7 @@
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .m-game-card-top {
@@ -1890,6 +1891,37 @@
 .m-game-card--location {
   border-color: color-mix(in srgb, #f59e0b 18%, var(--border));
   --card-accent: #f59e0b;
+}
+
+.m-game-card--route-highlight {
+  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 62%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--card-accent, var(--primary)) 30%, transparent),
+    0 0 22px color-mix(in srgb, var(--card-accent, var(--primary)) 18%, transparent),
+    0 10px 28px rgba(0, 0, 0, 0.42);
+  transform: translateY(-2px);
+  animation: m-route-card-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes m-route-card-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--card-accent, var(--primary)) 26%, transparent),
+      0 0 18px color-mix(in srgb, var(--card-accent, var(--primary)) 14%, transparent),
+      0 10px 28px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--card-accent, var(--primary)) 42%, transparent),
+      0 0 30px color-mix(in srgb, var(--card-accent, var(--primary)) 24%, transparent),
+      0 12px 32px rgba(0, 0, 0, 0.46);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-game-card--route-highlight {
+    animation: none;
+  }
 }
 
 .m-game-card--imposter .m-game-card-info > svg { color: #7eb8ff; }

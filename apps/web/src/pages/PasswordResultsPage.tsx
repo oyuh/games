@@ -1,8 +1,8 @@
-import { mutators, queries, gameCategoryLabels } from "@games/shared";
+import { isEncrypted, mutators, queries, gameCategoryLabels } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/password.css";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiAward, FiTag } from "react-icons/fi";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
@@ -12,6 +12,7 @@ import { playGameOver } from "../lib/sounds";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordResultsPage } from "../mobile/pages/MobilePasswordResultsPage";
 import { GameIcon } from "../components/shared/GameIcon";
+import { useGameSecret } from "../lib/game-secrets";
 
 function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
 
@@ -25,8 +26,15 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
   const prevAnnouncementTs = useRef<number | null>(null);
   const navHandledRef = useRef(false);
   const playedResultsSoundRef = useRef(false);
+  const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
 
   const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
+  const { decryptValue } = useGameSecret({
+    gameType: "password",
+    gameId,
+    sessionId,
+    enabled: Boolean(game && game.phase === "results"),
+  });
 
   useEffect(() => {
     if (!game) return;
@@ -67,6 +75,32 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
     playGameOver();
   }, [game?.phase, game]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const rounds = game?.rounds ?? [];
+    if (rounds.length === 0) {
+      setDecryptedRoundWords({});
+      return;
+    }
+    void Promise.all(
+      rounds.map(async (round, index) => ({
+        index,
+        value: await decryptValue(round.word),
+      }))
+    ).then((rows) => {
+      if (cancelled) return;
+      setDecryptedRoundWords(
+        rows.reduce<Record<number, string | null>>((acc, row) => {
+          acc[row.index] = row.value;
+          return acc;
+        }, {})
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.rounds, decryptValue]);
+
   if (!game) {
     return (
       <div className="game-page">
@@ -85,6 +119,10 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
   const winners = sortedScores.filter(([, score]) => score === topScore);
   const isTie = winners.length > 1 && topScore > 0;
   const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
+  const roundsForView = game.rounds.map((round, index) => ({
+    ...round,
+    word: decryptedRoundWords[index] ?? (isEncrypted(round.word) ? "••••" : round.word),
+  }));
 
   return (
     <div className="game-page" data-game-theme="password">
@@ -140,7 +178,7 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
         </div>
       </div>
 
-      <PasswordRoundsTable rounds={game.rounds} teams={game.teams} names={names} defaultOpen />
+      <PasswordRoundsTable rounds={roundsForView} teams={game.teams} names={names} defaultOpen />
 
       {isHost ? (
         <div className="game-section">

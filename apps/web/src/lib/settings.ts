@@ -37,7 +37,7 @@ const defaultSoundPreferences: SoundPreferences = {
 const defaults: Settings = {
   theme: "dark",
   sidebarPosition: "left",
-  customCursor: true,
+  customCursor: false,
   customCursorScale: CURSOR_SCALE_DEFAULT,
   soundEnabled: false,
   soundPreferences: { ...defaultSoundPreferences },

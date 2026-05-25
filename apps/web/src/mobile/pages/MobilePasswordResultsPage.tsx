@@ -1,12 +1,13 @@
-import { mutators, queries } from "@games/shared";
+import { isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiAward } from "react-icons/fi";
 import { showToast } from "../../lib/toast";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { playGameOver } from "../../lib/sounds";
+import { useGameSecret } from "../../lib/game-secrets";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
@@ -20,6 +21,13 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
   const prevAnnouncementTs = useRef<number | null>(null);
   const navHandledRef = useRef(false);
   const playedResultsSoundRef = useRef(false);
+  const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
+  const { decryptValue } = useGameSecret({
+    gameType: "password",
+    gameId,
+    sessionId,
+    enabled: Boolean(game && game.phase === "results"),
+  });
 
   useEffect(() => {
     if (!game) return;
@@ -42,6 +50,32 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
     playGameOver();
   }, [game?.phase, game]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const rounds = game?.rounds ?? [];
+    if (rounds.length === 0) {
+      setDecryptedRoundWords({});
+      return;
+    }
+    void Promise.all(
+      rounds.map(async (round, index) => ({
+        index,
+        value: await decryptValue(round.word),
+      }))
+    ).then((rows) => {
+      if (cancelled) return;
+      setDecryptedRoundWords(
+        rows.reduce<Record<number, string | null>>((acc, row) => {
+          acc[row.index] = row.value;
+          return acc;
+        }, {})
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.rounds, decryptValue]);
+
   if (!game) return <MobileGameNotFound theme="password" />;
 
   const isHost = game.host_id === sessionId;
@@ -49,6 +83,10 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
   const topScore = sortedScores[0]?.[1] ?? 0;
   const winners = sortedScores.filter(([, s]) => s === topScore);
   const isTie = winners.length > 1 && topScore > 0;
+  const roundsForView = game.rounds.map((round, index) => ({
+    ...round,
+    word: decryptedRoundWords[index] ?? (isEncrypted(round.word) ? "••••" : round.word),
+  }));
 
   return (
     <div className="m-page" data-game-theme="password">
@@ -102,14 +140,14 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
       </div>
 
       {/* Rounds table */}
-      {game.rounds.length > 0 && (
+      {roundsForView.length > 0 && (
         <div className="m-card">
           <h3 className="m-card-title">Rounds</h3>
           <div className="m-data-table-wrap">
             <table className="m-data-table">
               <thead><tr><th>#</th><th>Team</th><th>Word</th><th>Pts</th></tr></thead>
               <tbody>
-                {game.rounds.map((r) => (
+                {roundsForView.map((r) => (
                   <tr key={r.roundId ?? `${r.round}-${r.teamIndex}`}>
                     <td>{r.round}</td>
                     <td>{game.teams[r.teamIndex]?.name ?? `Team ${r.teamIndex + 1}`}</td>

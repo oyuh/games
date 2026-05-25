@@ -54,6 +54,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
+  const clueInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   // Controlled map state for auto-zoom/pan
@@ -193,6 +194,17 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     }
     setDraftMarker(null);
   }, [game?.settings.currentRound, game?.phase]);
+
+  useEffect(() => {
+    if (!game?.phase.startsWith("clue") || !isLeader || isSpectator) return;
+    const input = clueInputRef.current;
+    if (!input) return;
+    const timer = window.setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [game?.phase, isLeader, isSpectator]);
 
   // Reset leader target on round change
   useEffect(() => {
@@ -695,8 +707,8 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
             </div>
           )}
           <form onSubmit={(e) => void submitClue(e, currentClueRound)} className="m-shade-clue-form">
-            <input className="m-input" onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire!" : `Clue ${currentClueRound}!`} maxLength={80} />
-            <button className="m-btn m-btn-primary" type="submit" disabled={!draftClue.trim()}>
+            <input ref={clueInputRef} className="m-input" onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire!" : `Clue ${currentClueRound}!`} maxLength={80} />
+            <button className="m-btn m-btn-primary" type="submit" disabled={!draftClue.trim()} onMouseDown={(event) => event.preventDefault()}>
               <FiSend size={14} /> Send
             </button>
           </form>

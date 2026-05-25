@@ -51,7 +51,8 @@ export const demoMutators = {
           currentRound: args.currentRound,
           roundDurationSec: 75,
           votingDurationSec: 45,
-          phaseEndsAt: args.phaseEndsAt
+          phaseEndsAt: args.phaseEndsAt,
+          clueVisibility: 0.65
         },
         created_at: ts,
         updated_at: ts
