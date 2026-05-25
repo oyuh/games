@@ -48,6 +48,7 @@ const imposterGames = table("imposter_games").columns({
     roundDurationSec: number;
     votingDurationSec: number;
     phaseEndsAt: number | null;
+    clueVisibility?: number;
     skipVotes?: string[];
   }>(),
   is_public: boolean(),

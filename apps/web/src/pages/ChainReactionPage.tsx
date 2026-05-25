@@ -38,6 +38,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const [guess, setGuess] = useState("");
   const [showDemo, setShowDemo] = useState(false);
   const inlineInputRef = useRef<HTMLInputElement>(null);
+  const submissionFirstInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   // Chain submission state (for custom mode)
@@ -169,8 +170,20 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (editingIndex !== null) {
       inlineInputRef.current?.focus();
+      inlineInputRef.current?.select();
     }
   }, [editingIndex]);
+
+  useEffect(() => {
+    if (game?.phase !== "submitting" || hasSubmitted || submissionWords.length === 0) return;
+    const input = submissionFirstInputRef.current;
+    if (!input) return;
+    const timer = window.setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [game?.phase, hasSubmitted, submissionWords.length]);
 
   useEffect(() => {
     if (editingIndex === null) {
@@ -557,6 +570,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                   <div key={id} className="cr-submit-slot">
                     <span className="cr-slot-num">{i + 1}</span>
                     <input
+                      ref={i === 0 ? submissionFirstInputRef : undefined}
                       className="cr-submit-input"
                       onFocus={(e) => e.currentTarget.select()}
                       value={word}

@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
-import { FiArrowRight, FiCheck, FiLock } from "react-icons/fi";
+import { useState, type CSSProperties } from "react";
+import { FiArrowRight, FiCheck, FiChevronUp, FiLock } from "react-icons/fi";
 import { BorringAvatar } from "../shared/BorringAvatar";
 import { getPasswordPlayerName } from "../../lib/password-names";
 
@@ -16,6 +16,7 @@ export function PasswordTeamGrid({
   showScores,
   targetScore,
   isLobby,
+  defaultExpanded,
   isHost,
   teamsLocked,
   onSwitchTeam,
@@ -29,14 +30,29 @@ export function PasswordTeamGrid({
   showScores?: boolean;
   targetScore?: number;
   isLobby?: boolean;
+  defaultExpanded?: boolean;
   isHost?: boolean;
   teamsLocked?: boolean | undefined;
   onSwitchTeam?: (teamName: string) => void;
   onMovePlayer?: (playerId: string, teamName: string) => void;
 }) {
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(
+    () => new Set(defaultExpanded ? teams.map((team) => team.name) : [])
+  );
   const myTeam = teams.find((t) => t.members.includes(sessionId))?.name;
   // Create a flat list of all players to determine their index for color assignment
   const allPlayers = teams.flatMap((t) => t.members);
+  const toggleTeam = (teamName: string) => {
+    setExpandedTeams((current) => {
+      const next = new Set(current);
+      if (next.has(teamName)) {
+        next.delete(teamName);
+      } else {
+        next.add(teamName);
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="game-section">
@@ -61,20 +77,47 @@ export function PasswordTeamGrid({
           const isMyTeam = team.name === myTeam;
           const canJoin = isLobby && !teamsLocked && !isMyTeam && onSwitchTeam;
           const memberCountLabel = `${team.members.length} ${team.members.length === 1 ? "player" : "players"}`;
+          const isExpanded = expandedTeams.has(team.name);
 
           return (
             <div
               key={team.name}
-              className={`game-team-card${isActive ? " game-team-card--active" : ""}${isMyTeam ? " game-team-card--mine" : ""}${canJoin ? " game-team-card--joinable" : ""}`}
+              className={`game-team-card${isActive ? " game-team-card--active" : ""}${isMyTeam ? " game-team-card--mine" : ""}${canJoin ? " game-team-card--joinable" : ""}${isExpanded ? " game-team-card--expanded" : ""}`}
               style={{ "--team-color": color } as CSSProperties}
+              role="button"
+              tabIndex={0}
+              aria-expanded={isExpanded}
+              aria-label={isExpanded ? `Collapse ${team.name}` : `Show ${team.name} members`}
+              onClick={() => toggleTeam(team.name)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  toggleTeam(team.name);
+                }
+              }}
             >
-              <div className="game-team-header">
-                <div className="game-team-heading">
-                  <span className="game-team-name">{team.name}</span>
+              <span
+                className="game-team-expand-btn"
+                aria-hidden="true"
+              >
+                <FiChevronUp size={16} aria-hidden="true" />
+              </span>
+              <div className="game-team-summary">
+                <span className="game-team-name">{team.name}</span>
+                {showScores && (
+                  <span className="game-team-score" data-tooltip={`${team.name}'s score${targetScore ? ` - first to ${targetScore} wins` : ""}`} data-tooltip-variant="game">
+                    {score}{targetScore ? ` / ${targetScore}` : ""}
+                  </span>
+                )}
+              </div>
+
+              <div
+                className="game-team-details"
+                aria-hidden={!isExpanded}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="game-team-detail-meta">
                   <span className="game-team-meta">{memberCountLabel}</span>
-                </div>
-                <div className="game-team-badges">
-                  {showScores && <span className="game-team-score" data-tooltip={`${team.name}'s score${targetScore ? ` - first to ${targetScore} wins` : ""}`} data-tooltip-variant="game">{score}{targetScore ? ` / ${targetScore}` : ""}</span>}
                   {isMyTeam && (
                     <span className="game-team-state-badge game-team-state-badge--mine">
                       <FiCheck size={11} /> You're in
@@ -82,57 +125,58 @@ export function PasswordTeamGrid({
                   )}
                   {isActive && <span className="badge badge-warn" style={{ fontSize: "0.75rem" }} data-tooltip="This team is currently guessing" data-tooltip-variant="game">Playing</span>}
                 </div>
-              </div>
-              <div className="game-team-members">
-                {team.members.length > 0 ? (
-                  team.members.map((id) => {
-                    const n = getPasswordPlayerName(names, id);
-                    const isMe = id === sessionId;
-                    const playerIndex = allPlayers.indexOf(id);
-                    return (
-                      <div key={id} className="game-team-member-row">
-                        <div className="game-team-member-info">
-                          <span className={`game-team-avatar${isMe ? " game-team-avatar--me" : ""}`}>
-                            <BorringAvatar
-                              seed={id}
-                              playerIndex={playerIndex}
-                            />
-                          </span>
-                          <div className="game-team-member-copy">
-                            <span className={`game-team-member${isMe ? " game-team-member--me" : ""}`}>{n}</span>
-                            <span className="game-team-member-caption">{isMe ? "You" : "Player"}</span>
+
+                <div className="game-team-members">
+                  {team.members.length > 0 ? (
+                    team.members.map((id) => {
+                      const n = getPasswordPlayerName(names, id);
+                      const isMe = id === sessionId;
+                      const playerIndex = allPlayers.indexOf(id);
+                      return (
+                        <div key={id} className="game-team-member-row">
+                          <div className="game-team-member-info">
+                            <span className={`game-team-avatar${isMe ? " game-team-avatar--me" : ""}`}>
+                              <BorringAvatar
+                                seed={id}
+                                playerIndex={playerIndex}
+                              />
+                            </span>
+                            <div className="game-team-member-copy">
+                              <span className={`game-team-member${isMe ? " game-team-member--me" : ""}`}>{n}</span>
+                              <span className="game-team-member-caption">{isMe ? "You" : "Player"}</span>
+                            </div>
                           </div>
+                          {isHost && isLobby && !isMe && onMovePlayer && (
+                            <MoveTargets
+                              teams={teams}
+                              currentTeam={team.name}
+                              onMove={(targetTeam) => onMovePlayer(id, targetTeam)}
+                            />
+                          )}
                         </div>
-                        {isHost && isLobby && !isMe && onMovePlayer && (
-                          <MoveTargets
-                            teams={teams}
-                            currentTeam={team.name}
-                            onMove={(targetTeam) => onMovePlayer(id, targetTeam)}
-                          />
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <span className="game-team-empty">No members</span>
-                )}
-              </div>
-              <div className="game-team-footer">
-                {canJoin && (
-                  <button
-                    className="btn btn-sm game-team-join-btn"
-                    onClick={() => onSwitchTeam(team.name)}
-                    data-tooltip={`Switch to ${team.name}`}
-                    data-tooltip-variant="game"
-                  >
-                    <FiArrowRight size={14} /> {myTeam ? `Move to ${team.name}` : `Join ${team.name}`}
-                  </button>
-                )}
-                {isMyTeam && isLobby && (
-                  <div className="game-team-joined-note">
-                    <FiCheck size={13} /> You're already on this team
-                  </div>
-                )}
+                      );
+                    })
+                  ) : (
+                    <span className="game-team-empty">No members</span>
+                  )}
+                </div>
+                <div className="game-team-footer">
+                  {canJoin && (
+                    <button
+                      className="btn btn-sm game-team-join-btn"
+                      onClick={() => onSwitchTeam(team.name)}
+                      data-tooltip={`Switch to ${team.name}`}
+                      data-tooltip-variant="game"
+                    >
+                      <FiArrowRight size={14} /> {myTeam ? `Move to ${team.name}` : `Join ${team.name}`}
+                    </button>
+                  )}
+                  {isMyTeam && isLobby && (
+                    <div className="game-team-joined-note">
+                      <FiCheck size={13} /> You're already on this team
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );

@@ -1,16 +1,23 @@
-import { FormEvent } from "react";
+import { FormEvent, useEffect, useRef } from "react";
 import { FiEye, FiEyeOff, FiSend, FiCheck } from "react-icons/fi";
-import { imposterCategoryLabels } from "@games/shared";
+import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, imposterCategoryLabels } from "@games/shared";
 import { getDisplayName } from "../../lib/session";
 
-/** Redact a clue showing a contiguous ~65% chunk of each word. */
-function redactClue(text: string): string {
+/** Redact a clue by showing one contiguous chunk of each word. */
+function redactClue(text: string, visibility = DEFAULT_IMPOSTER_CLUE_VISIBILITY): string {
+  const clampedVisibility = Number.isFinite(visibility)
+    ? Math.min(1, Math.max(0, visibility))
+    : DEFAULT_IMPOSTER_CLUE_VISIBILITY;
+
+  if (clampedVisibility >= 1) return text;
+
   return text.split(" ").map((word) => {
     const len = word.length;
+    if (clampedVisibility <= 0) return "_".repeat(len);
     if (len <= 2) return "_".repeat(len);
-    const showCount = Math.max(1, Math.floor(len * 0.65));
+    const showCount = Math.max(1, Math.floor(len * clampedVisibility));
     // Start the revealed chunk at a deterministic offset (~20% in)
-    const start = Math.floor(len * 0.2);
+    const start = Math.min(Math.floor(len * 0.2), len - showCount);
     return word.split("").map((ch, i) =>
       i >= start && i < start + showCount ? ch : "_"
     ).join("");
@@ -28,6 +35,7 @@ export function ImposterClueSection({
   clues,
   sessionId,
   sessionById,
+  clueVisibility,
   onClueChange,
   onSubmit
 }: {
@@ -41,11 +49,24 @@ export function ImposterClueSection({
   clues: Array<{ sessionId: string; text: string }>;
   sessionId: string;
   sessionById: Record<string, string>;
+  clueVisibility?: number;
   onClueChange: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
 }) {
   const isImposter = role === "imposter";
   const othersClues = clues.filter((c) => c.sessionId !== sessionId);
+  const clueInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (submitted) return;
+    const input = clueInputRef.current;
+    if (!input) return;
+    const timer = window.setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [role, submitted]);
 
   return (
     <div className="game-section">
@@ -73,7 +94,7 @@ export function ImposterClueSection({
         </div>
       </div>
 
-      {isImposter && othersClues.length > 0 && (
+      {isImposter && clueVisibility !== 0 && othersClues.length > 0 && (
         <div style={{ marginBottom: "0.75rem" }}>
           <h4 className="game-section-label" style={{ fontSize: "0.8rem", opacity: 0.7 }}>Hints from other clues</h4>
           <div className="game-clue-recap">
@@ -83,7 +104,7 @@ export function ImposterClueSection({
                 <div key={c.sessionId} className="game-clue-item">
                   <span className="game-clue-name">{name}</span>
                   <span className="game-clue-text" style={{ fontFamily: "monospace", letterSpacing: "0.04em" }}>
-                    {redactClue(c.text)}
+                    {redactClue(c.text, clueVisibility)}
                   </span>
                 </div>
               );
@@ -102,6 +123,7 @@ export function ImposterClueSection({
       ) : (
         <form className="game-input-row" onSubmit={onSubmit}>
           <input
+            ref={clueInputRef}
             className="input flex-1"
             onFocus={(e) => e.currentTarget.select()}
             value={clue}
@@ -109,7 +131,12 @@ export function ImposterClueSection({
             placeholder={isImposter ? "Give a vague clue…" : "Give a clue about the word…"}
             maxLength={80}
           />
-          <button type="submit" className="btn btn-primary" disabled={!clue.trim()}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={!clue.trim()}
+            onMouseDown={(event) => event.preventDefault()}
+          >
             <FiSend size={14} /> Send
           </button>
         </form>

@@ -592,6 +592,14 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
           <Routes>
             <Route element={<AppShell />}>
               <Route path="/" element={<LazyRoute><HomePage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/imposter" element={<Navigate to="/?game=imposter" replace />} />
+              <Route path="/password" element={<Navigate to="/?game=password" replace />} />
+              <Route path="/chain" element={<Navigate to="/?game=chain" replace />} />
+              <Route path="/chain-reaction" element={<Navigate to="/?game=chain" replace />} />
+              <Route path="/shade" element={<Navigate to="/?game=shade" replace />} />
+              <Route path="/shade-signal" element={<Navigate to="/?game=shade" replace />} />
+              <Route path="/location" element={<Navigate to="/?game=location" replace />} />
+              <Route path="/location-signal" element={<Navigate to="/?game=location" replace />} />
               <Route path="/imposter/:id" element={<LazyRoute><ImposterPage sessionId={initialSessionId} /></LazyRoute>} />
               <Route path="/password/:id/begin" element={<LazyRoute><PasswordBeginPage sessionId={initialSessionId} /></LazyRoute>} />
               <Route path="/password/:id" element={<LazyRoute><PasswordGamePage sessionId={initialSessionId} /></LazyRoute>} />

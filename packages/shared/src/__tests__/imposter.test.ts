@@ -82,6 +82,17 @@ describe("Imposter — lobby phase", () => {
     expect(game.host_id).toBe("host1");
     expect(game.players).toHaveLength(1);
     expect(game.players[0].sessionId).toBe("host1");
+    expect(game.settings.clueVisibility).toBe(0.65);
+  });
+
+  it("stores the host's clue visibility setting", async () => {
+    await mutators.create({
+      args: { id: "game1", hostId: "host1", clueVisibility: 0.25 },
+      tx,
+      ctx: serverCtx("host1"),
+    });
+    const game = tx.getById("imposter_games", "game1") as any;
+    expect(game.settings.clueVisibility).toBe(0.25);
   });
 
   it("player can join the lobby", async () => {
