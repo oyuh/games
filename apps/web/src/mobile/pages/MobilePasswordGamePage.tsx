@@ -33,6 +33,8 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
   const [fallbackKey, setFallbackKey] = useState<string | null>(null);
   const [fallbackRetryNonce, setFallbackRetryNonce] = useState(0);
+  const clueInputRef = useRef<HTMLInputElement>(null);
+  const guessInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
   const isSpectatorRef = useRef(false);
   const navHandledRef = useRef(false);
@@ -189,6 +191,26 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
     clearDraft("clue");
     clearDraft("guess");
   }, [activeRoundId, clearDraft]);
+
+  useEffect(() => {
+    if (game?.phase !== "playing" || !myActiveRound) return;
+    const isGuesser = myActiveRound.guesserId === sessionId;
+    const input = isGuesser ? guessInputRef.current : clueInputRef.current;
+    if (!input) return;
+    const timer = window.setTimeout(() => {
+      input.focus();
+      if (!input.value) input.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [
+    game?.phase,
+    activeRoundId,
+    myActiveRound?.guesserId,
+    myActiveRound?.clues?.length,
+    myActiveRound?.guesses?.length,
+    decryptedActiveWord,
+    sessionId,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -416,8 +438,8 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                         <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)" }}>{ar.word}</span>
                       </div>
                       <form className="m-input-row" onSubmit={submitClue}>
-                        <input className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={clue} onChange={(e) => handleClueChange(e.target.value)} placeholder={ar.clues.length > 0 ? "Another clue..." : "Enter clue..."} maxLength={80} />
-                        <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}><FiSend size={14} /></button>
+                        <input ref={clueInputRef} className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={clue} onChange={(e) => handleClueChange(e.target.value)} placeholder={ar.clues.length > 0 ? "Another clue..." : "Enter clue..."} maxLength={80} />
+                        <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()} onMouseDown={(e) => e.preventDefault()}><FiSend size={14} /></button>
                       </form>
                     </>
                   ) : isClueGiver ? (
@@ -473,8 +495,8 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                   {isGuesser ? (
                     <>
                       <form className="m-input-row" onSubmit={submitGuess}>
-                        <input className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={guess} onChange={(e) => handleGuessChange(e.target.value)} placeholder="Type your guess..." maxLength={80} />
-                        <button type="submit" className="m-btn m-btn-primary" disabled={!guess.trim() || duplicateGuess}><FiSend size={14} /> Guess</button>
+                        <input ref={guessInputRef} className="m-input" onFocus={(e) => e.currentTarget.select()} style={{ flex: 1 }} value={guess} onChange={(e) => handleGuessChange(e.target.value)} placeholder="Type your guess..." maxLength={80} />
+                        <button type="submit" className="m-btn m-btn-primary" disabled={!guess.trim() || duplicateGuess} onMouseDown={(e) => e.preventDefault()}><FiSend size={14} /> Guess</button>
                       </form>
                       {duplicateGuess && (
                         <p style={{ margin: "0.5rem 0 0", color: "#f59e0b", fontSize: "0.82rem" }}>You already guessed that one.</p>

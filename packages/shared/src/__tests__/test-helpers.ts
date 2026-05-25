@@ -204,6 +204,7 @@ export function makeImposterGame(overrides: Partial<Row> & { id: string; host_id
       roundDurationSec: 75,
       votingDurationSec: 45,
       phaseEndsAt: null,
+      clueVisibility: 0.65,
     },
     is_public: false,
     created_at: Date.now(),

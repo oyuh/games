@@ -1,6 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
+import { DEFAULT_IMPOSTER_CLUE_VISIBILITY } from "../../types/game";
 import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
 import { imposterWordBank } from "./word-banks";
 
@@ -11,7 +12,8 @@ export const imposterMutators = {
       hostId: z.string(),
       category: z.string().optional(),
       rounds: z.number().min(1).max(10).optional(),
-      imposters: z.number().min(1).max(5).optional()
+      imposters: z.number().min(1).max(5).optional(),
+      clueVisibility: z.number().min(0).max(1).optional()
     }),
     async ({ args, tx }) => {
       const ts = now();
@@ -37,7 +39,8 @@ export const imposterMutators = {
           currentRound: 1,
           roundDurationSec: 75,
           votingDurationSec: 45,
-          phaseEndsAt: null
+          phaseEndsAt: null,
+          clueVisibility: args.clueVisibility ?? DEFAULT_IMPOSTER_CLUE_VISIBILITY
         },
         is_public: false,
         created_at: ts,

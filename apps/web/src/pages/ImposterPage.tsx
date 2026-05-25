@@ -1,4 +1,4 @@
-import { isEncrypted, mutators, queries } from "@games/shared";
+import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -355,6 +355,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
             clues={game.clues}
             sessionId={sessionId}
             sessionById={sessionById}
+            clueVisibility={game.settings.clueVisibility ?? DEFAULT_IMPOSTER_CLUE_VISIBILITY}
             onClueChange={setClue}
             onSubmit={submitClue}
           />

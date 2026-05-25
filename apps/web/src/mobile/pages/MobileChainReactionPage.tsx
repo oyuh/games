@@ -32,6 +32,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [guess, setGuess] = useState("");
   const inlineInputRef = useRef<HTMLInputElement>(null);
+  const submissionFirstInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   const [submissionWords, setSubmissionWords] = useState<string[]>([]);
@@ -163,8 +164,20 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (editingIndex !== null) {
       inlineInputRef.current?.focus();
+      inlineInputRef.current?.select();
     }
   }, [editingIndex]);
+
+  useEffect(() => {
+    if (game?.phase !== "submitting" || hasSubmitted || submissionWords.length === 0) return;
+    const input = submissionFirstInputRef.current;
+    if (!input) return;
+    const timer = window.setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [game?.phase, hasSubmitted, submissionWords.length]);
 
   useEffect(() => {
     if (editingIndex === null) {
@@ -490,6 +503,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                   <div key={id} className="m-cr-submit-slot">
                     <span className="m-cr-slot-num">{i + 1}</span>
                     <input
+                      ref={i === 0 ? submissionFirstInputRef : undefined}
                       className="m-input"
                       onFocus={(e) => e.currentTarget.select()}
                       value={word}

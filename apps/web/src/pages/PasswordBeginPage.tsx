@@ -178,7 +178,10 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
         names={names}
         activeTeamIndex={undefined}
         sessionId={sessionId}
+        showScores
+        targetScore={game.settings.targetScore}
         isLobby
+        defaultExpanded
         isHost={isHost}
         teamsLocked={game.settings.teamsLocked}
         onSwitchTeam={(teamName) =>

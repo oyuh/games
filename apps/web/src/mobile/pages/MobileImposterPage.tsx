@@ -1,4 +1,4 @@
-import { imposterCategoryLabels, isEncrypted, mutators, queries } from "@games/shared";
+import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, imposterCategoryLabels, isEncrypted, mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -19,13 +19,20 @@ import { callGameSecretInit, useGameSecret } from "../../lib/game-secrets";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 import { playVote } from "../../lib/sounds";
 
-/** Redact a clue showing a contiguous ~65% chunk of each word. */
-function redactClue(text: string): string {
+/** Redact a clue by showing one contiguous chunk of each word. */
+function redactClue(text: string, visibility = DEFAULT_IMPOSTER_CLUE_VISIBILITY): string {
+  const clampedVisibility = Number.isFinite(visibility)
+    ? Math.min(1, Math.max(0, visibility))
+    : DEFAULT_IMPOSTER_CLUE_VISIBILITY;
+
+  if (clampedVisibility >= 1) return text;
+
   return text.split(" ").map((word) => {
     const len = word.length;
+    if (clampedVisibility <= 0) return "_".repeat(len);
     if (len <= 2) return "_".repeat(len);
-    const showCount = Math.max(1, Math.floor(len * 0.65));
-    const start = Math.floor(len * 0.2);
+    const showCount = Math.max(1, Math.floor(len * clampedVisibility));
+    const start = Math.min(Math.floor(len * 0.2), len - showCount);
     return word.split("").map((ch, i) =>
       i >= start && i < start + showCount ? ch : "_"
     ).join("");
@@ -47,6 +54,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
+  const clueInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "imposter" });
@@ -211,6 +219,18 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
     prevAnnouncementRef.current = cur;
     showToast(`📢 ${cur.text}`, "info");
   }, [game?.announcement, isHost]);
+
+  useEffect(() => {
+    const hasSubmitted = Boolean(game?.clues.some((c) => c.sessionId === sessionId));
+    if (game?.phase !== "playing" || isSpectator || !inGame || me?.eliminated || hasSubmitted) return;
+    const input = clueInputRef.current;
+    if (!input) return;
+    const timer = window.setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [game?.phase, game?.settings.currentRound, isSpectator, inGame, me?.eliminated, sessionId]);
 
   if (!game) return <MobileGameNotFound theme="imposter" />;
 
@@ -392,6 +412,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
         const isImposter = me?.role === "imposter";
         const hasSubmitted = game.clues.some((c) => c.sessionId === sessionId);
         const othersClues = game.clues.filter((c) => c.sessionId !== sessionId);
+        const clueVisibility = game.settings.clueVisibility ?? DEFAULT_IMPOSTER_CLUE_VISIBILITY;
 
         return (
           <div className="m-card">
@@ -417,7 +438,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               </div>
             </div>
 
-            {isImposter && othersClues.length > 0 && (
+            {isImposter && clueVisibility !== 0 && othersClues.length > 0 && (
               <div style={{ marginTop: "0.5rem" }}>
                 <p style={{ fontSize: "0.75rem", opacity: 0.6, marginBottom: "0.25rem" }}>Hints from other clues</p>
                 <div className="m-clue-recap">
@@ -427,7 +448,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                       <div key={c.sessionId} className="m-clue-item">
                         <span className="m-clue-name">{name}</span>
                         <span className="m-clue-text" style={{ fontFamily: "monospace", letterSpacing: "0.04em" }}>
-                          {redactClue(c.text)}
+                          {redactClue(c.text, clueVisibility)}
                         </span>
                       </div>
                     );
@@ -446,6 +467,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
             ) : (
               <form className="m-input-row" onSubmit={submitClue} style={{ marginTop: "0.75rem" }}>
                 <input
+                  ref={clueInputRef}
                   className="m-input"
                   onFocus={(e) => e.currentTarget.select()}
                   style={{ flex: 1 }}
@@ -454,7 +476,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                   placeholder={isImposter ? "Give a vague clue…" : "Clue about the word…"}
                   maxLength={80}
                 />
-                <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()}>
+                <button type="submit" className="m-btn m-btn-primary" disabled={!clue.trim()} onMouseDown={(e) => e.preventDefault()}>
                   <FiSend size={14} />
                 </button>
               </form>
