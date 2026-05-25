@@ -93,6 +93,20 @@ function buildPasswordGuessEntry(
   };
 }
 
+function withPasswordPlayerName<T extends { playerNames?: Record<string, string> }>(
+  settings: T,
+  sessionId: string,
+  name: string
+) {
+  return {
+    ...settings,
+    playerNames: {
+      ...(settings.playerNames ?? {}),
+      [sessionId]: name
+    }
+  };
+}
+
 export const passwordMutators = {
   create: defineMutator(
     z.object({
@@ -104,6 +118,8 @@ export const passwordMutators = {
     }),
     async ({ args, tx, ctx }) => {
       const count = args.teamCount ?? 2;
+      const hostSession = await tx.run(zql.sessions.where("id", args.hostId).one());
+      const hostName = resolvePlayerName(hostSession?.name, args.hostId);
       const teams = Array.from({ length: count }, (_, i) => ({
         name: `Team ${String.fromCharCode(65 + i)}`,
         members: i === 0 ? [args.hostId] : ([] as string[])
@@ -123,14 +139,18 @@ export const passwordMutators = {
         kicked: [],
         spectators: [],
         announcement: null,
-        settings: { targetScore: args.targetScore ?? 10, roundDurationSec: 120, roundEndsAt: null, category: args.category ?? "animals" },
+        settings: {
+          targetScore: args.targetScore ?? 10,
+          roundDurationSec: 300,
+          roundEndsAt: null,
+          category: args.category ?? "animals",
+          playerNames: { [args.hostId]: hostName }
+        },
         is_public: false,
         created_at: now(),
         updated_at: now()
       });
 
-      const hostSession = await tx.run(zql.sessions.where("id", args.hostId).one());
-      const hostName = resolvePlayerName(hostSession?.name, args.hostId);
       await tx.mutate.sessions.upsert({
         id: args.hostId,
         name: hostName,
@@ -159,6 +179,7 @@ export const passwordMutators = {
           await tx.mutate.password_games.update({
             id: game.id,
             spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
+            settings: withPasswordPlayerName(game.settings, args.sessionId, sessionName),
             updated_at: now()
           });
           await tx.mutate.sessions.upsert({
@@ -189,6 +210,7 @@ export const passwordMutators = {
       await tx.mutate.password_games.update({
         id: game.id,
         teams,
+        settings: withPasswordPlayerName(game.settings, args.sessionId, sessionName),
         updated_at: now()
       });
 
@@ -764,6 +786,7 @@ export const passwordMutators = {
       await tx.mutate.password_games.update({
         id: game.id,
         spectators: [...game.spectators, { sessionId: args.sessionId, name: sessionName }],
+        settings: withPasswordPlayerName(game.settings, args.sessionId, sessionName),
         updated_at: now()
       });
       await tx.mutate.sessions.upsert({

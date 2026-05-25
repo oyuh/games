@@ -10,7 +10,8 @@ import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
+import { buildPasswordPlayerNames } from "../lib/password-names";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
@@ -35,12 +36,7 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
 
   const isHost = game?.host_id === sessionId;
 
-  const names = useMemo(() => {
-    return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = getDisplayName(s.name, s.id);
-      return acc;
-    }, {});
-  }, [sessions]);
+  const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
 
   useEffect(() => {
     if (!game) return;

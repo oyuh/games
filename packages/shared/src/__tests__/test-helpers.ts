@@ -227,7 +227,7 @@ export function makePasswordGame(overrides: Partial<Row> & { id: string; host_id
     kicked: [],
     spectators: [],
     announcement: null,
-    settings: { targetScore: 10, roundDurationSec: 120, roundEndsAt: null, category: "animals" },
+    settings: { targetScore: 10, roundDurationSec: 300, roundEndsAt: null, category: "animals" },
     is_public: false,
     created_at: Date.now(),
     updated_at: Date.now(),

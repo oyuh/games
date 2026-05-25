@@ -15,7 +15,8 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordGamePage } from "../mobile/pages/MobilePasswordGamePage";
 import { useGameSecret } from "../lib/game-secrets";
-import { getDisplayName, getSessionRequestHeaders } from "../lib/session";
+import { getSessionRequestHeaders } from "../lib/session";
+import { buildPasswordPlayerNames } from "../lib/password-names";
 import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
 
 function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
@@ -44,12 +45,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
 
   usePresenceSocket({ sessionId, gameId, gameType: "password" });
 
-  const names = useMemo(() => {
-    return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = getDisplayName(s.name, s.id);
-      return acc;
-    }, {});
-  }, [sessions]);
+  const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
 
   // Find the player's team index
   const myTeamIndex = useMemo(() => {
