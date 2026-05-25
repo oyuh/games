@@ -785,31 +785,45 @@
 
 .game-teams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 300px));
+  grid-auto-rows: 1fr;
+  justify-content: center;
+  align-items: stretch;
   gap: 0.9rem;
 }
 
 .game-team-card {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
-  min-height: 100%;
-  padding: 1rem;
+  align-items: center;
+  gap: 0;
+  min-height: 112px;
+  padding: 1rem 1.1rem;
   border-radius: 1rem;
   background: color-mix(in srgb, var(--team-color, var(--primary)) 6%, var(--card));
   border: 1px solid color-mix(in srgb, var(--team-color, var(--primary)) 18%, transparent);
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
   animation: game-stagger-in 0.35s ease-out both;
+  cursor: pointer;
+  position: relative;
+  text-align: center;
+  height: 100%;
 }
 .game-teams-grid > .game-team-card:nth-child(1) { animation-delay: 0.05s; }
 .game-teams-grid > .game-team-card:nth-child(2) { animation-delay: 0.12s; }
 .game-teams-grid > .game-team-card:nth-child(3) { animation-delay: 0.19s; }
 .game-teams-grid > .game-team-card:nth-child(4) { animation-delay: 0.26s; }
 
-.game-team-card--joinable:hover {
+.game-team-card:hover,
+.game-team-card:focus-visible {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--team-color, var(--primary)) 45%, transparent);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.game-team-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--team-color, var(--primary)) 62%, transparent);
+  outline-offset: 3px;
 }
 
 .game-team-card--active {
@@ -826,6 +840,73 @@
 .game-team-card--mine {
   border-color: color-mix(in srgb, var(--team-color, var(--primary)) 50%, transparent);
   background: color-mix(in srgb, var(--team-color, var(--primary)) 10%, transparent);
+}
+
+.game-team-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 78px;
+  width: 100%;
+  padding: 0.25rem 2rem;
+}
+
+.game-team-expand-btn {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--team-color, var(--primary)) 26%, transparent);
+  background: color-mix(in srgb, var(--team-color, var(--primary)) 12%, transparent);
+  color: var(--team-color, var(--primary));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.18s ease, background 0.15s ease;
+  cursor: pointer;
+}
+
+.game-team-card:hover .game-team-expand-btn,
+.game-team-card:focus-within .game-team-expand-btn,
+.game-team-card--expanded .game-team-expand-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.game-team-expand-btn:hover {
+  background: color-mix(in srgb, var(--team-color, var(--primary)) 20%, transparent);
+}
+
+.game-team-card--expanded .game-team-expand-btn svg {
+  transform: rotate(180deg);
+}
+
+.game-team-details {
+  display: none;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  cursor: default;
+}
+
+.game-team-card--expanded .game-team-details {
+  display: flex;
+}
+
+.game-team-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .game-section-header {
@@ -945,8 +1026,8 @@
 }
 
 .game-team-name {
-  font-size: 0.96rem;
-  font-weight: 700;
+  font-size: 1.02rem;
+  font-weight: 800;
   color: var(--team-color, var(--primary));
 }
 
@@ -963,7 +1044,7 @@
 }
 
 .game-team-score {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--team-color, var(--primary));
   transition: transform 0.3s ease;
@@ -995,6 +1076,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  width: 100%;
 }
 
 .game-team-member {
@@ -1060,11 +1142,13 @@
 
 .game-team-footer {
   margin-top: auto;
+  width: 100%;
 }
 
 .game-team-joined-note {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   font-size: 0.74rem;
   font-weight: 700;

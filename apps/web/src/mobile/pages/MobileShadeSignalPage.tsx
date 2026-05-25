@@ -80,6 +80,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
+  const clueInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   usePresenceSocket({ sessionId, gameId, gameType: "shade_signal" });
@@ -217,6 +218,17 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
 
   const phase = (game?.phase ?? "lobby") as ShadePhase;
+
+  useEffect(() => {
+    if ((phase !== "clue1" && phase !== "clue2") || !isLeader || isSpectator) return;
+    const input = clueInputRef.current;
+    if (!input) return;
+    const timer = window.setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [phase, isLeader, isSpectator]);
 
   // Inline countdown for active phases
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -504,6 +516,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
 
           <form className="m-shade-clue-form" onSubmit={submitClue}>
             <input
+              ref={clueInputRef}
               className="m-input"
               value={clue}
               onChange={(e) => setClue(e.target.value)}
@@ -511,7 +524,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
               placeholder={phase === "clue1" ? "One word clue…" : "Second clue (1-2 words)…"}
               maxLength={60}
             />
-            <button className="m-btn m-btn-primary" type="submit" disabled={!clue.trim()}>
+            <button className="m-btn m-btn-primary" type="submit" disabled={!clue.trim()} onMouseDown={(event) => event.preventDefault()}>
               <FiSend size={14} /> Send
             </button>
           </form>

@@ -51,6 +51,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const [showDemo, setShowDemo] = useState(false);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
+  const clueInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   // Controlled map state for auto-zoom/pan
@@ -170,6 +171,17 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     }
     setDraftMarker(null);
   }, [game?.settings.currentRound, game?.phase]);
+
+  useEffect(() => {
+    if (!game?.phase.startsWith("clue") || !isLeader || isSpectator) return;
+    const input = clueInputRef.current;
+    if (!input) return;
+    const timer = window.setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [game?.phase, isLeader, isSpectator]);
 
   // Reset leader target on round change
   useEffect(() => {
@@ -739,8 +751,8 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           )}
           <form onSubmit={(e) => void submitClue(e, currentClueRound)} className="locsig-clue-form">
-            <input className="input locsig-clue-input" onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire" : `Clue ${currentClueRound}`} maxLength={80} />
-            <button className="btn btn-primary" type="submit" disabled={!draftClue.trim()} data-tooltip="Submit this clue to the guessers" data-tooltip-variant="info">
+            <input ref={clueInputRef} className="input locsig-clue-input" onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire" : `Clue ${currentClueRound}`} maxLength={80} />
+            <button className="btn btn-primary" type="submit" disabled={!draftClue.trim()} data-tooltip="Submit this clue to the guessers" data-tooltip-variant="info" onMouseDown={(event) => event.preventDefault()}>
               <FiSend size={14} /> Send
             </button>
           </form>

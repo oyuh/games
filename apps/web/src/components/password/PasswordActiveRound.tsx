@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { useEffect, useRef, type FormEvent } from "react";
 import { FiSend, FiSkipForward } from "react-icons/fi";
 import type { PasswordLiveTypingEntry } from "../../hooks/usePasswordLiveTyping";
 import { getPasswordPlayerName } from "../../lib/password-names";
@@ -41,13 +41,6 @@ function formatEntryTime(ts: number) {
   });
 }
 
-function scoreForNextGuess(guessCount: number) {
-  const nextGuessNumber = guessCount + 1;
-  if (nextGuessNumber <= 1) return 3;
-  if (nextGuessNumber === 2) return 2;
-  return 1;
-}
-
 function normalized(value: string) {
   return value.trim().toLowerCase();
 }
@@ -82,6 +75,7 @@ export function PasswordActiveRound({
   guess,
   liveEntries,
   skipsRemaining,
+  gameProgress,
   onClueChange,
   onGuessChange,
   onSubmitClue,
@@ -97,6 +91,7 @@ export function PasswordActiveRound({
   guess: string;
   liveEntries: PasswordLiveTypingEntry[];
   skipsRemaining: number;
+  gameProgress?: number;
   onClueChange: (value: string) => void;
   onGuessChange: (value: string) => void;
   onSubmitClue: (event: FormEvent) => void;
@@ -108,7 +103,8 @@ export function PasswordActiveRound({
   const isGuesser = activeRound.guesserId === sessionId;
   const isOnTeam = teamMembers.includes(sessionId);
   const isClueGiver = isOnTeam && !isGuesser;
-  const clueGiverCount = teamMembers.filter((member) => member !== activeRound.guesserId).length;
+  const clueInputRef = useRef<HTMLInputElement>(null);
+  const guessInputRef = useRef<HTMLInputElement>(null);
   const submittedClues = activeRound.clues ?? [];
   const submittedGuesses = activeRound.guesses ?? [];
   const clueDrafts = liveEntries.filter((entry) => entry.role === "clue" && entry.text.trim());
@@ -138,27 +134,26 @@ export function PasswordActiveRound({
     })
     .sort((a, b) => a.ts - b.ts);
 
+  useEffect(() => {
+    const input = isGuesser ? guessInputRef.current : isClueGiver ? clueInputRef.current : null;
+    if (!input) return;
+    const timer = window.setTimeout(() => {
+      input.focus();
+      if (!input.value) input.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [activeRound.roundId, activeRound.word, isClueGiver, isGuesser, submittedClues.length, submittedGuesses.length]);
+
   return (
     <div className="game-section pw-live-round">
-      <div className="game-round-roles">
-        <div className="game-round-role">
-          <span className="game-round-role-label">Guesser</span>
-          <span className={`game-round-role-name${isGuesser ? " game-round-role-name--me" : ""}`}>
-            {guesserName}{isGuesser ? " (you)" : ""}
-          </span>
-        </div>
-        <div className="game-round-role">
-          <span className="game-round-role-label">Clue Team</span>
-          <span className="game-round-role-name">
-            {clueGiverCount} clue giver{clueGiverCount === 1 ? "" : "s"}
-          </span>
-        </div>
-        <div className="game-round-role">
-          <span className="game-round-role-label">Solve Value</span>
-          <span className="game-round-role-name">
-            {scoreForNextGuess(submittedGuesses.length)} pt{scoreForNextGuess(submittedGuesses.length) === 1 ? "" : "s"} next guess
-          </span>
-        </div>
+      <div
+        className="pw-round-progress"
+        aria-label={`Game progress ${Math.round((gameProgress ?? 0) * 100)} percent`}
+      >
+        <span
+          className="pw-round-progress-fill"
+          style={{ width: `${Math.round(Math.min(1, Math.max(0, gameProgress ?? 0)) * 100)}%` }}
+        />
       </div>
 
       <div className="pw-live-layout">
@@ -179,6 +174,7 @@ export function PasswordActiveRound({
                 </div>
                 <form className="game-input-row pw-live-input" onSubmit={onSubmitClue}>
                   <input
+                    ref={clueInputRef}
                     className="input flex-1"
                     onFocus={(e) => e.currentTarget.select()}
                     value={clue}
@@ -186,7 +182,12 @@ export function PasswordActiveRound({
                     placeholder={submittedClues.length > 0 ? "Drop another clue..." : "Enter first clue..."}
                     maxLength={80}
                   />
-                  <button type="submit" className="btn btn-primary game-action-btn" disabled={!clue.trim()}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary game-action-btn"
+                    disabled={!clue.trim()}
+                    onMouseDown={(event) => event.preventDefault()}
+                  >
                     <FiSend size={14} /> Send
                   </button>
                 </form>
@@ -241,6 +242,7 @@ export function PasswordActiveRound({
               <>
                 <form className="game-input-row pw-live-input" onSubmit={onSubmitGuess}>
                   <input
+                    ref={guessInputRef}
                     className="input flex-1"
                     onFocus={(e) => e.currentTarget.select()}
                     value={guess}
@@ -252,6 +254,7 @@ export function PasswordActiveRound({
                     type="submit"
                     className="btn btn-primary game-action-btn"
                     disabled={!guess.trim() || duplicateGuess}
+                    onMouseDown={(event) => event.preventDefault()}
                   >
                     <FiSend size={14} /> Guess
                   </button>

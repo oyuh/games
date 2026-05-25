@@ -45,7 +45,7 @@ describe("getSettings", () => {
     const s = getSettings();
     expect(s.theme).toBe("dark");
     expect(s.sidebarPosition).toBe("left");
-    expect(s.customCursor).toBe(true);
+    expect(s.customCursor).toBe(false);
     expect(s.customCursorScale).toBe(1);
   });
 });
