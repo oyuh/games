@@ -78,6 +78,7 @@ export const imposterGames = pgTable(
       roundDurationSec: number;
       votingDurationSec: number;
       phaseEndsAt: number | null;
+      clueVisibility?: number;
       skipVotes?: string[];
     }>().notNull().default({
       rounds: 3,
