@@ -261,7 +261,7 @@ describe("Password — live round gameplay", () => {
         ],
         settings: {
           targetScore: 10,
-          roundDurationSec: 120,
+          roundDurationSec: 300,
           roundEndsAt: Date.now() + 60_000,
           category: "animals",
         },
