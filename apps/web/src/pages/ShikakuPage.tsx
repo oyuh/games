@@ -1850,7 +1850,9 @@ export function ShikakuPage() {
         />
 
         <div className="shikaku-playing-footer">
-          <p className="shikaku-hint">Drag to draw - click to remove - right-click to remove</p>
+          <p className="shikaku-hint">
+            {isMobile ? "Drag rectangles. Tap a shape to remove it." : "Drag to draw - click to remove - right-click to remove"}
+          </p>
         </div>
         </div>
       </div>
