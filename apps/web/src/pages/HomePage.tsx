@@ -1658,7 +1658,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       currentRound: phase === "lobby" ? 1 : 4,
       activeRounds,
       targetScore: 10,
-      roundEndsAt: phase === "playing" ? ts + 45_000 : null,
+      roundEndsAt: phase === "playing" ? ts + 300_000 : null,
     }));
 
     // Seed some demo chat messages

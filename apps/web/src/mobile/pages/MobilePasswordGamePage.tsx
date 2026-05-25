@@ -12,7 +12,8 @@ import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { useGameSecret } from "../../lib/game-secrets";
-import { getDisplayName, getSessionRequestHeaders } from "../../lib/session";
+import { getSessionRequestHeaders } from "../../lib/session";
+import { buildPasswordPlayerNames, getPasswordPlayerName } from "../../lib/password-names";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
@@ -42,7 +43,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   phaseRef.current = game?.phase;
 
   usePresenceSocket({ sessionId, gameId, gameType: "password" });
-  const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = getDisplayName(s.name, s.id); return acc; }, {}), [sessions]);
+  const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
 
   useEffect(() => {
     const spectating = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
@@ -62,7 +63,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: names[id] ?? getDisplayName(null, id) }))), spectators: game.spectators ?? [] }
+      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: getPasswordPlayerName(names, id) }))), spectators: game.spectators ?? [] }
       : null
   );
 
@@ -356,11 +357,13 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       {/* Active Round */}
       {!isSpectator && game.phase === "playing" && activeRoundView && (() => {
         const ar = activeRoundView;
-        const guesserName = names[ar.guesserId] ?? getDisplayName(null, ar.guesserId);
+        const guesserName = getPasswordPlayerName(names, ar.guesserId);
         const isGuesser = ar.guesserId === sessionId;
         const isClueGiver = myTeamMembers.includes(sessionId) && !isGuesser;
         const clueDrafts = liveEntries.filter((entry) => entry.role === "clue" && entry.text.trim());
         const guessDraft = liveEntries.find((entry) => entry.role === "guess" && entry.text.trim());
+        const clueDraftText = clueDrafts[clueDrafts.length - 1]?.text ?? "";
+        const guessDraftText = guessDraft?.text ?? "";
         const duplicateGuess = Boolean(guess.trim() && ar.guesses.some((entry) => normalized(entry.text) === normalized(guess)));
         const latestGuess = ar.guesses[ar.guesses.length - 1] ?? null;
         const timeline = [...ar.clues, ...ar.guesses]
@@ -369,13 +372,13 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
               return {
                 ...entry,
                 type: "guess" as const,
-                playerName: names[entry.sessionId] ?? getDisplayName(null, entry.sessionId),
+                playerName: getPasswordPlayerName(names, entry.sessionId),
               };
             }
             return {
               ...entry,
               type: "clue" as const,
-              playerName: names[entry.sessionId] ?? getDisplayName(null, entry.sessionId),
+              playerName: getPasswordPlayerName(names, entry.sessionId),
             };
           })
           .sort((a, b) => a.ts - b.ts);
@@ -426,9 +429,12 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                       </button>
                     </div>
                   ) : (
-                    <p style={{ margin: 0, opacity: 0.75, fontSize: "0.92rem" }}>
-                      {isGuesser ? "Your teammates can keep sending clues while you guess." : "Watch new clues appear as your teammates type."}
-                    </p>
+                    <div className={`m-input m-live-readonly-shell${clueDraftText ? " m-live-readonly-shell--active" : ""}`} aria-live="polite">
+                      <span className={clueDraftText ? "" : "m-live-readonly-shell-placeholder"}>
+                        {clueDraftText || "Clue givers type here"}
+                      </span>
+                      {clueDraftText ? <span className="m-live-readonly-shell-caret" aria-hidden="true" /> : null}
+                    </div>
                   )}
 
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginTop: "0.75rem" }}>
@@ -441,16 +447,11 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                         <span key={entry.id} className={`m-badge ${repeated ? "m-badge--warn" : "m-badge--primary"}`} style={{ padding: "0.35rem 0.65rem", display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem" }}>
                           <strong>{entry.text}</strong>
                           <span style={{ fontSize: "0.7rem", opacity: 0.75 }}>
-                            {names[entry.sessionId] ?? getDisplayName(null, entry.sessionId)}{entry.clueNumber > 1 ? ` • clue ${entry.clueNumber}` : ""}
+                            {getPasswordPlayerName(names, entry.sessionId)}{entry.clueNumber > 1 ? ` • clue ${entry.clueNumber}` : ""}
                           </span>
                         </span>
                       );
                     })}
-                    {clueDrafts.map((entry) => (
-                      <span key={entry.clientId ?? `${entry.sessionId}-${entry.updatedAt}`} className="m-badge" style={{ padding: "0.35rem 0.65rem", borderStyle: "dashed", opacity: 0.9 }}>
-                        {(names[entry.sessionId] ?? getDisplayName(null, entry.sessionId))}: {entry.text}...
-                      </span>
-                    ))}
                   </div>
                 </div>
 
@@ -480,9 +481,12 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                       )}
                     </>
                   ) : (
-                    <p style={{ margin: 0, opacity: 0.75, fontSize: "0.92rem" }}>
-                      Watch {guesserName}'s guesses appear live, including their draft while they type.
-                    </p>
+                    <div className={`m-input m-live-readonly-shell${guessDraftText ? " m-live-readonly-shell--active" : ""}`} aria-live="polite">
+                      <span className={guessDraftText ? "" : "m-live-readonly-shell-placeholder"}>
+                        {guessDraftText || `${guesserName} types here`}
+                      </span>
+                      {guessDraftText ? <span className="m-live-readonly-shell-caret" aria-hidden="true" /> : null}
+                    </div>
                   )}
 
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginTop: "0.75rem" }}>
@@ -495,11 +499,6 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                         <span style={{ fontSize: "0.7rem", opacity: 0.75 }}>Guess {entry.guessNumber}{entry.correct ? " • solved" : ""}</span>
                       </span>
                     ))}
-                    {guessDraft && (
-                      <span className="m-badge" style={{ padding: "0.35rem 0.65rem", borderStyle: "dashed", opacity: 0.9 }}>
-                        {(names[guessDraft.sessionId] ?? getDisplayName(null, guessDraft.sessionId))}: {guessDraft.text}...
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -516,9 +515,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
             <div className="m-card">
               <h3 className="m-card-title">Round Timeline</h3>
               <div style={{ display: "grid", gap: "0.65rem" }}>
-                {timeline.length === 0 && (
-                  <p style={{ margin: 0, opacity: 0.65, fontSize: "0.9rem" }}>The timeline fills in as clues and guesses land.</p>
-                )}
+                {timeline.length === 0 && <p style={{ margin: 0, opacity: 0.65, fontSize: "0.9rem" }}>Waiting...</p>}
                 {timeline.map((entry) => (
                   <div
                     key={entry.id}

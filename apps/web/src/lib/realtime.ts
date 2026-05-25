@@ -285,3 +285,7 @@ export function buildRealtimeUserTopic(sessionId: string) {
 export function buildPasswordTeamTopic(gameId: string, teamIndex: number) {
   return `password-team:${gameId}:${teamIndex}`;
 }
+
+export function buildChainReactionGameTopic(gameId: string) {
+  return `chain-game:${gameId}`;
+}

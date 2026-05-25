@@ -161,7 +161,15 @@ export const passwordGames = pgTable(
     spectators: jsonb("spectators").$type<Array<{ sessionId: string; name: string | null }>>().notNull().default([]),
     kicked: jsonb("kicked").$type<string[]>().notNull().default([]),
     announcement: jsonb("announcement").$type<{ text: string; ts: number } | null>().default(null),
-    settings: jsonb("settings").$type<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean }>().notNull().default({ targetScore: 10, roundDurationSec: 75, roundEndsAt: null }),
+    settings: jsonb("settings").$type<{
+      targetScore: number;
+      roundDurationSec: number;
+      roundEndsAt: number | null;
+      teamsLocked?: boolean;
+      skipsRemaining?: Record<string, number>;
+      category?: string;
+      playerNames?: Record<string, string>;
+    }>().notNull().default({ targetScore: 10, roundDurationSec: 300, roundEndsAt: null }),
     isPublic: boolean("is_public").notNull().default(false),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
     updatedAt: bigint("updated_at", { mode: "number" }).notNull()
