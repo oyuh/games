@@ -199,29 +199,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
                         const isMe = id === sessionId;
                         return (
                           <div key={id} className={`m-pw-member${isMe ? " m-pw-member--me" : ""}`}>
-                            <span>{(n[0] ?? "?").toUpperCase()} {n}{isMe ? " (you)" : ""}</span>
-                            {isHost && !isMe && (
-                              <div className="m-pw-member-actions">
-                                {game.teams.reduce<Array<{ team: typeof game.teams[number]; color: string }>>((targets, targetTeam, targetIndex) => {
-                                  if (targetTeam.name !== team.name) {
-                                    targets.push({
-                                      team: targetTeam,
-                                      color: teamColors[targetIndex % teamColors.length]!,
-                                    });
-                                  }
-                                  return targets;
-                                }, []).map(({ team: t, color }) => (
-                                  <button
-                                    key={t.name}
-                                    className="m-pw-move-btn"
-                                    style={{ borderColor: color, color }}
-                                    onClick={() => void zero.mutate(mutators.password.movePlayer({ gameId, hostId: sessionId, playerId: id, teamName: t.name }))}
-                                  >
-                                    <FiArrowRight size={10} /> {t.name}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
+                            <span className="m-pw-member-name">{(n[0] ?? "?").toUpperCase()} {n}{isMe ? " (you)" : ""}</span>
                           </div>
                         );
                       })}
@@ -250,10 +228,11 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
 
       {/* Actions */}
       {inGame && (
-        <div className="m-card">
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div className="m-card m-bottom-safe">
+          <div className="m-pw-host-actions">
             {isHost ? (
               <>
+                <p className="m-pw-host-actions-title">Host controls</p>
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <LobbyVisibilityToggle gameType="password" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />
                 </div>

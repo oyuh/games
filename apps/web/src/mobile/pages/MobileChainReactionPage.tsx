@@ -451,7 +451,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
           </p>
 
           {inGame && (
-            <div className="m-actions">
+            <div className="m-actions m-bottom-safe">
               {isHost && (
                 <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
                   <LobbyVisibilityToggle gameType="chain_reaction" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />
@@ -638,6 +638,31 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                   {renderPartialWord(slot.word, slot.lettersShown)}
                 </span>
               );
+              const slotMeta = (
+                <div className="m-cr-slot-meta">
+                  {!slot.revealed && !isEditing && slot.lettersShown > 0 && (
+                    <span className="m-badge-small">{slot.lettersShown}/{slot.word.length}</span>
+                  )}
+                  {isEdge && slot.revealed && <span className="m-badge-small">hint</span>}
+                  {slot.revealed && !slot.solvedBy && !isEdge && (
+                    <span className="m-badge-small m-badge-small--muted">skipped</span>
+                  )}
+                  {slot.solvedBy && !isEdge && (
+                    <span className={`m-badge-small${slot.solvedBy === sessionId ? " m-badge-small--accent" : ""}`}>
+                      {slot.solvedBy === sessionId ? "you" : isViewingMine ? "you" : oppName}
+                    </span>
+                  )}
+                  {giveUpConfirm === i && (
+                    <span className="m-badge-small m-badge-small--danger">tap X again to skip</span>
+                  )}
+                </div>
+              );
+              const slotInner = (
+                <div className="m-cr-word-slot-inner">
+                  <div className="m-cr-slot-content">{slotContent}</div>
+                  {slotMeta}
+                </div>
+              );
 
               return (
                 <div key={id} className="m-cr-slot-outer">
@@ -646,22 +671,24 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
 
                     {canClick ? (
                       <button type="button" className={slotClassName} onClick={() => handleSlotClick(i)}>
-                        {slotContent}
+                        {slotInner}
                       </button>
                     ) : (
-                      <div className={slotClassName}>{slotContent}</div>
+                      <div className={slotClassName}>{slotInner}</div>
                     )}
 
                     {/* Action buttons */}
                     <div className="m-cr-slot-actions">
                       {isViewingMine && !isEdge && !slot.revealed && !myDone && (
                         <>
-                          <button className="m-btn-icon m-btn-icon--hint"
+                          <button type="button" className="m-btn-icon m-btn-icon--hint" aria-label="Reveal a letter"
                             onClick={(e) => { e.stopPropagation(); void handleHint(i); }}
                             disabled={slot.lettersShown >= slot.word.length - 1}>
                             <FiHelpCircle size={16} />
                           </button>
                           <button
+                            type="button"
+                            aria-label={giveUpConfirm === i ? "Confirm skip word" : "Skip word"}
                             className={`m-btn-icon m-btn-icon--giveup${giveUpConfirm === i ? " m-btn-icon--confirm" : ""}`}
                             onClick={(e) => { e.stopPropagation(); void handleGiveUp(i); }}>
                             <FiXCircle size={16} />
@@ -669,25 +696,6 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                         </>
                       )}
                     </div>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="m-cr-slot-tags">
-                    {!slot.revealed && !isEditing && slot.lettersShown > 0 && (
-                      <span className="m-badge-small">{slot.lettersShown}/{slot.word.length}</span>
-                    )}
-                    {isEdge && slot.revealed && <span className="m-badge-small">hint</span>}
-                    {slot.revealed && !slot.solvedBy && !isEdge && (
-                      <span className="m-badge-small m-badge-small--muted">skipped</span>
-                    )}
-                    {slot.solvedBy && !isEdge && (
-                      <span className={`m-badge-small${slot.solvedBy === sessionId ? " m-badge-small--accent" : ""}`}>
-                        {slot.solvedBy === sessionId ? "you" : isViewingMine ? "you" : oppName}
-                      </span>
-                    )}
-                    {giveUpConfirm === i && (
-                      <span className="m-badge-small m-badge-small--danger">tap ✕ again to skip</span>
-                    )}
                   </div>
 
                   {i < viewingChain.length - 1 && <div className="m-cr-connector" />}
@@ -780,7 +788,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
             </>
           )}
 
-          <div className="m-actions">
+          <div className="m-actions m-bottom-safe">
             {isHost ? (
               <>
                 <button className="m-btn m-btn-primary"
