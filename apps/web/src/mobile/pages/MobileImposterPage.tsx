@@ -321,7 +321,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       {/* Players */}
       <div className="m-card">
         <h3 className="m-card-title">Players <span style={{ opacity: 0.5, fontWeight: 400 }}>{game.players.filter((p) => !p.eliminated).length}/{game.players.length}</span></h3>
-        <div className="m-player-chips">
+        <div className="m-player-chips m-players-row--strip">
           {game.players.map((p, playerIndex) => {
             const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
             const showRole = revealRoles || p.sessionId === mobileVotedOutId;
@@ -340,7 +340,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                     playerIndex={playerIndex}
                   />
                 )}</span>
-                <span>{name}</span>
+                <span className="m-player-name">{name}</span>
                 {isEliminated && <span className="m-badge m-badge--muted" style={{ fontSize: "0.75rem" }}>OUT</span>}
                 {!isEliminated && isImposter && <span className="m-badge m-badge--danger" style={{ fontSize: "0.75rem" }}>IMP</span>}
                 {!isEliminated && showRole && !isImposter && p.role && <span className="m-badge m-badge--success" style={{ fontSize: "0.75rem" }}>OK</span>}
@@ -366,7 +366,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
       {/* Lobby: Actions */}
       {game.phase === "lobby" && inGame && (
-        <div className="m-card">
+        <div className="m-card m-bottom-safe">
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {isHost && (
               <div style={{ display: "flex", justifyContent: "center" }}>
@@ -627,17 +627,20 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
             <div className="m-card">
               <h3 className="m-card-title">Vote Breakdown</h3>
               {voteLines.length > 0 ? (
-                <div style={{ display: "grid", gap: "0.25rem", marginBottom: "0.65rem" }}>
+                <details className="m-imposter-ballots">
+                  <summary>Ballots</summary>
+                  <div>
                   {voteLines.map((line) => (
                     <p key={line.id} style={{ margin: 0, fontSize: "0.85rem", opacity: 0.9 }}>{line.text}</p>
                   ))}
-                </div>
+                  </div>
+                </details>
               ) : (
                 <p style={{ margin: "0 0 0.65rem", opacity: 0.7 }}>No votes recorded.</p>
               )}
 
               <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.9rem" }}>Vote Totals</h4>
-              <div className="m-results-list">
+              <div className="m-imposter-vote-lines">
                 {activePlayers.map((p) => {
                   const name = sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId);
                   const voteCount = tally[p.sessionId] ?? 0;
@@ -650,16 +653,26 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                     return names;
                   }, []);
                   return (
-                    <div key={p.sessionId} className="m-result-row">
-                      <div className="m-result-info">
-                        <span className={isVotedOut ? "m-result-name--danger" : ""}>{name}</span>
-                        <span className="m-result-votes">{voteCount} {voteCount === 1 ? "vote" : "votes"}{isVotedOut ? " • Voted Out" : ""}</span>
+                    <div key={p.sessionId} className={`m-vote-total-card${isVotedOut ? " m-vote-total-card--danger" : ""}`}>
+                      <div className="m-vote-total-head">
+                        <div className="m-vote-total-player">
+                          <span className="m-player-avatar">
+                            <BorringAvatar
+                              seed={p.sessionId}
+                              playerIndex={game.players.findIndex((pl) => pl.sessionId === p.sessionId)}
+                            />
+                          </span>
+                          <span className={`m-vote-total-name${isVotedOut ? " m-result-name--danger" : ""}`}>{name}</span>
+                        </div>
+                        <span className="m-vote-total-badge">
+                          {voteCount} {voteCount === 1 ? "vote" : "votes"}{isVotedOut ? " - Out" : ""}
+                        </span>
                       </div>
-                      <div className="m-result-bar-track">
-                        <div className={`m-result-bar${isVotedOut ? " m-result-bar--danger" : ""}`} style={{ width: `${pct}%` }} />
+                      <div className="m-vote-total-track">
+                        <div className={`m-vote-total-fill${isVotedOut ? " m-result-bar--danger" : ""}`} style={{ width: `${pct}%` }} />
                       </div>
                       {voterNames.length > 0 && (
-                        <p className="m-result-voters" style={{ fontSize: "0.75rem", opacity: 0.7, margin: "0.15rem 0 0" }}>
+                        <p className="m-vote-total-voters">
                           Voted by: {voterNames.join(", ")}
                         </p>
                       )}
@@ -669,7 +682,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               </div>
             </div>
 
-            <div className="m-card" style={{ textAlign: "center" }}>
+            <div className="m-card m-bottom-safe" style={{ textAlign: "center" }}>
               <RoundCountdown endsAt={game.settings.phaseEndsAt} label="Next round" />
               <button
                 className={`m-btn ${(game.settings.skipVotes ?? []).includes(sessionId) ? "m-btn-muted" : "m-btn-primary"}`}
@@ -734,7 +747,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
               </div>
             )}
 
-          <div className="m-card">
+          <div className="m-card m-bottom-safe">
             {isHost ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 <button
