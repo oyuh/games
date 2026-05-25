@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
-import { getDisplayName } from "../../lib/session";
+import { getPasswordPlayerName } from "../../lib/password-names";
 
 type PasswordClueEntry = {
   id: string;
@@ -67,13 +67,13 @@ export function PasswordRoundsTable({
             return {
               ...entry,
               type: "guess" as const,
-              playerName: names[entry.sessionId] ?? getDisplayName(null, entry.sessionId),
+              playerName: getPasswordPlayerName(names, entry.sessionId),
             };
           }
           return {
             ...entry,
             type: "clue" as const,
-            playerName: names[entry.sessionId] ?? getDisplayName(null, entry.sessionId),
+            playerName: getPasswordPlayerName(names, entry.sessionId),
           };
         })
         .sort((a, b) => a.ts - b.ts);
@@ -104,7 +104,7 @@ export function PasswordRoundsTable({
           {roundsWithTimeline.map(({ round, timeline }) => {
             const teamName = teams[round.teamIndex]?.name ?? `Team ${round.teamIndex + 1}`;
             const teamColor = teamColors[round.teamIndex % teamColors.length]!;
-            const guesserName = names[round.guesserId] ?? getDisplayName(null, round.guesserId);
+            const guesserName = getPasswordPlayerName(names, round.guesserId);
 
             return (
               <div

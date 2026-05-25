@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import { FiSend, FiSkipForward } from "react-icons/fi";
 import type { PasswordLiveTypingEntry } from "../../hooks/usePasswordLiveTyping";
-import { getDisplayName } from "../../lib/session";
+import { getPasswordPlayerName } from "../../lib/password-names";
 
 type PasswordClueEntry = {
   id: string;
@@ -56,19 +56,19 @@ type TimelineEntry =
   | ({ type: "clue"; playerName: string } & PasswordClueEntry)
   | ({ type: "guess"; playerName: string } & PasswordGuessEntry);
 
-function DraftLine({
-  entry,
-  names,
+function ReadonlyLiveInput({
+  text,
+  placeholder,
 }: {
-  entry: PasswordLiveTypingEntry;
-  names: Record<string, string>;
+  text: string;
+  placeholder: string;
 }) {
-  const playerName = names[entry.sessionId] ?? getDisplayName(null, entry.sessionId);
   return (
-    <div className={`pw-draft-line pw-draft-line--${entry.role}`}>
-      <span className="pw-draft-line-name">{playerName}</span>
-      <span className="pw-draft-line-text">{entry.text}</span>
-      <span className="pw-draft-line-caret" aria-hidden="true" />
+    <div className={`input pw-readonly-shell${text ? " pw-readonly-shell--active" : ""}`} aria-live="polite">
+      <span className={`pw-readonly-shell-text${text ? "" : " pw-readonly-shell-text--placeholder"}`}>
+        {text || placeholder}
+      </span>
+      {text ? <span className="pw-readonly-shell-caret" aria-hidden="true" /> : null}
     </div>
   );
 }
@@ -104,7 +104,7 @@ export function PasswordActiveRound({
   onSkip: () => void;
   onRetryWordLoad?: () => void;
 }) {
-  const guesserName = names[activeRound.guesserId] ?? getDisplayName(null, activeRound.guesserId);
+  const guesserName = getPasswordPlayerName(names, activeRound.guesserId);
   const isGuesser = activeRound.guesserId === sessionId;
   const isOnTeam = teamMembers.includes(sessionId);
   const isClueGiver = isOnTeam && !isGuesser;
@@ -113,6 +113,8 @@ export function PasswordActiveRound({
   const submittedGuesses = activeRound.guesses ?? [];
   const clueDrafts = liveEntries.filter((entry) => entry.role === "clue" && entry.text.trim());
   const guessDraft = liveEntries.find((entry) => entry.role === "guess" && entry.text.trim());
+  const clueDraftText = clueDrafts[clueDrafts.length - 1]?.text ?? "";
+  const guessDraftText = guessDraft?.text ?? "";
   const draftTimeline = liveEntries.filter((entry) => entry.text.trim());
   const duplicateGuess = Boolean(
     guess.trim() &&
@@ -125,13 +127,13 @@ export function PasswordActiveRound({
         return {
           ...entry,
           type: "guess",
-          playerName: names[entry.sessionId] ?? getDisplayName(null, entry.sessionId),
+          playerName: getPasswordPlayerName(names, entry.sessionId),
         };
       }
       return {
         ...entry,
         type: "clue",
-        playerName: names[entry.sessionId] ?? getDisplayName(null, entry.sessionId),
+        playerName: getPasswordPlayerName(names, entry.sessionId),
       };
     })
     .sort((a, b) => a.ts - b.ts);
@@ -163,22 +165,11 @@ export function PasswordActiveRound({
         <div className="pw-live-stack">
           <section className="pw-live-lane pw-live-lane--clue">
             <div className="pw-live-panel-head">
-              <div>
-                <p className="pw-live-panel-label">Clue Givers</p>
-                <h3 className="pw-live-panel-title">Clues in motion</h3>
-              </div>
+              <h3 className="pw-live-panel-title">Clues</h3>
               <span className="pw-live-panel-meta">
                 {submittedClues.length} clue{submittedClues.length === 1 ? "" : "s"}
               </span>
             </div>
-
-            {clueDrafts.length > 0 && (
-              <div className="pw-draft-strip" aria-live="polite">
-                {clueDrafts.map((entry) => (
-                  <DraftLine key={entry.clientId ?? `${entry.sessionId}-${entry.role}`} entry={entry} names={names} />
-                ))}
-              </div>
-            )}
 
             {isClueGiver && activeRound.word ? (
               <>
@@ -209,20 +200,13 @@ export function PasswordActiveRound({
                 </button>
               </div>
             ) : (
-              <div className="pw-live-readonly">
-                <p className="pw-live-readonly-title">
-                  {isGuesser ? "You can guess at any time while clues come in." : "Watch your team build the round in real time."}
-                </p>
-                <p className="pw-live-readonly-sub">
-                  Submitted clues stay visible and new clue drafts pulse in as teammates type.
-                </p>
-              </div>
+              <ReadonlyLiveInput text={clueDraftText} placeholder="Clue givers type here" />
             )}
 
             <div className="pw-live-feed" aria-label="Submitted clues">
               {submittedClues.length > 0 ? (
                 submittedClues.map((entry) => {
-                  const playerName = names[entry.sessionId] ?? getDisplayName(null, entry.sessionId);
+                  const playerName = getPasswordPlayerName(names, entry.sessionId);
                   const repeated = entry.clueNumber > 1 || entry.repeatedText;
                   return (
                     <div key={entry.id} className={`pw-feed-chip${repeated ? " pw-feed-chip--repeat" : ""}`}>
@@ -234,30 +218,17 @@ export function PasswordActiveRound({
                     </div>
                   );
                 })
-              ) : (
-                <div className="pw-live-empty">No clues locked in yet.</div>
-              )}
-
-              {clueDrafts.length > 0 && <div className="pw-live-empty pw-live-empty--draft">Live draft above.</div>}
+              ) : null}
             </div>
           </section>
 
           <section className="pw-live-lane pw-live-lane--guess">
             <div className="pw-live-panel-head">
-              <div>
-                <p className="pw-live-panel-label">Guesser</p>
-                <h3 className="pw-live-panel-title">Guess stream</h3>
-              </div>
+              <h3 className="pw-live-panel-title">Guesses</h3>
               <span className="pw-live-panel-meta">
                 {submittedGuesses.length} guess{submittedGuesses.length === 1 ? "" : "es"}
               </span>
             </div>
-
-            {guessDraft && (
-              <div className="pw-draft-strip" aria-live="polite">
-                <DraftLine entry={guessDraft} names={names} />
-              </div>
-            )}
 
             {latestGuess && !latestGuess.correct && (
               <div className="game-reveal-card game-reveal-card--fail pw-live-alert">
@@ -290,14 +261,7 @@ export function PasswordActiveRound({
                 )}
               </>
             ) : (
-              <div className="pw-live-readonly">
-                <p className="pw-live-readonly-title">
-                  {guesserName} can guess at any time.
-                </p>
-                <p className="pw-live-readonly-sub">
-                  You’ll see draft guesses update character-by-character before they send them.
-                </p>
-              </div>
+              <ReadonlyLiveInput text={guessDraftText} placeholder={`${guesserName} types here`} />
             )}
 
             <div className="pw-live-feed" aria-label="Submitted guesses">
@@ -308,7 +272,7 @@ export function PasswordActiveRound({
                     className={`pw-feed-chip pw-feed-chip--guess${entry.correct ? " pw-feed-chip--success" : ""}`}
                   >
                     <span className="pw-feed-chip-label">
-                      {names[entry.sessionId] ?? getDisplayName(null, entry.sessionId)}
+                      {getPasswordPlayerName(names, entry.sessionId)}
                     </span>
                     <span className="pw-feed-chip-text">{entry.text}</span>
                     <span className="pw-feed-chip-meta">
@@ -316,21 +280,14 @@ export function PasswordActiveRound({
                     </span>
                   </div>
                 ))
-              ) : (
-                <div className="pw-live-empty">No guesses submitted yet.</div>
-              )}
-
-              {guessDraft && <div className="pw-live-empty pw-live-empty--draft">Live draft above.</div>}
+              ) : null}
             </div>
           </section>
         </div>
 
         <aside className="pw-live-timeline-panel">
           <div className="pw-live-panel-head">
-            <div>
-              <p className="pw-live-panel-label">Round Timeline</p>
-              <h3 className="pw-live-panel-title">Round pulse</h3>
-            </div>
+            <h3 className="pw-live-panel-title">Timeline</h3>
             <span className="pw-live-panel-meta">
               {timeline.length + draftTimeline.length} event{timeline.length + draftTimeline.length === 1 ? "" : "s"}
             </span>
@@ -347,9 +304,9 @@ export function PasswordActiveRound({
                   <div className="pw-timeline-body">
                     <div className="pw-timeline-top">
                       <span className="pw-timeline-kind">{entry.type === "clue" ? "Clue" : "Guess"}</span>
+                      <span className="pw-timeline-text">{entry.text}</span>
                       <span className="pw-timeline-time">{formatEntryTime(entry.ts)}</span>
                     </div>
-                    <p className="pw-timeline-text">{entry.text}</p>
                     <p className="pw-timeline-meta">
                       {entry.playerName}
                       {entry.type === "clue" && entry.clueNumber > 1 ? ` • clue ${entry.clueNumber}` : ""}
@@ -367,21 +324,19 @@ export function PasswordActiveRound({
                   <div className="pw-timeline-rail" />
                   <div className="pw-timeline-body">
                     <div className="pw-timeline-top">
-                      <span className="pw-timeline-kind">{entry.role === "clue" ? "Clue Draft" : "Guess Draft"}</span>
+                      <span className="pw-timeline-kind">Draft</span>
+                      <span className="pw-timeline-text">{entry.text}</span>
                       <span className="pw-timeline-time">Live</span>
                     </div>
-                    <p className="pw-timeline-text">{entry.text}</p>
                     <p className="pw-timeline-meta">
-                      {names[entry.sessionId] ?? getDisplayName(null, entry.sessionId)} is typing
+                      {getPasswordPlayerName(names, entry.sessionId)}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="pw-live-empty pw-live-empty--timeline">
-              The timeline fills in as clues and guesses land.
-            </div>
+            <div className="pw-live-empty pw-live-empty--timeline">Waiting...</div>
           )}
         </aside>
       </div>

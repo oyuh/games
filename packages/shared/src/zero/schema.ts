@@ -118,7 +118,15 @@ const passwordGames = table("password_games").columns({
   spectators: json<Array<{ sessionId: string; name: string | null }>>(),
   kicked: json<string[]>(),
   announcement: json<{ text: string; ts: number } | null>(),
-  settings: json<{ targetScore: number; roundDurationSec: number; roundEndsAt: number | null; teamsLocked?: boolean; skipsRemaining?: Record<string, number>; category?: string }>(),
+  settings: json<{
+    targetScore: number;
+    roundDurationSec: number;
+    roundEndsAt: number | null;
+    teamsLocked?: boolean;
+    skipsRemaining?: Record<string, number>;
+    category?: string;
+    playerNames?: Record<string, string>;
+  }>(),
   is_public: boolean(),
   created_at: number(),
   updated_at: number()
