@@ -522,6 +522,34 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
       </button>
     </>
   ) : null;
+  const mobileMapStatus = isGameActive ? (() => {
+    if (phase === "picking") {
+      return {
+        title: isLeader ? "Choose the target" : "Target is being chosen",
+        body: isLeader
+          ? (draftMarker ? "Target marker placed. Lock it when ready." : "Tap anywhere on the map to set the hidden location.")
+          : `${leaderName} is picking the hidden location.`,
+      };
+    }
+    if (isCluePhase) {
+      return {
+        title: isLeader ? `Write clue ${currentClueRound}` : "Waiting for clue",
+        body: isLeader ? "Use the map context, then send the next clue below." : `${leaderName} is writing clue ${currentClueRound}.`,
+      };
+    }
+    if (isGuessPhase) {
+      return {
+        title: isLeader ? "Guesses live on the map" : `Place guess ${currentGuessRound}`,
+        body: isLeader
+          ? "Current guesses appear as players submit them."
+          : (draftMarker ? "Guess marker placed. Ready to submit." : "Tap the map to place or move your guess marker."),
+      };
+    }
+    if (phase === "reveal") {
+      return { title: "Reveal", body: "The target and latest guesses are highlighted on the map." };
+    }
+    return null;
+  })() : null;
 
   return (
     <div className="m-page" data-game-theme="location">
@@ -546,7 +574,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
       {isGameActive && (
         <div className="m-section">
           <h3 className="m-label">Players <span className="m-badge-small">{game.players.length}</span></h3>
-          <div className="m-players-row">
+          <div className="m-players-row m-players-row--strip">
             {game.players.map((p, playerIndex) => {
               const name = playerName(p.sessionId);
               const isMe = p.sessionId === sessionId;
@@ -577,10 +605,16 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
 
       {/* Map */}
       {isGameActive && (
-        <div className="m-card" style={{ padding: "0.5rem" }}>
-          <div ref={mapWrapRef} style={{ borderRadius: "var(--radius)", overflow: "hidden", border: "1px solid var(--border)" }}>
+        <div className="m-card locsig-mobile-map-card">
+          {mobileMapStatus && (
+            <div className="locsig-mobile-status">
+              <strong>{mobileMapStatus.title}</strong>
+              <span>{mobileMapStatus.body}</span>
+            </div>
+          )}
+          <div ref={mapWrapRef} className="locsig-mobile-map-frame">
             <WorldMap
-              height={300}
+              height={320}
               {...(mapClickable ? { onClick: (coords: { lat: number; lng: number }) => setDraftMarker(coords) } : {})}
               interactive={mapInteractive}
               markers={buildMarkers()}
@@ -593,6 +627,11 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
               expandedActions={expandedMapActions}
             />
           </div>
+          {expandedMapActions && (
+            <div className="locsig-mobile-map-actions">
+              {expandedMapActions}
+            </div>
+          )}
         </div>
       )}
 
@@ -600,7 +639,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
       {phase === "lobby" && (
         <div className="m-section">
           <h3 className="m-label">Players <span className="m-badge-small">{game.players.length}</span></h3>
-          <div className="m-players-row">
+          <div className="m-players-row m-players-row--strip">
             {game.players.map((p, playerIndex) => {
               const name = playerName(p.sessionId);
               const isMe = p.sessionId === sessionId;
@@ -619,8 +658,8 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
             })}
           </div>
 
-          <div className="m-card" style={{ padding: "0.5rem" }}>
-            <div style={{ borderRadius: "var(--radius)", overflow: "hidden", border: "1px solid var(--border)" }}>
+          <div className="m-card locsig-mobile-map-card">
+            <div className="locsig-mobile-map-frame">
               <WorldMap
                 height={240}
                 interactive
@@ -631,7 +670,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           </div>
 
           {!inGame && !isSpectator && (
-            <div className="m-actions" style={{ marginTop: "0.5rem" }}>
+            <div className="m-actions m-bottom-safe" style={{ marginTop: "0.5rem" }}>
               <p className="m-text-muted m-text-center">You're not in this lobby yet.</p>
               <button className="m-btn m-btn-primary" onClick={handleJoinClick}>
                 <FiLogIn size={16} /> Join Game
@@ -640,7 +679,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           )}
 
           {inGame && (
-            <div className="m-actions" style={{ marginTop: "0.5rem" }}>
+            <div className="m-actions m-bottom-safe" style={{ marginTop: "0.5rem" }}>
               {isHost && (
                 <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
                   <LobbyVisibilityToggle gameType="location_signal" gameId={game.id} sessionId={sessionId} isPublic={game.is_public} />
@@ -670,12 +709,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
             <h3>Pick your target location! 📍</h3>
             <p>Tap the map to place your target.</p>
           </div>
-          <div className="m-actions">
-            <button className="m-btn m-btn-primary" disabled={!draftMarker}
-              onClick={lockTarget}>
-              <FiMapPin size={14} /> Lock Target
-            </button>
-          </div>
+          <p className="locsig-mobile-phase-note">Target ready once a pin is placed.</p>
         </div>
       )}
 
@@ -749,11 +783,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           <p className="m-text-center m-text-muted" style={{ fontSize: "0.82rem" }}>
             {myRoundGuess ? "Guess placed! Tap the map to update." : "Tap the map to place your guess"}
           </p>
-          <div className="m-actions">
-            <button className="m-btn m-btn-primary" disabled={!draftMarker} onClick={() => void submitGuess(currentGuessRound)}>
-              <FiMapPin size={14} /> {myRoundGuess ? "Update Guess" : isLastGuessPhase ? "Place Final Guess" : "Place Guess"}
-            </button>
-          </div>
+          <p className="locsig-mobile-phase-note">Guess ready once a pin is placed.</p>
         </div>
       )}
 
@@ -789,7 +819,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
               ))}
             </div>
           )}
-          <div className="m-shade-score-table">
+          <div className="m-shade-score-table m-shade-score-table--compact locsig-mobile-reveal-summary">
             <h4 className="m-label">Round {game.settings.currentRound} Scores</h4>
             {(() => {
               const prevHistory = game.round_history.length > 1 ? game.round_history[game.round_history.length - 2] : null;
@@ -843,7 +873,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
               );
             })}
           </div>
-          <div className="m-actions" style={{ marginTop: "0.5rem" }}>
+          <div className="m-actions m-bottom-safe" style={{ marginTop: "0.5rem" }}>
             {isHost ? (
               <>
                 <button className="m-btn m-btn-primary"

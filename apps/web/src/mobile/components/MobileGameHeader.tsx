@@ -27,9 +27,9 @@ export function MobileGameHeader({ code, gameLabel, phase, round, totalRounds, a
     <div className="m-game-header" style={accent ? { borderBottomColor: accent } : undefined}>
       <div className="m-game-header-top">
         <span className="m-game-header-label">{gameLabel}</span>
-        <button className="m-game-header-code" onClick={copyCode}>
+        <button type="button" className="m-game-header-code" onClick={copyCode} aria-label={`Copy room code ${code}`}>
           {copied ? "Copied!" : code}
-          {!copied && <FiCopy size={12} />}
+          {!copied && <FiCopy size={14} />}
         </button>
       </div>
       <div className="m-game-header-meta">

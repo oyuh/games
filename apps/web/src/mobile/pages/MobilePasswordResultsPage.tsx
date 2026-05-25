@@ -125,7 +125,7 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
             const maxScore = sortedScores[0]?.[1] ?? 1;
             const pct = maxScore > 0 ? (score / maxScore) * 100 : 0;
             return (
-              <div key={teamName} className="m-result-row">
+              <div key={teamName} className="m-result-row m-result-row--stack">
                 <div className="m-result-info">
                   <span style={{ color, fontWeight: 600 }}>{teamName}</span>
                   <span className="m-result-votes">{score}</span>
@@ -162,7 +162,7 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
       )}
 
       {/* Actions */}
-      <div className="m-card">
+      <div className="m-card m-bottom-safe">
         {isHost ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <button

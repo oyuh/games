@@ -52,9 +52,9 @@ const ZONE_LEGEND = [
   { pts: 1, label: "3 away", cls: "shade-scoring-swatch--2" },
 ];
 
-function MobileScoringLegend() {
+function MobileScoringLegend({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="m-shade-legend">
+    <div className={`m-shade-legend${compact ? " m-shade-legend--compact" : ""}`}>
       {ZONE_LEGEND.map((z) => (
         <span key={z.pts} className="m-shade-legend-item">
           <span className={`shade-scoring-swatch ${z.cls}`} />
@@ -401,7 +401,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       {/* ── Players bar ── */}
       <div className="m-section">
         <h3 className="m-label">Players <span className="m-badge-small">{game.players.length}</span></h3>
-        <div className="m-players-row">
+        <div className="m-players-row m-players-row--strip">
           {game.players.map((player, playerIndex) => {
             const name = sessionById[player.sessionId] ?? getDisplayName(player.name, player.sessionId);
             const isMe = player.sessionId === sessionId;
@@ -457,7 +457,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
           />
           {lobbyPreviewTarget && <MobileScoringLegend />}
 
-          <div className="m-actions">
+          <div className="m-actions m-bottom-safe">
             {isHost && (
               <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
                 <LobbyVisibilityToggle gameType="shade_signal" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />
@@ -683,10 +683,13 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
             playerIndexMap={playerIndexMap}
             compact
           />
-          <MobileScoringLegend />
+          <details className="m-shade-legend-details">
+            <summary>Scoring zones</summary>
+            <MobileScoringLegend compact />
+          </details>
 
           {latestRound && (
-            <div className="m-shade-score-table">
+            <div className="m-shade-score-table m-shade-score-table--compact">
               <h4 className="m-label">Round Scores</h4>
               {game.players.reduce<typeof game.players>((players, player) => {
                 if (player.sessionId !== game.leader_id) {
@@ -760,7 +763,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
               })}
           </div>
 
-          <div className="m-actions">
+          <div className="m-actions m-bottom-safe">
             {isHost ? (
               <>
                 <button className="m-btn m-btn-primary"

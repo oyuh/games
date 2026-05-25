@@ -2817,19 +2817,22 @@ button.pips-mode-card:hover {
 
 .pips-menu-links {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1rem;
   margin: 0;
   animation: pips-menu-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
 }
 
 .pips-menu-link {
-  min-height: 0;
+  min-height: 2.75rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
-  padding: 0.25rem 0;
+  padding: 0.45rem 0.65rem;
   border: 0;
-  border-radius: 0;
+  border-radius: 0.55rem;
   background: none;
   color: var(--muted-foreground);
   cursor: pointer;
@@ -3381,11 +3384,84 @@ button.pips-mode-card:hover {
 
 @media (max-width: 600px) {
   .pips-page.game-page {
-    padding: 0.6rem;
+    padding: 0.6rem 0.6rem calc(5.75rem + env(safe-area-inset-bottom, 0px));
   }
 
   .pips-container {
-    --pips-cell-size: clamp(42px, 13vw, 62px);
+    --pips-cell-size: clamp(
+      30px,
+      min(calc((100dvh - 17rem) / var(--pips-rows, 7)), calc((100vw - 1.5rem) / var(--pips-cols, 7))),
+      56px
+    );
+    min-height: calc(100dvh - 6rem);
+  }
+
+  .pips-container[data-pips-difficulty="hard"] {
+    --pips-cell-size: clamp(
+      28px,
+      min(calc((100dvh - 17.5rem) / var(--pips-rows, 7)), calc((100vw - 1.25rem) / var(--pips-cols, 7))),
+      46px
+    );
+    --pips-tray-cell-size: clamp(32px, calc(var(--pips-cell-size) * 0.76), 42px);
+  }
+
+  .pips-game-header {
+    width: 100%;
+    overflow: visible;
+  }
+
+  .pips-game-header .game-header-left {
+    justify-content: center;
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+    overflow: visible;
+  }
+
+  .pips-game-header .badge,
+  .pips-game-header .pips-seed-badge {
+    flex: 0 0 auto;
+  }
+
+  .pips-stage {
+    align-content: start;
+    gap: 0.65rem;
+  }
+
+  .pips-board-zone {
+    padding-inline: 0;
+  }
+
+  .pips-domino-rail {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .pips-tray {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.35rem 0.45rem 0.65rem;
+    scroll-padding-inline: 0.75rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pips-tray-slot {
+    flex: 0 0 var(--pips-tray-domino-width);
+  }
+
+  .pips-domino--selected {
+    outline: 3px solid color-mix(in srgb, var(--primary) 78%, white 10%);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 24%, transparent), 0 3px 0 rgba(0, 0, 0, 0.24);
+  }
+
+  .pips-puzzle-info-btn,
+  .pips-icon-btn {
+    min-width: 2.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
   }
 
   .pips-footer-btns {
