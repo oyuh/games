@@ -477,6 +477,11 @@
   box-shadow: 0 0 14px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
+.cr-word-slot--live {
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
 .cr-word-slot--mine {
   border-left: 3px solid var(--primary);
 }
@@ -500,6 +505,9 @@
 .cr-slot-body {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 /* Word text */
@@ -516,15 +524,41 @@
   color: var(--secondary);
 }
 
+.cr-word-text--draft {
+  color: var(--primary);
+}
+
+.cr-remote-draft {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.cr-remote-draft-live {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  opacity: 0.75;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
 /* Inline guess form: input + ↵ button inside slot */
 .cr-inline-form {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .cr-inline-input {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;
@@ -536,6 +570,7 @@
   color: var(--primary);
   caret-color: var(--primary);
   padding: 0;
+  text-align: left;
 }
 
 .cr-inline-input::placeholder {

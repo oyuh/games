@@ -9,6 +9,7 @@ import { PasswordHeader } from "../components/password/PasswordHeader";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
+import { useChainReactionLiveTyping } from "../hooks/useChainReactionLiveTyping";
 import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
@@ -61,6 +62,12 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
   const activeGameId = mySession?.game_id ?? null;
   const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "chain_reaction" || activeGameId !== gameId));
+  const { liveBySession, publishDraft, clearDraft } = useChainReactionLiveTyping({
+    enabled: Boolean(game?.phase === "playing" && inGame),
+    gameId,
+    sessionId,
+    round: game?.settings.currentRound ?? null,
+  });
 
   useGameSounds({
     phase: game?.phase,
@@ -141,7 +148,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     setHasSubmitted(false);
     setViewingTarget("self");
     setGiveUpConfirm(null);
-  }, [game?.settings.currentRound, sessionId]);
+    clearDraft();
+  }, [clearDraft, game?.settings.currentRound, sessionId]);
 
   // Initialize submission words
   useEffect(() => {
@@ -163,6 +171,15 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
       inlineInputRef.current?.focus();
     }
   }, [editingIndex]);
+
+  useEffect(() => {
+    if (editingIndex === null) {
+      clearDraft();
+      return;
+    }
+
+    publishDraft(editingIndex, guess);
+  }, [clearDraft, editingIndex, guess, publishDraft]);
 
   useEffect(() => {
     if (game) return;
@@ -189,6 +206,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const isViewingMine = viewingTarget === "self" || !opponentId;
   const viewingId = isViewingMine ? sessionId : (opponentId ?? sessionId);
   const viewingChain = isViewingMine ? myChain : oppChain;
+  const viewingLiveDraft = !isViewingMine && opponentId ? liveBySession[opponentId] ?? null : null;
   const submissionSlots = submissionWords.map((word, index) => ({ id: `submission-slot-${index}`, word, index }));
   const viewingSlots = viewingChain.map((slot, index) => ({ id: `${viewingId}-chain-slot-${index}`, slot, index }));
   const submittedChainEntries = (game.submitted_chains[sessionId] ?? []).map((word, index) => ({
@@ -220,6 +238,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     const idx = editingIndex;
     const currentGuess = guess.trim();
     const slot = myChain[idx];
+    clearDraft();
     setGuess("");
     setEditingIndex(null);
 
@@ -244,6 +263,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const handleHint = async (i: number) => {
     // Exit editing so the updated partial word is visible immediately
     if (editingIndex === i) {
+      clearDraft();
       setEditingIndex(null);
       setGuess("");
     }
@@ -258,6 +278,11 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const handleGiveUp = async (i: number) => {
     if (giveUpConfirm === i) {
       setGiveUpConfirm(null);
+      if (editingIndex === i) {
+        clearDraft();
+        setEditingIndex(null);
+        setGuess("");
+      }
       try {
         await zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })).server;
       } catch {
@@ -626,11 +651,18 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
               const isEditing = isViewingMine && editingIndex === i;
               const isEdge = i === 0 || i === viewingChain.length - 1;
               const canClick = isViewingMine && !myDone && !slot.revealed && !isEditing;
+              const isLiveDrafting = Boolean(
+                !isViewingMine &&
+                !slot.revealed &&
+                viewingLiveDraft?.wordIndex === i &&
+                viewingLiveDraft.text.trim()
+              );
               const slotClassName = [
                 "cr-word-slot",
                 slot.revealed ? "cr-word-slot--revealed" : "cr-word-slot--hidden",
                 isEditing ? "cr-word-slot--editing" : "",
                 canClick ? "cr-word-slot--clickable" : "",
+                isLiveDrafting ? "cr-word-slot--live" : "",
                 slot.solvedBy === sessionId ? "cr-word-slot--mine" : "",
                 slot.solvedBy && slot.solvedBy !== sessionId ? "cr-word-slot--theirs" : "",
                 slot.revealed && !slot.solvedBy && !isEdge ? "cr-word-slot--givenup" : "",
@@ -658,6 +690,11 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                       </form>
                     ) : slot.revealed ? (
                       <span className="cr-word-text">{slot.word}</span>
+                    ) : isLiveDrafting ? (
+                      <div className="cr-remote-draft">
+                        <span className="cr-word-text cr-word-text--draft">{viewingLiveDraft?.text}</span>
+                        <span className="cr-remote-draft-live">live</span>
+                      </div>
                     ) : (
                       <span className="cr-word-text cr-word-text--partial">
                         {renderPartialWord(slot.word, slot.lettersShown)}

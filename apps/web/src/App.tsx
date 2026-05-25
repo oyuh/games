@@ -30,9 +30,6 @@ const HomePage = lazy(() => import("./pages/HomePage").then(({ HomePage }) => ({
 const HomePageStylePreview = lazy(() =>
   import("./pages/HomePageStylePreview").then(({ HomePageStylePreview }) => ({ default: HomePageStylePreview }))
 );
-const AdminScoresPage = lazy(() =>
-  import("./pages/AdminScoresPage").then(({ AdminScoresPage }) => ({ default: AdminScoresPage }))
-);
 const ImposterPage = lazy(() => import("./pages/ImposterPage").then(({ ImposterPage }) => ({ default: ImposterPage })));
 const PasswordBeginPage = lazy(() =>
   import("./pages/PasswordBeginPage").then(({ PasswordBeginPage }) => ({ default: PasswordBeginPage }))
@@ -604,7 +601,6 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/location/:id" element={<LazyRoute><LocationSignalPage sessionId={initialSessionId} /></LazyRoute>} />
               <Route path="/shikaku" element={<LazyRoute><ShikakuPage /></LazyRoute>} />
               <Route path="/pips" element={<LazyRoute><PipsPage /></LazyRoute>} />
-              <Route path="/admin/scores" element={<LazyRoute><AdminScoresPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

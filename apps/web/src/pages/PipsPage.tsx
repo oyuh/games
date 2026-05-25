@@ -17,7 +17,6 @@ import "../styles/game-shared.css";
 import "../styles/pips.css";
 import { PipsDemo } from "../components/demos/PipsDemo";
 import { GameIcon } from "../components/shared/GameIcon";
-import { AdminScoreModal } from "../components/shared/AdminScoreModal";
 import {
   evaluateRegionRule,
   generateRun,
@@ -188,7 +187,6 @@ export function PipsPage() {
   const [infiniteSolved, setInfiniteSolved] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [openPanel, setOpenPanel] = useState<PipsPanel>(null);
-  const [showAdminScoreModal, setShowAdminScoreModal] = useState(false);
   const [leaderboardEntries, setLeaderboardEntries] = useState<PipsLeaderboardEntry[]>(PIPS_SEEDED_LEADERBOARD);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardPage, setLeaderboardPage] = useState(1);
@@ -884,15 +882,12 @@ export function PipsPage() {
     };
     const handleDevSolution = () => showSolvedPuzzle();
     const handleDevSkip = () => skipDifficulty();
-    const handleAdminScore = () => setShowAdminScoreModal(true);
-
     window.addEventListener("pips-undo", handleUndo);
     window.addEventListener("pips-restart-run", handleRestart);
     window.addEventListener("pips-give-up", handleGiveUp);
     window.addEventListener("pips-toggle-leaderboard", handleLeaderboard);
     window.addEventListener("pips-dev-solution", handleDevSolution);
     window.addEventListener("pips-dev-skip", handleDevSkip);
-    window.addEventListener("pips-open-admin-score", handleAdminScore);
     return () => {
       window.removeEventListener("pips-undo", handleUndo);
       window.removeEventListener("pips-restart-run", handleRestart);
@@ -900,7 +895,6 @@ export function PipsPage() {
       window.removeEventListener("pips-toggle-leaderboard", handleLeaderboard);
       window.removeEventListener("pips-dev-solution", handleDevSolution);
       window.removeEventListener("pips-dev-skip", handleDevSkip);
-      window.removeEventListener("pips-open-admin-score", handleAdminScore);
     };
   }, [undoPlacement, restartRun, giveUpRun, showSolvedPuzzle, skipDifficulty]);
 
@@ -1219,23 +1213,6 @@ export function PipsPage() {
     <PipsDemo onClose={() => setOpenPanel(null)} />
   ) : null;
 
-  const adminScoreModal = showAdminScoreModal ? (
-    <AdminScoreModal
-      apiBase={API_BASE}
-      game="pips"
-      pipsDefaults={{
-        ...(seed > 0 ? { seed: String(seed) } : {}),
-        ...(runSplits.easy != null ? { easyMs: String(runSplits.easy) } : {}),
-        ...(runSplits.medium != null ? { mediumMs: String(runSplits.medium) } : {}),
-        ...(runSplits.hard != null ? { hardMs: String(runSplits.hard) } : {}),
-        ...(hasAllRankedSplits(runSplits) ? { totalMs: String(runSplits.easy + runSplits.medium + runSplits.hard) } : {}),
-        puzzleCount: "3",
-      }}
-      onClose={() => setShowAdminScoreModal(false)}
-      onCreated={() => void fetchLeaderboard(1, leaderboardView)}
-    />
-  ) : null;
-
   if (phase === "menu") {
     return (
       <>
@@ -1256,7 +1233,6 @@ export function PipsPage() {
         </div>
         {leaderboardPanel}
         {howToPanel}
-        {adminScoreModal}
       </>
     );
   }
@@ -1283,7 +1259,6 @@ export function PipsPage() {
         </div>
         {leaderboardPanel}
         {howToPanel}
-        {adminScoreModal}
       </>
     );
   }
@@ -1319,7 +1294,6 @@ export function PipsPage() {
         </div>
         {leaderboardPanel}
         {howToPanel}
-        {adminScoreModal}
       </>
     );
   }
@@ -1525,7 +1499,6 @@ export function PipsPage() {
 
         {leaderboardPanel}
         {howToPanel}
-        {adminScoreModal}
       </div>
     </div>
   );

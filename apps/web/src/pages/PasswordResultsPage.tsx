@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiAward, FiTag } from "react-icons/fi";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
-import { getDisplayName } from "../lib/session";
+import { buildPasswordPlayerNames } from "../lib/password-names";
 import { showToast } from "../lib/toast";
 import { playGameOver } from "../lib/sounds";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -26,12 +26,7 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
   const navHandledRef = useRef(false);
   const playedResultsSoundRef = useRef(false);
 
-  const names = useMemo(() => {
-    return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = getDisplayName(s.name, s.id);
-      return acc;
-    }, {});
-  }, [sessions]);
+  const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
 
   useEffect(() => {
     if (!game) return;

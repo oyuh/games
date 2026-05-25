@@ -9,6 +9,7 @@ import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
+import { useChainReactionLiveTyping } from "../../hooks/useChainReactionLiveTyping";
 import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
@@ -57,6 +58,12 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
   const activeGameId = mySession?.game_id ?? null;
   const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "chain_reaction" || activeGameId !== gameId));
+  const { liveBySession, publishDraft, clearDraft } = useChainReactionLiveTyping({
+    enabled: Boolean(game?.phase === "playing" && inGame),
+    gameId,
+    sessionId,
+    round: game?.settings.currentRound ?? null,
+  });
 
   const inGameRef = useRef(inGame);
   const phaseRef = useRef(game?.phase);
@@ -138,7 +145,8 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     setHasSubmitted(false);
     setViewingTarget("self");
     setGiveUpConfirm(null);
-  }, [game?.settings.currentRound, sessionId]);
+    clearDraft();
+  }, [clearDraft, game?.settings.currentRound, sessionId]);
 
   useEffect(() => {
     if (game?.phase === "submitting" && !hasSubmitted) {
@@ -158,6 +166,15 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     }
   }, [editingIndex]);
 
+  useEffect(() => {
+    if (editingIndex === null) {
+      clearDraft();
+      return;
+    }
+
+    publishDraft(editingIndex, guess);
+  }, [clearDraft, editingIndex, guess, publishDraft]);
+
   if (!game) return <MobileGameNotFound theme="chain" />;
 
   const myChain: ChainSlot[] = game.chain[sessionId] ?? [];
@@ -166,6 +183,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const isViewingMine = viewingTarget === "self" || !opponentId;
   const viewingId = isViewingMine ? sessionId : (opponentId ?? sessionId);
   const viewingChain = isViewingMine ? myChain : oppChain;
+  const viewingLiveDraft = !isViewingMine && opponentId ? liveBySession[opponentId] ?? null : null;
   const submissionSlots = submissionWords.map((word, index) => ({ id: `mobile-submission-slot-${index}`, word, index }));
   const viewingSlots = viewingChain.map((slot, index) => ({ id: `${viewingId}-mobile-chain-slot-${index}`, slot, index }));
   const submittedChainEntries = (game.submitted_chains[sessionId] ?? []).map((word, index) => ({
@@ -194,6 +212,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     if (editingIndex === null || !guess.trim()) return;
     const idx = editingIndex;
     const currentGuess = guess.trim();
+    clearDraft();
     setGuess("");
     setEditingIndex(null);
     try {
@@ -202,7 +221,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   };
 
   const handleHint = async (i: number) => {
-    if (editingIndex === i) { setEditingIndex(null); setGuess(""); }
+    if (editingIndex === i) { clearDraft(); setEditingIndex(null); setGuess(""); }
     try {
       await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })).server;
       playHint();
@@ -212,6 +231,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const handleGiveUp = async (i: number) => {
     if (giveUpConfirm === i) {
       setGiveUpConfirm(null);
+      if (editingIndex === i) { clearDraft(); setEditingIndex(null); setGuess(""); }
       try {
         await zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })).server;
       } catch { /* noop */ }
@@ -562,11 +582,18 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
               const isEditing = isViewingMine && editingIndex === i;
               const isEdge = i === 0 || i === viewingChain.length - 1;
               const canClick = isViewingMine && !myDone && !slot.revealed && !isEditing;
+              const isLiveDrafting = Boolean(
+                !isViewingMine &&
+                !slot.revealed &&
+                viewingLiveDraft?.wordIndex === i &&
+                viewingLiveDraft.text.trim()
+              );
               const slotClassName = [
                 "m-cr-word-slot",
                 slot.revealed ? "m-cr-word-slot--revealed" : "m-cr-word-slot--hidden",
                 isEditing ? "m-cr-word-slot--editing" : "",
                 canClick ? "m-cr-word-slot--clickable" : "",
+                isLiveDrafting ? "m-cr-word-slot--live" : "",
                 slot.solvedBy === sessionId ? "m-cr-word-slot--mine" : "",
                 slot.solvedBy && slot.solvedBy !== sessionId ? "m-cr-word-slot--theirs" : "",
                 slot.revealed && !slot.solvedBy && !isEdge ? "m-cr-word-slot--givenup" : "",
@@ -587,6 +614,11 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                 </form>
               ) : slot.revealed ? (
                 <span className="m-cr-word-text">{slot.word}</span>
+              ) : isLiveDrafting ? (
+                <div className="m-cr-remote-draft">
+                  <span className="m-cr-word-text m-cr-word-text--draft">{viewingLiveDraft?.text}</span>
+                  <span className="m-cr-remote-draft-live">live</span>
+                </div>
               ) : (
                 <span className="m-cr-word-text m-cr-word-text--partial">
                   {renderPartialWord(slot.word, slot.lettersShown)}

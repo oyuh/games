@@ -1,12 +1,11 @@
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiAward } from "react-icons/fi";
 import { showToast } from "../../lib/toast";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
-import { getDisplayName } from "../../lib/session";
 import { playGameOver } from "../../lib/sounds";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
@@ -17,13 +16,10 @@ export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) 
   const navigate = useNavigate();
   const gameId = params.id ?? "";
   const [games] = useQuery(queries.password.byId({ id: gameId }));
-  const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   const game = games[0];
   const prevAnnouncementTs = useRef<number | null>(null);
   const navHandledRef = useRef(false);
   const playedResultsSoundRef = useRef(false);
-
-  const names = useMemo(() => sessions.reduce<Record<string, string>>((acc, s) => { acc[s.id] = getDisplayName(s.name, s.id); return acc; }, {}), [sessions]);
 
   useEffect(() => {
     if (!game) return;

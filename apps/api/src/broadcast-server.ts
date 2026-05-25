@@ -1,4 +1,4 @@
-import { passwordGames } from "@games/shared";
+import { chainReactionGames, passwordGames } from "@games/shared";
 import { eq } from "drizzle-orm";
 import { drizzleClient } from "./db-provider";
 
@@ -28,6 +28,15 @@ export type PasswordLiveTypingPayload = {
   updatedAt: number;
 };
 
+export type ChainReactionLiveTypingPayload = {
+  sessionId: string;
+  clientId?: string;
+  round: number;
+  wordIndex: number;
+  text: string;
+  updatedAt: number;
+};
+
 export type RealtimeSocketData = {
   sessionId: string;
   subscriptions: Set<string>;
@@ -49,7 +58,9 @@ type RealtimeOutboundMessage =
 const GLOBAL_BROADCAST_TOPIC = "broadcast";
 const USER_TOPIC_PREFIX = "user:";
 const PASSWORD_TEAM_TOPIC_PREFIX = "password-team:";
+const CHAIN_GAME_TOPIC_PREFIX = "chain-game:";
 const PASSWORD_TYPING_EVENT = "password:typing";
+const CHAIN_TYPING_EVENT = "chain:typing";
 const MAX_TYPING_TEXT_LENGTH = 120;
 
 let customStatus: CustomStatusPayload = null;
@@ -97,6 +108,15 @@ function parsePasswordTeamTopic(topic: string) {
   return { gameId, teamIndex };
 }
 
+function parseChainGameTopic(topic: string) {
+  if (!topic.startsWith(CHAIN_GAME_TOPIC_PREFIX)) {
+    return null;
+  }
+
+  const gameId = topic.slice(CHAIN_GAME_TOPIC_PREFIX.length).trim();
+  return gameId ? { gameId } : null;
+}
+
 function normalizeTypingText(value: unknown) {
   if (typeof value !== "string") {
     return "";
@@ -135,6 +155,37 @@ function sanitizePasswordTypingPayload(sessionId: string, payload: unknown): Pas
   };
 }
 
+function sanitizeChainTypingPayload(sessionId: string, payload: unknown): ChainReactionLiveTypingPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const candidate = payload as {
+    clientId?: unknown;
+    round?: unknown;
+    wordIndex?: unknown;
+    text?: unknown;
+  };
+
+  const clientId = typeof candidate.clientId === "string"
+    ? candidate.clientId.trim().replace(/[^\w:.-]/g, "").slice(0, 128)
+    : "";
+  const round = typeof candidate.round === "number" ? Math.trunc(candidate.round) : Number.NaN;
+  const wordIndex = typeof candidate.wordIndex === "number" ? Math.trunc(candidate.wordIndex) : Number.NaN;
+  if (!Number.isInteger(round) || round < 1 || !Number.isInteger(wordIndex) || wordIndex < -1) {
+    return null;
+  }
+
+  return {
+    sessionId,
+    ...(clientId ? { clientId } : {}),
+    round,
+    wordIndex,
+    text: normalizeTypingText(candidate.text),
+    updatedAt: Date.now(),
+  };
+}
+
 async function isAuthorizedRealtimeTopic(sessionId: string, topic: string) {
   if (topic === GLOBAL_BROADCAST_TOPIC) {
     return true;
@@ -145,17 +196,27 @@ async function isAuthorizedRealtimeTopic(sessionId: string, topic: string) {
   }
 
   const parsedTeamTopic = parsePasswordTeamTopic(topic);
-  if (!parsedTeamTopic) {
+  if (parsedTeamTopic) {
+    const [game] = await drizzleClient
+      .select({ teams: passwordGames.teams })
+      .from(passwordGames)
+      .where(eq(passwordGames.id, parsedTeamTopic.gameId))
+      .limit(1);
+    const team = game?.teams[parsedTeamTopic.teamIndex];
+    return Boolean(team?.members.includes(sessionId));
+  }
+
+  const parsedChainTopic = parseChainGameTopic(topic);
+  if (!parsedChainTopic) {
     return false;
   }
 
   const [game] = await drizzleClient
-    .select({ teams: passwordGames.teams })
-    .from(passwordGames)
-    .where(eq(passwordGames.id, parsedTeamTopic.gameId))
+    .select({ players: chainReactionGames.players })
+    .from(chainReactionGames)
+    .where(eq(chainReactionGames.id, parsedChainTopic.gameId))
     .limit(1);
-  const team = game?.teams[parsedTeamTopic.teamIndex];
-  return Boolean(team?.members.includes(sessionId));
+  return Boolean(game?.players.some((player) => player.sessionId === sessionId));
 }
 
 function parseInboundMessage(rawMessage: string | Buffer | ArrayBuffer | Uint8Array) {
@@ -175,6 +236,10 @@ export function buildRealtimeUserTopic(sessionId: string) {
 
 export function buildRealtimePasswordTeamTopic(gameId: string, teamIndex: number) {
   return `${PASSWORD_TEAM_TOPIC_PREFIX}${gameId}:${teamIndex}`;
+}
+
+export function buildRealtimeChainGameTopic(gameId: string) {
+  return `${CHAIN_GAME_TOPIC_PREFIX}${gameId}`;
 }
 
 export function attachRealtimeServer(server: Bun.Server<RealtimeSocketData>) {
@@ -245,8 +310,8 @@ export async function onRealtimeMessage(
 
     case "publish": {
       const topic = typeof message.topic === "string" ? message.topic.trim() : "";
-      if (!topic || message.event !== PASSWORD_TYPING_EVENT) {
-        sendToSocket(socket, { type: "error", code: "unsupported_event", message: "Unsupported realtime event." });
+      if (!topic) {
+        sendToSocket(socket, { type: "error", code: "invalid_topic", message: "Missing topic." });
         return;
       }
 
@@ -255,13 +320,29 @@ export async function onRealtimeMessage(
         return;
       }
 
-      const payload = sanitizePasswordTypingPayload(socket.data.sessionId, message.payload);
-      if (!payload) {
-        sendToSocket(socket, { type: "error", code: "invalid_payload", topic, message: "Invalid realtime payload." });
+      if (message.event === PASSWORD_TYPING_EVENT) {
+        const payload = sanitizePasswordTypingPayload(socket.data.sessionId, message.payload);
+        if (!payload) {
+          sendToSocket(socket, { type: "error", code: "invalid_payload", topic, message: "Invalid realtime payload." });
+          return;
+        }
+
+        publishToTopic(topic, PASSWORD_TYPING_EVENT, payload);
         return;
       }
 
-      publishToTopic(topic, PASSWORD_TYPING_EVENT, payload);
+      if (message.event === CHAIN_TYPING_EVENT) {
+        const payload = sanitizeChainTypingPayload(socket.data.sessionId, message.payload);
+        if (!payload) {
+          sendToSocket(socket, { type: "error", code: "invalid_payload", topic, message: "Invalid realtime payload." });
+          return;
+        }
+
+        publishToTopic(topic, CHAIN_TYPING_EVENT, payload);
+        return;
+      }
+
+      sendToSocket(socket, { type: "error", code: "unsupported_event", message: "Unsupported realtime event." });
       return;
     }
 
