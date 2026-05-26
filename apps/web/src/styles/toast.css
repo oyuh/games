@@ -296,19 +296,6 @@ body.has-sync-wake-toast .shell > .toast-container {
   }
 }
 
-body.has-sync-paused-controls .shell-main :where(button, input, select, textarea, [role="button"], .btn),
-body.has-sync-paused-controls .m-shell-content :where(button, input, select, textarea, [role="button"], .m-btn, .btn) {
-  opacity: 0.45;
-  filter: grayscale(0.65);
-  cursor: not-allowed !important;
-  pointer-events: none;
-}
-
-body.has-sync-paused-controls .shell-main :where(button, input, select, textarea, [role="button"], .btn):focus-visible,
-body.has-sync-paused-controls .m-shell-content :where(button, input, select, textarea, [role="button"], .m-btn, .btn):focus-visible {
-  outline-color: color-mix(in srgb, var(--secondary) 50%, transparent);
-}
-
 .sync-hosting-modal {
   max-width: 520px;
   border-color: color-mix(in srgb, #f59e0b 24%, var(--border));
