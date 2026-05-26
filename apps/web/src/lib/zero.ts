@@ -9,7 +9,6 @@ import { useZero as _useZero } from "@rocicorp/zero/react";
 import { useMemo } from "react";
 import { checkRateLimit } from "./rate-limit";
 import { showDedupedToast } from "./toast";
-import { getSyncSessionBlockedMessage, isSyncSessionInteractionBlocked } from "./sync-session-activity";
 
 export { useQuery } from "@rocicorp/zero/react";
 
@@ -59,10 +58,6 @@ export function useZero() {
         get(target, prop, receiver) {
           if (prop === "mutate") {
             return (...args: unknown[]) => {
-              if (isSyncSessionInteractionBlocked()) {
-                showDedupedToast(getSyncSessionBlockedMessage(), "info");
-                return BLOCKED;
-              }
               if (!checkRateLimit()) return BLOCKED;
               const mutationResult = (target.mutate as Function)(...args);
               if (

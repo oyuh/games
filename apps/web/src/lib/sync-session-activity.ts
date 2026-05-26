@@ -1,17 +1,15 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
-type SyncSessionActivityStatus = "active" | "idle" | "resuming";
+type SyncSessionActivityStatus = "active" | "idle";
 
 type SyncSessionActivityState = {
   status: SyncSessionActivityStatus;
   needsSync: boolean;
   lastActiveAt: number;
   idleStartedAt: number | null;
-  resumeStartedAt: number | null;
 };
 
 const IDLE_AFTER_MS = import.meta.env.DEV ? 90_000 : 5 * 60_000;
-const RESUME_ESTIMATE_SECS = import.meta.env.DEV ? 35 : 25;
 const ACTIVITY_THROTTLE_MS = 2_000;
 
 let state: SyncSessionActivityState = {
@@ -19,11 +17,9 @@ let state: SyncSessionActivityState = {
   needsSync: false,
   lastActiveAt: Date.now(),
   idleStartedAt: null,
-  resumeStartedAt: null,
 };
 
 let idleTimer: number | null = null;
-let currentZeroConnected = false;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -56,7 +52,6 @@ function markIdleIfNeeded() {
   setState({
     status: "idle",
     idleStartedAt: now,
-    resumeStartedAt: null,
   });
 }
 
@@ -71,15 +66,7 @@ function scheduleIdleTimer() {
   idleTimer = window.setTimeout(markIdleIfNeeded, waitMs);
 }
 
-export function configureSyncSessionActivity({
-  needsSync,
-  zeroConnected,
-}: {
-  needsSync: boolean;
-  zeroConnected: boolean;
-}) {
-  currentZeroConnected = zeroConnected;
-
+export function configureSyncSessionActivity({ needsSync }: { needsSync: boolean }) {
   if (!needsSync) {
     clearIdleTimer();
     if (state.needsSync || state.status !== "active") {
@@ -88,7 +75,6 @@ export function configureSyncSessionActivity({
         needsSync: false,
         lastActiveAt: Date.now(),
         idleStartedAt: null,
-        resumeStartedAt: null,
       });
     }
     return;
@@ -100,28 +86,6 @@ export function configureSyncSessionActivity({
       needsSync: true,
       lastActiveAt: Date.now(),
       idleStartedAt: null,
-      resumeStartedAt: null,
-    });
-    scheduleIdleTimer();
-    return;
-  }
-
-  if (state.status === "active" && Date.now() - state.lastActiveAt >= IDLE_AFTER_MS) {
-    clearIdleTimer();
-    setState({
-      status: "idle",
-      idleStartedAt: Date.now(),
-      resumeStartedAt: null,
-    });
-    return;
-  }
-
-  if (state.status === "resuming" && zeroConnected) {
-    setState({
-      status: "active",
-      lastActiveAt: Date.now(),
-      idleStartedAt: null,
-      resumeStartedAt: null,
     });
     scheduleIdleTimer();
     return;
@@ -139,33 +103,13 @@ export function noteSyncSessionActivity() {
 
   const now = Date.now();
 
-  if (state.status === "idle" || state.status === "resuming") {
+  if (state.status === "idle") {
     setState({
-      status: currentZeroConnected ? "active" : "resuming",
+      status: "active",
       lastActiveAt: now,
       idleStartedAt: null,
-      resumeStartedAt: currentZeroConnected ? null : now,
     });
-    if (currentZeroConnected) {
-      scheduleIdleTimer();
-    } else {
-      clearIdleTimer();
-    }
-    return;
-  }
-
-  if (now - state.lastActiveAt >= IDLE_AFTER_MS) {
-    setState({
-      status: currentZeroConnected ? "active" : "resuming",
-      lastActiveAt: now,
-      idleStartedAt: null,
-      resumeStartedAt: currentZeroConnected ? null : now,
-    });
-    if (currentZeroConnected) {
-      scheduleIdleTimer();
-    } else {
-      clearIdleTimer();
-    }
+    scheduleIdleTimer();
     return;
   }
 
@@ -175,24 +119,6 @@ export function noteSyncSessionActivity() {
 
   setState({ lastActiveAt: now });
   scheduleIdleTimer();
-}
-
-export function isSyncSessionInteractionBlocked() {
-  return state.needsSync && state.status !== "active";
-}
-
-export function getSyncSessionBlockedMessage() {
-  if (state.status === "idle") {
-    return "Your multiplayer session is idle. Move, click, or press a key to resume controls.";
-  }
-
-  if (state.status === "resuming") {
-    const elapsed = state.resumeStartedAt == null ? 0 : (Date.now() - state.resumeStartedAt) / 1000;
-    const remaining = Math.max(1, Math.ceil(RESUME_ESTIMATE_SECS - elapsed));
-    return `Sync is reconnecting after idle (~${remaining}s). Controls will unlock automatically.`;
-  }
-
-  return "Multiplayer controls are paused until sync is ready.";
 }
 
 export function useSyncSessionActivityState() {
@@ -205,44 +131,10 @@ export function useSyncSessionActivityState() {
   );
 }
 
-export function useSyncSessionResumeCountdown(): number | null {
-  const snapshot = useSyncSessionActivityState();
-  const resumeStartedAt = snapshot.resumeStartedAt;
-  const [remaining, setRemaining] = useState<number | null>(() => {
-    if (resumeStartedAt == null) return null;
-    const elapsed = (Date.now() - resumeStartedAt) / 1000;
-    return Math.max(1, Math.ceil(RESUME_ESTIMATE_SECS - elapsed));
-  });
-
+export function useSyncSessionActivityTracker({ needsSync }: { needsSync: boolean }) {
   useEffect(() => {
-    if (resumeStartedAt == null) {
-      setRemaining(null);
-      return;
-    }
-
-    const update = () => {
-      const elapsed = (Date.now() - resumeStartedAt) / 1000;
-      setRemaining(Math.max(1, Math.ceil(RESUME_ESTIMATE_SECS - elapsed)));
-    };
-
-    update();
-    const timer = window.setInterval(update, 1_000);
-    return () => window.clearInterval(timer);
-  }, [resumeStartedAt]);
-
-  return remaining;
-}
-
-export function useSyncSessionActivityTracker({
-  needsSync,
-  zeroConnected,
-}: {
-  needsSync: boolean;
-  zeroConnected: boolean;
-}) {
-  useEffect(() => {
-    configureSyncSessionActivity({ needsSync, zeroConnected });
-  }, [needsSync, zeroConnected]);
+    configureSyncSessionActivity({ needsSync });
+  }, [needsSync]);
 
   useEffect(() => {
     if (!needsSync) {
