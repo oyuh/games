@@ -91,6 +91,7 @@ export const locationSignalMutators = {
       const sessionName = resolvePlayerName(session?.name, args.sessionId);
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
+      if (game.phase === "ended" || game.phase === "finished") throw new Error("Game has ended");
       if (game.kicked.includes(args.sessionId)) throw new Error("You have been kicked from this game");
       const existing = game.players.find((p) => p.sessionId === args.sessionId);
 
