@@ -10,7 +10,6 @@ import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
-import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -63,8 +62,6 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     setMapCenter(center);
     setMapZoom(zoom);
   }, []);
-
-  usePresenceSocket({ sessionId, gameId, gameType: "location_signal" });
 
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);

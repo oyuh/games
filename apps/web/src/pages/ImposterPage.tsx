@@ -13,7 +13,6 @@ import { ImposterVoteSection } from "../components/imposter/ImposterVoteSection"
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -39,8 +38,6 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   const [visibleSecretWord, setVisibleSecretWord] = useState<string | null>(null);
   const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
-
-  usePresenceSocket({ sessionId, gameId, gameType: "imposter" });
 
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
 

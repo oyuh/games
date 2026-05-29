@@ -24,7 +24,6 @@
     "db:push": "bun --filter @games/shared db:push",
     "db:push:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/db-push-prod.ps1",
     "db:push:prod:linux": "bash ./scripts/db-push-prod.sh",
-    "db:generate": "bun --filter @games/shared db:generate",
     "db:studio": "bun --filter @games/shared db:studio"
   },
   "devDependencies": {

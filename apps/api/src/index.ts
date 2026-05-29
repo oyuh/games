@@ -28,6 +28,7 @@ import {
   onRealtimeOpen,
   type RealtimeSocketData,
 } from "./broadcast-server";
+import { startPresenceFlush } from "./presence-server";
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 import { allowUnrestrictedSessionName, findRestrictedNameMatch } from "./name-rules";
 import { rateLimiter } from "./rate-limit";
@@ -152,14 +153,6 @@ app.use(
   })
 );
 
-app.use(
-  "/api/presence/heartbeat",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 30,
-    scope: "presence_heartbeat"
-  })
-);
 
 app.use(
   "/api/cleanup",
@@ -527,52 +520,9 @@ app.post("/api/session/sync", async (c) => {
   });
 });
 
-// ─── Presence heartbeat (replaces WebSocket presence) ───────
-app.post("/api/presence/heartbeat", async (c) => {
-  const body = await c.req.json().catch(() => null) as {
-    sessionId?: string;
-  } | null;
-  const claimedSessionId = body?.sessionId ?? "";
-
-  if (!claimedSessionId || claimedSessionId.length > MAX_ID_LEN) {
-    return c.json({ error: "sessionId required" }, 400);
-  }
-
-  const resolvedIdentity = await resolveSessionIdentity(c, {
-    claimedSessionId,
-    allowCreate: false,
-  });
-
-  if (!resolvedIdentity) {
-    return c.json({ error: "Invalid session" }, 403);
-  }
-
-  const sessionId = resolvedIdentity.sessionId;
-
-  const { ip, region, userAgent } = await getClientInfo(c.req);
-  const fingerprint = computeFingerprint(ip, userAgent);
-
-  // Check for session ID being used from too many different clients
-  const anomaly = checkFingerprintAnomaly(sessionId, fingerprint);
-
-  await drizzleClient
-    .update(sessions)
-    .set({
-      ip,
-      region,
-      userAgent,
-      fingerprint,
-      lastSeen: Date.now(),
-    })
-    .where(eq(sessions.id, sessionId));
-
-  return c.json({
-    ok: true,
-    sessionId,
-    resetRequired: resolvedIdentity.resetRequired,
-    ...(anomaly ? { warning: "fingerprint_anomaly" } : {}),
-  });
-});
+// Presence is now driven entirely by the realtime `/ws` connection
+// (see presence-server.ts). The old HTTP heartbeat polling endpoint was
+// removed — clients no longer poll; holding the socket open is the signal.
 
 // ─── Custom status in build-info ───────────────────────────
 app.get("/api/admin-status", (c) => {
@@ -2993,6 +2943,9 @@ attachRealtimeServer(server);
 console.log(`API listening on http://localhost:${server.port}`);
 
 setBanChecker(isBanned);
+// Presence is driven by the realtime WS connection; this just keeps online
+// sessions' last_seen fresh for the admin roster (server-side, no client polling).
+startPresenceFlush();
 console.log("Realtime WebSocket transport configured");
 
 // ─── Auto-cleanup: run every 15 minutes ────────────────────
