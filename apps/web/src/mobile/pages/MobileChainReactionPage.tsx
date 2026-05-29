@@ -10,7 +10,6 @@ import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityTo
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { useChainReactionLiveTyping } from "../../hooks/useChainReactionLiveTyping";
-import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
@@ -41,8 +40,6 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   const [giveUpConfirm, setGiveUpConfirm] = useState<number | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
-
-  usePresenceSocket({ sessionId, gameId, gameType: "chain_reaction" });
 
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);

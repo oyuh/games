@@ -13,7 +13,6 @@ import { RoundCountdown } from "../components/shared/RoundCountdown";
 import { SpectatorBadge, HostBadge } from "../components/shared/SpectatorBadge";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { BorringAvatar } from "../components/shared/BorringAvatar";
-import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -109,8 +108,6 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const clueInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
-
-  usePresenceSocket({ sessionId, gameId, gameType: "shade_signal" });
 
   const isHost = game?.host_id === sessionId;
   const isLeader = game?.leader_id === sessionId;
