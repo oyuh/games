@@ -14,6 +14,7 @@ import { ChatProvider, useChatContext } from "../lib/chat-context";
 import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useGameMeta } from "../hooks/useGameMeta";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { usePresence } from "../hooks/usePresence";
 
 const ChatWindow = lazy(() => import("./shared/ChatWindow").then(({ ChatWindow }) => ({ default: ChatWindow })));
 const ConnectionDebugPanel = lazy(() =>
@@ -32,6 +33,9 @@ export function AppShell() {
 
 function AppShellInner() {
   useGameMeta();
+  // Global presence heartbeat for EVERY client (home, single-player, and
+  // multiplayer) so they all stay visible on the admin panel.
+  usePresence(getOrCreateSessionId());
   const isMobile = useIsMobile();
 
   if (isMobile) {

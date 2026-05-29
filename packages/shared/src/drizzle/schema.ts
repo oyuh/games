@@ -25,6 +25,10 @@ export const sessions = pgTable(
     name: text("name"),
     gameType: gameTypeEnum("game_type"),
     gameId: text("game_id"),
+    // Free-form label of what the client is currently doing (e.g. "home",
+    // "pips", "shikaku", or a multiplayer game type). Lets the admin panel
+    // see single-player / idle clients that aren't attached to a game row.
+    activity: text("activity"),
     ip: text("ip"),
     userAgent: text("user_agent"),
     region: text("region"),

@@ -33,7 +33,7 @@ export const sessionMutators = {
   attachGame: defineMutator(
     z.object({
       id: z.string(),
-      gameType: z.enum(["imposter", "password", "chain_reaction", "shade_signal"]),
+      gameType: z.enum(["imposter", "password", "chain_reaction", "shade_signal", "location_signal"]),
       gameId: z.string()
     }),
     async ({ args, tx, ctx }) => {

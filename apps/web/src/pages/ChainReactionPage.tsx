@@ -10,7 +10,6 @@ import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { useChainReactionLiveTyping } from "../hooks/useChainReactionLiveTyping";
-import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -52,8 +51,6 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
   const [flashSlot, setFlashSlot] = useState<{ idx: number; type: "correct" | "wrong" } | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
-
-  usePresenceSocket({ sessionId, gameId, gameType: "chain_reaction" });
 
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);

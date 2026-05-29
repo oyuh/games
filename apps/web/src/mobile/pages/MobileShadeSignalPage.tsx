@@ -12,7 +12,6 @@ import { BorringAvatar } from "../../components/shared/BorringAvatar";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
-import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
@@ -82,8 +81,6 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const clueInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
-
-  usePresenceSocket({ sessionId, gameId, gameType: "shade_signal" });
 
   const isHost = game?.host_id === sessionId;
   const isLeader = game?.leader_id === sessionId;

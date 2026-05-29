@@ -15,6 +15,7 @@ const sessions = table("sessions").columns({
   name: string().optional(),
   game_type: enumeration<"imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal">().optional(),
   game_id: string().optional(),
+  activity: string().optional(),
   created_at: number(),
   last_seen: number()
 }).primaryKey("id");
