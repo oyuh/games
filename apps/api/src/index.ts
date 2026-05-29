@@ -31,7 +31,7 @@ import {
 import { startPresenceFlush } from "./presence-server";
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 import { allowUnrestrictedSessionName, findRestrictedNameMatch } from "./name-rules";
-import { rateLimiter } from "./rate-limit";
+import { rateLimit } from "./rate-limit";
 import {
   chooseCanonicalSession,
   createSignedSessionCookieValue,
@@ -135,52 +135,51 @@ app.use(
   })
 );
 
-app.use(
-  "/api/zero/*",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 120,
-    scope: "zero"
-  })
-);
+// ─── Rate limiting ─────────────────────────────────────────
+// IMPORTANT: all rate-limit middleware is registered HERE, before any routes
+// are mounted below. In Hono, middleware only applies to handlers registered
+// *after* it, so registering limiters up front guarantees every route — present
+// and future — is covered. The numbers live in RATE_LIMITS (see rate-limit.ts);
+// tiers are layered (e.g. a score submission hits global → game → score).
+//
+// A global catch-all runs first so nothing is ever accidentally unprotected.
+app.use("/api/*", rateLimit("global"));
+app.use("/debug/*", rateLimit("global", "global_debug"));
+app.use("/health", rateLimit("health"));
 
-app.use(
-  "/api/maps/geocode",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 10,
-    scope: "maps_geocode"
-  })
-);
+// High-volume real-time sync + identity — generous so live play is never throttled.
+app.use("/api/zero/*", rateLimit("zero"));
+app.use("/api/session/sync", rateLimit("sessionSync"));
 
+// Per-game encryption key exchange.
+app.use("/api/game-secret/*", rateLimit("gameSecret"));
 
-app.use(
-  "/api/cleanup",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 5,
-    scope: "cleanup"
-  })
-);
+// Map helpers — geocode proxies an external provider, so it's tighter.
+app.use("/api/maps/config", rateLimit("mapsConfig"));
+app.use("/api/maps/geocode", rateLimit("mapsGeocode"));
 
-app.use(
-  "/api/game-secret/*",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 30,
-    scope: "game_secret"
-  })
-);
+// Solo games (shikaku/pips): general reads + image generation share the "game"
+// tier; score submission gets a tighter layer on top. Registered before the
+// shikaku image routes are mounted below so they're actually covered.
+app.use("/api/shikaku/*", rateLimit("game", "shikaku"));
+app.use("/api/shikaku/score", rateLimit("score", "shikaku_score"));
+app.use("/api/pips/*", rateLimit("game", "pips"));
+app.use("/api/pips/score", rateLimit("score", "pips_score"));
+
+// Embeds (crawler/social previews) + public read-only lookups.
+app.use("/api/embed/*", rateLimit("embed"));
+app.use("/api/public/*", rateLimit("publicRead"));
+app.use("/api/admin-status", rateLimit("publicRead", "admin_status"));
+
+// Internal / secret-authed — light limits (present but generous).
+app.use("/api/admin/*", rateLimit("admin"));
+app.use("/api/cleanup", rateLimit("cron", "cleanup"));
+app.use("/api/activity", rateLimit("cron", "activity"));
+
+// Debug build-info runs a DB probe — keep it modest (on top of the global cap).
+app.use("/debug/build-info", rateLimit("debug"));
 
 // ─── Admin routes ──────────────────────────────────────────
-app.use(
-  "/api/admin/*",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 60,
-    scope: "admin"
-  })
-);
 app.route("/api/admin", adminRoutes);
 
 // ─── Public endpoints (no auth) ─────────────────────────────
@@ -1583,25 +1582,8 @@ function isShikakuBanned(sessionId: string): boolean {
   return shikakuBanCache.has(sessionId);
 }
 
-app.use(
-  "/api/shikaku/*",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 30,
-    scope: "shikaku"
-  })
-);
-
-// Tighter limit specifically for score submissions
-app.use(
-  "/api/shikaku/score",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 6,
-    scope: "shikaku_score"
-  })
-);
-
+// Rate limits for /api/shikaku/* (incl. score) are registered up top, before
+// the shikaku image routes are mounted — see the "Rate limiting" block.
 app.get("/api/shikaku/leaderboard", async (c) => {
   const difficulty = c.req.query("difficulty")?.trim() ?? "easy";
   if (!isShikakuDifficulty(difficulty)) {
@@ -2169,24 +2151,8 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
   };
 }
 
-app.use(
-  "/api/pips/*",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 30,
-    scope: "pips"
-  })
-);
-
-app.use(
-  "/api/pips/score",
-  rateLimiter({
-    windowMs: 60_000,
-    maxRequests: 6,
-    scope: "pips_score"
-  })
-);
-
+// Rate limits for /api/pips/* (incl. score) are registered up top — see the
+// "Rate limiting" block.
 app.get("/api/pips/leaderboard", async (c) => {
   const limitParam = parseInt(c.req.query("limit") ?? "10", 10);
   const limit = Math.min(Math.max(1, limitParam), 50);
