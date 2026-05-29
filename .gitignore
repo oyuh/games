@@ -43,3 +43,6 @@ Thumbs.db
 # Misc
 *.log
 *.tsbuildinfo
+
+
+packages\shared\drizzle

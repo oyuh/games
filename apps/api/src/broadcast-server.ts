@@ -1,6 +1,7 @@
 import { chainReactionGames, passwordGames } from "@games/shared";
 import { eq } from "drizzle-orm";
 import { drizzleClient } from "./db-provider";
+import { presenceActivity, presenceClose, presenceOpen } from "./presence-server";
 
 export type CustomStatusPayload = {
   text: string;
@@ -46,6 +47,7 @@ type RealtimeInboundMessage =
   | { type: "subscribe"; topic: string }
   | { type: "unsubscribe"; topic: string }
   | { type: "publish"; topic: string; event: string; payload?: unknown }
+  | { type: "presence"; activity?: string }
   | { type: "ping"; ts?: number };
 
 type RealtimeOutboundMessage =
@@ -253,9 +255,13 @@ export function onRealtimeOpen(socket: Bun.ServerWebSocket<RealtimeSocketData>) 
   } else {
     sessionSockets.set(socket.data.sessionId, new Set([socket]));
   }
+  // The open socket itself is the presence signal — no client polling needed.
+  presenceOpen(socket.data.sessionId);
 }
 
 export function onRealtimeClose(socket: Bun.ServerWebSocket<RealtimeSocketData>) {
+  presenceClose(socket.data.sessionId);
+
   const existing = sessionSockets.get(socket.data.sessionId);
   if (!existing) {
     return;
@@ -345,6 +351,10 @@ export async function onRealtimeMessage(
       sendToSocket(socket, { type: "error", code: "unsupported_event", message: "Unsupported realtime event." });
       return;
     }
+
+    case "presence":
+      presenceActivity(socket.data.sessionId, message.activity);
+      return;
 
     case "ping":
       sendToSocket(socket, { type: "pong", ts: typeof message.ts === "number" ? message.ts : Date.now() });

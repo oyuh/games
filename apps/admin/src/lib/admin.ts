@@ -23,6 +23,8 @@ export type ClientRecord = {
   lastSeen: number;
   gameId: string | null;
   gameType: GameType | null;
+  activity: string | null;
+  online: boolean;
 };
 
 export type GameSummary = {
@@ -186,6 +188,25 @@ export function formatGameType(type: GameType | string | null | undefined) {
     return "Unknown";
   }
   return GAME_TYPE_LABELS[type as GameType] ?? humanizeKey(type);
+}
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  home: "Home",
+  browsing: "Browsing",
+  pips: "Pips",
+  shikaku: "Shikaku",
+  imposter: "Imposter",
+  password: "Password",
+  chain_reaction: "Chain Reaction",
+  shade_signal: "Shade Signal",
+  location_signal: "Location Signal",
+};
+
+export function formatActivity(activity: string | null | undefined) {
+  if (!activity) {
+    return "Idle";
+  }
+  return ACTIVITY_LABELS[activity] ?? humanizeKey(activity);
 }
 
 export function shortId(value: string | null | undefined, length = 10) {
