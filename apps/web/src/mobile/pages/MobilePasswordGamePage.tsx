@@ -3,7 +3,6 @@ import { useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiSend, FiClock, FiSkipForward } from "react-icons/fi";
-import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { usePasswordLiveTyping } from "../../hooks/usePasswordLiveTyping";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
@@ -44,7 +43,6 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   isHostRef.current = Boolean(isHost);
   phaseRef.current = game?.phase;
 
-  usePresenceSocket({ sessionId, gameId, gameType: "password" });
   const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
 
   useEffect(() => {

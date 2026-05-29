@@ -1,4 +1,5 @@
 import { getOrCreateSessionId, getStoredSessionProof } from "./session";
+import { setPresenceConnectionState } from "./connection-debug";
 
 type RealtimeServerMessage =
   | { type: "event"; topic: string; event: string; payload: unknown }
@@ -11,6 +12,7 @@ type RealtimeClientMessage =
   | { type: "subscribe"; topic: string }
   | { type: "unsubscribe"; topic: string }
   | { type: "publish"; topic: string; event: string; payload?: unknown }
+  | { type: "presence"; activity: string }
   | { type: "ping"; ts: number };
 
 type RealtimeListener = (payload: unknown) => void;
@@ -59,6 +61,10 @@ class RealtimeClient {
   private readonly activeTopics = new Set<string>();
   private readonly pendingPublishes = new Map<string, RealtimeClientMessage & { type: "publish" }>();
   private readonly listeners = new Map<string, Map<string, Set<RealtimeListener>>>();
+  // Presence: the open socket *is* the presence signal. We only push an extra
+  // message when the client's activity (current route) changes — no polling.
+  private presenceActive = false;
+  private presenceActivity: string | null = null;
 
   subscribe<T>(topic: string, event: string, listener: (payload: T) => void) {
     this.addListener(topic, event, listener as RealtimeListener);
@@ -69,6 +75,20 @@ class RealtimeClient {
       this.removeListener(topic, event, listener as RealtimeListener);
       this.releaseTopic(topic);
     };
+  }
+
+  /**
+   * Mark this client present and report what it's doing. Opens (and keeps
+   * reconnecting) the realtime socket; the live connection is the heartbeat.
+   * Activity is only re-sent when it actually changes.
+   */
+  setPresence(activity: string) {
+    this.presenceActive = true;
+    this.presenceActivity = activity;
+    this.connect();
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(encodeMessage({ type: "presence", activity }));
+    }
   }
 
   publish(topic: string, event: string, payload?: unknown) {
@@ -96,15 +116,28 @@ class RealtimeClient {
       wsUrl.searchParams.set("sessionProof", sessionProof);
     }
 
+    if (this.presenceActive) {
+      setPresenceConnectionState({ state: "connecting" });
+    }
+
     const socket = new WebSocket(wsUrl.toString());
     this.socket = socket;
 
     socket.addEventListener("open", () => {
       this.reconnectAttempts = 0;
       this.clearReconnectTimer();
+      if (this.presenceActive) {
+        setPresenceConnectionState({ state: "connected" });
+      }
 
       for (const topic of this.topicRefCounts.keys()) {
         socket.send(encodeMessage({ type: "subscribe", topic }));
+      }
+
+      // Re-announce presence after a (re)connect so the server registry and the
+      // session's activity are restored immediately.
+      if (this.presenceActive && this.presenceActivity) {
+        socket.send(encodeMessage({ type: "presence", activity: this.presenceActivity }));
       }
     });
 
@@ -154,6 +187,9 @@ class RealtimeClient {
         this.socket = null;
       }
       this.activeTopics.clear();
+      if (this.presenceActive) {
+        setPresenceConnectionState({ state: "error", reason: "socket closed" });
+      }
       this.scheduleReconnect();
     });
 
@@ -235,7 +271,9 @@ class RealtimeClient {
   }
 
   private scheduleReconnect() {
-    if (this.reconnectTimer !== null || this.topicRefCounts.size === 0) {
+    // Reconnect if anything still needs the socket: active topic subscriptions
+    // or an active presence session.
+    if (this.reconnectTimer !== null || (this.topicRefCounts.size === 0 && !this.presenceActive)) {
       return;
     }
 
@@ -276,6 +314,10 @@ export function subscribeToRealtimeEvent<T>(
 
 export function publishRealtimeEvent(topic: string, event: string, payload?: unknown) {
   return getRealtimeClient().publish(topic, event, payload);
+}
+
+export function setRealtimePresence(activity: string) {
+  return getRealtimeClient().setPresence(activity);
 }
 
 export function buildRealtimeUserTopic(sessionId: string) {

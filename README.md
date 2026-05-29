@@ -405,7 +405,6 @@ Run from the repository root.
 | `bun run test:local` | Run shared local integration tests |
 | `bun run lint` | Placeholder lint scripts |
 | `bun run db:push` | Push Drizzle schema to the configured database |
-| `bun run db:generate` | Generate Drizzle migration files |
 | `bun run db:studio` | Open Drizzle Studio |
 | `bun run db:push:prod` | Push schema to `PROD_DB_URL` after confirmation |
 

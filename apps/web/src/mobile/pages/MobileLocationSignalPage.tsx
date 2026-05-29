@@ -10,7 +10,6 @@ import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
-import { usePresenceSocket } from "../../hooks/usePresenceSocket";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
@@ -66,8 +65,6 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     setMapCenter(center);
     setMapZoom(zoom);
   }, []);
-
-  usePresenceSocket({ sessionId, gameId, gameType: "location_signal" });
 
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
