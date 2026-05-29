@@ -1,1 +1,0 @@
-ALTER TYPE "public"."shade_signal_phase" ADD VALUE 'picking' BEFORE 'clue1';

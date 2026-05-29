@@ -9,7 +9,6 @@ import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { usePresenceSocket } from "../hooks/usePresenceSocket";
 import { usePasswordLiveTyping } from "../hooks/usePasswordLiveTyping";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -42,8 +41,6 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
 
   isHostRef.current = Boolean(isHost);
   phaseRef.current = game?.phase;
-
-  usePresenceSocket({ sessionId, gameId, gameType: "password" });
 
   const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
 

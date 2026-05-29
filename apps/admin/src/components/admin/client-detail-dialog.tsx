@@ -14,6 +14,7 @@ import { api } from "@/lib/client-api";
 import {
   ClientDetailResponse,
   ClientRecord,
+  formatActivity,
   formatDateTime,
   formatGameType,
   formatRelativeTime,
@@ -214,13 +215,23 @@ export function ClientDetailDialog({
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-[11px] uppercase tracking-normal text-muted-foreground">
-                        Current game
+                      <div className="flex items-center gap-2 text-[11px] uppercase tracking-normal text-muted-foreground">
+                        Current activity
+                        <Badge
+                          className={
+                            activeClient.online
+                              ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                              : "border border-amber-500/40 bg-amber-400/10 text-amber-700 dark:text-amber-300"
+                          }
+                        >
+                          {activeClient.online ? "Online" : "Idle"}
+                        </Badge>
                       </div>
                       <div className="mt-2 text-foreground">
                         {activeClient.gameId && activeClient.gameType
                           ? formatGameType(activeClient.gameType)
-                          : "Not in a game"}
+                          : formatActivity(activeClient.activity)}
+                        {!activeClient.online ? " (idle)" : ""}
                       </div>
                     </div>
                     {activeClient.gameId &&

@@ -25,6 +25,7 @@ import {
   setCustomStatus,
   type CustomStatusPayload,
 } from "./broadcast-server";
+import { isSessionOnline } from "./presence-server";
 import {
   isRestrictedName,
   loadRestrictedNamePatterns,
@@ -166,6 +167,10 @@ function mapSessionToClient(session: SessionRow) {
     lastSeen: session.lastSeen,
     gameId: session.gameId,
     gameType: session.gameType,
+    activity: session.activity ?? null,
+    // Live online status from the WS presence registry. If false but the row is
+    // still recent, the admin UI renders it as "<last activity> (idle)".
+    online: isSessionOnline(session.id),
   };
 }
 
@@ -184,6 +189,7 @@ function matchesClientSearch(session: SessionRow, query: string) {
     session.fingerprint,
     session.gameId,
     session.gameType,
+    session.activity,
   ];
 
   return searchableValues.some((value) => normalizeAdminText(value).includes(normalizedQuery));

@@ -15,6 +15,7 @@ import { api } from "@/lib/client-api";
 import {
   ClientListResponse,
   ClientRecord,
+  formatActivity,
   formatGameType,
   formatRelativeTime,
   GAME_TYPE_OPTIONS,
@@ -296,7 +297,9 @@ export default function ClientsPage() {
                   <TableHead className="text-muted-foreground">
                     Location
                   </TableHead>
-                  <TableHead className="text-muted-foreground">Game</TableHead>
+                  <TableHead className="text-muted-foreground">
+                    Game / Activity
+                  </TableHead>
                   <TableHead className="hidden text-muted-foreground xl:table-cell">
                     Fingerprint / UA
                   </TableHead>
@@ -334,27 +337,49 @@ export default function ClientsPage() {
                           {client.ip || "Unknown IP"}
                         </div>
                       </TableCell>
-                      <TableCell className="align-top">
+                      <TableCell
+                        className={`align-top ${
+                          client.online ? "" : "bg-amber-400/10"
+                        }`}
+                      >
                         {client.gameId && client.gameType ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-border bg-card text-foreground hover:bg-accent"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setSelectedGame({
-                                id: client.gameId!,
-                                type: client.gameType!,
-                              });
-                            }}
-                          >
-                            <Activity className="size-4" />
-                            {formatGameType(client.gameType)}
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-border bg-card text-foreground hover:bg-accent"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedGame({
+                                  id: client.gameId!,
+                                  type: client.gameType!,
+                                });
+                              }}
+                            >
+                              <Activity className="size-4" />
+                              {formatGameType(client.gameType)}
+                            </Button>
+                            {!client.online && (
+                              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                                (idle)
+                              </span>
+                            )}
+                          </div>
                         ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Not attached
-                          </span>
+                          <Badge
+                            variant="outline"
+                            className={
+                              client.online
+                                ? "border-border bg-card text-muted-foreground"
+                                : "border-amber-500/40 bg-amber-400/10 text-amber-700 dark:text-amber-300"
+                            }
+                          >
+                            {client.online
+                              ? formatActivity(client.activity)
+                              : client.activity
+                                ? `${formatActivity(client.activity)} (idle)`
+                                : "Idle"}
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell className="hidden max-w-sm align-top text-sm text-muted-foreground xl:table-cell">
