@@ -641,6 +641,49 @@
   color: var(--primary);
 }
 
+.option-toggle-btn--wide {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* ── Custom sidebar placement controls ───────────────────────── */
+.option-sublabel {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0.85rem 0 0.45rem;
+}
+
+.sidebar-custom-panel {
+  margin-top: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.sidebar-custom-panel .option-sublabel:first-child {
+  margin-top: 0;
+}
+
+.sidebar-place-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin: 0.6rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--secondary);
+}
+
+.sidebar-place-hint svg {
+  vertical-align: middle;
+}
+
 .cursor-scale-control {
   margin-top: 0.65rem;
   padding: 0.65rem 0.75rem;
