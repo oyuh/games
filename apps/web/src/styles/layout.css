@@ -137,6 +137,104 @@
   background: color-mix(in srgb, var(--secondary) 28%, transparent);
 }
 
+/* ── Custom free-placement sidebar (desktop only) ────────────── */
+/* Position itself is applied inline (React) so it can follow the cursor
+   while dragging and anchor to the nearest viewport edge on release.
+   These rules only handle orientation, shape, and the drag handle. On
+   mobile the drawer (responsive.css) takes over regardless of this mode. */
+.sidebar--dragging {
+  transition: none;
+  user-select: none;
+  cursor: grabbing;
+}
+
+@media (min-width: 769px) {
+  /* Both orientations share the same rounded-rectangle corners (no pill). */
+  [data-sidebar="custom"][data-sidebar-orientation="vertical"] .sidebar {
+    flex-direction: column;
+    border-radius: 18px;
+  }
+
+  [data-sidebar="custom"][data-sidebar-orientation="horizontal"] .sidebar {
+    flex-direction: row;
+    border-radius: 18px;
+    padding: 0.5rem 0.6rem;
+    gap: 0.25rem;
+  }
+
+  [data-sidebar="custom"][data-sidebar-orientation="horizontal"] .sidebar-separator {
+    width: 1px;
+    height: 28px;
+    margin: 0 0.15rem;
+  }
+
+  /* ── Drag tab: a skinny detached bar in the site's primary blue, floating in
+        the gap beside the sidebar. Spans most of one edge (7% inset on each
+        end) and is translucent until hovered. ── */
+  .sidebar-drag-tab {
+    position: absolute;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary) 50%, transparent);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+    touch-action: none;
+    transition: background 0.15s ease, width 0.15s ease, height 0.15s ease;
+  }
+
+  /* Vertical sidebar → tab on the top or bottom, spanning the width. */
+  .sidebar-drag-tab--top,
+  .sidebar-drag-tab--bottom {
+    left: 7%;
+    right: 7%;
+    height: 6px;
+  }
+
+  .sidebar-drag-tab--bottom {
+    top: calc(100% + 6px);
+  }
+
+  .sidebar-drag-tab--top {
+    bottom: calc(100% + 6px);
+  }
+
+  .sidebar-drag-tab--top:hover,
+  .sidebar-drag-tab--bottom:hover {
+    height: 8px;
+  }
+
+  /* Horizontal sidebar → tab on the inner side, spanning the height. */
+  .sidebar-drag-tab--right,
+  .sidebar-drag-tab--left {
+    top: 7%;
+    bottom: 7%;
+    width: 6px;
+  }
+
+  .sidebar-drag-tab--right {
+    left: calc(100% + 8px);
+  }
+
+  .sidebar-drag-tab--left {
+    right: calc(100% + 8px);
+  }
+
+  .sidebar-drag-tab--right:hover,
+  .sidebar-drag-tab--left:hover {
+    width: 8px;
+  }
+
+  .sidebar-drag-tab:hover {
+    background: color-mix(in srgb, var(--primary) 90%, transparent);
+  }
+
+  .sidebar--dragging .sidebar-drag-tab {
+    cursor: grabbing;
+    background: color-mix(in srgb, var(--primary) 90%, transparent);
+  }
+}
+
 /* ── Mobile hamburger ────────────────────────────────────────── */
 .sidebar-mobile-toggle {
   display: none;

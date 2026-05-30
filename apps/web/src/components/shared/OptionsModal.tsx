@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FiX, FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX, FiChevronDown, FiNavigation, FiMonitor, FiMaximize2 } from "react-icons/fi";
+import { FiX, FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX, FiChevronDown, FiNavigation, FiMonitor, FiMaximize2, FiMove, FiMoreVertical, FiMoreHorizontal } from "react-icons/fi";
 import { CURSOR_SCALE_MAX, CURSOR_SCALE_MIN, CURSOR_SCALE_STEP, updateSettings, useSettings } from "../../lib/settings";
 import type { SidebarPosition, Theme, SoundPreferences } from "../../lib/settings";
 import { playPress } from "../../lib/sounds";
@@ -89,17 +89,57 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
           {/* Sidebar position */}
           <div className="option-group">
             <span className="option-label">Sidebar Position</span>
-            <div className="option-toggle-row">
-              {(["left", "right", "top"] as SidebarPosition[]).map((pos) => (
+            {!settings.sidebarCustom && (
+              <div className="option-toggle-row">
+                {(["left", "right", "top"] as SidebarPosition[]).map((pos) => (
+                  <button
+                    key={pos}
+                    className={`option-toggle-btn ${settings.sidebarPosition === pos ? "option-toggle-btn--active" : ""}`}
+                    onClick={() => updateSettings({ sidebarPosition: pos })}
+                  >
+                    {positionIcons[pos]} {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Custom free-placement toggle */}
+            <button
+              className={`option-toggle-btn option-toggle-btn--wide ${settings.sidebarCustom ? "option-toggle-btn--active" : ""}`}
+              onClick={() => updateSettings({ sidebarCustom: !settings.sidebarCustom })}
+            >
+              <FiMove size={14} /> Custom Placement: {settings.sidebarCustom ? "On" : "Off"}
+            </button>
+
+            {settings.sidebarCustom && (
+              <div className="sidebar-custom-panel">
+                {/* Orientation */}
+                <span className="option-sublabel">Orientation</span>
+                <div className="option-toggle-row">
+                  <button
+                    className={`option-toggle-btn ${settings.sidebarOrientation === "vertical" ? "option-toggle-btn--active" : ""}`}
+                    onClick={() => updateSettings({ sidebarOrientation: "vertical" })}
+                  >
+                    <FiMoreVertical size={14} /> Vertical
+                  </button>
+                  <button
+                    className={`option-toggle-btn ${settings.sidebarOrientation === "horizontal" ? "option-toggle-btn--active" : ""}`}
+                    onClick={() => updateSettings({ sidebarOrientation: "horizontal" })}
+                  >
+                    <FiMoreHorizontal size={14} /> Horizontal
+                  </button>
+                </div>
+
+                {/* Movement tool — shows the drag tab on the sidebar */}
+                <span className="option-sublabel">Placement</span>
                 <button
-                  key={pos}
-                  className={`option-toggle-btn ${settings.sidebarPosition === pos ? "option-toggle-btn--active" : ""}`}
-                  onClick={() => updateSettings({ sidebarPosition: pos })}
+                  className={`option-toggle-btn option-toggle-btn--wide ${settings.sidebarDragEnabled ? "option-toggle-btn--active" : ""}`}
+                  onClick={() => updateSettings({ sidebarDragEnabled: !settings.sidebarDragEnabled })}
                 >
-                  {positionIcons[pos]} {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                  <FiMove size={14} /> Movement Tool: {settings.sidebarDragEnabled ? "On" : "Off"}
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Sound */}
