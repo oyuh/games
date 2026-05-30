@@ -1,11 +1,12 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward, FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight, FiTrash2 } from "react-icons/fi";
 import { FaCrown } from "react-icons/fa";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
 import type { GameContext } from "./shared/HostControlsModal";
-import { useSettings } from "../lib/settings";
+import { updateSettings, useSettings } from "../lib/settings";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
 import { showToast } from "../lib/toast";
@@ -188,6 +189,16 @@ function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "sha
   }, [detected, imp, pwd, chr, shd, loc]);
 }
 
+/** Gap (px) the custom sidebar keeps from the viewport edges. */
+const SIDEBAR_MARGIN = 12;
+/** Snap grid: N divisions per axis → (N + 1)² placements (24 here = 625 spots). */
+const SIDEBAR_GRID_DIVISIONS = 24;
+
+function snapFraction(f: number): number {
+  const clamped = Math.min(1, Math.max(0, f));
+  return Math.round(clamped * SIDEBAR_GRID_DIVISIONS) / SIDEBAR_GRID_DIVISIONS;
+}
+
 export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [modal, setModal] = useState<"options" | "info" | "host" | null>(null);
@@ -200,6 +211,60 @@ export function Sidebar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const settings = useSettings();
+  const isMobile = useIsMobile();
+  const navRef = useRef<HTMLElement>(null);
+  // While dragging we follow the cursor in raw px; on release we convert to a
+  // snapped fraction of the viewport (see handleDragEnd) so it survives resizes.
+  const [dragPx, setDragPx] = useState<{ x: number; y: number } | null>(null);
+  const dragMeta = useRef<{ grabX: number; grabY: number; w: number; h: number } | null>(null);
+  // Custom free-placement is desktop-only; on mobile the drawer takes over.
+  const customActive = settings.sidebarCustom && !isMobile;
+
+  const handleDragMove = useCallback((e: PointerEvent) => {
+    const meta = dragMeta.current;
+    if (!meta) return;
+    const x = Math.min(Math.max(SIDEBAR_MARGIN, e.clientX - meta.grabX), window.innerWidth - meta.w - SIDEBAR_MARGIN);
+    const y = Math.min(Math.max(SIDEBAR_MARGIN, e.clientY - meta.grabY), window.innerHeight - meta.h - SIDEBAR_MARGIN);
+    setDragPx({ x, y });
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    window.removeEventListener("pointermove", handleDragMove);
+    window.removeEventListener("pointerup", handleDragEnd);
+    const nav = navRef.current;
+    const meta = dragMeta.current;
+    dragMeta.current = null;
+    if (nav && meta) {
+      const rect = nav.getBoundingClientRect();
+      // Convert the dropped pixel position into a snapped fraction of the
+      // available travel space, so it stays correct across window resizes.
+      const travelX = window.innerWidth - rect.width - 2 * SIDEBAR_MARGIN;
+      const travelY = window.innerHeight - rect.height - 2 * SIDEBAR_MARGIN;
+      const fx = snapFraction(travelX > 0 ? (rect.left - SIDEBAR_MARGIN) / travelX : 0);
+      const fy = snapFraction(travelY > 0 ? (rect.top - SIDEBAR_MARGIN) / travelY : 0);
+      updateSettings({ sidebarCustomPos: { fx, fy } });
+    }
+    setDragPx(null);
+  }, [handleDragMove]);
+
+  const handleDragStart = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const nav = navRef.current;
+    if (!nav) return;
+    const rect = nav.getBoundingClientRect();
+    dragMeta.current = { grabX: e.clientX - rect.left, grabY: e.clientY - rect.top, w: rect.width, h: rect.height };
+    setDragPx({ x: rect.left, y: rect.top });
+    window.addEventListener("pointermove", handleDragMove);
+    window.addEventListener("pointerup", handleDragEnd);
+  }, [handleDragMove, handleDragEnd]);
+
+  // Detach drag listeners if the sidebar unmounts mid-drag.
+  useEffect(() => () => {
+    window.removeEventListener("pointermove", handleDragMove);
+    window.removeEventListener("pointerup", handleDragEnd);
+  }, [handleDragMove, handleDragEnd]);
+
   const gameContext = useGameContext();
   const demoInfo = useGameDemoInfo();
   const sessionId = getOrCreateSessionId();
@@ -374,6 +439,38 @@ export function Sidebar() {
 
   const isTop = settings.sidebarPosition === "top";
 
+  let navStyle: CSSProperties | undefined;
+  if (customActive) {
+    if (dragPx) {
+      navStyle = { left: dragPx.x, top: dragPx.y, right: "auto", bottom: "auto", transform: "none" };
+    } else {
+      // Position via viewport-percentage + a self-relative translate so the bar
+      // spans flush-edge to flush-edge across [0,1] and stays on-screen on resize,
+      // keeping a fixed SIDEBAR_MARGIN gap at the extremes — all in pure CSS.
+      const { fx, fy } = settings.sidebarCustomPos;
+      const m = SIDEBAR_MARGIN;
+      navStyle = {
+        left: `${fx * 100}%`,
+        top: `${fy * 100}%`,
+        right: "auto",
+        bottom: "auto",
+        transform: `translate(calc(${-fx * 100}% + ${(0.5 - fx) * 2 * m}px), calc(${-fy * 100}% + ${(0.5 - fy) * 2 * m}px))`,
+      };
+    }
+  }
+
+  // The tab always sits on the sidebar edge that faces the open screen: a
+  // horizontal bar in the right half gets it on the left (and vice versa); a
+  // vertical bar in the bottom half gets it on top (and vice versa).
+  const tabSide: "left" | "right" | "top" | "bottom" =
+    settings.sidebarOrientation === "horizontal"
+      ? settings.sidebarCustomPos.fx >= 0.5
+        ? "left"
+        : "right"
+      : settings.sidebarCustomPos.fy >= 0.5
+        ? "top"
+        : "bottom";
+
   return (
     <>
       {/* Mobile toggle - always rendered; CSS hides on desktop */}
@@ -391,7 +488,19 @@ export function Sidebar() {
       )}
 
       {/* Floating sidebar / top bar */}
-      <nav className={`sidebar ${mobileOpen ? "sidebar--open" : ""}`}>
+      <nav
+        ref={navRef}
+        className={`sidebar ${mobileOpen ? "sidebar--open" : ""}${customActive ? " sidebar--custom" : ""}${dragPx ? " sidebar--dragging" : ""}`}
+        style={navStyle}
+      >
+        {customActive && settings.sidebarDragEnabled && (
+          <button
+            type="button"
+            className={`sidebar-drag-tab sidebar-drag-tab--${tabSide}`}
+            onPointerDown={handleDragStart}
+            aria-label="Drag sidebar to reposition"
+          />
+        )}
         <Link
           to="/"
           className={`sidebar-link ${pathname === "/" ? "sidebar-link--active" : ""} ${confirmLeave ? "sidebar-link--confirm" : ""}`}

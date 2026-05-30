@@ -99,7 +99,7 @@
     repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 24px),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 26px),
     var(--solo-bg, linear-gradient(160deg, #232323 0%, #1a1a1a 100%));
-  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   transition: border-color 0.2s, box-shadow 0.2s;
   position: relative;
   overflow: hidden;
@@ -118,10 +118,7 @@
 .solo-card--playable:focus-visible,
 .solo-card--playable:focus-within {
   border-color: color-mix(in srgb, var(--solo-accent, var(--primary)) 35%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--solo-accent, var(--primary)) 18%, transparent),
-    0 14px 48px rgba(0, 0, 0, 0.58),
-    inset 0 0 22px color-mix(in srgb, var(--solo-accent, var(--primary)) 5%, transparent);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.24);
 }
 
 .solo-card--playable:focus-visible {
@@ -131,10 +128,7 @@
 
 .solo-card--playable:active {
   border-color: color-mix(in srgb, var(--solo-accent, var(--primary)) 45%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--solo-accent, var(--primary)) 22%, transparent),
-    0 8px 28px rgba(0, 0, 0, 0.5),
-    inset 0 0 26px color-mix(in srgb, var(--solo-accent, var(--primary)) 8%, transparent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
 }
 
 .solo-card-hit-area {
@@ -666,7 +660,7 @@ a.solo-card-title-link {
   border-radius: 1.25rem;
   border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
   background: linear-gradient(to bottom right, #232323, #1a1a1a);
-  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.4s, filter 0.4s;
   position: relative;
   overflow: hidden;
@@ -674,7 +668,7 @@ a.solo-card-title-link {
 
 .home-card:hover {
   border-color: color-mix(in srgb, var(--primary) 30%, transparent);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.24);
 }
 
 /* ── Icon pattern background for game cards ──────────────────── */
