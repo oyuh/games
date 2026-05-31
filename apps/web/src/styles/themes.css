@@ -82,7 +82,8 @@
   bottom: auto;
   transform: translateX(-50%);
   flex-direction: row;
-  border-radius: 999px;
+  /* Squircle corners to match the custom horizontal sidebar (not a pill). */
+  border-radius: 18px;
   padding: 0.35rem 0.75rem;
   gap: 0.25rem;
   width: auto;
