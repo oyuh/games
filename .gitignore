@@ -19,7 +19,7 @@ node_modules
 
 # Test / coverage
 coverage
-docs\react-doctor-guide.md
+docs/react-doctor-guide.md
 
 # Zero
 zero-data
@@ -44,6 +44,3 @@ Thumbs.db
 # Misc
 *.log
 *.tsbuildinfo
-
-
-packages\shared\drizzle
