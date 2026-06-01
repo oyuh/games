@@ -1,0 +1,129 @@
+/* ── Chain Reaction — masked "fill in the blank" guess field ───────────────
+   Locked hint letters as a fixed prefix, typed letters in the accent colour,
+   remaining positions shown as underscores. Reused (read-only) to mirror an
+   opponent's live typing. Shared by desktop + mobile chain reaction pages. */
+
+.crg-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.crg-readonly-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.crg-field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.crg-cells {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  /* Match the wider spacing of the non-editing partial word: renderPartialWord
+     joins letters with literal spaces, so each letter sits a full space apart. */
+  gap: 0.78em;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.crg-field--compact .crg-cells {
+  font-size: 0.9rem;
+  gap: 0.72em;
+}
+
+.crg-cell {
+  min-width: 0.6em;
+  text-align: center;
+  text-transform: uppercase;
+  transition: color 0.12s ease;
+}
+
+/* Revealed hint letters — locked, can't be edited */
+.crg-cell--locked {
+  color: var(--secondary);
+  opacity: 0.85;
+}
+
+/* Letters the player has typed */
+.crg-cell--filled {
+  color: var(--primary);
+}
+
+/* Not yet filled — underscore placeholder */
+.crg-cell--empty {
+  color: var(--secondary);
+  opacity: 0.45;
+}
+
+/* Next position to fill — acts as the caret */
+.crg-cell--active {
+  color: var(--primary);
+  opacity: 1;
+  animation: crg-caret-blink 1s steps(1, end) infinite;
+}
+
+@keyframes crg-caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
+}
+
+/* Invisible input overlay — captures typing, native caret hidden in favour of
+   the active-cell indicator so it always lines up with the masked letters. */
+.crg-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font: inherit;
+  letter-spacing: 0.5em;
+  cursor: text;
+}
+
+.crg-go {
+  background: var(--primary);
+  color: var(--background, var(--primary-foreground));
+  border: none;
+  border-radius: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.crg-go:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.crg-live {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  opacity: 0.75;
+  flex-shrink: 0;
+  margin-left: auto;
+}
