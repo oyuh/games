@@ -149,16 +149,22 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
             </div>
           </div>
 
-          <div className="game-actions active-game-actions">
+          <div className="active-game-actions">
+            <button
+              className="btn active-game-leave-btn"
+              onClick={() => void handleLeave()}
+              disabled={leaving}
+              aria-label={leaving ? "Leaving game" : "Leave game"}
+              title="Leave game"
+            >
+              <FiLogOut size={16} />
+              {wasKicked && <span>{leaving ? "Leaving..." : "Leave Game"}</span>}
+            </button>
             {!wasKicked && (
               <button className="btn active-game-rejoin-btn game-action-btn" onClick={handleRejoin}>
                 Rejoin {gameLabel} <FiArrowRight size={14} />
               </button>
             )}
-            <button className="btn active-game-leave-btn" onClick={() => void handleLeave()} disabled={leaving}>
-              <FiLogOut size={14} />
-              {leaving ? "Leaving..." : "Leave Game"}
-            </button>
           </div>
         </div>
       </div>
