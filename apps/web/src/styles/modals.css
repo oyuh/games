@@ -133,24 +133,45 @@
 }
 
 .active-game-actions {
-  flex-direction: column;
+  display: flex;
+  flex-direction: row;
   align-items: stretch;
-  justify-content: flex-start;
-  gap: 0.55rem;
+  gap: 0.6rem;
+  flex-wrap: nowrap;
 }
 
 .active-game-actions .btn {
-  width: 100%;
   justify-content: center;
 }
 
+.active-game-rejoin-btn {
+  /* Fills whatever the fixed-width leave button leaves behind (~88%). */
+  flex: 1 1 0;
+}
+
 .active-game-leave-btn {
+  /* Fixed 12% of the row; min-width:0 lets it actually reach that narrow. */
+  flex: 0 0 12%;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
+  /* Icon-only button — trim side padding so the icon sits cleanly in the narrow width. */
+  padding-inline: 0.5rem;
   background: color-mix(in srgb, #ef4444 12%, transparent);
   border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
   color: #f87171;
+}
+
+/* When the leave button is the only action (e.g. you were removed), let it fill the row. */
+.active-game-leave-btn:only-child {
+  flex: 1 1 auto;
+}
+
+/* Leave sits on the left, so mirror the log-out arrow to point outward (left). */
+.active-game-leave-btn svg {
+  transform: scaleX(-1);
 }
 
 .active-game-leave-btn:hover:not(:disabled) {
