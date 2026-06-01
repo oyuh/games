@@ -9,6 +9,7 @@ import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
+import { ChainGuessField } from "../../components/chain/ChainGuessField";
 import { useChainReactionLiveTyping } from "../../hooks/useChainReactionLiveTyping";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
@@ -158,10 +159,16 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.submitted_chains, sessionId]);
 
+  // Caret after the locked hint prefix (don't select it — selecting would let the
+  // first keystroke try to overwrite the locked letters)
   useEffect(() => {
     if (editingIndex !== null) {
-      inlineInputRef.current?.focus();
-      inlineInputRef.current?.select();
+      const input = inlineInputRef.current;
+      if (input) {
+        input.focus();
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+      }
     }
   }, [editingIndex]);
 
@@ -217,8 +224,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     }
   };
 
-  const handleInlineGuess = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleInlineGuess = async () => {
     if (editingIndex === null || !guess.trim()) return;
     const idx = editingIndex;
     const currentGuess = guess.trim();
@@ -610,26 +616,27 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
                 slot.revealed && !slot.solvedBy && !isEdge ? "m-cr-word-slot--givenup" : "",
               ].filter(Boolean).join(" ");
               const slotContent = isEditing ? (
-                <form onSubmit={handleInlineGuess} className="m-cr-inline-form">
-                  <input
-                    ref={inlineInputRef}
-                    className="m-cr-inline-input"
-                    value={guess}
-                    onChange={(e) => setGuess(e.target.value)}
-                    placeholder="guess…"
-                    maxLength={slot.word.length}
-                    onBlur={() => { if (!guess.trim()) { setEditingIndex(null); } }}
-                    onKeyDown={(e) => { if (e.key === "Escape") { setEditingIndex(null); setGuess(""); } }}
-                  />
-                  <button type="submit" className="m-cr-inline-go" disabled={!guess.trim()}>↵</button>
-                </form>
+                <ChainGuessField
+                  word={slot.word}
+                  lettersShown={slot.lettersShown}
+                  value={guess}
+                  compact
+                  inputRef={inlineInputRef}
+                  onChange={setGuess}
+                  onSubmit={() => void handleInlineGuess()}
+                  onCancel={() => { setEditingIndex(null); setGuess(""); }}
+                />
               ) : slot.revealed ? (
                 <span className="m-cr-word-text">{slot.word}</span>
               ) : isLiveDrafting ? (
-                <div className="m-cr-remote-draft">
-                  <span className="m-cr-word-text m-cr-word-text--draft">{viewingLiveDraft?.text}</span>
-                  <span className="m-cr-remote-draft-live">live</span>
-                </div>
+                <ChainGuessField
+                  word={slot.word}
+                  lettersShown={slot.lettersShown}
+                  value={viewingLiveDraft?.text ?? ""}
+                  compact
+                  readOnly
+                  live
+                />
               ) : (
                 <span className="m-cr-word-text m-cr-word-text--partial">
                   {renderPartialWord(slot.word, slot.lettersShown)}
