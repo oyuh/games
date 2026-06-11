@@ -10,6 +10,14 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
+    "@games/shared#build": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@games/api#build": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "test": {
       "dependsOn": ["^build"],
       "outputs": []

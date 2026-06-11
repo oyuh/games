@@ -7,6 +7,7 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./db": "./src/drizzle/schema.ts",
     "./games/shikaku-engine": "./src/games/shikaku-engine.ts",
     "./games/pips-engine": "./src/games/pips-engine.ts"
   },
@@ -21,18 +22,18 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@rocicorp/zero": "1.5.0",
-    "drizzle-orm": "^0.41.0",
-    "nanoid": "^5.1.5",
-    "zod": "^3.24.2"
+    "@rocicorp/zero": "1.6.2",
+    "drizzle-orm": "^0.45.2",
+    "nanoid": "^5.1.11",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^22.13.10",
-    "@types/pg": "^8.15.5",
-    "dotenv": "^16.4.7",
-    "drizzle-kit": "^0.30.5",
-    "pg": "^8.19.0",
-    "typescript": "^5.8.2",
-    "vitest": "^3.0.9"
+    "@types/node": "^22.19.21",
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "pg": "^8.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }
