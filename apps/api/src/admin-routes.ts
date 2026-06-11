@@ -15,7 +15,7 @@ import {
   statusTable,
   pipsScores,
   shikakuScores,
-} from "@games/shared";
+} from "@games/shared/db";
 import { drizzleClient } from "./db-provider";
 import {
   broadcastToAll,

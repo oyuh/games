@@ -1,13 +1,15 @@
 import {
   GAME_META,
-  chainReactionGames,
   getGameSlugFromPath,
+  type GameSlug,
+} from "@games/shared";
+import {
+  chainReactionGames,
   imposterGames,
   locationSignalGames,
   passwordGames,
   shadeSignalGames,
-  type GameSlug,
-} from "@games/shared";
+} from "@games/shared/db";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";

@@ -26,7 +26,6 @@ export default defineConfig({
           if (
             normalized.includes("/@rocicorp/") ||
             normalized.includes("/@badrap/valita/") ||
-            normalized.includes("/drizzle-orm/") ||
             normalized.includes("/zod/")
           ) {
             return "vendor-zero";
