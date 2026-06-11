@@ -1,4 +1,4 @@
-import { adminRestrictedNames } from "@games/shared";
+import { adminRestrictedNames } from "@games/shared/db";
 import { drizzleClient } from "./db-provider";
 import { sanitizeSessionName } from "./session-identity";
 

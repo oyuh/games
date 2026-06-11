@@ -11,7 +11,7 @@ import { beforeAll, afterAll } from "vitest";
 import * as schema from "../../drizzle/schema";
 
 // Load .env from workspace root
-config({ path: "../../.env" });
+config({ path: "../../.env", quiet: true });
 
 const DATABASE_URL = process.env.DATABASE_URL;
 

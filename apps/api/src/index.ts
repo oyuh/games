@@ -1,5 +1,6 @@
 import { fallbackPlayerName, mutators, queries, schema } from "@games/shared";
-import { adminNameOverrides, chatMessages, chainReactionGames, decryptSecret, encryptSecret, gameEncryptionKeys, generateGameKey, imposterGames, isEncrypted, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared";
+import { decryptSecret, encryptSecret, generateGameKey, isEncrypted } from "@games/shared";
+import { adminNameOverrides, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared/db";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -50,7 +51,7 @@ import { getClientInfo } from "./client-info";
 import { shikakuImageRoutes } from "./shikaku-image";
 import { embedRoutes } from "./embed-routes";
 
-config({ path: "../../.env" });
+config({ path: "../../.env", quiet: true });
 
 const app = new Hono();
 const DB_STATUS_KEY = process.env.DB_STATUS_KEY?.trim() || "footer";
