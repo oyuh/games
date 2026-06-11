@@ -643,13 +643,14 @@ GET https://<api-domain>/debug/build-info
 
 ### Railway Zero Cache
 
-Deploy Zero cache as a separate service. Keep it on the same `@rocicorp/zero` version used by the workspace (`1.6.2`).
+Deploy Zero cache as a separate service using the official Docker image. Keep the image tag on the same `@rocicorp/zero` version used by the workspace (`1.6.2`).
 
-Recommended start command:
+Service configuration:
 
-```bash
-bunx @rocicorp/zero@1.6.2 zero-cache --port "$PORT"
-```
+- **Source**: Docker image `rocicorp/zero:1.6.2` (Docker Hub)
+- **Start command**: leave empty — the image's entrypoint starts zero-cache. Do not set a `bunx`/`npx` start command; the image contains Node only, so `bunx` does not exist inside the container.
+
+To upgrade Zero in production, change the image tag in the Railway service's source settings to match the workspace version, then redeploy.
 
 Required Zero variables:
 
