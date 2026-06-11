@@ -1,5 +1,5 @@
 import { schema as zeroSchema } from "@games/shared";
-import { chainReactionGames, gameEncryptionKeys, imposterGames, passwordGames, shadeSignalGames, locationSignalGames, sessions, statusTable, shikakuScores } from "@games/shared";
+import { chainReactionGames, gameEncryptionKeys, imposterGames, passwordGames, shadeSignalGames, locationSignalGames, sessions, statusTable, shikakuScores } from "@games/shared/db";
 import { zeroDrizzle } from "@rocicorp/zero/server/adapters/drizzle";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +8,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
-config({ path: resolve(currentDir, "../../../.env") });
+config({ path: resolve(currentDir, "../../../.env"), quiet: true });
 
 const connStr = process.env.DATABASE_URL ?? process.env.ZERO_UPSTREAM_DB ?? "";
 if (!connStr) {

@@ -10,10 +10,10 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "paths": {
-      "@games/shared": ["packages/shared/src/index.ts"],
-      "@games/shared/*": ["packages/shared/src/*"]
+      "@games/shared": ["./packages/shared/src/index.ts"],
+      "@games/shared/db": ["./packages/shared/src/drizzle/schema.ts"],
+      "@games/shared/*": ["./packages/shared/src/*"]
     }
   }
 }
