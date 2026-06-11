@@ -643,12 +643,12 @@ GET https://<api-domain>/debug/build-info
 
 ### Railway Zero Cache
 
-Deploy Zero cache as a separate service. Keep it on the same `@rocicorp/zero` version used by the workspace (`1.5.0`).
+Deploy Zero cache as a separate service. Keep it on the same `@rocicorp/zero` version used by the workspace (`1.6.2`).
 
 Recommended start command:
 
 ```bash
-bunx @rocicorp/zero@1.5.0 zero-cache --port "$PORT"
+bunx @rocicorp/zero@1.6.2 zero-cache --port "$PORT"
 ```
 
 Required Zero variables:
