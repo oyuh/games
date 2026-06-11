@@ -9,7 +9,7 @@
 //   - We still persist `activity` + `last_seen` so the admin roster query keeps
 //     working and so a client's *last* activity survives after they disconnect
 //     (shown as "… (idle)").
-import { sessions } from "@games/shared";
+import { sessions } from "@games/shared/db";
 import { eq, inArray } from "drizzle-orm";
 import { drizzleClient } from "./db-provider";
 

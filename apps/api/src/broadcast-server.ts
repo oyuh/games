@@ -1,4 +1,4 @@
-import { chainReactionGames, passwordGames } from "@games/shared";
+import { chainReactionGames, passwordGames } from "@games/shared/db";
 import { eq } from "drizzle-orm";
 import { drizzleClient } from "./db-provider";
 import { presenceActivity, presenceClose, presenceOpen } from "./presence-server";
