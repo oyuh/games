@@ -36,7 +36,7 @@ describe("mulberry32", () => {
     }
   });
 
-  it("is deterministic — same seed produces same sequence", () => {
+  it("is deterministic: same seed produces same sequence", () => {
     const a = mulberry32(999);
     const b = mulberry32(999);
     for (let i = 0; i < 100; i++) {
@@ -61,7 +61,7 @@ describe("mulberry32", () => {
     for (let i = 0; i < N; i++) {
       buckets[Math.floor(rng() * 10)]++;
     }
-    // Each bucket should have ~1000 values — allow 20% tolerance
+    // Each bucket should have ~1000 values, so allow 20% tolerance
     for (const count of buckets) {
       expect(count).toBeGreaterThan(800);
       expect(count).toBeLessThan(1200);
@@ -211,7 +211,7 @@ describe("generatePuzzle", () => {
     expect(validateSolution(puzzle, puzzle.solution)).toBe(true);
   });
 
-  it("is deterministic — same seed produces identical puzzle", () => {
+  it("is deterministic: same seed produces identical puzzle", () => {
     const p1 = generatePuzzle(5, 5, mulberry32(42));
     const p2 = generatePuzzle(5, 5, mulberry32(42));
     expect(p1.numbers).toEqual(p2.numbers);
@@ -260,7 +260,7 @@ describe("generateRun", () => {
     }
   });
 
-  it("is deterministic — same seed + difficulty = same run", () => {
+  it("is deterministic: same seed + difficulty = same run", () => {
     const a = generateRun(42, "medium");
     const b = generateRun(42, "medium");
     expect(a).toEqual(b);
@@ -269,7 +269,7 @@ describe("generateRun", () => {
   it("different seeds produce different runs", () => {
     const a = generateRun(1, "easy");
     const b = generateRun(2, "easy");
-    // Compare first puzzle numbers — extremely unlikely to match
+    // Compare first puzzle numbers; extremely unlikely to match
     expect(a[0]!.numbers).not.toEqual(b[0]!.numbers);
   });
 });
@@ -517,7 +517,7 @@ describe("calculateScore", () => {
 });
 
 // ─── Integration: full pipeline ─────────────────────────────
-describe("integration — generate → validate → score", () => {
+describe("integration: generate → validate → score", () => {
   it("full workflow: generate run, validate all, then score", () => {
     const run = generateRun(777, "medium");
     expect(run.length).toBe(PUZZLES_PER_RUN);

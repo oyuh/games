@@ -22,7 +22,7 @@ function getToasts(): Toast[] {
   // Since we're in node without React, we manually subscribe
   let current: Toast[] = [];
   const { useSyncExternalStore } = require("react");
-  // This is tested indirectly — but we can access the store via re-export
+  // This is tested indirectly, but we can access the store via re-export
   // Instead, we just verify toasts are created by checking showToast doesn't throw
   return current;
 }
@@ -47,7 +47,7 @@ describe("showDedupedToast", () => {
   it("suppresses duplicate within dedupe window", () => {
     // First call should work
     showDedupedToast("same message", "error");
-    // Immediately calling again — still within DEDUPE_WINDOW_MS (1500ms)
+    // Immediately calling again, still within DEDUPE_WINDOW_MS (1500ms)
     showDedupedToast("same message", "error");
     // No throw = success.
     // Real dedup is that only 1 toast is created, but we can't easily

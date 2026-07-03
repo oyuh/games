@@ -2,7 +2,7 @@
  * Pure logic for the Chain Reaction masked guess field.
  *
  * Two behaviours live here, kept framework-free so they can be unit tested:
- *   1. The revealed hint letters form a locked prefix — the player can only type
+ *   1. The revealed hint letters form a locked prefix; the player can only type
  *      the remaining letters, and the total never exceeds the word length.
  *   2. Every position is rendered as a cell so unfilled slots stay visible as
  *      underscores (the player always sees how many letters the word needs).
@@ -14,7 +14,7 @@ export type GuessCell = {
   index: number;
   char: string;
   kind: GuessCellKind;
-  /** The next position to fill — used as the caret indicator (interactive only). */
+  /** The next position to fill, used as the caret indicator (interactive only). */
   active: boolean;
 };
 
@@ -49,7 +49,7 @@ export function buildGuessCells(
   const total = word.length;
   const prefixLen = Math.min(Math.max(lettersShown, 0), total);
   const prefix = word.slice(0, prefixLen).toUpperCase();
-  // A mirrored draft can momentarily be shorter than the prefix — never show less
+  // A mirrored draft can momentarily be shorter than the prefix; never show less
   // than the revealed letters.
   const display = (value.length < prefixLen ? prefix : value).toUpperCase();
   const typedLen = Math.min(display.length, total);

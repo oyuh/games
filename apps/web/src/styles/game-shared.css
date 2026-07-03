@@ -79,7 +79,7 @@
   z-index: 0; /* establish stacking context */
 }
 
-/* Corner gradient — game color glows from corners, gray center */
+/* Corner gradient: game color glows from corners, gray center */
 .game-page[data-game-theme]::before {
   content: "";
   position: fixed;
@@ -94,7 +94,7 @@
   opacity: 0.3;
 }
 
-/* Subtle repeating icon pattern — blurred, fading from corners like the gradient */
+/* Subtle repeating icon pattern: blurred, fading from corners like the gradient */
 .game-page[data-game-theme]::after {
   content: "";
   position: fixed;

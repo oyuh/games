@@ -56,7 +56,7 @@ const chat = chatMutators as unknown as Record<string, Handler>;
 const sessions = sessionMutators as unknown as Record<string, Handler>;
 
 // ───────────────────────────────────────────────────────────
-describe("Chat — send message", () => {
+describe("Chat: send message", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -174,7 +174,7 @@ describe("Chat — send message", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Chat — clearForGame", () => {
+describe("Chat: clearForGame", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -201,7 +201,7 @@ describe("Chat — clearForGame", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Sessions — upsert", () => {
+describe("Sessions: upsert", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -239,7 +239,7 @@ describe("Sessions — upsert", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Sessions — setName", () => {
+describe("Sessions: setName", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -283,7 +283,7 @@ describe("Sessions — setName", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Sessions — touchPresence", () => {
+describe("Sessions: touchPresence", () => {
   let tx: MockTx;
 
   beforeEach(() => {

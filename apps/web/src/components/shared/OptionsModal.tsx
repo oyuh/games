@@ -130,7 +130,7 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
                   </button>
                 </div>
 
-                {/* Movement tool — shows the drag tab on the sidebar */}
+                {/* Movement tool, shows the drag tab on the sidebar */}
                 <span className="option-sublabel">Placement</span>
                 <button
                   className={`option-toggle-btn option-toggle-btn--wide ${settings.sidebarDragEnabled ? "option-toggle-btn--active" : ""}`}

@@ -5,7 +5,7 @@ import {
 } from "../zero/mutators/helpers";
 
 // ───────────────────────────────────────────────────────────
-// assertCaller — server-side identity enforcement
+// assertCaller: server-side identity enforcement
 // ───────────────────────────────────────────────────────────
 describe("assertCaller", () => {
   const serverTx = { location: "server" };
@@ -53,7 +53,7 @@ describe("assertCaller", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-// assertHost — server-side host-only enforcement
+// assertHost: server-side host-only enforcement
 // ───────────────────────────────────────────────────────────
 describe("assertHost", () => {
   const serverTx = { location: "server" };

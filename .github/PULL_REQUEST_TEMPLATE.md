@@ -1,6 +1,6 @@
 ## What does this PR do?
 
-<!-- Brief description of the change -->
+<!-- Quick description of the change -->
 
 ## Game affected
 
@@ -8,6 +8,9 @@
 - [ ] Password
 - [ ] Chain Reaction
 - [ ] Shade Signal
+- [ ] Location Signal
+- [ ] Shikaku
+- [ ] Pips
 - [ ] New game (name: _____________)
 - [ ] Platform / shared
 - [ ] None (infra, docs, etc.)
@@ -24,9 +27,9 @@
 ## Checklist
 
 - [ ] TypeScript compiles (`bun typecheck`)
-- [ ] Tested locally in browser
+- [ ] Tested locally in the browser
 - [ ] Schema changes pushed (if applicable)
-- [ ] No console errors or warnings added
+- [ ] No new console errors or warnings
 - [ ] Docs updated (if adding a new game)
 - [ ] Mobile UI tested (if touching `apps/web/src/mobile/`)
 - [ ] Desktop UI unaffected (if touching shared components)
@@ -36,7 +39,7 @@
 - [ ] Schema added to `packages/shared/src/drizzle/schema.ts`
 - [ ] Zero schema added to `packages/shared/src/zero/schema.ts`
 - [ ] Queries added to `packages/shared/src/zero/queries.ts`
-- [ ] Mutators added to `packages/shared/src/zero/mutators.ts`
+- [ ] Mutators added under `packages/shared/src/zero/mutators/`
 - [ ] Game types added to `packages/shared/src/types/game.ts`
 - [ ] Page component(s) created in `apps/web/src/pages/`
 - [ ] Route(s) added to `apps/web/src/App.tsx`
@@ -49,7 +52,7 @@
 
 ## Screenshots / recordings
 
-<!-- If there are UI changes, add screenshots or a screen recording -->
+<!-- If there are UI changes, drop in screenshots or a screen recording -->
 
 ## Additional notes
 

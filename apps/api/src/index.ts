@@ -60,7 +60,7 @@ const DEFAULT_PUBLIC_ORIGIN = "https://games.lawsonhart.me";
 const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || "games-dev-session-secret";
 const DEV_MODE = process.env.NODE_ENV !== "production";
 if (DEV_MODE) {
-  console.log("[dev-mode] Security relaxations active — fingerprint binding, session proof, and rate limits are loosened for local testing.");
+  console.log("[dev-mode] Security relaxations active: fingerprint binding, session proof, and rate limits are loosened for local testing.");
 }
 
 function parseOriginList(value: string | undefined) {
@@ -139,8 +139,8 @@ app.use(
 // ─── Rate limiting ─────────────────────────────────────────
 // IMPORTANT: all rate-limit middleware is registered HERE, before any routes
 // are mounted below. In Hono, middleware only applies to handlers registered
-// *after* it, so registering limiters up front guarantees every route — present
-// and future — is covered. The numbers live in RATE_LIMITS (see rate-limit.ts);
+// *after* it, so registering limiters up front guarantees every route (present
+// and future) is covered. The numbers live in RATE_LIMITS (see rate-limit.ts);
 // tiers are layered (e.g. a score submission hits global → game → score).
 //
 // A global catch-all runs first so nothing is ever accidentally unprotected.
@@ -148,14 +148,14 @@ app.use("/api/*", rateLimit("global"));
 app.use("/debug/*", rateLimit("global", "global_debug"));
 app.use("/health", rateLimit("health"));
 
-// High-volume real-time sync + identity — generous so live play is never throttled.
+// High-volume real-time sync + identity. Generous so live play is never throttled.
 app.use("/api/zero/*", rateLimit("zero"));
 app.use("/api/session/sync", rateLimit("sessionSync"));
 
 // Per-game encryption key exchange.
 app.use("/api/game-secret/*", rateLimit("gameSecret"));
 
-// Map helpers — geocode proxies an external provider, so it's tighter.
+// Map helpers. Geocode proxies an external provider, so it's tighter.
 app.use("/api/maps/config", rateLimit("mapsConfig"));
 app.use("/api/maps/geocode", rateLimit("mapsGeocode"));
 
@@ -172,12 +172,12 @@ app.use("/api/embed/*", rateLimit("embed"));
 app.use("/api/public/*", rateLimit("publicRead"));
 app.use("/api/admin-status", rateLimit("publicRead", "admin_status"));
 
-// Internal / secret-authed — light limits (present but generous).
+// Internal / secret-authed routes get light limits (present but generous).
 app.use("/api/admin/*", rateLimit("admin"));
 app.use("/api/cleanup", rateLimit("cron", "cleanup"));
 app.use("/api/activity", rateLimit("cron", "activity"));
 
-// Debug build-info runs a DB probe — keep it modest (on top of the global cap).
+// Debug build-info runs a DB probe, so keep it modest (on top of the global cap).
 app.use("/debug/build-info", rateLimit("debug"));
 
 // ─── Admin routes ──────────────────────────────────────────
@@ -244,7 +244,7 @@ app.get("/api/maps/geocode", async (c) => {
 
 /** Simple hash of IP+UA to detect session migration between different clients */
 function computeFingerprint(ip: string, userAgent: string): string {
-  // Quick deterministic hash — not crypto, just identity binding
+  // Quick deterministic hash. Not crypto, just identity binding.
   let hash = 0;
   const str = `${ip}::${userAgent}`;
   for (let i = 0; i < str.length; i++) {
@@ -522,7 +522,7 @@ app.post("/api/session/sync", async (c) => {
 
 // Presence is now driven entirely by the realtime `/ws` connection
 // (see presence-server.ts). The old HTTP heartbeat polling endpoint was
-// removed — clients no longer poll; holding the socket open is the signal.
+// removed. Clients no longer poll; holding the socket open is the signal.
 
 // ─── Custom status in build-info ───────────────────────────
 app.get("/api/admin-status", (c) => {
@@ -692,8 +692,8 @@ function enforceMutatorCaller(userId: string, name: string, args: unknown) {
     if (namespace === "sessions" && name === "sessions.setName") {
       return; // allow anon to set their own name (client-side session)
     }
-    // For all other mutations, anon callers still go through identity checks
-    // below — they'll fail if the payload includes an identity field, which
+    // For all other mutations, anon callers still go through the identity checks
+    // below. They'll fail if the payload includes an identity field, which
     // is the correct behaviour (prevents spoofing).
   }
 
@@ -1584,7 +1584,7 @@ function isShikakuBanned(sessionId: string): boolean {
 }
 
 // Rate limits for /api/shikaku/* (incl. score) are registered up top, before
-// the shikaku image routes are mounted — see the "Rate limiting" block.
+// the shikaku image routes are mounted; see the "Rate limiting" block.
 app.get("/api/shikaku/leaderboard", async (c) => {
   const difficulty = c.req.query("difficulty")?.trim() ?? "easy";
   if (!isShikakuDifficulty(difficulty)) {
@@ -2152,7 +2152,7 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
   };
 }
 
-// Rate limits for /api/pips/* (incl. score) are registered up top — see the
+// Rate limits for /api/pips/* (incl. score) are registered up top; see the
 // "Rate limiting" block.
 app.get("/api/pips/leaderboard", async (c) => {
   const limitParam = parseInt(c.req.query("limit") ?? "10", 10);
@@ -2443,7 +2443,7 @@ app.post("/api/zero/mutate", async (c) => {
     return c.json(result);
   } catch (err) {
     // Mutation ID conflicts happen when the client's IndexedDB cache gets
-    // evicted (mobile storage pressure, clearing data, etc.) — the client
+    // evicted (mobile storage pressure, clearing data, etc.). The client
     // resets to mutation 0 but the server still expects a higher ID.
     // Return an empty success so the client doesn't endlessly retry.
     const msg = err instanceof Error ? err.message : String(err);

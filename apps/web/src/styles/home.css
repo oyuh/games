@@ -2565,7 +2565,7 @@ a.solo-card-title-link {
     width: 100%;
   }
 
-  /* Hide split layout on mobile — handled by MobileHomePage */
+  /* Hide split layout on mobile: handled by MobileHomePage */
   .home-section-multi,
   .home-section-separator,
   .home-section-solo {

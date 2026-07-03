@@ -1,5 +1,5 @@
 /**
- * Imposter game — mutator integration tests.
+ * Imposter game: mutator integration tests.
  *
  * Tests game phases (lobby → playing → voting → results) and
  * security enforcement (identity spoofing, kicked players, etc.)
@@ -61,7 +61,7 @@ type Handler = (params: { args: any; tx: any; ctx: any }) => Promise<void>;
 const mutators = imposterMutators as unknown as Record<string, Handler>;
 
 // ───────────────────────────────────────────────────────────
-describe("Imposter — lobby phase", () => {
+describe("Imposter: lobby phase", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -132,7 +132,7 @@ describe("Imposter — lobby phase", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Imposter — identity enforcement", () => {
+describe("Imposter: identity enforcement", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -207,7 +207,7 @@ describe("Imposter — identity enforcement", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Imposter — game start & playing phase", () => {
+describe("Imposter: game start & playing phase", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -266,7 +266,7 @@ describe("Imposter — game start & playing phase", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Imposter — clue submission", () => {
+describe("Imposter: clue submission", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -359,7 +359,7 @@ describe("Imposter — clue submission", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Imposter — voting phase", () => {
+describe("Imposter: voting phase", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -453,7 +453,7 @@ describe("Imposter — voting phase", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Imposter — host leaving / ending", () => {
+describe("Imposter: host leaving / ending", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -497,7 +497,7 @@ describe("Imposter — host leaving / ending", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Imposter — spectator handling", () => {
+describe("Imposter: spectator handling", () => {
   let tx: MockTx;
 
   beforeEach(() => {

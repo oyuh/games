@@ -11,12 +11,12 @@ assignees: []
 **Game name:**
 **Tagline:** (one-liner, e.g. "Find the liar through one-word clues")
 
-**Player count:** min – max
+**Player count:** min to max
 **Game type:** (competitive / cooperative / teams / social deduction / other)
 
 ## How it works
 
-Describe the core gameplay loop in 3–5 bullets:
+Describe the core gameplay loop in 3-5 bullets:
 
 -
 -
@@ -24,7 +24,7 @@ Describe the core gameplay loop in 3–5 bullets:
 
 ## Phases
 
-List the game phases (e.g. lobby → playing → voting → results):
+List the game phases (e.g. lobby -> playing -> voting -> results):
 
 1.
 2.
@@ -52,4 +52,4 @@ Any specific UI ideas, layouts, or visual references?
 
 ## Additional context
 
-Anything else — inspiration, similar games, edge cases to consider.
+Anything else: inspiration, similar games, edge cases worth thinking about.

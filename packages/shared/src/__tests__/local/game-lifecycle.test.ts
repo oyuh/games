@@ -1,5 +1,5 @@
 /**
- * Local DB — game lifecycle tests.
+ * Local DB: game lifecycle tests.
  *
  * Creates games in the real local database, verifies JSONB columns
  * round-trip correctly, and tests phase transitions.
@@ -29,7 +29,7 @@ afterEach(async () => {
 });
 
 // ─── Imposter ───────────────────────────────────────────────
-describe("Local DB — imposter game lifecycle", () => {
+describe("Local DB: imposter game lifecycle", () => {
   it("creates a game and round-trips JSONB players", async () => {
     const db = getDb();
     const id = testId();
@@ -116,7 +116,7 @@ describe("Local DB — imposter game lifecycle", () => {
 });
 
 // ─── Password ───────────────────────────────────────────────
-describe("Local DB — password game lifecycle", () => {
+describe("Local DB: password game lifecycle", () => {
   it("creates a game with teams JSONB", async () => {
     const db = getDb();
     const id = testId();
@@ -168,7 +168,7 @@ describe("Local DB — password game lifecycle", () => {
 });
 
 // ─── Chain Reaction ─────────────────────────────────────────
-describe("Local DB — chain reaction game lifecycle", () => {
+describe("Local DB: chain reaction game lifecycle", () => {
   it("creates a game with settings JSONB", async () => {
     const db = getDb();
     const id = testId();
@@ -231,7 +231,7 @@ describe("Local DB — chain reaction game lifecycle", () => {
 });
 
 // ─── Shade Signal ───────────────────────────────────────────
-describe("Local DB — shade signal game lifecycle", () => {
+describe("Local DB: shade signal game lifecycle", () => {
   it("creates a game with players containing totalScore", async () => {
     const db = getDb();
     const id = testId();
@@ -259,7 +259,7 @@ describe("Local DB — shade signal game lifecycle", () => {
 });
 
 // ─── Cross-table: session ↔ game link ───────────────────────
-describe("Local DB — session/game linking", () => {
+describe("Local DB: session/game linking", () => {
   it("session references a game and can be queried", async () => {
     const db = getDb();
     const gameId = testId();
