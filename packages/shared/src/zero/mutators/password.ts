@@ -198,7 +198,7 @@ export const passwordMutators = {
       let teams = game.teams;
       if (!allMembers.has(args.sessionId)) {
         if (game.settings.teamsLocked) {
-          throw new Error("Teams are locked — only the host can assign teams");
+          throw new Error("Teams are locked. Only the host can assign teams.");
         }
         const sorted = [...game.teams].sort((a, b) => a.members.length - b.members.length);
         const teamName = sorted[0]?.name ?? "Team A";
@@ -557,7 +557,7 @@ export const passwordMutators = {
       const roundEndsAt = game.settings.roundEndsAt;
       if (!roundEndsAt || now() < roundEndsAt) return; // not expired
 
-      // Timer expired — game over, highest score wins
+      // Timer expired: game over, highest score wins
       // Record all in-progress rounds as incomplete
       const nextHistory = [...game.rounds];
       for (const round of game.active_rounds) {

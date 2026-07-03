@@ -10,7 +10,7 @@ type Row = Record<string, unknown>;
 type TableStore = Map<string, Row>;
 
 export class MockTx {
-  /** "server" or "client" — controls whether assertCaller/assertHost enforce */
+  /** "server" or "client": controls whether assertCaller/assertHost enforce */
   location: string;
 
   /** In-memory tables keyed by table name → Map<primaryKey, row> */
@@ -46,7 +46,7 @@ export class MockTx {
     return this.tables.get(tableName)?.get(id);
   }
 
-  // ─── tx.run() — executes ZQL-like queries ──────────────
+  // ─── tx.run(): executes ZQL-like queries ──────────────
   run = (query: unknown): Promise<unknown> => {
     // The query object from zql gets captured here. We intercept it.
     // In practice, mutators call: tx.run(zql.sessions.where("id", x).one())
@@ -139,7 +139,7 @@ function createMockQuery(table: string): MockQuery {
 }
 
 /**
- * A mock `zql` proxy — intercepts `zql.sessions`, `zql.imposter_games`, etc.
+ * A mock `zql` proxy: intercepts `zql.sessions`, `zql.imposter_games`, etc.
  * and returns chainable query builders the MockTx can resolve.
  */
 export const mockZql = new Proxy(

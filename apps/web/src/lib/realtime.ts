@@ -62,7 +62,7 @@ class RealtimeClient {
   private readonly pendingPublishes = new Map<string, RealtimeClientMessage & { type: "publish" }>();
   private readonly listeners = new Map<string, Map<string, Set<RealtimeListener>>>();
   // Presence: the open socket *is* the presence signal. We only push an extra
-  // message when the client's activity (current route) changes — no polling.
+  // message when the client's activity (current route) changes; no polling.
   private presenceActive = false;
   private presenceActivity: string | null = null;
 

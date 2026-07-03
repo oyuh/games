@@ -318,7 +318,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   GLOBAL TOOLTIP SYSTEM (JS portal — smart positioning)
+   GLOBAL TOOLTIP SYSTEM (JS portal, smart positioning)
    Usage: data-tooltip="text" data-tooltip-pos="top|bottom|left|right"
           data-tooltip-variant="default|game|info|success|danger"
    ═══════════════════════════════════════════════════════════════ */

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildGuessCells, lockToPrefix } from "../components/chain/chain-guess";
 
-describe("lockToPrefix — revealed letters are a locked prefix", () => {
+describe("lockToPrefix: revealed letters are a locked prefix", () => {
   it("lets the player type only the remaining letters (2 shown of a 5-letter word → 3 more)", () => {
     const word = "TRUCK";
     const prefix = word.slice(0, 2); // "TR" revealed
@@ -11,7 +11,7 @@ describe("lockToPrefix — revealed letters are a locked prefix", () => {
     guess = lockToPrefix(guess + "c", prefix, word.length); // TRUC
     guess = lockToPrefix(guess + "k", prefix, word.length); // TRUCK
     expect(guess).toBe("TRUCK");
-    // The word is full — no further letters can be added.
+    // The word is full, so no further letters can be added.
     expect(lockToPrefix(guess + "s", prefix, word.length)).toBe("TRUCK");
   });
 
@@ -34,7 +34,7 @@ describe("lockToPrefix — revealed letters are a locked prefix", () => {
   });
 });
 
-describe("buildGuessCells — underscores stay visible while typing", () => {
+describe("buildGuessCells: underscores stay visible while typing", () => {
   it("shows locked letters, typed letters, then underscores for the rest", () => {
     // 5-letter word, 2 revealed, player has typed one more letter ("TRU").
     const cells = buildGuessCells("TRUCK", 2, "TRU", true);

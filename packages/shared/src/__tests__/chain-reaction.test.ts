@@ -1,5 +1,5 @@
 /**
- * Chain Reaction game — mutator integration tests.
+ * Chain Reaction game: mutator integration tests.
  *
  * Tests lobby, identity enforcement, and sanitization.
  */
@@ -53,7 +53,7 @@ type Handler = (params: { args: any; tx: any; ctx: any }) => Promise<void>;
 const mutators = chainReactionMutators as unknown as Record<string, Handler>;
 
 // ───────────────────────────────────────────────────────────
-describe("Chain Reaction — lobby phase", () => {
+describe("Chain Reaction: lobby phase", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -103,7 +103,7 @@ describe("Chain Reaction — lobby phase", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Chain Reaction — identity enforcement", () => {
+describe("Chain Reaction: identity enforcement", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -160,7 +160,7 @@ describe("Chain Reaction — identity enforcement", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Chain Reaction — host leaving", () => {
+describe("Chain Reaction: host leaving", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -204,7 +204,7 @@ describe("Chain Reaction — host leaving", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Chain Reaction — announcement sanitization", () => {
+describe("Chain Reaction: announcement sanitization", () => {
   let tx: MockTx;
 
   beforeEach(() => {

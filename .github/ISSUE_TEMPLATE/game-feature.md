@@ -12,6 +12,9 @@ assignees: []
 - [ ] Password
 - [ ] Chain Reaction
 - [ ] Shade Signal
+- [ ] Location Signal
+- [ ] Shikaku
+- [ ] Pips
 - [ ] Platform-wide
 - [ ] Other:
 
@@ -21,7 +24,7 @@ A clear description of the feature or improvement.
 
 ## Why?
 
-What problem does this solve or what experience does it improve?
+What problem does this solve, or what experience does it improve?
 
 ## Proposed behavior
 

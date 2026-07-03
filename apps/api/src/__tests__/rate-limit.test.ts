@@ -23,7 +23,7 @@ async function req(app: Hono, ip = "127.0.0.1") {
 }
 
 // ─── Sliding Window ─────────────────────────────────────────
-describe("rateLimiter — sliding window", () => {
+describe("rateLimiter: sliding window", () => {
   it("allows requests under the limit", async () => {
     const app = makeApp({ windowMs: 60_000, maxRequests: 5, scope: "test-allow" });
     for (let i = 0; i < 5; i++) {
@@ -79,7 +79,7 @@ describe("rateLimiter — sliding window", () => {
     });
     expect(resA.status).toBe(200);
 
-    // Same IP, different scope — should still be allowed
+    // Same IP, different scope, so this should still be allowed
     const resB = await app.request("/b/test", {
       method: "GET",
       headers: { "x-forwarded-for": "10.0.0.6" },
@@ -89,7 +89,7 @@ describe("rateLimiter — sliding window", () => {
 });
 
 // ─── IP Extraction ──────────────────────────────────────────
-describe("rateLimiter — IP extraction", () => {
+describe("rateLimiter: IP extraction", () => {
   it("uses first IP from x-forwarded-for", async () => {
     const app = makeApp({ windowMs: 60_000, maxRequests: 1, scope: "test-ip-fwd" });
     const res1 = await app.request("/test", {
@@ -127,7 +127,7 @@ describe("rateLimiter — IP extraction", () => {
 });
 
 // ─── Input validation helpers (tested via API behavior) ─────
-describe("rateLimiter — edge cases", () => {
+describe("rateLimiter: edge cases", () => {
   it("includes scope in the 429 response body", async () => {
     const app = makeApp({ windowMs: 60_000, maxRequests: 1, scope: "my_scope" });
     await req(app, "10.0.0.20");

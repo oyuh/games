@@ -1,5 +1,5 @@
 /**
- * Location Signal game — mutator integration tests.
+ * Location Signal game: mutator integration tests.
  *
  * Tests lobby, identity enforcement, and sanitization.
  */
@@ -53,7 +53,7 @@ type Handler = (params: { args: any; tx: any; ctx: any }) => Promise<void>;
 const mutators = locationSignalMutators as unknown as Record<string, Handler>;
 
 // ───────────────────────────────────────────────────────────
-describe("Location Signal — lobby phase", () => {
+describe("Location Signal: lobby phase", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -91,7 +91,7 @@ describe("Location Signal — lobby phase", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Location Signal — identity enforcement", () => {
+describe("Location Signal: identity enforcement", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -140,7 +140,7 @@ describe("Location Signal — identity enforcement", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Location Signal — host leaving", () => {
+describe("Location Signal: host leaving", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -173,7 +173,7 @@ describe("Location Signal — host leaving", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Location Signal — announcement sanitization", () => {
+describe("Location Signal: announcement sanitization", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -197,7 +197,7 @@ describe("Location Signal — announcement sanitization", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Location Signal — clue submission sanitization", () => {
+describe("Location Signal: clue submission sanitization", () => {
   let tx: MockTx;
 
   beforeEach(() => {

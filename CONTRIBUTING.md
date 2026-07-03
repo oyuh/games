@@ -1,18 +1,18 @@
 # Contributing
 
-Thanks for wanting to contribute. This repo is intentionally open for useful fixes, new games, docs, and self-hosting improvements, as long as contributions respect the license and the people working here.
+Thanks for wanting to pitch in. This repo is intentionally open to useful fixes, new games, docs, and self-hosting improvements, as long as contributions respect the license and the people working here.
 
 ## Ground Rules
 
 - Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 - For security issues, follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
-- Keep pull requests focused. Small, reviewable changes are much easier to merge.
-- Do not submit code you do not have the right to license to this project.
-- By contributing, you agree that your contribution can be used under this repository's license.
+- Keep pull requests focused. Small, reviewable changes get merged; sprawling ones sit.
+- Don't submit code you don't have the right to license to this project.
+- By contributing, you agree your contribution can be used under this repo's license.
 
 ## Local Setup
 
-Install dependencies from the repository root:
+Install dependencies from the repo root:
 
 ```bash
 bun install
@@ -40,7 +40,7 @@ Useful local URLs:
 
 ## Before Opening A Pull Request
 
-Run the same checks CI runs:
+Run the same checks CI runs, so you're not surprised by a red X:
 
 ```bash
 bun run lint
@@ -49,19 +49,19 @@ bun run test:ci
 bun run build
 ```
 
-If you touch game state, database schema, Zero mutators, admin tools, or deployment config, include notes in the PR about how you tested the change.
+If you touch game state, database schema, Zero mutators, admin tools, or deployment config, say in the PR how you tested it.
 
 ## Pull Request Checklist
 
 - Explain what changed and why.
-- Link related issues when available.
+- Link related issues when there are any.
 - Include screenshots or recordings for UI changes.
-- Update docs when behavior, setup, security posture, or deployment steps change.
-- Call out migrations, environment variables, or operational risks.
+- Update the docs when behavior, setup, security posture, or deployment steps change.
+- Call out migrations, new environment variables, or anything operationally risky.
 
 ## New Game Checklist
 
-New multiplayer games usually need updates in:
+New multiplayer games usually mean touching all of these:
 
 - `packages/shared/src/drizzle/schema.ts`
 - `packages/shared/src/zero/schema.ts`
@@ -73,4 +73,4 @@ New multiplayer games usually need updates in:
 - `apps/web/src/mobile/pages/`
 - `docs/`
 
-Solo games should include deterministic engine tests and server-side score validation if scores or leaderboards are involved.
+Solo games should come with deterministic engine tests, plus server-side score validation if scores or leaderboards are involved.

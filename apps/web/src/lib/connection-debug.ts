@@ -328,7 +328,7 @@ export function startGlobalConnectionDebugCapture() {
 }
 
 /**
- * React hook — subscribe to the debug state.
+ * React hook to subscribe to the debug state.
  * Returns a fresh snapshot; re-renders whenever the state is mutated.
  */
 export function useConnectionDebug() {

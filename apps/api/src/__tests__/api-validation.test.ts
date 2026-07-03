@@ -255,7 +255,7 @@ describe("enforceMutatorCaller", () => {
   });
 });
 
-// ─── Ban system — isBanned logic ────────────────────────────
+// ─── Ban system: isBanned logic ─────────────────────────────
 describe("isBanned (logic)", () => {
   type Ban = { id: string; type: "session" | "ip" | "region"; value: string; reason: string; createdAt: number };
 
