@@ -1,5 +1,5 @@
 /**
- * Local test setup — runs before local-only tests.
+ * Local test setup: runs before local-only tests.
  *
  * Establishes a connection to the local dev database and provides
  * cleanup utilities. Uses the same DB connection as local dev.

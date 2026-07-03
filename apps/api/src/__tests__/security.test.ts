@@ -1,5 +1,5 @@
 /**
- * Security tests — validates all hardening measures cannot be bypassed.
+ * Security tests. These check that none of the hardening measures can be bypassed.
  *
  * Covers: enforceMutatorCaller anon hardening, fingerprint anomaly detection,
  * abuse strike system, shikaku score validation, client info extraction,
@@ -24,7 +24,7 @@ function assertCallerValue(userId: string, claimed: unknown, field: string) {
   }
 }
 
-// ── enforceMutatorCaller (updated — anon is no longer a free pass) ─
+// ── enforceMutatorCaller (updated: anon is no longer a free pass) ─
 function enforceMutatorCaller(userId: string, name: string, args: unknown) {
   if (args == null || typeof args !== "object") {
     return;
@@ -161,7 +161,7 @@ function adminAuth(authHeader: string | undefined, secret: string): boolean {
 // ═══════════════════════════════════════════════════════════════
 
 // ─── enforceMutatorCaller: anon hardening ───────────────────
-describe("enforceMutatorCaller — anon bypass prevention", () => {
+describe("enforceMutatorCaller: anon bypass prevention", () => {
   it("anon CAN create a session (sessions.create)", () => {
     expect(() =>
       enforceMutatorCaller("anon", "sessions.create", { id: "any-id" })
@@ -175,10 +175,9 @@ describe("enforceMutatorCaller — anon bypass prevention", () => {
   });
 
   it("anon CANNOT call sessions.upsert with arbitrary id (identity check fires)", () => {
-    // sessions.upsert is NOT in the whitelist — assertCallerValue("anon", ...) runs
-    // but assertCallerValue returns early for anon, so sessions namespace just checks id
-    // Since userId is "anon", assertCallerValue returns immediately for anon.
-    // That means sessions.upsert is technically allowed for anon — BUT the identity
+    // sessions.upsert is NOT in the whitelist, so assertCallerValue("anon", ...) runs,
+    // but assertCallerValue returns early for anon and the sessions namespace just checks id.
+    // That means sessions.upsert is technically allowed for anon, BUT the identity
     // binding still prevents misuse since the session was already created.
     expect(() =>
       enforceMutatorCaller("anon", "sessions.upsert", { id: "victim-session" })
@@ -191,8 +190,8 @@ describe("enforceMutatorCaller — anon bypass prevention", () => {
     // assertCallerValue is called with "anon" which returns early.
     // But the real protection is that the Zero mutation handler verifies
     // the session exists in DB and matches the caller.
-    // For the enforceMutatorCaller specifically, anon does skip
-    // assertCallerValue — this is expected since session IDs are
+    // For enforceMutatorCaller specifically, anon does skip
+    // assertCallerValue. That's expected, since session IDs are
     // unguessable nanoid values.
     expect(() =>
       enforceMutatorCaller("anon", "imposter.join", { sessionId: "victim" })
@@ -232,7 +231,7 @@ describe("enforceMutatorCaller — anon bypass prevention", () => {
     ).toThrow("Missing sessionId");
   });
 
-  it("handles payload with multiple identity fields — all checked", () => {
+  it("handles payload with multiple identity fields (all checked)", () => {
     // If a mutation has both hostId and sessionId, BOTH must match
     expect(() =>
       enforceMutatorCaller("user-1", "imposter.someAction", {
@@ -333,7 +332,7 @@ describe("checkFingerprintAnomaly", () => {
     expect(check("session-B", "fp-2")).toBe(false);
   });
 
-  it("simulates VPN hopping attack — detects at threshold", () => {
+  it("simulates a VPN hopping attack and detects at the threshold", () => {
     const check = makeAnomalyChecker();
     const vpnIPs = [
       "1.1.1.1", "2.2.2.2", "3.3.3.3",
@@ -384,7 +383,7 @@ describe("abuse strike system", () => {
     const t0 = Date.now();
     recordStrike("user-1", "strike 1", t0);
     recordStrike("user-1", "strike 2", t0);
-    // 31 minutes later — window resets
+    // 31 minutes later, the window resets
     const t1 = t0 + 31 * 60 * 1000;
     expect(recordStrike("user-1", "new strike 1", t1)).toBe(false);
     expect(recordStrike("user-1", "new strike 2", t1)).toBe(false);
@@ -418,7 +417,7 @@ describe("abuse strike system", () => {
 
 // ─── Shikaku score validation ───────────────────────────────
 describe("shikaku score validation", () => {
-  describe("shikakuMaxScore — server-side cap", () => {
+  describe("shikakuMaxScore: server-side cap", () => {
     it("returns a positive score for valid inputs", () => {
       expect(shikakuMaxScore(60_000, "easy")).toBeGreaterThan(0);
       expect(shikakuMaxScore(120_000, "medium")).toBeGreaterThan(0);
@@ -680,7 +679,7 @@ describe("session ID security", () => {
     const withNull = "session\0injected";
     const result = validId(withNull);
     // validId does accept it (length is fine), but the null byte is
-    // preserved as-is — Drizzle handles it safely in parameterized queries
+    // preserved as-is; Drizzle handles it safely in parameterized queries
     expect(typeof result).toBe("string");
   });
 
@@ -791,18 +790,18 @@ describe("combined attack scenarios", () => {
       const minTime = SHIKAKU_MIN_TIME_MS[diff]!;
       const maxTime = SHIKAKU_MAX_TIME_MS[diff]!;
 
-      // Just under min — should be rejected
+      // Just under min: should be rejected
       expect(minTime - 1).toBeLessThan(minTime);
 
-      // Exactly at min — should be accepted
+      // Exactly at min: should be accepted
       const scoreAtMin = shikakuMaxScore(minTime, diff);
       expect(scoreAtMin).toBeGreaterThan(0);
 
-      // Exactly at max — should be accepted
+      // Exactly at max: should be accepted
       const scoreAtMax = shikakuMaxScore(maxTime, diff);
       expect(scoreAtMax).toBeGreaterThanOrEqual(0);
 
-      // Just over max — should be rejected
+      // Just over max: should be rejected
       expect(maxTime + 1).toBeGreaterThan(maxTime);
     }
   });

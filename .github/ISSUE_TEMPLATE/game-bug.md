@@ -12,6 +12,9 @@ assignees: []
 - [ ] Password
 - [ ] Chain Reaction
 - [ ] Shade Signal
+- [ ] Location Signal
+- [ ] Shikaku
+- [ ] Pips
 - [ ] Home / Lobby
 - [ ] Other:
 
@@ -42,7 +45,7 @@ What actually happened?
 
 ## Screenshots / recordings
 
-If applicable, add screenshots or screen recordings.
+If you have screenshots or a screen recording, they help a lot.
 
 ## Console errors
 
@@ -53,4 +56,4 @@ Paste any browser console errors here:
 
 ## Additional context
 
-Any other details — session ID, join code, timing, etc.
+Any other details: session ID, join code, timing, that sort of thing.

@@ -1,5 +1,5 @@
 /**
- * Password game — mutator integration tests.
+ * Password game: mutator integration tests.
  *
  * Tests game phases (lobby → playing → results) and
  * security enforcement (identity, sanitization, team rules).
@@ -54,7 +54,7 @@ type Handler = (params: { args: any; tx: any; ctx: any }) => Promise<void>;
 const mutators = passwordMutators as unknown as Record<string, Handler>;
 
 // ───────────────────────────────────────────────────────────
-describe("Password — lobby phase", () => {
+describe("Password: lobby phase", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -106,7 +106,7 @@ describe("Password — lobby phase", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Password — identity enforcement", () => {
+describe("Password: identity enforcement", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -151,7 +151,7 @@ describe("Password — identity enforcement", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Password — host leaving", () => {
+describe("Password: host leaving", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -187,7 +187,7 @@ describe("Password — host leaving", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Password — spectator during active game", () => {
+describe("Password: spectator during active game", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -216,7 +216,7 @@ describe("Password — spectator during active game", () => {
   });
 });
 
-describe("Password — live round gameplay", () => {
+describe("Password: live round gameplay", () => {
   let tx: MockTx;
 
   beforeEach(() => {

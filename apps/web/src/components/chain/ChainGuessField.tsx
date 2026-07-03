@@ -3,7 +3,7 @@ import { buildGuessCells, lockToPrefix } from "./chain-guess";
 import "../../styles/chain-guess-field.css";
 
 type ChainGuessFieldProps = {
-  /** The target word — used for length and the locked hint letters only. */
+  /** The target word, used for length and the locked hint letters only. */
   word: string;
   /** Number of leading letters that are already revealed (locked, non-editable). */
   lettersShown: number;
@@ -24,7 +24,7 @@ type ChainGuessFieldProps = {
 /**
  * Locked-prefix + underscore "fill in the blank" guess field.
  *
- * The revealed hint letters form a fixed prefix the player can't edit — they only
+ * The revealed hint letters form a fixed prefix the player can't edit; they only
  * type the remaining letters. Unfilled positions stay visible as underscores so the
  * player always knows how many letters the word needs. The same masked rendering is
  * reused (read-only) to mirror an opponent's live typing when spectating their board.
@@ -84,7 +84,7 @@ export function ChainGuessField({
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
-          aria-label={`Guess — ${total} letters`}
+          aria-label={`Guess, ${total} letters`}
           onChange={(e) => handleChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={() => { if (!value.trim()) onCancel?.(); }}

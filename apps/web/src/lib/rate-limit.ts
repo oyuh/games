@@ -22,7 +22,7 @@ export function checkRateLimit(): boolean {
   // Currently restricted
   if (t < restrictedUntil) {
     const sec = Math.ceil((restrictedUntil - t) / 1000);
-    showToast(`Rate limited — wait ${sec}s`, "error");
+    showToast(`Rate limited, wait ${sec}s`, "error");
     return false;
   }
 
@@ -35,7 +35,7 @@ export function checkRateLimit(): boolean {
 
   if (timestamps.length <= MAX_PER_WINDOW) return true;
 
-  // Over limit — issue warning
+  // Over the limit, so issue a warning
   warnings++;
   lastWarningAt = t;
 

@@ -8,7 +8,7 @@ interface UseGameSecretOptions {
   gameType: "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
   gameId: string;
   sessionId: string;
-  /** Enable fetching — set to false until the game is in a phase where secrets are needed. */
+  /** Enable fetching; set to false until the game is in a phase where secrets are needed. */
   enabled?: boolean;
 }
 
@@ -102,7 +102,7 @@ export function useGameSecret({ gameType, gameId, sessionId, enabled = true }: U
 /**
  * Calls the server to encrypt the current game secret and overwrite it in Zero.
  * Uses the same key across rounds so the client hook only needs to fetch once.
- * Idempotent — safe to call multiple times.
+ * Idempotent, so it's safe to call multiple times.
  */
 export async function callGameSecretInit(
   gameType: "imposter" | "shade_signal" | "location_signal",

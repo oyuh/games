@@ -1,5 +1,5 @@
 /**
- * Local DB — sessions CRUD tests.
+ * Local DB: sessions CRUD tests.
  *
  * Verifies sessions can be created, read, updated, and cleaned up
  * against the real local dev database.
@@ -24,7 +24,7 @@ afterEach(async () => {
   createdIds.length = 0;
 });
 
-describe("Local DB — sessions", () => {
+describe("Local DB: sessions", () => {
   it("can insert and read back a session", async () => {
     const db = getDb();
     const id = testId();

@@ -13,7 +13,7 @@
   color: inherit;
 }
 
-/* ── Container — fill viewport, NO scrollbar ever ────────── */
+/* ── Container: fill viewport, NO scrollbar ever ────────── */
 /* Strip shell-main padding when shikaku page is active */
 .shell-main:has(.shikaku-page) {
   padding: 0;
@@ -30,7 +30,7 @@
   overflow: hidden;
   box-sizing: border-box;
 }
-/* On desktop, large puzzles may still overflow the page — allow scroll.
+/* On desktop, large puzzles may still overflow the page: allow scroll.
    On mobile, the grid-wrap handles its own scroll; the page stays locked. */
 .shikaku-page.game-page[data-difficulty="hard"],
 .shikaku-page.game-page[data-difficulty="expert"] {
@@ -114,7 +114,7 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* ── Mode bar — tabs + seed toggle in one row ─────────────── */
+/* ── Mode bar: tabs + seed toggle in one row ─────────────── */
 .shikaku-mode-bar {
   display: flex;
   align-items: center;
@@ -163,7 +163,7 @@
   color: #34d399;
 }
 
-/* Seed toggle — icon-only square button, aligned with tab height */
+/* Seed toggle: icon-only square button, aligned with tab height */
 .shikaku-seed-toggle {
   display: flex;
   align-items: center;
@@ -198,7 +198,7 @@
   color: #34d399;
 }
 
-/* ── Difficulty cards — 4-column ──────────────────────────── */
+/* ── Difficulty cards: 4-column ──────────────────────────── */
 .shikaku-diff-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -513,7 +513,7 @@
   align-items: center;
 }
 
-/* ── Dim counter — overlay positioned at the dragged rect ─ */
+/* ── Dim counter: overlay positioned at the dragged rect ─ */
 .shikaku-dim-counter {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -531,12 +531,12 @@
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
-/* Floating variant for large puzzles on mobile — hidden on desktop */
+/* Floating variant for large puzzles on mobile: hidden on desktop */
 .shikaku-dim-counter--floating {
   display: none;
 }
 
-/* ── Scroll navigation — integrated into footer for expert on mobile ── */
+/* ── Scroll navigation: integrated into footer for expert on mobile ── */
 .shikaku-grid-outer {
   position: relative;
   width: 100%;
@@ -550,7 +550,7 @@
   flex-direction: column;
   gap: 0.15rem;
 }
-/* Scroll-variant of icon-btn — slightly smaller, accent-tinted border */
+/* Scroll-variant of icon-btn: slightly smaller, accent-tinted border */
 .shikaku-icon-btn--scroll {
   width: 2rem;
   height: 1.6rem;
@@ -618,10 +618,10 @@
   background: color-mix(in srgb, #34d399 6%, transparent);
 }
 
-/* Placed rectangle cell — crosshair so you can drag through */
+/* Placed rectangle cell: crosshair so you can drag through */
 .shikaku-cell--filled {
   cursor: crosshair;
-  transition: none; /* instant fill — avoids mobile repaint/compositor bugs */
+  transition: none; /* instant fill: avoids mobile repaint/compositor bugs */
 }
 .shikaku-cell--filled::before {
   background: var(--rect-fill, rgba(52, 211, 153, 0.38));
@@ -631,7 +631,7 @@
   background: var(--rect-fill-strong, rgba(52, 211, 153, 0.48));
 }
 
-/* Rectangle border edges — thicker to show rect outline */
+/* Rectangle border edges: thicker to show rect outline */
 .shikaku-cell--top    { border-top: 2.5px solid var(--rect-color, #34d399); }
 .shikaku-cell--bottom { border-bottom: 2.5px solid var(--rect-color, #34d399); }
 .shikaku-cell--left   { border-left: 2.5px solid var(--rect-color, #34d399); }
@@ -649,12 +649,12 @@
   animation: shikaku-flash 0.6s ease-in-out infinite alternate;
 }
 
-/* Preview (dragging) — only tint empty cells; keep filled cells with their rect color */
+/* Preview (dragging): only tint empty cells; keep filled cells with their rect color */
 .shikaku-cell--preview:not(.shikaku-cell--filled)::before {
   background: rgba(52, 211, 153, 0.14);
 }
 .shikaku-cell--filled.shikaku-cell--preview::before {
-  /* Keep the filled rect's color — slightly brighter to hint at overlap */
+  /* Keep the filled rect's color: slightly brighter to hint at overlap */
   background: var(--rect-fill-strong, rgba(52, 211, 153, 0.48));
   box-shadow: inset 0 0 0 0.5px var(--rect-stroke-strong, rgba(52, 211, 153, 0.28));
 }
@@ -765,7 +765,7 @@
 }
 
 /* ── Finished screen ───────────────────────────────────────── */
-/* ── End screen — wide wrapper ─────────────────────────────── */
+/* ── End screen: wide wrapper ─────────────────────────────── */
 .shikaku-end-wrap {
   width: 100%;
   max-width: 720px;
@@ -822,7 +822,7 @@
   color: var(--muted-foreground);
 }
 
-/* ── Grid tile area — 2 columns, balanced ── */
+/* ── Grid tile area: 2 columns, balanced ── */
 .shikaku-end-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -836,7 +836,7 @@
   margin: 0 auto;
 }
 
-/* ── Stats tiles — left column ── */
+/* ── Stats tiles: left column ── */
 .shikaku-end-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -922,7 +922,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── List tile — right column ── */
+/* ── List tile: right column ── */
 .shikaku-end-list-tile {
   background: var(--card);
   border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
@@ -1264,7 +1264,7 @@
   padding: 2.5rem 1rem;
 }
 
-/* Container that holds either the list, loading, or empty state — fixed height so pagination doesn't jump */
+/* Container that holds either the list, loading, or empty state: fixed height so pagination doesn't jump */
 .shikaku-lb-content {
   min-height: 26rem;
   display: flex;
@@ -1579,7 +1579,7 @@
   pointer-events: none;
 }
 
-/* ── Compact playing header — always single row ─────────────── */
+/* ── Compact playing header: always single row ─────────────── */
 .shikaku-page .game-header .game-header-left {
   flex-wrap: nowrap;
 }
@@ -1601,7 +1601,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Mobile — Shikaku responsive overrides
+   Mobile: Shikaku responsive overrides
    ══════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .shikaku-page.game-page {
@@ -1609,7 +1609,7 @@
     padding: 0.5rem 0.5rem;
     padding-top: calc(0.5rem + env(safe-area-inset-top, 0px));
   }
-  /* On mobile, page-level scrolling is OFF — the grid-wrap handles its own scroll */
+  /* On mobile, page-level scrolling is OFF: the grid-wrap handles its own scroll */
   .shikaku-page.game-page[data-difficulty="hard"],
   .shikaku-page.game-page[data-difficulty="expert"] {
     overflow: hidden;
@@ -1633,7 +1633,7 @@
     font-size: 1.15rem;
   }
 
-  /* Grid — larger touch target, use full width */
+  /* Grid: larger touch target, use full width */
   .shikaku-grid {
     max-width: min(500px, 94vw, calc(100dvh - 16rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
   }
@@ -1644,7 +1644,7 @@
     flex: 1;
     min-height: 0;      /* allow flex child to shrink below content size */
     max-width: 100%;
-    margin: 0;          /* override margin:auto centering — fill height instead */
+    margin: 0;          /* override margin:auto centering: fill height instead */
   }
   .shikaku-page[data-difficulty="hard"] .shikaku-grid-outer,
   .shikaku-page[data-difficulty="expert"] .shikaku-grid-outer {
@@ -1691,11 +1691,11 @@
     border-radius: 0.5rem;
     box-shadow: 0 2px 12px rgba(0,0,0,0.5);
   }
-  /* Hard: grid larger than viewport — enables scroll in both axes */
+  /* Hard: grid larger than viewport: enables scroll in both axes */
   .shikaku-page[data-difficulty="hard"] .shikaku-grid {
     max-width: none;
     width: max(94vw, 480px);
-    flex-shrink: 0;  /* don't compress the grid — let the wrapper scroll */
+    flex-shrink: 0;  /* don't compress the grid: let the wrapper scroll */
     border-radius: 0;
     border: none;
   }
@@ -1715,7 +1715,7 @@
     background: transparent;
   }
 
-  /* Playing footer — compact, never allowed to be pushed offscreen */
+  /* Playing footer: compact, never allowed to be pushed offscreen */
   .shikaku-hint {
     font-size: 0.68rem;
   }
@@ -1723,7 +1723,7 @@
     justify-content: center;
     flex-shrink: 0;     /* footer never shrinks */
   }
-  /* Header pinned at top — never shrinks */
+  /* Header pinned at top: never shrinks */
   .shikaku-page .game-header {
     flex-shrink: 0;
   }
@@ -1785,7 +1785,7 @@
     display: flex;
   }
 
-  /* End-game tiles — equal columns on mobile, prevent imbalance */
+  /* End-game tiles: equal columns on mobile, prevent imbalance */
   .shikaku-end-stats {
     grid-template-columns: 1fr 1fr;
   }
@@ -1849,7 +1849,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Light Theme — Shikaku overrides
+   Light Theme: Shikaku overrides
    ══════════════════════════════════════════════════════════════ */
 
 /* Leaderboard modal */
@@ -1969,17 +1969,17 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Safe-area insets — iOS Dynamic Island & notch support
+   Safe-area insets: iOS Dynamic Island & notch support
    ══════════════════════════════════════════════════════════════ */
 
-/* Leaderboard overlay — respect safe areas on mobile */
+/* Leaderboard overlay: respect safe areas on mobile */
 .shikaku-leaderboard-overlay {
   padding: calc(1rem + env(safe-area-inset-top, 0px)) calc(1rem + env(safe-area-inset-right, 0px)) calc(1rem + env(safe-area-inset-bottom, 0px)) calc(1rem + env(safe-area-inset-left, 0px));
 }
 
-/* Give-up overlay — respect safe areas */
+/* Give-up overlay: respect safe areas */
 .shikaku-giveup-overlay {
   padding: calc(1rem + env(safe-area-inset-top, 0px)) calc(1rem + env(safe-area-inset-right, 0px)) calc(1rem + env(safe-area-inset-bottom, 0px)) calc(1rem + env(safe-area-inset-left, 0px));
 }
 
-/* (Old custom-seed styles removed — replaced by .shikaku-seed-* above) */
+/* (Old custom-seed styles removed: replaced by .shikaku-seed-* above) */

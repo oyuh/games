@@ -979,7 +979,7 @@ export const chainCategories = Object.keys(chainWordBank);
 
 export const chainCategoryLabels: Record<string, string> = { ...gameCategoryLabels };
 
-// Legacy flat list for backwards compat — combines all categorized chains
+// Legacy flat list for backwards compat; combines all categorized chains
 export const chainWordBankFlat: string[][] = Object.values(chainWordBank).flat();
 
 // ── Password word bank (categorized) ────────────────────

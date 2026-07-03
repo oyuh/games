@@ -1,18 +1,18 @@
-# Location Signal — Game Design Document
+# Location Signal (Game Design Document)
 
 > **Status:** Implemented
-> **Players:** 2–10
+> **Players:** 2-10
 > **Type:** Competitive map + clue party game
 
 ---
 
 ## Core Idea
 
-Each round, one player is the **Leader** and secretly picks a real-world location (city/landmark/region) on a world map. The Leader gives up to **two clues**. Everyone else clicks where they think the location is. Closest guesses get the fewest points.
+Each round, one player is the **Leader** and secretly picks a real-world location (a city, landmark, or region) on a world map. The Leader gives up to **two clues**. Everyone else clicks where they think the location is. Closer guesses collect fewer points.
 
-**Scoring style:** golf — **lowest total score wins**.
+**Scoring style:** golf. **Lowest total score wins.**
 
-This game is a social version of GeoGuessr-style distance guessing, with clue quality and mind-games as the core skill.
+It's basically a social spin on GeoGuessr-style distance guessing, where clue quality and mind games are the core skill.
 
 ---
 
@@ -20,40 +20,40 @@ This game is a social version of GeoGuessr-style distance guessing, with clue qu
 
 ### Phase 1: Leader Pick
 
-- Leader is shown an interactive map and chooses a hidden target point.
-- Guessers do not see the target.
-- Optional: lock location scope by category (city-only, country-only, landmark-only).
+- The leader gets an interactive map and chooses a hidden target point.
+- Guessers can't see the target.
+- Optional: lock the location scope by category (city-only, country-only, landmark-only).
 
 ### Phase 2: Clue 1
 
-- Leader submits first clue (short text).
+- The leader submits a first clue (short text).
 - Example clues: "Mediterranean", "mountain capital", "desert coast".
 
 ### Phase 3: Guess 1
 
-- All guessers place first guess marker on map.
-- Guesses are hidden until all guessers submit (or timer ends).
+- All guessers place their first marker on the map.
+- Guesses stay hidden until everyone has submitted (or the timer ends).
 
 ### Phase 4: Clue 2 (Correction Clue)
 
-- Leader submits second clue after seeing first-guess spread.
-- Purpose: allow guessers to recover if they are very far off.
+- The leader submits a second clue after seeing the first-guess spread.
+- The point is to let guessers recover if they're wildly off.
 
 ### Phase 5: Final Guess
 
-- Guessers can move marker and submit final guess.
-- Final guess is what counts for scoring (default mode).
+- Guessers can move their marker and submit a final guess.
+- The final guess is what counts for scoring (in the default mode).
 
 ### Phase 6: Reveal + Scoring
 
-- Reveal true location and all final guess markers.
-- Compute each guesser distance to target.
-- Convert distance to penalty points (lower is better).
+- The true location and all final markers are revealed.
+- Each guesser's distance to the target is computed.
+- Distance is converted to penalty points; lower is better.
 
 ### Phase 7: Rotate Leader
 
-- Next player becomes leader.
-- Repeat until everyone leads once (or configured rounds).
+- The next player becomes leader.
+- Repeat until everyone has led once (or for the configured number of rounds).
 
 ---
 
@@ -75,18 +75,18 @@ This game is a social version of GeoGuessr-style distance guessing, with clue qu
 
 ### Optional Variant (Raw Distance)
 
-- Use exact km distance as points (capped), still lowest wins.
-- More precise but less casual-friendly.
+- Use the exact km distance as points (capped); lowest still wins.
+- More precise, but less casual-friendly.
 
 ---
 
 ## Rules
 
-- Leader cannot use exact coordinates/lat-long.
-- Leader cannot name the exact location directly.
-- Clue 1 and clue 2 each have character limit (e.g., 40 chars).
-- Guessers cannot submit after timer expires.
-- Host can enable/disable second clue mode.
+- The leader can't use exact coordinates or lat/long.
+- The leader can't name the exact location directly.
+- Clue 1 and clue 2 each have a character limit (e.g. 40 chars).
+- Guessers can't submit after the timer expires.
+- The host can turn second-clue mode on or off.
 
 ---
 
@@ -94,16 +94,16 @@ This game is a social version of GeoGuessr-style distance guessing, with clue qu
 
 | Setting | Range | Default |
 |--------|-------|---------|
-| Rounds | 1–10 | players count (everyone leads once) |
-| Guess timer | 15–120 sec | 45 sec |
-| Clue timer | 10–60 sec | 20 sec |
+| Rounds | 1-10 | player count (everyone leads once) |
+| Guess timer | 15-120 sec | 45 sec |
+| Clue timer | 10-60 sec | 20 sec |
 | Map scope | world / region / category | world |
 | Second clue | on/off | on |
 | Scoring mode | bucket / raw km | bucket |
 
 ---
 
-## Data Model (planned)
+## Data Model
 
 ```ts
 location_signal_games {
@@ -155,7 +155,7 @@ location_signal_games {
 
 ---
 
-## Key Mutators (planned)
+## Key Mutators
 
 - `locationSignal.create`
 - `locationSignal.join`
@@ -173,7 +173,7 @@ location_signal_games {
 
 ---
 
-## UI Components (planned)
+## UI Components
 
 - `LocationSignalPage` (desktop)
 - `MobileLocationSignalPage` (mobile)
@@ -189,8 +189,8 @@ location_signal_games {
 
 ## UX Notes
 
-- Auto-focus clue inputs when clue phases start.
-- Keep map center/zoom smooth between phases.
-- Show clear phase countdown + lock state.
-- On reveal, animate lines from guesses to target for clarity.
+- Auto-focus the clue inputs when clue phases start.
+- Keep the map center/zoom smooth between phases.
+- Show a clear phase countdown and lock state.
+- On reveal, animate lines from guesses to the target so results read instantly.
 - Keep spectators read-only but fully informed.

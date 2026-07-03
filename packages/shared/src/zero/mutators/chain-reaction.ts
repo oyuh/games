@@ -152,7 +152,7 @@ export const chainReactionMutators = {
         players,
         phase,
         announcement: game.phase === "playing"
-          ? { text: "Your opponent left — game over!", ts: now() }
+          ? { text: "Your opponent left. Game over!", ts: now() }
           : game.announcement,
         settings: { ...game.settings, phaseEndsAt: null },
         updated_at: now()
@@ -236,7 +236,7 @@ export const chainReactionMutators = {
       if (game.players.length !== 2) throw new Error("Need exactly 2 players");
 
       if (game.settings.chainMode === "custom") {
-        // Go to submitting phase — both players will enter their chains
+        // Go to the submitting phase; both players will enter their chains
         await tx.mutate.chain_reaction_games.update({
           id: game.id,
           phase: "submitting",
@@ -248,7 +248,7 @@ export const chainReactionMutators = {
         return;
       }
 
-      // Premade mode — pick two different chains, one for each player to solve
+      // Premade mode: pick two different chains, one for each player to solve
       const p1 = game.players[0]!.sessionId;
       const p2 = game.players[1]!.sessionId;
       const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
@@ -308,7 +308,7 @@ export const chainReactionMutators = {
         return;
       }
 
-      // Both submitted — each player guesses the OTHER player's chain
+      // Both submitted, so each player guesses the OTHER player's chain
       const p1 = game.players[0]!.sessionId;
       const p2 = game.players[1]!.sessionId;
       const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
@@ -333,7 +333,7 @@ export const chainReactionMutators = {
         chain,
         submitted_chains: submitted,
         current_turn: undefined,
-        announcement: { text: "Chains submitted — let's play!", ts: now() },
+        announcement: { text: "Chains submitted. Let's play!", ts: now() },
         settings: { ...game.settings, phaseEndsAt },
         updated_at: now()
       });
@@ -388,7 +388,7 @@ export const chainReactionMutators = {
       let announcement: { text: string; ts: number } | null = null;
 
       if (!correct) {
-        // Wrong guess — auto-reveal one letter (unless it would reveal the whole word)
+        // Wrong guess: auto-reveal one letter (unless it would reveal the whole word)
         const newLettersShown = slot.lettersShown < slot.word.length - 1
           ? slot.lettersShown + 1
           : slot.lettersShown;
@@ -473,7 +473,7 @@ export const chainReactionMutators = {
               scores,
               current_turn: undefined,
               round_history: roundHistory,
-              announcement: { text: `Round ${nextRound} — submit your chains!`, ts: now() },
+              announcement: { text: `Round ${nextRound}: submit your chains!`, ts: now() },
               settings: { ...game.settings, currentRound: nextRound, phaseEndsAt: null },
               updated_at: now()
             });
@@ -509,7 +509,7 @@ export const chainReactionMutators = {
         return;
       }
 
-      // Not all done yet — just update this player's chain
+      // Not all done yet, so just update this player's chain
       await tx.mutate.chain_reaction_games.update({
         id: game.id,
         chain: updatedChains,
@@ -590,7 +590,7 @@ export const chainReactionMutators = {
               scores,
               current_turn: undefined,
               round_history: roundHistory,
-              announcement: { text: `Round ${nextRound} — submit your chains!`, ts: now() },
+              announcement: { text: `Round ${nextRound}: submit your chains!`, ts: now() },
               settings: { ...game.settings, currentRound: nextRound, phaseEndsAt: null },
               updated_at: now()
             });

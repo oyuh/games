@@ -352,7 +352,7 @@ export const locationSignalMutators = {
         return;
       }
 
-      // Last guess round — reveal and score
+      // Last guess round, so reveal and score
       const bestGuesses = new Map<string, { sessionId: string; round: number; lat: number; lng: number }>();
       for (const g of game.guesses) {
         const existing = bestGuesses.get(g.sessionId);
@@ -462,7 +462,7 @@ export const locationSignalMutators = {
       const cluePairs = game.settings.cluePairs ?? 2;
 
       if (game.phase.startsWith("clue")) {
-        // Leader didn't submit clue in time — skip to guess phase anyway
+        // Leader didn't submit a clue in time, so skip to the guess phase anyway
         const clueRound = Number(game.phase.replace("clue", ""));
         const guessPhase = `guess${clueRound}` as typeof game.phase;
         await tx.mutate.location_signal_games.update({
@@ -475,7 +475,7 @@ export const locationSignalMutators = {
         const guessRound = Number(game.phase.replace("guess", ""));
 
         if (guessRound < cluePairs) {
-          // Not last guess round — advance to next clue phase
+          // Not the last guess round, so advance to the next clue phase
           const nextCluePhase = `clue${guessRound + 1}` as typeof game.phase;
           await tx.mutate.location_signal_games.update({
             id: game.id,
@@ -484,9 +484,9 @@ export const locationSignalMutators = {
             updated_at: now(),
           });
         } else {
-          // Last guess round — score and go to reveal
+          // Last guess round: score and go to reveal
           if (game.target_lat == null || game.target_lng == null || !game.leader_id) {
-            // Missing target — skip to reveal anyway
+            // Missing target, so skip to reveal anyway
             await tx.mutate.location_signal_games.update({
               id: game.id,
               phase: "reveal",

@@ -28,7 +28,7 @@ function handleSecurityError(error: unknown) {
   const message = normalizeErrorMessage(error).toLowerCase();
 
   if (message.includes("429") || message.includes("rate_limited") || message.includes("too many requests")) {
-    showDedupedToast("You're doing that too fast — try again in a second.", "error");
+    showDedupedToast("You're doing that too fast. Try again in a second.", "error");
     return;
   }
 
