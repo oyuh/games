@@ -1,5 +1,5 @@
 /**
- * Shikaku puzzle engine — generation, validation, and seeded PRNG.
+ * Shikaku puzzle engine: generation, validation, and the seeded PRNG.
  *
  * A Shikaku puzzle is a grid where numbered cells must be covered by
  * non-overlapping rectangles whose area equals the number inside them.
@@ -84,7 +84,7 @@ export function generatePuzzle(rows: number, cols: number, rng: () => number): S
     if (solveResult === 1) return result; // uniquely solvable!
     // If solver hit budget limit, accept puzzle (still solvable by construction)
     if (solveResult === -1) return result;
-    // Otherwise has 0 or 2+ solutions — retry
+    // Otherwise it has 0 or 2+ solutions, so retry
   }
   // Fallback: very simple grid of 1×1 cells
   const numbers: NumberCell[] = [];
@@ -428,7 +428,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-/* ── Solver — verify unique solvability ────────────────────── */
+/* ── Solver: verify unique solvability ─────────────────────── */
 
 /**
  * Count solutions for a Shikaku puzzle using backtracking with
@@ -511,7 +511,7 @@ function countSolutions(puzzle: ShikakuPuzzle, maxCount: number, iterBudget: num
     }
 
     if (bestNi === -1) {
-      // All numbers assigned — check full coverage
+      // All numbers assigned, now check full coverage
       for (let i = 0; i < rows * cols; i++)
         if (!grid[i]!) return;
       solutions++;

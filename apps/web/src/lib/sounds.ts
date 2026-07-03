@@ -1,6 +1,6 @@
 /**
  * Sound engine using Web Audio API.
- * All sounds are synthesized — no audio files needed.
+ * All sounds are synthesized, no audio files needed.
  * Sounds are off by default and controlled via the settings store.
  */
 
@@ -126,7 +126,7 @@ export function playPress() {
   playNoise(0.03, { volume: 0.2, filterFreq: 5000 });
 }
 
-/** Gentle notification — it's your turn */
+/** Gentle notification: it's your turn */
 export function playYourTurn() {
   if (!canPlay("gameNotifications")) return;
   playTone(523, "sine", 0.15, { volume: 0.5, filterFreq: 2000 });
@@ -140,7 +140,7 @@ export function playCountdownTick() {
   playTone(440, "sine", 0.1, { volume: 0.5, attack: 0.005, decay: 0.08 });
 }
 
-/** Countdown final — GO! */
+/** Countdown final: GO! */
 function playCountdownGo() {
   if (!canPlay("gameNotifications")) return;
   playTone(523, "sine", 0.12, { volume: 0.6, attack: 0.005 });
@@ -193,7 +193,7 @@ export function playGameOver() {
   playTone(784, "sine", 0.35, { volume: 0.55, delay: 0.45 });
 }
 
-/** Victory fanfare — you/your team won */
+/** Victory fanfare: you/your team won */
 function playVictory() {
   if (!canPlay("actionFeedback")) return;
   playTone(523, "sine", 0.12, { volume: 0.5 });

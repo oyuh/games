@@ -4,15 +4,15 @@
 
 This project should be a useful, welcoming place to build party games, puzzle systems, infrastructure, and docs together. Be kind, assume good intent, and keep feedback specific to the work.
 
-Examples of welcome behavior:
+Behavior that's welcome here:
 
-- Using clear, respectful language.
-- Giving constructive feedback with enough context to act on it.
-- Respecting different experience levels and communication styles.
-- Accepting maintainer decisions when a thread has been resolved.
+- Clear, respectful language.
+- Constructive feedback with enough context that someone can actually act on it.
+- Respect for different experience levels and communication styles.
+- Accepting maintainer decisions once a thread has been resolved.
 - Keeping issues and pull requests focused on the project.
 
-Examples of unacceptable behavior:
+Behavior that isn't:
 
 - Harassment, threats, personal attacks, or discriminatory language.
 - Sexualized comments or imagery.
@@ -24,8 +24,8 @@ Examples of unacceptable behavior:
 
 Maintainers may edit, hide, lock, or remove comments, issues, pull requests, or other contributions that violate this code. Maintainers may also temporarily or permanently limit participation for behavior that harms contributors or the project.
 
-If you see a problem, report it privately to a maintainer when possible. If the issue is a security vulnerability, follow [SECURITY.md](SECURITY.md) instead of posting public details.
+If you see a problem, report it privately to a maintainer when possible. If the issue is a security vulnerability, follow [SECURITY.md](SECURITY.md) instead of posting details publicly.
 
 ## Scope
 
-This code applies in this repository, linked community spaces, and any project-related interaction where someone is representing the project.
+This code applies in this repository, in linked community spaces, and in any project-related interaction where someone is representing the project.

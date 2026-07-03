@@ -446,7 +446,7 @@ export function Sidebar() {
     } else {
       // Position via viewport-percentage + a self-relative translate so the bar
       // spans flush-edge to flush-edge across [0,1] and stays on-screen on resize,
-      // keeping a fixed SIDEBAR_MARGIN gap at the extremes — all in pure CSS.
+      // keeping a fixed SIDEBAR_MARGIN gap at the extremes, all in pure CSS.
       const { fx, fy } = settings.sidebarCustomPos;
       const m = SIDEBAR_MARGIN;
       navStyle = {

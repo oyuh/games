@@ -87,7 +87,7 @@
   --radius: 0.625rem;
 }
 
-/* ── Game page theming — per-game --primary overrides ────────── */
+/* ── Game page theming: per-game --primary overrides ────────── */
 [data-game-theme="imposter"] {
   --primary: #7eb8ff;
   --primary-foreground: #181a1b;

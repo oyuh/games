@@ -14,7 +14,7 @@ import {
 
 /**
  * Watches a game's phase and fires sound effects on transitions.
- * Call this once per game page — it deduplicates via refs.
+ * Call this once per game page; it deduplicates via refs.
  */
 export function useGameSounds({
   phase,

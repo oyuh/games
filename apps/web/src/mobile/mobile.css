@@ -1713,7 +1713,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   MISSING CSS — Button single-dash aliases
+   MISSING CSS: Button single-dash aliases
    ══════════════════════════════════════════════════════════════ */
 .m-btn-primary { background: var(--primary); color: var(--primary-foreground); }
 .m-btn-muted { background: var(--muted); color: var(--text); }
@@ -1721,7 +1721,7 @@
 .m-btn-ghost { background: transparent; color: var(--text); }
 
 /* ══════════════════════════════════════════════════════════════
-   MISSING CSS — Home Page
+   MISSING CSS: Home Page
    ══════════════════════════════════════════════════════════════ */
 .m-home {
   display: flex;
@@ -1937,7 +1937,7 @@
 .m-game-card--location .m-game-card-title { color: #f59e0b; }
 
 /* ══════════════════════════════════════════════════════════════
-   MISSING CSS — Shared Game Components
+   MISSING CSS: Shared Game Components
    ══════════════════════════════════════════════════════════════ */
 .m-card-title {
   font-size: 0.9rem;
@@ -2158,7 +2158,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   MISSING CSS — Chain Reaction (lobby + playing + finished)
+   MISSING CSS: Chain Reaction (lobby + playing + finished)
    ══════════════════════════════════════════════════════════════ */
 .m-cr-duel-slots {
   display: flex;
@@ -2372,7 +2372,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   MISSING CSS — Shade Signal extras
+   MISSING CSS: Shade Signal extras
    ══════════════════════════════════════════════════════════════ */
 .m-shade-timer {
   text-align: center;
@@ -2552,7 +2552,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   MISSING CSS — Options / Chat / Info sheet extras
+   MISSING CSS: Options / Chat / Info sheet extras
    ══════════════════════════════════════════════════════════════ */
 .m-options-group {
   display: flex;
@@ -3145,7 +3145,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   MISSING CSS — Game Header component
+   MISSING CSS: Game Header component
    ══════════════════════════════════════════════════════════════ */
 .m-game-header {
   padding: 0.75rem 1rem;
@@ -3236,7 +3236,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   MISSING CSS — MobileLayout / Bottom Nav / Sheet
+   MISSING CSS: MobileLayout / Bottom Nav / Sheet
    ══════════════════════════════════════════════════════════════ */
 .m-nav-badge {
   position: absolute;
@@ -3762,7 +3762,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Container for stable height — prevents layout shift when page count varies */
+/* Container for stable height: prevents layout shift when page count varies */
 .m-lb-content {
   min-height: 24rem;
   display: flex;

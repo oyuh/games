@@ -350,7 +350,7 @@ export const imposterMutators = {
           p.sessionId === votedOutId ? { ...p, eliminated: true } : p
         );
 
-        // Move eliminated player to spectators (unless they are the host — host
+        // Move the eliminated player to spectators (unless they're the host; the host
         // stays in players so they keep host controls on the UI)
         const updatedSpectators = [...(game.spectators ?? [])];
         if (votedOutPlayer && votedOutPlayer.sessionId !== game.host_id) {
@@ -393,7 +393,7 @@ export const imposterMutators = {
           return;
         }
 
-        // Continue to next round — new word, same roles, minus eliminated
+        // Continue to the next round: new word, same roles, minus the eliminated
         const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
         const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
         await tx.mutate.imposter_games.update({
@@ -438,7 +438,7 @@ export const imposterMutators = {
         p.sessionId === votedOutId ? { ...p, eliminated: true } : p
       );
 
-      // Move eliminated player to spectators (unless they are the host — host
+      // Move the eliminated player to spectators (unless they're the host; the host
       // stays in players so they keep host controls on the UI)
       const updatedSpectators = [...(game.spectators ?? [])];
       if (votedOutPlayer && votedOutPlayer.sessionId !== game.host_id) {
@@ -480,7 +480,7 @@ export const imposterMutators = {
         return;
       }
 
-      // Continue to next round — new word, same roles, minus eliminated
+      // Continue to the next round: new word, same roles, minus the eliminated
       const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
       const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
       await tx.mutate.imposter_games.update({
