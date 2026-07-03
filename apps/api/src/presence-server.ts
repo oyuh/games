@@ -1,4 +1,4 @@
-// Presence is tracked via the realtime WebSocket connection itself — no HTTP
+// Presence is tracked via the realtime WebSocket connection itself, no HTTP
 // polling. A client is "online" for as long as it holds an open `/ws` socket.
 // The socket lifecycle (open/close) and an occasional `presence` message
 // (sent only when the client's activity changes) keep this registry current.
@@ -106,7 +106,7 @@ let flushTimer: ReturnType<typeof setInterval> | null = null;
  * Periodically bump `last_seen` for all online sessions so the admin roster's
  * recency window keeps including long-lived single-page clients (who may not
  * send any activity messages for minutes). This is a single batched DB write
- * on the server — clients never poll.
+ * on the server; clients never poll.
  */
 export function startPresenceFlush(intervalMs = 60_000) {
   if (flushTimer) {

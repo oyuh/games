@@ -159,7 +159,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.submitted_chains, sessionId]);
 
-  // Caret after the locked hint prefix (don't select it — selecting would let the
+  // Caret after the locked hint prefix (don't select it; selecting would let the
   // first keystroke try to overwrite the locked letters)
   useEffect(() => {
     if (editingIndex !== null) {

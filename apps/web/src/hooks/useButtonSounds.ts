@@ -19,7 +19,7 @@ function isButton(el: EventTarget | null): boolean {
 export function useButtonSounds() {
   useEffect(() => {
     const onPointerEnter = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return; // skip touch — no hover on mobile
+      if (e.pointerType === "touch") return; // skip touch, there's no hover on mobile
       if (isButton(e.target)) playHover();
     };
 

@@ -330,7 +330,7 @@ export const shadeSignalMutators = {
         ];
         const words = clueText.toLowerCase().split(/\s+/);
         const found = words.find((w) => banned.includes(w));
-        if (found) throw new Error(`"${found}" is a color name — not allowed with No Color Names rule!`);
+        if (found) throw new Error(`"${found}" is a color name, which isn't allowed with the No Color Names rule!`);
       }
 
       if (game.phase === "clue1") {
@@ -421,7 +421,7 @@ export const shadeSignalMutators = {
       if (!phaseEnd || phaseEnd > now()) return;
 
       if (game.phase === "clue1") {
-        // Leader didn't submit clue1 in time — skip to guess1 with no clue
+        // Leader didn't submit clue1 in time, so skip to guess1 with no clue
         await tx.mutate.shade_signal_games.update({
           id: game.id,
           phase: "guess1",
@@ -437,7 +437,7 @@ export const shadeSignalMutators = {
           updated_at: now()
         });
       } else if (game.phase === "clue2") {
-        // Leader didn't submit clue2 in time — skip to guess2
+        // Leader didn't submit clue2 in time, so skip to guess2
         await tx.mutate.shade_signal_games.update({
           id: game.id,
           phase: "guess2",
@@ -523,7 +523,7 @@ export const shadeSignalMutators = {
           roundScores[gId] = 0;
           continue;
         }
-        // Chebyshev distance (max of row/col diff) — reflects visual grid proximity better
+        // Chebyshev distance (max of row/col diff) reflects visual grid proximity better
         const dist = Math.max(Math.abs(guess.row - targetRow), Math.abs(guess.col - targetCol));
         let pts = 0;
         if (dist === 0) pts = 5;

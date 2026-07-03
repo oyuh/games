@@ -1,5 +1,5 @@
 /**
- * Shade Signal game — mutator integration tests.
+ * Shade Signal game: mutator integration tests.
  *
  * Tests game phases (lobby → picking → clue → guess → reveal)
  * and security enforcement.
@@ -54,7 +54,7 @@ type Handler = (params: { args: any; tx: any; ctx: any }) => Promise<void>;
 const mutators = shadeSignalMutators as unknown as Record<string, Handler>;
 
 // ───────────────────────────────────────────────────────────
-describe("Shade Signal — lobby phase", () => {
+describe("Shade Signal: lobby phase", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -93,7 +93,7 @@ describe("Shade Signal — lobby phase", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Shade Signal — identity enforcement", () => {
+describe("Shade Signal: identity enforcement", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -143,7 +143,7 @@ describe("Shade Signal — identity enforcement", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Shade Signal — announcement sanitization", () => {
+describe("Shade Signal: announcement sanitization", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -167,7 +167,7 @@ describe("Shade Signal — announcement sanitization", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Shade Signal — host leaving", () => {
+describe("Shade Signal: host leaving", () => {
   let tx: MockTx;
 
   beforeEach(() => {
@@ -200,7 +200,7 @@ describe("Shade Signal — host leaving", () => {
 });
 
 // ───────────────────────────────────────────────────────────
-describe("Shade Signal — clue submission sanitization", () => {
+describe("Shade Signal: clue submission sanitization", () => {
   let tx: MockTx;
 
   beforeEach(() => {

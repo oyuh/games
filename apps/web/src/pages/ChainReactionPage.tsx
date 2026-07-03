@@ -164,7 +164,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     }
   }, [game?.phase, game?.submitted_chains, sessionId]);
 
-  // Auto-focus inline input, caret after the locked hint prefix (don't select it —
+  // Auto-focus the inline input, caret after the locked hint prefix (don't select it;
   // selecting would let the first keystroke try to overwrite the locked letters)
   useEffect(() => {
     if (editingIndex !== null) {

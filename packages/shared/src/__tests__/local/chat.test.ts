@@ -1,5 +1,5 @@
 /**
- * Local DB — chat message tests.
+ * Local DB: chat message tests.
  *
  * Verifies chat messages persist correctly and can be queried/deleted
  * against the real local dev database.
@@ -24,7 +24,7 @@ afterEach(async () => {
   createdIds.length = 0;
 });
 
-describe("Local DB — chat messages", () => {
+describe("Local DB: chat messages", () => {
   it("inserts and reads back a message", async () => {
     const db = getDb();
     const id = testId();

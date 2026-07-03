@@ -76,23 +76,23 @@ export function rateLimiter(options: RateLimitOptions): MiddlewareHandler {
 // ─── Rate limit tiers ───────────────────────────────────────
 // Central, named tiers so every route pulls from one tunable table instead of
 // scattering magic numbers. All windows are 60s and counted per client IP.
-// (Dev gets a 10x multiplier — see rateLimiter above.) Tune a tier here and it
+// (Dev gets a 10x multiplier, see rateLimiter above.) Tune a tier here and it
 // applies everywhere that tier is used.
 //
 // Rough philosophy:
-//   • global      — catch-all flood ceiling so NO route is ever unprotected.
-//   • high-volume — real-time sync / identity; generous so play is never throttled.
-//   • abuse-prone — score submission, external geocoding; tight.
-//   • internal    — secret-authed (admin/cron); present but generous.
+//   • global:      catch-all flood ceiling so NO route is ever unprotected.
+//   • high-volume: real-time sync / identity; generous so play is never throttled.
+//   • abuse-prone: score submission, external geocoding; tight.
+//   • internal:    secret-authed (admin/cron); present but generous.
 export const RATE_LIMITS = {
   // Catch-all safety net applied to every /api and /debug route. High ceiling:
   // it only stops pathological floods; tighter per-route tiers do the real work.
   global: { windowMs: 60_000, maxRequests: 600 },
 
-  // Real-time Zero sync push endpoint — chatty by design, kept generous.
+  // Real-time Zero sync push endpoint. Chatty by design, so it stays generous.
   zero: { windowMs: 60_000, maxRequests: 240 },
 
-  // Session/identity resolution — hit on most page loads + reconnects.
+  // Session/identity resolution, hit on most page loads and reconnects.
   sessionSync: { windowMs: 60_000, maxRequests: 120 },
 
   // Per-game encryption key exchange.
@@ -101,13 +101,13 @@ export const RATE_LIMITS = {
   // Map tile config (cheap, static-ish).
   mapsConfig: { windowMs: 60_000, maxRequests: 60 },
 
-  // Geocoding proxies an external provider (Nominatim) — keep tight.
+  // Geocoding proxies an external provider (Nominatim), so keep it tight.
   mapsGeocode: { windowMs: 60_000, maxRequests: 15 },
 
   // Solo-game reads: leaderboards, eligibility checks, puzzle image generation.
   game: { windowMs: 60_000, maxRequests: 30 },
 
-  // Solo-game score submission — strictest public tier (anti-cheat + write).
+  // Solo-game score submission: the strictest public tier (anti-cheat + write).
   score: { windowMs: 60_000, maxRequests: 6 },
 
   // Rich-link embeds for crawlers/social previews (does DB reads).
@@ -116,16 +116,16 @@ export const RATE_LIMITS = {
   // Public read-only lookups (restricted-name list, admin status banner).
   publicRead: { windowMs: 60_000, maxRequests: 60 },
 
-  // Admin dashboard — secret-authed and polls several endpoints, so generous.
+  // Admin dashboard is secret-authed and polls several endpoints, so generous.
   admin: { windowMs: 60_000, maxRequests: 120 },
 
   // Cron-triggered + secret-authed (cleanup / activity report).
   cron: { windowMs: 60_000, maxRequests: 10 },
 
-  // Debug build-info runs a DB probe — keep modest.
+  // Debug build-info runs a DB probe, so keep it modest.
   debug: { windowMs: 60_000, maxRequests: 20 },
 
-  // Health check — cheapest endpoint; high ceiling just to cap abuse.
+  // Health check is the cheapest endpoint; the high ceiling just caps abuse.
   health: { windowMs: 60_000, maxRequests: 600 },
 } as const;
 

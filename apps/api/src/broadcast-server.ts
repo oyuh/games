@@ -255,7 +255,7 @@ export function onRealtimeOpen(socket: Bun.ServerWebSocket<RealtimeSocketData>) 
   } else {
     sessionSockets.set(socket.data.sessionId, new Set([socket]));
   }
-  // The open socket itself is the presence signal — no client polling needed.
+  // The open socket itself is the presence signal, so no client polling needed.
   presenceOpen(socket.data.sessionId);
 }
 

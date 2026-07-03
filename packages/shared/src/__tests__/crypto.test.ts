@@ -6,7 +6,7 @@ import {
   generateGameKey,
 } from "../crypto";
 
-describe("crypto — AES-256-GCM encryption", () => {
+describe("crypto: AES-256-GCM encryption", () => {
   it("generates a non-empty base64 key", async () => {
     const key = await generateGameKey();
     expect(typeof key).toBe("string");

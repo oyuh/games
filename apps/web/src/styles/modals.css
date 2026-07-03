@@ -157,7 +157,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  /* Icon-only button — trim side padding so the icon sits cleanly in the narrow width. */
+  /* Icon-only button: trim side padding so the icon sits cleanly in the narrow width. */
   padding-inline: 0.5rem;
   background: color-mix(in srgb, #ef4444 12%, transparent);
   border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);

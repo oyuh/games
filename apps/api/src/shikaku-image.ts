@@ -1,10 +1,10 @@
 /**
- * Shikaku puzzle image generator — serves dynamic SVG puzzle images
+ * Shikaku puzzle image generator. Serves dynamic SVG puzzle images
  * and an HTML preview page with OG/Twitter embed tags.
  *
  * Routes:
- *   GET /api/shikaku/puzzle.svg  — random puzzle SVG (query: ?difficulty=&seed=&theme=)
- *   GET /api/shikaku/puzzle      — HTML page with puzzle display, download, and embeds
+ *   GET /api/shikaku/puzzle.svg  Random puzzle SVG (query: ?difficulty=&seed=&theme=)
+ *   GET /api/shikaku/puzzle      HTML page with puzzle display, download, and embeds
  */
 
 import { Context, Hono } from "hono";
@@ -70,7 +70,7 @@ function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: nu
     svg += `<rect width="${totalW}" height="${totalH}" rx="12" fill="${bg}"/>`;
   }
 
-  // Header — only when background is visible and padding allows it
+  // Header, only when the background is visible and padding allows it
   if (!transparentBg && paddingMode === "normal") {
     svg += `<text x="${totalW / 2}" y="${padding + 8}" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="18" font-weight="800" fill="${accent}">SHIKAKU</text>`;
     svg += `<text x="${totalW / 2}" y="${padding + 28}" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="11" fill="${mutedText}">${difficulty.toUpperCase()} / ${rows}×${cols} / seed ${seed}</text>`;
@@ -111,14 +111,14 @@ function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: nu
     svg += `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="system-ui,-apple-system,sans-serif" font-size="${fontSize}" font-weight="700" fill="${textColor}">${num.value}</text>`;
   }
 
-  // Watermark — bottom-right, subtle (skip in none/tight padding)
+  // Watermark: bottom-right, subtle (skipped in none/tight padding)
   if (paddingMode === "normal") {
     const wmY = gridY + gridH + 18;
     const wmX = totalW - padding + 4;
     svg += `<text x="${wmX}" y="${wmY}" text-anchor="end" font-family="system-ui,-apple-system,sans-serif" font-size="8" font-weight="500" fill="${mutedText}" opacity="0.5">games · Lawson Hart</text>`;
   }
 
-  // Footer — only when background is visible and padding allows it
+  // Footer, only when the background is visible and padding allows it
   if (!transparentBg && paddingMode === "normal") {
     const footerY = gridY + gridH + footerHeight - 4;
     svg += `<text x="${padding}" y="${footerY}" text-anchor="start" font-family="system-ui,-apple-system,sans-serif" font-size="10" fill="${mutedText}">games · shikaku puzzle</text>`;
@@ -292,7 +292,7 @@ shikakuImageRoutes.get("/puzzle.svg/download", (c) => {
   });
 });
 
-// HTML preview page with OG/Twitter embed meta tags — styled to match the main Games site
+// HTML preview page with OG/Twitter embed meta tags, styled to match the main Games site
 shikakuImageRoutes.get("/puzzle", (c) => {
   const difficulty = parseDifficulty(c.req.query("difficulty"));
   const theme = parseTheme(c.req.query("theme"));
@@ -326,7 +326,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
   }
 
   const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
-  const title = `Shikaku ${showingSolution ? "Solution" : "Puzzle"} — ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} ${rows}×${cols}`;
+  const title = `Shikaku ${showingSolution ? "Solution" : "Puzzle"}: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} ${rows}×${cols}`;
   const description = showingSolution
     ? `The solution for a ${rows}×${cols} ${difficulty} Shikaku logic puzzle.`
     : `A ${rows}×${cols} ${difficulty} Shikaku logic puzzle. Cover every cell with rectangles matching the numbers!`;
@@ -403,7 +403,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       overflow-x: hidden;
     }
 
-    /* Corner glows from all 4 corners — matches game-shared.css */
+    /* Corner glows from all 4 corners, matches game-shared.css */
     body::before {
       content: "";
       position: fixed;
@@ -418,7 +418,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       opacity: 0.3;
     }
 
-    /* Shikaku grid icon pattern — matches game-shared.css */
+    /* Shikaku grid icon pattern, matches game-shared.css */
     body::after {
       content: "";
       position: fixed;
@@ -442,7 +442,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
         radial-gradient(ellipse 60% 60% at 100% 100%, black 0%, transparent 65%);
     }
 
-    /* Card — matches components.css .card */
+    /* Card, matches components.css .card */
     .card {
       position: relative;
       z-index: 1;
@@ -465,7 +465,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       gap: 1.1rem;
     }
 
-    /* Title — matches shikaku.css .shikaku-title style */
+    /* Title, matches shikaku.css .shikaku-title style */
     .title {
       font-size: 2.5rem;
       font-weight: 900;
@@ -488,7 +488,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       max-width: 440px;
     }
 
-    /* Badge row — matches components.css .badge */
+    /* Badge row, matches components.css .badge */
     .badge-row {
       display: flex;
       gap: 0.4rem;
@@ -519,7 +519,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       border: 1px solid color-mix(in srgb, var(--muted-fg) 25%, transparent);
     }
 
-    /* Puzzle frame — gradient border */
+    /* Puzzle frame with a gradient border */
     .puzzle-wrap {
       width: 100%;
       border-radius: 0.75rem;
@@ -543,7 +543,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       height: auto;
     }
 
-    /* Play button — prominent, matches .solo-card-play */
+    /* Play button: prominent, matches .solo-card-play */
     .play-btn {
       display: flex;
       align-items: center;
@@ -610,7 +610,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
     }
     .btn-ghost:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 
-    /* Difficulty cards — matches shikaku.css .shikaku-diff-card */
+    /* Difficulty cards, matches shikaku.css .shikaku-diff-card */
     .diff-cards {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -674,14 +674,14 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       color: var(--secondary);
     }
 
-    /* Divider — matches site */
+    /* Divider, matches the site */
     .divider {
       width: 100%;
       height: 1px;
       background: linear-gradient(90deg, transparent, var(--border), transparent);
     }
 
-    /* Footer — matches footer.css */
+    /* Footer, matches footer.css */
     .footer {
       display: flex;
       align-items: center;

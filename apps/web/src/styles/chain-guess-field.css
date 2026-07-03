@@ -1,4 +1,4 @@
-/* ── Chain Reaction — masked "fill in the blank" guess field ───────────────
+/* ── Chain Reaction: masked "fill in the blank" guess field ───────────────
    Locked hint letters as a fixed prefix, typed letters in the accent colour,
    remaining positions shown as underscores. Reused (read-only) to mirror an
    opponent's live typing. Shared by desktop + mobile chain reaction pages. */
@@ -50,7 +50,7 @@
   transition: color 0.12s ease;
 }
 
-/* Revealed hint letters — locked, can't be edited */
+/* Revealed hint letters: locked, can't be edited */
 .crg-cell--locked {
   color: var(--secondary);
   opacity: 0.85;
@@ -61,13 +61,13 @@
   color: var(--primary);
 }
 
-/* Not yet filled — underscore placeholder */
+/* Not yet filled: underscore placeholder */
 .crg-cell--empty {
   color: var(--secondary);
   opacity: 0.45;
 }
 
-/* Next position to fill — acts as the caret */
+/* Next position to fill: acts as the caret */
 .crg-cell--active {
   color: var(--primary);
   opacity: 1;
@@ -79,7 +79,7 @@
   50%, 100% { opacity: 0.25; }
 }
 
-/* Invisible input overlay — captures typing, native caret hidden in favour of
+/* Invisible input overlay: captures typing, native caret hidden in favour of
    the active-cell indicator so it always lines up with the masked letters. */
 .crg-input {
   position: absolute;

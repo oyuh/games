@@ -1,10 +1,10 @@
 # Games
 
 [![CI](https://github.com/oyuh/games/actions/workflows/ci.yml/badge.svg)](https://github.com/oyuh/games/actions/workflows/ci.yml)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)
 [![License](https://img.shields.io/badge/license-source--available-blue)](LICENSE)
 
-Games is a TypeScript monorepo for browser-based party games and logic puzzles. It includes a React + Vite player app, a Bun/Hono API, a Next.js admin dashboard, shared Drizzle/Zero contracts, and a local Postgres + Zero development stack.
+Games is a TypeScript monorepo for browser party games and logic puzzles. There's a React + Vite app players actually use, a Bun/Hono API behind it, a Next.js admin dashboard for moderation, a shared package holding the Drizzle/Zero contracts, and a local Postgres + Zero stack so you can run the whole thing on your machine.
 
 This project is a full refactor of an earlier version: [oyuh/games-arch](https://github.com/oyuh/games-arch).
 
@@ -70,7 +70,7 @@ Community files:
 
 ## Games Included
 
-The app currently exposes seven playable experiences.
+Seven games are playable right now.
 
 | Game | Mode | Players | Route | State model |
 |------|------|---------|-------|-------------|
@@ -82,13 +82,13 @@ The app currently exposes seven playable experiences.
 | Shikaku | Timed rectangle logic puzzle | Solo | `/shikaku` | Shared seeded engine + REST leaderboard |
 | Pips | Timed domino logic run | Solo | `/pips` | Shared seeded engine + REST leaderboard |
 
-Multiplayer games share room creation, join codes, public lobby visibility, spectators, host controls, chat, session presence, admin kicks, and synchronized state through Rocicorp Zero.
+The multiplayer games all share the same plumbing: room creation, join codes, a public lobby browser, spectators, host controls, chat, session presence, admin kicks, and state that syncs through Rocicorp Zero.
 
-Solo games do not require the Zero cache to be awake. Shikaku and Pips run their puzzle engines in the browser and call REST endpoints only for eligibility checks, leaderboard reads, and score submission. Ranked submissions include replay data, and the API reuses the same shared engines to regenerate the public seed and verify the submitted solve before storing leaderboard rows.
+The solo games don't need the Zero cache at all. Shikaku and Pips run their puzzle engines right in the browser and only hit REST endpoints for eligibility checks, leaderboard reads, and score submission. Ranked submissions come with replay data, and the API runs the same shared engines to regenerate the puzzle from the public seed and check that the submitted solve is real before it writes a leaderboard row.
 
 ## Game Docs
 
-Each game has its own document with rules, flow, scoring, and implementation notes.
+Each game has its own doc with rules, flow, scoring, and implementation notes.
 
 | Game | What it covers | Doc |
 |------|----------------|-----|
@@ -108,12 +108,12 @@ Each game has its own document with rules, flow, scoring, and implementation not
 +-- apps/
 |   +-- web/            # React 19 + Vite player app
 |   +-- api/            # Bun/Hono API, Zero handlers, REST endpoints
-|   +-- admin/          # Next.js 15 admin dashboard
+|   +-- admin/          # Next.js 16 admin dashboard
 +-- packages/
 |   +-- shared/         # Drizzle/Zero contracts, metadata, shared solo puzzle engines
 +-- docs/              # Game docs and maintenance notes
 +-- scripts/           # Local stack and production DB helper scripts
-+-- docker-compose.yml # Local Postgres + Zero cache stack for Windows script path
++-- docker-compose.yml # Local Postgres + Zero cache stack for the Windows script path
 +-- Dockerfile         # API container image
 +-- railway.toml       # API Railway deployment config
 +-- vercel.json        # Web Vercel deployment config with SPA + bot preview rewrites
@@ -125,18 +125,18 @@ Each game has its own document with rules, flow, scoring, and implementation not
 
 ### Player App: `apps/web`
 
-The web app is a React 19 single-page application built by Vite. It owns the public game experience.
+The web app is a React 19 single-page app built by Vite. It owns everything players see.
 
-Main responsibilities:
+What it handles:
 
-- Browser routes for the home page, multiplayer rooms, Shikaku, Pips, and score admin helper route.
+- Browser routes for the home page, multiplayer rooms, Shikaku, Pips, and a score admin helper route.
 - A module-scoped Zero client for realtime multiplayer sync.
 - Local browser identity, recent games, display name, and first-visit state.
-- HTTP session sync and presence heartbeats against the API.
+- HTTP session sync against the API, with presence flowing over the realtime WebSocket.
 - Bun WebSocket subscriptions for global admin broadcasts, targeted user events, and live Password typing.
-- Lazy-loaded game pages and vendor chunks for smaller initial loads.
-- Sync wake/idle messaging when the multiplayer Zero cache is cold or paused.
-- Mobile-specific pages and bottom sheets for the multiplayer experience.
+- Lazy-loaded game pages and vendor chunks to keep the initial load small.
+- Wake/idle messaging for when the multiplayer Zero cache is cold or paused.
+- Mobile-specific pages and bottom sheets for the multiplayer games.
 
 Key files:
 
@@ -150,27 +150,27 @@ Key files:
 
 ### Shared Solo Puzzle Engines
 
-Shikaku and Pips use shared TypeScript engine modules so the browser and API agree on the exact same ranked rules even when the API is not needed for local play. The web app imports the engines through thin wrappers in `apps/web/src/lib/*-engine.ts`; the API imports the shared modules directly for leaderboard validation.
+Shikaku and Pips use shared TypeScript engine modules so the browser and the API agree on the exact same ranked rules, even though the API isn't needed for local play. The web app imports the engines through thin wrappers in `apps/web/src/lib/*-engine.ts`; the API imports the shared modules directly for leaderboard validation.
 
 - `packages/shared/src/games/shikaku-engine.ts` owns seeded Shikaku generation, rectangle validation, scoring, auto-filled `1x1` detection, and ranked replay verification.
 - `packages/shared/src/games/pips-engine.ts` owns seeded Pips generation, board/region validation, domino placement validation, solver utilities, run time scoring, and ranked replay verification.
-- Ranked score requests include replay payloads: Shikaku sends solved rectangles for each of the five puzzles, and Pips sends solved domino placements for Easy, Medium, and Hard.
-- On the server, the API regenerates the canonical run from the submitted seed, validates the replay against those generated puzzles, recalculates or checks score/time invariants, then applies duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
+- Ranked score requests include replay payloads: Shikaku sends the solved rectangles for each of the five puzzles, and Pips sends the solved domino placements for Easy, Medium, and Hard.
+- On the server, the API regenerates the canonical run from the submitted seed, validates the replay against those generated puzzles, recalculates or checks the score/time invariants, then applies duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
 
 ### API App: `apps/api`
 
 The API is a Bun-powered Hono service. It handles REST endpoints, Zero query/mutation forwarding, admin operations, signed session identity, score validation, and cleanup work.
 
-Main responsibilities:
+What it handles:
 
 - `POST /api/zero/query` and `POST /api/zero/mutate`
 - Signed session cookies and signed Zero session proofs.
-- Session sync and presence heartbeat updates.
+- Session sync, plus WebSocket-driven presence tracking.
 - Bun WebSocket upgrade auth and admin event triggers.
 - Server-held secret keys for hidden game data.
-- Shikaku and Pips leaderboard, eligibility, and score validation.
-- Location Signal map tile config and geocode proxy.
-- Admin dashboard API under `/api/admin/*`.
+- Shikaku and Pips leaderboards, eligibility, and score validation.
+- Location Signal map tile config and a geocode proxy.
+- The admin dashboard API under `/api/admin/*`.
 - Scheduled and manual cleanup of stale games and sessions.
 - `/health` and `/debug/build-info` diagnostics.
 
@@ -184,13 +184,13 @@ Key files:
 
 ### Admin App: `apps/admin`
 
-The admin dashboard is a Next.js 16 app protected by NextAuth. It proxies admin requests to the API with `ADMIN_SECRET`.
+The admin dashboard is a Next.js 16 app behind NextAuth. It proxies admin requests to the API using `ADMIN_SECRET`.
 
-Main responsibilities:
+What it handles:
 
 - Dashboard summary and recent activity.
-- Connected client/session browsing.
-- Active game inspection, ending, and kicking.
+- Browsing connected clients and sessions.
+- Inspecting, ending, and kicking players from active games.
 - Session, IP, and region bans.
 - Restricted name patterns and forced name overrides.
 - Global broadcasts, refresh commands, update warnings, and custom status banners.
@@ -206,16 +206,16 @@ Key files:
 
 ### Shared Package: `packages/shared`
 
-The shared package is the contract layer used by the web app and API.
+The shared package is the contract layer between the web app and the API.
 
 It contains:
 
-- Drizzle Postgres schema.
-- Zero schema.
+- The Drizzle Postgres schema.
+- The Zero schema.
 - Shared query definitions.
-- Domain-split Zero mutators.
+- Zero mutators, split by game domain.
 - Shared game types and game metadata.
-- Drizzle Kit config and migrations.
+- The Drizzle Kit config.
 
 Mutators live under `packages/shared/src/zero/mutators/`:
 
@@ -256,11 +256,11 @@ Then open:
 - Admin app: `http://localhost:3002`
 - Zero cache: `http://localhost:4848`
 
-`bun run local:up` starts local Postgres, pushes the Drizzle schema, resets the Zero replica, starts Zero cache, and launches the workspace dev servers.
+`bun run local:up` starts local Postgres, pushes the Drizzle schema, resets the Zero replica, starts the Zero cache, and launches the workspace dev servers.
 
 ### Manual Local Start
 
-If you want to run each piece yourself:
+If you'd rather run each piece yourself:
 
 ```bash
 bun install
@@ -305,7 +305,7 @@ The Linux/macOS script uses standalone Docker containers and volumes. The Window
 
 ### Root `.env`
 
-The API and shared database tooling load the repository root `.env`. For local development, this is the practical minimum:
+The API and shared database tooling load the repo root `.env`. For local development, this is the practical minimum:
 
 ```bash
 NODE_ENV=development
@@ -329,7 +329,7 @@ MAP_GEOCODE_URL=https://nominatim.openstreetmap.org/search
 
 ### Web App Variables
 
-The web app defaults to local endpoints when these are omitted:
+The web app falls back to local endpoints when these are omitted:
 
 ```bash
 VITE_ZERO_CACHE_URL=http://localhost:4848
@@ -338,7 +338,7 @@ VITE_WS_URL=ws://localhost:3001/ws
 VITE_STYLE_ONLY=false
 ```
 
-`VITE_WS_URL` is optional if it is just the API URL plus `/ws`; the client can derive it from `VITE_API_URL`.
+You can skip `VITE_WS_URL` if it's just the API URL plus `/ws`; the client derives it from `VITE_API_URL`.
 
 ### Admin App Variables
 
@@ -348,13 +348,13 @@ The admin app talks to the API through a proxy route and sends `ADMIN_SECRET` as
 GAMES_API_URL=http://localhost:3001
 ADMIN_SECRET=<same_secret_used_by_api>
 AUTH_SECRET=<long_random_secret>
-# NEXTAUTH_SECRET can also be used if the deployment already relies on it.
+# NEXTAUTH_SECRET also works if the deployment already relies on it.
 GITHUB_CLIENT_ID=<github_oauth_client_id>
 GITHUB_CLIENT_SECRET=<github_oauth_client_secret>
 ADMIN_GITHUB_IDS=<comma_separated_allowed_github_logins>
 ```
 
-For local development, a credentials login can be enabled:
+For local development, you can enable a credentials login:
 
 ```bash
 ADMIN_DEV_SECRET=<local_admin_password>
@@ -385,11 +385,11 @@ ZERO_CVR_DB=<postgres_url>
 ZERO_CHANGE_DB=<postgres_url>
 ```
 
-For Zero 1.5, keep the Zero cache version aligned with `@rocicorp/zero` in the workspace. A cache/server version mismatch can pass health checks while breaking browser sync connections.
+Keep the deployed Zero cache version in lockstep with `@rocicorp/zero` in the workspace. A version mismatch can pass health checks while quietly breaking browser sync connections, which is a miserable thing to debug.
 
 ## Common Commands
 
-Run from the repository root.
+Run these from the repo root.
 
 | Command | Purpose |
 |---------|---------|
@@ -404,7 +404,7 @@ Run from the repository root.
 | `bun run test:ci` | Run CI-style Vitest suites |
 | `bun run test:local` | Run shared local integration tests |
 | `bun run lint` | Placeholder lint scripts |
-| `bun run db:push` | Push Drizzle schema to the configured database |
+| `bun run db:push` | Push the Drizzle schema to the configured database |
 | `bun run db:studio` | Open Drizzle Studio |
 | `bun run db:push:prod` | Push schema to `PROD_DB_URL` after confirmation |
 
@@ -431,25 +431,25 @@ bun run test:ci
 bun run build
 ```
 
-The `Deploy Hooks` workflow listens for successful `CI` runs on `main` or `master`. It only calls deploy hooks after CI passes. Add these repository secrets if you want GitHub Actions to trigger deployments:
+The `Deploy Hooks` workflow listens for successful `CI` runs on `main` or `master`, and only calls deploy hooks after CI passes. Add these repository secrets if you want GitHub Actions to trigger deployments:
 
 ```bash
 VERCEL_DEPLOY_HOOK_URL=<vercel_deploy_hook_url>
 RAILWAY_DEPLOY_HOOK_URL=<optional_custom_or_platform_deploy_trigger_url>
 ```
 
-To keep production from deploying failing commits, protect the production branch in GitHub and require `Quality Gate` before merging. Also configure the hosts themselves:
+To keep failing commits out of production, protect the production branch in GitHub and require `Quality Gate` before merging. Also configure the hosts themselves:
 
-- Vercel: use Deployment Checks for the production project and select the GitHub Actions `Quality Gate` check, or disable automatic Git production deploys and rely on the post-CI deploy hook.
+- Vercel: use Deployment Checks on the production project and select the GitHub Actions `Quality Gate` check, or disable automatic Git production deploys and rely on the post-CI deploy hook.
 - Railway: enable Wait for CI on each GitHub-connected service, or disable automatic deploys and trigger Railway from a post-CI workflow.
 
-Keep the CI job name stable. GitHub, Vercel, and Railway use check names to identify which result should gate a merge or deployment.
+Keep the CI job name stable. GitHub, Vercel, and Railway all match on check names to decide what gates a merge or deployment, so renaming the job silently un-gates everything.
 
 ## Data Model
 
 The primary schema lives in `packages/shared/src/drizzle/schema.ts`.
 
-Important tables:
+The important tables:
 
 | Table | Purpose |
 |-------|---------|
@@ -470,7 +470,7 @@ Important tables:
 | `admin_restricted_names` | Restricted display-name patterns |
 | `admin_name_overrides` | Forced display names by session |
 
-The multiplayer game tables intentionally store much of their live state in JSON columns. That keeps room snapshots simple and keeps game transitions close to the mutator logic.
+The multiplayer game tables deliberately keep most of their live state in JSON columns. Room snapshots stay simple, and game transitions live right next to the mutator logic instead of being scattered across a dozen relational tables.
 
 ## API Surface
 
@@ -481,8 +481,7 @@ The multiplayer game tables intentionally store much of their live state in JSON
 | `GET /health` | Railway/API healthcheck |
 | `GET /debug/build-info` | API build, uptime, platform, and database sentinel status |
 | `POST /api/session/sync` | Resolve or create signed browser session identity |
-| `POST /api/presence/heartbeat` | Refresh session/game presence |
-| `GET /ws` | Upgrade to the authenticated Bun WebSocket transport |
+| `GET /ws` | Upgrade to the authenticated Bun WebSocket transport (also carries presence) |
 | `GET /api/admin-status` | Current site-wide admin status payload |
 | `GET /api/public/names/restricted` | Public restricted-name pattern list |
 | `GET /api/embed/html` | Rich social/bot preview HTML |
@@ -507,18 +506,18 @@ The multiplayer game tables intentionally store much of their live state in JSON
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /api/shikaku/leaderboard` | Read Shikaku leaderboard |
+| `GET /api/shikaku/leaderboard` | Read the Shikaku leaderboard |
 | `POST /api/shikaku/score/eligibility` | Check Shikaku score eligibility and canonical replay validity |
-| `POST /api/shikaku/score` | Submit Shikaku score with solved-rectangle replay |
-| `GET /api/pips/leaderboard` | Read Pips leaderboard |
+| `POST /api/shikaku/score` | Submit a Shikaku score with the solved-rectangle replay |
+| `GET /api/pips/leaderboard` | Read the Pips leaderboard |
 | `POST /api/pips/score/eligibility` | Check Pips run eligibility and canonical replay validity |
-| `POST /api/pips/score` | Submit Pips run with solved-domino replay |
+| `POST /api/pips/score` | Submit a Pips run with the solved-domino replay |
 
 ### Admin API
 
 Admin routes are mounted under `/api/admin/*` and require `Authorization: Bearer <ADMIN_SECRET>`.
 
-Major groups:
+The major groups:
 
 - `/clients`
 - `/games`
@@ -546,17 +545,17 @@ Pages:
 | `/shikaku` | Shikaku leaderboard management |
 | `/pips` | Pips leaderboard management |
 
-Capabilities:
+What you can do from it:
 
-- Use broadcast controls from the dashboard shell.
+- Use the broadcast controls from the dashboard shell.
 - View live sessions, names, fingerprints, regions, and game attachments.
 - Inspect active games by type and phase.
-- End one game or all games.
+- End one game, or all of them.
 - Kick a player from a game.
 - Ban by session ID, IP address, or region.
 - Send global or targeted toast messages.
 - Force refresh all clients.
-- Publish custom site-wide status.
+- Publish a custom site-wide status.
 - Schedule update warnings.
 - Override player names and maintain restricted name patterns.
 - Create, edit, delete, and bulk-clear Shikaku and Pips score records.
@@ -565,9 +564,9 @@ Capabilities:
 
 The web app has a separate mobile surface under `apps/web/src/mobile`.
 
-Mobile routing is selected by the desktop page components through `useIsMobile()` at the `768px` breakpoint. Mobile pages use their own app shell, bottom navigation, sheets, and `m-` prefixed CSS classes so desktop and mobile changes stay isolated.
+Mobile routing is chosen by the desktop page components through `useIsMobile()` at the `768px` breakpoint. Mobile pages get their own app shell, bottom navigation, sheets, and `m-` prefixed CSS classes, so desktop and mobile changes stay out of each other's way.
 
-Current mobile-specific pages include:
+Current mobile-specific pages:
 
 - Home
 - Imposter
@@ -576,7 +575,7 @@ Current mobile-specific pages include:
 - Shade Signal
 - Location Signal
 
-Solo games render their own pages. Shikaku is documented as desktop-only; Pips owns its own responsive puzzle interface rather than a separate `MobilePipsPage`.
+Solo games render their own pages. Shikaku is desktop-only on purpose; Pips has its own responsive puzzle interface instead of a separate `MobilePipsPage`.
 
 ## Deployment
 
@@ -588,7 +587,7 @@ Production is split across separate services:
 - Railway Postgres or Neon: database
 - Bun WebSockets: admin broadcasts, targeted events, and live Password typing
 
-`vercel.json` disables automatic Git deploys from `main` and `master`. The default production web path is the post-CI deploy hook, not a raw push that has not passed `Quality Gate`. If you prefer Vercel's built-in Deployment Checks flow, remove or adjust that `git.deploymentEnabled` block and configure `Quality Gate` as the required deployment check in Vercel.
+`vercel.json` disables automatic Git deploys from `main` and `master`. The default production web path is the post-CI deploy hook, not a raw push that hasn't passed `Quality Gate`. If you'd rather use Vercel's built-in Deployment Checks flow, remove or adjust the `git.deploymentEnabled` block and configure `Quality Gate` as the required deployment check in Vercel.
 
 ### Vercel Web App
 
@@ -600,8 +599,8 @@ Production is split across separate services:
 
 It also includes:
 
-- SPA rewrite to `/index.html`.
-- Bot/social-preview rewrite to the API embed endpoint.
+- An SPA rewrite to `/index.html`.
+- A bot/social-preview rewrite to the API embed endpoint.
 
 Required Vercel variables:
 
@@ -611,7 +610,7 @@ VITE_API_URL=https://<api-domain>
 VITE_WS_URL=wss://<api-domain>/ws
 ```
 
-If Vercel Git auto-deploys are enabled again, configure Vercel Deployment Checks so production is not promoted until `Quality Gate` passes. The current repo config disables `main` and `master` Git autodeploys, so the safer default is to store a Vercel deploy hook as `VERCEL_DEPLOY_HOOK_URL` and let GitHub Actions call it after CI passes.
+If you turn Vercel Git auto-deploys back on, set up Vercel Deployment Checks so production isn't promoted until `Quality Gate` passes. The current repo config disables `main` and `master` Git autodeploys, so the safer default is to store a Vercel deploy hook as `VERCEL_DEPLOY_HOOK_URL` and let GitHub Actions call it after CI passes.
 
 ### Railway API
 
@@ -632,9 +631,9 @@ ADMIN_SECRET=<strong_admin_secret>
 CORS_ALLOWED_ORIGINS=https://<web-domain>
 ```
 
-If Railway GitHub autodeploys are enabled, turn on Wait for CI in the Railway service settings so Railway waits for GitHub Actions before deploying. If using a manual/API trigger instead, disable automatic deploys and trigger it from the post-CI workflow after `Quality Gate` passes.
+If Railway GitHub autodeploys are on, enable Wait for CI in the Railway service settings so Railway holds deploys until GitHub Actions finishes. If you're using a manual/API trigger instead, disable automatic deploys and trigger Railway from the post-CI workflow after `Quality Gate` passes.
 
-Useful API checks after deploy:
+Worth checking after a deploy:
 
 ```bash
 GET https://<api-domain>/health
@@ -643,12 +642,12 @@ GET https://<api-domain>/debug/build-info
 
 ### Railway Zero Cache
 
-Deploy Zero cache as a separate service using the official Docker image. Keep the image tag on the same `@rocicorp/zero` version used by the workspace (`1.6.2`).
+Deploy the Zero cache as its own service using the official Docker image. Keep the image tag on the same `@rocicorp/zero` version the workspace uses (`1.6.2`).
 
 Service configuration:
 
 - **Source**: Docker image `rocicorp/zero:1.6.2` (Docker Hub)
-- **Start command**: leave empty — the image's entrypoint starts zero-cache. Do not set a `bunx`/`npx` start command; the image contains Node only, so `bunx` does not exist inside the container.
+- **Start command**: leave it empty. The image's entrypoint starts zero-cache on its own. Don't set a `bunx`/`npx` start command; the image only contains Node, so `bunx` doesn't exist inside the container.
 
 To upgrade Zero in production, change the image tag in the Railway service's source settings to match the workspace version, then redeploy.
 
@@ -662,7 +661,7 @@ ZERO_MUTATE_URL=https://<api-domain>/api/zero/mutate
 ZERO_ADMIN_PASSWORD=<strong_secret>
 ```
 
-Do not set `ZERO_PORT` to the literal string `"$PORT"` on Railway. Railway does not shell-expand environment variable values in that field.
+Don't set `ZERO_PORT` to the literal string `"$PORT"` on Railway. Railway doesn't shell-expand environment variable values in that field, so Zero would try to listen on a port named `$PORT`.
 
 ### Database Requirements
 
@@ -672,17 +671,17 @@ Zero needs a direct Postgres connection with logical replication support. For lo
 postgres -c wal_level=logical
 ```
 
-For production, use a direct Postgres URL for `ZERO_UPSTREAM_DB`; avoid transaction poolers for the Zero upstream connection.
+For production, point `ZERO_UPSTREAM_DB` at a direct Postgres URL. Don't put a transaction pooler in front of the Zero upstream connection; logical replication doesn't work through one.
 
 ## Operational Notes
 
 ### Session Identity
 
-The app uses browser-local identity rather than user accounts for public gameplay. The API signs a long-lived `games_session` cookie and issues a signed Zero session proof. Mutations are checked so one browser session cannot submit actions for another player.
+Public gameplay uses browser-local identity, not user accounts. The API signs a long-lived `games_session` cookie and issues a signed Zero session proof. Mutations are checked server-side so one browser session can't submit actions on behalf of another player.
 
 ### Presence
 
-Presence is inferred from HTTP heartbeats, not WebSockets. Game pages periodically call `POST /api/presence/heartbeat`, and the API updates `sessions.lastSeen` plus the current game attachment.
+Presence rides on the realtime WebSocket. The open `/ws` connection itself is the "online" signal: the client reports its current activity (route) when it changes, the API keeps an in-memory presence registry per session, and a server-side flush periodically bumps `last_seen` for sessions that are still connected. There's no HTTP presence polling.
 
 ### Admin Broadcasts
 
@@ -694,16 +693,16 @@ Admin broadcasts use the API's Bun WebSocket service:
 
 ### Cleanup
 
-The API can clean stale games and sessions in two ways:
+The API can clean up stale games and sessions two ways:
 
-- scheduled cleanup inside the API process
-- manual `GET` or `POST /api/cleanup` with bearer auth from `CLEANUP_SECRET`
+- Scheduled cleanup inside the API process.
+- A manual `GET` or `POST /api/cleanup` with bearer auth from `CLEANUP_SECRET`.
 
 Cleanup marks abandoned games as ended, detaches stale sessions, and removes old ended rows.
 
 ### Footer Database Status
 
-`/debug/build-info` reads the `status` table and reports whether the configured sentinel exists and matches.
+`/debug/build-info` reads the `status` table and reports whether the configured sentinel row exists and matches.
 
 Default values:
 
@@ -730,17 +729,17 @@ After a deploy:
 1. Open the web app.
 2. Create one room for each multiplayer game.
 3. Join a room from a second tab or device.
-4. Confirm chat, presence, phase transitions, and host controls.
-5. Play one Shikaku run and verify leaderboard submission.
-6. Play one Pips run and verify leaderboard submission.
-7. Open the admin dashboard and verify clients, games, broadcasts, bans, Shikaku scores, and Pips scores.
+4. Confirm chat, presence, phase transitions, and host controls all work.
+5. Play one Shikaku run and verify the leaderboard submission.
+6. Play one Pips run and verify the leaderboard submission.
+7. Open the admin dashboard and check clients, games, broadcasts, bans, Shikaku scores, and Pips scores.
 8. Check `/health`, `/debug/build-info`, and the Zero cache public URL.
 
 ## Known Constraints
 
-- Public gameplay has browser-local identity only; there is no player account system.
-- Lint scripts are placeholders.
-- Multiplayer game state is mostly JSON-column snapshots by design.
+- Public gameplay is browser-local identity only; there's no player account system.
+- The lint scripts are placeholders.
+- Multiplayer game state is mostly JSON-column snapshots, by design.
 - The API runs TypeScript directly through Bun in production instead of a compiled `dist` entry.
-- The Zero cache and workspace `@rocicorp/zero` versions should stay aligned.
-- Shikaku and Pips are not Zero-synced multiplayer games; they use REST only for leaderboard flows.
+- The Zero cache and workspace `@rocicorp/zero` versions have to stay aligned.
+- Shikaku and Pips are not Zero-synced multiplayer games; they only use REST for the leaderboard flows.
