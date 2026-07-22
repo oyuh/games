@@ -222,7 +222,7 @@ start_zero_container() {
     -e ZERO_QUERY_URL=http://host.docker.internal:3001/api/zero/query \
     -e ZERO_MUTATE_URL=http://host.docker.internal:3001/api/zero/mutate \
     -v "$zero_volume_name":/data \
-    rocicorp/zero:1.6.2 >/dev/null
+    rocicorp/zero:1.8.0 >/dev/null
 }
 
 echo "Checking required tools..."

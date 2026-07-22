@@ -22,7 +22,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@rocicorp/zero": "1.6.2",
+    "@rocicorp/zero": "1.8.0",
     "drizzle-orm": "^0.45.2",
     "nanoid": "^5.1.11",
     "zod": "^4.4.3"
