@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@games/shared": "workspace:*",
-    "@rocicorp/zero": "1.6.2",
+    "@rocicorp/zero": "1.8.0",
     "boring-avatars": "^2.0.4",
     "nanoid": "^5.1.11",
     "pigeon-maps": "^0.22.1",
