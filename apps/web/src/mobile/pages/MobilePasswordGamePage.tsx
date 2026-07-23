@@ -1,5 +1,5 @@
 import { decryptSecret, isEncrypted, mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../../lib/zero";
+import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiSend, FiClock, FiSkipForward } from "react-icons/fi";
@@ -290,19 +290,19 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
   const submitClue = async (event: FormEvent) => {
     event.preventDefault();
     if (!clue.trim()) return;
-    try { await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server; setClue(""); clearDraft("clue"); playSoundSubmit(); }
+    try { await optimistic(zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() }))); setClue(""); clearDraft("clue"); playSoundSubmit(); }
     catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit clue", "error"); }
   };
 
   const submitGuess = async (event: FormEvent) => {
     event.preventDefault();
     if (!guess.trim()) return;
-    try { await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server; setGuess(""); clearDraft("guess"); playSoundSubmit(); }
+    try { await optimistic(zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() }))); setGuess(""); clearDraft("guess"); playSoundSubmit(); }
     catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit guess", "error"); }
   };
 
   const skipWord = async () => {
-    try { await zero.mutate(mutators.password.skipWord({ gameId, sessionId })).server; }
+    try { await optimistic(zero.mutate(mutators.password.skipWord({ gameId, sessionId }))); }
     catch (e) { showToast(e instanceof Error ? e.message : "Couldn't skip word", "error"); }
   };
 

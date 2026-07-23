@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../lib/zero";
+import { optimistic, useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/password.css";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -149,7 +149,7 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
     if (!isHost || !canStart || startingGame) return;
     setStartingGame(true);
     try {
-      const result = await zero.mutate(mutators.password.start({ gameId, hostId: sessionId })).server;
+      const result = await optimistic(zero.mutate(mutators.password.start({ gameId, hostId: sessionId })));
       if (result.type === "error") {
         showToast(result.error.message, "error");
       }
@@ -239,7 +239,7 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
             <button
               className="btn btn-muted"
               onClick={() => {
-                void zero.mutate(mutators.password.leave({ gameId, sessionId })).server
+                void optimistic(zero.mutate(mutators.password.leave({ gameId, sessionId })))
                   .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't leave game", "error"));
               }}
             >
