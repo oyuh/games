@@ -1,5 +1,5 @@
 import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, GAME_META, IMPOSTER_CLUE_VISIBILITY_OPTIONS, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../../lib/zero";
+import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -160,7 +160,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     }
 
     try {
-      await zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })).server;
+      await optimistic(zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })));
       setStoredName(sanitizedName);
       setName(sanitizedName);
       setSavedName(sanitizedName);
@@ -177,7 +177,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters, clueVisibility: imposterClueVisibility })).server;
+      const result = await optimistic(zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters, clueVisibility: imposterClueVisibility })));
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       navigate(`/imposter/${id}`);
     } finally { setPendingAction(null); }
@@ -188,7 +188,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })).server;
+      const result = await optimistic(zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })));
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       navigate(`/password/${id}/begin`);
     } finally { setPendingAction(null); }
@@ -199,7 +199,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })).server;
+      const result = await optimistic(zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })));
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       navigate(`/chain/${id}`);
     } finally { setPendingAction(null); }
@@ -210,7 +210,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })).server;
+      const result = await optimistic(zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })));
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       navigate(`/shade/${id}`);
     } finally { setPendingAction(null); }
@@ -221,7 +221,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })).server;
+      const result = await optimistic(zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })));
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       navigate(`/location/${id}`);
     } finally { setPendingAction(null); }
@@ -250,19 +250,19 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
 
     const performJoinTarget = async (target: { gameType: SessionGameType; gameId: string; code: string; route: string }) => {
       if (target.gameType === "imposter") {
-        const result = await zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else if (target.gameType === "password") {
-        const result = await zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else if (target.gameType === "chain_reaction") {
-        const result = await zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else if (target.gameType === "shade_signal") {
-        const result = await zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else {
-        const result = await zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       }
       addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
@@ -329,19 +329,19 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         const target = pendingJoinTarget;
         if (!target) return;
         if (target.gameType === "imposter") {
-          const result = await zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         } else if (target.gameType === "password") {
-          const result = await zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         } else if (target.gameType === "chain_reaction") {
-          const result = await zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         } else if (target.gameType === "shade_signal") {
-          const result = await zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         } else {
-          const result = await zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         }
         addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });

@@ -6,6 +6,7 @@ import { Component, lazy, Suspense, useEffect, useRef, useState, type CSSPropert
 import { FiExternalLink, FiInfo, FiX } from "react-icons/fi";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { BootStatusPage } from "./components/BootStatusPage";
 import {
   addConnectionDebugEvent,
   initConnectionDebug,
@@ -16,7 +17,7 @@ import {
   startGlobalConnectionDebugCapture,
   useConnectionDebug
 } from "./lib/connection-debug";
-import { syncSessionIdentity } from "./lib/session";
+import { syncSessionIdentity, syncSessionIdentityForBoot } from "./lib/session";
 import { markSyncConnecting, markSyncConnected, useSyncElapsedSeconds, useSyncTimedOut } from "./lib/sync-wake";
 import { useSyncSessionActivityState, useSyncSessionActivityTracker } from "./lib/sync-session-activity";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
@@ -118,8 +119,8 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<RouteLoading />}>{children}</Suspense>;
 }
 
-/** Routes that don't use the Zero sync server (solo/offline games). */
-const SYNC_FREE_ROUTES = ["/shikaku", "/pips", "/admin"];
+/** Routes that don't use the Zero sync server (solo/offline games + the status page). */
+const SYNC_FREE_ROUTES = ["/shikaku", "/pips", "/admin", "/status"];
 
 function isSyncFreePath(pathname: string) {
   return SYNC_FREE_ROUTES.some((prefix) => pathname.startsWith(prefix));
@@ -172,6 +173,9 @@ function HostingInfoModal({ onClose }: { onClose: () => void }) {
             <a className="btn btn-primary" href={BUY_ME_A_COFFEE_URL} target="_blank" rel="noreferrer">
               Buy Me a Coffee
               <FiExternalLink size={16} />
+            </a>
+            <a className="btn btn-muted" href="/status">
+              Service status
             </a>
             <button className="btn btn-muted" type="button" onClick={onClose}>
               Close
@@ -348,7 +352,9 @@ export function useZeroConnected() {
 
 export function App({ initialSessionId, initialSessionProof }: { initialSessionId: string; initialSessionProof: string | null }) {
   const styleOnly = import.meta.env.VITE_STYLE_ONLY === "true";
-  const [zero] = useState(() => createZero(initialSessionId, initialSessionProof));
+  const [session, setSession] = useState(() => ({ id: initialSessionId, proof: initialSessionProof }));
+  const [zero, setZero] = useState(() => createZero(session.id, session.proof));
+  const appliedSessionRef = useRef(session);
 
   // Global admin broadcast listener (toasts, refresh, custom status, kick)
   useAdminBroadcast();
@@ -356,37 +362,83 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
   // Global button hover/press sound effects
   useButtonSounds();
 
+  // Recreate the Zero client in place when a background identity check yields a
+  // new session or auth proof. Zero re-uses its IndexedDB store keyed by userID,
+  // so the swap is seamless: a first-timer boots anonymous and silently upgrades
+  // to an authenticated client the moment the backend hands out a proof, with no
+  // page reload and no data flash.
+  useEffect(() => {
+    if (appliedSessionRef.current.id === session.id && appliedSessionRef.current.proof === session.proof) {
+      return;
+    }
+    appliedSessionRef.current = session;
+    const next = createZero(session.id, session.proof);
+    setZero((previous) => {
+      void previous.close();
+      return next;
+    });
+  }, [session]);
+
   useEffect(() => {
     if (styleOnly) {
       return;
     }
 
-    // In dev mode, skip the periodic identity verification that triggers
-    // page reloads - the server may return varying sessions due to relaxed
-    // fingerprinting, which causes an infinite reload loop.
-    if (import.meta.env.DEV) {
-      return;
-    }
-
     let cancelled = false;
 
-    const verifyIdentity = async () => {
+    const applyVerifiedIdentity = (synced: {
+      sessionId: string;
+      zeroSessionProof: string | null;
+      source: string;
+    }) => {
+      // "fallback" means the server never answered, so keep our local identity.
+      if (cancelled || synced.source === "fallback") {
+        return;
+      }
+      setSession((prev) => {
+        const nextProof = synced.zeroSessionProof ?? prev.proof;
+        if (prev.id === synced.sessionId && prev.proof === nextProof) {
+          return prev;
+        }
+        return { id: synced.sessionId, proof: nextProof };
+      });
+    };
+
+    const verifyNow = async () => {
       if (isSyncFreePath(window.location.pathname)) {
         return;
       }
-      const synced = await syncSessionIdentity(apiBaseURL, { allowCreate: true, reason: "app-verify" });
-      if (!cancelled && !isSyncFreePath(window.location.pathname) && (synced.sessionId !== initialSessionId || synced.zeroSessionProof !== initialSessionProof)) {
-        window.location.reload();
-      }
+      applyVerifiedIdentity(await syncSessionIdentity(apiBaseURL, { allowCreate: true, reason: "app-verify" }));
     };
 
+    // Background upgrade on mount: keep retrying a cold backend until we get a
+    // verified session + proof, then swap Zero to authenticated in place.
+    void (async () => {
+      if (isSyncFreePath(window.location.pathname)) {
+        return;
+      }
+      try {
+        applyVerifiedIdentity(await syncSessionIdentityForBoot(apiBaseURL));
+      } catch {
+        // Backend still cold or unreachable; the interval below keeps trying.
+      }
+    })();
+
+    // In dev the server hands out varying sessions, so only the one-shot mount
+    // upgrade runs there. Prod keeps re-verifying periodically and on tab focus.
+    if (import.meta.env.DEV) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const timer = window.setInterval(() => {
-      void verifyIdentity();
+      void verifyNow();
     }, 60_000);
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        void verifyIdentity();
+        void verifyNow();
       }
     };
 
@@ -397,7 +449,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [initialSessionId, initialSessionProof, styleOnly]);
+  }, [styleOnly]);
 
   useEffect(() => {
     initConnectionDebug({
@@ -574,8 +626,19 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
         <BrowserRouter>
           <SyncWakeToast />
           <Routes>
+            <Route
+              path="/status"
+              element={
+                <BootStatusPage
+                  apiBase={apiBaseURL}
+                  zeroCacheURL={zeroCacheURL}
+                  sessionId={session.id}
+                  onRetry={() => window.location.reload()}
+                />
+              }
+            />
             <Route element={<AppShell />}>
-              <Route path="/" element={<LazyRoute><HomePage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/" element={<LazyRoute><HomePage sessionId={session.id} /></LazyRoute>} />
               <Route path="/imposter" element={<Navigate to="/?game=imposter" replace />} />
               <Route path="/password" element={<Navigate to="/?game=password" replace />} />
               <Route path="/chain" element={<Navigate to="/?game=chain" replace />} />
@@ -584,13 +647,13 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/shade-signal" element={<Navigate to="/?game=shade" replace />} />
               <Route path="/location" element={<Navigate to="/?game=location" replace />} />
               <Route path="/location-signal" element={<Navigate to="/?game=location" replace />} />
-              <Route path="/imposter/:id" element={<LazyRoute><ImposterPage sessionId={initialSessionId} /></LazyRoute>} />
-              <Route path="/password/:id/begin" element={<LazyRoute><PasswordBeginPage sessionId={initialSessionId} /></LazyRoute>} />
-              <Route path="/password/:id" element={<LazyRoute><PasswordGamePage sessionId={initialSessionId} /></LazyRoute>} />
-              <Route path="/password/:id/results" element={<LazyRoute><PasswordResultsPage sessionId={initialSessionId} /></LazyRoute>} />
-              <Route path="/chain/:id" element={<LazyRoute><ChainReactionPage sessionId={initialSessionId} /></LazyRoute>} />
-              <Route path="/shade/:id" element={<LazyRoute><ShadeSignalPage sessionId={initialSessionId} /></LazyRoute>} />
-              <Route path="/location/:id" element={<LazyRoute><LocationSignalPage sessionId={initialSessionId} /></LazyRoute>} />
+              <Route path="/imposter/:id" element={<LazyRoute><ImposterPage sessionId={session.id} /></LazyRoute>} />
+              <Route path="/password/:id/begin" element={<LazyRoute><PasswordBeginPage sessionId={session.id} /></LazyRoute>} />
+              <Route path="/password/:id" element={<LazyRoute><PasswordGamePage sessionId={session.id} /></LazyRoute>} />
+              <Route path="/password/:id/results" element={<LazyRoute><PasswordResultsPage sessionId={session.id} /></LazyRoute>} />
+              <Route path="/chain/:id" element={<LazyRoute><ChainReactionPage sessionId={session.id} /></LazyRoute>} />
+              <Route path="/shade/:id" element={<LazyRoute><ShadeSignalPage sessionId={session.id} /></LazyRoute>} />
+              <Route path="/location/:id" element={<LazyRoute><LocationSignalPage sessionId={session.id} /></LazyRoute>} />
               <Route path="/shikaku" element={<LazyRoute><ShikakuPage /></LazyRoute>} />
               <Route path="/pips" element={<LazyRoute><PipsPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
