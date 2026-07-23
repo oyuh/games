@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../../lib/zero";
+import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiLogOut, FiSend, FiMapPin, FiClock } from "react-icons/fi";
@@ -358,9 +358,9 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     event.preventDefault();
     if (!draftClue.trim() || !game) return;
     try {
-      await zero.mutate(mutators.locationSignal.submitClue({
+      await optimistic(zero.mutate(mutators.locationSignal.submitClue({
         gameId: game.id, sessionId, round: round as 1 | 2 | 3 | 4, text: draftClue.trim(),
-      })).server;
+      })));
       setDraftClue("");
       playSoundSubmit();
     } catch (error) {
@@ -371,9 +371,9 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
   const submitGuess = async (round: number) => {
     if (!draftMarker || !game) return;
     try {
-      await zero.mutate(mutators.locationSignal.submitGuess({
+      await optimistic(zero.mutate(mutators.locationSignal.submitGuess({
         gameId: game.id, sessionId, round: round as 1 | 2 | 3 | 4, lat: draftMarker.lat, lng: draftMarker.lng,
-      })).server;
+      })));
       showToast("Guess placed!", "success");
       playSoundSubmit();
     } catch (error) {
@@ -466,7 +466,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
 
   const joinGame = async () => {
     await ensureName(zero, sessionId);
-    void zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })).server.catch(() => showToast("Couldn't join", "error"));
+    void optimistic(zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId }))).catch(() => showToast("Couldn't join", "error"));
   };
 
   const handleJoinClick = () => {
@@ -684,14 +684,14 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
               )}
               {isHost ? (
                 <button className="m-btn m-btn-primary" disabled={game.players.length < 2}
-                  onClick={() => void zero.mutate(mutators.locationSignal.start({ gameId: game.id, hostId: sessionId })).server.catch((e: unknown) => showToast(e instanceof Error ? e.message : "Start failed", "error"))}>
+                  onClick={() => void optimistic(zero.mutate(mutators.locationSignal.start({ gameId: game.id, hostId: sessionId }))).catch((e: unknown) => showToast(e instanceof Error ? e.message : "Start failed", "error"))}>
                   {game.players.length < 2 ? `Need ${2 - game.players.length} more` : "Start Game"}
                 </button>
               ) : (
                 <p className="m-text-muted m-text-center">Waiting for host to start&hellip;</p>
               )}
               <button className="m-btn m-btn-muted"
-                onClick={() => void zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })).server}>
+                onClick={() => void optimistic(zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })))}>
                 <FiLogOut size={14} /> Leave
               </button>
             </div>
@@ -897,7 +897,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
         <MobileSpectatorOverlay
           playerCount={game.players.length}
           phase={game.phase}
-          onLeave={() => void zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })).server.then(() => navigate("/"))}
+          onLeave={() => void optimistic(zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId }))).then(() => navigate("/"))}
         />
       )}
 

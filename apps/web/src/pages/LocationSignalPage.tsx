@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../lib/zero";
+import { optimistic, useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/location-signal.css";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -359,9 +359,9 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     event.preventDefault();
     if (!draftClue.trim() || !game) return;
     try {
-      await zero.mutate(mutators.locationSignal.submitClue({
+      await optimistic(zero.mutate(mutators.locationSignal.submitClue({
         gameId: game.id, sessionId, round: round as 1 | 2 | 3 | 4, text: draftClue.trim(),
-      })).server;
+      })));
       setDraftClue("");
       playSoundSubmit();
     } catch (error) {
@@ -372,9 +372,9 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const submitGuess = async (round: number) => {
     if (!draftMarker || !game) return;
     try {
-      await zero.mutate(mutators.locationSignal.submitGuess({
+      await optimistic(zero.mutate(mutators.locationSignal.submitGuess({
         gameId: game.id, sessionId, round: round as 1 | 2 | 3 | 4, lat: draftMarker.lat, lng: draftMarker.lng,
-      })).server;
+      })));
       showToast("Guess placed!", "success");
       playSoundSubmit();
     } catch (error) {
@@ -482,7 +482,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   const joinGame = async () => {
     await ensureName(zero, sessionId);
-    void zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })).server.catch(() => showToast("Couldn't join", "error"));
+    void optimistic(zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId }))).catch(() => showToast("Couldn't join", "error"));
   };
 
   const handleJoinClick = () => {
@@ -686,7 +686,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
               {isHost ? (
                 <button className="btn btn-primary game-action-btn" disabled={game.players.length < 2}
                   data-tooltip={game.players.length < 2 ? "Need at least 2 players to start" : "Start the game"} data-tooltip-variant="info"
-                  onClick={() => void zero.mutate(mutators.locationSignal.start({ gameId: game.id, hostId: sessionId })).server.catch((e: unknown) => showToast(e instanceof Error ? e.message : "Start failed", "error"))}>
+                  onClick={() => void optimistic(zero.mutate(mutators.locationSignal.start({ gameId: game.id, hostId: sessionId }))).catch((e: unknown) => showToast(e instanceof Error ? e.message : "Start failed", "error"))}>
                   {game.players.length < 2
                     ? `Need ${2 - game.players.length} more player${2 - game.players.length > 1 ? "s" : ""}`
                     : "Start Game"}
@@ -695,7 +695,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
                 <p className="game-waiting-text">Waiting for host to start&hellip;</p>
               )}
               <button className="btn btn-muted game-action-btn" data-tooltip="Leave this game" data-tooltip-variant="info"
-                onClick={() => void zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })).server}>
+                onClick={() => void optimistic(zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })))}>
                 <FiLogOut size={14} /> Leave
               </button>
             </div>
@@ -921,7 +921,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         <SpectatorOverlay
           playerCount={game.players.length}
           phase={game.phase}
-          onLeave={() => void zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })).server.then(() => navigate("/"))}
+          onLeave={() => void optimistic(zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId }))).then(() => navigate("/"))}
         />
       )}
 

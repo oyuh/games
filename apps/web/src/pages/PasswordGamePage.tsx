@@ -1,5 +1,5 @@
 import { decryptSecret, isEncrypted, mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../lib/zero";
+import { optimistic, useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/password.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -277,7 +277,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     event.preventDefault();
     if (!clue.trim()) return;
     try {
-      await zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })).server;
+      await optimistic(zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() })));
       setClue("");
       clearDraft("clue");
       playSoundSubmit();
@@ -290,7 +290,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     event.preventDefault();
     if (!guess.trim()) return;
     try {
-      await zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })).server;
+      await optimistic(zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() })));
       setGuess("");
       clearDraft("guess");
       playSoundSubmit();
@@ -301,7 +301,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
 
   const skipWord = async () => {
     try {
-      await zero.mutate(mutators.password.skipWord({ gameId, sessionId })).server;
+      await optimistic(zero.mutate(mutators.password.skipWord({ gameId, sessionId })));
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Couldn't skip word", "error");
     }

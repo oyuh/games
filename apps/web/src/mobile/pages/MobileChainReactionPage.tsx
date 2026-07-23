@@ -1,5 +1,5 @@
 import { mutators, queries, chainCategoryLabels } from "@games/shared";
-import { useQuery, useZero } from "../../lib/zero";
+import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiHelpCircle, FiLogIn, FiLogOut, FiPlay, FiSend, FiX, FiXCircle, FiEye, FiClock } from "react-icons/fi";
@@ -232,14 +232,14 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     setGuess("");
     setEditingIndex(null);
     try {
-      await zero.mutate(mutators.chainReaction.guess({ gameId, sessionId, wordIndex: idx, guess: currentGuess })).server;
+      await optimistic(zero.mutate(mutators.chainReaction.guess({ gameId, sessionId, wordIndex: idx, guess: currentGuess })));
     } catch { /* noop */ }
   };
 
   const handleHint = async (i: number) => {
     if (editingIndex === i) { clearDraft(); setEditingIndex(null); setGuess(""); }
     try {
-      await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })).server;
+      await optimistic(zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })));
       playHint();
     } catch { /* noop */ }
   };
@@ -249,7 +249,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
       setGiveUpConfirm(null);
       if (editingIndex === i) { clearDraft(); setEditingIndex(null); setGuess(""); }
       try {
-        await zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })).server;
+        await optimistic(zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })));
       } catch { /* noop */ }
     } else {
       setGiveUpConfirm(i);
@@ -260,7 +260,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     event.preventDefault();
     if (submissionWords.some((w) => !w.trim())) return;
     try {
-      await zero.mutate(mutators.chainReaction.submitChain({ gameId, sessionId, words: submissionWords.map((w) => w.trim()) })).server;
+      await optimistic(zero.mutate(mutators.chainReaction.submitChain({ gameId, sessionId, words: submissionWords.map((w) => w.trim()) })));
       setHasSubmitted(true);
       playSoundSubmit();
     } catch (err) {

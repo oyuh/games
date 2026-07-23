@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiX, FiUserMinus, FiPower, FiMessageCircle, FiSend, FiEye, FiGlobe, FiLock } from "react-icons/fi";
 import { mutators } from "@games/shared";
-import { useZero } from "../../lib/zero";
+import { optimistic, useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
 import { getDisplayName } from "../../lib/session";
 
@@ -118,15 +118,15 @@ export function HostControlsModal({
     setTogglingVisibility(true);
     try {
       if (game.type === "imposter") {
-        await zero.mutate(mutators.imposter.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+        await optimistic(zero.mutate(mutators.imposter.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })));
       } else if (game.type === "shade_signal") {
-        await zero.mutate(mutators.shadeSignal.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+        await optimistic(zero.mutate(mutators.shadeSignal.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })));
       } else if (game.type === "chain_reaction") {
-        await zero.mutate(mutators.chainReaction.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+        await optimistic(zero.mutate(mutators.chainReaction.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })));
       } else if (game.type === "location_signal") {
-        await zero.mutate(mutators.locationSignal.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+        await optimistic(zero.mutate(mutators.locationSignal.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })));
       } else {
-        await zero.mutate(mutators.password.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })).server;
+        await optimistic(zero.mutate(mutators.password.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })));
       }
       showToast(newValue ? "Game is now public" : "Game is now private", "info");
     } catch {
