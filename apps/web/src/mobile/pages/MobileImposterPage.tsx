@@ -1,5 +1,5 @@
 import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, imposterCategoryLabels, isEncrypted, mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../../lib/zero";
+import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiEye, FiEyeOff, FiSend, FiCheck, FiArrowRight, FiClock } from "react-icons/fi";
@@ -234,14 +234,14 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   const submitClue = async (event: FormEvent) => {
     event.preventDefault();
     if (!clue.trim()) return;
-    await zero.mutate(mutators.imposter.submitClue({ gameId, sessionId, text: clue.trim() })).server;
+    await optimistic(zero.mutate(mutators.imposter.submitClue({ gameId, sessionId, text: clue.trim() })));
     setClue("");
     playSoundSubmit();
   };
 
   const submitVote = async () => {
     if (!voteTarget) return;
-    await zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })).server;
+    await optimistic(zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })));
     playVote();
   };
 

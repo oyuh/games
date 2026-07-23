@@ -1,5 +1,5 @@
 import { queries, mutators } from "@games/shared";
-import { useQuery, useZero } from "../../lib/zero";
+import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { useNavigate } from "react-router-dom";
 import { FiUsers, FiGlobe } from "react-icons/fi";
 import { addRecentGame, ensureName } from "../../lib/session";
@@ -131,19 +131,19 @@ export function PublicGamesList({
     try {
       await ensureName(zero, sessionId);
       if (gameType === "imposter") {
-        const result = await zero.mutate(mutators.imposter.join({ gameId: game.id, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.imposter.join({ gameId: game.id, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else if (gameType === "password") {
-        const result = await zero.mutate(mutators.password.join({ gameId: game.id, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.password.join({ gameId: game.id, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else if (gameType === "chain_reaction") {
-        const result = await zero.mutate(mutators.chainReaction.join({ gameId: game.id, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.chainReaction.join({ gameId: game.id, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else if (gameType === "shade_signal") {
-        const result = await zero.mutate(mutators.shadeSignal.join({ gameId: game.id, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.shadeSignal.join({ gameId: game.id, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else {
-        const result = await zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       }
       addRecentGame({ id: game.id, code: game.code, gameType });

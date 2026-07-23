@@ -91,7 +91,13 @@ export function getOrCreateStoredName(sessionId?: string | null) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function ensureName(zero: { mutate: any }, sessionId: string) {
   const name = getOrCreateStoredName(sessionId);
-  await zero.mutate(mutators.sessions.setName({ id: sessionId, name })).server.catch(() => undefined);
+  // Local-first: apply the name optimistically and let the server push flush in
+  // the background. Awaiting .server here would hang the whole join/create flow
+  // while the sync server is still waking up. The name is already in
+  // localStorage via getOrCreateStoredName, so callers can proceed immediately.
+  const mutation = zero.mutate(mutators.sessions.setName({ id: sessionId, name }));
+  void mutation.server?.catch?.(() => undefined);
+  await mutation.client?.catch?.(() => undefined);
   return name;
 }
 

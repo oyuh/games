@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../lib/zero";
+import { optimistic, useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/shade-signal.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -377,7 +377,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
     e.preventDefault();
     if (!clue.trim()) return;
     try {
-      const result = await zero.mutate(mutators.shadeSignal.submitClue({ gameId, sessionId, text: clue.trim() })).server;
+      const result = await optimistic(zero.mutate(mutators.shadeSignal.submitClue({ gameId, sessionId, text: clue.trim() })));
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -392,9 +392,9 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const submitGuess = async () => {
     if (!selectedCell) return;
     try {
-      const result = await zero.mutate(
+      const result = await optimistic(zero.mutate(
         mutators.shadeSignal.submitGuess({ gameId, sessionId, row: selectedCell.row, col: selectedCell.col })
-      ).server;
+      ));
       if (result.type === "error") {
         showToast(result.error.message, "error");
       } else {
@@ -802,9 +802,9 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
                       className="btn btn-muted game-action-btn"
                       onClick={() => {
                         setSelectedCell({ row: g1.row, col: g1.col });
-                        void zero.mutate(
+                        void optimistic(zero.mutate(
                           mutators.shadeSignal.submitGuess({ gameId, sessionId, row: g1.row, col: g1.col })
-                        ).server.then(() => setGuessLocked(true));
+                        )).then(() => setGuessLocked(true));
                       }}
                     >
                       Skip (keep guess 1)

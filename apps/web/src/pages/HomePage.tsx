@@ -1,5 +1,5 @@
 import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, GAME_META, IMPOSTER_CLUE_VISIBILITY_OPTIONS, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../lib/zero";
+import { optimistic, useQuery, useZero } from "../lib/zero";
 import "../styles/home.css";
 import { nanoid } from "nanoid";
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -7,7 +7,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
 import { FiArrowLeft, FiBookOpen, FiCheck, FiChevronDown, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
-import { showDedupedToast, showToast } from "../lib/toast";
+import { showToast } from "../lib/toast";
 import { isNameRestricted } from "../hooks/useAdminBroadcast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileHomePage } from "../mobile/pages/MobileHomePage";
@@ -16,9 +16,6 @@ import { ActiveGameModal } from "../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../components/shared/PublicGamesBrowser";
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { GameIcon } from "../components/shared/GameIcon";
-import { useZeroConnected } from "../App";
-import { useConnectionDebug } from "../lib/connection-debug";
-import { useSyncCountdown, useSyncTimedOut } from "../lib/sync-wake";
 import { getHomeRouteGame, type HomeRouteGame } from "../lib/home-route-highlight";
 
 const ImposterDemo = lazy(() => import("../components/demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
@@ -192,56 +189,17 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const navigate = useNavigate();
   const location = useLocation();
   const routeHighlight = useMemo(() => getHomeRouteGame(location.search), [location.search]);
-  const debug = useConnectionDebug();
-  const zeroConnected = useZeroConnected();
-  const syncTimedOut = useSyncTimedOut();
-  const syncCountdown = useSyncCountdown();
-  const syncBackendHealthy = debug.apiMetaState === "ok" && debug.dbState === "ok";
-  const syncNeedsAuth = !zeroConnected && debug.zeroState === "needs-auth";
-  const syncDelayed = !zeroConnected && syncTimedOut && !syncNeedsAuth;
-  const syncPending = !zeroConnected && !syncDelayed && !syncNeedsAuth;
-  const syncOffline = !zeroConnected;
-  const syncAttention = syncNeedsAuth || syncDelayed;
-  const syncStatusTooltip = syncNeedsAuth
-    ? syncBackendHealthy
-      ? "Multiplayer sync is connecting. Try again when it connects."
-      : "Sync server is waking. Try again when it connects."
-    : syncDelayed
-    ? syncBackendHealthy
-      ? "Multiplayer sync is taking longer than usual. Try again when it connects."
-      : "Sync server is taking longer than usual. Try again when it connects."
-    : syncOffline
-    ? syncBackendHealthy
-      ? `Multiplayer sync is connecting${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}`
-      : `Sync server is waking${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}`
-    : "Browse Public Games";
-  const blockSyncAction = useCallback((actionLabel: string) => {
-    if (syncNeedsAuth) {
-      const message = syncBackendHealthy
-        ? `Multiplayer sync is connecting. Try ${actionLabel} again when it connects.`
-        : `Sync server is waking up. Try ${actionLabel} again when it connects.`;
-      showDedupedToast(message, "info");
-      return true;
-    }
-    if (syncDelayed) {
-      const message = syncBackendHealthy
-        ? `Multiplayer sync is still connecting. Try ${actionLabel} again when it connects.`
-        : `Sync server is still waking up. Try ${actionLabel} again when it connects.`;
-      showDedupedToast(message, "info");
-      return true;
-    }
-    if (syncPending) {
-      const message = syncBackendHealthy
-        ? `Multiplayer sync is connecting${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}. Try ${actionLabel} again in a moment.`
-        : `Sync server is waking up${syncCountdown != null ? ` (~${syncCountdown}s)` : ""}. Try ${actionLabel} again in a moment.`;
-      showDedupedToast(
-        message,
-        "info"
-      );
-      return true;
-    }
-    return false;
-  }, [syncBackendHealthy, syncCountdown, syncDelayed, syncNeedsAuth, syncPending]);
+  // Multiplayer is local-first: create / join / browse apply optimistically and
+  // the Zero client flushes to the server on its own once sync reconnects, so we
+  // never gate these controls on the connection or show a "sync connecting" state
+  // on them. These stay as constants so the existing render sites collapse to the
+  // clean, no-noise state.
+  // ponytail: the inline `false &&` sync-status branches (spinner/wifi-off) are
+  // now dead; scrub them from the JSX on the next pass through this file.
+  const syncOffline = false;
+  const syncPending = false;
+  const syncAttention = false;
+  const syncStatusTooltip = "Browse Public Games";
   const [name, setName] = useState(() => getOrCreateStoredName(sessionId));
   const [savedName, setSavedName] = useState(() => getOrCreateStoredName(sessionId));
   const [firstVisit, setFirstVisit] = useState(() => !hasVisited());
@@ -407,7 +365,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     }
 
     try {
-      await zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })).server;
+      await optimistic(zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })));
       setStoredName(sanitizedName);
       setName(sanitizedName);
       setSavedName(sanitizedName);
@@ -416,13 +374,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     }
   };
 
-  const createImposter = async () => {
-    if (blockSyncAction("creating a game")) return;
-    setPendingAction("create-imposter");
+  const createImposter = async () => {    setPendingAction("create-imposter");
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters, clueVisibility: imposterClueVisibility })).server;
+      const result = await optimistic(zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters, clueVisibility: imposterClueVisibility })));
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -433,13 +389,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     }
   };
 
-  const createPassword = async () => {
-    if (blockSyncAction("creating a game")) return;
-    setPendingAction("create-password");
+  const createPassword = async () => {    setPendingAction("create-password");
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })).server;
+      const result = await optimistic(zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })));
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -450,13 +404,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     }
   };
 
-  const createChainReaction = async () => {
-    if (blockSyncAction("creating a game")) return;
-    setPendingAction("create-chain");
+  const createChainReaction = async () => {    setPendingAction("create-chain");
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })).server;
+      const result = await optimistic(zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })));
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -467,13 +419,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     }
   };
 
-  const createShadeSignal = async () => {
-    if (blockSyncAction("creating a game")) return;
-    setPendingAction("create-shade");
+  const createShadeSignal = async () => {    setPendingAction("create-shade");
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })).server;
+      const result = await optimistic(zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })));
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -484,13 +434,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     }
   };
 
-  const createLocationSignal = async () => {
-    if (blockSyncAction("creating a game")) return;
-    setPendingAction("create-location");
+  const createLocationSignal = async () => {    setPendingAction("create-location");
     const id = nanoid();
     try {
       await ensureName();
-      const result = await zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })).server;
+      const result = await optimistic(zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })));
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -506,9 +454,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     if (!normalizedCode) {
       showToast("Enter a join code first.", "error");
       return;
-    }
-    if (blockSyncAction("joining a game")) return;
-    setPendingAction("join");
+    }    setPendingAction("join");
     // Make sure the player has a name before joining any game
     await ensureName();
 
@@ -529,19 +475,19 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
     const performJoinTarget = async (target: { gameType: SessionGameType; gameId: string; code: string; route: string }) => {
       if (target.gameType === "imposter") {
-        const result = await zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else if (target.gameType === "password") {
-        const result = await zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else if (target.gameType === "chain_reaction") {
-        const result = await zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else if (target.gameType === "shade_signal") {
-        const result = await zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       } else {
-        const result = await zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })).server;
+        const result = await optimistic(zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })));
         if (result.type === "error") { showToast(result.error.message, "error"); return; }
       }
       addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
@@ -611,19 +557,19 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         const target = pendingJoinTarget;
         if (!target) return;
         if (target.gameType === "imposter") {
-          const result = await zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         } else if (target.gameType === "password") {
-          const result = await zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         } else if (target.gameType === "chain_reaction") {
-          const result = await zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         } else if (target.gameType === "shade_signal") {
-          const result = await zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         } else {
-          const result = await zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })).server;
+          const result = await optimistic(zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })));
           if (result.type === "error") { showToast(result.error.message, "error"); return; }
         }
         addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
@@ -952,7 +898,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !imposterExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${imposterPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { if (blockSyncAction("browsing public games")) return; setImposterExpanded(false); setImposterBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${imposterPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setImposterExpanded(false); setImposterBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && imposterPublicCount > 0 && <span className="hc-globe-badge">{imposterPublicCount}</span>}
                 </button>
@@ -1106,7 +1052,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !passwordExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${passwordPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { if (blockSyncAction("browsing public games")) return; setPasswordExpanded(false); setPasswordBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${passwordPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setPasswordExpanded(false); setPasswordBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && passwordPublicCount > 0 && <span className="hc-globe-badge">{passwordPublicCount}</span>}
                 </button>
@@ -1254,7 +1200,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !chainExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${chainPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { if (blockSyncAction("browsing public games")) return; setChainExpanded(false); setChainBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${chainPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setChainExpanded(false); setChainBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && chainPublicCount > 0 && <span className="hc-globe-badge">{chainPublicCount}</span>}
                 </button>
@@ -1382,7 +1328,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !shadeExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${shadePublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { if (blockSyncAction("browsing public games")) return; setShadeExpanded(false); setShadeBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${shadePublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setShadeExpanded(false); setShadeBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && shadePublicCount > 0 && <span className="hc-globe-badge">{shadePublicCount}</span>}
                 </button>
@@ -1524,7 +1470,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             ) : !locationExpanded ? (
               <>
               <div className="hc-row">
-                <button className={`btn hc-browse-globe${locationPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { if (blockSyncAction("browsing public games")) return; setLocationExpanded(false); setLocationBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
+                <button className={`btn hc-browse-globe${locationPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setLocationExpanded(false); setLocationBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
                   {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
                   {!syncOffline && locationPublicCount > 0 && <span className="hc-globe-badge">{locationPublicCount}</span>}
                 </button>

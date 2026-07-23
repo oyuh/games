@@ -14,6 +14,21 @@ export { useQuery } from "@rocicorp/zero/react";
 
 const BLOCKED = { client: Promise.resolve(), server: Promise.resolve() };
 
+type MutatePair<T> = { client: Promise<T>; server: Promise<T> };
+
+/**
+ * Run a mutation local-first: resolve as soon as the optimistic client run
+ * finishes and let the authoritative server push flush in the background (Zero
+ * retries it on its own once sync reconnects). This is what lets create / join /
+ * name changes work instantly even while the sync server is still waking up,
+ * instead of hanging on the server round-trip. Errors still surface through the
+ * security-toast wrapper on the mutate proxy.
+ */
+export async function optimistic<T>(mutation: MutatePair<T>): Promise<T> {
+  void mutation.server.catch(() => {});
+  return mutation.client;
+}
+
 function normalizeErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;

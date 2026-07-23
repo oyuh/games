@@ -1,5 +1,5 @@
 import { mutators, queries, chainCategoryLabels } from "@games/shared";
-import { useQuery, useZero } from "../lib/zero";
+import { optimistic, useQuery, useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/chain-reaction.css";
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -264,12 +264,12 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     setTimeout(() => setFlashSlot((cur) => (cur?.idx === idx ? null : cur)), 600);
 
     try {
-      await zero.mutate(mutators.chainReaction.guess({
+      await optimistic(zero.mutate(mutators.chainReaction.guess({
         gameId,
         sessionId,
         wordIndex: idx,
         guess: currentGuess
-      })).server;
+      })));
     } catch {
       // Mutation error - stay out of editing
     }
@@ -283,7 +283,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
       setGuess("");
     }
     try {
-      await zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })).server;
+      await optimistic(zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })));
       playHint();
     } catch {
       // All revealable letters already shown
@@ -299,7 +299,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
         setGuess("");
       }
       try {
-        await zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })).server;
+        await optimistic(zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })));
       } catch {
         // Already revealed
       }
@@ -312,11 +312,11 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     event.preventDefault();
     if (submissionWords.some((w) => !w.trim())) return;
     try {
-      await zero.mutate(mutators.chainReaction.submitChain({
+      await optimistic(zero.mutate(mutators.chainReaction.submitChain({
         gameId,
         sessionId,
         words: submissionWords.map((w) => w.trim())
-      })).server;
+      })));
       setHasSubmitted(true);
       playSoundSubmit();
     } catch (err) {
