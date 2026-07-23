@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../../lib/zero";
+import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiClock, FiLogIn, FiSend } from "react-icons/fi";
@@ -305,7 +305,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
     e.preventDefault();
     if (!clue.trim()) return;
     try {
-      const result = await zero.mutate(mutators.shadeSignal.submitClue({ gameId, sessionId, text: clue.trim() })).server;
+      const result = await optimistic(zero.mutate(mutators.shadeSignal.submitClue({ gameId, sessionId, text: clue.trim() })));
       if (result.type === "error") { showToast(result.error.message, "error"); return; }
       setClue("");
       playSoundSubmit();
@@ -317,9 +317,9 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   const submitGuess = async () => {
     if (!selectedCell) return;
     try {
-      const result = await zero.mutate(
+      const result = await optimistic(zero.mutate(
         mutators.shadeSignal.submitGuess({ gameId, sessionId, row: selectedCell.row, col: selectedCell.col })
-      ).server;
+      ));
       if (result.type === "error") { showToast(result.error.message, "error"); }
       else { setGuessLocked(true); playSoundSubmit(); }
     } catch (err: unknown) {

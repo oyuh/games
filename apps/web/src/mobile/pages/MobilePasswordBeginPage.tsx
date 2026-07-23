@@ -1,5 +1,5 @@
 import { mutators, queries } from "@games/shared";
-import { useQuery, useZero } from "../../lib/zero";
+import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiPlay, FiLogIn, FiLock, FiUnlock, FiArrowRight, FiCheck, FiXCircle } from "react-icons/fi";
@@ -145,7 +145,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
     if (!isHost || !canStart || startingGame) return;
     setStartingGame(true);
     try {
-      const result = await zero.mutate(mutators.password.start({ gameId, hostId: sessionId })).server;
+      const result = await optimistic(zero.mutate(mutators.password.start({ gameId, hostId: sessionId })));
       if (result.type === "error") {
         showToast(result.error.message, "error");
       }
@@ -273,7 +273,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
               className="m-btn m-btn-muted"
               style={{ width: "100%" }}
               onClick={() => {
-                void zero.mutate(mutators.password.leave({ gameId, sessionId })).server
+                void optimistic(zero.mutate(mutators.password.leave({ gameId, sessionId })))
                   .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't leave game", "error"));
               }}
             >

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FiGlobe, FiLock } from "react-icons/fi";
 import { mutators } from "@games/shared";
-import { useZero } from "../../lib/zero";
+import { optimistic, useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
 
 type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
@@ -32,7 +32,7 @@ export function LobbyVisibilityToggle({
     const newValue = !isPublic;
     setToggling(true);
     try {
-      await zero.mutate(mutatorMap[gameType]({ gameId, hostId: sessionId, isPublic: newValue })).server;
+      await optimistic(zero.mutate(mutatorMap[gameType]({ gameId, hostId: sessionId, isPublic: newValue })));
       showToast(newValue ? "Game is now public" : "Game is now private", "info");
     } catch {
       showToast("Couldn't change visibility", "error");
