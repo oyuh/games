@@ -2,7 +2,7 @@ import { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
-import { Component, lazy, Suspense, useEffect, useRef, useState, type CSSProperties } from "react";
+import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { FiExternalLink, FiInfo, FiX } from "react-icons/fi";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
@@ -20,6 +20,7 @@ import {
 import { syncSessionIdentity, syncSessionIdentityForBoot } from "./lib/session";
 import { markSyncConnecting, markSyncConnected, useSyncElapsedSeconds, useSyncTimedOut } from "./lib/sync-wake";
 import { useSyncSessionActivityState, useSyncSessionActivityTracker } from "./lib/sync-session-activity";
+import { showDedupedToast } from "./lib/toast";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
 import { useButtonSounds } from "./hooks/useButtonSounds";
 
@@ -87,15 +88,28 @@ const apiInfoURL = `${apiBaseURL}/debug/build-info`;
 const SYNC_WAKE_NOTICE_DELAY_MS = 2_500;
 const SYNC_WAKE_NOTICE_COOLDOWN_MS = 120_000;
 const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/lawsonhart";
+const ZERO_CLIENT_RESET_COOLDOWN_MS = 5_000;
 let lastSyncWakeNoticeShownAt = 0;
 
-function createZero(sessionId: string, sessionProof: string | null) {
+function createZero(sessionId: string, sessionProof: string | null, onClientStateNotFound: () => void) {
   return new Zero({
     auth: sessionProof ?? undefined,
     userID: sessionId,
     cacheURL: zeroCacheURL,
     schema,
     mutators,
+    // Zero's default reaction to "zero-cache no longer knows this client" is
+    // location.reload(). A sync server that restarted or woke from sleep hits
+    // that path on the very next connect, so the page kept refreshing under
+    // whoever was mid-game. ZeroProvider only swaps the client for you when it
+    // owns it, and ours is passed in, so do the swap ourselves: same page,
+    // fresh client, nothing lost but the sync socket.
+    onClientStateNotFound,
+    // Same deal for a client/server version mismatch. Only a real page load can
+    // pick up new JS, so say so and let the player finish what they're doing.
+    onUpdateNeeded: () => {
+      showDedupedToast("A new version is out. Refresh when you get a chance.", "info");
+    },
   });
 }
 
@@ -353,8 +367,29 @@ export function useZeroConnected() {
 export function App({ initialSessionId, initialSessionProof }: { initialSessionId: string; initialSessionProof: string | null }) {
   const styleOnly = import.meta.env.VITE_STYLE_ONLY === "true";
   const [session, setSession] = useState(() => ({ id: initialSessionId, proof: initialSessionProof }));
-  const [zero, setZero] = useState(() => createZero(session.id, session.proof));
-  const appliedSessionRef = useRef(session);
+  const [clientGeneration, setClientGeneration] = useState(0);
+  const lastClientResetRef = useRef(0);
+  const clientResetTimerRef = useRef<number | null>(null);
+
+  // Zero hands this to us when the sync server drops our client state. Bumping
+  // the generation swaps in a new client below instead of reloading the page.
+  // Swaps are spaced out (never dropped) so a server that keeps rejecting us
+  // can't make us churn through clients as fast as it can answer.
+  // ponytail: fixed spacing, swap for real backoff if that ever shows up.
+  const resetZeroClient = useCallback(() => {
+    if (clientResetTimerRef.current !== null) {
+      return;
+    }
+    const sinceLastReset = Date.now() - lastClientResetRef.current;
+    clientResetTimerRef.current = window.setTimeout(() => {
+      clientResetTimerRef.current = null;
+      lastClientResetRef.current = Date.now();
+      setClientGeneration((generation) => generation + 1);
+    }, Math.max(0, ZERO_CLIENT_RESET_COOLDOWN_MS - sinceLastReset));
+  }, []);
+
+  const [zero, setZero] = useState(() => createZero(session.id, session.proof, resetZeroClient));
+  const appliedZeroRef = useRef({ session, generation: clientGeneration });
 
   // Global admin broadcast listener (toasts, refresh, custom status, kick)
   useAdminBroadcast();
@@ -363,21 +398,27 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
   useButtonSounds();
 
   // Recreate the Zero client in place when a background identity check yields a
-  // new session or auth proof. Zero re-uses its IndexedDB store keyed by userID,
-  // so the swap is seamless: a first-timer boots anonymous and silently upgrades
-  // to an authenticated client the moment the backend hands out a proof, with no
-  // page reload and no data flash.
+  // new session or auth proof, or when the sync server told us our client state
+  // is gone. Zero re-uses its IndexedDB store keyed by userID, so the swap is
+  // seamless: a first-timer boots anonymous and silently upgrades to an
+  // authenticated client the moment the backend hands out a proof, with no page
+  // reload and no data flash.
   useEffect(() => {
-    if (appliedSessionRef.current.id === session.id && appliedSessionRef.current.proof === session.proof) {
+    const applied = appliedZeroRef.current;
+    if (
+      applied.session.id === session.id &&
+      applied.session.proof === session.proof &&
+      applied.generation === clientGeneration
+    ) {
       return;
     }
-    appliedSessionRef.current = session;
-    const next = createZero(session.id, session.proof);
+    appliedZeroRef.current = { session, generation: clientGeneration };
+    const next = createZero(session.id, session.proof, resetZeroClient);
     setZero((previous) => {
       void previous.close();
       return next;
     });
-  }, [session]);
+  }, [clientGeneration, resetZeroClient, session]);
 
   useEffect(() => {
     if (styleOnly) {
