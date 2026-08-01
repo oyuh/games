@@ -197,7 +197,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
   background: color-mix(in srgb, var(--primary) 15%, transparent);
   color: var(--primary);
@@ -258,7 +258,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.35rem 0.75rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
   background: color-mix(in srgb, var(--primary) 8%, transparent);
   color: var(--primary);
@@ -316,7 +316,7 @@
   align-items: center;
   text-align: center;
   padding: 2rem 1rem;
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   border: 1px dashed color-mix(in srgb, var(--primary) 25%, transparent);
   background: color-mix(in srgb, var(--primary) 4%, transparent);
 }
@@ -345,7 +345,7 @@
   padding: 0 0.4rem;
   min-width: 18px;
   height: 18px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--primary) 15%, transparent);
   color: var(--primary);
   font-size: 0.65rem;
@@ -366,7 +366,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.65rem;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--secondary) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--secondary) 18%, transparent);
   transition: border-color 0.15s;
@@ -400,7 +400,7 @@
 .game-player-avatar {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--primary) 18%, transparent);
   color: var(--primary);
   display: flex;
@@ -476,7 +476,7 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--primary) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
   animation: game-role-reveal 0.5s ease-out both;
@@ -507,7 +507,7 @@
 .game-role-icon {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--primary) 15%, transparent);
   color: var(--primary);
   display: flex;
@@ -585,7 +585,7 @@
   flex-direction: column;
   gap: 0.35rem;
   padding: 0.75rem;
-  border-radius: 0.65rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--secondary) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--secondary) 15%, transparent);
 }
@@ -621,7 +621,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.75rem 0.5rem;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 2px solid color-mix(in srgb, var(--secondary) 20%, transparent);
   background: color-mix(in srgb, var(--secondary) 6%, transparent);
   cursor: pointer;
@@ -680,7 +680,7 @@
   align-items: center;
   gap: 0.35rem;
   padding: 1.25rem;
-  border-radius: 0.85rem;
+  border-radius: var(--radius-xl);
   text-align: center;
 }
 
@@ -758,7 +758,7 @@
 
 .game-result-bar-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--secondary) 15%, transparent);
   overflow: hidden;
   flex: 1;
@@ -766,7 +766,7 @@
 
 .game-result-bar {
   height: 100%;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--primary);
   transition: width 0.4s ease;
 }
@@ -799,7 +799,7 @@
   gap: 0;
   min-height: 112px;
   padding: 1rem 1.1rem;
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--team-color, var(--primary)) 6%, var(--card));
   border: 1px solid color-mix(in srgb, var(--team-color, var(--primary)) 18%, transparent);
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
@@ -863,7 +863,7 @@
   width: 30px;
   height: 30px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, var(--team-color, var(--primary)) 26%, transparent);
   background: color-mix(in srgb, var(--team-color, var(--primary)) 12%, transparent);
   color: var(--team-color, var(--primary));
@@ -957,7 +957,7 @@
   justify-content: space-between;
   gap: 0.6rem;
   padding: 0.55rem 0.65rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--secondary) 10%, transparent);
 }
 
@@ -1135,7 +1135,7 @@
   font-size: 0.77rem;
   color: var(--secondary);
   font-style: italic;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border: 1px dashed color-mix(in srgb, var(--secondary) 30%, transparent);
   background: color-mix(in srgb, var(--secondary) 6%, transparent);
 }
@@ -1226,7 +1226,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.85rem;
-  border-radius: 0.65rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--secondary) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--secondary) 15%, transparent);
   font-size: 0.85rem;
@@ -1391,7 +1391,7 @@
 
 .solo-menu {
   --solo-pad: 0.25rem;
-  --solo-radius: 0.75rem;
+  --solo-radius: var(--radius-lg);
   --solo-control-h: 3.5rem;
   /* Inner height shared by both drawers so they are interchangeable. */
   --solo-seed-h: 2.4rem;
@@ -1642,7 +1642,7 @@
   width: 2rem;
   height: 2rem;
   border: 0;
-  border-radius: 0.4rem;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;

@@ -191,7 +191,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
-  border-radius: 0.65rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--background) 78%, transparent);
   color: var(--primary);
   cursor: pointer;
@@ -224,7 +224,7 @@
   position: absolute;
   inset: 0.22rem;
   border: 2px dashed color-mix(in srgb, var(--region-color) 88%, #1d1d1f);
-  border-radius: 0.42rem;
+  border-radius: var(--radius-sm);
   opacity: 0.92;
   pointer-events: none;
 }
@@ -255,7 +255,7 @@
   width: 2.15rem;
   height: 2.15rem;
   transform: translateY(-50%) rotate(45deg);
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   background: var(--region-color);
   color: #fff;
   font-size: 0.78rem;
@@ -335,7 +335,7 @@
   min-height: var(--pips-tray-domino-height);
   overflow: hidden;
   border: 2px dashed color-mix(in srgb, var(--muted-foreground) 42%, transparent);
-  border-radius: 0.55rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--foreground) 7%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--background) 34%, transparent);
 }
@@ -353,7 +353,7 @@
   padding: 0;
   overflow: hidden;
   border: 2px solid var(--pips-line);
-  border-radius: 0.55rem;
+  border-radius: var(--radius-md);
   background: #f8f8f7;
   color: #343434;
   cursor: grab;
@@ -575,7 +575,7 @@
   gap: 0.45rem;
   padding: 0.35rem;
   border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
-  border-radius: 0.8rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--card) 92%, transparent);
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
 }
@@ -587,7 +587,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
-  border-radius: 0.58rem;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;
@@ -630,7 +630,7 @@
   gap: 0.85rem;
   padding: 0.8rem 1rem;
   border: 1px solid color-mix(in srgb, #14b8a6 30%, var(--border));
-  border-radius: 0.85rem;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--card) 92%, rgba(0, 0, 0, 0.36));
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.46);
   transform: translateX(-50%);
@@ -742,7 +742,7 @@
   gap: 0.9rem;
   padding: 1rem;
   border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
-  border-radius: 0.9rem;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--card) 94%, transparent);
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
 }
@@ -775,7 +775,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
-  border-radius: 0.55rem;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;
@@ -796,7 +796,7 @@
 .pips-panel-note,
 .pips-panel-empty {
   border: 1px solid color-mix(in srgb, var(--foreground) 9%, transparent);
-  border-radius: 0.65rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--foreground) 4%, transparent);
 }
 
@@ -866,7 +866,7 @@
   gap: 0.75rem;
   padding: 0.55rem 0.85rem;
   border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--primary) 8%, transparent);
   font-size: 0.78rem;
 }
@@ -924,7 +924,7 @@
   flex-direction: column;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--foreground) 3%, transparent);
 }
 
@@ -1079,7 +1079,7 @@
   gap: 1rem;
   padding: clamp(1.2rem, 3vw, 2rem);
   border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--primary) 22%, transparent), transparent 34%),
     color-mix(in srgb, var(--card) 90%, transparent);
@@ -1135,7 +1135,7 @@
   height: 4.05rem;
   overflow: hidden;
   border: 2px solid var(--pips-line);
-  border-radius: 0.7rem;
+  border-radius: var(--radius-lg);
   background: #f8f8f7;
   color: #343434;
   box-shadow: 0 5px 0 rgba(0, 0, 0, 0.22), 0 18px 34px rgba(0, 0, 0, 0.25);
@@ -1176,7 +1176,7 @@
   min-height: 2.4rem;
   padding: 0 0.65rem;
   border: 1px solid color-mix(in srgb, var(--foreground) 7%, transparent);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--foreground) 4%, transparent);
 }
 
@@ -1246,7 +1246,7 @@
   height: 2.4rem;
   display: grid;
   place-items: center;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: var(--primary);
   color: var(--primary-foreground);
   font-size: 1.25rem;
@@ -1292,7 +1292,7 @@
 .pips-end-tile,
 .pips-end-list-tile {
   border: 1px solid color-mix(in srgb, var(--foreground) 9%, transparent);
-  border-radius: 0.85rem;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--card) 88%, transparent);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
 }
@@ -1340,7 +1340,7 @@
   display: grid;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;
@@ -1435,7 +1435,7 @@
   gap: 0.65rem;
   padding: 0.7rem;
   border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
-  border-radius: 0.72rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--foreground) 4%, transparent);
 }
 
@@ -1443,7 +1443,7 @@
   display: grid;
   place-items: center;
   height: 3rem;
-  border-radius: 0.58rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--primary) 14%, transparent);
   color: var(--primary);
   font-size: 1.05rem;
@@ -1505,7 +1505,7 @@
   width: clamp(1.45rem, calc(var(--pips-cell-size) * 0.54), 2.05rem);
   height: clamp(1.45rem, calc(var(--pips-cell-size) * 0.54), 2.05rem);
   right: clamp(-0.84rem, calc(var(--pips-cell-size) * -0.2), -0.58rem);
-  border-radius: 0.34rem;
+  border-radius: var(--radius-sm);
   font-size: clamp(0.62rem, calc(var(--pips-cell-size) * 0.18), 0.78rem);
 }
 
@@ -1637,7 +1637,7 @@
 }
 .pips-end-tile,
 .pips-end-list-tile {
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border-color: color-mix(in srgb, var(--primary) 20%, var(--border));
   background:
     linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, transparent), color-mix(in srgb, var(--background) 90%, transparent)),
@@ -1696,7 +1696,7 @@
   gap: 0.3rem;
   padding: 0.8rem 0.95rem;
   border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
-  border-radius: 0.8rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--card) 92%, transparent);
   text-align: center;
 }
@@ -1752,7 +1752,7 @@
   display: flex;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  border-radius: 0.45rem;
+  border-radius: var(--radius-md);
 }
 
 .pips-lb-view-btn {
@@ -1835,7 +1835,7 @@
   min-width: 4.4rem;
   min-height: 2rem;
   border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--primary) 9%, transparent);
   color: var(--primary);
   cursor: pointer;
@@ -1911,7 +1911,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 1rem 1.5rem;
-  border-radius: 0.85rem;
+  border-radius: var(--radius-xl);
   text-align: center;
 }
 
@@ -1973,7 +1973,7 @@
   gap: 0.2rem;
   padding: 0.75rem 0.5rem;
   border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   background: var(--card);
   box-shadow: none;
   transition: border-color 0.2s, background 0.2s;
@@ -2030,7 +2030,7 @@
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--secondary) 20%, transparent);
   color: var(--muted-foreground);
   cursor: pointer;
@@ -2050,7 +2050,7 @@
   overflow: hidden;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   background: var(--card);
   box-shadow: none;
 }
@@ -2097,7 +2097,7 @@
   right: 20%;
   bottom: -1px;
   height: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--primary);
 }
 
@@ -2132,7 +2132,7 @@
 .pips-end-list-body::-webkit-scrollbar { width: 4px; }
 .pips-end-list-body::-webkit-scrollbar-track { background: transparent; }
 .pips-end-list-body::-webkit-scrollbar-thumb {
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--secondary) 50%, transparent);
 }
 
@@ -2240,7 +2240,7 @@
 .pips-panel--leaderboard .pips-lb-current {
   margin: 0.42rem 1rem 0.28rem;
   padding: 0.42rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   font-size: 0.78rem;
 }
 
@@ -2317,7 +2317,7 @@
   flex: 0 0 auto;
   padding: 0;
   border: 0;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--secondary) 20%, transparent);
   color: var(--muted-foreground);
   cursor: pointer;
@@ -2576,7 +2576,7 @@
   width: 1.5rem;
   height: 1.5rem;
   border: none;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--secondary) 20%, transparent);
 }
 

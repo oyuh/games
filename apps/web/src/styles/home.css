@@ -92,7 +92,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-radius: 1.25rem;
+  border-radius: var(--radius-2xl);
   border: 1px solid color-mix(in srgb, var(--solo-accent, var(--primary)) 18%, transparent);
   background:
     radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--solo-accent, var(--primary)) 13%, transparent), transparent 26%),
@@ -265,7 +265,7 @@ a.solo-card-title-link {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   font-size: 0.6rem;
   font-weight: 800;
   background: color-mix(in srgb, var(--secondary) 8%, transparent);
@@ -381,35 +381,35 @@ a.solo-card-title-link {
 }
 
 .solo-pips-cell:nth-child(1) {
-  border-top-left-radius: 0.48rem;
+  border-top-left-radius: var(--radius-md);
 }
 
 .solo-pips-cell:nth-child(2) {
-  border-top-right-radius: 0.48rem;
+  border-top-right-radius: var(--radius-md);
 }
 
 .solo-pips-cell:nth-child(3) {
-  border-bottom-left-radius: 0.48rem;
+  border-bottom-left-radius: var(--radius-md);
 }
 
 .solo-pips-cell:nth-child(4) {
-  border-bottom-right-radius: 0.48rem;
+  border-bottom-right-radius: var(--radius-md);
 }
 
 .solo-pips-cell:nth-child(1)::after {
-  border-top-left-radius: 0.32rem;
+  border-top-left-radius: var(--radius-sm);
 }
 
 .solo-pips-cell:nth-child(2)::after {
-  border-top-right-radius: 0.32rem;
+  border-top-right-radius: var(--radius-sm);
 }
 
 .solo-pips-cell:nth-child(3)::after {
-  border-bottom-left-radius: 0.32rem;
+  border-bottom-left-radius: var(--radius-sm);
 }
 
 .solo-pips-cell:nth-child(4)::after {
-  border-bottom-right-radius: 0.32rem;
+  border-bottom-right-radius: var(--radius-sm);
 }
 
 .solo-pips-cell--rose { --solo-pips-region: #be5364; }
@@ -423,7 +423,7 @@ a.solo-card-title-link {
   place-items: center;
   width: 1.48rem;
   height: 1.48rem;
-  border-radius: 0.42rem;
+  border-radius: var(--radius-sm);
   background: var(--solo-pips-rule);
   color: #fff;
   font-size: 0.62rem;
@@ -446,7 +446,7 @@ a.solo-card-title-link {
   grid-template-columns: 1fr 1fr;
   overflow: hidden;
   border: 2px solid var(--solo-pips-line);
-  border-radius: 0.62rem;
+  border-radius: var(--radius-md);
   background: #f8f8f7;
   color: #343434;
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.22);
@@ -536,7 +536,7 @@ a.solo-card-title-link {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   font-size: 0.55rem;
   font-weight: 800;
   background: color-mix(in srgb, var(--secondary) 8%, transparent);
@@ -569,7 +569,7 @@ a.solo-card-title-link {
   align-content: center;
   gap: 0.42rem;
   padding: 0.82rem 0.78rem;
-  border-radius: 0.65rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--solo-accent) 28%, transparent);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04)),
@@ -616,7 +616,7 @@ a.solo-card-title-link {
 .solo-suggestion-check {
   width: 0.72rem;
   height: 0.72rem;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   border: 1px solid color-mix(in srgb, var(--solo-accent) 42%, transparent);
   background: color-mix(in srgb, var(--solo-accent) 9%, transparent);
   animation: solo-suggestion-check-fill 5.8s ease-in-out infinite;
@@ -657,7 +657,7 @@ a.solo-card-title-link {
   max-height: 480px;
   display: flex;
   flex-direction: column;
-  border-radius: 1.25rem;
+  border-radius: var(--radius-2xl);
   border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
   background: linear-gradient(to bottom right, #232323, #1a1a1a);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
@@ -891,7 +891,7 @@ a.solo-card-title-link {
   align-items: flex-start;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
-  border-radius: 0.6rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--primary) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
   margin-bottom: 0.75rem;
@@ -934,7 +934,7 @@ a.solo-card-title-link {
 
 /* ── Mini game board preview (Imposter / Password) ───────────── */
 .hc-mini-board {
-  border-radius: 0.6rem;
+  border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--secondary) 18%, transparent);
   background: color-mix(in srgb, var(--secondary) 5%, transparent);
@@ -1043,7 +1043,7 @@ a.solo-card-title-link {
   font-size: 0.52rem;
   font-weight: 800;
   padding: 0.08rem 0.3rem;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
 }
 
@@ -1133,7 +1133,7 @@ a.solo-card-title-link {
   align-items: center;
   gap: 0.25rem;
   padding: 0.5rem 1.2rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   min-width: 76px;
 }
 
@@ -1198,7 +1198,7 @@ a.solo-card-title-link {
   letter-spacing: 0;
   color: var(--muted-foreground);
   padding: 0.28rem 0.5rem;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   border: 1px dashed color-mix(in srgb, #a78bfa 30%, transparent);
   background: color-mix(in srgb, #a78bfa 6%, transparent);
 }
@@ -1218,7 +1218,7 @@ a.solo-card-title-link {
   justify-content: center;
   width: 1rem;
   height: 1.25rem;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, #a78bfa 8%, transparent);
   color: var(--muted-foreground);
   border: 1px solid color-mix(in srgb, #a78bfa 16%, transparent);
@@ -1311,7 +1311,7 @@ a.solo-card-title-link {
 .hc-loc-map-stage {
   position: relative;
   aspect-ratio: 1.62;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, #f59e0b 22%, transparent);
   overflow: hidden;
   background:
@@ -1485,7 +1485,7 @@ a.solo-card-title-link {
 .hc-loc-clues span {
   display: block;
   padding: 0.28rem 0.48rem;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, #f59e0b 8%, transparent);
   border: 1px solid color-mix(in srgb, #f59e0b 14%, transparent);
   color: var(--secondary);
@@ -1516,7 +1516,7 @@ a.solo-card-title-link {
   font-weight: 700;
   letter-spacing: 0.12em;
   padding: 0.35rem 0.85rem;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   width: 100%;
   max-width: 170px;
   text-align: center;
@@ -1600,7 +1600,7 @@ a.solo-card-title-link {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   overflow: hidden;
   max-width: 220px;
   width: 100%;
@@ -1609,7 +1609,7 @@ a.solo-card-title-link {
 
 .hc-shade-cell {
   aspect-ratio: 1;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   opacity: 0.75;
   outline: 1px solid transparent;
   outline-offset: -1px;
@@ -1700,7 +1700,7 @@ a.solo-card-title-link {
   gap: 0.35rem;
   background: color-mix(in srgb, var(--primary) 5%, transparent);
   border: 1px dashed color-mix(in srgb, var(--primary) 20%, transparent);
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   padding: 0.4rem 0.6rem;
   cursor: pointer;
   font: inherit;
@@ -1966,7 +1966,7 @@ a.solo-card-title-link {
   background: none;
   border: none;
   padding: 0.25rem;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   color: var(--secondary);
   cursor: pointer;
   opacity: 0.5;
@@ -1995,7 +1995,7 @@ a.solo-card-title-link {
   width: 100%;
   min-height: 2.22rem;
   padding: 0.32rem 0.55rem 0.32rem 0.5rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--recent-status, var(--primary)) 7%, transparent);
   border: 1px solid color-mix(in srgb, var(--recent-status, var(--primary)) 24%, transparent);
   text-decoration: none;
@@ -2102,7 +2102,7 @@ a.solo-card-title-link {
   justify-content: center;
   width: 46px;
   height: 46px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   flex-shrink: 0;
 }
 
@@ -2256,7 +2256,7 @@ a.solo-card-title-link {
   color: var(--muted-foreground);
   cursor: pointer;
   padding: 0.35rem 0.55rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--secondary) 6%, transparent);
   border: 1px solid color-mix(in srgb, var(--secondary) 14%, transparent);
   transition: background 0.15s, border-color 0.15s;
@@ -2460,7 +2460,7 @@ a.solo-card-title-link {
   border: none;
   color: var(--card-accent, var(--secondary));
   opacity: 0.5;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 .hc-help-btn:hover {
   opacity: 1;
@@ -2642,7 +2642,7 @@ a.solo-card-title-link {
   border: none;
   color: var(--card-accent, var(--secondary));
   opacity: 0.5;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 .hc-browse-globe:hover {
   opacity: 1;
@@ -2721,7 +2721,7 @@ a.solo-card-title-link {
   border: none;
   color: var(--card-accent, var(--secondary));
   opacity: 0.5;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 .m-browse-globe svg {
   width: 22px;
@@ -2787,7 +2787,7 @@ a.solo-card-title-link {
   flex-direction: column;
   gap: 0.2rem;
   padding: 0.65rem 0.85rem;
-  border-radius: 0.65rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.03);
   cursor: pointer;
@@ -2820,7 +2820,7 @@ a.solo-card-title-link {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 0.15rem 0.45rem;
-  border-radius: 0.3rem;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.06);
   color: var(--muted-foreground);
 }

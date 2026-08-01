@@ -144,7 +144,7 @@
   color: #34d399;
   background: rgba(0, 0, 0, 0.7);
   padding: 0.2rem 0.5rem;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   backdrop-filter: blur(3px);
   text-shadow: 0 1px 4px rgba(0,0,0,0.6);
   font-variant-numeric: tabular-nums;
@@ -174,7 +174,7 @@
 .shikaku-icon-btn--scroll {
   width: 2rem;
   height: 1.6rem;
-  border-radius: 0.4rem;
+  border-radius: var(--radius-sm);
   border-color: color-mix(in srgb, #34d399 30%, var(--secondary));
   color: color-mix(in srgb, #34d399 50%, var(--muted-foreground));
   opacity: 0.3;
@@ -199,7 +199,7 @@
   max-width: min(500px, 80vw, calc(100dvh - 11rem));
   aspect-ratio: 1;
   border: 2px solid color-mix(in srgb, #34d399 30%, var(--secondary));
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   overflow: hidden;
   user-select: none;
   background: var(--card);
@@ -315,7 +315,7 @@
   text-shadow: 0 0 30px rgba(52, 211, 153, 0.5), 0 4px 12px rgba(0, 0, 0, 0.6);
   background: rgba(0, 0, 0, 0.55);
   padding: 0.65rem 1.5rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   backdrop-filter: blur(6px);
 }
 .shikaku-solved-text svg {
@@ -357,7 +357,7 @@
   justify-content: center;
   width: 2.2rem;
   height: 2.2rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, var(--secondary) 50%, transparent);
   background: var(--card);
   color: var(--muted-foreground);
@@ -419,7 +419,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 1rem 1.5rem;
-  border-radius: 0.85rem;
+  border-radius: var(--radius-xl);
   text-align: center;
   width: 100%;
 }
@@ -480,7 +480,7 @@
   gap: 0.2rem;
   padding: 0.75rem 0.5rem;
   min-height: 4.5rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   background: var(--card);
   border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
   transition: border-color 0.2s, background 0.2s;
@@ -501,7 +501,7 @@
   width: 1.5rem;
   height: 1.5rem;
   border: none;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--secondary) 20%, transparent);
   color: var(--muted-foreground);
   cursor: pointer;
@@ -545,7 +545,7 @@
 .shikaku-end-list-tile {
   background: var(--card);
   border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -592,7 +592,7 @@
   right: 20%;
   height: 2px;
   background: #34d399;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .shikaku-end-list-header {
@@ -616,7 +616,7 @@
 }
 .shikaku-end-list-body::-webkit-scrollbar { width: 4px; }
 .shikaku-end-list-body::-webkit-scrollbar-track { background: transparent; }
-.shikaku-end-list-body::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--secondary) 50%, transparent); border-radius: 4px; }
+.shikaku-end-list-body::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--secondary) 50%, transparent); border-radius: var(--radius-xs); }
 .shikaku-end-list-row {
   display: flex;
   justify-content: space-between;
@@ -674,7 +674,7 @@
   gap: 0.3rem;
   padding: 0.8rem 0.95rem;
   margin-top: 0.35rem;
-  border-radius: 0.8rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--secondary) 24%, transparent);
   background: color-mix(in srgb, var(--card) 92%, transparent);
   text-align: center;
@@ -743,7 +743,7 @@
   --primary-foreground: #181a1b;
   background: linear-gradient(to bottom right, #232323, #181a1b);
   border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   padding: 0;
   width: 100%;
   max-width: 480px;
@@ -811,7 +811,7 @@
   margin: 0.6rem 1rem 0.5rem;
   background: color-mix(in srgb, var(--primary) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   font-size: 0.78rem;
 }
 .shikaku-lb-pb-label {
@@ -843,7 +843,7 @@
 .shikaku-lb-view-toggle {
   display: flex;
   gap: 0;
-  border-radius: 0.4rem;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
@@ -945,7 +945,7 @@
 /* Scrollbar */
 .shikaku-lb-list::-webkit-scrollbar { width: 4px; }
 .shikaku-lb-list::-webkit-scrollbar-track { background: transparent; }
-.shikaku-lb-list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--secondary) 50%, transparent); border-radius: 4px; }
+.shikaku-lb-list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--secondary) 50%, transparent); border-radius: var(--radius-xs); }
 
 /* Column header row */
 .shikaku-lb-col-header {
@@ -1087,7 +1087,7 @@
 .shikaku-lb-skel-block {
   display: inline-block;
   height: 0.75rem;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--muted-foreground) 15%, transparent);
   animation: shikaku-lb-shimmer 1.2s ease-in-out infinite;
 }
@@ -1137,7 +1137,7 @@
 .shikaku-giveup-modal {
   background: var(--card);
   border: 1px solid color-mix(in srgb, #f87171 25%, var(--secondary));
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   padding: 1.75rem 2rem;
   text-align: center;
   display: flex;
@@ -1193,7 +1193,7 @@
   content: "";
   position: absolute;
   inset: 4px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1.5px solid color-mix(in srgb, #34d399 35%, transparent);
   pointer-events: none;
 }
@@ -1290,7 +1290,7 @@
     z-index: 10;
     font-size: 1.05rem;
     padding: 0.3rem 0.75rem;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     box-shadow: 0 2px 12px rgba(0,0,0,0.5);
   }
   /* Hard: grid larger than viewport: enables scroll in both axes */
@@ -1360,7 +1360,7 @@
   .shikaku-end-tile {
     padding: 0.55rem 0.4rem;
     min-height: 3.5rem;
-    border-radius: 0.65rem;
+    border-radius: var(--radius-lg);
   }
   .shikaku-end-list-tile {
     max-height: 14rem;
@@ -1373,7 +1373,7 @@
     max-height: calc(85vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     width: 100%;
     margin: 0 0.5rem;
-    border-radius: 0.85rem;
+    border-radius: var(--radius-xl);
   }
 
   /* Give-up dialog */
@@ -1439,7 +1439,7 @@
   padding: 0.2rem 0.35rem;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   color: var(--muted-foreground);
   cursor: pointer;
   transition: color 0.15s ease, opacity 0.15s ease;
