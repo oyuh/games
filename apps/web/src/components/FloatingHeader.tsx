@@ -7,6 +7,7 @@ import { useQuery } from "@rocicorp/zero/react";
 import type { GameContext } from "./shared/HostControlsModal";
 import { updateSettings, useSettings } from "../lib/settings";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
 import { showToast } from "../lib/toast";
@@ -275,8 +276,8 @@ export function Sidebar() {
   const isPips = /^\/pips(\/|$)/.test(pathname);
 
   // Track infinite mode state from ShikakuPage
-  const [infiniteEnabled, setInfiniteEnabled] = useState(false);
-  const [infiniteCanToggle, setInfiniteCanToggle] = useState(true);
+  /* infiniteEnabled / infiniteCanToggle lived here for a sidebar toggle that
+     no longer renders. Nothing read them, so they went with it. */
 
   // Track full game state for game-mode indicator
   const [shikakuState, setShikakuState] = useState<{
@@ -340,32 +341,12 @@ export function Sidebar() {
     canDevSkip: false,
   });
 
-  useEffect(() => {
-    if (!isShikaku) return;
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { enabled: boolean; canToggle: boolean };
-      setInfiniteEnabled(detail.enabled);
-      setInfiniteCanToggle(detail.canToggle);
-    };
-    const stateHandler = (e: Event) => {
-      setShikakuState((e as CustomEvent).detail);
-    };
-    window.addEventListener("shikaku-infinite-state", handler);
-    window.addEventListener("shikaku-game-state", stateHandler);
-    return () => {
-      window.removeEventListener("shikaku-infinite-state", handler);
-      window.removeEventListener("shikaku-game-state", stateHandler);
-    };
-  }, [isShikaku]);
-
-  useEffect(() => {
-    if (!isPips) return;
-    const stateHandler = (e: Event) => {
-      setPipsState((e as CustomEvent).detail);
-    };
-    window.addEventListener("pips-game-state", stateHandler);
-    return () => window.removeEventListener("pips-game-state", stateHandler);
-  }, [isPips]);
+  useSoloEvent("shikaku-game-state", (state) => {
+    if (isShikaku) setShikakuState(state);
+  });
+  useSoloEvent("pips-game-state", (state) => {
+    if (isPips) setPipsState(state);
+  });
 
   useEffect(() => {
     setMobileOpen(false);
@@ -579,7 +560,7 @@ export function Sidebar() {
               disabled={!shikakuState.canUndo}
               className="sidebar-link--shikaku"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent("shikaku-undo"));
+                emitSolo("shikaku-undo");
                 setMobileOpen(false);
               }}
             />
@@ -589,7 +570,7 @@ export function Sidebar() {
               disabled={!shikakuState.canClear}
               className="sidebar-link--shikaku"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent("shikaku-clear-board"));
+                emitSolo("shikaku-clear-board");
                 setMobileOpen(false);
               }}
             />
@@ -615,7 +596,7 @@ export function Sidebar() {
               disabled={!shikakuState.canLeaderboard}
               className="sidebar-link--shikaku"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent("shikaku-toggle-leaderboard"));
+                emitSolo("shikaku-toggle-leaderboard");
                 setMobileOpen(false);
               }}
             />
@@ -628,7 +609,7 @@ export function Sidebar() {
                   disabled={!shikakuState.canScroll.up}
                   className="sidebar-link--shikaku"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent("shikaku-scroll-up"));
+                    emitSolo("shikaku-scroll-up");
                     setMobileOpen(false);
                   }}
                 />
@@ -638,7 +619,7 @@ export function Sidebar() {
                   disabled={!shikakuState.canScroll.down}
                   className="sidebar-link--shikaku"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent("shikaku-scroll-down"));
+                    emitSolo("shikaku-scroll-down");
                     setMobileOpen(false);
                   }}
                 />
@@ -648,7 +629,7 @@ export function Sidebar() {
                   disabled={!shikakuState.canScroll.left}
                   className="sidebar-link--shikaku"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent("shikaku-scroll-left"));
+                    emitSolo("shikaku-scroll-left");
                     setMobileOpen(false);
                   }}
                 />
@@ -658,7 +639,7 @@ export function Sidebar() {
                   disabled={!shikakuState.canScroll.right}
                   className="sidebar-link--shikaku"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent("shikaku-scroll-right"));
+                    emitSolo("shikaku-scroll-right");
                     setMobileOpen(false);
                   }}
                 />
@@ -674,7 +655,7 @@ export function Sidebar() {
               disabled={pipsState.phase !== "playing" || !pipsState.canUndo}
               className="sidebar-link--pips"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent("pips-undo"));
+                emitSolo("pips-undo");
                 setMobileOpen(false);
               }}
             />
@@ -700,7 +681,7 @@ export function Sidebar() {
               disabled={!pipsState.canLeaderboard}
               className="sidebar-link--pips"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent("pips-toggle-leaderboard"));
+                emitSolo("pips-toggle-leaderboard");
                 setMobileOpen(false);
               }}
             />
@@ -709,7 +690,7 @@ export function Sidebar() {
               label="Add Score"
               className="sidebar-link--pips"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent("pips-open-admin-score"));
+                emitSolo("pips-open-admin-score");
                 setMobileOpen(false);
               }}
             /> */}
@@ -721,7 +702,7 @@ export function Sidebar() {
                   label="DEV Solve"
                   className="sidebar-link--pips"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent("pips-dev-solution"));
+                    emitSolo("pips-dev-solution");
                     setMobileOpen(false);
                   }}
                 />
@@ -731,7 +712,7 @@ export function Sidebar() {
                   disabled={!pipsState.canDevSkip}
                   className="sidebar-link--pips"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent("pips-dev-skip"));
+                    emitSolo("pips-dev-skip");
                     setMobileOpen(false);
                   }}
                 />

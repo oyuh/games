@@ -34,44 +34,15 @@ import { ToastContainer } from "../components/shared/ToastContainer";
 import { ConnectionDebugPanel } from "../components/shared/ConnectionDebugPanel";
 import { showToast } from "../lib/toast";
 import { GameIcon } from "../components/shared/GameIcon";
+import { emitSolo, useSoloEvent, type PipsState, type ShikakuState } from "../lib/solo-bus";
 
 type MobileSheet = "chat" | "info" | "options" | "host" | "leaderboard" | "actions" | null;
 type ConfirmAction = "restart" | "give-up";
 
-type ShikakuMobileState = {
-  phase: string;
-  infiniteMode: boolean;
-  customMode: boolean;
-  challengeMode: boolean;
-  showSeedInput: boolean;
-  difficulty: string;
-  seed: number | null;
-  canUndo: boolean;
-  canClear: boolean;
-  canRestart: boolean;
-  canGiveUp: boolean;
-  canLeaderboard: boolean;
-  showScrollControls: boolean;
-  canScroll: { up: boolean; down: boolean; left: boolean; right: boolean };
-};
-
-type PipsMobileState = {
-  phase: string;
-  runMode: string;
-  difficulty: string;
-  puzzleIndex: number;
-  puzzleCount: number;
-  placedCount: number;
-  totalDominoes: number;
-  remainingMoves: number;
-  solved: boolean;
-  canLeaderboard: boolean;
-  canUndo: boolean;
-  showDevTools: boolean;
-  canDevSkip: boolean;
-};
-
-const DEFAULT_SHIKAKU_STATE: ShikakuMobileState = {
+/* These used to be hand-copied from what the pages dispatch, with every
+   field widened to `string`. They come from the bus now, so a change to
+   either page's payload fails the build here instead of silently. */
+const DEFAULT_SHIKAKU_STATE: ShikakuState = {
   phase: "menu",
   infiniteMode: false,
   customMode: false,
@@ -88,7 +59,7 @@ const DEFAULT_SHIKAKU_STATE: ShikakuMobileState = {
   canScroll: { up: false, down: false, left: false, right: false },
 };
 
-const DEFAULT_PIPS_STATE: PipsMobileState = {
+const DEFAULT_PIPS_STATE: PipsState = {
   phase: "menu",
   runMode: "ranked",
   difficulty: "easy",
@@ -104,22 +75,18 @@ const DEFAULT_PIPS_STATE: PipsMobileState = {
   canDevSkip: false,
 };
 
-function dispatchGameEvent(name: string) {
-  window.dispatchEvent(new CustomEvent(name));
-}
-
 function titleCase(value: string) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 }
 
-function shikakuModeLabel(state: ShikakuMobileState) {
+function shikakuModeLabel(state: ShikakuState) {
   if (state.customMode || state.showSeedInput) return "Seeded";
   if (state.infiniteMode) return "Infinite";
   if (state.challengeMode) return "Challenge";
   return "Ranked";
 }
 
-function pipsModeLabel(state: PipsMobileState) {
+function pipsModeLabel(state: PipsState) {
   return titleCase(state.runMode || "ranked");
 }
 
@@ -171,8 +138,8 @@ function MobileLayoutInner() {
   const [sheet, setSheet] = useState<MobileSheet>(null);
   const [shikakuConfirmAction, setShikakuConfirmAction] = useState<ConfirmAction | null>(null);
   const [pipsConfirmAction, setPipsConfirmAction] = useState<ConfirmAction | null>(null);
-  const [shikakuState, setShikakuState] = useState<ShikakuMobileState>(DEFAULT_SHIKAKU_STATE);
-  const [pipsState, setPipsState] = useState<PipsMobileState>(DEFAULT_PIPS_STATE);
+  const [shikakuState, setShikakuState] = useState<ShikakuState>(DEFAULT_SHIKAKU_STATE);
+  const [pipsState, setPipsState] = useState<PipsState>(DEFAULT_PIPS_STATE);
   const isHome = location.pathname === "/";
   const isShikaku = /^\/shikaku(\/|$)/.test(location.pathname);
   const isPips = /^\/pips(\/|$)/.test(location.pathname);
@@ -185,40 +152,19 @@ function MobileLayoutInner() {
     setPipsConfirmAction(null);
   }, [location.pathname]);
 
+  /* Only the mounted page emits these, and a page is only mounted on its own
+     route, so subscribing unconditionally is the same as the old per-route
+     listeners. The effects below still clear state on the way out. */
+  useSoloEvent("shikaku-game-state", setShikakuState);
+  useSoloEvent("shikaku-open-leaderboard", () => setSheet("leaderboard"));
+  useSoloEvent("pips-game-state", setPipsState);
+
   useEffect(() => {
-    if (!isShikaku) {
-      setShikakuState(DEFAULT_SHIKAKU_STATE);
-      return;
-    }
-
-    const stateHandler = (event: Event) => {
-      setShikakuState((event as CustomEvent<ShikakuMobileState>).detail);
-    };
-    const openLeaderboard = () => setSheet("leaderboard");
-    const openInfo = () => setSheet("info");
-
-    window.addEventListener("shikaku-game-state", stateHandler);
-    window.addEventListener("shikaku-open-leaderboard", openLeaderboard);
-    window.addEventListener("shikaku-open-info", openInfo);
-    return () => {
-      window.removeEventListener("shikaku-game-state", stateHandler);
-      window.removeEventListener("shikaku-open-leaderboard", openLeaderboard);
-      window.removeEventListener("shikaku-open-info", openInfo);
-    };
+    if (!isShikaku) setShikakuState(DEFAULT_SHIKAKU_STATE);
   }, [isShikaku]);
 
   useEffect(() => {
-    if (!isPips) {
-      setPipsState(DEFAULT_PIPS_STATE);
-      return;
-    }
-
-    const stateHandler = (event: Event) => {
-      setPipsState((event as CustomEvent<PipsMobileState>).detail);
-    };
-
-    window.addEventListener("pips-game-state", stateHandler);
-    return () => window.removeEventListener("pips-game-state", stateHandler);
+    if (!isPips) setPipsState(DEFAULT_PIPS_STATE);
   }, [isPips]);
 
   useEffect(() => {
@@ -236,7 +182,7 @@ function MobileLayoutInner() {
   const handleShikakuConfirmedAction = useCallback((action: ConfirmAction) => {
     if (shikakuConfirmAction === action) {
       setShikakuConfirmAction(null);
-      dispatchGameEvent(action === "restart" ? "shikaku-restart-run" : "shikaku-give-up");
+      emitSolo(action === "restart" ? "shikaku-restart-run" : "shikaku-give-up");
       setSheet(null);
       return;
     }
@@ -248,7 +194,7 @@ function MobileLayoutInner() {
   const handlePipsConfirmedAction = useCallback((action: ConfirmAction) => {
     if (pipsConfirmAction === action) {
       setPipsConfirmAction(null);
-      dispatchGameEvent(action === "restart" ? "pips-restart-run" : "pips-give-up");
+      emitSolo(action === "restart" ? "pips-restart-run" : "pips-give-up");
       setSheet(null);
       return;
     }
@@ -291,7 +237,7 @@ function MobileLayoutInner() {
                 detail="Last rectangle"
                 disabled={!shikakuState.canUndo}
                 onClick={() => {
-                  dispatchGameEvent("shikaku-undo");
+                  emitSolo("shikaku-undo");
                   setSheet(null);
                 }}
               />
@@ -301,7 +247,7 @@ function MobileLayoutInner() {
                 detail="Placed rectangles"
                 disabled={!shikakuState.canClear}
                 onClick={() => {
-                  dispatchGameEvent("shikaku-clear-board");
+                  emitSolo("shikaku-clear-board");
                   setSheet(null);
                 }}
               />
@@ -341,7 +287,7 @@ function MobileLayoutInner() {
                     detail="Nudge board"
                     disabled={!shikakuState.canScroll.up}
                     onClick={() => {
-                      dispatchGameEvent("shikaku-scroll-up");
+                      emitSolo("shikaku-scroll-up");
                       setSheet(null);
                     }}
                   />
@@ -351,7 +297,7 @@ function MobileLayoutInner() {
                     detail="Nudge board"
                     disabled={!shikakuState.canScroll.down}
                     onClick={() => {
-                      dispatchGameEvent("shikaku-scroll-down");
+                      emitSolo("shikaku-scroll-down");
                       setSheet(null);
                     }}
                   />
@@ -361,7 +307,7 @@ function MobileLayoutInner() {
                     detail="Nudge board"
                     disabled={!shikakuState.canScroll.left}
                     onClick={() => {
-                      dispatchGameEvent("shikaku-scroll-left");
+                      emitSolo("shikaku-scroll-left");
                       setSheet(null);
                     }}
                   />
@@ -371,7 +317,7 @@ function MobileLayoutInner() {
                     detail="Nudge board"
                     disabled={!shikakuState.canScroll.right}
                     onClick={() => {
-                      dispatchGameEvent("shikaku-scroll-right");
+                      emitSolo("shikaku-scroll-right");
                       setSheet(null);
                     }}
                   />
@@ -410,7 +356,7 @@ function MobileLayoutInner() {
               detail="Last domino"
               disabled={pipsState.phase !== "playing" || !pipsState.canUndo}
               onClick={() => {
-                dispatchGameEvent("pips-undo");
+                emitSolo("pips-undo");
                 setSheet(null);
               }}
             />
@@ -437,7 +383,7 @@ function MobileLayoutInner() {
               detail="Best runs"
               disabled={!pipsState.canLeaderboard}
               onClick={() => {
-                dispatchGameEvent("pips-toggle-leaderboard");
+                emitSolo("pips-toggle-leaderboard");
                 setSheet(null);
               }}
             />
@@ -452,7 +398,7 @@ function MobileLayoutInner() {
                   label="DEV Solve"
                   detail="Reveal answer"
                   onClick={() => {
-                    dispatchGameEvent("pips-dev-solution");
+                    emitSolo("pips-dev-solution");
                     setSheet(null);
                   }}
                 />
@@ -462,7 +408,7 @@ function MobileLayoutInner() {
                   detail="Next puzzle"
                   disabled={!pipsState.canDevSkip}
                   onClick={() => {
-                    dispatchGameEvent("pips-dev-skip");
+                    emitSolo("pips-dev-skip");
                     setSheet(null);
                   }}
                 />

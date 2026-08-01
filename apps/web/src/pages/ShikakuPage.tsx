@@ -26,6 +26,7 @@ import "../styles/shikaku.css";
 import { ShikakuDemo } from "../components/demos/ShikakuDemo";
 import { GameIcon } from "../components/shared/GameIcon";
 import { SoloGameMenu } from "../components/shared/SoloGameMenu";
+import { emitSolo, onSolo, useSoloEvent } from "../lib/solo-bus";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
@@ -1011,64 +1012,43 @@ export function ShikakuPage() {
       if (showScrollControls) scrollApi?.doScroll(160, 0);
     };
 
-    window.addEventListener("shikaku-undo", handleUndo);
-    window.addEventListener("shikaku-clear-board", handleClear);
-    window.addEventListener("shikaku-restart-run", handleRestart);
-    window.addEventListener("shikaku-give-up", handleGiveUp);
-    window.addEventListener("shikaku-toggle-leaderboard", handleLeaderboard);
-    window.addEventListener("shikaku-scroll-up", handleScrollUp);
-    window.addEventListener("shikaku-scroll-down", handleScrollDown);
-    window.addEventListener("shikaku-scroll-left", handleScrollLeft);
-    window.addEventListener("shikaku-scroll-right", handleScrollRight);
-    return () => {
-      window.removeEventListener("shikaku-undo", handleUndo);
-      window.removeEventListener("shikaku-clear-board", handleClear);
-      window.removeEventListener("shikaku-restart-run", handleRestart);
-      window.removeEventListener("shikaku-give-up", handleGiveUp);
-      window.removeEventListener("shikaku-toggle-leaderboard", handleLeaderboard);
-      window.removeEventListener("shikaku-scroll-up", handleScrollUp);
-      window.removeEventListener("shikaku-scroll-down", handleScrollDown);
-      window.removeEventListener("shikaku-scroll-left", handleScrollLeft);
-      window.removeEventListener("shikaku-scroll-right", handleScrollRight);
-    };
+    const off = [
+      onSolo("shikaku-undo", handleUndo),
+      onSolo("shikaku-clear-board", handleClear),
+      onSolo("shikaku-restart-run", handleRestart),
+      onSolo("shikaku-give-up", handleGiveUp),
+      onSolo("shikaku-toggle-leaderboard", handleLeaderboard),
+      onSolo("shikaku-scroll-up", handleScrollUp),
+      onSolo("shikaku-scroll-down", handleScrollDown),
+      onSolo("shikaku-scroll-left", handleScrollLeft),
+      onSolo("shikaku-scroll-right", handleScrollRight),
+    ];
+    return () => off.forEach((unsubscribe) => unsubscribe());
   }, [canClear, canGiveUp, canRestart, canUndo, clearPlacedRects, difficulty, fetchLeaderboard, giveUp, lbView, restartCurrentRun, scrollApi, showScrollControls, undo]);
 
-  // Listen for sidebar infinite mode toggle
-  useEffect(() => {
-    const handler = () => {
-      if (phase === "menu") {
-        // Ranked / endless / seed are one choice, so leave seed when toggling.
-        setSeedMode(false);
-        setInfiniteMode((v) => !v);
-      }
-    };
-    window.addEventListener("shikaku-toggle-infinite", handler);
-    return () => window.removeEventListener("shikaku-toggle-infinite", handler);
-  }, [phase]);
+  /* The sidebar used to carry its own infinite-mode toggle, driven by a
+     shikaku-toggle-infinite event and a shikaku-infinite-state broadcast.
+     That control is gone; the mode selector in SoloGameMenu is the only way
+     in now, so both events and their handlers went with it. */
 
-  // Broadcast game state so sidebar knows mode + phase
+  // Broadcast game state so the sidebar and mobile sheet know mode + phase
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("shikaku-infinite-state", {
-      detail: { enabled: infiniteMode, canToggle: phase === "menu" },
-    }));
-    window.dispatchEvent(new CustomEvent("shikaku-game-state", {
-      detail: {
-        phase,
-        infiniteMode,
-        customMode,
-        challengeMode,
-        showSeedInput: seedMode,
-        difficulty,
-        seed: seed ?? null,
-        canUndo,
-        canClear,
-        canRestart,
-        canGiveUp,
-        canLeaderboard,
-        showScrollControls,
-        canScroll,
-      },
-    }));
+    emitSolo("shikaku-game-state", {
+      phase,
+      infiniteMode,
+      customMode,
+      challengeMode,
+      showSeedInput: seedMode,
+      difficulty,
+      seed: seed ?? null,
+      canUndo,
+      canClear,
+      canRestart,
+      canGiveUp,
+      canLeaderboard,
+      showScrollControls,
+      canScroll,
+    });
   }, [infiniteMode, phase, customMode, challengeMode, seedMode, difficulty, seed, canUndo, canClear, canRestart, canGiveUp, canLeaderboard, showScrollControls, canScroll]);
 
   useEffect(() => {
@@ -1400,7 +1380,7 @@ export function ShikakuPage() {
               onStart={startFromMenu}
               onOpenLeaderboard={() => {
                 if (isMobile) {
-                  window.dispatchEvent(new CustomEvent("shikaku-open-leaderboard"));
+                  emitSolo("shikaku-open-leaderboard");
                 } else {
                   setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
                 }
@@ -1693,7 +1673,7 @@ export function ShikakuPage() {
                 className="btn btn-muted game-action-btn"
                 onClick={() => {
                   if (isMobile) {
-                    window.dispatchEvent(new CustomEvent("shikaku-open-leaderboard"));
+                    emitSolo("shikaku-open-leaderboard");
                   } else {
                     setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
                   }
@@ -2078,10 +2058,15 @@ function ShikakuGrid({
     el.addEventListener("touchstart", handleTouchStart, { passive: false });
     el.addEventListener("touchmove", handleTouchMove, { passive: false });
     el.addEventListener("touchend", handleTouchEnd, { passive: false });
+    // iOS fires touchcancel instead of touchend when the system takes over
+    // (incoming call, edge gesture). Without this the drag state stays set
+    // and the next touch starts from a stale cell.
+    el.addEventListener("touchcancel", handleTouchEnd, { passive: false });
     return () => {
       el.removeEventListener("touchstart", handleTouchStart);
       el.removeEventListener("touchmove", handleTouchMove);
       el.removeEventListener("touchend", handleTouchEnd);
+      el.removeEventListener("touchcancel", handleTouchEnd);
       stopAutoScroll();
     };
   }, [startAutoScroll, stopAutoScroll]);
