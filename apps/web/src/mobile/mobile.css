@@ -19,7 +19,7 @@
 .m-shell .toast {
   font-size: 0.85rem;
   padding: 0.65rem 0.85rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   gap: 0.5rem;
   background: rgba(30, 30, 30, 0.72);
   backdrop-filter: blur(16px) saturate(1.4);
@@ -187,7 +187,7 @@
   border: none;
   background: transparent;
   color: var(--secondary);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
   position: relative;
@@ -227,7 +227,7 @@
   border-radius: 99px;
   background: var(--destructive);
   color: #fff;
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -246,14 +246,12 @@
   padding-bottom: 1.5rem;
 }
 
-/* ── Mobile Cards ────────────────────────────────────────── */
+/* ── Mobile Cards ──────────────────────────────────────────
+   Surface comes from components.css; radius matches desktop .card. */
 .m-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-xl);
   padding: 1rem;
   margin-bottom: 0.75rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .m-card--flush {
@@ -278,7 +276,7 @@
 }
 
 .m-section-count {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   background: var(--muted);
   border-radius: 99px;
   padding: 0.1rem 0.35rem;
@@ -404,7 +402,7 @@
   gap: 0.2rem;
   padding: 0.15rem 0.4rem;
   border-radius: 99px;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 700;
   background: var(--muted);
   color: var(--muted-foreground);
@@ -461,7 +459,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--text);
   flex-shrink: 0;
@@ -489,7 +487,7 @@
 }
 
 .m-player-you {
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   color: var(--primary);
   font-weight: 600;
 }
@@ -761,7 +759,7 @@
 .m-table th {
   text-align: left;
   font-weight: 700;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--secondary);
@@ -895,13 +893,11 @@
   gap: 0.5rem;
 }
 
+/* Surface from components.css; radius matches desktop .home-card. */
 .m-game-card {
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--card);
+  border-radius: var(--radius-2xl);
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
@@ -932,7 +928,7 @@
 }
 
 .m-game-tag {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 600;
   padding: 0.12rem 0.4rem;
   border-radius: 99px;
@@ -1053,7 +1049,7 @@
 
 .m-recent-status {
   margin-left: auto;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--secondary);
 }
 
@@ -1097,7 +1093,7 @@
   width: 2.5rem;
   background: var(--muted);
   font-weight: 800;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--secondary);
   flex-shrink: 0;
 }
@@ -1114,7 +1110,7 @@
 }
 
 .m-cr-progress {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   color: var(--secondary);
 }
 
@@ -1166,7 +1162,7 @@
 }
 
 .m-cr-idx {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--secondary);
   width: 1.2rem;
@@ -1276,7 +1272,8 @@
   background: transparent;
   border: none;
   color: var(--text);
-  font-size: 0.85rem;
+  /* 16px exactly: iOS Safari zooms the page on focus below this */
+  font-size: 16px;
   font-weight: 600;
   outline: none;
   padding: 0;
@@ -1296,7 +1293,7 @@
 }
 
 .m-cr-remote-draft-live {
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1349,14 +1346,14 @@
 }
 
 .m-cr-slot-tag {
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--secondary);
   text-transform: uppercase;
 }
 
 .m-cr-solver-tag {
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   font-weight: 600;
   padding: 0.05rem 0.3rem;
   border-radius: 99px;
@@ -1373,7 +1370,7 @@
 }
 
 .m-cr-letters-count {
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   color: var(--secondary);
 }
 
@@ -1448,11 +1445,12 @@
   border: 1px solid var(--border);
   background: var(--input);
   color: var(--text);
-  font-size: 0.85rem;
+  /* 16px exactly: iOS Safari zooms the page on focus below this */
+  font-size: 16px;
 }
 
 .m-cr-submit-tag {
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   color: var(--secondary);
   font-weight: 600;
 }
@@ -1533,8 +1531,8 @@
 
 .m-cr-round-word {
   padding: 0.1rem 0.3rem;
-  border-radius: 4px;
-  font-size: 0.65rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
@@ -1565,7 +1563,7 @@
 }
 
 .m-shade-clue-tag {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--secondary);
@@ -1615,7 +1613,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  /* 16px exactly: iOS Safari zooms the page on focus below this */
+  font-size: 16px;
   font-weight: 600;
   color: var(--secondary);
 }
@@ -1623,7 +1622,7 @@
 .m-shade-preview-swatch {
   width: 2rem;
   height: 2rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 2px solid var(--border);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
@@ -1640,7 +1639,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--secondary);
   justify-content: center;
   margin-top: 0.5rem;
@@ -1655,7 +1654,7 @@
 .m-shade-scoring-swatch {
   width: 0.75rem;
   height: 0.75rem;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .m-shade-scoring-swatch--5 { background: hsla(120, 80%, 45%, 0.4); }
@@ -1852,7 +1851,7 @@
 }
 
 .m-tag {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 600;
   padding: 0.15rem 0.45rem;
   border-radius: 99px;
@@ -1872,26 +1871,8 @@
   color: var(--card-accent, var(--primary));
 }
 
-.m-game-card--imposter {
-  border-color: color-mix(in srgb, #7eb8ff 18%, var(--border));
-  --card-accent: #7eb8ff;
-}
-.m-game-card--password {
-  border-color: color-mix(in srgb, #a78bfa 18%, var(--border));
-  --card-accent: #a78bfa;
-}
-.m-game-card--chain {
-  border-color: color-mix(in srgb, #34d399 18%, var(--border));
-  --card-accent: #34d399;
-}
-.m-game-card--shade {
-  border-color: color-mix(in srgb, #f472b6 18%, var(--border));
-  --card-accent: #f472b6;
-}
-.m-game-card--location {
-  border-color: color-mix(in srgb, #f59e0b 18%, var(--border));
-  --card-accent: #f59e0b;
-}
+/* --card-accent for each game is set in components.css, shared with the
+   desktop .home-card--* variants. The border derives from it there too. */
 
 .m-game-card--route-highlight {
   border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 62%, var(--border));
@@ -1966,7 +1947,7 @@
 .m-data-table th {
   text-align: left;
   font-weight: 700;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--secondary);
@@ -2109,7 +2090,7 @@
 .m-badge-small {
   display: inline-flex;
   align-items: center;
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   font-weight: 600;
   padding: 0.05rem 0.3rem;
   border-radius: 99px;
@@ -2315,7 +2296,7 @@
   flex-wrap: wrap;
   gap: 0.2rem;
   padding-left: 1.85rem;
-  font-size: 0.55rem;
+  font-size: 0.7rem;
 }
 
 .m-cr-vs-avatar {
@@ -2344,7 +2325,7 @@
 
 .m-cr-vs-name { font-size: 0.8rem; font-weight: 700; }
 .m-cr-vs-score { font-size: 1.25rem; font-weight: 800; color: var(--primary); }
-.m-cr-vs-progress { font-size: 0.65rem; color: var(--secondary); }
+.m-cr-vs-progress { font-size: 0.7rem; color: var(--secondary); }
 
 .m-cr-vs-middle {
   display: flex;
@@ -2355,7 +2336,7 @@
 }
 
 .m-cr-vs-label { font-weight: 800; font-size: 0.75rem; color: var(--secondary); }
-.m-cr-vs-round { font-size: 0.6rem; color: var(--secondary); }
+.m-cr-vs-round { font-size: 0.7rem; color: var(--secondary); }
 .m-cr-done-badge { color: #4ade80; font-weight: 800; font-size: 1rem; }
 
 .m-winner-icon { font-size: 1.5rem; }
@@ -2364,7 +2345,7 @@
 .m-cr-round-chain { flex: 1; }
 
 .m-cr-round-chain-label {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--secondary);
   text-transform: uppercase;
@@ -2576,7 +2557,7 @@
 .m-cursor-scale-control {
   padding: 0.6rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--foreground) 3%, transparent);
   transition: opacity 0.15s ease;
 }
@@ -2613,6 +2594,16 @@
   display: block;
   width: 100%;
   accent-color: var(--primary);
+}
+
+/* CustomCursor bails out unless (pointer: fine), so on a touch device
+   these controls change nothing. The mobile layout is width-based, so a
+   narrow desktop window still gets them, which is why this is a pointer
+   query and not just a mobile-only rule. */
+@media (pointer: coarse) {
+  .m-options-group--cursor {
+    display: none;
+  }
 }
 
 /* ─── Mobile Sound Customize Dropdown ────────────────── */
@@ -2653,7 +2644,7 @@
   gap: 0.5rem;
   margin-top: 0.4rem;
   padding: 0.55rem 0.65rem;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 30%, transparent);
 }
@@ -2765,7 +2756,7 @@
   flex-direction: column;
   gap: 0.1rem;
   padding: 0.3rem 0.45rem;
-  border-radius: 0.45rem;
+  border-radius: var(--radius-md);
 }
 
 .m-chat-msg--me {
@@ -2806,7 +2797,7 @@
   gap: 0.15rem;
   padding: 0.05rem 0.3rem;
   border-radius: 99px;
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -2831,7 +2822,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.7rem;
-  border-radius: 0.7rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 26%, transparent);
   margin-bottom: 0.5rem;
@@ -2845,7 +2836,7 @@
 }
 
 .m-info-session-label {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -2854,7 +2845,7 @@
 
 .m-info-session-helper {
   margin: 0;
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   line-height: 1.35;
   color: var(--secondary);
 }
@@ -2862,10 +2853,10 @@
 .m-info-session-id {
   min-width: 0;
   padding: 0.6rem 0.65rem;
-  border-radius: 0.55rem;
+  border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
   background: color-mix(in srgb, black 10%, transparent);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   line-height: 1.45;
   font-family: "Geist Mono", monospace;
   color: var(--foreground);
@@ -2884,7 +2875,7 @@
   background: transparent;
   color: var(--secondary);
   cursor: pointer;
-  border-radius: 0.45rem;
+  border-radius: var(--radius-md);
   font-size: 0.7rem;
   font-weight: 650;
   line-height: 1;
@@ -2943,7 +2934,7 @@
   font-size: 0.78rem;
   font-weight: 500;
   padding: 0.45rem 0.65rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--primary);
   background: color-mix(in srgb, var(--primary) 6%, transparent);
   color: var(--foreground);
@@ -2973,7 +2964,7 @@
 }
 
 .m-info-current-page-kicker {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -2996,7 +2987,7 @@
 
 /* Section titles */
 .m-info-section-title {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -3019,7 +3010,7 @@
   display: flex;
   gap: 0.55rem;
   padding: 0.5rem 0.6rem;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 30%, transparent);
 }
@@ -3027,7 +3018,7 @@
 .m-info-game-icon {
   width: 28px;
   height: 28px;
-  border-radius: 0.4rem;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3054,7 +3045,7 @@
 }
 
 .m-info-game-players {
-  font-size: 0.56rem;
+  font-size: 0.7rem;
   font-weight: 600;
   padding: 0.06rem 0.3rem;
   border-radius: 999px;
@@ -3063,7 +3054,7 @@
 }
 
 .m-info-game-desc {
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   color: var(--secondary);
   line-height: 1.4;
 }
@@ -3082,7 +3073,7 @@
 }
 
 .m-info-feedback-label {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -3109,7 +3100,7 @@
   font-weight: 650;
   padding: 0.34rem 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--muted) 34%, transparent);
 }
 
@@ -3179,7 +3170,7 @@
   border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   padding: 0.25rem 0.6rem;
   border-radius: 99px;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
   font-family: "SF Mono", "Menlo", monospace;
   letter-spacing: 0.12em;
@@ -3244,7 +3235,7 @@
   right: -6px;
   background: #f87171;
   color: #fff;
-  font-size: 0.5rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 0.05rem 0.25rem;
   border-radius: 99px;
@@ -3260,7 +3251,6 @@
   z-index: 200;
   animation: m-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.m-sheet-backdrop--closing,
 .m-sheet-backdrop[data-state="closed"] {
   animation: m-fade-out 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
@@ -3274,8 +3264,8 @@
   background: color-mix(in srgb, var(--card) 92%, transparent);
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  border-top-left-radius: 1rem;
-  border-top-right-radius: 1rem;
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
   max-height: 85dvh;
   display: flex;
   flex-direction: column;
@@ -3285,7 +3275,6 @@
   overscroll-behavior: contain;
   outline: none;
 }
-.m-sheet--closing,
 .m-sheet[data-state="closed"] {
   animation: m-slide-down 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
@@ -3356,7 +3345,7 @@
   gap: 0.75rem;
   padding: 0.85rem;
   border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   background:
     radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 48%),
     color-mix(in srgb, var(--card) 82%, transparent);
@@ -3384,7 +3373,7 @@
   width: 2.6rem;
   height: 2.6rem;
   flex: 0 0 auto;
-  border-radius: 0.85rem;
+  border-radius: var(--radius-xl);
   color: var(--primary);
   background: color-mix(in srgb, var(--primary) 13%, transparent);
 }
@@ -3433,7 +3422,7 @@
   gap: 0.55rem;
   padding: 0.65rem;
   border: 1px solid var(--border);
-  border-radius: 0.9rem;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--card) 78%, transparent);
   color: var(--foreground);
   text-align: left;
@@ -3464,7 +3453,7 @@
   width: 2rem;
   height: 2rem;
   flex: 0 0 auto;
-  border-radius: 0.7rem;
+  border-radius: var(--radius-lg);
   color: var(--primary);
   background: color-mix(in srgb, var(--primary) 11%, transparent);
 }
@@ -3491,7 +3480,7 @@
 
 .m-game-action-detail {
   color: var(--secondary);
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   font-weight: 600;
   line-height: 1.25;
 }
@@ -3604,37 +3593,7 @@
   font-size: 0.9rem;
 }
 
-/* ── Game theme variables for mobile (mirrors desktop styles.css) ── */
-[data-game-theme="imposter"] {
-  --primary: #7eb8ff;
-  --primary-foreground: #181a1b;
-  --game-accent: #7eb8ff;
-  --game-bg: #1d2430;
-}
-[data-game-theme="password"] {
-  --primary: #a78bfa;
-  --primary-foreground: #181a1b;
-  --game-accent: #a78bfa;
-  --game-bg: #21272e;
-}
-[data-game-theme="chain"] {
-  --primary: #34d399;
-  --primary-foreground: #181a1b;
-  --game-accent: #34d399;
-  --game-bg: #1a2e26;
-}
-[data-game-theme="shade"] {
-  --primary: #f472b6;
-  --primary-foreground: #181a1b;
-  --game-accent: #f472b6;
-  --game-bg: #2a1a2e;
-}
-[data-game-theme="location"] {
-  --primary: #f59e0b;
-  --primary-foreground: #181a1b;
-  --game-accent: #f59e0b;
-  --game-bg: #2e2418;
-}
+/* The [data-game-theme] palette lives in base.css and applies here too. */
 
 /* ── Themed background gradient (matches desktop game-page) ── */
 .m-page[data-game-theme] {
@@ -3699,7 +3658,7 @@
   padding: 0.5rem 0.75rem;
   margin: 0 0.25rem 0.5rem;
   background: color-mix(in srgb, var(--primary) 8%, transparent);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
@@ -3734,7 +3693,7 @@
 .m-lb-view-toggle {
   display: flex;
   gap: 0;
-  border-radius: 0.4rem;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--border);
 }
@@ -3743,7 +3702,7 @@
   background: none;
   border: none;
   padding: 0.3rem 0.65rem;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--muted-foreground);
   cursor: pointer;
@@ -3756,7 +3715,7 @@
 }
 
 .m-lb-count {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
@@ -3834,7 +3793,7 @@
 }
 
 .m-lb-rank {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: var(--muted-foreground);
   min-width: 1.8rem;
@@ -3863,7 +3822,7 @@
 }
 
 .m-lb-you {
-  font-size: 0.5rem;
+  font-size: 0.7rem;
   font-weight: 800;
   background: var(--primary);
   color: var(--primary-foreground);
@@ -3882,7 +3841,7 @@
 }
 
 .m-lb-time {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--muted-foreground);
   min-width: 3rem;
@@ -3896,7 +3855,7 @@
   color: var(--muted-foreground);
   cursor: pointer;
   padding: 0.35rem;
-  border-radius: 0.3rem;
+  border-radius: var(--radius-sm);
   display: flex;
   flex-shrink: 0;
   transition: color 0.15s;
@@ -3966,7 +3925,7 @@
 .m-lb-skel-block {
   display: inline-block;
   height: 0.65rem;
-  border-radius: 0.2rem;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--muted-foreground) 15%, transparent);
   animation: m-lb-shimmer 1.2s ease-in-out infinite;
 }
@@ -4131,7 +4090,7 @@
   border-radius: 99px;
   border: 1px solid var(--border);
   background: transparent;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -4200,15 +4159,13 @@
 /* ══════════════════════════════════════════════════════════════
    Solo game cards (mobile home)
    ══════════════════════════════════════════════════════════════ */
+/* Surface from components.css; radius matches desktop .solo-card. */
 .m-solo-card {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.85rem;
-  border-radius: 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 18%, var(--border));
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--card-accent, var(--primary)) 9%, var(--card)) 0%, var(--card) 100%);
+  border-radius: var(--radius-2xl);
   text-decoration: none;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
@@ -4218,23 +4175,15 @@
   background: color-mix(in srgb, var(--card-accent, var(--primary)) 12%, var(--card));
   transform: scale(0.99);
 }
-.m-solo-card--shikaku {
-  --card-accent: #34d399;
+/* --card-accent for each solo card is set in components.css. The title
+   takes --foreground like the desktop .solo-card-title does; only the
+   icon carries the accent, which keeps it readable in light mode. */
+.m-solo-card-icon {
+  color: var(--card-accent, var(--primary));
 }
-.m-solo-card--shikaku .m-solo-card-icon { color: #34d399; }
-.m-solo-card--shikaku .m-solo-card-title { color: #34d399; }
-
-.m-solo-card--pips {
-  --card-accent: #fb923c;
+.m-solo-card-title {
+  color: var(--foreground);
 }
-.m-solo-card--pips .m-solo-card-icon { color: #fb923c; }
-.m-solo-card--pips .m-solo-card-title { color: #fb923c; }
-
-.m-solo-card--ideas {
-  --card-accent: #93c5fd;
-}
-.m-solo-card--ideas .m-solo-card-icon { color: #93c5fd; }
-.m-solo-card--ideas .m-solo-card-title { color: #93c5fd; }
 
 .m-solo-card-icon {
   flex-shrink: 0;
@@ -4243,7 +4192,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--card-accent, var(--secondary)) 10%, transparent);
 }
 .m-solo-card-body {
@@ -4263,12 +4212,12 @@
 }
 .m-solo-card-cta {
   flex-shrink: 0;
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 0.44rem 0.7rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 25%, transparent);
   background: color-mix(in srgb, var(--card-accent, var(--primary)) 14%, transparent);
   color: var(--foreground);
@@ -4523,7 +4472,7 @@
   align-items: stretch;
   gap: 0.45rem;
   padding: 0.65rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   background: color-mix(in srgb, var(--card) 70%, transparent);
 }
@@ -4560,7 +4509,7 @@
   flex-direction: column;
   gap: 0.55rem;
   padding: 0.75rem;
-  border-radius: 0.8rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   background: color-mix(in srgb, var(--card) 74%, transparent);
 }
@@ -4720,7 +4669,7 @@
 .m-shade-legend-details {
   margin: 0.45rem 0 0.75rem;
   padding: 0.2rem 0.6rem 0.55rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
   background: color-mix(in srgb, var(--card) 62%, transparent);
 }
@@ -4748,7 +4697,7 @@
 
 .m-shade-score-table--compact {
   padding: 0.65rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   background: color-mix(in srgb, var(--card) 70%, transparent);
 }
@@ -4764,7 +4713,7 @@
   flex-direction: column;
   gap: 0.25rem;
   padding: 0.65rem 0.7rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--primary) 10%, var(--card));
   border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
 }
@@ -4786,7 +4735,7 @@
 
 .locsig-mobile-map-frame {
   overflow: hidden;
-  border-radius: 0.8rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   contain: paint;
 }

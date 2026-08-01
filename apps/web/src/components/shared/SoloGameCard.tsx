@@ -10,7 +10,6 @@ export interface SoloGameDef {
   title: string;
   description: string;
   accent: string;
-  bgGradient: string;
   preview: ReactNode;
   href?: string;
   actionLabel?: string;
@@ -32,7 +31,7 @@ export function SoloGameCard({ game, onDemo }: { game: SoloGameDef; onDemo?: (de
     <div
       className={`solo-card${canPlay ? " solo-card--playable" : " solo-card--disabled"}${game.comingSoon ? " solo-card--coming-soon" : ""}`}
       data-game-theme={game.gameSlug}
-      style={{ "--solo-accent": game.accent, "--solo-bg": game.bgGradient } as CSSProperties}
+      style={{ "--card-accent": game.accent } as CSSProperties}
     >
       {game.href && isExternal && (
         <a

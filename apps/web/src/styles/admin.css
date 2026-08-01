@@ -37,7 +37,7 @@
 }
 
 .admin-scores-card {
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--card) 92%, transparent);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
@@ -162,7 +162,7 @@
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 40%, transparent);
   color: inherit;
-  border-radius: 0.85rem;
+  border-radius: var(--radius-xl);
   padding: 0.85rem 0.9rem;
   text-align: left;
   cursor: pointer;

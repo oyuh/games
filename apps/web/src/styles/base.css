@@ -84,7 +84,36 @@
   --ring: #666;
   --bg: #181a1b;
   --text: #f5f5f5;
-  --radius: 0.625rem;
+
+  /* Corner radius. One knob for the whole site: 1 is the old rounded-off
+     look, 0.5 is half of it. Everything with a corner pulls from the
+     --radius-* scale below. Pills and circles (999px, 50%) stay out of it. */
+  --radius-scale: 0.5;
+  --radius: var(--radius-md); /* legacy alias, still used in a lot of places */
+
+  /* Card surfaces. The site's card look is built from these four pieces:
+     an accent wash, a faint two-axis grid, a base fill, and a shadow.
+     components.css assembles them; themes.css swaps them for light mode.
+     Every card on the site, desktop and mobile, reads from here. */
+  --surface-bg: linear-gradient(160deg, #232323 0%, #1a1a1a 100%);
+  --surface-grid: rgba(255, 255, 255, 0.028);
+  --surface-grid-soft: rgba(255, 255, 255, 0.02);
+  --surface-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  --surface-shadow-hover: 0 3px 10px rgba(0, 0, 0, 0.24);
+}
+
+/* The same scale backs Tailwind's rounded-* utilities so class-based and
+   hand-written CSS can't drift apart. static = always emitted, since most
+   of these are referenced from plain CSS that Tailwind doesn't scan. */
+@theme static {
+  --radius-xs: calc(0.25rem * var(--radius-scale));
+  --radius-sm: calc(0.375rem * var(--radius-scale));
+  --radius-md: calc(0.5rem * var(--radius-scale));
+  --radius-lg: calc(0.75rem * var(--radius-scale));
+  --radius-xl: calc(1rem * var(--radius-scale));
+  --radius-2xl: calc(1.25rem * var(--radius-scale));
+  --radius-3xl: calc(1.5rem * var(--radius-scale));
+  --radius-4xl: calc(2rem * var(--radius-scale));
 }
 
 /* ── Game page theming: per-game --primary overrides ────────── */
@@ -199,7 +228,7 @@ body {
 }
 ::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   transition: background 0.3s;
 }
 *:hover::-webkit-scrollbar-thumb {

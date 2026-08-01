@@ -102,7 +102,7 @@
   background: var(--primary);
   color: var(--background, var(--primary-foreground));
   border: none;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   font-size: 0.9rem;
   font-weight: 800;
   padding: 0.15rem 0.45rem;
