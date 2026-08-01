@@ -1521,7 +1521,7 @@
 }
 
 .solo-opt-hint {
-  font-size: 0.63rem;
+  font-size: 0.7rem;
   font-weight: 600;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
@@ -1724,6 +1724,15 @@
   text-underline-offset: 3px;
 }
 
+/* These sit at 28px tall, under the 44px touch minimum. Pad them out on
+   touch only, so the desktop menu keeps its tight spacing. */
+@media (pointer: coarse) {
+  .solo-menu-link {
+    min-height: 44px;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
 @media (max-width: 600px) {
   .solo-menu {
     gap: 1.1rem;
@@ -1738,9 +1747,9 @@
     font-size: 0.76rem;
   }
 
-  .solo-opt-hint {
-    font-size: 0.58rem;
-  }
+  /* .solo-opt-hint used to shrink to 0.58rem here, which made it smaller
+     on exactly the screens where it is hardest to read. It keeps the
+     0.7rem base size now. */
 
   .solo-ring {
     width: 18px;

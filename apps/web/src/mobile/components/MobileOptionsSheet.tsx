@@ -263,7 +263,7 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
         )}
       </div>
 
-      <div className="m-options-group">
+      <div className="m-options-group m-options-group--cursor">
         <span className="m-options-label">Cursor</span>
         <div className="m-options-row">
           <button

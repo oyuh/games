@@ -87,6 +87,25 @@ body.has-sync-wake-toast .shell > .toast-container {
   color: var(--foreground);
 }
 
+/* The X is a 20px icon, well under the 44px touch minimum. Grow the hit
+   area with a pseudo-element rather than the button, so it stays visually
+   small. Fine pointers don't need it and it would only steal clicks from
+   the toast body, so it's coarse-pointer only. */
+@media (pointer: coarse) {
+  .toast-dismiss {
+    position: relative;
+  }
+  .toast-dismiss::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+}
+
 /* ─── Sync Wake Toast (persistent, rendered by SyncWakeToast) ── */
 
 .sync-wake-toast-container {
