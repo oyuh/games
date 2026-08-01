@@ -1,54 +1,35 @@
-import { decryptSecret, isEncrypted, mutators, queries } from "@games/shared";
-import { optimistic, useQuery, useZero } from "../../lib/zero";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { mutators } from "@games/shared";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { FiSend, FiClock, FiSkipForward } from "react-icons/fi";
-import { usePasswordLiveTyping } from "../../hooks/usePasswordLiveTyping";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
-import { useGameSecret } from "../../lib/game-secrets";
-import { getSessionRequestHeaders } from "../../lib/session";
-import { buildPasswordPlayerNames, getPasswordPlayerName } from "../../lib/password-names";
-import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
+import { getPasswordPlayerName } from "../../lib/password-names";
+import { usePasswordGame } from "../../hooks/usePasswordGame";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
 export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
-  const zero = useZero();
-  const params = useParams();
-  const navigate = useNavigate();
-  const gameId = params.id ?? "";
-  const [games] = useQuery(queries.password.byId({ id: gameId }));
-  const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
-  const game = games[0];
-  const isHost = game?.host_id === sessionId;
-  const [clue, setClue] = useState("");
-  const [guess, setGuess] = useState("");
-  const [decryptedActiveWord, setDecryptedActiveWord] = useState<string | null>(null);
-  const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
-  const [fallbackKey, setFallbackKey] = useState<string | null>(null);
-  const [fallbackRetryNonce, setFallbackRetryNonce] = useState(0);
+  const {
+    zero, gameId, game, isHost, names,
+    myTeamIndex, myActiveRound, activeRoundId, isSpectator, liveEntries,
+    clue, guess, handleClueChange, handleGuessChange,
+    submitClue, submitGuess, skipWord, retryWordLoad,
+    decryptedActiveWord, myTeamMembers, myTeamSkips, gameProgress,
+    activeRoundView, roundsForView, navigate,
+  } = usePasswordGame(sessionId);
+
   const clueInputRef = useRef<HTMLInputElement>(null);
   const guessInputRef = useRef<HTMLInputElement>(null);
-  const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
+
+  /* Mobile-only: leaving as a spectator drops the spectator slot. The ref
+     keeps the unmount cleanup from closing over a stale value. */
   const isSpectatorRef = useRef(false);
-  const navHandledRef = useRef(false);
-  const isHostRef = useRef(Boolean(isHost));
-  const phaseRef = useRef(game?.phase);
-
-  isHostRef.current = Boolean(isHost);
-  phaseRef.current = game?.phase;
-
-  const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
-
-  useEffect(() => {
-    const spectating = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
-    isSpectatorRef.current = spectating;
-  }, [game?.spectators, sessionId]);
+  useEffect(() => { isSpectatorRef.current = isSpectator; }, [isSpectator]);
 
   useEffect(() => {
     let active = false;
@@ -66,129 +47,6 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: getPasswordPlayerName(names, id) }))), spectators: game.spectators ?? [] }
       : null
   );
-
-  const myTeamIndex = useMemo(() => {
-    if (!game) return -1;
-    return game.teams.findIndex((t) => t.members.includes(sessionId));
-  }, [game?.teams, sessionId]);
-
-  const myActiveRound = useMemo(() => {
-    if (!game || !game.active_rounds.length || myTeamIndex === -1) return undefined;
-    return game.active_rounds.find((r) => r.teamIndex === myTeamIndex);
-  }, [game?.active_rounds, myTeamIndex]);
-  const activeRoundId = myActiveRound?.roundId ?? (myTeamIndex >= 0 && game ? `legacy-${game.current_round}-${myTeamIndex}` : null);
-  const isSpectator = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
-
-  const { liveEntries, publishDraft, clearDraft } = usePasswordLiveTyping({
-    enabled: Boolean(game?.phase === "playing" && myTeamIndex >= 0 && !isSpectator),
-    gameId,
-    teamIndex: myTeamIndex,
-    sessionId,
-    roundId: activeRoundId,
-  });
-
-  useGameSounds({
-    phase: game?.phase,
-    sessionId,
-    isMyTurn: Boolean(myActiveRound),
-    phaseEndsAt: game?.settings.roundEndsAt,
-  });
-
-  const { decryptValue } = useGameSecret({
-    gameType: "password",
-    gameId,
-    sessionId,
-    enabled: Boolean(game && game.phase !== "lobby")
-  });
-
-  const encryptedActiveWord = myActiveRound?.encryptedWord
-    ?? (myActiveRound?.word && isEncrypted(myActiveRound.word) ? myActiveRound.word : null);
-
-  useEffect(() => {
-    if (!game || game.phase !== "playing" || !encryptedActiveWord || fallbackKey) return;
-    if (myActiveRound?.guesserId === sessionId) return;
-    const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
-    let cancelled = false;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    void fetch(`${apiBase}/api/game-secret/key`, {
-      method: "POST",
-      credentials: "include",
-      headers: getSessionRequestHeaders(sessionId, {
-        "Content-Type": "application/json"
-      }),
-      body: JSON.stringify({ gameType: "password", gameId, sessionId })
-    })
-      .then(async (res) => {
-        if (!res.ok) return null;
-        const data = await res.json() as { key?: string };
-        return data.key ?? null;
-      })
-      .then((key) => {
-        if (!cancelled && key) {
-          setFallbackKey(key);
-        }
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled && !fallbackKey) {
-          retryTimer = setTimeout(() => setFallbackRetryNonce((n) => n + 1), 1500);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-      if (retryTimer) clearTimeout(retryTimer);
-    };
-  }, [game?.phase, encryptedActiveWord, fallbackKey, myActiveRound?.guesserId, sessionId, gameId, fallbackRetryNonce]);
-
-  useEffect(() => {
-    let active = false;
-    const timer = setTimeout(() => {
-      active = true;
-    }, 500);
-
-    return () => {
-      clearTimeout(timer);
-      if (!active) return;
-      if (!isHostRef.current) return;
-      if (phaseRef.current === "results" || phaseRef.current === "ended") return;
-      void zero.mutate(mutators.password.leave({ gameId, sessionId }));
-    };
-  }, [gameId, sessionId, zero]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const encryptedOrPlain = myActiveRound?.word ?? myActiveRound?.encryptedWord ?? null;
-    if (!encryptedOrPlain) {
-      setDecryptedActiveWord(null);
-      return;
-    }
-    void decryptValue(encryptedOrPlain).then(async (value) => {
-      if (cancelled) return;
-      if (value !== null) {
-        setDecryptedActiveWord(value);
-        return;
-      }
-      if (!fallbackKey || !isEncrypted(encryptedOrPlain)) {
-        setDecryptedActiveWord(null);
-        return;
-      }
-      const fallbackValue = await decryptSecret(encryptedOrPlain, fallbackKey).catch(() => null);
-      if (!cancelled) {
-        setDecryptedActiveWord(fallbackValue);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [myActiveRound?.word, myActiveRound?.encryptedWord, decryptValue, fallbackKey]);
-
-  useEffect(() => {
-    setClue("");
-    setGuess("");
-    clearDraft("clue");
-    clearDraft("guess");
-  }, [activeRoundId, clearDraft]);
 
   useEffect(() => {
     if (game?.phase !== "playing" || !myActiveRound) return;
@@ -210,57 +68,6 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
     sessionId,
   ]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const rounds = game?.rounds ?? [];
-    if (rounds.length === 0) {
-      setDecryptedRoundWords({});
-      return;
-    }
-    void Promise.all(
-      rounds.map(async (round, index) => ({
-        index,
-        value: await decryptValue(round.word)
-      }))
-    ).then((rows) => {
-      if (cancelled) return;
-      setDecryptedRoundWords(
-        rows.reduce<Record<number, string | null>>((acc, row) => {
-          acc[row.index] = row.value;
-          return acc;
-        }, {})
-      );
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [game?.rounds, decryptValue]);
-
-  useEffect(() => {
-    if (!game || game.phase !== "playing" || !game.settings.roundEndsAt) return;
-    const remaining = game.settings.roundEndsAt - Date.now();
-    if (remaining <= 0) { void zero.mutate(mutators.password.advanceTimer({ gameId })); return; }
-    const timer = setTimeout(() => { void zero.mutate(mutators.password.advanceTimer({ gameId })); }, remaining + 500);
-    return () => clearTimeout(timer);
-  }, [game?.settings.roundEndsAt, game?.phase, gameId, zero]);
-
-  useEffect(() => { if (game?.phase === "results") navigate(`/password/${game.id}/results`); }, [game?.phase, game?.id, navigate]);
-  useEffect(() => {
-    if (!game) return;
-    if (navHandledRef.current) return;
-    if (game.phase === "ended") { navHandledRef.current = true; showToast("The host ended the game", "info"); navigate("/"); return; }
-    if (game.kicked.includes(sessionId)) { navHandledRef.current = true; showToast("You were kicked from the game", "error"); navigate("/"); }
-  }, [game?.phase, game?.kicked, sessionId, navigate]);
-
-  useEffect(() => {
-    if (!game?.announcement || isHost) return;
-    const prev = prevAnnouncementRef.current;
-    const cur = game.announcement;
-    if (prev && prev.text === cur.text && Math.abs(cur.ts - prev.ts) < 3000) return;
-    prevAnnouncementRef.current = cur;
-    showToast(`📢 ${cur.text}`, "info");
-  }, [game?.announcement, isHost]);
-
   // Countdown timer
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   useEffect(() => {
@@ -274,59 +81,8 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
 
   if (!game) return <MobileGameNotFound theme="password" />;
 
-  const myTeam = myTeamIndex >= 0 ? game.teams[myTeamIndex] : undefined;
-  const myTeamMembers = myTeam?.members ?? [];
-
-  const handleClueChange = (value: string) => {
-    setClue(value);
-    publishDraft("clue", value);
-  };
-
-  const handleGuessChange = (value: string) => {
-    setGuess(value);
-    publishDraft("guess", value);
-  };
-
-  const submitClue = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!clue.trim()) return;
-    try { await optimistic(zero.mutate(mutators.password.submitClue({ gameId, sessionId, clue: clue.trim() }))); setClue(""); clearDraft("clue"); playSoundSubmit(); }
-    catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit clue", "error"); }
-  };
-
-  const submitGuess = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!guess.trim()) return;
-    try { await optimistic(zero.mutate(mutators.password.submitGuess({ gameId, sessionId, guess: guess.trim() }))); setGuess(""); clearDraft("guess"); playSoundSubmit(); }
-    catch (e) { showToast(e instanceof Error ? e.message : "Couldn't submit guess", "error"); }
-  };
-
-  const skipWord = async () => {
-    try { await optimistic(zero.mutate(mutators.password.skipWord({ gameId, sessionId }))); }
-    catch (e) { showToast(e instanceof Error ? e.message : "Couldn't skip word", "error"); }
-  };
-
-  const myTeamSkips = myTeam ? (game.settings.skipsRemaining?.[myTeam.name] ?? 0) : 0;
-  const activeRoundView = myActiveRound
-    ? {
-        ...myActiveRound,
-        roundId: activeRoundId ?? myActiveRound.roundId,
-        clues: myActiveRound.clues ?? [],
-        guesses: myActiveRound.guesses ?? [],
-        guessCount: myActiveRound.guessCount ?? myActiveRound.guesses?.length ?? 0,
-        word: decryptedActiveWord ?? (myActiveRound.word && !isEncrypted(myActiveRound.word) ? myActiveRound.word : null),
-      }
-    : undefined;
-  const roundsForView = game.rounds.map((round, index) => ({
-    ...round,
-    roundId: round.roundId ?? `legacy-${round.round}-${round.teamIndex}`,
-    clues: round.clues ?? [],
-    guesses: round.guesses ?? [],
-    guessCount: round.guessCount ?? round.guesses?.length ?? 0,
-    points: round.points ?? (round.correct ? 1 : 0),
-    word: decryptedRoundWords[index] ?? (isEncrypted(round.word) ? "••••" : round.word),
-  }));
-
+  /* Presentation helpers, mobile-only: the desktop layout renders these
+     details through PasswordActiveRound instead. */
   const formatEntryTime = (ts: number) => new Date(ts).toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
@@ -444,7 +200,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
                     <div className="m-waiting">
                       <div className="m-waiting-pulse" />
                       <p>Loading secret word…</p>
-                      <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => setFallbackRetryNonce((n) => n + 1)}>
+                      <button className="m-btn m-btn-muted" style={{ width: "100%", marginTop: "0.5rem" }} onClick={retryWordLoad}>
                         Retry Sync
                       </button>
                     </div>

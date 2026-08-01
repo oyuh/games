@@ -1,86 +1,29 @@
-import { mutators, queries } from "@games/shared";
-import { optimistic, useQuery, useZero } from "../lib/zero";
+import { mutators } from "@games/shared";
+import { optimistic } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/password.css";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock, FiHelpCircle } from "react-icons/fi";
+import { useState } from "react";
+import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock } from "react-icons/fi";
 import { PasswordHeader } from "../components/password/PasswordHeader";
 import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
-import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
-import { buildPasswordPlayerNames } from "../lib/password-names";
+import { ensureName, leaveCurrentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
 import { PasswordDemo } from "../components/demos/PasswordDemo";
+import { usePasswordBegin } from "../hooks/usePasswordBegin";
 
 function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
-
-  const zero = useZero();
-  const navigate = useNavigate();
-  const params = useParams();
-  const gameId = params.id ?? "";
-  const [games] = useQuery(queries.password.byId({ id: gameId }));
-  const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
-  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
-  const game = games[0];
-  const prevAnnouncementTs = useRef<number | null>(null);
-  const navHandledRef = useRef(false);
+  const {
+    zero, navigate, gameId, game, names, isHost,
+    inGame, isSpectator, activeGameType, activeGameId, inAnotherGame,
+    teamsWithPlayers, canStart, startingGame, startGame,
+    showInSessionModal, setShowInSessionModal,
+    joiningFromOtherGame, setJoiningFromOtherGame,
+  } = usePasswordBegin(sessionId);
   const [showDemo, setShowDemo] = useState(false);
-  const [showInSessionModal, setShowInSessionModal] = useState(false);
-  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
-  const [startingGame, setStartingGame] = useState(false);
-
-  const isHost = game?.host_id === sessionId;
-
-  const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
-
-  useEffect(() => {
-    if (!game) return;
-    addRecentGame({ id: game.id, code: game.code, gameType: "password" });
-
-  }, [game]);
-
-  // Auto-navigate to game when host starts
-  useEffect(() => {
-    if (game?.phase === "playing") {
-      navigate(`/password/${game.id}`);
-    }
-  }, [game?.phase, game?.id, navigate]);
-
-  useEffect(() => {
-    if (!game) return;
-    if (navHandledRef.current) return;
-    if (game.phase === "ended") {
-      navHandledRef.current = true;
-      showToast("The host ended the game", "info");
-      navigate("/");
-      return;
-    }
-    if (game.kicked.includes(sessionId)) {
-      navHandledRef.current = true;
-      showToast("You were kicked from the game", "error");
-      navigate("/");
-    }
-  }, [game?.phase, game?.kicked, sessionId, navigate]);
-
-  // Announcement watcher (skip for host - they sent it)
-  useEffect(() => {
-    if (!game?.announcement) return;
-    if (prevAnnouncementTs.current !== game.announcement.ts) {
-      prevAnnouncementTs.current = game.announcement.ts;
-      if (!isHost) showToast(`📢 ${game.announcement.text}`, "info");
-    }
-  }, [game?.announcement, isHost]);
-
-  useEffect(() => {
-    if (game) return;
-    const timer = setTimeout(() => navigate("/"), 3000);
-    return () => clearTimeout(timer);
-  }, [game, navigate]);
 
   if (!game) {
     return (
@@ -93,15 +36,6 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
       </div>
     );
   }
-
-  const inGame = game.teams.some((t) => t.members.includes(sessionId));
-  const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
-  const teamsWithPlayers = game.teams.filter((t) => t.members.length > 0).length;
-  const canStart = isHost && teamsWithPlayers >= 2;
-  const mySession = mySessionRows[0];
-  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
-  const activeGameId = mySession?.game_id ?? null;
-  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "password" || activeGameId !== gameId));
 
   const joinGame = async () => {
     await ensureName(zero, sessionId);
@@ -143,21 +77,6 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => setJoiningFromOtherGame(false));
-  };
-
-  const startGame = async () => {
-    if (!isHost || !canStart || startingGame) return;
-    setStartingGame(true);
-    try {
-      const result = await optimistic(zero.mutate(mutators.password.start({ gameId, hostId: sessionId })));
-      if (result.type === "error") {
-        showToast(result.error.message, "error");
-      }
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Couldn't start game", "error");
-    } finally {
-      setStartingGame(false);
-    }
   };
 
   return (

@@ -1,105 +1,19 @@
-import { isEncrypted, mutators, queries, gameCategoryLabels } from "@games/shared";
-import { useQuery, useZero } from "../lib/zero";
+import { mutators, gameCategoryLabels } from "@games/shared";
 import "../styles/game-shared.css";
 import "../styles/password.css";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 import { FiAward, FiTag } from "react-icons/fi";
 import { PasswordRoundsTable } from "../components/password/PasswordRoundsTable";
-import { buildPasswordPlayerNames } from "../lib/password-names";
 import { showToast } from "../lib/toast";
-import { playGameOver } from "../lib/sounds";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordResultsPage } from "../mobile/pages/MobilePasswordResultsPage";
 import { GameIcon } from "../components/shared/GameIcon";
-import { useGameSecret } from "../lib/game-secrets";
+import { PASSWORD_TEAM_COLORS, usePasswordResults } from "../hooks/usePasswordResults";
 
 function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
-
-  const zero = useZero();
-  const params = useParams();
-  const navigate = useNavigate();
-  const gameId = params.id ?? "";
-  const [games] = useQuery(queries.password.byId({ id: gameId }));
-  const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
-  const game = games[0];
-  const prevAnnouncementTs = useRef<number | null>(null);
-  const navHandledRef = useRef(false);
-  const playedResultsSoundRef = useRef(false);
-  const [decryptedRoundWords, setDecryptedRoundWords] = useState<Record<number, string | null>>({});
-
-  const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
-  const { decryptValue } = useGameSecret({
-    gameType: "password",
-    gameId,
-    sessionId,
-    enabled: Boolean(game && game.phase === "results"),
-  });
-
-  useEffect(() => {
-    if (!game) return;
-    if (navHandledRef.current) return;
-    if (game.phase === "ended") {
-      navHandledRef.current = true;
-      showToast("The host ended the game", "info");
-      navigate("/");
-      return;
-    }
-    if (game.kicked.includes(sessionId)) {
-      navHandledRef.current = true;
-      showToast("You were kicked from the game", "error");
-      navigate("/");
-    }
-  }, [game?.phase, game?.kicked, sessionId, navigate]);
-
-  // Announcement watcher (skip for host - they sent it)
-  useEffect(() => {
-    if (!game?.announcement) return;
-    if (prevAnnouncementTs.current !== game.announcement.ts) {
-      prevAnnouncementTs.current = game.announcement.ts;
-      if (game.host_id !== sessionId) showToast(`📢 ${game.announcement.text}`, "info");
-    }
-  }, [game?.announcement, game?.host_id, sessionId]);
-
-  useEffect(() => {
-    if (game) return;
-    const timer = setTimeout(() => navigate("/"), 3000);
-    return () => clearTimeout(timer);
-  }, [game, navigate]);
-
-  useEffect(() => {
-    if (!game || playedResultsSoundRef.current || game.phase !== "results") {
-      return;
-    }
-    playedResultsSoundRef.current = true;
-    playGameOver();
-  }, [game?.phase, game]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const rounds = game?.rounds ?? [];
-    if (rounds.length === 0) {
-      setDecryptedRoundWords({});
-      return;
-    }
-    void Promise.all(
-      rounds.map(async (round, index) => ({
-        index,
-        value: await decryptValue(round.word),
-      }))
-    ).then((rows) => {
-      if (cancelled) return;
-      setDecryptedRoundWords(
-        rows.reduce<Record<number, string | null>>((acc, row) => {
-          acc[row.index] = row.value;
-          return acc;
-        }, {})
-      );
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [game?.rounds, decryptValue]);
+  const {
+    zero, gameId, game, names, navigate,
+    isHost, sortedScores, topScore, winners, isTie, roundsForView,
+  } = usePasswordResults(sessionId);
 
   if (!game) {
     return (
@@ -113,16 +27,7 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const isHost = game.host_id === sessionId;
-  const sortedScores = Object.entries(game.scores).sort((a, b) => b[1] - a[1]);
-  const topScore = sortedScores[0]?.[1] ?? 0;
-  const winners = sortedScores.filter(([, score]) => score === topScore);
-  const isTie = winners.length > 1 && topScore > 0;
-  const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
-  const roundsForView = game.rounds.map((round, index) => ({
-    ...round,
-    word: decryptedRoundWords[index] ?? (isEncrypted(round.word) ? "••••" : round.word),
-  }));
+  const teamColors = PASSWORD_TEAM_COLORS;
 
   return (
     <div className="game-page" data-game-theme="password">
