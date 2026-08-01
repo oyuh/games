@@ -15,6 +15,7 @@ import "../styles/game-shared.css";
 import "../styles/pips.css";
 import { PipsDemo } from "../components/demos/PipsDemo";
 import { SoloGameMenu } from "../components/shared/SoloGameMenu";
+import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import {
   evaluateRegionRule,
   generateRun,
@@ -848,53 +849,35 @@ export function PipsPage() {
   }, [dragState, finishPointerDrag]);
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("pips-game-state", {
-      detail: {
-        phase,
-        runMode,
-        difficulty: puzzle.difficulty,
-        puzzleIndex,
-        puzzleCount: run.puzzles.length,
-        placedCount,
-        totalDominoes: puzzle.dominoes.length,
-        remainingMoves: progress.remainingMoves,
-        solved,
-        canLeaderboard: phase === "menu" || phase === "complete",
-        canUndo: phase === "playing" && advanceCountdown == null && placements.length > 0,
-        showDevTools: SHOW_PIPS_DEV_TOOLS,
-        canDevSkip: phase === "playing" && puzzleIndex < run.puzzles.length - 1,
-      },
-    }));
+    emitSolo("pips-game-state", {
+      phase,
+      runMode,
+      difficulty: puzzle.difficulty,
+      puzzleIndex,
+      puzzleCount: run.puzzles.length,
+      placedCount,
+      totalDominoes: puzzle.dominoes.length,
+      remainingMoves: progress.remainingMoves,
+      solved,
+      canLeaderboard: phase === "menu" || phase === "complete",
+      canUndo: phase === "playing" && advanceCountdown == null && placements.length > 0,
+      showDevTools: SHOW_PIPS_DEV_TOOLS,
+      canDevSkip: phase === "playing" && puzzleIndex < run.puzzles.length - 1,
+    });
   }, [phase, runMode, puzzle.difficulty, puzzleIndex, run.puzzles.length, placedCount, puzzle.dominoes.length, progress.remainingMoves, solved, placements.length, advanceCountdown]);
 
-  useEffect(() => {
-    const handleUndo = () => undoPlacement();
-    const handleRestart = () => restartRun();
-    const handleGiveUp = () => giveUpRun();
-    const handleLeaderboard = () => {
-      if (phase === "playing" || phase === "countdown") {
-        showToast("Leaderboard opens when the run is over", "info");
-        return;
-      }
-      setOpenPanel("leaderboard");
-    };
-    const handleDevSolution = () => showSolvedPuzzle();
-    const handleDevSkip = () => skipDifficulty();
-    window.addEventListener("pips-undo", handleUndo);
-    window.addEventListener("pips-restart-run", handleRestart);
-    window.addEventListener("pips-give-up", handleGiveUp);
-    window.addEventListener("pips-toggle-leaderboard", handleLeaderboard);
-    window.addEventListener("pips-dev-solution", handleDevSolution);
-    window.addEventListener("pips-dev-skip", handleDevSkip);
-    return () => {
-      window.removeEventListener("pips-undo", handleUndo);
-      window.removeEventListener("pips-restart-run", handleRestart);
-      window.removeEventListener("pips-give-up", handleGiveUp);
-      window.removeEventListener("pips-toggle-leaderboard", handleLeaderboard);
-      window.removeEventListener("pips-dev-solution", handleDevSolution);
-      window.removeEventListener("pips-dev-skip", handleDevSkip);
-    };
-  }, [undoPlacement, restartRun, giveUpRun, showSolvedPuzzle, skipDifficulty]);
+  useSoloEvent("pips-undo", () => undoPlacement());
+  useSoloEvent("pips-restart-run", () => restartRun());
+  useSoloEvent("pips-give-up", () => giveUpRun());
+  useSoloEvent("pips-toggle-leaderboard", () => {
+    if (phase === "playing" || phase === "countdown") {
+      showToast("Leaderboard opens when the run is over", "info");
+      return;
+    }
+    setOpenPanel("leaderboard");
+  });
+  useSoloEvent("pips-dev-solution", () => showSolvedPuzzle());
+  useSoloEvent("pips-dev-skip", () => skipDifficulty());
 
   useEffect(() => {
     if (!solved || phase !== "playing" || devSolutionPreview) return;
