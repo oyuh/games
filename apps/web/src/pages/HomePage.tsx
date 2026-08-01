@@ -59,7 +59,6 @@ const SOLO_GAMES: SoloGameDef[] = [
     demoId: "shikaku",
     description: shikakuMeta.shortDescription,
     accent: shikakuMeta.accent,
-    bgGradient: "linear-gradient(160deg, #1a2e26 0%, #1a1a1a 100%)",
     href: "/shikaku",
     preview: (
       <div className="solo-preview-shikaku">
@@ -88,7 +87,6 @@ const SOLO_GAMES: SoloGameDef[] = [
     demoId: "pips",
     description: pipsMeta.shortDescription,
     accent: pipsMeta.accent,
-    bgGradient: "linear-gradient(160deg, #2e2218 0%, #1a1a1a 100%)",
     href: "/pips",
     preview: (
       <div className="solo-preview-pips">
@@ -110,7 +108,6 @@ const SOLO_GAMES: SoloGameDef[] = [
     id: "nexus", title: "Coming Soon!",
     description: "Submit a suggestion for a new game! or create it yourself!",
     accent: "#38bdf8",
-    bgGradient: "linear-gradient(160deg, #182530 0%, #1a1a1a 100%)",
     href: NEW_GAME_ISSUE_URL,
     actionLabel: "Suggest a new game",
     comingSoon: true,

@@ -90,6 +90,16 @@
      --radius-* scale below. Pills and circles (999px, 50%) stay out of it. */
   --radius-scale: 0.5;
   --radius: var(--radius-md); /* legacy alias, still used in a lot of places */
+
+  /* Card surfaces. The site's card look is built from these four pieces:
+     an accent wash, a faint two-axis grid, a base fill, and a shadow.
+     components.css assembles them; themes.css swaps them for light mode.
+     Every card on the site, desktop and mobile, reads from here. */
+  --surface-bg: linear-gradient(160deg, #232323 0%, #1a1a1a 100%);
+  --surface-grid: rgba(255, 255, 255, 0.028);
+  --surface-grid-soft: rgba(255, 255, 255, 0.02);
+  --surface-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  --surface-shadow-hover: 0 3px 10px rgba(0, 0, 0, 0.24);
 }
 
 /* The same scale backs Tailwind's rounded-* utilities so class-based and
