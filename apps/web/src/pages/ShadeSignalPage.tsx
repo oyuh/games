@@ -20,10 +20,9 @@ import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets
 
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 import { ShadeDemo } from "../components/demos/ShadeDemo";
-import { useGameSounds, playSoundSubmit } from "../hooks/useGameSounds";
+import { useShadeSignalGame, chebyshevDist, type ShadePhase } from "../hooks/useShadeSignalGame";
 import { GameIcon } from "../components/shared/GameIcon";
 
-type ShadePhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended";
 
 const phaseLabels: Record<ShadePhase, string> = {
   lobby: "Lobby",
@@ -58,9 +57,6 @@ function scoreGuess(guess: { row: number; col: number }, target: { row: number; 
   return 0;
 }
 
-function chebyshevDist(a: { row: number; col: number }, b: { row: number; col: number }): number {
-  return Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col));
-}
 
 function distLabel(dist: number): string {
   if (dist === 0) return "Exact!";
@@ -89,267 +85,41 @@ function ScoringLegend() {
 
 function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
-  const zero = useZero();
-  const navigate = useNavigate();
-  const params = useParams();
-  const gameId = params.id ?? "";
-  const [games] = useQuery(queries.shadeSignal.byId({ id: gameId }));
-  const [sessions] = useQuery(queries.sessions.byGame({ gameType: "shade_signal", gameId }));
-  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
-  const game = games[0];
-  const [clue, setClue] = useState("");
-  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [pickingCell, setPickingCell] = useState<{ row: number; col: number } | null>(null);
-  const [guessLocked, setGuessLocked] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
   const [showDemo, setShowDemo] = useState(false);
-  const [showInSessionModal, setShowInSessionModal] = useState(false);
-  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
-  const clueInputRef = useRef<HTMLInputElement>(null);
-  const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
-  const isHost = game?.host_id === sessionId;
-  const isLeader = game?.leader_id === sessionId;
-  const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
-  const inGame = Boolean(me);
+  const {
+    zero, navigate, gameId, game, me, isHost, isLeader, inGame, isSpectator,
+    sessionById, playerIndexMap, phase, target, targetColor,
+    clue, setClue, selectedCell, setSelectedCell,
+    guessLocked, setGuessLocked, lobbyPreviewTarget, setLobbyPreviewTarget,
+    clueInputRef, activeGameType, activeGameId, inAnotherGame,
+    showInSessionModal, setShowInSessionModal,
+    joiningFromOtherGame, setJoiningFromOtherGame,
+    guessMarkerData, myCurrentGuess, lockedInIds, currentRoundGuesses,
+    isGameActive, leaderName, totalRounds, guessersCount, latestRound,
+    submitClue, submitGuess, handleJoinClick, confirmLeaveAndJoin,
+  } = useShadeSignalGame(sessionId);
 
-  useGameSounds({
-    phase: game?.phase,
-    sessionId,
-    isMyTurn: Boolean(inGame && (
-      (isLeader && (game?.phase === "picking" || game?.phase?.startsWith("clue"))) ||
-      (!isLeader && game?.phase?.startsWith("guess"))
-    )),
-    phaseEndsAt: game?.settings.phaseEndsAt,
-  });
-
-  const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
-  const mySession = mySessionRows[0];
-  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
-  const activeGameId = mySession?.game_id ?? null;
-  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "shade_signal" || activeGameId !== gameId));
-
-  const inGameRef = useRef(inGame);
-  const phaseRef = useRef(game?.phase);
-  const isSpectatorRef = useRef(isSpectator);
-  inGameRef.current = inGame;
-  phaseRef.current = game?.phase;
-  isSpectatorRef.current = isSpectator;
-
-  // Show toast when user becomes a spectator
-  useEffect(() => {
-    if (isSpectator) {
-      showToast("You are a spectator", "info");
-    }
-  }, [isSpectator]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    let active = false;
-    const timer = setTimeout(() => { active = true; }, 500);
-    return () => {
-      clearTimeout(timer);
-      if (active && isSpectatorRef.current) {
-        void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId }));
-      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
-        void zero.mutate(mutators.shadeSignal.leave({ gameId, sessionId }));
-      }
-    };
-  }, [gameId, sessionId, zero]);
-
-  const sessionById = useMemo(() => {
-    return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = getDisplayName(s.name, s.id);
-      return acc;
-    }, {});
-  }, [sessions]);
-
-  const playerIndexMap = useMemo(() => {
-    return game?.players.reduce<Record<string, number>>((acc, player, playerIndex) => {
-      acc[player.sessionId] = playerIndex;
-      return acc;
-    }, {}) ?? {};
-  }, [game?.players]);
-
-  useEffect(() => {
-    if (!game) return;
-    addRecentGame({ id: game.id, code: game.code, gameType: "shade_signal" });
-  }, [game]);
-
-  useEffect(() => {
-    if (!game) return;
-    if (game.phase === "ended") {
-      showToast("The host ended the game", "info");
-      navigate("/");
-      return;
-    }
-    if (game.kicked.includes(sessionId)) {
-      showToast("You were kicked from the game", "error");
-      navigate("/");
-    }
-  }, [game?.phase, game?.kicked, sessionId, navigate]);
-
-  // Timer auto-advance
-  useEffect(() => {
-    if (!game) return;
-    const phaseEnd = game.settings.phaseEndsAt;
-    if (!phaseEnd) return;
-    const activePhases: ShadePhase[] = ["clue1", "guess1", "clue2", "guess2", "reveal"];
-    if (!activePhases.includes(game.phase as ShadePhase)) return;
-    const remaining = phaseEnd - Date.now();
-    if (remaining <= 0) {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
-      return;
-    }
-    const timer = setTimeout(() => {
-      void zero.mutate(mutators.shadeSignal.advanceTimer({ gameId }));
-    }, remaining + 500);
-    return () => clearTimeout(timer);
-  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
-
-  // Announcement watcher
-  useEffect(() => {
-    if (!game?.announcement || isHost) return;
-    const prev = prevAnnouncementRef.current;
-    const cur = game.announcement;
-    if (prev && prev.text === cur.text && Math.abs(cur.ts - prev.ts) < 3000) return;
-    prevAnnouncementRef.current = cur;
-    showToast(`📢 ${cur.text}`, "info");
-  }, [game?.announcement, isHost]);
-
-  // Reset selected cell on phase change (pre-select guess1 position when entering guess2)
-  useEffect(() => {
-    if (game?.phase === "guess2") {
-      const g1 = game.guesses.find((g) => g.sessionId === sessionId && g.round === 1);
-      setSelectedCell(g1 ? { row: g1.row, col: g1.col } : null);
-    } else {
-      setSelectedCell(null);
-    }
-    setGuessLocked(false);
-  }, [game?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-reveal: when entering reveal phase, auto-calculate scores
-  useEffect(() => {
-    if (!game || game.phase !== "reveal") return;
-    // Only the host triggers the reveal mutator to avoid duplicates
-    if (game.host_id !== sessionId) return;
-    const latest = game.round_history[game.round_history.length - 1];
-    if (latest && latest.round === game.settings.currentRound) return; // already revealed this round
-    const timer = setTimeout(() => {
-      void callGameSecretPreReveal("shade_signal", gameId, sessionId)
-        .then(() => zero.mutate(mutators.shadeSignal.reveal({ gameId })));
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
-
-  // ── All hooks MUST be above the early-return guard ──
-  const phase = (game?.phase ?? "lobby") as ShadePhase;
-
-  useEffect(() => {
-    if ((phase !== "clue1" && phase !== "clue2") || !isLeader || isSpectator) return;
-    const input = clueInputRef.current;
-    if (!input) return;
-    const timer = window.setTimeout(() => {
-      input.focus();
-      input.select();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [phase, isLeader, isSpectator]);
-
-  const target = game?.target_row != null && game?.target_col != null && game.target_row >= 0 && game.target_col >= 0
-    ? { row: game.target_row, col: game.target_col }
-    : null;
-
-  const targetColor = target && game
-    ? generateGridColor(target.row, target.col, game.grid_rows, game.grid_cols, game.grid_seed)
-    : null;
-
-  const guessMarkers = useMemo(() => {
-    if (!game || (phase !== "reveal" && phase !== "finished")) return [];
-    const latest = game.round_history[game.round_history.length - 1];
-    return game.guesses.map((g) => {
-      const name = sessionById[g.sessionId] ?? getDisplayName(null, g.sessionId);
-      const dist = target
-        ? chebyshevDist({ row: g.row, col: g.col }, target)
-        : null;
-      const pts = latest?.scores[g.sessionId] ?? null;
-      const roundLabel = g.round === 1 ? "Clue 1" : "Clue 2";
-      const tooltip = [
-        `${name}${g.sessionId === sessionId ? " (you)" : ""}`,
-        `Guess: ${roundLabel}`,
-        dist != null ? (dist === 0 ? "Distance: Exact! 🎯" : `Distance: ${dist} away`) : null,
-        pts != null ? `Points: +${pts}` : null,
-      ].filter(Boolean).join("\n");
-      return {
-        sessionId: g.sessionId,
-        name,
-        row: g.row,
-        col: g.col,
-        isOwn: g.sessionId === sessionId,
-        tooltip,
-      };
-    });
-  }, [game, phase, sessionById, sessionId, target]);
+  // Desktop wording: one line per fact.
+  const guessMarkers = guessMarkerData.map((m) => ({
+    sessionId: m.sessionId, name: m.name, row: m.row, col: m.col, isOwn: m.isOwn,
+    tooltip: [
+      `${m.name}${m.isOwn ? " (you)" : ""}`,
+      `Guess: ${m.roundLabel}`,
+      m.dist != null ? (m.dist === 0 ? "Distance: Exact! 🎯" : `Distance: ${m.dist} away`) : null,
+      m.pts != null ? `Points: +${m.pts}` : null,
+    ].filter(Boolean).join("\n"),
+  }));
 
   // Leader sees guess1 markers while writing clue2
-  const leaderGuess1Markers = useMemo(() => {
-    if (!game || phase !== "clue2" || !isLeader) return [];
-    const guess1s = game.guesses.filter((g) => g.round === 1);
-    return guess1s.map((g) => {
-      const name = sessionById[g.sessionId] ?? getDisplayName(null, g.sessionId);
-      return {
-        sessionId: g.sessionId,
-        name,
-        row: g.row,
-        col: g.col,
-        isOwn: false,
-        tooltip: `${name}'s guess 1`,
-      };
-    });
-  }, [game, phase, isLeader, sessionById]);
-
-  const myCurrentGuess = useMemo(() => {
-    if (!game || (phase !== "guess1" && phase !== "guess2")) return null;
-    const round = phase === "guess1" ? 1 : 2;
-    return game.guesses.find((g) => g.sessionId === sessionId && g.round === round) ?? null;
-  }, [game, phase, sessionId]);
-
-  // Auto-lock if user already submitted a guess (e.g. page reload)
-  useEffect(() => {
-    if (myCurrentGuess && !guessLocked) {
-      setGuessLocked(true);
-    }
-  }, [myCurrentGuess]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const currentRoundGuesses = useMemo(() => {
-    if (!game || (phase !== "guess1" && phase !== "guess2")) return 0;
-    const round = phase === "guess1" ? 1 : 2;
-    return game.guesses.reduce<Set<string>>((ids, guess) => {
-      if (guess.round === round) {
-        ids.add(guess.sessionId);
-      }
-      return ids;
-    }, new Set()).size;
-  }, [game, phase]);
-
-  // Set of player IDs who have locked in for the current guess round
-  const lockedInIds = useMemo(() => {
-    if (!game || (phase !== "guess1" && phase !== "guess2")) return new Set<string>();
-    const round = phase === "guess1" ? 1 : 2;
-    return game.guesses.reduce<Set<string>>((ids, guess) => {
-      if (guess.round === round) {
-        ids.add(guess.sessionId);
-      }
-      return ids;
-    }, new Set());
-  }, [game, phase]);
-
-  useEffect(() => {
-    if (game) return;
-    const timer = setTimeout(() => navigate("/"), 3000);
-    return () => clearTimeout(timer);
-  }, [game, navigate]);
+  const leaderGuess1Markers = (phase === "clue2" && isLeader && game)
+    ? game.guesses.filter((g) => g.round === 1).map((g) => {
+        const name = sessionById[g.sessionId] ?? g.sessionId;
+        return { sessionId: g.sessionId, name, row: g.row, col: g.col, isOwn: false, tooltip: `${name}'s guess 1` };
+      })
+    : [];
 
   if (!game) {
     return (
@@ -363,94 +133,12 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const isGameActive = phase !== "lobby" && phase !== "ended" && phase !== "finished" && phase !== "picking";
-  const leaderName = game.leader_id ? (sessionById[game.leader_id] ?? "???") : "";
-  const totalRounds = game.leader_order.length * game.settings.roundsPerPlayer;
-
   const copyCode = () => {
     void navigator.clipboard.writeText(game.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const submitClue = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!clue.trim()) return;
-    try {
-      const result = await optimistic(zero.mutate(mutators.shadeSignal.submitClue({ gameId, sessionId, text: clue.trim() })));
-      if (result.type === "error") {
-        showToast(result.error.message, "error");
-        return;
-      }
-      setClue("");
-      playSoundSubmit();
-    } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : "Failed to submit clue", "error");
-    }
-  };
-
-  const submitGuess = async () => {
-    if (!selectedCell) return;
-    try {
-      const result = await optimistic(zero.mutate(
-        mutators.shadeSignal.submitGuess({ gameId, sessionId, row: selectedCell.row, col: selectedCell.col })
-      ));
-      if (result.type === "error") {
-        showToast(result.error.message, "error");
-      } else {
-        setGuessLocked(true);
-        playSoundSubmit();
-      }
-    } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : "Failed to submit guess", "error");
-    }
-  };
-
-  const joinGame = async () => {
-    await ensureName(zero, sessionId);
-    if (isSpectator) {
-      void zero.mutate(mutators.shadeSignal.leaveSpectator({ gameId, sessionId }))
-        .client.then(() => zero.mutate(mutators.shadeSignal.join({ gameId, sessionId })))
-        .catch(() => showToast("Couldn't join game", "error"));
-      return;
-    }
-    void zero.mutate(mutators.shadeSignal.join({ gameId, sessionId }))
-      .client.catch(() => showToast("Couldn't join game", "error"));
-  };
-
-  const handleJoinClick = () => {
-    if (inAnotherGame && activeGameType && activeGameId) {
-      setJoiningFromOtherGame(true);
-      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
-        .catch(() => showToast("Couldn't leave current game", "error"))
-        .finally(() => {
-          setJoiningFromOtherGame(false);
-          void joinGame();
-        });
-      return;
-    }
-    void joinGame();
-  };
-
-  const confirmLeaveAndJoin = () => {
-    if (!activeGameType || !activeGameId) {
-      setShowInSessionModal(false);
-      void joinGame();
-      return;
-    }
-    setJoiningFromOtherGame(true);
-    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
-      .then(() => {
-        setShowInSessionModal(false);
-        void joinGame();
-      })
-      .catch(() => showToast("Couldn't leave current game", "error"))
-      .finally(() => setJoiningFromOtherGame(false));
-  };
-
-  const guessersCount = game.players.filter((p) => p.sessionId !== game.leader_id).length;
-  const latestRoundRaw = game.round_history[game.round_history.length - 1];
-  const latestRound = latestRoundRaw && latestRoundRaw.round === game.settings.currentRound ? latestRoundRaw : undefined;
 
   return (
     <div className="game-page shade-page" data-game-theme="shade">
