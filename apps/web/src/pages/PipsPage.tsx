@@ -2,13 +2,11 @@ import { type CSSProperties, type MouseEvent, type PointerEvent, useEffect, useM
 import {
   FiAward,
   FiCheck,
-  FiClipboard,
   FiClock,
   FiCopy,
   FiFlag,
   FiHash,
   FiHelpCircle,
-  FiPlay,
   FiRepeat,
   FiUploadCloud,
   FiX,
@@ -16,10 +14,12 @@ import {
 import "../styles/game-shared.css";
 import "../styles/pips.css";
 import { PipsDemo } from "../components/demos/PipsDemo";
-import { GameIcon } from "../components/shared/GameIcon";
+import { SoloGameMenu } from "../components/shared/SoloGameMenu";
+import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import {
   evaluateRegionRule,
   generateRun,
+  PIPS_DIFFICULTY_CONFIG,
   getPlacementValueGrid,
   getRunScoreTime,
   validateSolution,
@@ -487,14 +487,13 @@ export function PipsPage() {
     beginRun(nextRun, nextSeed, "ranked");
   };
 
-  const startSeededRun = (difficulty?: PipsDifficulty) => {
+  const startSeededRun = () => {
     const parsedSeed = parseInt(customSeedInput, 10);
     if (!Number.isFinite(parsedSeed) || parsedSeed <= 0) {
       showToast("Enter a positive seed first", "info");
       return;
     }
-    const nextRun = difficulty ? generateSingleDifficultyRun(parsedSeed, difficulty) : generateRun(parsedSeed);
-    beginRun(nextRun, parsedSeed, "seeded", difficulty ?? infiniteDifficulty);
+    beginRun(generateRun(parsedSeed), parsedSeed, "seeded", infiniteDifficulty);
     setCustomSeedInput("");
   };
 
@@ -850,53 +849,35 @@ export function PipsPage() {
   }, [dragState, finishPointerDrag]);
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("pips-game-state", {
-      detail: {
-        phase,
-        runMode,
-        difficulty: puzzle.difficulty,
-        puzzleIndex,
-        puzzleCount: run.puzzles.length,
-        placedCount,
-        totalDominoes: puzzle.dominoes.length,
-        remainingMoves: progress.remainingMoves,
-        solved,
-        canLeaderboard: phase === "menu" || phase === "complete",
-        canUndo: phase === "playing" && advanceCountdown == null && placements.length > 0,
-        showDevTools: SHOW_PIPS_DEV_TOOLS,
-        canDevSkip: phase === "playing" && puzzleIndex < run.puzzles.length - 1,
-      },
-    }));
+    emitSolo("pips-game-state", {
+      phase,
+      runMode,
+      difficulty: puzzle.difficulty,
+      puzzleIndex,
+      puzzleCount: run.puzzles.length,
+      placedCount,
+      totalDominoes: puzzle.dominoes.length,
+      remainingMoves: progress.remainingMoves,
+      solved,
+      canLeaderboard: phase === "menu" || phase === "complete",
+      canUndo: phase === "playing" && advanceCountdown == null && placements.length > 0,
+      showDevTools: SHOW_PIPS_DEV_TOOLS,
+      canDevSkip: phase === "playing" && puzzleIndex < run.puzzles.length - 1,
+    });
   }, [phase, runMode, puzzle.difficulty, puzzleIndex, run.puzzles.length, placedCount, puzzle.dominoes.length, progress.remainingMoves, solved, placements.length, advanceCountdown]);
 
-  useEffect(() => {
-    const handleUndo = () => undoPlacement();
-    const handleRestart = () => restartRun();
-    const handleGiveUp = () => giveUpRun();
-    const handleLeaderboard = () => {
-      if (phase === "playing" || phase === "countdown") {
-        showToast("Leaderboard opens when the run is over", "info");
-        return;
-      }
-      setOpenPanel("leaderboard");
-    };
-    const handleDevSolution = () => showSolvedPuzzle();
-    const handleDevSkip = () => skipDifficulty();
-    window.addEventListener("pips-undo", handleUndo);
-    window.addEventListener("pips-restart-run", handleRestart);
-    window.addEventListener("pips-give-up", handleGiveUp);
-    window.addEventListener("pips-toggle-leaderboard", handleLeaderboard);
-    window.addEventListener("pips-dev-solution", handleDevSolution);
-    window.addEventListener("pips-dev-skip", handleDevSkip);
-    return () => {
-      window.removeEventListener("pips-undo", handleUndo);
-      window.removeEventListener("pips-restart-run", handleRestart);
-      window.removeEventListener("pips-give-up", handleGiveUp);
-      window.removeEventListener("pips-toggle-leaderboard", handleLeaderboard);
-      window.removeEventListener("pips-dev-solution", handleDevSolution);
-      window.removeEventListener("pips-dev-skip", handleDevSkip);
-    };
-  }, [undoPlacement, restartRun, giveUpRun, showSolvedPuzzle, skipDifficulty]);
+  useSoloEvent("pips-undo", () => undoPlacement());
+  useSoloEvent("pips-restart-run", () => restartRun());
+  useSoloEvent("pips-give-up", () => giveUpRun());
+  useSoloEvent("pips-toggle-leaderboard", () => {
+    if (phase === "playing" || phase === "countdown") {
+      showToast("Leaderboard opens when the run is over", "info");
+      return;
+    }
+    setOpenPanel("leaderboard");
+  });
+  useSoloEvent("pips-dev-solution", () => showSolvedPuzzle());
+  useSoloEvent("pips-dev-skip", () => skipDifficulty());
 
   useEffect(() => {
     if (!solved || phase !== "playing" || devSolutionPreview) return;
@@ -1219,6 +1200,7 @@ export function PipsPage() {
         <div className="game-page pips-page pips-page--menu" data-game-theme="pips" data-phase={phase}>
           <div className="pips-container pips-container--menu">
             <PipsMenu
+              difficulty={menuDifficulty}
               customSeedInput={customSeedInput}
               onDifficultyChange={setMenuDifficulty}
               onSeedChange={setCustomSeedInput}
@@ -1504,7 +1486,29 @@ export function PipsPage() {
   );
 }
 
+const PIPS_DIFFICULTY_ACCENTS: Record<PipsDifficulty, string> = {
+  easy: "#f59e0b",
+  medium: "#fb7185",
+  hard: "#f97316",
+};
+
+type PipsMenuMode = "ranked" | "endless" | "seed";
+
+// Keep every note at or under 40 chars, see .solo-setup-note.
+const PIPS_MODE_NOTES: Record<PipsMenuMode, string> = {
+  ranked: "Easy, Medium, Hard. Timed and ranked.",
+  endless: "One size, endless puzzles. Unranked.",
+  seed: "Your seed, all three sizes. Unranked.",
+};
+
+const PIPS_START_LABELS: Record<PipsMenuMode, string> = {
+  ranked: "Start Ranked Run",
+  endless: "Start Endless Run",
+  seed: "Start Seeded Run",
+};
+
 function PipsMenu({
+  difficulty,
   customSeedInput,
   onDifficultyChange,
   onSeedChange,
@@ -1515,191 +1519,72 @@ function PipsMenu({
   onOpenLeaderboard,
   onOpenHowTo,
 }: {
+  difficulty: PipsDifficulty;
   customSeedInput: string;
   onDifficultyChange: (difficulty: PipsDifficulty) => void;
   onSeedChange: (value: string) => void;
   onStartRanked: () => void;
-  onStartSeeded: (difficulty?: PipsDifficulty) => void;
+  onStartSeeded: () => void;
   onStartInfinite: (difficulty: PipsDifficulty) => void;
   onStartSeededInfinite: (difficulty: PipsDifficulty) => void;
   onOpenLeaderboard: () => void;
   onOpenHowTo: () => void;
 }) {
-  const [menuMode, setMenuMode] = useState<"ranked" | "infinite">("ranked");
-  const [showSeedInput, setShowSeedInput] = useState(false);
-  const showDifficultyCards = menuMode === "infinite" || showSeedInput;
-  const seedReady = customSeedInput.trim().length > 0;
+  const [mode, setMode] = useState<PipsMenuMode>("ranked");
+  // Ranked and seeded runs both play the whole Easy/Medium/Hard ladder.
+  const laddered = mode !== "endless";
+
+  const start = () => {
+    if (mode === "seed") onStartSeeded();
+    else if (mode === "endless") {
+      // Endless takes an optional seed: empty just means a random start.
+      if (customSeedInput.length > 0) onStartSeededInfinite(difficulty);
+      else onStartInfinite(difficulty);
+    } else onStartRanked();
+  };
 
   return (
-    <main className="pips-menu">
-      <section className="pips-menu-hero" aria-label="Pips">
-        <h1 className="pips-title">Pips</h1>
-        <p className="pips-subtitle">Place every domino so each colored region satisfies its rule.</p>
-      </section>
-
-      <section className="pips-mode-bar" aria-label="Pips mode">
-        <div className="pips-tabs">
-          <button
-            className={`pips-tab${menuMode === "ranked" ? " pips-tab--active" : ""}`}
-            type="button"
-            onClick={() => setMenuMode("ranked")}
-            data-tooltip="Easy, medium, and hard. Ranked by total time."
-            data-tooltip-pos="bottom"
-          >
-            <FiFlag size={14} />
-            Regular
-          </button>
-          <button
-            className={`pips-tab${menuMode === "infinite" ? " pips-tab--active" : ""}`}
-            type="button"
-            onClick={() => {
-              setMenuMode("infinite");
-              setShowSeedInput(false);
-            }}
-            data-tooltip="Endless puzzles at one difficulty, unranked."
-            data-tooltip-pos="bottom"
-          >
-            <FiRepeat size={14} />
-            Infinite
-          </button>
-        </div>
-        <button
-          className={`pips-seed-toggle${showSeedInput ? " pips-seed-toggle--on" : ""}`}
-          type="button"
-          onClick={() => {
-            setShowSeedInput((value) => !value);
-          }}
-          data-tooltip={showSeedInput ? "Seeded run on - click to disable" : "Play a specific run seed"}
-          data-tooltip-pos="bottom"
-          aria-label="Toggle seeded run"
-        >
-          <FiHash size={16} />
-        </button>
-      </section>
-
-      {!showDifficultyCards ? (
-        <button
-          className="pips-ranked-start"
-          type="button"
-          onClick={onStartRanked}
-          onPointerMove={(event) => {
-            const rect = event.currentTarget.getBoundingClientRect();
-            event.currentTarget.style.setProperty("--pips-cta-x", `${event.clientX - rect.left}px`);
-            event.currentTarget.style.setProperty("--pips-cta-y", `${event.clientY - rect.top}px`);
-          }}
-          onPointerLeave={(event) => {
-            event.currentTarget.style.setProperty("--pips-cta-x", "50%");
-            event.currentTarget.style.setProperty("--pips-cta-y", "50%");
-          }}
-          data-tooltip="Start the ranked Easy / Medium / Hard run"
-          data-tooltip-pos="bottom"
-        >
-          <span className="pips-ranked-start-text">
-            <span className="pips-ranked-start-title">
-              <GameIcon game="pips" className="pips-ranked-start-title-icon" size={22} />
-              Start Ranked Run
-            </span>
-            <span className="pips-ranked-start-copy">Easy / Medium / Hard - fastest total time ranks.</span>
-          </span>
-        </button>
-      ) : (
-        <section className="pips-diff-cards">
-          {PIPS_DIFFICULTIES.map((difficulty) => (
-            <button
-              key={`${menuMode}-${showSeedInput ? "seeded" : "random"}-${difficulty}`}
-              className={`pips-diff-card${showSeedInput ? " pips-diff-card--selected" : ""}`}
-              data-diff={difficulty}
-              type="button"
-              onClick={() => {
-                onDifficultyChange(difficulty);
-                if (showSeedInput) {
-                  if (!seedReady) {
-                    showToast("Enter a positive seed first", "info");
-                    return;
-                  }
-                  if (menuMode === "infinite") {
-                    onStartSeededInfinite(difficulty);
-                  } else {
-                    onStartSeeded(difficulty);
-                  }
-                  return;
-                }
-                onStartInfinite(difficulty);
-              }}
-              data-tooltip={
-                showSeedInput
-                  ? menuMode === "infinite"
-                    ? `Start seeded infinite ${difficultyLabel(difficulty)}`
-                    : `Start seeded ${difficultyLabel(difficulty)} puzzle`
-                  : `Start infinite ${difficultyLabel(difficulty)}`
-              }
-              data-tooltip-pos="bottom"
-            >
-              <span className="pips-diff-card-size">{difficultyLabel(difficulty)}</span>
-              <span className="pips-diff-card-name">{showSeedInput ? (menuMode === "infinite" ? "Seeded ∞" : "Seeded") : "Infinite"}</span>
-              <span className="pips-diff-card-play"><FiPlay size={12} /></span>
-            </button>
-          ))}
-        </section>
-      )}
-
-      {!showSeedInput && (
-        <p className="pips-menu-hint">
-          {menuMode === "infinite"
-            ? "click a difficulty to start endless puzzles"
-            : "one ranked run: easy, medium, then hard"}
-        </p>
-      )}
-
-      {showSeedInput && (
-        <section className="pips-seed-section" aria-label="Seeded run">
-          <div className="pips-seed-row">
-            <div className="pips-seed-field">
-              <FiHash size={14} className="pips-seed-icon" />
-              <input
-                type="text"
-                className="pips-seed-input"
-                inputMode="numeric"
-                maxLength={9}
-                placeholder="Enter seed"
-                value={customSeedInput}
-                onChange={(event) => onSeedChange(event.target.value.replace(/[^0-9]/g, ""))}
-              />
-              <button
-                className="pips-seed-paste"
-                type="button"
-                onClick={async () => {
-                  try {
-                    const text = await navigator.clipboard.readText();
-                    const cleaned = text.replace(/[^0-9]/g, "").slice(0, 9);
-                    if (cleaned) onSeedChange(cleaned);
-                  } catch {
-                    // Clipboard access is optional.
-                  }
-                }}
-                data-tooltip="Paste from clipboard"
-                data-tooltip-pos="top"
-                aria-label="Paste seed"
-              >
-                <FiClipboard size={13} />
-              </button>
-            </div>
-          </div>
-          <p className="pips-seed-note">
-            {menuMode === "infinite" ? "Choose a difficulty to start seeded infinite mode" : "Choose a difficulty to start a seeded puzzle"} - unranked
-          </p>
-        </section>
-      )}
-
-      <div className="pips-menu-links">
-        <button className="pips-menu-link" type="button" onClick={onOpenLeaderboard} data-tooltip="View leaderboard" data-tooltip-pos="bottom">
-          <FiAward size={14} /> Leaderboard
-        </button>
-        <button className="pips-menu-link" type="button" onClick={onOpenHowTo} data-tooltip="Learn how to play" data-tooltip-pos="bottom">
-          <GameIcon game="pips" size={14} /> How to Play
-        </button>
-      </div>
-    </main>
+    <SoloGameMenu
+      title="Pips"
+      subtitle="Place every domino so each colored region satisfies its rule."
+      modeRow={{
+        label: "Run type",
+        value: mode,
+        onChange: (value) => setMode(value as PipsMenuMode),
+        options: [
+          { value: "ranked", label: "Ranked", icon: <FiFlag size={17} />, weight: 2, title: "Ranked run, all three sizes" },
+          { value: "endless", icon: <FiRepeat size={17} />, title: "Endless run at one size" },
+          { value: "seed", icon: <FiHash size={17} />, title: "Replay a run from a seed" },
+        ],
+      }}
+      difficultyRow={{
+        label: "Difficulty",
+        value: laddered ? "" : difficulty,
+        locked: laddered,
+        onChange: (value) => onDifficultyChange(value as PipsDifficulty),
+        options: PIPS_DIFFICULTIES.map((option, index) => ({
+          value: option,
+          label: difficultyLabel(option),
+          hint: `${PIPS_DIFFICULTY_CONFIG[option].dominoes} tiles`,
+          ring: { total: PIPS_DIFFICULTIES.length, filled: index + 1 },
+          accent: PIPS_DIFFICULTY_ACCENTS[option],
+          title: `${difficultyLabel(option)}, ${PIPS_DIFFICULTY_CONFIG[option].dominoes} dominoes`,
+        })),
+      }}
+      note={PIPS_MODE_NOTES[mode]}
+      seed={{
+        open: mode !== "ranked",
+        value: customSeedInput,
+        onChange: onSeedChange,
+        maxLength: 9,
+        placeholder: mode === "endless" ? "Optional seed" : "Enter a seed to replay a run",
+      }}
+      {...(mode === "ranked" ? { ladder: PIPS_DIFFICULTIES.map(difficultyLabel) } : {})}
+      startLabel={PIPS_START_LABELS[mode]}
+      onStart={start}
+      onOpenLeaderboard={onOpenLeaderboard}
+      onOpenHowTo={onOpenHowTo}
+    />
   );
 }
 

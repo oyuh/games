@@ -16,9 +16,8 @@ import { showToast } from "../../lib/toast";
 import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
 
 import { WorldMap, MapMarker, fitRepeatingMapBounds } from "../../components/location/WorldMap";
-import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
+import { useLocationSignalGame, type LocPhase } from "../../hooks/useLocationSignalGame";
 
-type LocPhase = "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "clue3" | "guess3" | "clue4" | "guess4" | "reveal" | "finished" | "ended";
 
 const phaseLabels: Record<LocPhase, string> = {
   lobby: "Lobby", picking: "Picking",
@@ -27,76 +26,24 @@ const phaseLabels: Record<LocPhase, string> = {
   reveal: "Reveal", finished: "Finished", ended: "Ended",
 };
 
-const PLAYER_COLORS = ["#06d6a0","#7ecbff","#ef476f","#a78bfa","#fb923c","#38bdf8","#f472b6","#4ade80","#facc15","#34d399"];
 
 /** Compute center + zoom that fits all points in the repeating map viewport */
-function fitBounds(
-  points: { lat: number; lng: number }[],
-  mapWidth: number,
-  mapHeight: number,
-  padding = 0.25,
-): { center: [number, number]; zoom: number } {
-  return fitRepeatingMapBounds(points, mapWidth, mapHeight, padding);
-}
-
 export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
-  const zero = useZero();
-  const navigate = useNavigate();
-  const params = useParams();
-  const gameId = params.id ?? "";
-  const [games] = useQuery(queries.locationSignal.byId({ id: gameId }));
-  const [sessions] = useQuery(queries.sessions.byGame({ gameType: "location_signal", gameId }));
-  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
-  const game = games[0];
+  const {
+    zero, navigate, gameId, game, me, isHost, isLeader, inGame, isSpectator,
+    sessionById, playerName, myRoundGuess, guesserColorMap,
+    draftClue, setDraftClue, draftMarker, setDraftMarker,
+    leaderTarget, mapCenter, mapZoom, handleBoundsChanged, mapWrapRef, clueInputRef,
+    activeGameType, activeGameId, inAnotherGame,
+    showInSessionModal, setShowInSessionModal,
+    joiningFromOtherGame, setJoiningFromOtherGame,
+    phase, cluePairs, currentClueRound, currentGuessRound,
+    isCluePhase, isGuessPhase, isLastGuessPhase, isGameActive,
+    leaderName, roundGuessers, guessesThisRound, totalRounds, sortedPlayers,
+    mapClickable, getClue, visibleClues,
+    submitClue, submitGuess, lockTarget, handleJoinClick, confirmLeaveAndJoin,
+  } = useLocationSignalGame(sessionId, { fallbackWidth: 400, height: 300 });
 
-  const [draftClue, setDraftClue] = useState("");
-  const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
-  const [showInSessionModal, setShowInSessionModal] = useState(false);
-  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
-  const clueInputRef = useRef<HTMLInputElement>(null);
-  const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
-
-  // Controlled map state for auto-zoom/pan
-  const [leaderTarget, setLeaderTarget] = useState<{ lat: number; lng: number } | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([25, 10]);
-  const [mapZoom, setMapZoom] = useState(2);
-  const mapWrapRef = useRef<HTMLDivElement>(null);
-  const handleBoundsChanged = useCallback(({ center, zoom }: { center: [number, number]; zoom: number }) => {
-    setMapCenter(center);
-    setMapZoom(zoom);
-  }, []);
-
-  const isHost = game?.host_id === sessionId;
-  const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
-  const inGame = Boolean(me);
-  const isLeader = game?.leader_id === sessionId;
-
-  useGameSounds({
-    phase: game?.phase,
-    sessionId,
-    isMyTurn: Boolean(inGame && (
-      (isLeader && (game?.phase === "picking" || game?.phase?.startsWith("clue"))) ||
-      (!isLeader && game?.phase?.startsWith("guess"))
-    )),
-    phaseEndsAt: game?.settings.phaseEndsAt,
-  });
-
-  const isSpectator = useMemo(() => game?.spectators?.some((s) => s.sessionId === sessionId) ?? false, [game, sessionId]);
-  const mySession = mySessionRows[0];
-  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
-  const activeGameId = mySession?.game_id ?? null;
-  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "location_signal" || activeGameId !== gameId));
-
-  const sessionById = useMemo(() => {
-    return sessions.reduce<Record<string, string>>((acc, s) => {
-      acc[s.id] = getDisplayName(s.name, s.id);
-      return acc;
-    }, {});
-  }, [sessions]);
-
-  const playerName = (id: string) => sessionById[id] ?? getDisplayName(null, id);
-
-  // Register host context for MobileHostControlsSheet
   useMobileHostRegister(
     isHost && game
       ? { type: "location_signal", gameId, hostId: game.host_id,
@@ -105,39 +52,6 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
       : null
   );
 
-  const inGameRef = useRef(inGame);
-  const phaseRef = useRef(game?.phase);
-  const isSpectatorRef = useRef(isSpectator);
-  inGameRef.current = inGame;
-  phaseRef.current = game?.phase;
-  isSpectatorRef.current = isSpectator;
-
-  useEffect(() => {
-    if (isSpectator) showToast("You are a spectator", "info");
-  }, [isSpectator]);
-
-  useEffect(() => {
-    let active = false;
-    const timer = setTimeout(() => { active = true; }, 500);
-    return () => {
-      clearTimeout(timer);
-      if (active && isSpectatorRef.current) {
-        void zero.mutate(mutators.locationSignal.leave({ gameId, sessionId }));
-      } else if (active && inGameRef.current && phaseRef.current !== "ended") {
-        void zero.mutate(mutators.locationSignal.leave({ gameId, sessionId }));
-      }
-    };
-  }, [gameId, sessionId, zero]);
-
-  const myRoundGuess = useMemo(() => {
-    if (!game) return null;
-    const p = game.phase;
-    const round = p.startsWith("guess") ? Number(p.replace("guess", "")) : 0;
-    if (!round) return null;
-    return game.guesses.find((g) => g.sessionId === sessionId && g.round === round) ?? null;
-  }, [game, sessionId]);
-
-  // Countdown timer
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   useEffect(() => {
     const endsAt = game?.settings.phaseEndsAt;
@@ -148,245 +62,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     return () => clearInterval(id);
   }, [game?.settings.phaseEndsAt]);
 
-  useEffect(() => {
-    if (!game) return;
-    addRecentGame({ id: game.id, code: game.code, gameType: "location_signal" });
-  }, [game]);
-
-  useEffect(() => {
-    if (!game) return;
-    if (game.phase === "ended") {
-      showToast("The host ended the game", "info");
-      navigate("/");
-      return;
-    }
-    if (game.kicked.includes(sessionId)) {
-      showToast("You were kicked from the game", "error");
-      navigate("/");
-    }
-  }, [game?.phase, game?.kicked, sessionId, navigate]);
-
-  useEffect(() => {
-    if (!game?.announcement) return;
-    const prev = prevAnnouncementRef.current;
-    const cur = game.announcement;
-    if (prev && prev.text === cur.text && Math.abs(cur.ts - prev.ts) < 3000) return;
-    prevAnnouncementRef.current = cur;
-    showToast(cur.text, "info");
-  }, [game?.announcement]);
-
-  useEffect(() => {
-    setDraftClue("");
-    // For guess rounds 2+, pre-populate draft marker with previous round's guess
-    if (game) {
-      const p = game.phase;
-      const guessRound = p.startsWith("guess") ? Number(p.replace("guess", "")) : 0;
-      if (guessRound > 1) {
-        const prevGuess = game.guesses.find((g) => g.sessionId === sessionId && g.round === guessRound - 1);
-        if (prevGuess) {
-          setDraftMarker({ lat: prevGuess.lat, lng: prevGuess.lng });
-          return;
-        }
-      }
-    }
-    setDraftMarker(null);
-  }, [game?.settings.currentRound, game?.phase]);
-
-  useEffect(() => {
-    if (!game?.phase.startsWith("clue") || !isLeader || isSpectator) return;
-    const input = clueInputRef.current;
-    if (!input) return;
-    const timer = window.setTimeout(() => {
-      input.focus();
-      input.select();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [game?.phase, isLeader, isSpectator]);
-
-  // Reset leader target on round change
-  useEffect(() => {
-    setLeaderTarget(null);
-  }, [game?.settings.currentRound]);
-
-  // Auto-zoom map on phase transitions
-  const autoZoomKeyRef = useRef("");
-  useEffect(() => {
-    if (!game) return;
-    const p = game.phase;
-    const tgtReady = p === "reveal" && game.target_lat != null;
-    const key = `${p}-${game.settings.currentRound}${tgtReady ? "-t" : ""}`;
-    if (autoZoomKeyRef.current === key) return;
-    autoZoomKeyRef.current = key;
-
-    const mapW = mapWrapRef.current?.clientWidth ?? 400;
-    const mapH = 300;
-
-    if (p === "reveal") {
-      const pts: { lat: number; lng: number }[] = [];
-      if (game.target_lat != null && game.target_lng != null) {
-        pts.push({ lat: game.target_lat, lng: game.target_lng });
-      } else if (leaderTarget) {
-        pts.push(leaderTarget);
-      }
-      const maxR = game.guesses.length > 0 ? Math.max(...game.guesses.map((g) => g.round)) : 1;
-      for (const g of game.guesses.filter((gg) => gg.round === maxR)) {
-        pts.push({ lat: g.lat, lng: g.lng });
-      }
-      if (pts.length > 0) {
-        const f = fitBounds(pts, mapW, mapH);
-        setMapCenter(f.center);
-        setMapZoom(f.zoom);
-      }
-      return;
-    }
-
-    if (p === "picking") {
-      setMapCenter([25, 10]);
-      setMapZoom(2);
-      return;
-    }
-
-    if (isLeader && leaderTarget) {
-      const cc = p.startsWith("clue") ? Number(p.replace("clue", "")) : 0;
-      const cg = p.startsWith("guess") ? Number(p.replace("guess", "")) : 0;
-      if (cc > 1 || cg > 1) {
-        const pts: { lat: number; lng: number }[] = [leaderTarget];
-        const upTo = cg > 1 ? cg - 1 : cc - 1;
-        for (let r = 1; r <= upTo; r++) {
-          for (const g of game.guesses.filter((gg) => gg.round === r)) pts.push({ lat: g.lat, lng: g.lng });
-        }
-        const f = fitBounds(pts, mapW, mapH);
-        setMapCenter(f.center);
-        setMapZoom(f.zoom);
-      } else if (cc === 1) {
-        setMapCenter([leaderTarget.lat, leaderTarget.lng]);
-        setMapZoom(6);
-      } else if (cg === 1) {
-        setMapCenter([leaderTarget.lat, leaderTarget.lng]);
-        setMapZoom(3);
-      }
-      return;
-    }
-
-    if (!isLeader && inGame && p.startsWith("guess")) {
-      const gr = Number(p.replace("guess", ""));
-      if (gr > 1) {
-        const prev = game.guesses.find((g) => g.sessionId === sessionId && g.round === gr - 1);
-        if (prev) {
-          setMapCenter([prev.lat, prev.lng]);
-          setMapZoom(5);
-        }
-      }
-    }
-  }, [game?.phase, game?.settings.currentRound, game?.target_lat, isLeader, leaderTarget, inGame, sessionId]);
-
-  // Timer auto-advance
-  useEffect(() => {
-    if (!game) return;
-    if (!isHost) return;
-    const localCluePairs = (game.settings as { cluePairs?: number }).cluePairs ?? 2;
-    const phaseEnd = game.settings.phaseEndsAt;
-    if (!phaseEnd) return;
-    const activePhases: string[] = ["clue1","guess1","clue2","guess2","clue3","guess3","clue4","guess4","reveal"];
-    if (!activePhases.includes(game.phase)) return;
-    const remaining = phaseEnd - Date.now();
-    if (remaining <= 0) {
-      if (game.phase.startsWith("guess") && Number(game.phase.replace("guess", "")) === localCluePairs) {
-        void callGameSecretPreReveal("location_signal", gameId, sessionId)
-          .then(() => zero.mutate(mutators.locationSignal.advanceTimer({ gameId })));
-      } else {
-        void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
-      }
-      return;
-    }
-    const timer = setTimeout(() => {
-      if (game.phase.startsWith("guess") && Number(game.phase.replace("guess", "")) === localCluePairs) {
-        void callGameSecretPreReveal("location_signal", gameId, sessionId)
-          .then(() => zero.mutate(mutators.locationSignal.advanceTimer({ gameId })));
-      } else {
-        void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
-      }
-    }, remaining + 500);
-    return () => clearTimeout(timer);
-  }, [game, game?.settings.phaseEndsAt, game?.phase, gameId, zero, isHost, sessionId]);
-
-  // Per-player color assignment - must be above `if (!game)` so hook count is constant
-  const guesserColorMap = useMemo(() => {
-    if (!game) return {};
-    const guessers = game.players.filter((p) => p.sessionId !== game.leader_id);
-    const map: Record<string, string> = {};
-    guessers.forEach((p, i) => {
-      map[p.sessionId] = PLAYER_COLORS[i % PLAYER_COLORS.length]!;
-    });
-    return map;
-  }, [game]);
-
   if (!game) return <MobileGameNotFound theme="location" />;
-
-  const phase = game.phase as LocPhase;
-  const leaderName = game.leader_id ? getDisplayName(game.players.find((p) => p.sessionId === game.leader_id)?.name, game.leader_id) : "---";
-  const roundGuessers = game.players.filter((p) => p.sessionId !== game.leader_id);
-  const guessesThisRound = (round: number) => game.guesses.filter((g) => g.round === round);
-  const totalRounds = game.settings.roundsPerPlayer * game.players.length;
-  const isGameActive = phase !== "lobby" && phase !== "finished" && phase !== "ended";
-  const cluePairs = (game.settings as { cluePairs?: number }).cluePairs ?? 2;
-
-  const currentClueRound = phase.startsWith("clue") ? Number(phase.replace("clue", "")) : 0;
-  const currentGuessRound = phase.startsWith("guess") ? Number(phase.replace("guess", "")) : 0;
-  const isCluePhase = currentClueRound > 0;
-  const isGuessPhase = currentGuessRound > 0;
-  const isLastGuessPhase = currentGuessRound === cluePairs;
-
-  const getClue = (n: number): string | null => {
-    if (n === 1) return game.clue1;
-    if (n === 2) return game.clue2;
-    if (n === 3) return (game as Record<string, unknown>).clue3 as string | null;
-    if (n === 4) return (game as Record<string, unknown>).clue4 as string | null;
-    return null;
-  };
-
-  const visibleClues = (upTo: number) => {
-    const clues: { round: number; text: string }[] = [];
-    for (let i = 1; i <= upTo; i++) {
-      const c = getClue(i);
-      if (c) clues.push({ round: i, text: c });
-    }
-    return clues;
-  };
-
-  const submitClue = async (event: FormEvent, round: number) => {
-    event.preventDefault();
-    if (!draftClue.trim() || !game) return;
-    try {
-      await optimistic(zero.mutate(mutators.locationSignal.submitClue({
-        gameId: game.id, sessionId, round: round as 1 | 2 | 3 | 4, text: draftClue.trim(),
-      })));
-      setDraftClue("");
-      playSoundSubmit();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Clue failed", "error");
-    }
-  };
-
-  const submitGuess = async (round: number) => {
-    if (!draftMarker || !game) return;
-    try {
-      await optimistic(zero.mutate(mutators.locationSignal.submitGuess({
-        gameId: game.id, sessionId, round: round as 1 | 2 | 3 | 4, lat: draftMarker.lat, lng: draftMarker.lng,
-      })));
-      showToast("Guess placed!", "success");
-      playSoundSubmit();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Guess failed", "error");
-    }
-  };
-
-  const lockTarget = () => {
-    if (!draftMarker) return;
-    setLeaderTarget({ lat: draftMarker.lat, lng: draftMarker.lng });
-    void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng }))
-      .server.then(() => callGameSecretInit("location_signal", game.id, sessionId));
-  };
 
   const buildMarkers = (): MapMarker[] => {
     const markers: MapMarker[] = [];
@@ -461,45 +137,11 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
     return markers;
   };
 
-  const mapClickable = (phase === "picking" && isLeader) || (isGuessPhase && !isLeader && inGame);
   const mapInteractive = true;
 
-  const joinGame = async () => {
-    await ensureName(zero, sessionId);
-    void optimistic(zero.mutate(mutators.locationSignal.join({ gameId: game.id, sessionId }))).catch(() => showToast("Couldn't join", "error"));
-  };
 
-  const handleJoinClick = () => {
-    if (inAnotherGame && activeGameType && activeGameId) {
-      setJoiningFromOtherGame(true);
-      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
-        .catch(() => showToast("Couldn't leave current game", "error"))
-        .finally(() => {
-          setJoiningFromOtherGame(false);
-          void joinGame();
-        });
-      return;
-    }
-    void joinGame();
-  };
-
-  const confirmLeaveAndJoin = () => {
-    if (!activeGameType || !activeGameId) {
-      setShowInSessionModal(false);
-      void joinGame();
-      return;
-    }
-    setJoiningFromOtherGame(true);
-    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
-      .then(() => {
-        setShowInSessionModal(false);
-        void joinGame();
-      })
-      .catch(() => showToast("Couldn't leave current game", "error"))
-      .finally(() => setJoiningFromOtherGame(false));
-  };
-
-  const sortedPlayers = game.players.toSorted((a, b) => b.totalScore - a.totalScore);
+  /* Mobile-only view shapes: the desktop layout renders these regions
+     differently, so they stay next to the markup. */
   const expandedMapActions = phase === "picking" && isLeader ? (
     <>
       <span className="locsig-map-action-hint">

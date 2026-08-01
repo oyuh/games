@@ -13,7 +13,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.55rem 1.1rem;
   font-size: 0.875rem;
   font-weight: 600;
@@ -63,7 +63,7 @@
   background: var(--card);
   color: var(--primary);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.65rem 0.875rem;
   font-size: 0.875rem;
   outline: none;
@@ -78,19 +78,76 @@
   outline-offset: 0;
 }
 
-/* ── Card base ───────────────────────────────────────────────── */
-.card {
-  background: linear-gradient(to bottom right, #232323, #181a1b);
-  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
-  border-radius: 1rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+/* ── Card surface ────────────────────────────────────────────
+   The site's card look, defined once. Every card class on both
+   desktop and mobile is listed here so the two can't drift apart;
+   each one still owns its own radius, padding and layout in its
+   own file. Tint a card by setting --card-accent on it, and swap
+   its base fill with --surface-bg. Light mode is handled by the
+   tokens in themes.css, so nothing here needs a theme override. */
+.card,
+.home-card,
+.solo-card,
+.m-card,
+.m-game-card,
+.m-solo-card {
+  border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 18%, transparent);
+  background: var(--surface-bg);
+  box-shadow: var(--surface-shadow);
 }
+
+/* Mobile cards layer an accent glow and a faint grid over the fill.
+   Desktop stays on the plain fill on purpose. */
+.m-card,
+.m-game-card,
+.m-solo-card {
+  background:
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--card-accent, var(--primary)) 13%, transparent), transparent 26%),
+    repeating-linear-gradient(0deg, var(--surface-grid) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, var(--surface-grid-soft) 0 1px, transparent 1px 26px),
+    var(--surface-bg);
+}
+
+.card {
+  border-radius: var(--radius-xl);
+}
+
+/* An accented card tints its own fill from that accent rather than
+   carrying a hand-picked gradient per game. Derived instead of listed,
+   so it follows --card-accent and works in both themes. */
+.home-card,
+.solo-card,
+.m-game-card,
+.m-solo-card {
+  --surface-bg: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--card-accent, var(--primary)) 12%, var(--card)) 0%,
+    var(--card) 100%
+  );
+}
+
+/* ── Game accents ────────────────────────────────────────────
+   One home for the five game colors. Desktop and mobile card
+   variants share a rule each so the hex only exists once. */
+.home-card--imposter, .m-game-card--imposter { --card-accent: #7eb8ff; }
+.home-card--password, .m-game-card--password { --card-accent: #a78bfa; }
+.home-card--chain,    .m-game-card--chain    { --card-accent: #34d399; }
+.home-card--shade,    .m-game-card--shade    { --card-accent: #f472b6; }
+.home-card--location, .m-game-card--location { --card-accent: #f59e0b; }
+
+/* Solo cards. Desktop sets --card-accent inline from GAME_META; these
+   match it for the mobile variants, which are plain CSS classes.
+   ponytail: two copies of the solo accents (GAME_META + here). Drive the
+   mobile cards off GAME_META inline too if a third consumer shows up. */
+.m-solo-card--shikaku { --card-accent: #34d399; }
+.m-solo-card--pips    { --card-accent: #fb923c; }
+.m-solo-card--ideas   { --card-accent: #93c5fd; }
 
 /* ── Inner panel (sections inside cards) ────────────────────── */
 .panel {
   background: color-mix(in srgb, var(--secondary) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--secondary) 30%, transparent);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   padding: 1rem;
 }
 
@@ -142,7 +199,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   font-size: 0.875rem;
   font-weight: 600;
   background: color-mix(in srgb, var(--primary) 10%, transparent);

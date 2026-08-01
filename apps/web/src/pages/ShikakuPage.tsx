@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FiAward, FiCheck, FiClipboard, FiClock, FiCopy, FiFlag, FiHash, FiHelpCircle, FiPlay, FiRepeat, FiUploadCloud, FiX } from "react-icons/fi";
+import { FiAward, FiCheck, FiClock, FiCopy, FiFlag, FiHash, FiPlay, FiRepeat, FiUploadCloud, FiX } from "react-icons/fi";
 import { ShikakuLeaderboard, LeaderboardEntry, LeaderboardView, PersonalBest } from "../components/ShikakuLeaderboard";
 import {
   calculateScore,
@@ -25,6 +25,8 @@ import "../styles/game-shared.css";
 import "../styles/shikaku.css";
 import { ShikakuDemo } from "../components/demos/ShikakuDemo";
 import { GameIcon } from "../components/shared/GameIcon";
+import { SoloGameMenu } from "../components/shared/SoloGameMenu";
+import { emitSolo, onSolo, useSoloEvent } from "../lib/solo-bus";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
@@ -34,6 +36,29 @@ const MAX_TIME_MS: Record<Difficulty, number> = {
   medium: 3_600_000 + 1_800_000,
   hard:   3_600_000 + 3_600_000,
   expert: 3_600_000 + 5_400_000,
+};
+
+/* ── Menu accent per difficulty ───────────────────────────── */
+const SHIKAKU_DIFFICULTY_ACCENTS: Record<Difficulty, string> = {
+  easy: "#34d399",
+  medium: "#60a5fa",
+  hard: "#f59e0b",
+  expert: "#f87171",
+};
+
+type ShikakuMenuMode = "ranked" | "endless" | "seed";
+
+// Keep every note at or under 40 chars, see .solo-setup-note.
+const SHIKAKU_MODE_NOTES: Record<ShikakuMenuMode, string> = {
+  ranked: `${PUZZLES_PER_RUN} puzzles, timed and ranked.`,
+  endless: "Endless puzzles at one size. Unranked.",
+  seed: `Your seed, ${PUZZLES_PER_RUN} puzzles. Unranked.`,
+};
+
+const SHIKAKU_START_LABELS: Record<ShikakuMenuMode, string> = {
+  ranked: "Start Ranked Run",
+  endless: "Start Endless Run",
+  seed: "Start Seeded Run",
 };
 
 /* ── Palette for rectangles ───────────────────────────────── */
@@ -153,7 +178,8 @@ export function ShikakuPage() {
   // Custom seed mode
   const [customMode, setCustomMode] = useState(false);
   const [customSeedInput, setCustomSeedInput] = useState("");
-  const [showSeedInput, setShowSeedInput] = useState(false);
+  // Seed is the third run type on the menu, alongside ranked and endless.
+  const [seedMode, setSeedMode] = useState(false);
 
   // Challenge mode - single puzzle from puzzle image page play button
   const [challengeMode, setChallengeMode] = useState(false);
@@ -214,7 +240,7 @@ export function ShikakuPage() {
           pendingChallenge.current = { seed: parsed, diff };
         } else {
           setCustomSeedInput(String(parsed));
-          setShowSeedInput(true);
+          setSeedMode(true);
           setDifficulty(diff);
         }
       }
@@ -986,63 +1012,44 @@ export function ShikakuPage() {
       if (showScrollControls) scrollApi?.doScroll(160, 0);
     };
 
-    window.addEventListener("shikaku-undo", handleUndo);
-    window.addEventListener("shikaku-clear-board", handleClear);
-    window.addEventListener("shikaku-restart-run", handleRestart);
-    window.addEventListener("shikaku-give-up", handleGiveUp);
-    window.addEventListener("shikaku-toggle-leaderboard", handleLeaderboard);
-    window.addEventListener("shikaku-scroll-up", handleScrollUp);
-    window.addEventListener("shikaku-scroll-down", handleScrollDown);
-    window.addEventListener("shikaku-scroll-left", handleScrollLeft);
-    window.addEventListener("shikaku-scroll-right", handleScrollRight);
-    return () => {
-      window.removeEventListener("shikaku-undo", handleUndo);
-      window.removeEventListener("shikaku-clear-board", handleClear);
-      window.removeEventListener("shikaku-restart-run", handleRestart);
-      window.removeEventListener("shikaku-give-up", handleGiveUp);
-      window.removeEventListener("shikaku-toggle-leaderboard", handleLeaderboard);
-      window.removeEventListener("shikaku-scroll-up", handleScrollUp);
-      window.removeEventListener("shikaku-scroll-down", handleScrollDown);
-      window.removeEventListener("shikaku-scroll-left", handleScrollLeft);
-      window.removeEventListener("shikaku-scroll-right", handleScrollRight);
-    };
+    const off = [
+      onSolo("shikaku-undo", handleUndo),
+      onSolo("shikaku-clear-board", handleClear),
+      onSolo("shikaku-restart-run", handleRestart),
+      onSolo("shikaku-give-up", handleGiveUp),
+      onSolo("shikaku-toggle-leaderboard", handleLeaderboard),
+      onSolo("shikaku-scroll-up", handleScrollUp),
+      onSolo("shikaku-scroll-down", handleScrollDown),
+      onSolo("shikaku-scroll-left", handleScrollLeft),
+      onSolo("shikaku-scroll-right", handleScrollRight),
+    ];
+    return () => off.forEach((unsubscribe) => unsubscribe());
   }, [canClear, canGiveUp, canRestart, canUndo, clearPlacedRects, difficulty, fetchLeaderboard, giveUp, lbView, restartCurrentRun, scrollApi, showScrollControls, undo]);
 
-  // Listen for sidebar infinite mode toggle
-  useEffect(() => {
-    const handler = () => {
-      if (phase === "menu") {
-        setInfiniteMode((v) => !v);
-      }
-    };
-    window.addEventListener("shikaku-toggle-infinite", handler);
-    return () => window.removeEventListener("shikaku-toggle-infinite", handler);
-  }, [phase]);
+  /* The sidebar used to carry its own infinite-mode toggle, driven by a
+     shikaku-toggle-infinite event and a shikaku-infinite-state broadcast.
+     That control is gone; the mode selector in SoloGameMenu is the only way
+     in now, so both events and their handlers went with it. */
 
-  // Broadcast game state so sidebar knows mode + phase
+  // Broadcast game state so the sidebar and mobile sheet know mode + phase
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("shikaku-infinite-state", {
-      detail: { enabled: infiniteMode, canToggle: phase === "menu" },
-    }));
-    window.dispatchEvent(new CustomEvent("shikaku-game-state", {
-      detail: {
-        phase,
-        infiniteMode,
-        customMode,
-        challengeMode,
-        showSeedInput,
-        difficulty,
-        seed: seed ?? null,
-        canUndo,
-        canClear,
-        canRestart,
-        canGiveUp,
-        canLeaderboard,
-        showScrollControls,
-        canScroll,
-      },
-    }));
-  }, [infiniteMode, phase, customMode, challengeMode, showSeedInput, difficulty, seed, canUndo, canClear, canRestart, canGiveUp, canLeaderboard, showScrollControls, canScroll]);
+    emitSolo("shikaku-game-state", {
+      phase,
+      infiniteMode,
+      customMode,
+      challengeMode,
+      showSeedInput: seedMode,
+      difficulty,
+      seed: seed ?? null,
+      canUndo,
+      canClear,
+      canRestart,
+      canGiveUp,
+      canLeaderboard,
+      showScrollControls,
+      canScroll,
+    });
+  }, [infiniteMode, phase, customMode, challengeMode, seedMode, difficulty, seed, canUndo, canClear, canRestart, canGiveUp, canLeaderboard, showScrollControls, canScroll]);
 
   useEffect(() => {
     if (phase !== "finished" || scoreSubmitted) {
@@ -1308,174 +1315,83 @@ export function ShikakuPage() {
   // Menu
   if (phase === "menu") {
     const diffKeys = Object.keys(DIFFICULTY_CONFIG) as Difficulty[];
+    const mode = seedMode ? "seed" : infiniteMode ? "endless" : "ranked";
+    const parsedSeed = parseInt(customSeedInput, 10);
+    const hasSeed = !isNaN(parsedSeed) && parsedSeed > 0;
+    const startFromMenu = () => {
+      if (seedMode && !hasSeed) {
+        showToast("Enter a seed first", "info");
+        return;
+      }
+      // Endless takes an optional seed: empty just means a random start.
+      // startCustomRun covers both, since infiniteMode is tracked separately.
+      if (hasSeed) {
+        startCustomRun(difficulty, parsedSeed);
+        setCustomSeedInput("");
+        return;
+      }
+      startRun(difficulty);
+    };
+
     return (
       <>
         <div className="game-page shikaku-page" data-game-theme="shikaku">
           <div className="shikaku-container">
-            <div className="shikaku-menu">
-            {/* ── Title ── */}
-            <div className="shikaku-menu-hero">
-              <h1 className="shikaku-title">Shikaku</h1>
-              <p className="shikaku-subtitle">Divide the grid into rectangles - each containing exactly one number equal to its area</p>
-            </div>
-
-            {/* ── Mode bar: tabs + seed toggle ── */}
-            <div className="shikaku-mode-bar">
-              <div className="shikaku-tabs">
-                <button
-                  className={`shikaku-tab${!infiniteMode ? " shikaku-tab--active" : ""}`}
-                  onClick={() => setInfiniteMode(false)}
-                  data-tooltip={`${PUZZLES_PER_RUN} puzzles, ranked on leaderboard`}
-                  data-tooltip-pos="bottom"
-                >
-                  <FiFlag size={14} />
-                  Regular
-                </button>
-                <button
-                  className={`shikaku-tab${infiniteMode ? " shikaku-tab--active" : ""}`}
-                  onClick={() => setInfiniteMode(true)}
-                  data-tooltip="Endless puzzles, unranked"
-                  data-tooltip-pos="bottom"
-                >
-                  <FiRepeat size={14} />
-                  Infinite
-                </button>
-              </div>
-              <button
-                className={`shikaku-seed-toggle${showSeedInput ? " shikaku-seed-toggle--on" : ""}`}
-                onClick={() => setShowSeedInput((v) => !v)}
-                data-tooltip={showSeedInput ? "Custom seed on - click to disable" : "Play a specific seed"}
-                data-tooltip-pos="bottom"
-              >
-                <FiHash size={16} />
-              </button>
-            </div>
-
-            {/* ── Difficulty cards - click to start (or select when seed is on) ── */}
-            <div className="shikaku-diff-cards">
-              {diffKeys.map((d) => (
-                <button
-                  key={d}
-                  className={`shikaku-diff-card${showSeedInput && d === difficulty ? " shikaku-diff-card--selected" : ""}`}
-                  data-diff={d}
-                  onClick={() => {
-                    setDifficulty(d);
-                    if (!showSeedInput) startRun(d);
-                  }}
-                  data-tooltip={
-                    showSeedInput
-                      ? `Select ${d} (${DIFFICULTY_CONFIG[d].label})`
-                      : `Start ${infiniteMode ? "infinite " : ""}${d} - ${DIFFICULTY_CONFIG[d].label}${!infiniteMode ? ` - ${PUZZLES_PER_RUN} puzzles` : ""}`
-                  }
-                  data-tooltip-pos="bottom"
-                >
-                  <span className="shikaku-diff-card-size">{DIFFICULTY_CONFIG[d].label}</span>
-                  <span className="shikaku-diff-card-name">{d}</span>
-                  {!showSeedInput && <span className="shikaku-diff-card-play"><FiPlay size={12} /></span>}
-                </button>
-              ))}
-            </div>
-
-            {/* ── Hint ── */}
-            {!showSeedInput && (
-              <p className="shikaku-menu-hint">
-                {infiniteMode ? "click a difficulty to start endless puzzles" : "click a difficulty to start"}
-              </p>
-            )}
-
-            {/* ── Custom seed input ── */}
-            {showSeedInput && (
-              <div className="shikaku-seed-section">
-                <div className="shikaku-seed-row">
-                  <div className="shikaku-seed-field">
-                    <FiHash size={14} className="shikaku-seed-icon" />
-                    <input
-                      type="text"
-                      className="shikaku-seed-input"
-                      placeholder="Enter seed"
-                      value={customSeedInput}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, "");
-                        setCustomSeedInput(val);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          const parsed = parseInt(customSeedInput, 10);
-                          if (!isNaN(parsed) && parsed > 0) {
-                            startCustomRun(difficulty, parsed);
-                            setCustomSeedInput("");
-                          }
-                        }
-                      }}
-                      maxLength={10}
-                    />
-                    <button
-                      className="shikaku-seed-paste"
-                      onClick={async () => {
-                        try {
-                          const text = await navigator.clipboard.readText();
-                          const cleaned = text.replace(/[^0-9]/g, "").slice(0, 10);
-                          if (cleaned) setCustomSeedInput(cleaned);
-                        } catch { /* clipboard not available */ }
-                      }}
-                      data-tooltip="Paste from clipboard"
-                      data-tooltip-pos="top"
-                    >
-                      <FiClipboard size={13} />
-                    </button>
-                  </div>
-                  <button
-                    className="shikaku-seed-go"
-                    onClick={() => {
-                      const parsed = parseInt(customSeedInput, 10);
-                      if (!isNaN(parsed) && parsed > 0) {
-                        startCustomRun(difficulty, parsed);
-                        setCustomSeedInput("");
-                      }
-                    }}
-                    disabled={!customSeedInput || isNaN(parseInt(customSeedInput, 10)) || parseInt(customSeedInput, 10) <= 0}
-                    data-tooltip="Start with this seed"
-                    data-tooltip-pos="top"
-                  >
-                    <FiPlay size={13} /> Start
-                  </button>
-                </div>
-                <p className="shikaku-seed-note">
-                  {difficulty} - {DIFFICULTY_CONFIG[difficulty].label} - {infiniteMode ? "infinite" : `${PUZZLES_PER_RUN} puzzles`} - unranked
-                </p>
-              </div>
-            )}
-
-            {/* ── Bottom links ── */}
-            <div className="shikaku-menu-links">
-              <button
-                className="shikaku-menu-link"
-                onClick={() => {
-                  if (isMobile) {
-                    window.dispatchEvent(new CustomEvent("shikaku-open-leaderboard"));
-                  } else {
-                    setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
-                  }
-                }}
-                data-tooltip="View leaderboard"
-                data-tooltip-pos="bottom"
-              >
-                <FiAward size={14} /> Leaderboard
-              </button>
-              <button
-                className="shikaku-menu-link"
-                onClick={() => setShowDemo(true)}
-                data-tooltip="Learn how to play"
-                data-tooltip-pos="bottom"
-              >
-                <FiHelpCircle size={14} /> How to Play
-              </button>
-            </div>
+            <SoloGameMenu
+              title="Shikaku"
+              subtitle="Divide the grid into rectangles, each holding exactly one number equal to its area."
+              modeRow={{
+                label: "Run type",
+                value: mode,
+                onChange: (value) => {
+                  setSeedMode(value === "seed");
+                  setInfiniteMode(value === "endless");
+                },
+                options: [
+                  { value: "ranked", label: "Ranked", icon: <FiFlag size={17} />, weight: 2, title: `Ranked run, ${PUZZLES_PER_RUN} puzzles` },
+                  { value: "endless", icon: <FiRepeat size={17} />, title: "Endless run, no puzzle limit" },
+                  { value: "seed", icon: <FiHash size={17} />, title: "Replay a run from a seed" },
+                ],
+              }}
+              difficultyRow={{
+                label: "Difficulty",
+                value: difficulty,
+                onChange: (value) => setDifficulty(value as Difficulty),
+                options: diffKeys.map((key, index) => ({
+                  value: key,
+                  label: key.charAt(0).toUpperCase() + key.slice(1),
+                  hint: DIFFICULTY_CONFIG[key].label,
+                  ring: { total: diffKeys.length, filled: index + 1 },
+                  accent: SHIKAKU_DIFFICULTY_ACCENTS[key],
+                  title: `${key.charAt(0).toUpperCase() + key.slice(1)}, ${DIFFICULTY_CONFIG[key].label} grid`,
+                })),
+              }}
+              note={SHIKAKU_MODE_NOTES[mode]}
+              seed={{
+                open: mode !== "ranked",
+                value: customSeedInput,
+                onChange: setCustomSeedInput,
+                placeholder: mode === "endless" ? "Optional seed" : "Enter a seed to replay a run",
+              }}
+              {...(mode === "ranked"
+                ? { ladder: Array.from({ length: PUZZLES_PER_RUN }, (_, i) => (i === 0 ? "Puzzle 1" : String(i + 1))) }
+                : {})}
+              startLabel={SHIKAKU_START_LABELS[mode]}
+              onStart={startFromMenu}
+              onOpenLeaderboard={() => {
+                if (isMobile) {
+                  emitSolo("shikaku-open-leaderboard");
+                } else {
+                  setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
+                }
+              }}
+              onOpenHowTo={() => setShowDemo(true)}
+            />
           </div>
-
-          {showDemo && <ShikakuDemo onClose={() => setShowDemo(false)} />}
         </div>
-        </div>
+        {/* Outside .game-page: its `> *` rule forces position:relative on
+            direct children, which would flatten the modal's fixed overlay. */}
+        {showDemo && <ShikakuDemo onClose={() => setShowDemo(false)} />}
         {leaderboardPanel}
       </>
     );
@@ -1757,7 +1673,7 @@ export function ShikakuPage() {
                 className="btn btn-muted game-action-btn"
                 onClick={() => {
                   if (isMobile) {
-                    window.dispatchEvent(new CustomEvent("shikaku-open-leaderboard"));
+                    emitSolo("shikaku-open-leaderboard");
                   } else {
                     setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
                   }
@@ -2142,10 +2058,15 @@ function ShikakuGrid({
     el.addEventListener("touchstart", handleTouchStart, { passive: false });
     el.addEventListener("touchmove", handleTouchMove, { passive: false });
     el.addEventListener("touchend", handleTouchEnd, { passive: false });
+    // iOS fires touchcancel instead of touchend when the system takes over
+    // (incoming call, edge gesture). Without this the drag state stays set
+    // and the next touch starts from a stale cell.
+    el.addEventListener("touchcancel", handleTouchEnd, { passive: false });
     return () => {
       el.removeEventListener("touchstart", handleTouchStart);
       el.removeEventListener("touchmove", handleTouchMove);
       el.removeEventListener("touchend", handleTouchEnd);
+      el.removeEventListener("touchcancel", handleTouchEnd);
       stopAutoScroll();
     };
   }, [startAutoScroll, stopAutoScroll]);

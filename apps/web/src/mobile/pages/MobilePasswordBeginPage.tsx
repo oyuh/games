@@ -1,52 +1,36 @@
-import { mutators, queries } from "@games/shared";
-import { optimistic, useQuery, useZero } from "../../lib/zero";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { mutators } from "@games/shared";
+import { optimistic } from "../../lib/zero";
+import { useEffect, useRef, useState } from "react";
 import { FiPlay, FiLogIn, FiLock, FiUnlock, FiArrowRight, FiCheck, FiXCircle } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
-import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../../lib/session";
-import { buildPasswordPlayerNames, getPasswordPlayerName } from "../../lib/password-names";
+import { ensureName, leaveCurrentGame } from "../../lib/session";
+import { getPasswordPlayerName } from "../../lib/password-names";
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
+import { usePasswordBegin } from "../../hooks/usePasswordBegin";
 
 const teamColors = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
 
 export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
-  const zero = useZero();
-  const navigate = useNavigate();
-  const params = useParams();
-  const gameId = params.id ?? "";
-  const [games] = useQuery(queries.password.byId({ id: gameId }));
-  const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
-  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
-  const game = games[0];
-  const prevAnnouncementTs = useRef<number | null>(null);
-  const isSpectatorRef = useRef(false);
-  const navHandledRef = useRef(false);
-  const [showInSessionModal, setShowInSessionModal] = useState(false);
-  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
+  const {
+    zero, navigate, gameId, game, names, isHost,
+    inGame, isSpectator, activeGameType, activeGameId, inAnotherGame,
+    teamsWithPlayers, canStart, startingGame, startGame,
+    showInSessionModal, setShowInSessionModal,
+    joiningFromOtherGame, setJoiningFromOtherGame,
+  } = usePasswordBegin(sessionId);
   const [pendingTeamToJoin, setPendingTeamToJoin] = useState<string | null>(null);
-  const [startingGame, setStartingGame] = useState(false);
 
-  const names = useMemo(() => buildPasswordPlayerNames(game, sessions), [game, sessions]);
-
-  useEffect(() => { if (game) addRecentGame({ id: game.id, code: game.code, gameType: "password" }); }, [game]);
-  useEffect(() => { if (game?.phase === "playing") navigate(`/password/${game.id}`); }, [game?.phase, game?.id, navigate]);
+  /* Mobile-only: leaving the lobby as a spectator drops the spectator slot.
+     The ref keeps the unmount cleanup from closing over a stale value. */
+  const isSpectatorRef = useRef(false);
   useEffect(() => {
-    if (!game) return;
-    if (navHandledRef.current) return;
-    if (game.phase === "ended") { navHandledRef.current = true; showToast("The host ended the game", "info"); navigate("/"); return; }
-    if (game.kicked.includes(sessionId)) { navHandledRef.current = true; showToast("You were kicked from the game", "error"); navigate("/"); }
-  }, [game?.phase, game?.kicked, sessionId, navigate]);
-
-  useEffect(() => {
-    const spectating = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
-    isSpectatorRef.current = spectating;
-  }, [game?.spectators, sessionId]);
+    isSpectatorRef.current = isSpectator;
+  }, [isSpectator]);
 
   useEffect(() => {
     let active = false;
@@ -59,33 +43,15 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
     };
   }, [gameId, sessionId, zero]);
 
-  const isHost = game?.host_id === sessionId;
-
   useMobileHostRegister(
     isHost && game
       ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: getPasswordPlayerName(names, id) }))), spectators: game.spectators ?? [] }
       : null
   );
 
-  useEffect(() => {
-    if (!game?.announcement) return;
-    if (prevAnnouncementTs.current !== game.announcement.ts) {
-      prevAnnouncementTs.current = game.announcement.ts;
-      if (!isHost) showToast(`📢 ${game.announcement.text}`, "info");
-    }
-  }, [game?.announcement, isHost]);
-
   if (!game) return <MobileGameNotFound theme="password" />;
 
-  const inGame = game.teams.some((t) => t.members.includes(sessionId));
-  const isSpectator = game.spectators?.some((s) => s.sessionId === sessionId) ?? false;
-  const mySession = mySessionRows[0] ?? null;
-  const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
-  const activeGameId = mySession?.game_id ?? null;
-  const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== "password" || activeGameId !== gameId));
   const myTeam = game.teams.find((t) => t.members.includes(sessionId))?.name;
-  const teamsWithPlayers = game.teams.filter((t) => t.members.length > 0).length;
-  const canStart = isHost && teamsWithPlayers >= 2;
 
   const joinTeam = (teamName: string) => {
     if (!inGame) {
@@ -139,21 +105,6 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => setJoiningFromOtherGame(false));
-  };
-
-  const startGame = async () => {
-    if (!isHost || !canStart || startingGame) return;
-    setStartingGame(true);
-    try {
-      const result = await optimistic(zero.mutate(mutators.password.start({ gameId, hostId: sessionId })));
-      if (result.type === "error") {
-        showToast(result.error.message, "error");
-      }
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Couldn't start game", "error");
-    } finally {
-      setStartingGame(false);
-    }
   };
 
   return (

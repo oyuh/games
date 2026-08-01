@@ -88,7 +88,7 @@
   padding: 0.4rem 0.65rem;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
 }
 
 .host-player-name {
@@ -119,7 +119,7 @@
   background: var(--destructive);
   color: #fff;
   border: 1px solid transparent;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.35rem 0.75rem;
@@ -145,7 +145,7 @@
   flex-direction: column;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 0.85rem;
+  border-radius: var(--radius-xl);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   animation: chat-pop-in 0.2s ease-out;
@@ -202,7 +202,7 @@
   color: var(--secondary);
   cursor: pointer;
   padding: 0.2rem;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -265,7 +265,7 @@
   flex-direction: column;
   gap: 0.1rem;
   padding: 0.35rem 0.55rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   transition: background 0.1s;
 }
 
@@ -347,7 +347,7 @@
   background: color-mix(in srgb, var(--secondary) 8%, transparent);
   color: var(--foreground);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 0.4rem 0.6rem;
   font-size: 0.8rem;
   outline: none;
@@ -366,7 +366,7 @@
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: none;
   background: var(--primary);
   color: var(--primary-foreground);
@@ -394,7 +394,7 @@
   height: 16px;
   cursor: nwse-resize;
   background: linear-gradient(135deg, transparent 50%, color-mix(in srgb, var(--secondary) 30%, transparent) 50%);
-  border-radius: 0 0 0.85rem 0;
+  border-radius: 0 0 var(--radius-xl) 0;
 }
 
 /* Light theme overrides */

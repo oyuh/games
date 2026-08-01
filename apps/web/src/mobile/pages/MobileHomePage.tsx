@@ -11,7 +11,8 @@ import { GameIcon } from "../../components/shared/GameIcon";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, SessionGameType, setStoredName } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { isNameRestricted } from "../../hooks/useAdminBroadcast";
-import { getHomeRouteGame, type HomeRouteGame } from "../../lib/home-route-highlight";
+import { type HomeRouteGame } from "../../lib/home-route-highlight";
+import { useHomePage } from "../../hooks/useHomePage";
 
 /** Scroll-wheel on a <select> cycles through its options */
 function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
@@ -32,331 +33,32 @@ function formatClueVisibility(value: number) {
 const NEW_GAME_ISSUE_URL = "https://github.com/oyuh/games/issues/new?template=new-game.md&title=%5BNew%20Game%5D%20";
 
 export function MobileHomePage({ sessionId }: { sessionId: string }) {
-  const zero = useZero();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const routeHighlight = useMemo(() => getHomeRouteGame(location.search), [location.search]);
-  const [name, setName] = useState(() => getOrCreateStoredName(sessionId));
-  const [savedName, setSavedName] = useState(() => getOrCreateStoredName(sessionId));
-  const [firstVisit, setFirstVisit] = useState(() => !hasVisited());
-  const [activeRouteHighlight, setActiveRouteHighlight] = useState<HomeRouteGame | null>(routeHighlight);
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  const {
+    zero, navigate,
+    name, setName, savedName, firstVisit, nameInputRef,
+    recentGames, setRecentGames, joinCode, setJoinCode, pendingAction,
+    showInSessionModal, setShowInSessionModal,
+    joiningFromOtherGame, pendingJoinTarget, setPendingJoinTarget, setPendingAction,
+    imposterPublicCount, passwordPublicCount, chainPublicCount, shadePublicCount, locationPublicCount,
+    imposterCategory, setImposterCategory, imposterImposters, setImposterImposters,
+    imposterRounds, setImposterRounds, imposterClueVisibility, setImposterClueVisibility,
+    passwordCategory, setPasswordCategory, passwordTeams, setPasswordTeams,
+    passwordTargetScore, setPasswordTargetScore,
+    chainCategory, setChainCategory, chainLength, setChainLength,
+    chainRounds, setChainRounds, chainMode, setChainMode,
+    shadeRoundsPerPlayer, setShadeRoundsPerPlayer, shadeHardMode, setShadeHardMode,
+    shadeLeaderPick, setShadeLeaderPick,
+    locCluePairs, setLocCluePairs, locRoundsPerPlayer, setLocRoundsPerPlayer,
+    saveName, joinAny, confirmLeaveAndJoin,
+    createImposter, createPassword, createChainReaction, createShadeSignal, createLocationSignal,
+    routeHighlightClass,
+  } = useHomePage(sessionId);
 
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const newName = (e as CustomEvent<string>).detail || "";
-      setName(newName);
-      setSavedName(newName);
-    };
-    window.addEventListener("games:name-changed", handler);
-    return () => window.removeEventListener("games:name-changed", handler);
-  }, []);
-
-  const [recentGames, setRecentGames] = useState(() => getRecentGames());
-  const [joinCode, setJoinCode] = useState("");
-  const [showRecent, setShowRecent] = useState(false);
-  const [pendingAction, setPendingAction] = useState<string | null>(null);
-  const [imposterMatches] = useQuery(queries.imposter.byCode({ code: joinCode || "______" }));
-  const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
-  const [chainMatches] = useQuery(queries.chainReaction.byCode({ code: joinCode || "______" }));
-  const [shadeMatches] = useQuery(queries.shadeSignal.byCode({ code: joinCode || "______" }));
-  const [locationMatches] = useQuery(queries.locationSignal.byCode({ code: joinCode || "______" }));
-  const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
-  const [showInSessionModal, setShowInSessionModal] = useState(false);
-  const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
-  const [pendingJoinTarget, setPendingJoinTarget] = useState<{ gameType: SessionGameType; gameId: string; code: string; route: string } | null>(null);
-  // Game configs
+  /* Mobile-only layout state: one accordion key and one browser key, where
+     desktop keeps five separate booleans of each. */
   const [expanded, setExpanded] = useState<string | null>(null);
   const [browsing, setBrowsing] = useState<string | null>(null);
-
-  // Public game counts
-  const imposterPublicCount = usePublicGameCount("imposter");
-  const passwordPublicCount = usePublicGameCount("password");
-  const chainPublicCount = usePublicGameCount("chain_reaction");
-  const shadePublicCount = usePublicGameCount("shade_signal");
-  const locationPublicCount = usePublicGameCount("location_signal");
-  const [imposterCategory, setImposterCategory] = useState("animals");
-  const [imposterImposters, setImposterImposters] = useState(1);
-  const [imposterRounds, setImposterRounds] = useState(3);
-  const [imposterClueVisibility, setImposterClueVisibility] = useState(DEFAULT_IMPOSTER_CLUE_VISIBILITY);
-  const [passwordTeams, setPasswordTeams] = useState(2);
-  const [passwordTargetScore, setPasswordTargetScore] = useState(10);
-  const [passwordCategory, setPasswordCategory] = useState("animals");
-  const [chainLength, setChainLength] = useState(5);
-  const [chainRounds, setChainRounds] = useState(3);
-  const [chainMode, setChainMode] = useState<"premade" | "custom">("premade");
-  const [chainCategory, setChainCategory] = useState("animals");
-  const [shadeRoundsPerPlayer, setShadeRoundsPerPlayer] = useState(1);
-  const [shadeHardMode, setShadeHardMode] = useState(false);
-  const [shadeLeaderPick, setShadeLeaderPick] = useState(false);
-  const [locCluePairs, setLocCluePairs] = useState(2);
-  const [locRoundsPerPlayer, setLocRoundsPerPlayer] = useState(1);
-
-  useEffect(() => {
-    setActiveRouteHighlight(routeHighlight);
-  }, [routeHighlight]);
-
-  const dismissRouteHighlight = useCallback(() => {
-    setActiveRouteHighlight(null);
-  }, []);
-
-  useEffect(() => {
-    if (!activeRouteHighlight) return;
-    const options = { once: true } as AddEventListenerOptions;
-    window.addEventListener("pointermove", dismissRouteHighlight, options);
-    window.addEventListener("pointerdown", dismissRouteHighlight, options);
-    window.addEventListener("keydown", dismissRouteHighlight, options);
-    window.addEventListener("touchstart", dismissRouteHighlight, options);
-    return () => {
-      window.removeEventListener("pointermove", dismissRouteHighlight);
-      window.removeEventListener("pointerdown", dismissRouteHighlight);
-      window.removeEventListener("keydown", dismissRouteHighlight);
-      window.removeEventListener("touchstart", dismissRouteHighlight);
-    };
-  }, [activeRouteHighlight, dismissRouteHighlight]);
-
-  useEffect(() => {
-    if (!activeRouteHighlight) return;
-    const animationFrame = window.requestAnimationFrame(() => {
-      const card = document.querySelector<HTMLElement>(`[data-home-game-card="${activeRouteHighlight}"]`);
-      card?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-    });
-    return () => window.cancelAnimationFrame(animationFrame);
-  }, [activeRouteHighlight]);
-
-  useEffect(() => {
-    if (firstVisit && nameInputRef.current) nameInputRef.current.focus();
-  }, [firstVisit]);
-
-  const ensureName = useCallback(async () => {
-    const resolved = await ensureSessionName(zero, sessionId);
-    setName(resolved);
-    setSavedName(resolved);
-    return resolved;
-  }, [zero, sessionId]);
-
-  const dismissFirstVisit = useCallback(() => {
-    if (firstVisit) {
-      void ensureName();
-      markVisited();
-      setFirstVisit(false);
-    }
-  }, [firstVisit, ensureName]);
-
-  useEffect(() => {
-    if (!firstVisit) return;
-    const handler = () => dismissFirstVisit();
-    window.addEventListener("click", handler, { capture: true });
-    return () => window.removeEventListener("click", handler, { capture: true });
-  }, [firstVisit, dismissFirstVisit]);
-
-  const saveName = async (event: FormEvent) => {
-    event.preventDefault();
-    dismissFirstVisit();
-    const sanitizedName = name.replace(/\s/g, "") || getDisplayName(null, sessionId);
-    if (sanitizedName && isNameRestricted(sanitizedName)) {
-      showToast("That name is restricted by admin. Pick another one.", "error");
-      return;
-    }
-
-    try {
-      await optimistic(zero.mutate(mutators.sessions.setName({ id: sessionId, name: sanitizedName })));
-      setStoredName(sanitizedName);
-      setName(sanitizedName);
-      setSavedName(sanitizedName);
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Unable to save name.", "error");
-    }
-  };
-
-  const routeHighlightClass = (game: HomeRouteGame) =>
-    activeRouteHighlight === game ? " m-game-card--route-highlight" : "";
-
-  const createImposter = async () => {
-    setPendingAction("create-imposter");
-    const id = nanoid();
-    try {
-      await ensureName();
-      const result = await optimistic(zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters, clueVisibility: imposterClueVisibility })));
-      if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      navigate(`/imposter/${id}`);
-    } finally { setPendingAction(null); }
-  };
-
-  const createPassword = async () => {
-    setPendingAction("create-password");
-    const id = nanoid();
-    try {
-      await ensureName();
-      const result = await optimistic(zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })));
-      if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      navigate(`/password/${id}/begin`);
-    } finally { setPendingAction(null); }
-  };
-
-  const createChainReaction = async () => {
-    setPendingAction("create-chain");
-    const id = nanoid();
-    try {
-      await ensureName();
-      const result = await optimistic(zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })));
-      if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      navigate(`/chain/${id}`);
-    } finally { setPendingAction(null); }
-  };
-
-  const createShadeSignal = async () => {
-    setPendingAction("create-shade");
-    const id = nanoid();
-    try {
-      await ensureName();
-      const result = await optimistic(zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })));
-      if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      navigate(`/shade/${id}`);
-    } finally { setPendingAction(null); }
-  };
-
-  const createLocationSignal = async () => {
-    setPendingAction("create-location");
-    const id = nanoid();
-    try {
-      await ensureName();
-      const result = await optimistic(zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })));
-      if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      navigate(`/location/${id}`);
-    } finally { setPendingAction(null); }
-  };
-
-  const joinAny = async () => {
-    setPendingAction("join");
-    const normalizedCode = joinCode.trim().toUpperCase();
-    if (!normalizedCode) { showToast("Enter a join code first.", "error"); setPendingAction(null); return; }
-    await ensureName();
-
-    const mySession = mySessionRows[0] ?? null;
-    const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
-    const activeGameId = mySession?.game_id ?? null;
-
-    const queueJoinIfNeeded = (target: { gameType: SessionGameType; gameId: string; code: string; route: string }) => {
-      const inAnotherGame = Boolean(activeGameType && activeGameId && (activeGameType !== target.gameType || activeGameId !== target.gameId));
-      if (inAnotherGame) {
-        if (activeGameType && activeGameId) {
-          void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
-            .catch(() => showToast("Couldn't leave previous game cleanly", "error"));
-        }
-      }
-      return false;
-    };
-
-    const performJoinTarget = async (target: { gameType: SessionGameType; gameId: string; code: string; route: string }) => {
-      if (target.gameType === "imposter") {
-        const result = await optimistic(zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })));
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      } else if (target.gameType === "password") {
-        const result = await optimistic(zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })));
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      } else if (target.gameType === "chain_reaction") {
-        const result = await optimistic(zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })));
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      } else if (target.gameType === "shade_signal") {
-        const result = await optimistic(zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })));
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      } else {
-        const result = await optimistic(zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })));
-        if (result.type === "error") { showToast(result.error.message, "error"); return; }
-      }
-      addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
-      setRecentGames(getRecentGames());
-      navigate(target.route);
-    };
-
-    try {
-      const imposterGame = imposterMatches[0];
-      if (imposterGame) {
-        const target = { gameType: "imposter" as const, gameId: imposterGame.id, code: imposterGame.code, route: `/imposter/${imposterGame.id}` };
-        if (queueJoinIfNeeded(target)) return;
-        await performJoinTarget(target);
-        return;
-      }
-      const passwordGame = passwordMatches[0];
-      if (passwordGame) {
-        const target = { gameType: "password" as const, gameId: passwordGame.id, code: passwordGame.code, route: `/password/${passwordGame.id}/begin` };
-        if (queueJoinIfNeeded(target)) return;
-        await performJoinTarget(target);
-        return;
-      }
-      const chainGame = chainMatches[0];
-      if (chainGame) {
-        const target = { gameType: "chain_reaction" as const, gameId: chainGame.id, code: chainGame.code, route: `/chain/${chainGame.id}` };
-        if (queueJoinIfNeeded(target)) return;
-        await performJoinTarget(target);
-        return;
-      }
-      const shadeGame = shadeMatches[0];
-      if (shadeGame) {
-        const target = { gameType: "shade_signal" as const, gameId: shadeGame.id, code: shadeGame.code, route: `/shade/${shadeGame.id}` };
-        if (queueJoinIfNeeded(target)) return;
-        await performJoinTarget(target);
-        return;
-      }
-      const locationGame = locationMatches[0];
-      if (locationGame) {
-        const target = { gameType: "location_signal" as const, gameId: locationGame.id, code: locationGame.code, route: `/location/${locationGame.id}` };
-        if (queueJoinIfNeeded(target)) return;
-        await performJoinTarget(target);
-        return;
-      }
-      showToast("No game found for that code.", "error");
-    } finally { setPendingAction(null); }
-  };
-
-  const confirmLeaveAndJoin = () => {
-    if (!pendingJoinTarget) {
-      setShowInSessionModal(false);
-      return;
-    }
-    const mySession = mySessionRows[0] ?? null;
-    const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;
-    const activeGameId = mySession?.game_id ?? null;
-    if (!activeGameType || !activeGameId) {
-      setShowInSessionModal(false);
-      setPendingJoinTarget(null);
-      return;
-    }
-    setJoiningFromOtherGame(true);
-    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
-      .then(async () => {
-        const target = pendingJoinTarget;
-        if (!target) return;
-        if (target.gameType === "imposter") {
-          const result = await optimistic(zero.mutate(mutators.imposter.join({ gameId: target.gameId, sessionId })));
-          if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        } else if (target.gameType === "password") {
-          const result = await optimistic(zero.mutate(mutators.password.join({ gameId: target.gameId, sessionId })));
-          if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        } else if (target.gameType === "chain_reaction") {
-          const result = await optimistic(zero.mutate(mutators.chainReaction.join({ gameId: target.gameId, sessionId })));
-          if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        } else if (target.gameType === "shade_signal") {
-          const result = await optimistic(zero.mutate(mutators.shadeSignal.join({ gameId: target.gameId, sessionId })));
-          if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        } else {
-          const result = await optimistic(zero.mutate(mutators.locationSignal.join({ gameId: target.gameId, sessionId })));
-          if (result.type === "error") { showToast(result.error.message, "error"); return; }
-        }
-        addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
-        setRecentGames(getRecentGames());
-        navigate(target.route);
-      })
-      .catch(() => showToast("Couldn't leave current game", "error"))
-      .finally(() => {
-        setJoiningFromOtherGame(false);
-        setShowInSessionModal(false);
-        setPendingJoinTarget(null);
-        setPendingAction(null);
-      });
-  };
-
+  const [showRecent, setShowRecent] = useState(false);
   const toggle = (key: string) => setExpanded(expanded === key ? null : key);
 
   return (
