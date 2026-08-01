@@ -24,7 +24,7 @@
   overflow-y: auto;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
   animation: modal-scale-in 0.2s ease-out;
 }
@@ -58,7 +58,7 @@
   color: var(--secondary);
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -103,7 +103,7 @@
   gap: 0.5rem;
   padding: 0.75rem;
   margin-bottom: 1rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--active-game-accent) 22%, transparent);
   background: color-mix(in srgb, var(--active-game-accent) 7%, transparent);
 }
@@ -234,7 +234,7 @@
   gap: 0.65rem;
   padding: 0.85rem;
   border: 1px solid color-mix(in srgb, var(--admin-score-accent) 18%, var(--border));
-  border-radius: 0.85rem;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--admin-score-accent) 5%, transparent);
 }
 
@@ -278,7 +278,7 @@
   min-height: 2.35rem;
   padding: 0.62rem 0.72rem;
   border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
-  border-radius: 0.65rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--card) 92%, transparent);
   color: var(--foreground);
   font: inherit;
@@ -306,7 +306,7 @@
   min-height: 2rem;
   padding: 0.4rem 0.65rem;
   border: 1px solid color-mix(in srgb, var(--admin-score-accent) 28%, transparent);
-  border-radius: 0.55rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--admin-score-accent) 9%, transparent);
   color: var(--admin-score-accent);
   cursor: pointer;
@@ -346,7 +346,7 @@
   min-height: 2.35rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid color-mix(in srgb, var(--admin-score-accent) 20%, transparent);
-  border-radius: 0.65rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--admin-score-accent) 8%, transparent);
   color: var(--muted-foreground);
   font-size: 0.8rem;
@@ -540,7 +540,7 @@
 /* Glow highlight */
 .demo-glow {
   position: relative;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   animation: demo-glow-pulse 2s ease-in-out infinite;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 40%, transparent);
 }
@@ -559,7 +559,7 @@
   color: var(--primary);
   background: var(--card);
   padding: 0 0.4rem;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   z-index: 1;
   white-space: nowrap;
   letter-spacing: 0.02em;
@@ -571,7 +571,7 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.4rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   border: 1px dashed var(--border);
   background: transparent;
   color: var(--secondary);
@@ -591,7 +591,7 @@
   margin-top: 0.75rem;
   padding: 0.6rem 0.75rem;
   background: color-mix(in srgb, var(--primary) 6%, transparent);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   font-size: 0.75rem;
   color: var(--secondary);
 }
@@ -641,7 +641,7 @@
   justify-content: center;
   gap: 0.4rem;
   padding: 0.55rem 0.75rem;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--secondary);
@@ -682,7 +682,7 @@
   margin-top: 0.65rem;
   padding: 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--foreground) 3%, transparent);
 }
 
@@ -709,7 +709,7 @@
   margin-top: 0.65rem;
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--foreground) 3%, transparent);
   transition: opacity 0.15s ease;
 }
@@ -791,7 +791,7 @@
   gap: 0.45rem;
   margin-top: 0.5rem;
   padding: 0.6rem 0.75rem;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 30%, transparent);
 }
@@ -858,7 +858,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--primary) 12%, transparent);
   color: var(--primary);
   flex-shrink: 0;
@@ -907,7 +907,7 @@
   font-size: 0.8rem;
   font-weight: 500;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--primary);
   background: color-mix(in srgb, var(--primary) 6%, transparent);
   color: var(--foreground);
@@ -982,7 +982,7 @@
   display: flex;
   gap: 0.6rem;
   padding: 0.6rem 0.7rem;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 30%, transparent);
   transition: border-color 0.15s;
@@ -995,7 +995,7 @@
 .info-game-card-icon {
   width: 32px;
   height: 32px;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1082,7 +1082,7 @@
   font-weight: 650;
   padding: 0.36rem 0.55rem;
   border: 1px solid var(--border);
-  border-radius: 0.55rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--muted) 34%, transparent);
   transition: border-color 0.15s, background 0.15s;
 }
@@ -1208,7 +1208,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 26%, transparent);
 }
@@ -1239,7 +1239,7 @@
   display: block;
   min-width: 0;
   padding: 0.55rem 0.65rem;
-  border-radius: 0.55rem;
+  border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
   background: color-mix(in srgb, black 10%, transparent);
   font-family: "Geist Mono", monospace;
@@ -1261,7 +1261,7 @@
   background: transparent;
   color: var(--secondary);
   cursor: pointer;
-  border-radius: 0.45rem;
+  border-radius: var(--radius-md);
   font-size: 0.7rem;
   font-weight: 650;
   line-height: 1;
@@ -1312,7 +1312,7 @@
   color: var(--secondary);
   cursor: pointer;
   padding: 0.3rem;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1391,7 +1391,7 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
@@ -1531,7 +1531,7 @@
   text-align: center;
   gap: 0.4rem;
   padding: 0.85rem 0.65rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 40%, transparent);
 }
@@ -1553,7 +1553,7 @@
 .locdemo-overview-icon {
   width: 42px;
   height: 42px;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1561,7 +1561,7 @@
 
 /* Map preview */
 .locdemo-map-preview {
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border);
 }
@@ -1582,7 +1582,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
 }
 
@@ -1631,7 +1631,7 @@
   font-size: 0.78rem;
   line-height: 1.5;
   padding: 0.65rem 0.85rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   border-left: 3px solid;
 }
 
@@ -1695,7 +1695,7 @@
   align-items: center;
   gap: 0.65rem;
   padding: 0.55rem 0.75rem;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 30%, transparent);
 }
@@ -1744,7 +1744,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 0.85rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: color-mix(in srgb, #f59e0b 6%, transparent);
 }
@@ -1764,7 +1764,7 @@
 }
 
 .locdemo-scoring-table {
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   overflow: hidden;
 }
@@ -1817,7 +1817,7 @@
 
 .locdemo-rule {
   padding: 0.65rem 0.75rem;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 30%, transparent);
 }

@@ -48,7 +48,7 @@
 .locsig-marker-tooltip {
   background: rgba(0, 0, 0, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 0.4rem;
+  border-radius: var(--radius-sm);
   padding: 0.3rem 0.55rem;
   display: flex;
   flex-direction: column;
@@ -133,7 +133,7 @@
   min-width: 2.75rem;
   height: 2.75rem;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 0.45rem;
+  border-radius: var(--radius-md);
   background: rgba(6, 12, 22, 0.82);
   color: #fff;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
@@ -162,7 +162,7 @@
   min-width: 2.75rem;
   height: 2.75rem;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 0.45rem;
+  border-radius: var(--radius-md);
   background: rgba(6, 12, 22, 0.82);
   color: #fff;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
@@ -194,7 +194,7 @@
   width: min(1500px, 85vw);
   max-width: calc(100vw - 2rem);
   border: 1px solid color-mix(in srgb, var(--locsig-accent) 28%, rgba(255, 255, 255, 0.18));
-  border-radius: 0.7rem;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   background: #0b1a2e;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.48);
@@ -253,7 +253,7 @@ body.locsig-map-expanded .app-footer {
 .locsig-map-credit {
   background: rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   padding: 3px 8px;
   font-size: 0.7rem;
   font-weight: 600;
@@ -319,7 +319,7 @@ body.locsig-map-expanded .app-footer {
   align-items: center;
   gap: 0.45rem;
   padding: 0.4rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--locsig-accent) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--locsig-accent) 25%, transparent);
   animation: locsig-clue-pop 0.4s ease-out both;
@@ -423,7 +423,7 @@ body.locsig-map-expanded .app-footer {
 .locsig-score-table {
   background: color-mix(in srgb, var(--secondary) 6%, transparent);
   border: 1px solid color-mix(in srgb, var(--secondary) 12%, transparent);
-  border-radius: 0.65rem;
+  border-radius: var(--radius-lg);
   padding: 0.75rem;
 }
 .locsig-score-table h4 {
@@ -441,7 +441,7 @@ body.locsig-map-expanded .app-footer {
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
-  border-radius: 0.4rem;
+  border-radius: var(--radius-sm);
   font-size: 0.85rem;
   animation: game-stagger-in 0.3s ease-out both;
 }
@@ -502,7 +502,7 @@ body.locsig-map-expanded .app-footer {
   align-items: center;
   gap: 0.65rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.55rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--secondary) 6%, transparent);
   border: 1px solid color-mix(in srgb, var(--secondary) 12%, transparent);
   animation: game-stagger-in 0.35s ease-out both;
@@ -554,7 +554,7 @@ body.locsig-map-expanded .app-footer {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--locsig-accent) 10%, transparent);
   font-size: 0.85rem;
   font-weight: 600;

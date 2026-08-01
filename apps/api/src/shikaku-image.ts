@@ -67,7 +67,7 @@ function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: nu
   // Background (optional)
   if (!transparentBg) {
     const bg = theme === "dark" ? "#0f1117" : "#ffffff";
-    svg += `<rect width="${totalW}" height="${totalH}" rx="12" fill="${bg}"/>`;
+    svg += `<rect width="${totalW}" height="${totalH}" rx="6" fill="${bg}"/>`;
   }
 
   // Header, only when the background is visible and padding allows it
@@ -386,6 +386,12 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       --secondary: #888;
       --accent: ${accent};
       --game-bg: ${DIFF_BG[difficulty]};
+      /* Mirrors the radius scale in apps/web base.css. Standalone page, so
+         it carries its own copy. Keep --radius-scale in sync with the site. */
+      --radius-scale: 0.5;
+      --radius-md: calc(0.5rem * var(--radius-scale));
+      --radius-lg: calc(0.75rem * var(--radius-scale));
+      --radius-xl: calc(1rem * var(--radius-scale));
     }
 
     body {
@@ -448,7 +454,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       z-index: 1;
       width: 100%;
       max-width: 540px;
-      border-radius: 1rem;
+      border-radius: var(--radius-xl);
       border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
       background: linear-gradient(to bottom right, #232323, #181a1b);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -522,13 +528,13 @@ shikakuImageRoutes.get("/puzzle", (c) => {
     /* Puzzle frame with a gradient border */
     .puzzle-wrap {
       width: 100%;
-      border-radius: 0.75rem;
+      border-radius: var(--radius-lg);
       padding: 1px;
       background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 25%, transparent), transparent 50%, color-mix(in srgb, var(--accent) 15%, transparent));
     }
 
     .puzzle-frame {
-      border-radius: 0.7rem;
+      border-radius: var(--radius-lg);
       overflow: hidden;
       background: #0f1117;
       display: flex;
@@ -554,7 +560,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       font-size: 0.95rem;
       font-weight: 800;
       letter-spacing: 0.04em;
-      border-radius: 0.65rem;
+      border-radius: var(--radius-lg);
       background: var(--accent);
       color: #111;
       border: none;
@@ -581,7 +587,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       justify-content: center;
       gap: 0.5rem;
       padding: 0.55rem 1.1rem;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 0.875rem;
       font-weight: 600;
       text-decoration: none;
@@ -624,7 +630,7 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       justify-content: center;
       gap: 0.15rem;
       padding: 0.75rem 0.4rem;
-      border-radius: 0.75rem;
+      border-radius: var(--radius-lg);
       border: 1.5px solid color-mix(in srgb, var(--dc) 25%, transparent);
       background: color-mix(in srgb, var(--dc) 4%, var(--card));
       cursor: pointer;
