@@ -1,6 +1,7 @@
-import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { FiAlertTriangle, FiCheckCircle, FiClock, FiCopy, FiInfo, FiLoader } from "react-icons/fi";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { FiClock } from "react-icons/fi";
 import { Segmented, type SoloSetupOption } from "./SoloGameMenu";
+import { SoloScoreTable, type SoloScoreRow } from "./SoloScoreTable";
 
 /** One number in the stat row across the top. */
 export interface SoloEndStat {
@@ -9,7 +10,7 @@ export interface SoloEndStat {
   /** Small trailing note, e.g. "unranked". Stays out of the big number. */
   note?: string;
   accent?: string;
-  /** Turns the tile into a copy button, used for the seed. */
+  /** Turns the whole tile into a copy button, used for the seed. */
   onCopy?: () => void;
 }
 
@@ -18,20 +19,7 @@ export interface SoloEndSplit {
   value: string;
 }
 
-/**
- * A leaderboard row. `rank` is the real standing, not the array index, because
- * the standings view is deliberately full of holes: top 3, you and your
- * neighbours, bottom 3. The gaps get drawn from the jumps between ranks.
- */
-export interface SoloEndScore {
-  id: string;
-  rank: number;
-  name: string;
-  isOwn?: boolean;
-  seed?: number;
-  /** One string per column, in the same order as `board.columns`. */
-  cells: string[];
-}
+export type SoloEndScore = SoloScoreRow;
 
 export interface SoloEndBoard {
   columns: string[];
@@ -59,7 +47,7 @@ export interface SoloEndAction {
 
 export interface SoloEndStatus {
   tone: "info" | "success" | "error";
-  /** Still waiting on the server. Spins the icon and holds the message. */
+  /** Still waiting on the server. Pulses the title and holds the message. */
   pending?: boolean;
   /** Two or three words: "Submitted", "Not submitted", "Verifying". */
   title: string;
@@ -67,12 +55,6 @@ export interface SoloEndStatus {
   /** Short chips under the message: where you placed, your time, the seed. */
   facts?: string[];
 }
-
-const STATUS_ICONS = {
-  info: <FiInfo size={16} />,
-  success: <FiCheckCircle size={16} />,
-  error: <FiAlertTriangle size={16} />,
-} as const;
 
 /** How long an armed confirm stays armed, matching the sidebar's give-up. */
 const CONFIRM_MS = 3000;
@@ -149,22 +131,6 @@ export function SoloEndScreen({
       }))
     : board?.rows ?? [];
 
-  const seedColumn = rows.some((row) => row.seed != null);
-  // In a table of nothing but your own runs, marking each one "you" is noise.
-  const allOwn = rows.length > 0 && rows.every((row) => row.isOwn);
-
-  // Centre your own run in the table rather than making you find it. Keyed on
-  // the row id so a scroll you did yourself is not undone on every render, and
-  // on the view so coming back from the times view re-centres it.
-  const selfRow = useRef<HTMLDivElement>(null);
-  const selfId = rows.find((row) => row.isOwn)?.id;
-  useEffect(() => {
-    const row = selfRow.current;
-    const scroller = row?.closest<HTMLElement>(".solo-end-table-scroll");
-    if (!row || !scroller) return;
-    scroller.scrollTop = row.offsetTop - (scroller.clientHeight - row.offsetHeight) / 2;
-  }, [selfId, board?.view]);
-
   // Which link is armed for its second press, by label. Disarms itself so an
   // armed button never sits there waiting to catch a later, unrelated click.
   const [armed, setArmed] = useState<string | null>(null);
@@ -194,31 +160,34 @@ export function SoloEndScreen({
         className="solo-end-stats"
         style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
       >
-        {stats.map((stat) => (
-          <div
-            className="solo-end-stat"
-            key={stat.label}
-            style={{ "--stat-accent": stat.accent ?? "var(--primary)" } as CSSProperties}
-          >
-            <span className="solo-end-stat-label">{stat.label}</span>
-            <span className="solo-end-stat-value">
-              {stat.value}
-              {stat.note && <em className="solo-end-stat-note">{stat.note}</em>}
-            </span>
-            {stat.onCopy && (
-              <button
-                className="solo-end-stat-copy"
-                type="button"
-                onClick={stat.onCopy}
-                aria-label={`Copy ${stat.label.toLowerCase()}`}
-                data-tooltip={`Copy ${stat.label.toLowerCase()}`}
-                data-tooltip-pos="top"
-              >
-                <FiCopy size={11} />
-              </button>
-            )}
-          </div>
-        ))}
+        {stats.map((stat) => {
+          // A copyable stat is the whole tile, so the target is the number you
+          // are looking at rather than a hover-only icon beside it.
+          const Tile = stat.onCopy ? "button" : "div";
+          return (
+            <Tile
+              className="solo-end-stat"
+              key={stat.label}
+              {...(stat.onCopy
+                ? {
+                    type: "button" as const,
+                    onClick: stat.onCopy,
+                    "aria-label": `Copy ${stat.label.toLowerCase()}`,
+                    "data-tooltip": "Click to copy",
+                    "data-tooltip-pos": "top",
+                    "data-copy": "",
+                  }
+                : {})}
+              style={{ "--stat-accent": stat.accent ?? "var(--primary)" } as CSSProperties}
+            >
+              <span className="solo-end-stat-label">{stat.label}</span>
+              <span className="solo-end-stat-value">
+                {stat.value}
+                {stat.note && <em className="solo-end-stat-note">{stat.note}</em>}
+              </span>
+            </Tile>
+          );
+        })}
       </div>
 
       {board && (
@@ -234,64 +203,14 @@ export function SoloEndScreen({
         />
 
         {/* The times are already in hand, so a stalled fetch never dims them. */}
-        <div className="solo-drawer solo-end-table" data-loading={board.loading && !splitsView ? "" : undefined}>
-          <div className="solo-end-table-scroll">
-            <div
-              className="solo-end-table-grid"
-              data-seed={seedColumn ? "" : undefined}
-              style={{ "--metric-cols": columns.length } as CSSProperties}
-            >
-              <div className="solo-end-row solo-end-row--head" role="row">
-                <span className="solo-end-cell solo-end-cell--rank">#</span>
-                <span className="solo-end-cell solo-end-cell--name">{splitsView ? "Puzzle" : "Player"}</span>
-                {columns.map((column) => (
-                  <span className="solo-end-cell solo-end-cell--metric" key={column}>{column}</span>
-                ))}
-                {seedColumn && <span className="solo-end-cell solo-end-cell--seed">Seed</span>}
-              </div>
-
-              {rows.length === 0 ? (
-                <p className="solo-end-empty">{board.loading ? "Loading standings" : board.empty}</p>
-              ) : (
-                rows.map((row, index) => {
-                  const previous = rows[index - 1];
-                  const skipped = previous ? row.rank - previous.rank - 1 : 0;
-                  return (
-                    <Fragment key={row.id}>
-                      {skipped > 0 && (
-                        <p className="solo-end-gap">
-                          {skipped} more {skipped === 1 ? "run" : "runs"}
-                        </p>
-                      )}
-                      <div
-                        className="solo-end-row"
-                        ref={row.isOwn ? selfRow : undefined}
-                        data-self={row.isOwn && !allOwn ? "" : undefined}
-                        data-medal={row.rank <= 3 ? row.rank : undefined}
-                      >
-                        <span className="solo-end-cell solo-end-cell--rank">{row.rank}</span>
-                        <span className="solo-end-cell solo-end-cell--name">
-                          <span className="solo-end-name">{row.name}</span>
-                          {row.isOwn && !allOwn && <span className="solo-end-you">You</span>}
-                        </span>
-                        {row.cells.map((cell, cellIndex) => (
-                          <span className="solo-end-cell solo-end-cell--metric" key={columns[cellIndex] ?? cellIndex}>
-                            {cell}
-                          </span>
-                        ))}
-                        {seedColumn && (
-                          <span className="solo-end-cell solo-end-cell--seed">
-                            {row.seed != null ? row.seed : "-"}
-                          </span>
-                        )}
-                      </div>
-                    </Fragment>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
+        <SoloScoreTable
+          columns={columns}
+          rows={rows}
+          nameLabel={splitsView ? "Puzzle" : "Player"}
+          empty={board.empty}
+          loading={board.loading && !splitsView}
+          scrollKey={board.view}
+        />
       </section>
       )}
 
@@ -302,13 +221,8 @@ export function SoloEndScreen({
           role="status"
         >
           <div className="solo-end-status-main">
-            <span className="solo-end-status-icon" aria-hidden="true">
-              {status.pending ? <FiLoader size={16} /> : STATUS_ICONS[status.tone]}
-            </span>
-            <div className="solo-end-status-body">
-              <p className="solo-end-status-title">{status.title}</p>
-              <p className="solo-end-status-message">{status.message}</p>
-            </div>
+            <p className="solo-end-status-title">{status.title}</p>
+            <p className="solo-end-status-message">{status.message}</p>
           </div>
           {status.facts && status.facts.length > 0 && (
             <div className="solo-drawer solo-end-status-facts">
