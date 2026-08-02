@@ -107,6 +107,11 @@ export const RATE_LIMITS = {
   // Solo-game reads: leaderboards, eligibility checks, puzzle image generation.
   game: { windowMs: 60_000, maxRequests: 30 },
 
+  // Leaderboard search. Typing fires more requests than a plain board read even
+  // debounced, so it gets its own budget instead of eating the "game" one, and
+  // a tighter one because every search is an unindexed scan.
+  leaderboardSearch: { windowMs: 60_000, maxRequests: 40 },
+
   // Solo-game score submission: the strictest public tier (anti-cheat + write).
   score: { windowMs: 60_000, maxRequests: 6 },
 

@@ -1921,6 +1921,25 @@
   justify-content: center;
   gap: 0.15rem;
   padding: 0 0.25rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+}
+
+/* The copyable tiles, the seed being the one that matters. */
+.solo-end-stat[data-copy] {
+  cursor: pointer;
+  transition: background 0.14s;
+}
+
+.solo-end-stat[data-copy]:hover,
+.solo-end-stat[data-copy]:focus-visible {
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.solo-end-stat[data-copy]:hover .solo-end-stat-value {
+  color: var(--foreground);
 }
 
 /* Hairline between stats, same one the locked picker uses. */
@@ -1964,41 +1983,6 @@
   font-weight: 600;
 }
 
-/* Sits in the tile's top corner so it never pushes the number around. */
-.solo-end-stat-copy {
-  position: absolute;
-  top: 0.15rem;
-  right: 0.15rem;
-  display: grid;
-  place-items: center;
-  width: 1.35rem;
-  height: 1.35rem;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.14s, background 0.14s, color 0.14s;
-}
-
-.solo-end-stat:hover .solo-end-stat-copy,
-.solo-end-stat-copy:focus-visible {
-  opacity: 1;
-}
-
-.solo-end-stat-copy:hover {
-  background: var(--accent);
-  color: var(--foreground);
-}
-
-/* Touch has no hover, so the button would never appear. */
-@media (pointer: coarse) {
-  .solo-end-stat-copy {
-    opacity: 0.65;
-  }
-}
-
 /* ── Standings table, hung off its filter picker ───────────── */
 .solo-end-table {
   display: block;
@@ -2014,7 +1998,7 @@
   /* Positioned so a row's offsetTop is measured against this box, which is
      what the scroll-to-your-own-row effect relies on. */
   position: relative;
-  height: 16.5rem;
+  height: var(--table-h, 16.5rem);
   overflow: auto;
   /* Keep the scrollbar's lane whether or not there is one to show, so a view
      with three rows lines its columns up with a view that has fifty. */
@@ -2114,6 +2098,23 @@
   font-size: 0.74rem;
 }
 
+/* Every seed is a copy button. It reads as text until you point at it. */
+.solo-end-seed {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-family: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+
+.solo-end-seed:hover,
+.solo-end-seed:focus-visible {
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  color: var(--foreground);
+}
+
 /* The first metric is the one the board is sorted by, so it carries the
    weight. The rest are supporting detail and stay quiet. */
 .solo-end-row:not(.solo-end-row--head) .solo-end-cell--metric:not(:nth-of-type(3)) {
@@ -2201,10 +2202,8 @@
 
 /* ── Submission status ─────────────────────────────────────
    Built out of the same two pieces as the rest of the screen: a bordered
-   control with a drawer hanging off it. The tone shows up in the left rule,
-   the icon and the title, the way your own row is marked in the standings,
-   rather than tinting the whole panel a different colour from every other
-   box on the page. */
+   control with a drawer hanging off it. Centred like everything else on the
+   screen, with the tone carried by the title's colour alone. */
 .solo-end-status {
   display: flex;
   flex-direction: column;
@@ -2212,13 +2211,14 @@
 
 .solo-end-status-main {
   display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.22rem;
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: var(--solo-radius);
   background: var(--background);
-  box-shadow: inset 3px 0 0 var(--status-accent);
+  text-align: center;
 }
 
 /* Flatten where the facts drawer joins on. */
@@ -2227,27 +2227,13 @@
   border-bottom-right-radius: 0;
 }
 
-.solo-end-status-icon {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  margin-top: 0.05rem;
-  color: var(--status-accent);
+/* Nothing spins any more, so the wait shows in the title fading. */
+.solo-end-status[data-pending] .solo-end-status-title {
+  animation: solo-end-pulse 1.4s ease-in-out infinite;
 }
 
-.solo-end-status[data-pending] .solo-end-status-icon {
-  animation: solo-end-spin 1.1s linear infinite;
-}
-
-@keyframes solo-end-spin {
-  to { transform: rotate(360deg); }
-}
-
-.solo-end-status-body {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.22rem;
+@keyframes solo-end-pulse {
+  50% { opacity: 0.45; }
 }
 
 /* The same micro-label the stat tiles use, in the tone's colour. */
@@ -2298,6 +2284,290 @@
 .solo-end-status--info { --status-accent: var(--primary); }
 .solo-end-status--success { --status-accent: #34d399; }
 .solo-end-status--error { --status-accent: #f87171; }
+
+/* ── Full leaderboard ──────────────────────────────────────────
+   The menu and the end screen in a modal: same hero, same segmented
+   pickers with a drawer hung off the last one, same standings table.
+   It is wider and it paginates, and that is the whole difference. */
+.solo-lb-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+}
+
+/* A portal renders outside .game-page, so the game's accent has to come with
+   it. Same two colours the page theme sets. */
+.solo-lb-overlay[data-game-theme="shikaku"] {
+  --primary: #34d399;
+  --primary-foreground: #181a1b;
+}
+
+.solo-lb-overlay[data-game-theme="pips"] {
+  --primary: #fb923c;
+  --primary-foreground: #181a1b;
+}
+
+.solo-lb {
+  --solo-pad: 0.25rem;
+  --solo-radius: var(--radius-lg);
+  /* Shorter than the menu's controls: this is a filter bar, not the setup.
+     Only the panel around them got tighter, the controls stay tappable. */
+  --solo-control-h: 3rem;
+  /* One page of standings, to the pixel. The rows are pinned to these
+     heights rather than measured, so the table always ends on row 10. */
+  --lb-row-h: 2.05rem;
+  --lb-head-h: 2.2rem;
+  --lb-rows: 10;
+  position: relative;
+  width: min(620px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem 0.9rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  animation: game-fade-in-up 0.22s ease-out both;
+}
+
+/* Nothing hangs off the top of the standings here the way it does on the end
+   screen, so it is a box in its own right and gets all four corners. */
+.solo-lb .solo-end-table {
+  border-top: 1px solid var(--border);
+  border-radius: var(--solo-radius);
+}
+
+.solo-lb .solo-end-row--head {
+  border-top-left-radius: var(--solo-radius);
+  border-top-right-radius: var(--solo-radius);
+}
+
+/* Rows are a fixed height here so ten of them fit exactly. */
+.solo-lb .solo-end-row {
+  height: var(--lb-row-h);
+  padding-block: 0;
+}
+
+.solo-lb .solo-end-row--head {
+  height: var(--lb-head-h);
+  padding-block: 0;
+}
+
+/* Ten rows when the screen has room for ten, and as many as fit when it does
+   not. The 21.5rem is everything else in the panel at its tallest, which is
+   the two-filter board, so the modal never outgrows the viewport. The floor
+   keeps a short window usable rather than collapsing it. */
+.solo-lb .solo-end-table-scroll {
+  --table-h: max(
+    8rem,
+    min(
+      calc(var(--lb-head-h) + var(--lb-rows) * var(--lb-row-h)),
+      calc(100dvh - 21.5rem)
+    )
+  );
+}
+
+/* Without this the table's min-width pushes the panel wider than a phone,
+   which is exactly what the table's own sideways scroll is there to avoid. */
+.solo-lb,
+.solo-lb > * {
+  min-width: 0;
+}
+
+.solo-lb-hero {
+  gap: 0.15rem;
+}
+
+.solo-lb-title {
+  font-size: clamp(1.4rem, 5vw, 1.7rem);
+}
+
+.solo-lb-hero .solo-menu-sub {
+  font-size: 0.78rem;
+}
+
+.solo-lb-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+
+.solo-lb-close:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.solo-lb-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* A picker and its drawer read as one unit, same as the menu's rows. */
+.solo-lb-filter {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The toggle is the first option on the bar rather than a button parked next
+   to it: same border, same height, corners joined, only its own left edge
+   rounded. It is still a toggle, not one of the picker's choices. */
+.solo-lb-filter-bar {
+  display: flex;
+  align-items: stretch;
+}
+
+.solo-lb-filter-bar .solo-seg {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Share the one border down the middle instead of stacking two. */
+.solo-lb-filter-bar:has(.solo-lb-search-toggle) .solo-seg {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.solo-lb-search-toggle {
+  flex: 0 0 10%;
+  display: grid;
+  place-items: center;
+  min-width: 2.6rem;
+  margin-right: -1px;
+  padding: var(--solo-pad);
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius) 0 0 var(--solo-radius);
+  background: var(--background);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 0.16s, background 0.16s;
+}
+
+/* The drawer hangs off the whole bar, so the toggle squares off with it. */
+.solo-lb-filter-bar:has(.solo-seg[data-attached]) .solo-lb-search-toggle {
+  border-bottom-left-radius: 0;
+}
+
+.solo-lb-search-toggle:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+
+.solo-lb-search-toggle[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--primary) 16%, var(--card));
+  color: var(--primary);
+}
+
+/* Sits in the drawer the facts usually occupy, laid out like the seed input.
+   The two share a height so toggling search never moves the table. */
+.solo-lb-search,
+.solo-lb .solo-end-status-facts {
+  min-height: 2.3rem;
+}
+
+.solo-lb-search {
+  gap: 0.4rem;
+  padding-left: 0.7rem;
+}
+
+.solo-lb-search-icon {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.solo-lb-search-input {
+  flex: 1;
+  min-width: 0;
+  /* Short enough that the drawer's min-height decides, which is what keeps it
+     the same height as the facts it replaces. */
+  height: 1.7rem;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  outline: none;
+}
+
+.solo-lb-search-input::placeholder {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+/* The type="search" widget's own clear button, which we replace. */
+.solo-lb-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.solo-lb-search-clear {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.7rem;
+  height: 1.7rem;
+  margin-right: 0.15rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+
+.solo-lb-search-clear:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.solo-lb-pages {
+  align-items: center;
+  gap: 1rem;
+}
+
+.solo-lb-page-count {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.solo-menu-link:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.solo-menu-link:disabled:hover {
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  .solo-lb {
+    padding: 1.2rem 0.8rem 0.9rem;
+  }
+
+  .solo-lb-pages {
+    gap: 0.7rem;
+  }
+}
 
 /* ── A link waiting on its second press ────────────────────── */
 .solo-menu-link[data-armed] {

@@ -3,7 +3,6 @@ import {
   FiAward,
   FiCheck,
   FiClock,
-  FiCopy,
   FiFlag,
   FiHash,
   FiHelpCircle,
@@ -12,13 +11,15 @@ import {
   FiTarget,
   FiUploadCloud,
   FiUser,
-  FiX,
 } from "react-icons/fi";
 import "../styles/game-shared.css";
 import "../styles/pips.css";
 import { PipsDemo } from "../components/demos/PipsDemo";
 import { SoloEndScreen, SPLITS_VIEW, soloStatusTitle } from "../components/shared/SoloEndScreen";
 import { SoloGameMenu, type SoloSetupOption } from "../components/shared/SoloGameMenu";
+import { SoloLeaderboard, type SoloLeaderboardSearch } from "../components/shared/SoloLeaderboard";
+import { copySeed } from "../components/shared/SoloScoreTable";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
 import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import {
@@ -200,6 +201,10 @@ export function PipsPage() {
   const [leaderboardTotalPages, setLeaderboardTotalPages] = useState(1);
   const [leaderboardTotal, setLeaderboardTotal] = useState(PIPS_SEEDED_LEADERBOARD.length);
   const [leaderboardView, setLeaderboardView] = useState<PipsLeaderboardView>("all");
+  const [leaderboardSearchOpen, setLeaderboardSearchOpen] = useState(false);
+  const [leaderboardSearch, setLeaderboardSearch] = useState("");
+  // Closing the search drops the query, which is what puts the board back.
+  const leaderboardQuery = useDebouncedValue(leaderboardSearchOpen ? leaderboardSearch.trim() : "", 300);
   const [personalBest, setPersonalBest] = useState<PipsPersonalBest | null>(null);
   const [scoreSubmitted, setScoreSubmitted] = useState(false);
   const [submittingScore, setSubmittingScore] = useState(false);
@@ -239,7 +244,7 @@ export function PipsPage() {
     [elapsedMs, runMode, runSplits, seed],
   );
 
-  const fetchLeaderboard = async (page = leaderboardPage, view = leaderboardView) => {
+  const fetchLeaderboard = async (page = leaderboardPage, view = leaderboardView, q = "") => {
     setLeaderboardLoading(true);
     try {
       const params = new URLSearchParams({
@@ -249,6 +254,9 @@ export function PipsPage() {
       });
       if (view === "mine") {
         params.set("mineOnly", "true");
+      }
+      if (q) {
+        params.set("q", q);
       }
       const res = await fetch(`${API_BASE}/api/pips/leaderboard?${params.toString()}`, {
         credentials: "include",
@@ -268,18 +276,31 @@ export function PipsPage() {
       setLeaderboardTotalPages(Math.max(1, data.totalPages ?? 1));
       setLeaderboardTotal(data.total ?? entries.length);
     } catch {
-      const sorted = sortPipsLeaderboardEntries(PIPS_SEEDED_LEADERBOARD);
+      // Offline: the seeded board stands in, and it can be searched too.
+      const needle = q.trim().toLowerCase();
+      const all = sortPipsLeaderboardEntries(PIPS_SEEDED_LEADERBOARD)
+        .filter((entry) => !needle
+          || entry.name.toLowerCase().includes(needle)
+          || String(entry.seed).includes(needle));
       const start = (page - 1) * PIPS_LEADERBOARD_PAGE_SIZE;
-      const fallbackEntries = view === "mine" ? [] : sorted.slice(start, start + PIPS_LEADERBOARD_PAGE_SIZE);
+      const fallbackEntries = view === "mine" ? [] : all.slice(start, start + PIPS_LEADERBOARD_PAGE_SIZE);
       setLeaderboardEntries(fallbackEntries);
       setPersonalBest(null);
       setLeaderboardPage(page);
-      setLeaderboardTotalPages(view === "mine" ? 1 : Math.max(1, Math.ceil(sorted.length / PIPS_LEADERBOARD_PAGE_SIZE)));
-      setLeaderboardTotal(view === "mine" ? 0 : sorted.length);
+      setLeaderboardTotalPages(view === "mine" ? 1 : Math.max(1, Math.ceil(all.length / PIPS_LEADERBOARD_PAGE_SIZE)));
+      setLeaderboardTotal(view === "mine" ? 0 : all.length);
     } finally {
       setLeaderboardLoading(false);
     }
   };
+
+  // Searching always lands you on page 1 of the matches.
+  useEffect(() => {
+    if (openPanel !== "leaderboard") return;
+    setLeaderboardPage(1);
+    void fetchLeaderboard(1, leaderboardView, leaderboardQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leaderboardQuery, openPanel]);
 
   const setLiveDragState = (next: PipsDragState | null) => {
     dragStateRef.current = next;
@@ -1154,7 +1175,9 @@ export function PipsPage() {
     <PipsLeaderboardPanel
       entries={leaderboardEntries}
       loading={leaderboardLoading}
-      currentRun={phase === "complete" && runMode !== "ranked" ? currentLeaderboardEntry : null}
+      // A searched board is a list of other people's runs, so this run does not
+      // get spliced into it.
+      currentRun={phase === "complete" && runMode !== "ranked" && !leaderboardQuery ? currentLeaderboardEntry : null}
       personalBest={personalBest}
       view={leaderboardView}
       page={leaderboardPage}
@@ -1164,12 +1187,18 @@ export function PipsPage() {
       onViewChange={(nextView) => {
         setLeaderboardView(nextView);
         setLeaderboardPage(1);
-        void fetchLeaderboard(1, nextView);
+        void fetchLeaderboard(1, nextView, leaderboardQuery);
       }}
       onPageChange={(nextPage) => {
         const safePage = Math.min(Math.max(1, nextPage), Math.max(1, leaderboardTotalPages));
         setLeaderboardPage(safePage);
-        void fetchLeaderboard(safePage, leaderboardView);
+        void fetchLeaderboard(safePage, leaderboardView, leaderboardQuery);
+      }}
+      search={{
+        open: leaderboardSearchOpen,
+        value: leaderboardSearch,
+        onToggle: () => setLeaderboardSearchOpen((open) => !open),
+        onChange: setLeaderboardSearch,
       }}
     />
   ) : null;
@@ -1572,6 +1601,11 @@ function PipsMenu({
 
 /* The two views you actually read get the room; Top 10 and the run's own
    times are a glance, so they get a sliver each. */
+const PIPS_LB_VIEWS: SoloSetupOption[] = [
+  { value: "all", label: "Everyone", icon: <FiAward size={15} />, title: "Every ranked run, fastest first" },
+  { value: "mine", label: "Yours", icon: <FiUser size={15} />, title: "Your own submitted runs" },
+];
+
 const PIPS_END_VIEWS: SoloSetupOption[] = [
   { value: "standings", label: "Standings", icon: <FiTarget size={15} />, weight: 35, title: "Top 3, your run and its neighbours, bottom 3" },
   { value: "mine", label: "Yours", icon: <FiUser size={15} />, weight: 35, title: "Your own submitted runs, best first" },
@@ -1666,9 +1700,7 @@ function PipsEndScreen({
           label: "Seed",
           value: String(seed),
           accent: "var(--muted-foreground)",
-          onCopy: () => navigator.clipboard.writeText(String(seed))
-            .then(() => showToast("Seed copied", "info"))
-            .catch(() => undefined),
+          onCopy: () => void copySeed(seed),
         },
       ]}
       splits={splits}
@@ -1839,6 +1871,7 @@ function PipsLeaderboardPanel({
   total,
   onViewChange,
   onPageChange,
+  search,
 }: {
   onClose: () => void;
   entries: PipsLeaderboardEntry[];
@@ -1851,6 +1884,7 @@ function PipsLeaderboardPanel({
   total: number;
   onViewChange: (view: PipsLeaderboardView) => void;
   onPageChange: (page: number) => void;
+  search?: SoloLeaderboardSearch;
 }) {
   const leaderboardRows = useMemo(
     () => currentRun ? sortPipsLeaderboardEntries([currentRun, ...entries]).slice(0, PIPS_LEADERBOARD_PAGE_SIZE) : entries,
@@ -1862,123 +1896,56 @@ function PipsLeaderboardPanel({
   const personalBestTime = ownEntry?.totalMs ?? personalBest?.totalMs;
   const fastestRun = ownEntry ?? personalBest;
 
+  const searching = Boolean(search?.open && search.value.trim());
+
   return (
-    <div
-      className="pips-panel-overlay"
-      role="presentation"
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      onWheel={(event) => event.stopPropagation()}
-    >
-      <section className="pips-panel pips-panel--leaderboard" role="dialog" aria-modal="true" aria-label="Pips leaderboard">
-        <div className="pips-panel-head">
-          <h2><FiAward size={16} /> Leaderboard</h2>
-          <button className="pips-panel-close" type="button" onClick={onClose} aria-label="Close">
-            <FiX size={18} />
-          </button>
-        </div>
-
-        {fastestRun && personalBestTime != null && (
-          <div className="pips-lb-current">
-            <div>
-              <span className="pips-lb-current-label">{ownEntry ? "This Run" : "Your Best"}</span>
-              <strong>#{ownRank} / {formatTime(personalBestTime)}</strong>
-            </div>
-            <div className="pips-lb-current-splits" aria-label="Your split times">
-              <span>Easy <strong>{formatSplitTime(fastestRun.easyMs)}</strong></span>
-              <span>Medium <strong>{formatSplitTime(fastestRun.mediumMs)}</strong></span>
-              <span>Hard <strong>{formatSplitTime(fastestRun.hardMs)}</strong></span>
-              {fastestRun.seed != null && <span>Seed <strong>{fastestRun.seed}</strong></span>}
-            </div>
-          </div>
-        )}
-
-        <div className="pips-lb-toolbar">
-          <div className="pips-lb-view-toggle" role="group" aria-label="Leaderboard view">
-            <button
-              className={`pips-lb-view-btn${view === "all" ? " pips-lb-view-btn--active" : ""}`}
-              type="button"
-              onClick={() => onViewChange("all")}
-            >
-              All
-            </button>
-            <button
-              className={`pips-lb-view-btn${view === "mine" ? " pips-lb-view-btn--active" : ""}`}
-              type="button"
-              onClick={() => onViewChange("mine")}
-            >
-              Mine
-            </button>
-          </div>
-          <span className="pips-lb-count">{total.toLocaleString()} run{total === 1 ? "" : "s"}</span>
-        </div>
-
-        <div className="pips-lb-table">
-          <div className="pips-lb-col-header" aria-hidden="true">
-            <span>Rank</span>
-            <span>Player</span>
-            <span>Total</span>
-            <span>Easy</span>
-            <span>Medium</span>
-            <span>Hard</span>
-            <span>Seed</span>
-          </div>
-          {loading ? (
-            <div className="pips-lb-spinner-wrap">
-              <span className="pips-lb-spinner" />
-              <span className="pips-lb-spinner-text">Loading leaderboard</span>
-            </div>
-          ) : leaderboardRows.length === 0 ? (
-            <div className="pips-lb-empty-stable">
-              {view === "mine" ? "No submitted Pips runs yet." : "No leaderboard runs yet."}
-            </div>
-          ) : (
-            <div className="pips-lb-list">
-              {leaderboardRows.map((entry, index) => {
-                const rank = pageBaseRank + index + 1;
-                return (
-                  <div
-                    className={`pips-lb-row${rank <= 3 ? ` pips-lb-row--top${rank}` : ""}${entry.isOwn ? " pips-lb-row--self" : ""}`}
-                    key={entry.id}
-                  >
-                    <span className="pips-lb-rank">#{rank}</span>
-                    <span className="pips-lb-player">
-                      <span className="pips-lb-name">{entry.name}</span>
-                      {entry.isOwn && <span className="pips-lb-badge">You</span>}
-                    </span>
-                    <span className="pips-lb-total">{formatTime(entry.totalMs)}</span>
-                    <span className="pips-lb-split">{formatSplitTime(entry.easyMs)}</span>
-                    <span className="pips-lb-split">{formatSplitTime(entry.mediumMs)}</span>
-                    <span className="pips-lb-split">{formatSplitTime(entry.hardMs)}</span>
-                    <span className="pips-lb-seed">
-                      <button
-                        className="pips-lb-seed-copy"
-                        type="button"
-                        onClick={() => navigator.clipboard.writeText(String(entry.seed)).then(() => showToast("Seed copied", "info")).catch(() => undefined)}
-                        data-tooltip="Copy seed"
-                        aria-label={`Copy seed ${entry.seed}`}
-                      >
-                        <FiCopy size={11} />
-                      </button>
-                      {entry.seed}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="pips-lb-pagination">
-          <button type="button" onClick={() => onPageChange(page - 1)} disabled={loading || page <= 1}>
-            Prev
-          </button>
-          <span>Page {page} / {Math.max(1, totalPages)}</span>
-          <button type="button" onClick={() => onPageChange(page + 1)} disabled={loading || page >= totalPages}>
-            Next
-          </button>
-        </div>
-      </section>
-    </div>
+    <SoloLeaderboard
+      game="pips"
+      title="Pips Leaderboard"
+      subtitle={searching
+        ? `${total.toLocaleString()} match${total === 1 ? "" : "es"}`
+        : `${total.toLocaleString()} ranked run${total === 1 ? "" : "s"}`}
+      {...(search ? { search } : {})}
+      filters={[{
+        label: "Leaderboard view",
+        value: view,
+        options: PIPS_LB_VIEWS,
+        onChange: (next) => onViewChange(next as PipsLeaderboardView),
+      }]}
+      facts={fastestRun && personalBestTime != null
+        ? [
+            `${ownEntry ? "This run" : "Your best"} #${ownRank}`,
+            `Total ${formatTime(personalBestTime)}`,
+            `Easy ${formatSplitTime(fastestRun.easyMs)}`,
+            `Med ${formatSplitTime(fastestRun.mediumMs)}`,
+            `Hard ${formatSplitTime(fastestRun.hardMs)}`,
+          ]
+        : undefined}
+      columns={["Total", "Easy", "Med", "Hard"]}
+      rows={leaderboardRows.map((entry, index) => ({
+        id: entry.id,
+        // Searching sends the standing each run actually holds; a plain page is
+        // in order, so its position is the rank.
+        rank: entry.rank ?? pageBaseRank + index + 1,
+        name: entry.name,
+        isOwn: Boolean(entry.isOwn),
+        seed: entry.seed,
+        cells: [
+          formatTime(entry.totalMs),
+          formatSplitTime(entry.easyMs),
+          formatSplitTime(entry.mediumMs),
+          formatSplitTime(entry.hardMs),
+        ],
+      }))}
+      loading={loading}
+      empty={searching
+        ? "No runs match that name or seed."
+        : view === "mine" ? "No submitted Pips runs yet." : "No leaderboard runs yet."}
+      page={page}
+      totalPages={totalPages}
+      onPageChange={onPageChange}
+      onClose={onClose}
+    />
   );
 }
 
