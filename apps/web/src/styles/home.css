@@ -2175,23 +2175,74 @@ a.solo-card-title-link {
 }
 
 /* ── Config area (expandable) ────────────────────────────────── */
-.hc-config {
+/* ── Create-game setup ────────────────────────────────────────
+   The single-player menu's controls, sized for a 320px card: bordered
+   pickers with a sliding thumb, no shadows, no glows, the card's own
+   accent on the choice you are on. The .solo-* classes themselves come
+   from game-shared.css, this only sets the dials they read. */
+.hc-setup {
+  --solo-pad: 0.2rem;
+  --solo-radius: var(--radius-lg);
+  --solo-control-h: 2.1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.5rem;
   width: 100%;
 }
 
-.hc-config-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: flex-end;
-}
-
-.hc-config-field {
+.hc-setup-field {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
+}
+
+/* A card holds four of these, so the segment text runs smaller than the
+   0.82rem the full-page menus use. */
+.hc-setup .solo-opt-name {
+  font-size: 0.75rem;
+}
+
+/* Category has fifteen options, too many for a segmented row, so it stays
+   a native select wearing the same bordered control. */
+.hc-setup-select {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: calc(var(--solo-control-h) + var(--solo-pad) * 2);
+  padding: 0 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius);
+  background: var(--background);
+  color: var(--card-accent, var(--primary));
+  transition: border-color 0.18s;
+}
+
+.hc-setup-select:hover,
+.hc-setup-select:focus-within {
+  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 55%, transparent);
+}
+
+.hc-setup-select select {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  appearance: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  /* The native dropdown draws itself, and it is not on our palette. */
+  text-align-last: center;
+}
+
+.hc-setup-select svg {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
 }
 
 .hc-config-label {
@@ -2211,23 +2262,7 @@ a.solo-card-title-link {
   text-underline-offset: 2px;
 }
 
-/* Compact selects inside card config */
-.hc-config .input {
-  padding: 0.65rem 0.75rem;
-  font-size: 0.88rem;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  cursor: pointer;
-  color: var(--card-accent, var(--primary));
-}
-.hc-config .input:hover {
-  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 45%, transparent);
-}
-.hc-config .input:focus {
-  border-color: var(--card-accent, var(--primary));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--card-accent, var(--primary)) 15%, transparent);
-}
-
-/* Styled checkbox row for config toggles */
+/* Styled checkbox row for config toggles (mobile home page) */
 .hc-config-check {
   display: flex;
   align-items: center;
@@ -2450,7 +2485,7 @@ a.solo-card-title-link {
 }
 
 /* ── Centered card: config stretch ───────────────────────────── */
-.hc-centered .hc-config {
+.hc-centered .hc-setup {
   width: 100%;
 }
 
@@ -2742,7 +2777,7 @@ a.solo-card-title-link {
 }
 
 /* Only center + expand when showing the config form */
-.hc-card-anim:has(> .hc-config) {
+.hc-card-anim:has(> .hc-setup) {
   display: flex;
   flex-direction: column;
   justify-content: center;
