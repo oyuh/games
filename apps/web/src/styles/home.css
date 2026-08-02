@@ -1734,7 +1734,14 @@ a.solo-card-title-link {
   font-size: 0.88rem;
 }
 
-/* ── Join input ready state (button-like) ────────────────────── */
+/* ── Join input ready state (button-like) ────────────────────────
+   A full, untried code turns the field into the join button. Once a code has
+   been turned away the class comes off and it is an ordinary text box again,
+   so the player can click into it and fix a character. */
+.hc-join-form {
+  position: relative;
+}
+
 .hc-join-input--ready {
   background: var(--primary);
   color: var(--primary-foreground);
@@ -1745,6 +1752,9 @@ a.solo-card-title-link {
   transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
   box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 25%, transparent);
   outline: none;
+  /* Code slides off centre to make room for the arrow. */
+  text-align: left;
+  padding-right: 2.5rem;
 }
 
 .hc-join-input--ready:hover {
@@ -1755,6 +1765,35 @@ a.solo-card-title-link {
 
 .hc-join-input--ready::placeholder {
   color: transparent;
+}
+
+/* The arrow sits over the right end of the field and nudges, just enough to
+   read as "press this". Pointer events pass through to the field itself, which
+   already joins on click. */
+.hc-join-go {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--primary-foreground);
+  pointer-events: none;
+  animation: hc-join-arrow-nudge 1.6s ease-in-out infinite;
+}
+
+@keyframes hc-join-arrow-nudge {
+  0%, 100% { transform: translate(0, -50%); }
+  50% { transform: translate(3px, -50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-join-go {
+    animation: none;
+    transform: translateY(-50%);
+  }
 }
 
 .hc-sync-mini-spinner {
