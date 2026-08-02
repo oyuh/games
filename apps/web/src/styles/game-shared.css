@@ -1785,7 +1785,6 @@
 }
 
 /* ── Stat row: the locked segmented picker, reused ─────────── */
-.solo-end-summary,
 .solo-end-board {
   display: flex;
   flex-direction: column;
@@ -1797,11 +1796,6 @@
   border: 1px solid var(--border);
   border-radius: var(--solo-radius);
   background: var(--background);
-}
-
-.solo-end-stats[data-attached] {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
 .solo-end-stat {
@@ -1892,33 +1886,6 @@
   }
 }
 
-/* ── Splits drawer: per-puzzle times, one line ─────────────── */
-.solo-end-splits {
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.3rem 0.9rem;
-  min-height: calc(var(--solo-seed-h) + var(--solo-pad) * 2 + 1px);
-  padding: 0.4rem 0.7rem;
-}
-
-.solo-end-split {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.32rem;
-  font-size: 0.78rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.solo-end-split-label {
-  color: var(--muted-foreground);
-  font-weight: 600;
-}
-
-.solo-end-split strong {
-  color: var(--foreground);
-  font-weight: 700;
-}
-
 /* ── Standings table, hung off its filter picker ───────────── */
 .solo-end-table {
   display: block;
@@ -1927,13 +1894,18 @@
 }
 
 /* Narrow screens scroll the table sideways rather than crushing the
-   columns, so every run stays readable at every width. */
+   columns, so every run stays readable at every width. The height is fixed,
+   not a max: two runs and fifty runs get the same box, so switching views
+   never resizes the screen under you. */
 .solo-end-table-scroll {
   /* Positioned so a row's offsetTop is measured against this box, which is
      what the scroll-to-your-own-row effect relies on. */
   position: relative;
-  max-height: 16.5rem;
+  height: 16.5rem;
   overflow: auto;
+  /* Keep the scrollbar's lane whether or not there is one to show, so a view
+     with three rows lines its columns up with a view that has fifty. */
+  scrollbar-gutter: stable;
   overscroll-behavior: contain;
 }
 
@@ -1941,15 +1913,31 @@
   opacity: 0.5;
 }
 
+/* Every track is a fixed size, so the columns land in the same places no
+   matter how many rows or how long the names are. Only the number of metric
+   columns moves them, and that is per game, not per view. */
 .solo-end-table-grid {
+  --rank-w: 2.4rem;
+  --name-w: 7rem;
+  --metric-w: 4.6rem;
+  --seed-w: 0rem;
+  /* The row padding, which subgrid takes out of the first and last track. */
+  --row-pad: 1.4rem;
   display: grid;
   grid-template-columns:
-    2.4rem
-    minmax(6rem, 1fr)
-    repeat(var(--metric-cols), minmax(3.8rem, max-content))
-    auto;
-  min-width: max-content;
+    var(--rank-w)
+    minmax(var(--name-w), 1fr)
+    repeat(var(--metric-cols), var(--metric-w))
+    var(--seed-w);
+  min-width: calc(
+    var(--rank-w) + var(--name-w) + var(--metric-cols) * var(--metric-w)
+    + var(--seed-w) + var(--row-pad)
+  );
   width: 100%;
+}
+
+.solo-end-table-grid[data-seed] {
+  --seed-w: 3.8rem;
 }
 
 .solo-end-row {
@@ -2099,27 +2087,38 @@
 }
 
 /* ── Submission status ─────────────────────────────────────
-   Same bordered group as everything else on this screen: a colour-coded
-   icon on the left says what happened at a glance, the right side spells
-   it out and hangs the run's own numbers underneath. */
+   Built out of the same two pieces as the rest of the screen: a bordered
+   control with a drawer hanging off it. The tone shows up in the left rule,
+   the icon and the title, the way your own row is marked in the standings,
+   rather than tinting the whole panel a different colour from every other
+   box on the page. */
 .solo-end-status {
   display: flex;
+  flex-direction: column;
+}
+
+.solo-end-status-main {
+  display: flex;
   align-items: flex-start;
-  gap: 0.7rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px solid color-mix(in srgb, var(--status-accent) 35%, var(--border));
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
   border-radius: var(--solo-radius);
-  background: color-mix(in srgb, var(--status-accent) 7%, var(--background));
+  background: var(--background);
+  box-shadow: inset 3px 0 0 var(--status-accent);
+}
+
+/* Flatten where the facts drawer joins on. */
+.solo-end-status-main:not(:last-child) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .solo-end-status-icon {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 1.9rem;
-  height: 1.9rem;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--status-accent) 16%, transparent);
+  margin-top: 0.05rem;
   color: var(--status-accent);
 }
 
@@ -2135,15 +2134,18 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.22rem;
 }
 
+/* The same micro-label the stat tiles use, in the tone's colour. */
 .solo-end-status-title {
   margin: 0;
   color: var(--status-accent);
-  font-size: 0.82rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .solo-end-status-message {
@@ -2153,21 +2155,31 @@
   line-height: 1.4;
 }
 
+/* The run's own numbers, in the drawer, laid out like the seed drawer. */
 .solo-end-status-facts {
-  display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
-  margin: 0.25rem 0 0;
+  justify-content: center;
+  gap: 0.15rem 0.8rem;
+  padding: 0.45rem 0.7rem;
 }
 
 .solo-end-fact {
-  padding: 0.1rem 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  position: relative;
   color: var(--foreground);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.solo-end-fact + .solo-end-fact::before {
+  content: "";
+  position: absolute;
+  left: -0.4rem;
+  top: 50%;
+  width: 1px;
+  height: 0.8rem;
+  transform: translateY(-50%);
+  background: var(--border);
 }
 
 .solo-end-status--info { --status-accent: var(--primary); }
@@ -2222,6 +2234,12 @@
   }
 
   .solo-end-table-scroll {
-    max-height: 13rem;
+    height: 13rem;
+  }
+
+  /* Tighter tracks so the common tables fit without sideways scrolling. */
+  .solo-end-table-grid {
+    --name-w: 5.2rem;
+    --metric-w: 4.1rem;
   }
 }

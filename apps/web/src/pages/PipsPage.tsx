@@ -17,7 +17,7 @@ import {
 import "../styles/game-shared.css";
 import "../styles/pips.css";
 import { PipsDemo } from "../components/demos/PipsDemo";
-import { SoloEndScreen, soloStatusTitle } from "../components/shared/SoloEndScreen";
+import { SoloEndScreen, SPLITS_VIEW, soloStatusTitle } from "../components/shared/SoloEndScreen";
 import { SoloGameMenu, type SoloSetupOption } from "../components/shared/SoloGameMenu";
 import { useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
 import { emitSolo, useSoloEvent } from "../lib/solo-bus";
@@ -1570,10 +1570,12 @@ function PipsMenu({
   );
 }
 
+/* The two views you actually read get the room; Top 10 and the run's own
+   times are a glance, so they get a sliver each. */
 const PIPS_END_VIEWS: SoloSetupOption[] = [
-  { value: "standings", label: "Standings", icon: <FiTarget size={15} />, weight: 1.2, title: "Top 3, your run and its neighbours, bottom 3" },
-  { value: "top", label: "Top 10", icon: <FiAward size={15} />, title: "The ten fastest runs" },
-  { value: "mine", label: "Yours", icon: <FiUser size={15} />, title: "Your own submitted runs, best first" },
+  { value: "standings", label: "Standings", icon: <FiTarget size={15} />, weight: 35, title: "Top 3, your run and its neighbours, bottom 3" },
+  { value: "mine", label: "Yours", icon: <FiUser size={15} />, weight: 35, title: "Your own submitted runs, best first" },
+  { value: "top", label: "Top 10", icon: <FiAward size={15} />, weight: 15, title: "The ten fastest runs" },
 ];
 
 function PipsEndScreen({
@@ -1611,12 +1613,13 @@ function PipsEndScreen({
 }) {
   const completed = outcome === "completed";
   const ranked = mode === "ranked";
-  const [view, setView] = useState<SoloEndView>("standings");
+  const [view, setView] = useState<SoloEndView | typeof SPLITS_VIEW>("standings");
   // Refetch once the score lands so the standings show where it actually put you.
+  // The times view is local, so it holds whatever the board last loaded.
   const board = useSoloEndBoard<PipsLeaderboardEntry, PipsPersonalBest>({
     game: "pips",
-    active: true,
-    view,
+    active: view !== SPLITS_VIEW,
+    view: view === SPLITS_VIEW ? "standings" : view,
     refreshKey: scoreSubmitted,
   });
 
@@ -1689,7 +1692,7 @@ function PipsEndScreen({
         total: board.total,
         view,
         views: PIPS_END_VIEWS,
-        onViewChange: (next) => setView(next as SoloEndView),
+        onViewChange: (next) => setView(next as SoloEndView | typeof SPLITS_VIEW),
       }}
       {...(scoreSubmissionStatus ? {
         status: {

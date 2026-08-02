@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { FiAlertTriangle, FiCheckCircle, FiCopy, FiInfo, FiLoader } from "react-icons/fi";
+import { FiAlertTriangle, FiCheckCircle, FiClock, FiCopy, FiInfo, FiLoader } from "react-icons/fi";
 import { Segmented, type SoloSetupOption } from "./SoloGameMenu";
 
 /** One number in the stat row across the top. */
@@ -69,13 +69,24 @@ export interface SoloEndStatus {
 }
 
 const STATUS_ICONS = {
-  info: <FiInfo size={18} />,
-  success: <FiCheckCircle size={18} />,
-  error: <FiAlertTriangle size={18} />,
+  info: <FiInfo size={16} />,
+  success: <FiCheckCircle size={16} />,
+  error: <FiAlertTriangle size={16} />,
 } as const;
 
 /** How long an armed confirm stays armed, matching the sidebar's give-up. */
 const CONFIRM_MS = 3000;
+
+/** The run's own puzzle times, as one more view of the standings table. */
+export const SPLITS_VIEW = "splits";
+
+const SPLITS_OPTION: SoloSetupOption = {
+  value: SPLITS_VIEW,
+  label: "Times",
+  icon: <FiClock size={15} />,
+  weight: 15,
+  title: "How long each puzzle in this run took",
+};
 
 /**
  * The two or three words above the status message. Both games run the same
@@ -117,7 +128,7 @@ export function SoloEndScreen({
   subtitle: string;
   tone: "success" | "ended";
   stats: SoloEndStat[];
-  /** Per-puzzle times, in the drawer under the stat row. Empty hides it. */
+  /** Per-puzzle times, shown as their own view of the table. Empty hides it. */
   splits: SoloEndSplit[];
   /** Left off for runs that never touch a leaderboard, like a one-off challenge. */
   board?: SoloEndBoard;
@@ -125,20 +136,34 @@ export function SoloEndScreen({
   primary: SoloEndAction;
   links: SoloEndAction[];
 }) {
-  const seedColumn = board?.rows.some((row) => row.seed != null) ?? false;
+  // The times share the standings table instead of sitting in a strip of their
+  // own, so the screen has one table with four views rather than two widgets.
+  const splitsView = board?.view === SPLITS_VIEW;
+  const columns = splitsView ? ["Time"] : board?.columns ?? [];
+  const rows: SoloEndScore[] = splitsView
+    ? splits.map((split, index) => ({
+        id: split.label,
+        rank: index + 1,
+        name: split.label,
+        cells: [split.value],
+      }))
+    : board?.rows ?? [];
+
+  const seedColumn = rows.some((row) => row.seed != null);
   // In a table of nothing but your own runs, marking each one "you" is noise.
-  const allOwn = (board?.rows.length ?? 0) > 0 && board!.rows.every((row) => row.isOwn);
+  const allOwn = rows.length > 0 && rows.every((row) => row.isOwn);
 
   // Centre your own run in the table rather than making you find it. Keyed on
-  // the row id so a scroll you did yourself is not undone on every render.
+  // the row id so a scroll you did yourself is not undone on every render, and
+  // on the view so coming back from the times view re-centres it.
   const selfRow = useRef<HTMLDivElement>(null);
-  const selfId = board?.rows.find((row) => row.isOwn)?.id;
+  const selfId = rows.find((row) => row.isOwn)?.id;
   useEffect(() => {
     const row = selfRow.current;
     const scroller = row?.closest<HTMLElement>(".solo-end-table-scroll");
     if (!row || !scroller) return;
     scroller.scrollTop = row.offsetTop - (scroller.clientHeight - row.offsetHeight) / 2;
-  }, [selfId]);
+  }, [selfId, board?.view]);
 
   // Which link is armed for its second press, by label. Disarms itself so an
   // armed button never sits there waiting to catch a later, unrelated click.
@@ -165,50 +190,36 @@ export function SoloEndScreen({
         <p className="solo-menu-sub">{subtitle}</p>
       </header>
 
-      <section className="solo-end-summary">
-        <div
-          className="solo-end-stats"
-          data-attached={splits.length > 0 ? "" : undefined}
-          style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
-        >
-          {stats.map((stat) => (
-            <div
-              className="solo-end-stat"
-              key={stat.label}
-              style={{ "--stat-accent": stat.accent ?? "var(--primary)" } as CSSProperties}
-            >
-              <span className="solo-end-stat-label">{stat.label}</span>
-              <span className="solo-end-stat-value">
-                {stat.value}
-                {stat.note && <em className="solo-end-stat-note">{stat.note}</em>}
-              </span>
-              {stat.onCopy && (
-                <button
-                  className="solo-end-stat-copy"
-                  type="button"
-                  onClick={stat.onCopy}
-                  aria-label={`Copy ${stat.label.toLowerCase()}`}
-                  data-tooltip={`Copy ${stat.label.toLowerCase()}`}
-                  data-tooltip-pos="top"
-                >
-                  <FiCopy size={11} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {splits.length > 0 && (
-          <div className="solo-drawer solo-end-splits">
-            {splits.map((split) => (
-              <span className="solo-end-split" key={split.label}>
-                <span className="solo-end-split-label">{split.label}</span>
-                <strong>{split.value}</strong>
-              </span>
-            ))}
+      <div
+        className="solo-end-stats"
+        style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
+      >
+        {stats.map((stat) => (
+          <div
+            className="solo-end-stat"
+            key={stat.label}
+            style={{ "--stat-accent": stat.accent ?? "var(--primary)" } as CSSProperties}
+          >
+            <span className="solo-end-stat-label">{stat.label}</span>
+            <span className="solo-end-stat-value">
+              {stat.value}
+              {stat.note && <em className="solo-end-stat-note">{stat.note}</em>}
+            </span>
+            {stat.onCopy && (
+              <button
+                className="solo-end-stat-copy"
+                type="button"
+                onClick={stat.onCopy}
+                aria-label={`Copy ${stat.label.toLowerCase()}`}
+                data-tooltip={`Copy ${stat.label.toLowerCase()}`}
+                data-tooltip-pos="top"
+              >
+                <FiCopy size={11} />
+              </button>
+            )}
           </div>
-        )}
-      </section>
+        ))}
+      </div>
 
       {board && (
       <section className="solo-end-board" aria-label="Standings">
@@ -216,32 +227,34 @@ export function SoloEndScreen({
           row={{
             label: "Standings filter",
             value: board.view,
-            options: board.views,
+            options: splits.length > 0 ? [...board.views, SPLITS_OPTION] : board.views,
             onChange: board.onViewChange,
           }}
           attached
         />
 
-        <div className="solo-drawer solo-end-table" data-loading={board.loading ? "" : undefined}>
+        {/* The times are already in hand, so a stalled fetch never dims them. */}
+        <div className="solo-drawer solo-end-table" data-loading={board.loading && !splitsView ? "" : undefined}>
           <div className="solo-end-table-scroll">
             <div
               className="solo-end-table-grid"
-              style={{ "--metric-cols": board.columns.length } as CSSProperties}
+              data-seed={seedColumn ? "" : undefined}
+              style={{ "--metric-cols": columns.length } as CSSProperties}
             >
               <div className="solo-end-row solo-end-row--head" role="row">
                 <span className="solo-end-cell solo-end-cell--rank">#</span>
-                <span className="solo-end-cell solo-end-cell--name">Player</span>
-                {board.columns.map((column) => (
+                <span className="solo-end-cell solo-end-cell--name">{splitsView ? "Puzzle" : "Player"}</span>
+                {columns.map((column) => (
                   <span className="solo-end-cell solo-end-cell--metric" key={column}>{column}</span>
                 ))}
                 {seedColumn && <span className="solo-end-cell solo-end-cell--seed">Seed</span>}
               </div>
 
-              {board.rows.length === 0 ? (
+              {rows.length === 0 ? (
                 <p className="solo-end-empty">{board.loading ? "Loading standings" : board.empty}</p>
               ) : (
-                board.rows.map((row, index) => {
-                  const previous = board.rows[index - 1];
+                rows.map((row, index) => {
+                  const previous = rows[index - 1];
                   const skipped = previous ? row.rank - previous.rank - 1 : 0;
                   return (
                     <Fragment key={row.id}>
@@ -262,7 +275,7 @@ export function SoloEndScreen({
                           {row.isOwn && !allOwn && <span className="solo-end-you">You</span>}
                         </span>
                         {row.cells.map((cell, cellIndex) => (
-                          <span className="solo-end-cell solo-end-cell--metric" key={board.columns[cellIndex] ?? cellIndex}>
+                          <span className="solo-end-cell solo-end-cell--metric" key={columns[cellIndex] ?? cellIndex}>
                             {cell}
                           </span>
                         ))}
@@ -288,20 +301,22 @@ export function SoloEndScreen({
           data-pending={status.pending ? "" : undefined}
           role="status"
         >
-          <span className="solo-end-status-icon" aria-hidden="true">
-            {status.pending ? <FiLoader size={18} /> : STATUS_ICONS[status.tone]}
-          </span>
-          <div className="solo-end-status-body">
-            <p className="solo-end-status-title">{status.title}</p>
-            <p className="solo-end-status-message">{status.message}</p>
-            {status.facts && status.facts.length > 0 && (
-              <p className="solo-end-status-facts">
-                {status.facts.map((fact) => (
-                  <span className="solo-end-fact" key={fact}>{fact}</span>
-                ))}
-              </p>
-            )}
+          <div className="solo-end-status-main">
+            <span className="solo-end-status-icon" aria-hidden="true">
+              {status.pending ? <FiLoader size={16} /> : STATUS_ICONS[status.tone]}
+            </span>
+            <div className="solo-end-status-body">
+              <p className="solo-end-status-title">{status.title}</p>
+              <p className="solo-end-status-message">{status.message}</p>
+            </div>
           </div>
+          {status.facts && status.facts.length > 0 && (
+            <div className="solo-drawer solo-end-status-facts">
+              {status.facts.map((fact) => (
+                <span className="solo-end-fact" key={fact}>{fact}</span>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
