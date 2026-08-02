@@ -95,7 +95,11 @@
      an accent wash, a faint two-axis grid, a base fill, and a shadow.
      components.css assembles them; themes.css swaps them for light mode.
      Every card on the site, desktop and mobile, reads from here. */
-  --surface-bg: linear-gradient(160deg, #232323 0%, #1a1a1a 100%);
+  /* Kept as two stops so an accented card can tint the top one and land on
+     the same bottom, without knowing either theme's hexes. */
+  --surface-top: #232323;
+  --surface-bottom: #1a1a1a;
+  --surface-bg: linear-gradient(160deg, var(--surface-top) 0%, var(--surface-bottom) 100%);
   --surface-grid: rgba(255, 255, 255, 0.028);
   --surface-grid-soft: rgba(255, 255, 255, 0.02);
   --surface-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
