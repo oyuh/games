@@ -57,6 +57,8 @@ const DEFAULT_SHIKAKU_STATE: ShikakuState = {
   canLeaderboard: true,
   showScrollControls: false,
   canScroll: { up: false, down: false, left: false, right: false },
+  showDevTools: false,
+  canDevSkip: false,
 };
 
 const DEFAULT_PIPS_STATE: PipsState = {
@@ -318,6 +320,34 @@ function MobileLayoutInner() {
                     disabled={!shikakuState.canScroll.right}
                     onClick={() => {
                       emitSolo("shikaku-scroll-right");
+                      setSheet(null);
+                    }}
+                  />
+                </div>
+              </section>
+            )}
+
+            {shikakuState.showDevTools && (
+              <section className="m-game-actions-section">
+                <h3>Dev Tools</h3>
+                <div className="m-game-action-grid">
+                  <MobileActionButton
+                    icon={<FiEye size={18} />}
+                    label="DEV Solve"
+                    detail="Fill answer"
+                    disabled={shikakuState.phase !== "playing"}
+                    onClick={() => {
+                      emitSolo("shikaku-dev-solve");
+                      setSheet(null);
+                    }}
+                  />
+                  <MobileActionButton
+                    icon={<FiSkipForward size={18} />}
+                    label="DEV Skip"
+                    detail="Next puzzle"
+                    disabled={!shikakuState.canDevSkip}
+                    onClick={() => {
+                      emitSolo("shikaku-dev-skip");
                       setSheet(null);
                     }}
                   />

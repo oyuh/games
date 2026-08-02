@@ -5,7 +5,7 @@ import { adminNameOverrides, chatMessages, chainReactionGames, gameEncryptionKey
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
-import { lt, and, asc, count, desc, eq, gt, inArray, ne, or, sql } from "drizzle-orm";
+import { lt, and, asc, count, desc, eq, gt, inArray, ne, or, sql, type SQL } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
@@ -1160,6 +1160,37 @@ async function probeDatabaseStatus(): Promise<DatabaseProbe> {
   }
 }
 
+// ─── Solo leaderboard standings window ───────────────────────
+
+/**
+ * Narrows an already-ranked score query down to the slice the end screen shows:
+ * the top 3, the caller's own rank plus and minus 3, and the bottom 3. It is one
+ * round trip on purpose, so the client never has to page around hunting for
+ * itself. `ranked` must select `session_id` plus a `rank` and a `total` window
+ * column; every other column comes back untouched under its raw SQL name.
+ *
+ * With no score of your own, `me.rank` is NULL, the abs() test is NULL, and you
+ * are left with just the top and bottom, which is the right answer.
+ */
+async function selectScoreWindow(ranked: SQL, sessionId: string | null) {
+  const result = await drizzleClient.execute(sql`
+    WITH ranked AS (${ranked}),
+    me AS (SELECT min(rank) AS rank FROM ranked WHERE session_id = ${sessionId ?? ""})
+    SELECT * FROM ranked
+    WHERE rank <= 3 OR rank > total - 3 OR abs(rank - (SELECT rank FROM me)) <= 3
+    ORDER BY rank
+  `);
+  const rows = (Array.isArray(result) ? result : result.rows ?? []) as Record<string, any>[];
+  return {
+    total: Number(rows[0]?.total ?? 0),
+    rows: rows.map((row): Record<string, any> & { rank: number; isOwn: boolean } => ({
+      ...row,
+      rank: Number(row.rank),
+      isOwn: sessionId != null && row.session_id === sessionId,
+    })),
+  };
+}
+
 // ─── Shikaku solo game endpoints ─────────────────────────────
 
 // Server-side score calculation uses the shared engine formula exactly.
@@ -1601,6 +1632,39 @@ app.get("/api/shikaku/leaderboard", async (c) => {
     : null;
   const sessionIdParam = resolvedIdentity?.sessionId ?? (normalizeSessionId(requestedSessionId) || null);
   const filters = [eq(shikakuScores.difficulty, difficulty)];
+
+  // The end screen's standings slice, in one round trip. See selectScoreWindow.
+  if (c.req.query("window") === "me") {
+    const { rows, total } = await selectScoreWindow(
+      sql`
+        SELECT id, name, score, time_ms, difficulty, created_at, seed, session_id,
+               row_number() OVER (ORDER BY score DESC, time_ms ASC, created_at ASC) AS rank,
+               count(*) OVER () AS total
+        FROM shikaku_scores
+        WHERE difficulty = ${difficulty}
+      `,
+      sessionIdParam,
+    );
+    const own = rows.find((row) => row.isOwn);
+    return c.json({
+      entries: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        score: Number(row.score),
+        timeMs: Number(row.time_ms),
+        difficulty: row.difficulty,
+        createdAt: Number(row.created_at),
+        seed: Number(row.seed),
+        rank: row.rank,
+        isOwn: row.isOwn,
+      })),
+      personalBest: own ? { score: Number(own.score), timeMs: Number(own.time_ms), rank: own.rank } : null,
+      page: 1,
+      pageSize: rows.length,
+      total,
+      totalPages: 1,
+    });
+  }
 
   if (mineOnly) {
     if (!sessionIdParam) {
@@ -2166,6 +2230,50 @@ app.get("/api/pips/leaderboard", async (c) => {
     : null;
   const sessionIdParam = resolvedIdentity?.sessionId ?? (normalizeSessionId(requestedSessionId) || null);
   const filters = [sql`true`];
+
+  // The end screen's standings slice, in one round trip. See selectScoreWindow.
+  if (c.req.query("window") === "me") {
+    const { rows, total } = await selectScoreWindow(
+      sql`
+        SELECT id, name, total_ms, easy_ms, medium_ms, hard_ms, created_at, seed, session_id,
+               row_number() OVER (ORDER BY total_ms ASC, created_at ASC) AS rank,
+               count(*) OVER () AS total
+        FROM pips_scores
+      `,
+      sessionIdParam,
+    );
+    const own = rows.find((row) => row.isOwn);
+    return c.json({
+      entries: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        totalMs: Number(row.total_ms),
+        easyMs: Number(row.easy_ms),
+        mediumMs: Number(row.medium_ms),
+        hardMs: Number(row.hard_ms),
+        createdAt: Number(row.created_at),
+        seed: Number(row.seed),
+        rank: row.rank,
+        isOwn: row.isOwn,
+      })),
+      personalBest: own
+        ? {
+            name: own.name,
+            seed: Number(own.seed),
+            totalMs: Number(own.total_ms),
+            easyMs: Number(own.easy_ms),
+            mediumMs: Number(own.medium_ms),
+            hardMs: Number(own.hard_ms),
+            createdAt: Number(own.created_at),
+            rank: own.rank,
+          }
+        : null,
+      page: 1,
+      pageSize: rows.length,
+      total,
+      totalPages: 1,
+    });
+  }
 
   if (mineOnly) {
     if (!sessionIdParam) {

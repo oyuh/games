@@ -55,6 +55,19 @@
 .shikaku-page[data-difficulty="hard"] .shikaku-container { max-width: 780px; }
 .shikaku-page[data-difficulty="expert"] .shikaku-container { max-width: 1000px; }
 
+/* The end screen carries a standings table, so unlike a board it is allowed
+   to outgrow the viewport and scroll. */
+.shikaku-page[data-phase="finished"].game-page {
+  height: auto;
+  min-height: calc(100dvh - 3.5rem);
+  overflow-y: auto;
+  padding: 1.25rem 1rem;
+}
+
+.shikaku-container--end {
+  max-width: 660px;
+}
+
 
 
 /* ── Generating ────────────────────────────────────────────── */
@@ -385,338 +398,23 @@
 }
 
 /* ── End screen: wide wrapper ─────────────────────────────── */
-.shikaku-end-wrap {
-  width: 100%;
-  max-width: 720px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
-  margin: auto 0;
-}
-
-.shikaku-finished {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0;
-  width: 100%;
-}
-.shikaku-finished-enter {
-  animation: shikaku-fade-up 0.5s ease-out both;
-}
 @keyframes shikaku-fade-up {
   0%   { transform: translateY(20px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
 }
 
 /* ── Header tile ── */
-.shikaku-end-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 1rem 1.5rem;
-  border-radius: var(--radius-xl);
-  text-align: center;
-  width: 100%;
-}
-.shikaku-end-header--success {
-  background: color-mix(in srgb, #4ade80 10%, transparent);
-  border: 1px solid color-mix(in srgb, #4ade80 25%, transparent);
-}
-.shikaku-end-header--fail {
-  background: color-mix(in srgb, #f87171 10%, transparent);
-  border: 1px solid color-mix(in srgb, #f87171 25%, transparent);
-}
-.shikaku-end-title {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--foreground);
-}
-.shikaku-end-sub {
-  font-size: 0.82rem;
-  color: var(--muted-foreground);
-}
-
 /* ── Grid tile area: 2 columns, balanced ── */
-.shikaku-end-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  width: 100%;
-  align-items: stretch;
-}
-.shikaku-end-grid--stats-only {
-  grid-template-columns: 1fr;
-  max-width: 440px;
-  margin: 0 auto;
-}
-
 /* ── Stats tiles: left column ── */
-.shikaku-end-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  align-content: stretch;
-}
 /* When the last tile is alone on its row, span both columns at full width */
-.shikaku-end-stats > .shikaku-end-tile:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
-  width: 100%;
-}
-.shikaku-end-stats--infinite {
-  grid-template-columns: 1fr 1fr;
-}
-
 /* Individual stat tile */
-.shikaku-end-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  padding: 0.75rem 0.5rem;
-  min-height: 4.5rem;
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
-  transition: border-color 0.2s, background 0.2s;
-}
-
 /* Seed tile with copy button */
-.shikaku-end-tile--seed {
-  position: relative;
-  cursor: default;
-}
-.shikaku-seed-copy-btn {
-  position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--secondary) 20%, transparent);
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  padding: 0;
-}
-.shikaku-seed-copy-btn:hover {
-  background: color-mix(in srgb, #34d399 18%, transparent);
-  color: #34d399;
-}
-.shikaku-end-tile:hover {
-  border-color: color-mix(in srgb, #34d399 30%, transparent);
-  background: color-mix(in srgb, #34d399 4%, var(--card));
-}
-.shikaku-end-tile--accent {
-  background: color-mix(in srgb, #34d399 8%, var(--card));
-  border-color: color-mix(in srgb, #34d399 25%, transparent);
-}
-.shikaku-stat-pop {
-  animation: shikaku-stat-pop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes shikaku-stat-pop-in {
-  0%   { transform: scale(0.5) translateY(10px); opacity: 0; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
-}
-.shikaku-end-tile-label {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted-foreground);
-  font-weight: 700;
-}
-.shikaku-end-tile-value {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: var(--foreground);
-  font-variant-numeric: tabular-nums;
-}
-
 /* ── List tile: right column ── */
-.shikaku-end-list-tile {
-  background: var(--card);
-  border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
 /* Tab bar */
-.shikaku-end-tab-bar {
-  display: flex;
-  background: color-mix(in srgb, var(--secondary) 8%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--secondary) 20%, transparent);
-}
-.shikaku-end-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  padding: 0.5rem 0.5rem;
-  font: inherit;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted-foreground);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-  position: relative;
-}
-.shikaku-end-tab:hover {
-  color: var(--foreground);
-  background: color-mix(in srgb, var(--secondary) 10%, transparent);
-}
-.shikaku-end-tab--active {
-  color: #34d399;
-}
-.shikaku-end-tab--active::after {
-  content: "";
-  position: absolute;
-  bottom: -1px;
-  left: 20%;
-  right: 20%;
-  height: 2px;
-  background: #34d399;
-  border-radius: var(--radius-xs);
-}
-
-.shikaku-end-list-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted-foreground);
-  background: color-mix(in srgb, var(--secondary) 8%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--secondary) 20%, transparent);
-}
-.shikaku-end-list-body {
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  flex: 1 1 0;
-  min-height: 0;
-}
-.shikaku-end-list-body::-webkit-scrollbar { width: 4px; }
-.shikaku-end-list-body::-webkit-scrollbar-track { background: transparent; }
-.shikaku-end-list-body::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--secondary) 50%, transparent); border-radius: var(--radius-xs); }
-.shikaku-end-list-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.76rem;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-  padding: 0.3rem 0.75rem;
-  transition: background 0.12s;
-}
-.shikaku-end-list-row > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.shikaku-end-list-row > span:last-child {
-  flex-shrink: 0;
-}
-.shikaku-end-list-row:hover {
-  background: color-mix(in srgb, var(--secondary) 10%, transparent);
-}
-.shikaku-end-list-row + .shikaku-end-list-row {
-  border-top: 1px solid color-mix(in srgb, var(--secondary) 15%, transparent);
-}
-.shikaku-end-list-row--self {
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
-}
-.shikaku-end-list-separator {
-  text-align: center;
-  font-size: 0.7rem;
-  color: var(--muted-foreground);
-  opacity: 0.5;
-  padding: 0.15rem 0;
-  letter-spacing: 0.2em;
-  border-top: 1px solid color-mix(in srgb, var(--secondary) 15%, transparent);
-}
-
 /* ── Action bar ── */
-.shikaku-end-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  flex-wrap: wrap;
-}
-
-.shikaku-end-status {
-  width: 100%;
-  max-width: 560px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.8rem 0.95rem;
-  margin-top: 0.35rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--secondary) 24%, transparent);
-  background: color-mix(in srgb, var(--card) 92%, transparent);
-  text-align: center;
-}
-
-.shikaku-end-status--info {
-  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
-  background: color-mix(in srgb, var(--primary) 8%, var(--card));
-}
-
-.shikaku-end-status--success {
-  border-color: color-mix(in srgb, #4ade80 28%, transparent);
-  background: color-mix(in srgb, #4ade80 9%, var(--card));
-}
-
-.shikaku-end-status--error {
-  border-color: color-mix(in srgb, #f87171 28%, transparent);
-  background: color-mix(in srgb, #f87171 9%, var(--card));
-}
-
-.shikaku-end-status--pending {
-  animation: shikaku-status-pulse 1.25s ease-in-out infinite;
-}
-
 @keyframes shikaku-status-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent); }
   50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 8%, transparent); }
-}
-
-.shikaku-end-status-label {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
-
-.shikaku-end-status-message {
-  margin: 0;
-  font-size: 0.88rem;
-  line-height: 1.45;
-  color: var(--foreground);
 }
 
 
@@ -1339,34 +1037,6 @@
   }
 
   /* Finished screen */
-  .shikaku-end-wrap {
-    max-width: 100%;
-    padding: 0 0.5rem;
-    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    max-height: calc(100dvh - 6.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-  }
-  .shikaku-end-grid {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-  .shikaku-end-stats {
-    grid-template-columns: 1fr 1fr;
-  }
-  .shikaku-end-tile-value {
-    font-size: 1rem;
-  }
-  .shikaku-end-tile {
-    padding: 0.55rem 0.4rem;
-    min-height: 3.5rem;
-    border-radius: var(--radius-lg);
-  }
-  .shikaku-end-list-tile {
-    max-height: 14rem;
-    min-height: 8rem;
-  }
-
   /* Leaderboard overlay */
   .shikaku-leaderboard {
     max-width: 100%;
@@ -1388,33 +1058,6 @@
   }
 
   /* End-game tiles: equal columns on mobile, prevent imbalance */
-  .shikaku-end-stats {
-    grid-template-columns: 1fr 1fr;
-  }
-  .shikaku-end-tile-label {
-    font-size: 0.55rem;
-  }
-  .shikaku-end-tab-bar {
-    border-bottom-width: 1px;
-  }
-  .shikaku-end-tab {
-    padding: 0.6rem 0.5rem;
-    font-size: 0.68rem;
-    min-height: 2.5rem;
-  }
-  .shikaku-end-list-row {
-    font-size: 0.72rem;
-    padding: 0.35rem 0.65rem;
-    min-height: 1.8rem;
-  }
-  .shikaku-end-list-header {
-    font-size: 0.6rem;
-    padding: 0.4rem 0.6rem;
-  }
-  .shikaku-end-actions {
-    gap: 0.4rem;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
   .shikaku-lb-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -1516,37 +1159,6 @@
 }
 
 /* End-screen tiles light mode */
-[data-theme="light"] .shikaku-end-tile {
-  background: var(--card);
-  border-color: var(--border);
-}
-[data-theme="light"] .shikaku-end-tile:hover {
-  border-color: color-mix(in srgb, #34d399 40%, var(--border));
-  background: color-mix(in srgb, #34d399 4%, var(--card));
-}
-[data-theme="light"] .shikaku-end-list-tile {
-  background: var(--card);
-  border-color: var(--border);
-}
-[data-theme="light"] .shikaku-end-tab-bar {
-  background: color-mix(in srgb, var(--muted) 40%, transparent);
-  border-color: var(--border);
-}
-[data-theme="light"] .shikaku-end-list-header {
-  background: color-mix(in srgb, var(--muted) 40%, transparent);
-  border-color: var(--border);
-}
-[data-theme="light"] .shikaku-end-list-row + .shikaku-end-list-row {
-  border-color: color-mix(in srgb, var(--border) 60%, transparent);
-}
-[data-theme="light"] .shikaku-end-list-row:hover {
-  background: color-mix(in srgb, var(--muted) 40%, transparent);
-}
-[data-theme="light"] .shikaku-end-status {
-  background: var(--card);
-  border-color: var(--border);
-}
-
 /* Dim counter light mode */
 [data-theme="light"] .shikaku-dim-counter {
   background: rgba(255, 255, 255, 0.85);
