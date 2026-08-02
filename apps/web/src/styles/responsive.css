@@ -218,15 +218,6 @@
     font-size: 1.3rem;
   }
 
-  .hc-config-row {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .hc-config-field {
-    width: 100%;
-  }
-
   .hc-game-desc {
     max-width: 30ch;
   }

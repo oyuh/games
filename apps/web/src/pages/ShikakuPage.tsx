@@ -25,7 +25,7 @@ import "../styles/game-shared.css";
 import "../styles/shikaku.css";
 import { ShikakuDemo } from "../components/demos/ShikakuDemo";
 import { GameIcon } from "../components/shared/GameIcon";
-import { SoloEndScreen, soloStatusTitle } from "../components/shared/SoloEndScreen";
+import { SoloEndScreen, SPLITS_VIEW, soloStatusTitle } from "../components/shared/SoloEndScreen";
 import { SoloGameMenu, type SoloSetupOption } from "../components/shared/SoloGameMenu";
 import { useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
 import { emitSolo, onSolo, useSoloEvent } from "../lib/solo-bus";
@@ -1580,10 +1580,12 @@ export function ShikakuPage() {
 /* ═══════════════════════════════════════════════════════════ */
 /*  End of run                                                 */
 /* ═══════════════════════════════════════════════════════════ */
+/* The two views you actually read get the room; Top 10 and the run's own
+   times are a glance, so they get a sliver each. */
 const SHIKAKU_END_VIEWS: SoloSetupOption[] = [
-  { value: "standings", label: "Standings", icon: <FiTarget size={15} />, weight: 1.2, title: "Top 3, your score and its neighbours, bottom 3" },
-  { value: "top", label: "Top 10", icon: <FiAward size={15} />, title: "The ten highest scores on this difficulty" },
-  { value: "mine", label: "Yours", icon: <FiUser size={15} />, title: "Your own submitted scores, best first" },
+  { value: "standings", label: "Standings", icon: <FiTarget size={15} />, weight: 35, title: "Top 3, your score and its neighbours, bottom 3" },
+  { value: "mine", label: "Yours", icon: <FiUser size={15} />, weight: 35, title: "Your own submitted scores, best first" },
+  { value: "top", label: "Top 10", icon: <FiAward size={15} />, weight: 15, title: "The ten highest scores on this difficulty" },
 ];
 
 function ShikakuEndScreen({
@@ -1621,13 +1623,14 @@ function ShikakuEndScreen({
   onMenu: () => void;
   onOpenLeaderboard: () => void;
 }) {
-  const [view, setView] = useState<SoloEndView>("standings");
+  const [view, setView] = useState<SoloEndView | typeof SPLITS_VIEW>("standings");
   const ranked = !infiniteMode && !customMode;
   // Refetch once the score lands so the standings show where it actually put you.
+  // The times view is local, so it holds whatever the board last loaded.
   const board = useSoloEndBoard<LeaderboardEntry & { rank?: number }, PersonalBest>({
     game: "shikaku",
-    active: true,
-    view,
+    active: view !== SPLITS_VIEW,
+    view: view === SPLITS_VIEW ? "standings" : view,
     difficulty,
     refreshKey: scoreSubmitted,
   });
@@ -1689,7 +1692,7 @@ function ShikakuEndScreen({
         total: board.total,
         view,
         views: SHIKAKU_END_VIEWS,
-        onViewChange: (next) => setView(next as SoloEndView),
+        onViewChange: (next) => setView(next as SoloEndView | typeof SPLITS_VIEW),
       }}
       {...(scoreSubmissionStatus ? {
         status: {
