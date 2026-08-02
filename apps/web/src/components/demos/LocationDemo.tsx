@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, FormEvent } from "react";
-import { FiMapPin, FiSend, FiTarget, FiAward } from "react-icons/fi";
-import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
+import { FiClock, FiMapPin, FiRefreshCw, FiSend, FiSlash, FiTarget, FiAward } from "react-icons/fi";
+import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
 import { BorringAvatar } from "../shared/BorringAvatar";
 import { WorldMap, type MapMarker } from "../location/WorldMap";
 import "../../styles/game-shared.css";
@@ -52,20 +52,24 @@ const GUESS_ROUND2: MapMarker[] = [
 
 // Reveal markers: target + all final guesses
 const REVEAL_MARKERS: MapMarker[] = [
-  { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "Target - Rome 🎯", size: 4.5, pulse: true, ring: true },
+  { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "Target - Rome", size: 4.5, pulse: true, ring: true },
   { lat: 43.7, lng: 11.2, color: "#7ecbff", label: "Alice", size: 2.5 },
   { lat: 45.4, lng: 9.2, color: "#ef476f", label: "Bob", size: 2.5 },
   { lat: 41.9, lng: 12.5, color: "#06d6a0", label: "You", size: 2.5, ring: true },
   { lat: 40.8, lng: 14.3, color: "#a78bfa", label: "Diana", size: 2.5 },
 ];
 
+/* Straight off scoreForDistance() in the location-signal mutator: anything
+   inside 120.7 km is a full 5,000, and past that it decays by
+   5000 * e^-((km - 120.7) / 3000). The old table here was guesswork and read
+   far too harsh, e.g. it claimed 0 past 5,000 km when you still bank ~1,000. */
 const SCORING_TABLE = [
-  { distance: "Exact (0 km)", pts: "5,000", emoji: "🎯" },
-  { distance: "≤ 100 km", pts: "~4,500", emoji: "🔥" },
-  { distance: "≤ 500 km", pts: "~3,500", emoji: "👍" },
-  { distance: "≤ 1,500 km", pts: "~1,800", emoji: "🤏" },
-  { distance: "≤ 3,000 km", pts: "~500", emoji: "😅" },
-  { distance: "> 5,000 km", pts: "0", emoji: "💀" },
+  { label: "Within 120 km", value: "5,000" },
+  { label: "~500 km", value: "~4,400" },
+  { label: "~1,500 km", value: "~3,150" },
+  { label: "~3,000 km", value: "~1,900" },
+  { label: "~5,000 km", value: "~1,000" },
+  { label: "~10,000 km", value: "~190" },
 ];
 
 const REVEAL_SCORES = [
@@ -86,7 +90,7 @@ const steps: DemoStep[] = [
   {
     label: "Leader Picks",
     description: "Each round, one player is the Leader. They click anywhere on the world map to secretly place a target pin. Nobody else can see it.",
-    hint: "Pick somewhere fun! Mountains, cities, coastlines - anywhere on Earth works.",
+    hint: "Pick somewhere interesting: not too obscure, not too obvious.",
   },
   {
     label: "Clues & Guesses",
@@ -96,7 +100,7 @@ const steps: DemoStep[] = [
   {
     label: "Leader's View",
     description: "As the Leader, you can see your target pin AND all the guesses in real-time. Use this to write a better second clue - if everyone guessed too far north, hint south!",
-    hint: "The leader always sees their own target pin throughout the entire round.",
+    hint: "Everyone guessing too far east? Aim the next clue west.",
   },
   {
     label: "Reveal",
@@ -105,8 +109,8 @@ const steps: DemoStep[] = [
   },
   {
     label: "Scoring",
-    description: "Points are based on distance from the target. Closer = more points! The scoring curve rewards accuracy but still gives partial credit.",
-    hint: "Lowest score wins in golf mode - but the default mode rewards highest score!",
+    description: "Points fall off with distance from the target. Anything inside 120 km counts as a bullseye, and the curve is generous enough that a wrong continent still scores something.",
+    hint: "The decay is exponential, so the first few hundred kilometres cost you almost nothing.",
   },
 ];
 
@@ -183,25 +187,20 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 1:
         return (
           <div className="locdemo-step">
-            <div className="locdemo-phase-banner locdemo-phase-banner--pick">
-              <span className="locdemo-phase-emoji">📍</span>
-              <div>
-                <h4>Pick your target location!</h4>
-                <p>Click anywhere on the map. Others can't see your pin.</p>
+            <DemoPoint label="Click anywhere to drop your secret pin">
+              <div className="locdemo-map-preview">
+                <WorldMap
+                  height={260}
+                  onClick={(coords) => setDraftMarker(coords)}
+                  interactive
+                  markers={draftMarker
+                    ? [{ lat: draftMarker.lat, lng: draftMarker.lng, color: "#ef476f", label: "Your pick", size: 3.5, pulse: true }]
+                    : [{ lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "e.g. Rome", size: 3, ring: true }]}
+                  defaultCenter={[38, 12]}
+                  defaultZoom={4}
+                />
               </div>
-            </div>
-            <div className="locdemo-map-preview">
-              <WorldMap
-                height={260}
-                onClick={(coords) => setDraftMarker(coords)}
-                interactive
-                markers={draftMarker
-                  ? [{ lat: draftMarker.lat, lng: draftMarker.lng, color: "#ef476f", label: "Your pick", size: 3.5, pulse: true }]
-                  : [{ lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "e.g. Rome", size: 3, ring: true }]}
-                defaultCenter={[38, 12]}
-                defaultZoom={4}
-              />
-            </div>
+            </DemoPoint>
             {draftMarker && (
               <div className="locdemo-action-row">
                 <button className="btn btn-primary game-action-btn" onClick={noop}>
@@ -209,9 +208,6 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 </button>
               </div>
             )}
-            <div className="locdemo-callout locdemo-callout--info">
-              <strong>Tip:</strong> Pick somewhere interesting - not too obscure, not too obvious. The fun is in the clues!
-            </div>
           </div>
         );
 
@@ -223,7 +219,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
               {/* Clue 1 block */}
               <div className="locdemo-split-section">
                 <div className="locdemo-phase-label">Round 1 - First Clue</div>
-                <DemoGlow label="Leader types a clue">
+                <DemoPoint label="Leader types a clue">
                   <div className="locdemo-clue-card">
                     <form className="locsig-clue-form" onSubmit={noop}>
                       <input className="input locsig-clue-input" value={clue} onChange={(e) => setClue(e.target.value)} placeholder='e.g. "Ancient empire"' maxLength={80} />
@@ -232,7 +228,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
                       </button>
                     </form>
                   </div>
-                </DemoGlow>
+                </DemoPoint>
                 <div className="locdemo-clue-reveal">
                   <div className="locsig-clue-display">
                     <span className="locsig-clue-tag">Clue 1</span>
@@ -270,20 +266,12 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 3:
         return (
           <div className="locdemo-step">
-            <div className="locdemo-phase-banner locdemo-phase-banner--leader">
-              <span className="locdemo-phase-emoji">👀</span>
-              <div>
-                <h4>Leader's perspective</h4>
-                <p>You see your target AND all guesses - use this to write better clues!</p>
+            <DemoPoint label="Your target in gold, every guess around it">
+              <div className="locdemo-map-preview">
+                <WorldMap height={280} interactive={false} markers={LEADER_GUESS1} defaultCenter={[40, 12]} defaultZoom={3} />
+                <p className="locdemo-map-caption">Leader sees everything - target (gold) + all player guesses</p>
               </div>
-            </div>
-            <div className="locdemo-map-preview">
-              <WorldMap height={280} interactive={false} markers={LEADER_GUESS1} defaultCenter={[40, 12]} defaultZoom={3} />
-              <p className="locdemo-map-caption">Leader sees everything - target (gold) + all player guesses</p>
-            </div>
-            <div className="locdemo-callout locdemo-callout--leader">
-              <strong>Strategy:</strong> If guessers are all in Greece and your target is Rome, try a clue like <em>"Further west - think pasta!"</em>
-            </div>
+            </DemoPoint>
           </div>
         );
 
@@ -291,29 +279,24 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 4:
         return (
           <div className="locdemo-step">
-            <div className="locdemo-phase-banner locdemo-phase-banner--reveal">
-              <span className="locdemo-phase-emoji">🎯</span>
-              <div>
-                <h4>Reveal!</h4>
-                <p>The target is shown and the map zooms to fit all pins</p>
-              </div>
-            </div>
             <div className="locdemo-map-preview">
               <WorldMap height={260} interactive={false} markers={REVEAL_MARKERS} defaultCenter={[42, 12]} defaultZoom={5} />
             </div>
-            <div className="locdemo-reveal-scores">
-              {REVEAL_SCORES.map((r, i) => (
-                <div key={r.id} className={`locdemo-reveal-row${r.id === P.you ? " locdemo-reveal-row--me" : ""}`}>
-                  <span className="locdemo-reveal-rank">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</span>
-                  <div className="locdemo-reveal-avatar">
-                    <BorringAvatar seed={r.id} playerIndex={i} />
+            <DemoPoint label="Closer pins score more">
+              <div className="locdemo-reveal-scores">
+                {REVEAL_SCORES.map((r, i) => (
+                  <div key={r.id} className={`locdemo-reveal-row${r.id === P.you ? " locdemo-reveal-row--me" : ""}`}>
+                    <span className="locdemo-reveal-rank">#{i + 1}</span>
+                    <div className="locdemo-reveal-avatar">
+                      <BorringAvatar seed={r.id} playerIndex={i} />
+                    </div>
+                    <span className="locdemo-reveal-name">{r.name}</span>
+                    <span className="locdemo-reveal-dist">{r.dist}</span>
+                    <span className="locdemo-reveal-pts" style={{ color: r.color }}>{r.pts.toLocaleString()} pts</span>
                   </div>
-                  <span className="locdemo-reveal-name">{r.name}</span>
-                  <span className="locdemo-reveal-dist">{r.dist}</span>
-                  <span className="locdemo-reveal-pts" style={{ color: r.color }}>{r.pts.toLocaleString()} pts</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </DemoPoint>
           </div>
         );
 
@@ -321,44 +304,16 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 5:
         return (
           <div className="locdemo-step">
-            <div className="locdemo-scoring-intro">
-              <FiTarget size={28} style={{ color: "#f59e0b" }} />
-              <div>
-                <h4>How scoring works</h4>
-                <p>Points decrease exponentially with distance - being close matters a lot!</p>
-              </div>
-            </div>
-            <div className="locdemo-scoring-table">
-              <div className="locdemo-scoring-header">
-                <span>Distance</span>
-                <span>Points</span>
-              </div>
-              {SCORING_TABLE.map((row) => (
-                <div key={row.distance} className="locdemo-scoring-row">
-                  <span className="locdemo-scoring-emoji">{row.emoji}</span>
-                  <span className="locdemo-scoring-dist">{row.distance}</span>
-                  <span className="locdemo-scoring-pts">{row.pts}</span>
-                </div>
-              ))}
-            </div>
-            <div className="locdemo-rules-grid">
-              <div className="locdemo-rule">
-                <strong>🚫 Clue Rules</strong>
-                <p>Don't name the exact place. Don't use coordinates. Max 80 characters per clue.</p>
-              </div>
-              <div className="locdemo-rule">
-                <strong>🔄 Rotation</strong>
-                <p>Every player gets to be Leader once (by default). More rounds = more fun!</p>
-              </div>
-              <div className="locdemo-rule">
-                <strong>⏱ Timer</strong>
-                <p>Each phase has a time limit. If you don't guess in time, you get 0 points for that round.</p>
-              </div>
-              <div className="locdemo-rule">
-                <strong>🏆 Winning</strong>
-                <p>After all rounds, the player with the highest total score wins!</p>
-              </div>
-            </div>
+            <DemoScoring
+              columns={["Distance from target", "Points"]}
+              rows={SCORING_TABLE}
+              rules={[
+                { icon: <FiSlash size={13} />, title: "Clue rules", text: "Don't name the exact place. Don't use coordinates. Max 80 characters per clue." },
+                { icon: <FiRefreshCw size={13} />, title: "Rotation", text: "Every player gets to be Leader once by default. More rounds, more fun." },
+                { icon: <FiClock size={13} />, title: "Timer", text: "Each phase has a time limit. Miss it and you score nothing that round." },
+                { icon: <FiAward size={13} />, title: "Winning", text: "After all rounds, the player with the highest total score wins." },
+              ]}
+            />
           </div>
         );
 

@@ -379,330 +379,381 @@
   }
 }
 
-/* ─── Demo / How to Play Modal ──────────────────────────── */
+/* ─── Shared modal shell ─────────────────────────────────
+   The frame behind the how-to, Options, Info and Host Controls.
+   Same rules as the solo menu it all borrows from:
+   1. No shadows and no glows on the content. Depth comes from borders
+      and fills. The panel's own drop shadow stays: it is elevation.
+   2. Pickers ARE the solo segmented control, so the tokens it reads
+      (--solo-pad, --solo-radius, --solo-control-h) get set here and
+      nothing else needs keeping in sync.
+   3. Nothing is called out by making it pulse. An arrow points at it. */
 
-.demo-modal-panel {
-  max-width: 820px;
-  width: 96vw;
+.mshell {
+  --solo-pad: 0.25rem;
+  --solo-radius: var(--radius-lg);
+  --solo-control-h: 2.6rem;
+  --mshell-gutter: 1.1rem;
   max-height: 92vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-.demo-modal-header {
+.mshell--md { width: 92vw; max-width: 470px; }
+.mshell--lg { width: 94vw; max-width: 580px; }
+.mshell--xl { width: 96vw; max-width: 820px; }
+
+.mshell-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem var(--mshell-gutter);
+  border-bottom: 1px solid var(--border);
+}
+
+.mshell-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid color-mix(in srgb, var(--modal-accent) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--modal-accent) 14%, transparent);
+  color: var(--modal-accent);
+}
+
+.mshell-head-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.mshell-kicker {
+  color: var(--muted-foreground);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mshell-title {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.mshell-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.9rem var(--mshell-gutter);
+}
+
+.mshell-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem 0.75rem;
-  border-bottom: 1px solid var(--border);
+  gap: 0.75rem;
+  padding: 0.7rem var(--mshell-gutter);
+  border-top: 1px solid var(--border);
 }
 
-.demo-modal-title-row {
-  display: flex;
+/* ── Sections: a label, an optional line of help, then controls ── */
+.mshell-section + .mshell-section {
+  margin-top: 1.15rem;
+}
+
+.mshell-section-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--foreground);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.mshell-section--danger .mshell-section-label {
+  color: #f87171;
+}
+
+.mshell-section-hint {
+  margin: 0 0 0.55rem;
+  color: var(--muted-foreground);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+/* The switch lives in controls.css: it is shared with the mobile sheets. */
+
+/* ── The one primary button a modal gets ────────────────── */
+.mshell-action {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-}
-
-.demo-modal-icon {
-  display: flex;
-}
-
-.demo-modal-title {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-/* Step bar */
-.demo-step-bar {
-  display: flex;
-  gap: 0.25rem;
-  padding: 0.6rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-}
-
-.demo-step-dot {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--secondary);
-  cursor: pointer;
-  font-size: 0.7rem;
-  white-space: nowrap;
-  transition: all 0.15s;
-}
-
-.demo-step-dot:hover {
-  border-color: var(--primary);
-  color: var(--foreground);
-}
-
-.demo-step-dot--active {
+  height: var(--solo-control-h);
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--solo-radius);
   background: var(--primary);
-  border-color: var(--primary);
+  color: var(--primary-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  transition: filter 0.16s;
+}
+
+.mshell-action--wide {
+  width: 100%;
+}
+
+.mshell-action--muted {
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.mshell-action--danger {
+  background: #ef4444;
   color: #fff;
 }
 
-.demo-step-dot--done {
-  border-color: var(--primary);
-  color: var(--primary);
+.mshell-action:hover:not(:disabled) { filter: brightness(1.08); }
+.mshell-action:active:not(:disabled) { filter: brightness(0.94); }
+
+.mshell-action:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
-.demo-step-num {
-  font-weight: 700;
-  font-size: 0.65rem;
+@media (max-width: 600px) {
+  .mshell {
+    --mshell-gutter: 0.8rem;
+    width: 100vw;
+    max-width: none;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
 }
 
-.demo-step-name {
-  font-weight: 500;
-}
+/* ─── How to Play: what the shell doesn't cover ──────────── */
 
-/* Phase description */
-.demo-step-info {
-  padding: 0.75rem 1.25rem;
-  background: color-mix(in srgb, var(--primary) 5%, transparent);
+/* Step picker plus the drawer hanging off it, read as one unit. */
+.howto-guide {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem var(--mshell-gutter);
   border-bottom: 1px solid var(--border);
 }
 
-.demo-step-label {
-  display: inline-block;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--foreground);
-  border-left: 3px solid;
-  padding-left: 0.5rem;
-  margin-bottom: 0.3rem;
+/* The solo drawer, laid out as a centered block of text instead of a row.
+   Needs the extra .howto to outrank .solo-drawer's own padding and
+   alignment, which land later in the cascade. */
+.howto .howto-step {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.7rem 0.85rem;
+  text-align: center;
 }
 
-.demo-step-desc {
-  font-size: 0.78rem;
-  color: var(--secondary);
-  line-height: 1.45;
+.howto-step-name {
   margin: 0;
+  color: var(--modal-accent);
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
-.demo-step-hint {
-  font-size: 0.72rem;
-  color: var(--primary);
-  margin: 0.35rem 0 0;
-  opacity: 0.9;
+.howto-step-desc {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 
-/* Game content area */
-.demo-modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.75rem 1rem;
+.howto-step-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.74rem;
+  line-height: 1.45;
 }
 
-.demo-modal-body .game-page {
+.howto-step-hint svg {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+/* Embedded game pages give up their own page chrome inside the modal. */
+.howto .mshell-body .game-page {
   padding: 0;
   min-height: auto;
   background: transparent;
 }
 
-.demo-modal-body .game-page[data-game-theme]::before,
-.demo-modal-body .game-page[data-game-theme]::after {
+.howto .mshell-body .game-page[data-game-theme]::before,
+.howto .mshell-body .game-page[data-game-theme]::after {
   content: none;
   display: none;
 }
 
-.demo-modal-body .game-header {
+.howto .mshell-body .game-header {
   position: static;
 }
 
-/* Navigation bar */
-.demo-modal-nav {
+/* Navigation bar: a plain text link back, one primary button forward. */
+.howto-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.25rem;
-  border-top: 1px solid var(--border);
   gap: 0.75rem;
+  width: 100%;
 }
 
-.demo-nav-btn {
-  font-size: 0.78rem;
-  gap: 0.25rem;
-}
-
-.demo-nav-counter {
-  font-size: 0.72rem;
-  color: var(--secondary);
-  font-weight: 500;
-}
-
-/* Glow highlight */
-.demo-glow {
-  position: relative;
-  border-radius: var(--radius-lg);
-  animation: demo-glow-pulse 2s ease-in-out infinite;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 40%, transparent);
-}
-
-@keyframes demo-glow-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent), 0 0 12px 2px color-mix(in srgb, var(--primary) 10%, transparent); }
-  50% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 50%, transparent), 0 0 20px 4px color-mix(in srgb, var(--primary) 20%, transparent); }
-}
-
-.demo-glow-label {
-  position: absolute;
-  top: -0.6rem;
-  left: 0.75rem;
-  font-size: 0.62rem;
+.howto-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--primary);
-  background: var(--card);
-  padding: 0 0.4rem;
-  border-radius: var(--radius-xs);
-  z-index: 1;
-  white-space: nowrap;
-  letter-spacing: 0.02em;
+  transition: color 0.16s;
 }
 
-/* "How to Play" trigger button */
-.demo-trigger-btn {
+.howto-back:hover:not(:disabled) {
+  color: var(--foreground);
+}
+
+.howto-back:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.howto-count {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mshell-action-arrow {
+  flex-shrink: 0;
+  transition: transform 0.16s;
+}
+
+.mshell-action:hover .mshell-action-arrow {
+  transform: translateX(3px);
+}
+
+/* ─── Arrow pointer inside a demo ────────────────────────
+   Names the thing the current step is about. This replaced a pulsing
+   glow around the same content. */
+.demo-point {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.demo-point-label {
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.4rem 0.75rem;
-  border-radius: var(--radius-md);
-  border: 1px dashed var(--border);
-  background: transparent;
-  color: var(--secondary);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.demo-trigger-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
-}
-
-/* Chain demo scoring info */
-.demo-scoring-info {
-  margin-top: 0.75rem;
-  padding: 0.6rem 0.75rem;
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
-  border-radius: var(--radius-md);
-  font-size: 0.75rem;
-  color: var(--secondary);
-}
-
-.demo-scoring-info strong {
-  display: block;
-  color: var(--foreground);
-  margin-bottom: 0.3rem;
+  color: var(--modal-accent, var(--primary));
   font-size: 0.72rem;
+  font-weight: 700;
 }
 
-.demo-scoring-grid {
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 0.15rem 0.75rem;
+.demo-point-arrow {
+  flex-shrink: 0;
 }
 
 /* ─── Options Modal ─────────────────────────────────────── */
+/* The pickers are the shared Segmented control, so all that is left here
+   is the slider drawer and the stacks of switches. The old
+   .option-toggle-* / .sidebar-custom-panel button set is gone with them.
+   The .cursor-scale-* and .sound-* rules below still dress the mobile
+   sheets, which keep their own markup. */
 
-.option-group {
-  margin-bottom: 1.25rem;
+/* Slider hung off the bottom of a picker, same drawer as the solo seed. */
+.opt-slider {
+  gap: 0.6rem;
+  padding-left: 0.7rem;
+  padding-right: 0.7rem;
 }
 
-.option-group:last-child {
-  margin-bottom: 0;
+.opt-slider-label {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
-.option-label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.6rem;
-}
-
-.option-toggle-row {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.option-toggle-btn {
+.opt-slider-range {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.55rem 0.75rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--secondary);
-  font-size: 0.85rem;
-  font-weight: 500;
+  min-width: 0;
+  height: 2.4rem;
+  accent-color: var(--modal-accent);
   cursor: pointer;
-  transition: all 0.15s;
 }
 
-.option-toggle-btn:hover {
-  border-color: var(--primary);
-  color: var(--foreground);
+.opt-slider-value {
+  flex-shrink: 0;
+  min-width: 2.6rem;
+  color: var(--modal-accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
-.option-toggle-btn--active {
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.option-toggle-btn--wide {
-  width: 100%;
+.opt-switches {
   margin-top: 0.5rem;
 }
 
-/* ── Custom sidebar placement controls ───────────────────────── */
-.option-sublabel {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0.85rem 0 0.45rem;
+/* Drawer holding a control rather than a slider, e.g. the sound picker. */
+.opt-drawer {
+  gap: 0.6rem;
+  padding-left: 0.7rem;
+  padding-right: var(--solo-pad);
 }
 
-.sidebar-custom-panel {
-  margin-top: 0.65rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+.opt-drawer-label {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
-.sidebar-custom-panel .option-sublabel:first-child {
-  margin-top: 0;
+.opt-drawer .solo-select {
+  flex: 1;
+  min-width: 0;
 }
 
-.sidebar-place-hint {
+/* The drawer sets the height, so the trigger inside it does not. */
+.opt-drawer .solo-select-trigger {
+  height: 2.4rem;
+}
+
+.opt-trailing-hint {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  flex-wrap: wrap;
-  margin: 0.6rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: var(--secondary);
-}
-
-.sidebar-place-hint svg {
-  vertical-align: middle;
+  gap: 0.3rem;
+  margin: 0.5rem 0 0;
 }
 
 .cursor-scale-control {
@@ -845,55 +896,170 @@
 
 /* ─── Info Modal ────────────────────────────────────────── */
 
-.info-hero {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+/* ─── Info Modal ────────────────────────────────────────── */
+/* Everything the desktop modal restyled is scoped to .mshell, because the
+   mobile info sheet still uses the unscoped .info-* rules with its own
+   markup. Touching those here would restyle the sheet by accident. */
+
+.mshell .info-site-desc {
+  margin: 0 0 0.9rem;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  line-height: 1.55;
 }
 
-.info-hero-icon {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
-  flex-shrink: 0;
+.mshell .info-status {
+  margin-bottom: 0.9rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-align: center;
 }
 
-.info-hero-text {
+.mshell .info-status a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mshell .info-tips {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.info-hero-title {
-  font-size: 1rem;
+.mshell .info-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  color: var(--secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.mshell .info-tip::before {
+  content: none;
+}
+
+.mshell .info-tip svg {
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+  color: var(--modal-accent);
+}
+
+.mshell .info-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.mshell .info-link {
+  display: inline-flex;
+  align-items: center;
+  height: 2.1rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.78rem;
   font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.16s, color 0.16s;
+}
+
+.mshell .info-link:hover {
+  border-color: color-mix(in srgb, var(--modal-accent) 50%, transparent);
+  color: var(--modal-accent);
+}
+
+.mshell .info-session {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: var(--solo-pad);
+  padding-left: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius);
+  background: var(--background);
+}
+
+.mshell .info-session-id {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem;
+}
+
+.mshell .info-session-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  height: 2rem;
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  transition: background 0.14s, color 0.14s;
+}
+
+.mshell .info-session-copy:hover {
+  background: var(--accent);
   color: var(--foreground);
 }
 
-.info-hero-sub {
-  font-size: 0.78rem;
-  color: var(--secondary);
-}
-
-/* ─── Info Modal (redesigned) ───────────────────────────── */
-
-.info-modal-panel {
-  max-width: 560px;
-  width: min(92vw, 560px);
-  border-color: color-mix(in srgb, var(--foreground) 8%, var(--border));
-}
-
-.info-modal-body {
+.mshell .info-footer {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
 }
+
+.mshell .info-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted-foreground);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.16s;
+}
+
+.mshell .info-footer-link:hover,
+.mshell .info-footer-by a:hover {
+  color: var(--modal-accent);
+}
+
+.mshell .info-footer-by a {
+  color: var(--foreground);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ─── Info sheet (mobile) keeps the rules below ─────────── */
 
 .info-site-desc {
   font-size: 0.92rem;
@@ -1576,79 +1742,10 @@
   border-top: 1px solid var(--border);
 }
 
-/* Phase banners */
-.locdemo-phase-banner {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-}
-
-.locdemo-phase-banner h4 {
-  font-size: 0.88rem;
-  font-weight: 650;
-  color: var(--foreground);
-  margin: 0;
-}
-
-.locdemo-phase-banner p {
-  font-size: 0.75rem;
-  color: var(--secondary);
-  margin: 0.15rem 0 0;
-  line-height: 1.4;
-}
-
-.locdemo-phase-emoji {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.locdemo-phase-banner--pick {
-  background: color-mix(in srgb, #ef476f 8%, transparent);
-  border-color: color-mix(in srgb, #ef476f 20%, transparent);
-}
-
-.locdemo-phase-banner--leader {
-  background: color-mix(in srgb, #f59e0b 8%, transparent);
-  border-color: color-mix(in srgb, #f59e0b 20%, transparent);
-}
-
-.locdemo-phase-banner--reveal {
-  background: color-mix(in srgb, #06d6a0 8%, transparent);
-  border-color: color-mix(in srgb, #06d6a0 20%, transparent);
-}
-
 /* Action row */
 .locdemo-action-row {
   display: flex;
   justify-content: center;
-}
-
-/* Callout */
-.locdemo-callout {
-  font-size: 0.78rem;
-  line-height: 1.5;
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-md);
-  border-left: 3px solid;
-}
-
-.locdemo-callout strong {
-  color: var(--foreground);
-}
-
-.locdemo-callout--info {
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
-  border-color: var(--primary);
-  color: var(--secondary);
-}
-
-.locdemo-callout--leader {
-  background: color-mix(in srgb, #f59e0b 6%, transparent);
-  border-color: #f59e0b;
-  color: var(--secondary);
 }
 
 /* Split layout (clues & guesses) */
@@ -1738,38 +1835,23 @@
   flex-shrink: 0;
 }
 
-/* Scoring table */
-.locdemo-scoring-intro {
+/* ─── Scoring step, shared by every game's how-to ────────
+   Started as the Location Signal scoring page. It reads well enough that
+   every game closes on one now, so it lives here and takes its accent
+   from whichever how-to it is inside. */
+.demo-scoring {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.75rem;
-  padding: 0.75rem 0.85rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, #f59e0b 6%, transparent);
 }
 
-.locdemo-scoring-intro h4 {
-  font-size: 0.88rem;
-  font-weight: 650;
-  color: var(--foreground);
-  margin: 0;
-}
-
-.locdemo-scoring-intro p {
-  font-size: 0.75rem;
-  color: var(--secondary);
-  margin: 0.15rem 0 0;
-  line-height: 1.4;
-}
-
-.locdemo-scoring-table {
+.demo-scoring-table {
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   overflow: hidden;
 }
 
-.locdemo-scoring-header {
+.demo-scoring-header {
   display: flex;
   justify-content: space-between;
   padding: 0.45rem 0.85rem;
@@ -1781,7 +1863,7 @@
   color: var(--secondary);
 }
 
-.locdemo-scoring-row {
+.demo-scoring-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1790,53 +1872,53 @@
   font-size: 0.8rem;
 }
 
-.locdemo-scoring-emoji {
-  font-size: 0.9rem;
-  width: 1.25rem;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.locdemo-scoring-dist {
+.demo-scoring-label {
   flex: 1;
   color: var(--foreground);
 }
 
-.locdemo-scoring-pts {
-  font-weight: 700;
-  color: var(--primary);
+.demo-scoring-value {
   flex-shrink: 0;
+  font-weight: 700;
+  color: var(--modal-accent, var(--primary));
+  font-variant-numeric: tabular-nums;
 }
 
-/* Rules grid */
-.locdemo-rules-grid {
+.demo-rules-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.65rem;
 }
 
-.locdemo-rule {
+.demo-rule {
   padding: 0.65rem 0.75rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 30%, transparent);
 }
 
-.locdemo-rule strong {
-  display: block;
+.demo-rule strong {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.78rem;
   color: var(--foreground);
   margin-bottom: 0.25rem;
 }
 
-.locdemo-rule p {
+.demo-rule strong svg {
+  flex-shrink: 0;
+  color: var(--modal-accent, var(--primary));
+}
+
+.demo-rule p {
   font-size: 0.72rem;
   color: var(--secondary);
   margin: 0;
   line-height: 1.45;
 }
 
-/* ─── Location Demo – responsive ────────────────────────── */
+/* ─── Demo responsive ───────────────────────────────────── */
 
 @media (max-width: 640px) {
   .locdemo-overview-grid {
@@ -1847,7 +1929,7 @@
     grid-template-columns: 1fr;
   }
 
-  .locdemo-rules-grid {
+  .demo-rules-grid {
     grid-template-columns: 1fr;
   }
 }

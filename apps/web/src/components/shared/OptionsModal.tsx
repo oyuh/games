@@ -1,217 +1,148 @@
-import { useState } from "react";
-import { FiX, FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX, FiChevronDown, FiNavigation, FiMonitor, FiMaximize2, FiMove, FiMoreVertical, FiMoreHorizontal } from "react-icons/fi";
+import { FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX, FiNavigation, FiMonitor, FiMove, FiMoreVertical, FiMoreHorizontal, FiSettings } from "react-icons/fi";
 import { CURSOR_SCALE_MAX, CURSOR_SCALE_MIN, CURSOR_SCALE_STEP, updateSettings, useSettings } from "../../lib/settings";
 import type { SidebarPosition, Theme, SoundPreferences } from "../../lib/settings";
 import { playPress } from "../../lib/sounds";
+import { Segmented, type SoloSetupRow } from "./SoloGameMenu";
+import { MultiSelect } from "./Select";
+import { SwitchRow } from "./Switch";
+import { ModalSection, ModalShell } from "./ModalShell";
 
-const positionIcons: Record<SidebarPosition, React.ReactNode> = {
-  left: <FiAlignLeft size={14} />,
-  right: <FiAlignRight size={14} />,
-  top: <FiAlignCenter size={14} />,
-};
+/** Every picker here is the solo menu's segmented control, so a setting in
+ *  this modal looks and moves exactly like a setting on a game menu. */
+function pick(label: string, value: string, onChange: (value: string) => void, options: SoloSetupRow["options"]): SoloSetupRow {
+  return { label, value, onChange, options };
+}
 
 export function OptionsModal({ onClose }: { onClose: () => void }) {
   const settings = useSettings();
-  const [soundCustomizeOpen, setSoundCustomizeOpen] = useState(false);
 
   return (
-    <div
-      className="modal-overlay"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
-      role="presentation"
+    <ModalShell
+      icon={<FiSettings size={18} />}
+      kicker="Preferences"
+      title="Options"
+      onClose={onClose}
     >
-      <div className="modal-panel">
-        <div className="modal-header">
-          <h2 className="modal-title">Options</h2>
-          <button className="modal-close" onClick={onClose}>
-            <FiX size={18} />
-          </button>
+      <ModalSection label="Theme">
+        <Segmented
+          row={pick("Theme", settings.theme, (value) => updateSettings({ theme: value as Theme }), [
+            { value: "dark", label: "Dark", title: "Dark theme", icon: <FiMoon size={14} /> },
+            { value: "light", label: "Light", title: "Light theme", icon: <FiSun size={14} /> },
+          ])}
+        />
+      </ModalSection>
+
+      <ModalSection label="Cursor" hint="The custom cursor is drawn by the site. System hands it back to your OS.">
+        <Segmented
+          row={pick("Cursor", settings.customCursor ? "custom" : "system", (value) => updateSettings({ customCursor: value === "custom" }), [
+            { value: "custom", label: "Custom", title: "Site cursor", icon: <FiNavigation size={14} /> },
+            { value: "system", label: "System", title: "System cursor", icon: <FiMonitor size={14} /> },
+          ])}
+          attached={settings.customCursor}
+        />
+
+        {settings.customCursor && (
+          <div className="solo-drawer opt-slider">
+            <span className="opt-slider-label">Scale</span>
+            <input
+              className="opt-slider-range"
+              type="range"
+              min={CURSOR_SCALE_MIN}
+              max={CURSOR_SCALE_MAX}
+              step={CURSOR_SCALE_STEP}
+              value={settings.customCursorScale}
+              aria-label="Cursor scale"
+              data-cursor="slider"
+              onChange={(event) => updateSettings({ customCursorScale: Number(event.currentTarget.value) })}
+            />
+            <span className="opt-slider-value">{Math.round(settings.customCursorScale * 100)}%</span>
+          </div>
+        )}
+      </ModalSection>
+
+      <ModalSection label="Sidebar" hint="Pick an edge, or turn on custom placement and drag it anywhere.">
+        {!settings.sidebarCustom ? (
+          <Segmented
+            row={pick("Sidebar position", settings.sidebarPosition, (value) => updateSettings({ sidebarPosition: value as SidebarPosition }), [
+              { value: "left", label: "Left", title: "Dock left", icon: <FiAlignLeft size={14} /> },
+              { value: "right", label: "Right", title: "Dock right", icon: <FiAlignRight size={14} /> },
+              { value: "top", label: "Top", title: "Dock top", icon: <FiAlignCenter size={14} /> },
+            ])}
+          />
+        ) : (
+          <Segmented
+            row={pick("Sidebar orientation", settings.sidebarOrientation, (value) => updateSettings({ sidebarOrientation: value as "vertical" | "horizontal" }), [
+              { value: "vertical", label: "Vertical", title: "Stack buttons vertically", icon: <FiMoreVertical size={14} /> },
+              { value: "horizontal", label: "Horizontal", title: "Lay buttons out horizontally", icon: <FiMoreHorizontal size={14} /> },
+            ])}
+          />
+        )}
+
+        <div className="opt-switches">
+          <SwitchRow
+            label="Custom placement"
+            checked={settings.sidebarCustom}
+            onChange={(next) => updateSettings({ sidebarCustom: next })}
+          />
+          {settings.sidebarCustom && (
+            <SwitchRow
+              label="Movement tool"
+              checked={settings.sidebarDragEnabled}
+              onChange={(next) => updateSettings({ sidebarDragEnabled: next })}
+            />
+          )}
         </div>
 
-        <div className="modal-body">
-          {/* Theme */}
-          <div className="option-group">
-            <span className="option-label">Theme</span>
-            <div className="option-toggle-row">
-              <ThemeBtn
-                active={settings.theme === "dark"}
-                icon={<FiMoon size={14} />}
-                label="Dark"
-                onClick={() => updateSettings({ theme: "dark" })}
-              />
-              <ThemeBtn
-                active={settings.theme === "light"}
-                icon={<FiSun size={14} />}
-                label="Light"
-                onClick={() => updateSettings({ theme: "light" })}
-              />
-            </div>
+        {settings.sidebarCustom && settings.sidebarDragEnabled && (
+          <p className="mshell-section-hint opt-trailing-hint">
+            <FiMove size={12} /> Grab the tab on the sidebar to move it.
+          </p>
+        )}
+      </ModalSection>
+
+      <ModalSection label="Sound">
+        <Segmented
+          row={pick("Sound effects", settings.soundEnabled ? "on" : "off", (value) => {
+            const on = value === "on";
+            updateSettings({ soundEnabled: on });
+            // Play one so turning it on is audible straight away.
+            if (on) setTimeout(() => playPress(), 50);
+          }, [
+            { value: "off", label: "Off", title: "Mute all sounds", icon: <FiVolumeX size={14} /> },
+            { value: "on", label: "On", title: "Play sounds", icon: <FiVolume2 size={14} /> },
+          ])}
+          attached={settings.soundEnabled}
+        />
+
+        {settings.soundEnabled && (
+          <div className="solo-drawer opt-drawer" data-no-sound>
+            <span className="opt-drawer-label">Play</span>
+            <MultiSelect
+              id="sound-prefs"
+              label="Which sounds to play"
+              placeholder="Nothing"
+              values={SOUND_PREFS.filter(({ key }) => settings.soundPreferences[key]).map(({ key }) => key)}
+              options={SOUND_PREFS.map(({ key, label }) => ({ value: key, label }))}
+              // Folding onto the current prefs keeps the result a complete
+              // SoundPreferences without a cast.
+              onChange={(next) => updateSettings({
+                soundPreferences: SOUND_PREFS.reduce<SoundPreferences>(
+                  (prefs, { key }) => ({ ...prefs, [key]: next.includes(key) }),
+                  settings.soundPreferences,
+                ),
+              })}
+            />
           </div>
-
-          {/* Cursor */}
-          <div className="option-group">
-            <span className="option-label">Cursor</span>
-            <div className="option-toggle-row">
-              <button
-                className={`option-toggle-btn ${settings.customCursor ? "option-toggle-btn--active" : ""}`}
-                onClick={() => updateSettings({ customCursor: true })}
-              >
-                <FiNavigation size={14} /> Custom
-              </button>
-              <button
-                className={`option-toggle-btn ${!settings.customCursor ? "option-toggle-btn--active" : ""}`}
-                onClick={() => updateSettings({ customCursor: false })}
-              >
-                <FiMonitor size={14} /> System
-              </button>
-            </div>
-            <div className={`cursor-scale-control ${!settings.customCursor ? "cursor-scale-control--disabled" : ""}`}>
-              <div className="cursor-scale-head">
-                <span className="cursor-scale-title"><FiMaximize2 size={14} /> Scale</span>
-                <span className="cursor-scale-value">{Math.round(settings.customCursorScale * 100)}%</span>
-              </div>
-              <input
-                className="cursor-scale-range"
-                type="range"
-                min={CURSOR_SCALE_MIN}
-                max={CURSOR_SCALE_MAX}
-                step={CURSOR_SCALE_STEP}
-                value={settings.customCursorScale}
-                disabled={!settings.customCursor}
-                aria-label="Cursor scale"
-                data-cursor="slider"
-                onChange={(event) => updateSettings({ customCursorScale: Number(event.currentTarget.value) })}
-              />
-            </div>
-          </div>
-
-          {/* Sidebar position */}
-          <div className="option-group">
-            <span className="option-label">Sidebar Position</span>
-            {!settings.sidebarCustom && (
-              <div className="option-toggle-row">
-                {(["left", "right", "top"] as SidebarPosition[]).map((pos) => (
-                  <button
-                    key={pos}
-                    className={`option-toggle-btn ${settings.sidebarPosition === pos ? "option-toggle-btn--active" : ""}`}
-                    onClick={() => updateSettings({ sidebarPosition: pos })}
-                  >
-                    {positionIcons[pos]} {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Custom free-placement toggle */}
-            <button
-              className={`option-toggle-btn option-toggle-btn--wide ${settings.sidebarCustom ? "option-toggle-btn--active" : ""}`}
-              onClick={() => updateSettings({ sidebarCustom: !settings.sidebarCustom })}
-            >
-              <FiMove size={14} /> Custom Placement: {settings.sidebarCustom ? "On" : "Off"}
-            </button>
-
-            {settings.sidebarCustom && (
-              <div className="sidebar-custom-panel">
-                {/* Orientation */}
-                <span className="option-sublabel">Orientation</span>
-                <div className="option-toggle-row">
-                  <button
-                    className={`option-toggle-btn ${settings.sidebarOrientation === "vertical" ? "option-toggle-btn--active" : ""}`}
-                    onClick={() => updateSettings({ sidebarOrientation: "vertical" })}
-                  >
-                    <FiMoreVertical size={14} /> Vertical
-                  </button>
-                  <button
-                    className={`option-toggle-btn ${settings.sidebarOrientation === "horizontal" ? "option-toggle-btn--active" : ""}`}
-                    onClick={() => updateSettings({ sidebarOrientation: "horizontal" })}
-                  >
-                    <FiMoreHorizontal size={14} /> Horizontal
-                  </button>
-                </div>
-
-                {/* Movement tool, shows the drag tab on the sidebar */}
-                <span className="option-sublabel">Placement</span>
-                <button
-                  className={`option-toggle-btn option-toggle-btn--wide ${settings.sidebarDragEnabled ? "option-toggle-btn--active" : ""}`}
-                  onClick={() => updateSettings({ sidebarDragEnabled: !settings.sidebarDragEnabled })}
-                >
-                  <FiMove size={14} /> Movement Tool: {settings.sidebarDragEnabled ? "On" : "Off"}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Sound */}
-          <div className="option-group">
-            <span className="option-label">Sound Effects</span>
-            <div className="option-toggle-row">
-              <button
-                className={`option-toggle-btn ${!settings.soundEnabled ? "option-toggle-btn--active" : ""}`}
-                onClick={() => updateSettings({ soundEnabled: false })}
-              >
-                <FiVolumeX size={14} /> Off
-              </button>
-              <button
-                className={`option-toggle-btn ${settings.soundEnabled ? "option-toggle-btn--active" : ""}`}
-                onClick={() => {
-                  updateSettings({ soundEnabled: true });
-                  // Play a sound so the user hears it's on
-                  setTimeout(() => playPress(), 50);
-                }}
-              >
-                <FiVolume2 size={14} /> On
-              </button>
-            </div>
-
-            {settings.soundEnabled && (
-              <div className="sound-customize" data-no-sound>
-                <button
-                  className="sound-customize-toggle"
-                  onClick={() => setSoundCustomizeOpen((v) => !v)}
-                >
-                  Customize Sounds <FiChevronDown size={14} className={`sound-customize-chevron ${soundCustomizeOpen ? "sound-customize-chevron--open" : ""}`} />
-                </button>
-
-                {soundCustomizeOpen && (
-                  <div className="sound-customize-list">
-                    <SoundPrefToggle label="Hover Sounds" prefKey="hoverSounds" prefs={settings.soundPreferences} />
-                    <SoundPrefToggle label="Click Sounds" prefKey="clickSounds" prefs={settings.soundPreferences} />
-                    <SoundPrefToggle label="Game Notifications" prefKey="gameNotifications" prefs={settings.soundPreferences} />
-                    <SoundPrefToggle label="Action Feedback" prefKey="actionFeedback" prefs={settings.soundPreferences} />
-                    <SoundPrefToggle label="Player Sounds" prefKey="playerSounds" prefs={settings.soundPreferences} />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+        )}
+      </ModalSection>
+    </ModalShell>
   );
 }
 
-function ThemeBtn({ active, icon, label, onClick }: { active: boolean; icon: React.ReactNode; label: string; onClick: () => void }) {
-  return (
-    <button className={`option-toggle-btn ${active ? "option-toggle-btn--active" : ""}`} onClick={onClick}>
-      {icon} {label}
-    </button>
-  );
-}
-
-function SoundPrefToggle({ label, prefKey, prefs }: { label: string; prefKey: keyof SoundPreferences; prefs: SoundPreferences }) {
-  const enabled = prefs[prefKey];
-  return (
-    <div className="sound-pref-item">
-      <span className="sound-pref-label">{label}</span>
-      <button
-        className={`sound-pref-switch ${enabled ? "sound-pref-switch--on" : ""}`}
-        role="switch"
-        aria-checked={enabled}
-        onClick={() => updateSettings({ soundPreferences: { ...prefs, [prefKey]: !enabled } })}
-      >
-        <span className="sound-pref-switch-knob" />
-      </button>
-    </div>
-  );
-}
+const SOUND_PREFS: Array<{ key: keyof SoundPreferences; label: string }> = [
+  { key: "hoverSounds", label: "Hover" },
+  { key: "clickSounds", label: "Clicks" },
+  { key: "gameNotifications", label: "Game notifications" },
+  { key: "actionFeedback", label: "Action feedback" },
+  { key: "playerSounds", label: "Player sounds" },
+];
