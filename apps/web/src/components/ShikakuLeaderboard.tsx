@@ -1,8 +1,7 @@
-import { useEffect } from "react";
-import { createPortal } from "react-dom";
-import { FiAward, FiCopy, FiX } from "react-icons/fi";
+import { FiAward, FiUser } from "react-icons/fi";
 import { Difficulty, DIFFICULTY_CONFIG } from "../lib/shikaku-engine";
-import { showToast } from "../lib/toast";
+import { SoloLeaderboard, type SoloLeaderboardSearch } from "./shared/SoloLeaderboard";
+import type { SoloSetupOption } from "./shared/SoloGameMenu";
 
 /* ── Types (exported so ShikakuPage can use them) ─────────── */
 export interface LeaderboardEntry {
@@ -14,6 +13,8 @@ export interface LeaderboardEntry {
   createdAt: number;
   seed: number;
   isOwn: boolean;
+  /** Real standing. Only the search and the end screen's window send it. */
+  rank?: number;
 }
 
 export interface PersonalBest {
@@ -24,9 +25,35 @@ export interface PersonalBest {
 
 export type LeaderboardView = "all" | "mine";
 
-/* ═══════════════════════════════════════════════════════════ */
-/*  ShikakuLeaderboard - modal popup (props-based)             */
-/* ═══════════════════════════════════════════════════════════ */
+const PAGE_SIZE = 10;
+
+/** One colour per rung of the ladder. The menu and the end screen use it too. */
+export const SHIKAKU_DIFFICULTY_ACCENTS: Record<Difficulty, string> = {
+  easy: "#34d399",
+  medium: "#60a5fa",
+  hard: "#f59e0b",
+  expert: "#f87171",
+};
+
+const VIEW_OPTIONS: SoloSetupOption[] = [
+  { value: "all", label: "Everyone", icon: <FiAward size={15} />, title: "Every submitted score, highest first" },
+  { value: "mine", label: "Yours", icon: <FiUser size={15} />, title: "Your own submitted scores" },
+];
+
+/** The difficulty ladder, drawn like the menu's picker: one filled arc per rank. */
+const DIFFICULTY_OPTIONS: SoloSetupOption[] = (Object.keys(DIFFICULTY_CONFIG) as Difficulty[])
+  .map((difficulty, index, all) => ({
+    value: difficulty,
+    label: difficulty.charAt(0).toUpperCase() + difficulty.slice(1),
+    ring: { total: all.length, filled: index + 1 },
+    accent: SHIKAKU_DIFFICULTY_ACCENTS[difficulty],
+    title: `${difficulty}, ${DIFFICULTY_CONFIG[difficulty].label} grid`,
+  }));
+
+/**
+ * Shikaku's full leaderboard. Everything but the columns and the two filter
+ * rows lives in SoloLeaderboard, which Pips uses too.
+ */
 export function ShikakuLeaderboard({
   entries,
   loading,
@@ -41,6 +68,7 @@ export function ShikakuLeaderboard({
   totalPages,
   total,
   onPageChange,
+  search,
 }: {
   entries: LeaderboardEntry[];
   loading: boolean;
@@ -55,160 +83,58 @@ export function ShikakuLeaderboard({
   totalPages: number;
   total: number;
   onPageChange: (page: number) => void;
+  search?: SoloLeaderboardSearch;
 }) {
-  const pageSize = 10;
-  const safeTotalPages = Math.max(totalPages, 1);
-
-  // Escape to close
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
-  // Lock body scroll while modal is open
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
-  return createPortal(
-    <div
-      className="shikaku-leaderboard-overlay"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={(e) => {
-        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
-          onClose();
-        }
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Shikaku leaderboard"
-    >
-      <div className="shikaku-leaderboard">
-        {/* Header */}
-        <div className="shikaku-lb-header">
-          <h2><FiAward size={14} /> Leaderboard <span className="shikaku-lb-count" style={{ marginLeft: 4 }}>{total}</span></h2>
-          <button className="btn btn-muted" onClick={onClose} data-tooltip="Close" style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}>
-            <FiX size={13} />
-          </button>
-        </div>
-
-        <div className="shikaku-lb-tabs">
-          {(Object.keys(DIFFICULTY_CONFIG) as Difficulty[]).map((d) => (
-            <button
-              key={d}
-              className={`shikaku-lb-tab ${d === difficulty ? "shikaku-lb-tab--active" : ""}`}
-              onClick={() => onDiffChange(d)}
-              data-tooltip={`${DIFFICULTY_CONFIG[d].label} grid`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-
-        <div className="shikaku-lb-personal-best">
-          {personalBest ? (
-            <>
-              <span className="shikaku-lb-pb-label" data-tooltip="Your highest score on this difficulty">Your Best - #{personalBest.rank}</span>
-              <span className="shikaku-lb-pb-value">{personalBest.score.toLocaleString()} - {formatTime(personalBest.timeMs)}</span>
-            </>
-          ) : (
-            <span className="shikaku-lb-pb-none">No personal best yet - play a round!</span>
-          )}
-        </div>
-
-        <div className="shikaku-lb-toolbar">
-          <div className="shikaku-lb-view-toggle" role="tablist" aria-label="Leaderboard view filter">
-            <button
-              className={`shikaku-lb-view-btn ${view === "all" ? "shikaku-lb-view-btn--active" : ""}`}
-              onClick={() => onViewChange("all")}
-            >
-              All
-            </button>
-            <button
-              className={`shikaku-lb-view-btn ${view === "mine" ? "shikaku-lb-view-btn--active" : ""}`}
-              onClick={() => onViewChange("mine")}
-            >
-              Mine
-            </button>
-          </div>
-          <span className="shikaku-lb-count">{total} {total === 1 ? "score" : "scores"}</span>
-        </div>
-
-        <div className="shikaku-lb-content">
-          <div className="shikaku-lb-col-header" aria-hidden="true">
-            <span>#</span>
-            <span>Player</span>
-            <span>Score</span>
-            <span>Time</span>
-            <span>Seed</span>
-          </div>
-          {loading ? (
-            <div className="shikaku-lb-spinner-wrap">
-              <div className="shikaku-lb-spinner" />
-              <span className="shikaku-lb-spinner-text">Loading scores…</span>
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="shikaku-lb-empty-stable">{view === "mine" ? "You have no saved scores on this difficulty yet." : "No scores yet - be the first!"}</div>
-          ) : (
-            <div className="shikaku-lb-list">
-              {entries.map((entry, i) => {
-                const rank = (page - 1) * pageSize + i + 1;
-                return (
-                  <div
-                    key={entry.id}
-                    className={`shikaku-lb-row${rank <= 3 ? ` shikaku-lb-row--top${rank}` : ""}${entry.isOwn ? " shikaku-lb-row--self" : ""}`}
-                    data-tooltip={entry.isOwn ? "Your score" : undefined}
-                  >
-                    <span className="shikaku-lb-rank">#{rank}</span>
-                    <div className="shikaku-lb-player">
-                      <span className="shikaku-lb-name">{entry.name}</span>
-                      {entry.isOwn && <span className="shikaku-lb-badge">You</span>}
-                    </div>
-                    <span className="shikaku-lb-score">{entry.score.toLocaleString()}</span>
-                    <span className="shikaku-lb-time">{formatTime(entry.timeMs)}</span>
-                    <button
-                      className="shikaku-lb-copy-seed"
-                      data-tooltip={`Copy seed: ${entry.seed}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard.writeText(String(entry.seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
-                      }}
-                    >
-                      <FiCopy size={12} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="shikaku-lb-pagination">
-          <button
-            className="shikaku-lb-page-btn"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1 || loading || safeTotalPages <= 1}
-          >
-            ←
-          </button>
-          <span className="shikaku-lb-page-info">
-            {`Page ${Math.min(page, safeTotalPages)} of ${safeTotalPages} (${total} ${total === 1 ? "score" : "scores"})`}
-          </span>
-          <button
-            className="shikaku-lb-page-btn"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= safeTotalPages || loading || safeTotalPages <= 1}
-          >
-            →
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
+  return (
+    <SoloLeaderboard
+      game="shikaku"
+      title="Shikaku Leaderboard"
+      subtitle={search?.open && search.value.trim()
+        ? `${total.toLocaleString()} ${difficulty} match${total === 1 ? "" : "es"}`
+        : `${total.toLocaleString()} ${difficulty} score${total === 1 ? "" : "s"}`}
+      {...(search ? { search } : {})}
+      filters={[
+        {
+          label: "Difficulty",
+          value: difficulty,
+          options: DIFFICULTY_OPTIONS,
+          onChange: (next) => onDiffChange(next as Difficulty),
+        },
+        {
+          label: "Leaderboard view",
+          value: view,
+          options: VIEW_OPTIONS,
+          onChange: (next) => onViewChange(next as LeaderboardView),
+        },
+      ]}
+      facts={personalBest
+        ? [
+            `Your best #${personalBest.rank}`,
+            `${personalBest.score.toLocaleString()} points`,
+            formatTime(personalBest.timeMs),
+          ]
+        : undefined}
+      columns={["Score", "Time"]}
+      rows={entries.map((entry, index) => ({
+        id: entry.id,
+        // Searching sends the standing each score actually holds; a plain page
+        // is in order, so its position is the rank.
+        rank: entry.rank ?? (page - 1) * PAGE_SIZE + index + 1,
+        name: entry.name,
+        isOwn: entry.isOwn,
+        seed: entry.seed,
+        cells: [entry.score.toLocaleString(), formatTime(entry.timeMs)],
+      }))}
+      loading={loading}
+      empty={search?.open && search.value.trim()
+        ? `Nothing on the ${difficulty} board matches that.`
+        : view === "mine"
+          ? `No saved ${difficulty} scores on this device yet.`
+          : `No ${difficulty} scores yet, be the first.`}
+      page={page}
+      totalPages={totalPages}
+      onPageChange={onPageChange}
+      onClose={onClose}
+    />
   );
 }

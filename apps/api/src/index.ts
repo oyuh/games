@@ -6,7 +6,7 @@ import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
 import { lt, and, asc, count, desc, eq, gt, inArray, ne, or, sql, type SQL } from "drizzle-orm";
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import {
   PUZZLES_PER_RUN as ENGINE_SHIKAKU_PUZZLES,
@@ -32,6 +32,7 @@ import {
 import { startPresenceFlush } from "./presence-server";
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 import { allowUnrestrictedSessionName, findRestrictedNameMatch } from "./name-rules";
+import { parseLeaderboardSearch } from "./leaderboard-search";
 import { rateLimit } from "./rate-limit";
 import {
   chooseCanonicalSession,
@@ -166,6 +167,15 @@ app.use("/api/shikaku/*", rateLimit("game", "shikaku"));
 app.use("/api/shikaku/score", rateLimit("score", "shikaku_score"));
 app.use("/api/pips/*", rateLimit("game", "pips"));
 app.use("/api/pips/score", rateLimit("score", "pips_score"));
+
+// Searching a leaderboard is the same route with a `q`, so the extra layer only
+// applies when there is one. Both games share the bucket: it is one budget for
+// "how much scanning may this IP ask for", not one per board.
+const searchLimiter = rateLimit("leaderboardSearch");
+const limitLeaderboardSearch: MiddlewareHandler = (c, next) =>
+  c.req.query("q") ? searchLimiter(c, next) : next();
+app.use("/api/shikaku/leaderboard", limitLeaderboardSearch);
+app.use("/api/pips/leaderboard", limitLeaderboardSearch);
 
 // Embeds (crawler/social previews) + public read-only lookups.
 app.use("/api/embed/*", rateLimit("embed"));
@@ -1673,6 +1683,48 @@ app.get("/api/shikaku/leaderboard", async (c) => {
     filters.push(eq(shikakuScores.sessionId, sessionIdParam));
   }
 
+  // Search. Ranking happens before the filter so a match keeps the standing it
+  // actually holds on the board, and count(*) OVER () pages the matches without
+  // a second round trip.
+  const search = parseLeaderboardSearch(c.req.query("q"));
+  if (search) {
+    const result = await drizzleClient.execute(sql`
+      WITH ranked AS (
+        SELECT id, name, score, time_ms, difficulty, created_at, seed, session_id,
+               row_number() OVER (ORDER BY score DESC, time_ms ASC, created_at ASC) AS rank
+        FROM shikaku_scores
+        WHERE difficulty = ${difficulty}
+        ${mineOnly ? sql`AND session_id = ${sessionIdParam}` : sql``}
+      )
+      SELECT *, count(*) OVER () AS match_total
+      FROM ranked
+      WHERE name ILIKE ${search.namePattern} ESCAPE '\'
+      ${search.seed != null ? sql`OR seed = ${search.seed}` : sql``}
+      ORDER BY rank
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+    const rows = (Array.isArray(result) ? result : result.rows ?? []) as Record<string, any>[];
+    const matchTotal = Number(rows[0]?.match_total ?? 0);
+    return c.json({
+      entries: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        score: Number(row.score),
+        timeMs: Number(row.time_ms),
+        difficulty: row.difficulty,
+        createdAt: Number(row.created_at),
+        seed: Number(row.seed),
+        rank: Number(row.rank),
+        isOwn: sessionIdParam != null && row.session_id === sessionIdParam,
+      })),
+      personalBest: null,
+      page,
+      pageSize: limit,
+      total: matchTotal,
+      totalPages: Math.max(1, Math.ceil(matchTotal / limit)),
+    });
+  }
+
   const [rows, totalResult] = await Promise.all([
     drizzleClient
       .select({
@@ -2280,6 +2332,47 @@ app.get("/api/pips/leaderboard", async (c) => {
       return c.json({ entries: [], personalBest: null, page: 1, pageSize: limit, total: 0, totalPages: 1 });
     }
     filters.push(eq(pipsScores.sessionId, sessionIdParam));
+  }
+
+  // Same shape as Shikaku's search: rank first, filter second, page the matches
+  // off count(*) OVER (). See that route for the reasoning.
+  const search = parseLeaderboardSearch(c.req.query("q"));
+  if (search) {
+    const result = await drizzleClient.execute(sql`
+      WITH ranked AS (
+        SELECT id, name, total_ms, easy_ms, medium_ms, hard_ms, created_at, seed, session_id,
+               row_number() OVER (ORDER BY total_ms ASC, created_at ASC) AS rank
+        FROM pips_scores
+        ${mineOnly ? sql`WHERE session_id = ${sessionIdParam}` : sql``}
+      )
+      SELECT *, count(*) OVER () AS match_total
+      FROM ranked
+      WHERE name ILIKE ${search.namePattern} ESCAPE '\'
+      ${search.seed != null ? sql`OR seed = ${search.seed}` : sql``}
+      ORDER BY rank
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+    const rows = (Array.isArray(result) ? result : result.rows ?? []) as Record<string, any>[];
+    const matchTotal = Number(rows[0]?.match_total ?? 0);
+    return c.json({
+      entries: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        totalMs: Number(row.total_ms),
+        easyMs: Number(row.easy_ms),
+        mediumMs: Number(row.medium_ms),
+        hardMs: Number(row.hard_ms),
+        createdAt: Number(row.created_at),
+        seed: Number(row.seed),
+        rank: Number(row.rank),
+        isOwn: sessionIdParam != null && row.session_id === sessionIdParam,
+      })),
+      personalBest: null,
+      page,
+      pageSize: limit,
+      total: matchTotal,
+      totalPages: Math.max(1, Math.ceil(matchTotal / limit)),
+    });
   }
 
   const whereClause = and(...filters);
