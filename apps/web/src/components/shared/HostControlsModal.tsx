@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiX, FiUserMinus, FiPower, FiMessageCircle, FiSend, FiEye, FiGlobe, FiLock } from "react-icons/fi";
+import { FiUserMinus, FiPower, FiSend, FiEye, FiGlobe, FiLock, FiSliders } from "react-icons/fi";
 import { mutators } from "@games/shared";
 import { optimistic, useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
 import { getDisplayName } from "../../lib/session";
+import { Segmented } from "./SoloGameMenu";
+import { ModalSection, ModalShell } from "./ModalShell";
 
 export type GameContext =
   | { type: "imposter"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
@@ -137,125 +139,101 @@ export function HostControlsModal({
   };
 
   return (
-    <div
-      className="modal-overlay"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
-      role="presentation"
+    <ModalShell
+      icon={<FiSliders size={18} />}
+      kicker="Host only"
+      title="Host Controls"
+      size="lg"
+      onClose={onClose}
     >
-      <div className="modal-panel modal-panel--wide">
-        <div className="modal-header">
-          <h2 className="modal-title">Host Controls</h2>
-          <button className="modal-close" onClick={onClose}><FiX size={18} /></button>
+      <ModalSection label="Announcement" hint="Sends a toast to everyone in the game.">
+        <div className="host-announce">
+          <input
+            className="host-announce-input"
+            placeholder="Type a message…"
+            value={announcement}
+            maxLength={120}
+            onChange={(e) => setAnnouncement(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAnnounce(); }}
+          />
+          <button
+            className="host-announce-send"
+            onClick={handleAnnounce}
+            disabled={!announcement.trim()}
+            aria-label="Send announcement"
+          >
+            <FiSend size={15} />
+          </button>
         </div>
+      </ModalSection>
 
-        <div className="modal-body">
-          {/* Announcement */}
-          <section className="host-section">
-            <h3 className="host-section-title"><FiMessageCircle size={14} /> Announcement</h3>
-            <p className="host-section-desc">Send a message to all players (shows as a toast notification).</p>
-            <div className="host-announce-row">
-              <input
-                className="input host-announce-input"
-                placeholder="Type a message…"
-                value={announcement}
-                maxLength={120}
-                onChange={(e) => setAnnouncement(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAnnounce(); }}
-              />
-              <button
-                className="btn btn-primary host-announce-btn"
-                onClick={handleAnnounce}
-                disabled={!announcement.trim()}
-              >
-                <FiSend size={14} />
-              </button>
-            </div>
-          </section>
+      <ModalSection
+        label="Visibility"
+        hint={game.isPublic
+          ? "Anyone can find this game in Browse Games."
+          : "Players need the join code to get in."}
+      >
+        <Segmented
+          row={{
+            label: "Game visibility",
+            value: game.isPublic ? "public" : "private",
+            onChange: (value) => {
+              if ((value === "public") !== game.isPublic && !togglingVisibility) void handleToggleVisibility();
+            },
+            options: [
+              { value: "private", label: "Private", title: "Join code only", icon: <FiLock size={14} /> },
+              { value: "public", label: "Public", title: "Listed in Browse Games", icon: <FiGlobe size={14} /> },
+            ],
+          }}
+        />
+      </ModalSection>
 
-          {/* Game Visibility */}
-          <section className="host-section">
-            <h3 className="host-section-title">{game.isPublic ? <FiGlobe size={14} /> : <FiLock size={14} />} Game Visibility</h3>
-            <p className="host-section-desc">
-              {game.isPublic
-                ? "This game is public - anyone can find and join it from the Browse Games section."
-                : "This game is private - players need the join code to enter."}
-            </p>
-            <button
-              className={`btn ${game.isPublic ? "btn-muted" : "btn-primary"} host-visibility-btn`}
-              onClick={() => void handleToggleVisibility()}
-              disabled={togglingVisibility}
-            >
-              {togglingVisibility
-                ? "Updating…"
-                : game.isPublic
-                  ? <><FiLock size={14} /> Make Private</>
-                  : <><FiGlobe size={14} /> Make Public</>}
+      <ModalSection label="Players" hint="Kicked players can't rejoin this game.">
+        {kickablePlayersList.length > 0 ? (
+          <div className="host-people">
+            {kickablePlayersList.map((p) => (
+              <div key={p.id} className="host-person">
+                <span className="host-person-name">{p.name}</span>
+                <button className="host-person-btn" onClick={() => handleKick(p.id, p.name)}>
+                  <FiUserMinus size={13} /> Kick
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="host-empty">No other players yet.</p>
+        )}
+      </ModalSection>
+
+      {spectatorsList.length > 0 && (
+        <ModalSection label="Spectators" hint="Watching without playing.">
+          <div className="host-people">
+            {spectatorsList.map((s) => (
+              <div key={s.id} className="host-person">
+                <span className="host-person-name">{s.name}</span>
+                <button className="host-person-btn" onClick={() => handleRemoveSpectator(s.id, s.name)}>
+                  <FiEye size={13} /> Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        </ModalSection>
+      )}
+
+      <ModalSection label="End game" tone="danger" hint="Ends it for everyone and sends all players home.">
+        {!confirmEnd ? (
+          <button className="mshell-action mshell-action--muted mshell-action--wide" onClick={() => setConfirmEnd(true)}>
+            <FiPower size={14} /> End Game
+          </button>
+        ) : (
+          <div className="host-confirm">
+            <button className="mshell-action mshell-action--muted" onClick={() => setConfirmEnd(false)}>Cancel</button>
+            <button className="mshell-action mshell-action--danger" onClick={handleEndGame}>
+              <FiPower size={14} /> End it
             </button>
-          </section>
-
-          {/* Kick Players */}
-          <section className="host-section">
-            <h3 className="host-section-title"><FiUserMinus size={14} /> Kick Player</h3>
-            <p className="host-section-desc">Remove a player from the game. They won't be able to rejoin.</p>
-            {kickablePlayersList.length > 0 ? (
-              <div className="host-player-list">
-                {kickablePlayersList.map((p) => (
-                  <div key={p.id} className="host-player-row">
-                    <span className="host-player-name">{p.name}</span>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => handleKick(p.id, p.name)}
-                    >
-                      Kick
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="host-empty-text">No other players in the game.</p>
-            )}
-          </section>
-
-          {/* Spectators */}
-          {spectatorsList.length > 0 && (
-            <section className="host-section">
-              <h3 className="host-section-title"><FiEye size={14} /> Spectators</h3>
-              <p className="host-section-desc">People watching the game. Remove to kick them out.</p>
-              <div className="host-player-list">
-                {spectatorsList.map((s) => (
-                  <div key={s.id} className="host-player-row">
-                    <span className="host-player-name">{s.name}</span>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => handleRemoveSpectator(s.id, s.name)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* End Game */}
-          <section className="host-section host-section--danger">
-            <h3 className="host-section-title"><FiPower size={14} /> End Game</h3>
-            <p className="host-section-desc">End the game for all players. Everyone will be sent back to the home screen.</p>
-            {!confirmEnd ? (
-              <button className="btn btn-danger" onClick={() => setConfirmEnd(true)}>
-                End Game
-              </button>
-            ) : (
-              <div className="host-confirm-row">
-                <span className="host-confirm-text">Are you sure?</span>
-                <button className="btn btn-muted btn-sm" onClick={() => setConfirmEnd(false)}>Cancel</button>
-                <button className="btn btn-danger btn-sm" onClick={handleEndGame}>Confirm End</button>
-              </div>
-            )}
-          </section>
-        </div>
-      </div>
-    </div>
+          </div>
+        )}
+      </ModalSection>
+    </ModalShell>
   );
 }

@@ -1,6 +1,6 @@
 import { useRef, useState, FormEvent } from "react";
-import { FiShield } from "react-icons/fi";
-import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
+import { FiEdit3, FiFlag, FiShield, FiUsers, FiZap } from "react-icons/fi";
+import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
 import { PasswordHeader } from "../password/PasswordHeader";
 import { PasswordTeamGrid } from "../password/PasswordTeamGrid";
 import { PasswordActiveRound } from "../password/PasswordActiveRound";
@@ -116,6 +116,11 @@ const steps: DemoStep[] = [
     description: "Correct solves are worth more when your team needs fewer guesses. All teams play simultaneously - first team to the target score wins!",
     hint: "Check the round history at the bottom to see every clue, guess, and solve timeline.",
   },
+  {
+    label: "Scoring",
+    description: "A team banks points the moment its guesser lands the word. How many points depends only on how many guesses it took.",
+    hint: "Nailing it first try is worth triple a slow solve, so a sharp clue pays for itself.",
+  },
 ];
 
 /* ── Component ──────────────────────────────────────────── */
@@ -134,7 +139,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
         return (
           <div className="game-page" data-game-theme="password">
             <PasswordHeader title="Password" code="DEMO" phase="lobby" isHost category="food" />
-            <DemoGlow label="Join a team before the game starts">
+            <DemoPoint label="Join a team before the game starts">
               <PasswordTeamGrid
                 teams={TEAMS}
                 scores={SCORES_ZERO}
@@ -144,7 +149,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 isLobby
                 isHost
               />
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -161,7 +166,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
               showScores
               targetScore={5}
             />
-            <DemoGlow label="You see the secret word - type a one-word clue">
+            <DemoPoint label="You see the secret word - type a one-word clue">
               <PasswordActiveRound
                 activeRound={ROUND_CLUE_PHASE}
                 names={NAMES}
@@ -177,7 +182,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 onSubmitGuess={noop}
                 onSkip={noop}
               />
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -194,7 +199,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
               showScores
               targetScore={5}
             />
-            <DemoGlow label="The guesser sees the clues and types a guess">
+            <DemoPoint label="The guesser sees the clues and types a guess">
               <PasswordActiveRound
                 activeRound={ROUND_GUESS_PHASE}
                 names={NAMES}
@@ -210,7 +215,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 onSubmitGuess={noop}
                 onSkip={noop}
               />
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -218,7 +223,7 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
         return (
           <div className="game-page" data-game-theme="password">
             <PasswordHeader title="Password" code="DEMO" phase="results" currentRound={3} category="food" />
-            <DemoGlow label="Final scores - first to the target wins">
+            <DemoPoint label="Final scores - first to the target wins">
               <PasswordTeamGrid
                 teams={TEAMS}
                 scores={SCORES_MID}
@@ -228,11 +233,30 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 showScores
                 targetScore={5}
               />
-            </DemoGlow>
-            <DemoGlow label="Full round history with all words, clues, and guesses">
+            </DemoPoint>
+            <DemoPoint label="Full round history with all words, clues, and guesses">
               <PasswordRoundsTable rounds={ROUNDS_HISTORY} teams={TEAMS} names={NAMES} defaultOpen />
-            </DemoGlow>
+            </DemoPoint>
           </div>
+        );
+
+      case 4: // Scoring
+        return (
+          <DemoScoring
+            columns={["Guesses your team used", "Points"]}
+            rows={[
+              { label: "Solved on the first guess", value: "3" },
+              { label: "Solved on the second guess", value: "2" },
+              { label: "Solved on the third or later", value: "1" },
+              { label: "Skipped the word", value: "0" },
+            ]}
+            rules={[
+              { icon: <FiEdit3 size={13} />, title: "Clue rules", text: "One word per clue, and it can't be a near-copy of a clue already given." },
+              { icon: <FiUsers size={13} />, title: "Teams", text: "Every team needs at least two players: someone giving clues and someone guessing." },
+              { icon: <FiZap size={13} />, title: "All at once", text: "Teams don't wait their turn. Every team works its own word at the same time." },
+              { icon: <FiFlag size={13} />, title: "Winning", text: "The first team to reach the target score ends the game." },
+            ]}
+          />
         );
 
       default:
