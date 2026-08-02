@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { DemoModal, type DemoStep } from "./DemoModal";
+import { FiAward, FiCheck, FiClock, FiFlag, FiTarget } from "react-icons/fi";
+import { DemoModal, DemoScoring, type DemoStep } from "./DemoModal";
 import { GameIcon } from "../shared/GameIcon";
 import "../../styles/game-shared.css";
 import "../../styles/shikaku.css";
@@ -23,14 +24,14 @@ const steps: DemoStep[] = [
     hint: "The timer runs across all 5 puzzles - speed matters for your score!",
   },
   {
-    label: "Scoring",
-    description: "Base score is 5,000 points, multiplied by difficulty (Easy ×1 → Expert ×3). You get a speed bonus up to 2× for finishing under par time.",
-    hint: "Par times: Easy 30s, Medium 60s, Hard 90s, Expert 120s per puzzle. Finish in half the par time for maximum bonus!",
-  },
-  {
     label: "Leaderboard",
     description: "Your score is submitted automatically. Check the leaderboard to see how you rank against other players on each difficulty!",
     hint: "Giving up still submits a score with a penalty - try to finish all 5 puzzles for the best result.",
+  },
+  {
+    label: "Scoring",
+    description: "A run is worth 5,000 base points (1,000 per puzzle), multiplied by the difficulty and then by how far under par you finished.",
+    hint: "Speed bonus is 2 minus your time over par, floored at 0.1. Half par is the 2x cap.",
   },
 ];
 
@@ -112,24 +113,11 @@ function DemoGrid({ step }: { step: number }) {
         </p>
       )}
       {step === 2 && (
-        <p style={{ fontSize: "0.75rem", color: "#34d399", textAlign: "center", margin: 0, fontWeight: 700 }}>
-          ✓ Solved! Every cell covered, every number matched
+        <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem", fontSize: "0.75rem", color: "#34d399", textAlign: "center", margin: 0, fontWeight: 700 }}>
+          <FiCheck size={14} /> Solved! Every cell covered, every number matched
         </p>
       )}
       {step === 3 && (
-        <div style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--muted-foreground)", lineHeight: 1.6 }}>
-          <p style={{ margin: 0 }}>
-            <strong style={{ color: "var(--foreground)" }}>Formula:</strong> 5,000 × difficulty × speed bonus
-          </p>
-          <p style={{ margin: "0.3rem 0 0" }}>
-            Speed bonus = max(0.1, 2 − time / par time)
-          </p>
-          <p style={{ margin: "0.3rem 0 0", color: "#34d399" }}>
-            Finish at half par → 2× bonus = max score!
-          </p>
-        </div>
-      )}
-      {step === 4 && (
         <div style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--muted-foreground)", lineHeight: 1.6 }}>
           <p style={{ margin: 0 }}>
             Scores ranked per difficulty. Compete for #1!
@@ -160,7 +148,25 @@ export function ShikakuDemo({ onClose, initialStep = 0 }: { onClose: () => void;
       onClose={onClose}
     >
       <div className="game-page" data-game-theme="shikaku">
-        <DemoGrid step={step} />
+        {step === 4 ? (
+          <DemoScoring
+            columns={["Difficulty", "Score multiplier"]}
+            rows={[
+              { label: "Easy, 5×5", value: "×1" },
+              { label: "Medium, 9×9", value: "×1.5" },
+              { label: "Hard, 15×15", value: "×2.2" },
+              { label: "Expert, 22×22", value: "×3" },
+            ]}
+            rules={[
+              { icon: <FiTarget size={13} />, title: "Base score", text: "1,000 points per puzzle, and a run is 5 puzzles, so 5,000 before multipliers." },
+              { icon: <FiClock size={13} />, title: "Speed bonus", text: "2 minus your time divided by par, never below 0.1. Finish at half par to cap it at 2x." },
+              { icon: <FiFlag size={13} />, title: "Par times", text: "Per puzzle: Easy 30s, Medium 60s, Hard 90s, Expert 120s. The clock runs across all 5." },
+              { icon: <FiAward size={13} />, title: "Leaderboard", text: "Boards are kept per difficulty, so an Expert run never competes with an Easy one." },
+            ]}
+          />
+        ) : (
+          <DemoGrid step={step} />
+        )}
       </div>
     </DemoModal>
   );

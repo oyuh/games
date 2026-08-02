@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import { FiLink, FiHelpCircle, FiXCircle } from "react-icons/fi";
-import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
+import { FiAward, FiLink, FiHelpCircle, FiXCircle, FiZap } from "react-icons/fi";
+import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
 import { PasswordHeader } from "../password/PasswordHeader";
 import { ChainGuessField } from "../chain/ChainGuessField";
 import "../../styles/game-shared.css";
@@ -52,12 +52,17 @@ const steps: DemoStep[] = [
   {
     label: "Hints & Give Up",
     description: "Use the hint button (left) to reveal a letter (costs points). Use give-up (right) to skip a hard word for 0 points.",
-    hint: "Scoring: 0 hints = 3pts, 1-2 hints = 2pts, 3+ hints = 1pt. Finishing first = bonus!",
+    hint: "A wrong guess reveals a letter too, so guessing wildly costs the same as asking.",
   },
   {
     label: "Finished",
     description: "The player with the most points wins! See round-by-round breakdown of both chains.",
     hint: "Play again to swap chains - you'll solve what your opponent wrote!",
+  },
+  {
+    label: "Scoring",
+    description: "Each word you crack is worth points based on how much of it was showing when you got it. Letters get revealed by hints and by wrong guesses alike.",
+    hint: "A clean word is worth three times a word you brute-forced open.",
   },
 ];
 
@@ -128,7 +133,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
         return (
           <div className="game-page" data-game-theme="chain">
             <PasswordHeader title="Chain Reaction" code="DEMO" phase="lobby" isHost category="moviesAndShows" />
-            <DemoGlow label="1v1 duel - two player slots">
+            <DemoPoint label="1v1 duel - two player slots">
               <div className="game-section">
                 <div className="cr-lobby-duel">
                   <div className="cr-lobby-slot cr-lobby-slot--filled cr-lobby-slot--me">
@@ -145,7 +150,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
                 </div>
                 <p className="cr-mode-info">Mode: <strong>Custom Chains</strong></p>
               </div>
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -153,7 +158,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
         return (
           <div className="game-page" data-game-theme="chain">
             <PasswordHeader title="Chain Reaction" code="DEMO" phase="submitting" category="moviesAndShows" />
-            <DemoGlow label="Write connected words - first & last are shown as hints">
+            <DemoPoint label="Write connected words - first & last are shown as hints">
               <div className="game-section">
                 <div className="cr-chain">
                   {SUBMIT_WORDS.map((word, i) => {
@@ -175,7 +180,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
                   })}
                 </div>
               </div>
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -183,13 +188,13 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
         return (
           <div className="game-page" data-game-theme="chain">
             <PasswordHeader title="Chain Reaction" code="DEMO" phase="playing" currentRound={1} category="moviesAndShows" />
-            <DemoGlow label="Click any hidden word to type your guess">
+            <DemoPoint label="Click any hidden word to type your guess">
               <div className="game-section">
                 <span className="cr-view-label">Solve the chain - tap a word to guess!</span>
                 {renderChain(CHAIN_YOURS, true)}
                 <p className="game-progress-text">0 / 3 words cracked</p>
               </div>
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -199,18 +204,9 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
             <PasswordHeader title="Chain Reaction" code="DEMO" phase="playing" currentRound={1} category="moviesAndShows" />
             <div className="game-section">
               <span className="cr-view-label">Use hints or give up on tough words</span>
-              <DemoGlow label="⬅ Hint button reveals a letter | Give-up button skips ➡">
+              <DemoPoint label="Hint button reveals a letter, give-up skips the word">
                 {renderChain(CHAIN_YOURS, true)}
-              </DemoGlow>
-              <div className="demo-scoring-info">
-                <strong>Scoring per word:</strong>
-                <div className="demo-scoring-grid">
-                  <span>0 hints used</span><span>→ 3 points</span>
-                  <span>1–2 hints</span><span>→ 2 points</span>
-                  <span>3+ hints</span><span>→ 1 point</span>
-                  <span>Give up</span><span>→ 0 points</span>
-                </div>
-              </div>
+              </DemoPoint>
             </div>
           </div>
         );
@@ -219,24 +215,43 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
         return (
           <div className="game-page" data-game-theme="chain">
             <PasswordHeader title="Chain Reaction" code="DEMO" phase="finished" category="moviesAndShows" />
-            <DemoGlow label="Winner is announced with final scores">
+            <DemoPoint label="Winner is announced with final scores">
               <div className="game-section">
                 <div className="cr-winner-card cr-winner-card--win">
-                  <span className="cr-winner-icon">🏆</span>
+                  <FiAward className="cr-winner-icon" size={30} />
                   <div>
                     <p className="cr-winner-title">You Win!</p>
                     <p className="cr-winner-sub">8 – 6</p>
                   </div>
                 </div>
               </div>
-            </DemoGlow>
-            <DemoGlow label="See both chains fully revealed">
+            </DemoPoint>
+            <DemoPoint label="See both chains fully revealed">
               <div className="game-section">
                 <h3 className="game-section-label">Your Chain</h3>
                 {renderChain(CHAIN_SOLVED, false)}
               </div>
-            </DemoGlow>
+            </DemoPoint>
           </div>
+        );
+
+      case 5: // Scoring
+        return (
+          <DemoScoring
+            columns={["Letters showing when you solve it", "Points"]}
+            rows={[
+              { label: "2 or fewer", value: "3" },
+              { label: "3 or 4", value: "2" },
+              { label: "5 or more", value: "1" },
+              { label: "You gave up on the word", value: "0" },
+            ]}
+            rules={[
+              { icon: <FiHelpCircle size={13} />, title: "Hints", text: "The hint button reveals one more letter. It never reveals the whole word." },
+              { icon: <FiXCircle size={13} />, title: "Wrong guesses", text: "A wrong guess reveals a letter as well, so it costs you exactly what a hint does." },
+              { icon: <FiZap size={13} />, title: "Last word bonus", text: "Solving the final hidden word in your chain is worth one extra point." },
+              { icon: <FiAward size={13} />, title: "Winning", text: "Highest total across the chain takes it. The first and last words are free hints." },
+            ]}
+          />
         );
 
       default:

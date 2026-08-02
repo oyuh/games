@@ -1,6 +1,6 @@
 import { useRef, useState, FormEvent } from "react";
-import { FiEye } from "react-icons/fi";
-import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
+import { FiEdit3, FiEye, FiEyeOff, FiRefreshCw, FiUsers } from "react-icons/fi";
+import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
 import { ImposterHeader } from "../imposter/ImposterHeader";
 import { ImposterPlayersCard } from "../imposter/ImposterPlayersCard";
 import { ImposterLobbyActions } from "../imposter/ImposterLobbyActions";
@@ -82,6 +82,11 @@ const steps: DemoStep[] = [
     description: "Votes are tallied and the imposter is revealed. Did the group catch them, or did they escape?",
     hint: "The imposter wins if no one catches them! Then a new round starts with a different word.",
   },
+  {
+    label: "Scoring",
+    description: "Imposter keeps no running score. Each round is settled on its own by the vote, and whoever got the most votes is the one revealed.",
+    hint: "That makes every round a fresh start, so a blown round costs you nothing later.",
+  },
 ];
 
 /* ── Component ──────────────────────────────────────────── */
@@ -100,12 +105,12 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
         return (
           <div className="game-page" data-game-theme="imposter">
             <ImposterHeader code="DEMO" phase="lobby" currentRound={1} totalRounds={3} phaseEndsAt={null} isHost category="animals" />
-            <DemoGlow label="Players waiting in lobby">
+            <DemoPoint label="Players waiting in lobby">
               <ImposterPlayersCard players={PLAYERS} sessionId={P.you} sessionById={NAMES} revealRoles={false} />
-            </DemoGlow>
-            <DemoGlow label="Host starts the game when ready">
+            </DemoPoint>
+            <DemoPoint label="Host starts the game when ready">
               <ImposterLobbyActions canStart isHost playerCount={5} onStart={() => setStep(1)} onLeave={noop} />
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -114,7 +119,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
           <div className="game-page" data-game-theme="imposter">
             <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
             <ImposterPlayersCard players={PLAYERS} sessionId={P.you} sessionById={NAMES} revealRoles={false} />
-            <DemoGlow label="You see the secret word and submit a clue">
+            <DemoPoint label="You see the secret word and submit a clue">
               <ImposterClueSection
                 role="player"
                 secretWord={SECRET_WORD}
@@ -129,7 +134,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 onClueChange={setClue}
                 onSubmit={noop}
               />
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -138,7 +143,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
           <div className="game-page" data-game-theme="imposter">
             <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
             <ImposterPlayersCard players={PLAYERS} sessionId={P.charlie} sessionById={NAMES} revealRoles={false} />
-            <DemoGlow label="The imposter doesn't see the word - only redacted hints!">
+            <DemoPoint label="The imposter doesn't see the word - only redacted hints!">
               <ImposterClueSection
                 role="imposter"
                 secretWord={null}
@@ -153,7 +158,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 onClueChange={setClue}
                 onSubmit={noop}
               />
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -161,7 +166,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
         return (
           <div className="game-page" data-game-theme="imposter">
             <ImposterHeader code="DEMO" phase="voting" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
-            <DemoGlow label="Review all clues and vote for the imposter">
+            <DemoPoint label="Review all clues and vote for the imposter">
               <ImposterVoteSection
                 players={PLAYERS}
                 sessionId={P.you}
@@ -174,7 +179,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 onVoteTargetChange={setVoteTarget}
                 onSubmit={noop}
               />
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
@@ -182,10 +187,10 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
         return (
           <div className="game-page" data-game-theme="imposter">
             <ImposterHeader code="DEMO" phase="results" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
-            <DemoGlow label="Roles are revealed">
+            <DemoPoint label="Roles are revealed">
               <ImposterPlayersCard players={PLAYERS} sessionId={P.you} sessionById={NAMES} revealRoles />
-            </DemoGlow>
-            <DemoGlow label="Vote tally shows who got caught">
+            </DemoPoint>
+            <DemoPoint label="Vote tally shows who got caught">
               <ImposterResultsSection
                 tally={TALLY}
                 votes={VOTES}
@@ -198,8 +203,25 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
                 hasVotedSkip={false}
                 onSkip={noop}
               />
-            </DemoGlow>
+            </DemoPoint>
           </div>
+        );
+
+      case 5: // Scoring
+        return (
+          <DemoScoring
+            columns={["What happens", "Who wins the round"]}
+            rows={[
+              { label: "Imposter takes the most votes", value: "The group" },
+              { label: "Anyone else takes the most votes", value: "The imposter" },
+            ]}
+            rules={[
+              { icon: <FiEdit3 size={13} />, title: "Clue rules", text: "One word, and it has to prove you know the secret word without handing it over." },
+              { icon: <FiEyeOff size={13} />, title: "Imposter view", text: "The imposter never sees the word. They only get redacted versions of the clues already in." },
+              { icon: <FiUsers size={13} />, title: "Players", text: "Three players minimum. Exactly one of them is the imposter each round." },
+              { icon: <FiRefreshCw size={13} />, title: "Rounds", text: "Every round picks a new secret word and reshuffles who the imposter is." },
+            ]}
+          />
         );
 
       default:

@@ -1628,7 +1628,10 @@
 
 .solo-select-popup {
   position: fixed;
-  z-index: 60;
+  /* Portalled to the body, so it stacks against the modal overlay (900) and
+     the admin modal (940) rather than against whatever opened it. Stays under
+     toasts (960) so a toast still lands on top of an open list. */
+  z-index: 950;
   max-height: 15rem;
   padding: 0.35rem 0;
   overflow-y: auto;
@@ -1681,6 +1684,46 @@
 
 .solo-select-check {
   flex-shrink: 0;
+}
+
+/* ── Multi-select extras ──────────────────────────────────
+   A count on the trigger so the summary never has to spell out a long
+   list, and a checkbox per row because a tick alone does not read as
+   something you can turn back off. */
+.solo-select-count {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.solo-select-trigger[data-empty] .solo-select-value {
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.solo-select-box {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs, 3px);
+  background: var(--background);
+  color: var(--primary-foreground);
+  transition: background 0.14s, border-color 0.14s;
+}
+
+.solo-select-box--on {
+  border-color: var(--select-accent, var(--primary));
+  background: var(--select-accent, var(--primary));
+}
+
+/* The label sits between the box and the right edge, so it takes the slack. */
+.solo-select-option .solo-select-option-label {
+  flex: 1;
 }
 
 /* ── Drawers hung off the bottom of a picker ──────────────── */

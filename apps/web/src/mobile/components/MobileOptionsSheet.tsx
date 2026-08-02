@@ -3,6 +3,7 @@ import { FiMoon, FiSun, FiVolume2, FiVolumeX, FiChevronDown, FiNavigation, FiMon
 import { CURSOR_SCALE_MAX, CURSOR_SCALE_MIN, CURSOR_SCALE_STEP, updateSettings, useSettings } from "../../lib/settings";
 import type { SoundPreferences } from "../../lib/settings";
 import { BottomSheet } from "./BottomSheet";
+import { Switch } from "../../components/shared/Switch";
 import { mutators } from "@games/shared";
 import { useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
@@ -304,18 +305,14 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
 }
 
 function MobileSoundPrefToggle({ label, prefKey, prefs }: { label: string; prefKey: keyof SoundPreferences; prefs: SoundPreferences }) {
-  const enabled = prefs[prefKey];
   return (
     <div className="m-sound-pref-item">
       <span className="m-sound-pref-label">{label}</span>
-      <button
-        className={`m-sound-pref-switch ${enabled ? "m-sound-pref-switch--on" : ""}`}
-        role="switch"
-        aria-checked={enabled}
-        onClick={() => updateSettings({ soundPreferences: { ...prefs, [prefKey]: !enabled } })}
-      >
-        <span className="m-sound-pref-switch-knob" />
-      </button>
+      <Switch
+        label={label}
+        checked={prefs[prefKey]}
+        onChange={(next) => updateSettings({ soundPreferences: { ...prefs, [prefKey]: next } })}
+      />
     </div>
   );
 }

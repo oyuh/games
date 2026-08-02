@@ -59,20 +59,124 @@
   color: var(--destructive);
 }
 
-.host-announce-row {
+/* ── Desktop Host Controls ───────────────────────────────
+   Lives inside the shared .mshell, so it reuses the solo drawer look:
+   a bordered shell with the control inset, no shadows, no glows. The
+   .host-section-* and .host-player-* rules above and below still dress
+   the mobile host sheet, which keeps its own markup. */
+
+.host-announce {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
+  gap: 0.3rem;
+  padding: var(--solo-pad, 0.25rem);
+  padding-left: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius, var(--radius-lg));
+  background: var(--background);
 }
 
 .host-announce-input {
   flex: 1;
   min-width: 0;
+  height: 2.4rem;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.85rem;
 }
 
-.host-announce-btn {
+.host-announce-input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.host-announce-send {
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
-  padding: 0.5rem 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--modal-accent, var(--primary));
+  cursor: pointer;
+  transition: background 0.14s, opacity 0.14s;
+}
+
+.host-announce-send:hover:not(:disabled) {
+  background: var(--accent);
+}
+
+.host-announce-send:disabled {
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.host-people {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.host-person {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.35rem;
+  padding: 0 0.4rem 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius, var(--radius-lg));
+  background: var(--background);
+}
+
+.host-person-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--foreground);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.host-person-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  height: 1.85rem;
+  padding: 0 0.6rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  transition: border-color 0.14s, color 0.14s;
+}
+
+.host-person-btn:hover {
+  border-color: color-mix(in srgb, #ef4444 45%, transparent);
+  color: #f87171;
+}
+
+.host-empty {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.host-confirm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
 }
 
 .host-player-list {
@@ -95,24 +199,6 @@
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--foreground);
-}
-
-.host-empty-text {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-style: italic;
-}
-
-.host-confirm-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.host-confirm-text {
-  font-size: 0.75rem;
-  color: var(--destructive);
-  font-weight: 500;
 }
 
 .btn-danger {
@@ -422,13 +508,5 @@
    CHAIN REACTION GAME: 1v1 DUEL UI
    ═══════════════════════════════════════════════════════ */
 
-
-/* ── Host Visibility Toggle ──────────────────────────── */
-/* ── Host Visibility Toggle ─────────────────────────────── */
-.host-visibility-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
 
 /* ── Globe Browse Button (desktop cards) ────────────────── */
