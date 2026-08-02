@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FiAward, FiCheck, FiClock, FiCopy, FiFlag, FiHash, FiHome, FiPlay, FiRepeat, FiTarget, FiUploadCloud, FiUser, FiX } from "react-icons/fi";
-import { ShikakuLeaderboard, LeaderboardEntry, LeaderboardView, PersonalBest } from "../components/ShikakuLeaderboard";
+import { FiAward, FiCheck, FiClock, FiFlag, FiHash, FiHome, FiPlay, FiRepeat, FiTarget, FiUploadCloud, FiUser } from "react-icons/fi";
+import {
+  ShikakuLeaderboard,
+  SHIKAKU_DIFFICULTY_ACCENTS,
+  LeaderboardEntry,
+  LeaderboardView,
+  PersonalBest,
+} from "../components/ShikakuLeaderboard";
 import {
   calculateScore,
   Difficulty,
@@ -20,6 +26,7 @@ import {
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { playCountdownTick, playGameOver } from "../lib/sounds";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useIsMobile } from "../hooks/useIsMobile";
 import "../styles/game-shared.css";
 import "../styles/shikaku.css";
@@ -27,6 +34,7 @@ import { ShikakuDemo } from "../components/demos/ShikakuDemo";
 import { GameIcon } from "../components/shared/GameIcon";
 import { SoloEndScreen, SPLITS_VIEW, soloStatusTitle } from "../components/shared/SoloEndScreen";
 import { SoloGameMenu, type SoloSetupOption } from "../components/shared/SoloGameMenu";
+import { copySeed } from "../components/shared/SoloScoreTable";
 import { useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
 import { emitSolo, onSolo, useSoloEvent } from "../lib/solo-bus";
 
@@ -41,14 +49,6 @@ const MAX_TIME_MS: Record<Difficulty, number> = {
   medium: 3_600_000 + 1_800_000,
   hard:   3_600_000 + 3_600_000,
   expert: 3_600_000 + 5_400_000,
-};
-
-/* ── Menu accent per difficulty ───────────────────────────── */
-const SHIKAKU_DIFFICULTY_ACCENTS: Record<Difficulty, string> = {
-  easy: "#34d399",
-  medium: "#60a5fa",
-  hard: "#f59e0b",
-  expert: "#f87171",
 };
 
 type ShikakuMenuMode = "ranked" | "endless" | "seed";
@@ -267,12 +267,16 @@ export function ShikakuPage() {
   const [lbPage, setLbPage] = useState(1);
   const [lbTotalPages, setLbTotalPages] = useState(1);
   const [lbTotal, setLbTotal] = useState(0);
+  const [lbSearchOpen, setLbSearchOpen] = useState(false);
+  const [lbSearch, setLbSearch] = useState("");
+  // Closing the search drops the query, which is what puts the board back.
+  const lbQuery = useDebouncedValue(lbSearchOpen ? lbSearch.trim() : "", 300);
   const LB_PAGE_SIZE = 10;
   const LB_CACHE_TTL = 30_000; // 30 seconds
   const lbCacheRef = useRef<Map<string, { data: any; ts: number }>>(new Map());
 
-  const fetchLeaderboard = useCallback(async (diff: Difficulty, pg = 1, view: LeaderboardView = lbView, forceRefresh = false) => {
-    const cacheKey = `${diff}:${pg}:${view}`;
+  const fetchLeaderboard = useCallback(async (diff: Difficulty, pg = 1, view: LeaderboardView = lbView, forceRefresh = false, q = "") => {
+    const cacheKey = `${diff}:${pg}:${view}:${q}`;
     const cached = lbCacheRef.current.get(cacheKey);
     if (!forceRefresh && cached && Date.now() - cached.ts < LB_CACHE_TTL) {
       const data = cached.data;
@@ -296,6 +300,9 @@ export function ShikakuPage() {
       if (view === "mine") {
         params.set("mineOnly", "1");
       }
+      if (q) {
+        params.set("q", q);
+      }
       const res = await fetch(`${API_BASE}/api/shikaku/leaderboard?${params.toString()}`, {
         credentials: "include",
       });
@@ -314,6 +321,14 @@ export function ShikakuPage() {
       setLeaderboardLoading(false);
     }
   }, [lbView]);
+
+  // Searching always lands you on page 1 of the matches.
+  useEffect(() => {
+    if (!showLeaderboard) return;
+    setLbPage(1);
+    void fetchLeaderboard(lbDifficulty, 1, lbView, false, lbQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lbQuery, showLeaderboard]);
 
   const resetReplayData = useCallback(() => {
     solvedReplayRectsRef.current = [];
@@ -1278,14 +1293,20 @@ export function ShikakuPage() {
       difficulty={lbDifficulty}
       view={lbView}
       personalBest={personalBest}
-      onDiffChange={(d: Difficulty) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1, lbView); }}
-      onViewChange={(v: LeaderboardView) => { setLbView(v); setLbPage(1); fetchLeaderboard(lbDifficulty, 1, v); }}
+      onDiffChange={(d: Difficulty) => { setLbDifficulty(d); setLbPage(1); fetchLeaderboard(d, 1, lbView, false, lbQuery); }}
+      onViewChange={(v: LeaderboardView) => { setLbView(v); setLbPage(1); fetchLeaderboard(lbDifficulty, 1, v, false, lbQuery); }}
       onClose={() => setShowLeaderboard(false)}
       formatTime={formatTime}
       page={lbPage}
       totalPages={lbTotalPages}
       total={lbTotal}
-      onPageChange={(p: number) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p, lbView); }}
+      onPageChange={(p: number) => { setLbPage(p); fetchLeaderboard(lbDifficulty, p, lbView, false, lbQuery); }}
+      search={{
+        open: lbSearchOpen,
+        value: lbSearch,
+        onToggle: () => setLbSearchOpen((open) => !open),
+        onChange: setLbSearch,
+      }}
     />
   ) : null;
 
@@ -1667,7 +1688,7 @@ function ShikakuEndScreen({
           label: "Seed",
           value: String(seed),
           accent: "var(--muted-foreground)",
-          onCopy: () => { navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {}); },
+          onCopy: () => void copySeed(seed),
         },
       ]}
       splits={puzzleTimes.map((time, index) => ({
