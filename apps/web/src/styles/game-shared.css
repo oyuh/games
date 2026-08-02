@@ -1756,3 +1756,472 @@
     height: 18px;
   }
 }
+
+/* ── Solo end screen (Pips + Shikaku share this) ───────────────
+   Same rules as the menu above, because it is meant to read as the
+   other half of it: no shadows, no glows, depth from borders and
+   fills, one primary button, plain text links at the bottom. The
+   stat row borrows the locked-picker look and the two drawers hang
+   off their control exactly like the seed and ladder drawers do. */
+
+.solo-end {
+  --solo-pad: 0.25rem;
+  --solo-radius: var(--radius-lg);
+  --solo-control-h: 3.5rem;
+  --solo-seed-h: 2.4rem;
+  width: min(620px, 100%);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.15rem;
+  animation: game-fade-in-up 0.32s ease-out both;
+}
+
+/* Abandoned runs get the muted title. Nothing else changes: a run that
+   ended early is still your run, it does not need a red banner. */
+.solo-end[data-tone="ended"] .solo-end-title {
+  color: var(--muted-foreground);
+}
+
+/* ── Stat row: the locked segmented picker, reused ─────────── */
+.solo-end-summary,
+.solo-end-board {
+  display: flex;
+  flex-direction: column;
+}
+
+.solo-end-stats {
+  display: grid;
+  padding: var(--solo-pad);
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius);
+  background: var(--background);
+}
+
+.solo-end-stats[data-attached] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.solo-end-stat {
+  position: relative;
+  min-width: 0;
+  height: var(--solo-control-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0 0.25rem;
+}
+
+/* Hairline between stats, same one the locked picker uses. */
+.solo-end-stat + .solo-end-stat::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 1.6rem;
+  transform: translateY(-50%);
+  background: var(--border);
+}
+
+.solo-end-stat-label {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.solo-end-stat-value {
+  max-width: 100%;
+  color: var(--stat-accent);
+  font-size: 1.02rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.solo-end-stat-note {
+  margin-left: 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* Sits in the tile's top corner so it never pushes the number around. */
+.solo-end-stat-copy {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.14s, background 0.14s, color 0.14s;
+}
+
+.solo-end-stat:hover .solo-end-stat-copy,
+.solo-end-stat-copy:focus-visible {
+  opacity: 1;
+}
+
+.solo-end-stat-copy:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+/* Touch has no hover, so the button would never appear. */
+@media (pointer: coarse) {
+  .solo-end-stat-copy {
+    opacity: 0.65;
+  }
+}
+
+/* ── Splits drawer: per-puzzle times, one line ─────────────── */
+.solo-end-splits {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem 0.9rem;
+  min-height: calc(var(--solo-seed-h) + var(--solo-pad) * 2 + 1px);
+  padding: 0.4rem 0.7rem;
+}
+
+.solo-end-split {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.32rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.solo-end-split-label {
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.solo-end-split strong {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+/* ── Standings table, hung off its filter picker ───────────── */
+.solo-end-table {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Narrow screens scroll the table sideways rather than crushing the
+   columns, so every run stays readable at every width. */
+.solo-end-table-scroll {
+  /* Positioned so a row's offsetTop is measured against this box, which is
+     what the scroll-to-your-own-row effect relies on. */
+  position: relative;
+  max-height: 16.5rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.solo-end-table[data-loading] .solo-end-table-scroll {
+  opacity: 0.5;
+}
+
+.solo-end-table-grid {
+  display: grid;
+  grid-template-columns:
+    2.4rem
+    minmax(6rem, 1fr)
+    repeat(var(--metric-cols), minmax(3.8rem, max-content))
+    auto;
+  min-width: max-content;
+  width: 100%;
+}
+
+.solo-end-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  padding: 0.42rem 0.7rem;
+  transition: background 0.14s;
+}
+
+.solo-end-row:not(.solo-end-row--head):hover {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+/* Sticky so you keep the column names while scrolling to your own row. */
+.solo-end-row--head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+  color: var(--muted-foreground);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.solo-end-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.solo-end-cell--rank {
+  color: var(--muted-foreground);
+  font-weight: 700;
+}
+
+.solo-end-cell--name {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding-right: 0.6rem;
+}
+
+.solo-end-cell--metric,
+.solo-end-cell--seed {
+  padding-left: 0.6rem;
+  text-align: right;
+}
+
+.solo-end-cell--seed {
+  color: var(--muted-foreground);
+  font-size: 0.74rem;
+}
+
+/* The first metric is the one the board is sorted by, so it carries the
+   weight. The rest are supporting detail and stay quiet. */
+.solo-end-row:not(.solo-end-row--head) .solo-end-cell--metric:not(:nth-of-type(3)) {
+  color: var(--muted-foreground);
+}
+
+.solo-end-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.solo-end-row[data-medal] .solo-end-cell--rank {
+  color: var(--medal);
+}
+
+.solo-end-row[data-medal="1"] { --medal: #fbbf24; }
+.solo-end-row[data-medal="2"] { --medal: #cbd5e1; }
+.solo-end-row[data-medal="3"] { --medal: #d99a6c; }
+
+/* Gold and silver wash out on the light background, so they go a few
+   shades deeper rather than a different hue. */
+[data-theme="light"] .solo-end-row[data-medal="1"] { --medal: #b45309; }
+[data-theme="light"] .solo-end-row[data-medal="2"] { --medal: #64748b; }
+[data-theme="light"] .solo-end-row[data-medal="3"] { --medal: #9a5b32; }
+
+.solo-end-row[data-medal] .solo-end-name {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+/* Your own row, the whole point of the standings view. */
+.solo-end-row[data-self] {
+  background: color-mix(in srgb, var(--primary) 13%, transparent);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.solo-end-row[data-self] .solo-end-cell--rank,
+.solo-end-row[data-self] .solo-end-name {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.solo-end-you {
+  flex-shrink: 0;
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Where the standings skip a stretch of runs. */
+.solo-end-gap {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.3rem 0.7rem;
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.solo-end-gap::before,
+.solo-end-gap::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed var(--border);
+}
+
+.solo-end-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 2.2rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* ── Submission status ─────────────────────────────────────
+   Same bordered group as everything else on this screen: a colour-coded
+   icon on the left says what happened at a glance, the right side spells
+   it out and hangs the run's own numbers underneath. */
+.solo-end-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--status-accent) 35%, var(--border));
+  border-radius: var(--solo-radius);
+  background: color-mix(in srgb, var(--status-accent) 7%, var(--background));
+}
+
+.solo-end-status-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--status-accent) 16%, transparent);
+  color: var(--status-accent);
+}
+
+.solo-end-status[data-pending] .solo-end-status-icon {
+  animation: solo-end-spin 1.1s linear infinite;
+}
+
+@keyframes solo-end-spin {
+  to { transform: rotate(360deg); }
+}
+
+.solo-end-status-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.solo-end-status-title {
+  margin: 0;
+  color: var(--status-accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.solo-end-status-message {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.solo-end-status-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.25rem 0 0;
+}
+
+.solo-end-fact {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.solo-end-status--info { --status-accent: var(--primary); }
+.solo-end-status--success { --status-accent: #34d399; }
+.solo-end-status--error { --status-accent: #f87171; }
+
+/* ── A link waiting on its second press ────────────────────── */
+.solo-menu-link[data-armed] {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.solo-menu-link[data-armed]::after {
+  content: "";
+  position: absolute;
+  inset: -0.15rem -0.45rem;
+  border: 1px dashed color-mix(in srgb, var(--primary) 55%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.solo-end .solo-menu-link {
+  position: relative;
+}
+
+.solo-end-start:disabled {
+  cursor: default;
+  filter: grayscale(0.7) brightness(0.8);
+}
+
+.solo-menu-link:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.solo-menu-link:disabled:hover {
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  .solo-end {
+    --solo-control-h: 3.2rem;
+    gap: 0.95rem;
+  }
+
+  .solo-end-stat-value {
+    font-size: 0.92rem;
+  }
+
+  .solo-end-stat-label {
+    font-size: 0.62rem;
+  }
+
+  .solo-end-table-scroll {
+    max-height: 13rem;
+  }
+}

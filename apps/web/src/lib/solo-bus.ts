@@ -39,6 +39,8 @@ export interface ShikakuState {
   canLeaderboard: boolean;
   showScrollControls: boolean;
   canScroll: { up: boolean; down: boolean; left: boolean; right: boolean };
+  showDevTools: boolean;
+  canDevSkip: boolean;
 }
 
 export interface PipsState {
@@ -80,6 +82,8 @@ export interface SoloEventMap {
   "shikaku-scroll-down": void;
   "shikaku-scroll-left": void;
   "shikaku-scroll-right": void;
+  "shikaku-dev-solve": void;
+  "shikaku-dev-skip": void;
   "pips-undo": void;
   "pips-restart-run": void;
   "pips-give-up": void;
