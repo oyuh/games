@@ -22,7 +22,8 @@
   /* Card surfaces. Overriding the tokens re-themes every card on the
      site at once, desktop and mobile, so no card class needs its own
      light-mode rule. The grid lines flip from white to black here. */
-  --surface-bg: linear-gradient(160deg, #f4f2ef 0%, #e9e7e3 100%);
+  --surface-top: #f4f2ef;
+  --surface-bottom: #e9e7e3;
   --surface-grid: rgba(0, 0, 0, 0.035);
   --surface-grid-soft: rgba(0, 0, 0, 0.025);
   --surface-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
