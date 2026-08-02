@@ -40,6 +40,30 @@ export function lockToPrefix(raw: string, prefix: string, maxLen: number): strin
  * @param value         the current guess text (includes the locked prefix)
  * @param interactive   when true, mark the next empty cell as the caret position
  */
+/**
+ * Index of the next still-hidden slot, walking `delta` (+1 down / -1 up) and
+ * wrapping around the chain. Used both to jump to the next word after one is
+ * solved or skipped, and for arrow-key navigation.
+ *
+ * @param skip a slot to ignore, for when the caller's snapshot is one mutation
+ *   stale (the word you just solved still reads `revealed: false`).
+ * @returns null when nothing is left to solve.
+ */
+export function nextUnsolvedIndex(
+  slots: ReadonlyArray<{ revealed: boolean }>,
+  from: number,
+  delta: 1 | -1 = 1,
+  skip?: number
+): number | null {
+  const n = slots.length;
+  for (let step = 1; step <= n; step++) {
+    const i = (((from + delta * step) % n) + n) % n;
+    if (i === skip) continue;
+    if (!slots[i]!.revealed) return i;
+  }
+  return null;
+}
+
 export function buildGuessCells(
   word: string,
   lettersShown: number,

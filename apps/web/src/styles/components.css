@@ -114,15 +114,18 @@
 
 /* An accented card tints its own fill from that accent rather than
    carrying a hand-picked gradient per game. Derived instead of listed,
-   so it follows --card-accent and works in both themes. */
+   so it follows --card-accent and works in both themes.
+
+   The tint goes over --surface-bottom, not --surface-top: a game card is a
+   moodier version of a plain card, so it must never sit lighter than one. */
 .home-card,
 .solo-card,
 .m-game-card,
 .m-solo-card {
   --surface-bg: linear-gradient(
     160deg,
-    color-mix(in srgb, var(--card-accent, var(--primary)) 12%, var(--card)) 0%,
-    var(--card) 100%
+    color-mix(in srgb, var(--card-accent, var(--primary)) 10%, var(--surface-bottom)) 0%,
+    var(--surface-bottom) 100%
   );
 }
 

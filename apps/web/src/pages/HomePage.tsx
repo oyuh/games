@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
-import { FiArrowLeft, FiBookOpen, FiCheck, FiChevronDown, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight, FiBookOpen, FiCheck, FiChevronDown, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { isNameRestricted } from "../hooks/useAdminBroadcast";
@@ -187,7 +187,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
     zero, navigate,
     name, setName, savedName, firstVisit, nameInputRef,
     activeRouteHighlight,
-    recentGames, setRecentGames, joinCode, setJoinCode, pendingAction,
+    recentGames, setRecentGames, joinCode, setJoinCode, joinRejected, pendingAction,
     showInSessionModal, setShowInSessionModal,
     joiningFromOtherGame, pendingJoinTarget, setPendingJoinTarget, setPendingAction,
     imposterPublicCount, passwordPublicCount, chainPublicCount, shadePublicCount, locationPublicCount,
@@ -212,6 +212,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const syncPending = false;
   const syncAttention = false;
   const syncStatusTooltip = "Browse Public Games";
+
+  /* A full code that hasn't already been turned away. Off, the join field is
+     just a text box again, which is the only way to click into a full code and
+     fix a character. */
+  const joinReady = joinCode.length === 6 && !joinRejected && pendingAction === null;
 
   /* Desktop-only layout state: five separate accordion/browser toggles and a
      horizontal scroll position with dot indicators. Mobile uses one key each. */
@@ -283,22 +288,27 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               {syncAttention && <FiWifiOff className="hc-sync-offline-icon hc-sync-offline-icon--label" size={14} />}
             </h3>
             <form
-              className="hc-row"
-              onSubmit={(e) => { e.preventDefault(); if (joinCode.length === 6 && pendingAction === null) void joinAny(); }}
+              className="hc-row hc-join-form"
+              onSubmit={(e) => { e.preventDefault(); if (joinReady) void joinAny(); }}
             >
               <input
-                className={`input flex-1 hc-join-input${joinCode.length === 6 ? " hc-join-input--ready" : ""}`}
+                className={`input flex-1 hc-join-input${joinReady ? " hc-join-input--ready" : ""}`}
                 value={joinCode}
                 onChange={(e) =>
                   setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
                 }
-                onClick={() => { if (joinCode.length === 6 && pendingAction === null) void joinAny(); }}
+                onClick={() => { if (joinReady) void joinAny(); }}
                 placeholder="ABCXYZ"
                 maxLength={6}
                 disabled={pendingAction === "join"}
-                data-tooltip={syncOffline ? syncStatusTooltip : joinCode.length === 6 ? "Click or press Enter to join!" : "Paste or type a 6-letter code"}
-                data-tooltip-variant={joinCode.length === 6 && !syncOffline ? "success" : "info"}
+                data-tooltip={syncOffline ? syncStatusTooltip : joinReady ? "Click or press Enter to join!" : joinRejected ? "That code didn't get you in - edit it to try again" : "Paste or type a 6-letter code"}
+                data-tooltip-variant={joinReady && !syncOffline ? "success" : "info"}
               />
+              {joinReady && (
+                <button type="submit" className="hc-join-go" tabIndex={-1} aria-label="Join game">
+                  <FiArrowRight size={18} aria-hidden="true" />
+                </button>
+              )}
             </form>
             <div className="hc-divider" />
           </section>

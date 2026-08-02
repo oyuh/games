@@ -17,7 +17,10 @@ type ChainGuessFieldProps = {
   live?: boolean;
   onChange?: (next: string) => void;
   onSubmit?: () => void;
+  /** Escape only: clicking a hint / give-up button must not drop the word. */
   onCancel?: () => void;
+  /** Arrow up / down: move to the previous / next unsolved word. */
+  onNavigate?: (delta: 1 | -1) => void;
   inputRef?: Ref<HTMLInputElement>;
 };
 
@@ -39,6 +42,7 @@ export function ChainGuessField({
   onChange,
   onSubmit,
   onCancel,
+  onNavigate,
   inputRef,
 }: ChainGuessFieldProps) {
   const total = word.length;
@@ -60,6 +64,10 @@ export function ChainGuessField({
     if (e.key === "Escape") {
       e.preventDefault();
       onCancel?.();
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      onNavigate?.(e.key === "ArrowDown" ? 1 : -1);
     }
   };
 
@@ -87,7 +95,6 @@ export function ChainGuessField({
           aria-label={`Guess, ${total} letters`}
           onChange={(e) => handleChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          onBlur={() => { if (!value.trim()) onCancel?.(); }}
         />
       )}
     </div>

@@ -38,7 +38,15 @@ export function useHomePage(sessionId: string) {
 
   const [recentGames, setRecentGames] = useState(() => getRecentGames());
   const [joinCode, setJoinCode] = useState("");
+  // A code that was tried and didn't get us in. Drops the join affordance until
+  // the code is edited, which is also what makes a full code editable again.
+  const [joinRejected, setJoinRejected] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+  const updateJoinCode = (next: string) => {
+    setJoinCode(next);
+    setJoinRejected(false);
+  };
 
   const [imposterMatches] = useQuery(queries.imposter.byCode({ code: joinCode || "______" }));
   const [passwordMatches] = useQuery(queries.password.byCode({ code: joinCode || "______" }));
@@ -168,6 +176,7 @@ export function useHomePage(sessionId: string) {
     }
   };
 
+  /** @returns false when the game turned us away, so the caller can flag the code. */
   const joinTarget = async (target: JoinTarget) => {
     const join = {
       imposter: mutators.imposter.join,
@@ -179,11 +188,12 @@ export function useHomePage(sessionId: string) {
     const result = await optimistic(zero.mutate(join({ gameId: target.gameId, sessionId })));
     if (result.type === "error") {
       showToast(result.error.message, "error");
-      return;
+      return false;
     }
     addRecentGame({ id: target.gameId, code: target.code, gameType: target.gameType });
     setRecentGames(getRecentGames());
     navigate(target.route);
+    return true;
   };
 
   const joinAny = async () => {
@@ -220,10 +230,11 @@ export function useHomePage(sessionId: string) {
       const target = candidates.find(Boolean) as JoinTarget | undefined;
       if (!target) {
         showToast("No game found for that code.", "error");
+        setJoinRejected(true);
         return;
       }
       leavePreviousIfNeeded(target);
-      await joinTarget(target);
+      if (!await joinTarget(target)) setJoinRejected(true);
     } finally {
       setPendingAction(null);
     }
@@ -245,7 +256,7 @@ export function useHomePage(sessionId: string) {
     setJoiningFromOtherGame(true);
     void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
       .then(async () => {
-        if (pendingJoinTarget) await joinTarget(pendingJoinTarget);
+        if (pendingJoinTarget && !await joinTarget(pendingJoinTarget)) setJoinRejected(true);
       })
       .catch(() => showToast("Couldn't leave current game", "error"))
       .finally(() => {
@@ -261,7 +272,7 @@ export function useHomePage(sessionId: string) {
     name, setName, savedName, firstVisit, nameInputRef,
     activeRouteHighlight, dismissRouteHighlight,
     recentGames, setRecentGames,
-    joinCode, setJoinCode, pendingAction, setPendingAction,
+    joinCode, setJoinCode: updateJoinCode, joinRejected, pendingAction, setPendingAction,
     mySessionRows,
     showInSessionModal, setShowInSessionModal,
     joiningFromOtherGame, setJoiningFromOtherGame,
