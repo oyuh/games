@@ -67,6 +67,10 @@
 
 /* ── Design tokens ───────────────────────────────────────────── */
 :root {
+  /* Tells the browser which way its own widgets should lean: dropdown
+     popups, scrollbars, focus rings. Without it they all render light on
+     a dark page. The light theme flips it back in themes.css. */
+  color-scheme: dark;
   --background: #181a1b;
   --foreground: #f5f5f5;
   --card: #232323;
@@ -210,6 +214,17 @@ body {
 /* ── Selection ───────────────────────────────────────────────── */
 ::selection {
   background: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+/* ── Dropdown lists ──────────────────────────────────────────────
+   The popup a <select> opens is drawn by the browser, so the only way
+   into it is the option's own colours. Every select on the site gets
+   the card surface and the normal text colour instead of whatever the
+   control happens to be painted with. The highlight on the row you are
+   hovering stays the browser's, which color-scheme above now themes. */
+option {
+  background: var(--card);
+  color: var(--foreground);
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────── */
