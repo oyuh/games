@@ -1235,7 +1235,19 @@
   border-color: #f87171;
   background: color-mix(in srgb, #f87171 8%, var(--card));
 }
-.m-cr-word-slot--givenup { opacity: 0.5; }
+.m-cr-word-slot--givenup {
+  opacity: 0.6;
+  border-color: color-mix(in srgb, var(--destructive) 35%, transparent);
+  background: color-mix(in srgb, var(--destructive) 6%, var(--card));
+}
+
+/* Cracked vs skipped, at a glance */
+.m-cr-word-slot--mine .m-cr-word-text { color: var(--primary); }
+.m-cr-word-slot--givenup .m-cr-word-text {
+  color: var(--destructive);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
 
 /* ── Chain Preview Word (submission confirm) ─────────── */
 .m-cr-preview-word {
@@ -2279,11 +2291,6 @@
   font-weight: 700;
   font-size: 0.85rem;
   flex: 1;
-}
-
-.m-cr-word-text--partial {
-  letter-spacing: 0.15em;
-  color: var(--secondary);
 }
 
 .m-cr-slot-actions {
