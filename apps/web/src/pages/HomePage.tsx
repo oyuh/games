@@ -1,5 +1,6 @@
 import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, GAME_META, IMPOSTER_CLUE_VISIBILITY_OPTIONS, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
 import { optimistic, useQuery, useZero } from "../lib/zero";
+import { Select } from "../components/shared/Select";
 import { Segmented, type SoloSetupOption } from "../components/shared/SoloGameMenu";
 /* The card setup forms borrow the single-player menu's controls. */
 import "../styles/game-shared.css";
@@ -132,17 +133,6 @@ const SOLO_GAMES: SoloGameDef[] = [
   },
 ];
 
-/** Scroll-wheel on a <select> cycles through its options */
-function wheelSelect<T>(value: T, opts: readonly T[], set: (v: T) => void) {
-  return (e: React.WheelEvent) => {
-    const i = opts.indexOf(value);
-    if (i < 0) return;
-    const next = e.deltaY < 0 ? Math.max(0, i - 1) : Math.min(opts.length - 1, i + 1);
-    const nextVal = opts[next];
-    if (next !== i && nextVal !== undefined) set(nextVal);
-  };
-}
-
 function formatClueVisibility(value: number) {
   if (value <= 0) return "No hints";
   if (value >= 1) return "Full clues";
@@ -196,20 +186,14 @@ function CardCategory({ id, hint, value, categories, labels, onChange }: {
   return (
     <div className="hc-setup-field">
       <label htmlFor={id} className="hc-config-label" data-tooltip={hint} data-tooltip-variant="info">Category</label>
-      <div className="hc-setup-select">
-        <FiBookOpen size={14} aria-hidden="true" />
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onWheel={wheelSelect(value, categories, onChange)}
-        >
-          {categories.map((key) => (
-            <option key={key} value={key}>{labels[key] ?? key}</option>
-          ))}
-        </select>
-        <FiChevronDown size={14} aria-hidden="true" />
-      </div>
+      <Select
+        id={id}
+        label="Category"
+        value={value}
+        onChange={onChange}
+        icon={<FiBookOpen size={14} aria-hidden="true" />}
+        options={categories.map((key) => ({ value: key, label: labels[key] ?? key }))}
+      />
     </div>
   );
 }
