@@ -2202,47 +2202,15 @@ a.solo-card-title-link {
   font-size: 0.75rem;
 }
 
-/* Category has fifteen options, too many for a segmented row, so it stays
-   a native select wearing the same bordered control. */
-.hc-setup-select {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
+/* Category has fifteen options, too many for a segmented row, so it uses
+   the shared Select: same bordered control, own floating list. */
+.hc-setup .solo-select {
+  --select-accent: var(--card-accent, var(--primary));
+}
+
+.hc-setup .solo-select-trigger {
   height: calc(var(--solo-control-h) + var(--solo-pad) * 2);
-  padding: 0 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: var(--solo-radius);
-  background: var(--background);
-  color: var(--card-accent, var(--primary));
-  transition: border-color 0.18s;
-}
-
-.hc-setup-select:hover,
-.hc-setup-select:focus-within {
-  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 55%, transparent);
-}
-
-.hc-setup-select select {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  appearance: none;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
   font-size: 0.78rem;
-  font-weight: 700;
-  text-align: center;
-  /* The native dropdown draws itself, and it is not on our palette. */
-  text-align-last: center;
-}
-
-.hc-setup-select svg {
-  flex-shrink: 0;
-  color: var(--muted-foreground);
 }
 
 .hc-config-label {
