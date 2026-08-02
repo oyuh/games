@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildGuessCells, lockToPrefix } from "../components/chain/chain-guess";
+import { buildGuessCells, lockToPrefix, nextUnsolvedIndex } from "../components/chain/chain-guess";
 
 describe("lockToPrefix: revealed letters are a locked prefix", () => {
   it("lets the player type only the remaining letters (2 shown of a 5-letter word → 3 more)", () => {
@@ -31,6 +31,37 @@ describe("lockToPrefix: revealed letters are a locked prefix", () => {
 
   it("allows free typing when no letters are revealed yet", () => {
     expect(lockToPrefix("tru", "", "TRUCK".length)).toBe("TRU");
+  });
+});
+
+describe("nextUnsolvedIndex: hopping to the next word to solve", () => {
+  // Edges (first/last) start revealed, middles are the ones to crack.
+  const chain = (revealed: boolean[]) => revealed.map((r) => ({ revealed: r }));
+
+  it("moves to the next hidden word", () => {
+    expect(nextUnsolvedIndex(chain([true, false, false, false, true]), 1)).toBe(2);
+  });
+
+  it("skips words that are already revealed", () => {
+    expect(nextUnsolvedIndex(chain([true, false, true, false, true]), 1)).toBe(3);
+  });
+
+  it("wraps past the last word back to the first unsolved one", () => {
+    expect(nextUnsolvedIndex(chain([true, false, true, false, true]), 3)).toBe(1);
+  });
+
+  it("walks backwards on arrow-up", () => {
+    expect(nextUnsolvedIndex(chain([true, false, false, false, true]), 3, -1)).toBe(2);
+  });
+
+  it("never lands back on the word just solved (snapshot is one mutation stale)", () => {
+    // Index 2 is the only hidden slot left in this snapshot, and it's the one we
+    // just solved, so there is nowhere left to go.
+    expect(nextUnsolvedIndex(chain([true, true, false, true, true]), 2, 1, 2)).toBeNull();
+  });
+
+  it("returns null when the whole chain is done", () => {
+    expect(nextUnsolvedIndex(chain([true, true, true]), 0)).toBeNull();
   });
 });
 

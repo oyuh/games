@@ -5,6 +5,7 @@ import { optimistic, useQuery, useZero } from "../lib/zero";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { playHint } from "../lib/sounds";
+import { nextUnsolvedIndex } from "../components/chain/chain-guess";
 import { useChainReactionLiveTyping } from "./useChainReactionLiveTyping";
 import { useGameSounds, playSoundSubmit, playSoundCorrect, playSoundWrong } from "./useGameSounds";
 
@@ -156,19 +157,6 @@ export function useChainReactionGame(
     }
   }, [game?.phase, game?.submitted_chains, sessionId]);
 
-  // Auto-focus the inline input, caret after the locked hint prefix (don't select it;
-  // selecting would let the first keystroke try to overwrite the locked letters)
-  useEffect(() => {
-    if (editingIndex !== null) {
-      const input = inlineInputRef.current;
-      if (input) {
-        input.focus();
-        const end = input.value.length;
-        input.setSelectionRange(end, end);
-      }
-    }
-  }, [editingIndex]);
-
   useEffect(() => {
     if (game?.phase !== "submitting" || hasSubmitted || submissionWords.length === 0) return;
     const input = submissionFirstInputRef.current;
@@ -202,6 +190,49 @@ export function useChainReactionGame(
   const viewingId = isViewingMine ? sessionId : (opponentId ?? sessionId);
   const viewingChain = isViewingMine ? myChain : oppChain;
   const myDone = myChain.length > 0 && myChain.every((s) => s.revealed);
+
+  const editingSlot = editingIndex !== null ? myChain[editingIndex] : undefined;
+  const lockedPrefix = editingSlot ? editingSlot.word.slice(0, editingSlot.lettersShown).toUpperCase() : "";
+
+  // A hint (or the auto-reveal after a wrong guess) grows the locked prefix under
+  // the player's caret. Keep the draft in sync instead of dropping them out of the
+  // word: they just carry on typing after the new letter.
+  useEffect(() => {
+    if (editingIndex === null) return;
+    setGuess((cur) => (cur.toUpperCase().startsWith(lockedPrefix) ? cur : lockedPrefix));
+  }, [editingIndex, lockedPrefix]);
+
+  // Focus the inline input, caret after the locked prefix (don't select it; selecting
+  // would let the first keystroke try to overwrite the locked letters). Re-runs when a
+  // letter is revealed so the caret follows it.
+  useEffect(() => {
+    if (editingIndex === null) return;
+    const input = inlineInputRef.current;
+    if (!input) return;
+    input.focus();
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
+  }, [editingIndex, lockedPrefix]);
+
+  /** Select a word for guessing, prefilled with whatever letters are revealed. */
+  const selectSlot = (i: number) => {
+    setEditingIndex(i);
+    setGuess(myChain[i]?.word.slice(0, myChain[i]!.lettersShown).toUpperCase() ?? "");
+  };
+
+  /**
+   * Hop to the next word still to solve. Called after a word is solved or skipped so
+   * the player is never dumped back to "click a word to start", and by the arrow keys.
+   */
+  const moveSelection = (from: number, delta: 1 | -1 = 1, skip?: number) => {
+    const next = nextUnsolvedIndex(myChain, from, delta, skip);
+    if (next === null) {
+      setEditingIndex(null);
+      setGuess("");
+      return;
+    }
+    selectSlot(next);
+  };
 
   const joinGame = async () => {
     await ensureName(zero, sessionId);
@@ -238,9 +269,13 @@ export function useChainReactionGame(
       if (!isViewingMine || myDone) return;
       const slot = myChain[i];
       if (!slot || slot.revealed) return;
-      setEditingIndex(i);
-      // Prefill with revealed hint letters
-      setGuess(slot.lettersShown > 0 ? slot.word.slice(0, slot.lettersShown) : "");
+      selectSlot(i);
+    },
+
+    /** Arrow keys while typing: previous / next word still to solve. */
+    handleNavigate: (delta: 1 | -1) => {
+      if (editingIndex === null || myDone) return;
+      moveSelection(editingIndex, delta);
     },
 
     handleInlineGuess: async () => {
@@ -248,28 +283,31 @@ export function useChainReactionGame(
       const idx = editingIndex;
       const currentGuess = guess.trim();
       const slot = myChain[idx];
-      clearDraft();
-      setGuess("");
-      setEditingIndex(null);
 
       const isCorrect = Boolean(slot && currentGuess.toLowerCase().trim() === slot.word.toLowerCase().trim());
       if (isCorrect) playSoundCorrect(); else playSoundWrong();
       onGuessResult?.(idx, isCorrect);
 
+      // Right: straight on to the next word. Wrong: stay put - the mutator reveals
+      // another letter, and the prefix sync effect puts it in front of the caret.
+      if (isCorrect) {
+        clearDraft();
+        moveSelection(idx, 1, idx);
+      } else {
+        setGuess(slot ? slot.word.slice(0, slot.lettersShown).toUpperCase() : "");
+      }
+
       try {
         await optimistic(zero.mutate(mutators.chainReaction.guess({ gameId, sessionId, wordIndex: idx, guess: currentGuess })));
       } catch {
-        // Mutation error - stay out of editing
+        // Mutation error - the guess just doesn't land
       }
     },
 
     handleHint: async (i: number) => {
-      // Exit editing so the updated partial word is visible immediately
-      if (editingIndex === i) {
-        clearDraft();
-        setEditingIndex(null);
-        setGuess("");
-      }
+      // Stay in (or move into) the word: the new letter joins the locked prefix and
+      // the player keeps typing after it.
+      if (editingIndex !== i) selectSlot(i);
       try {
         await optimistic(zero.mutate(mutators.chainReaction.revealLetter({ gameId, sessionId, wordIndex: i })));
         playHint();
@@ -284,11 +322,11 @@ export function useChainReactionGame(
         return;
       }
       setGiveUpConfirm(null);
-      if (editingIndex === i) {
-        clearDraft();
-        setEditingIndex(null);
-        setGuess("");
-      }
+      clearDraft();
+      // Same hop as a correct guess, minus the points - flagged wrong so the view
+      // flashes it red rather than green.
+      onGuessResult?.(i, false);
+      moveSelection(i, 1, i);
       try {
         await optimistic(zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })));
       } catch {

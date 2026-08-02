@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { FiLink, FiHelpCircle, FiXCircle } from "react-icons/fi";
 import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
 import { PasswordHeader } from "../password/PasswordHeader";
+import { ChainGuessField } from "../chain/ChainGuessField";
 import "../../styles/game-shared.css";
 import "../../styles/chain-reaction.css";
 
@@ -60,12 +61,6 @@ const steps: DemoStep[] = [
   },
 ];
 
-/* ── Helpers ─────────────────────────────────────────────── */
-
-function renderPartialWord(word: string, lettersShown: number): string {
-  return word.split("").map((ch, i) => (i < lettersShown ? ch : "_")).join(" ");
-}
-
 /* ── Component ──────────────────────────────────────────── */
 
 export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; initialStep?: number }) {
@@ -102,9 +97,7 @@ export function ChainDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
                   {slot.revealed ? (
                     <span className="cr-word-text">{slot.word}</span>
                   ) : (
-                    <span className="cr-word-text cr-word-text--partial">
-                      {renderPartialWord(slot.word, slot.lettersShown)}
-                    </span>
+                    <ChainGuessField word={slot.word} lettersShown={slot.lettersShown} value="" readOnly />
                   )}
                 </div>
                 {isEdge && slot.revealed && <span className="cr-slot-tag">hint</span>}

@@ -423,6 +423,18 @@
   opacity: 0.7;
 }
 
+/* Cracked vs skipped, at a glance: a word you solved is in the accent colour, a
+   word you gave up on is struck through in red. */
+.cr-word-slot--mine .cr-word-text {
+  color: var(--primary);
+}
+
+.cr-word-slot--givenup .cr-word-text {
+  color: var(--destructive);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
 .cr-solver-tag--skip {
   color: var(--destructive);
   background: color-mix(in srgb, var(--destructive) 10%, transparent);
@@ -518,10 +530,6 @@
   text-transform: uppercase;
   color: var(--foreground);
   font-family: "JetBrains Mono", monospace;
-}
-
-.cr-word-text--partial {
-  color: var(--secondary);
 }
 
 .cr-word-text--draft {

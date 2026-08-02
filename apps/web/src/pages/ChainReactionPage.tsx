@@ -40,7 +40,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     myDone, oppDone, submittedChainEntries,
     myScore, opponentScore, myName, oppName,
     myProgress, myTotal, oppProgress, oppTotal,
-    handleSlotClick, handleInlineGuess, handleHint, handleGiveUp,
+    handleSlotClick, handleInlineGuess, handleHint, handleGiveUp, handleNavigate,
     submitChain, handleJoinClick, confirmLeaveAndJoin,
   } = useChainReactionGame(sessionId, (idx, isCorrect) => {
     // Desktop-only: flash the slot green or red for a beat.
@@ -394,22 +394,21 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
                         inputRef={inlineInputRef}
                         onChange={setGuess}
                         onSubmit={() => void handleInlineGuess()}
+                        onNavigate={handleNavigate}
                         onCancel={() => { setEditingIndex(null); setGuess(""); }}
                       />
                     ) : slot.revealed ? (
                       <span className="cr-word-text">{slot.word}</span>
-                    ) : isLiveDrafting ? (
+                    ) : (
+                      /* Same masked field, read-only: the letters line up whether or not
+                         this is the word being typed in. */
                       <ChainGuessField
                         word={slot.word}
                         lettersShown={slot.lettersShown}
-                        value={viewingLiveDraft?.text ?? ""}
+                        value={isLiveDrafting ? (viewingLiveDraft?.text ?? "") : ""}
                         readOnly
-                        live
+                        live={isLiveDrafting}
                       />
-                    ) : (
-                      <span className="cr-word-text cr-word-text--partial">
-                        {renderPartialWord(slot.word, slot.lettersShown)}
-                      </span>
                     )}
                   </div>
 
@@ -600,13 +599,6 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
       )}
     </div>
   );
-}
-
-function renderPartialWord(word: string, lettersShown: number): string {
-  return word
-    .split("")
-    .map((ch, i) => (i < lettersShown ? ch : "_"))
-    .join(" ");
 }
 
 export function ChainReactionPage({ sessionId }: { sessionId: string }) {
