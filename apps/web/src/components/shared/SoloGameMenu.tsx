@@ -54,7 +54,7 @@ function DifficultyRing({ total, filled }: { total: number; filled: number }) {
   );
 }
 
-function Segmented({ row, attached }: { row: SoloSetupRow; attached?: boolean }) {
+export function Segmented({ row, attached }: { row: SoloSetupRow; attached?: boolean }) {
   const activeIndex = Math.max(0, row.options.findIndex((option) => option.value === row.value));
   const weights = row.options.map((option) => option.weight ?? 1);
   const total = weights.reduce((sum, weight) => sum + weight, 0);

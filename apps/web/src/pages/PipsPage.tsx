@@ -7,14 +7,19 @@ import {
   FiFlag,
   FiHash,
   FiHelpCircle,
+  FiHome,
   FiRepeat,
+  FiTarget,
   FiUploadCloud,
+  FiUser,
   FiX,
 } from "react-icons/fi";
 import "../styles/game-shared.css";
 import "../styles/pips.css";
 import { PipsDemo } from "../components/demos/PipsDemo";
-import { SoloGameMenu } from "../components/shared/SoloGameMenu";
+import { SoloEndScreen, soloStatusTitle } from "../components/shared/SoloEndScreen";
+import { SoloGameMenu, type SoloSetupOption } from "../components/shared/SoloGameMenu";
+import { useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
 import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import {
   evaluateRegionRule,
@@ -62,6 +67,8 @@ interface PipsLeaderboardEntry {
   hardMs?: number;
   createdAt?: number;
   isOwn?: boolean;
+  /** Real standing. Only the end screen's standings window sends it. */
+  rank?: number;
 }
 
 interface PipsPersonalBest {
@@ -194,14 +201,11 @@ export function PipsPage() {
   const [leaderboardTotal, setLeaderboardTotal] = useState(PIPS_SEEDED_LEADERBOARD.length);
   const [leaderboardView, setLeaderboardView] = useState<PipsLeaderboardView>("all");
   const [personalBest, setPersonalBest] = useState<PipsPersonalBest | null>(null);
-  const [finishedLeaderboard, setFinishedLeaderboard] = useState<PipsLeaderboardEntry[]>([]);
-  const [finishedPersonalBest, setFinishedPersonalBest] = useState<PipsPersonalBest | null>(null);
   const [scoreSubmitted, setScoreSubmitted] = useState(false);
   const [submittingScore, setSubmittingScore] = useState(false);
   const [scoreSubmissionStatus, setScoreSubmissionStatus] = useState<ScoreSubmissionStatus | null>(null);
   const [flashingDominoIds, setFlashingDominoIds] = useState<Set<string>>(() => new Set());
   const [advanceCountdown, setAdvanceCountdown] = useState<PipsAdvanceStep | null>(null);
-  const [devSolutionPreview, setDevSolutionPreview] = useState(false);
   const solvedAnnouncedRef = useRef<string>("");
   const lastSubmitTime = useRef(0);
   const flashTimerRef = useRef<number | null>(null);
@@ -263,10 +267,6 @@ export function PipsPage() {
       setLeaderboardPage(data.page ?? page);
       setLeaderboardTotalPages(Math.max(1, data.totalPages ?? 1));
       setLeaderboardTotal(data.total ?? entries.length);
-      if (phase === "complete") {
-        setFinishedLeaderboard(entries);
-        setFinishedPersonalBest(data.personalBest ?? null);
-      }
     } catch {
       const sorted = sortPipsLeaderboardEntries(PIPS_SEEDED_LEADERBOARD);
       const start = (page - 1) * PIPS_LEADERBOARD_PAGE_SIZE;
@@ -276,10 +276,6 @@ export function PipsPage() {
       setLeaderboardPage(page);
       setLeaderboardTotalPages(view === "mine" ? 1 : Math.max(1, Math.ceil(sorted.length / PIPS_LEADERBOARD_PAGE_SIZE)));
       setLeaderboardTotal(view === "mine" ? 0 : sorted.length);
-      if (phase === "complete") {
-        setFinishedLeaderboard(fallbackEntries);
-        setFinishedPersonalBest(null);
-      }
     } finally {
       setLeaderboardLoading(false);
     }
@@ -468,8 +464,6 @@ export function PipsPage() {
     setScoreSubmitted(false);
     setSubmittingScore(false);
     setScoreSubmissionStatus(null);
-    setFinishedLeaderboard([]);
-    setFinishedPersonalBest(null);
     setNow(Date.now());
     setDominoRotations({});
     setLiveDragState(null);
@@ -477,7 +471,6 @@ export function PipsPage() {
     clearFlashingDominoes();
     setAdvanceCountdown(null);
     solvedAnnouncedRef.current = "";
-    setDevSolutionPreview(false);
     setSelectedDominoId(firstPuzzle.dominoes[0]?.id ?? null);
   };
 
@@ -558,7 +551,6 @@ export function PipsPage() {
 
   const undoPlacement = () => {
     if (phase !== "playing" || advanceCountdown != null) return;
-    setDevSolutionPreview(false);
     setPlacements((current) => {
       const next = current.slice(0, -1);
       const removed = current[current.length - 1];
@@ -584,7 +576,6 @@ export function PipsPage() {
       setOpenPanel(null);
       clearFlashingDominoes();
       setAdvanceCountdown(null);
-      setDevSolutionPreview(false);
       solvedAnnouncedRef.current = "";
       setSelectedDominoId(nextRun.puzzles[0]?.dominoes[0]?.id ?? null);
       showToast(`${difficultyLabel(infiniteDifficulty)} puzzle generated`, "success");
@@ -620,7 +611,6 @@ export function PipsPage() {
     setOpenPanel(null);
     clearFlashingDominoes();
     setAdvanceCountdown(null);
-    setDevSolutionPreview(false);
     setSelectedDominoId(nextPuzzle.dominoes[0]?.id ?? null);
   };
 
@@ -632,7 +622,6 @@ export function PipsPage() {
     setDominoRotations(Object.fromEntries(solution.map((placement) => [placement.dominoId, placementToRotation(placement)])));
     setRotation(0);
     setLiveDragState(null);
-    setDevSolutionPreview(true);
     clearFlashingDominoes();
     setAdvanceCountdown(null);
     setSelectedDominoId(solution[0]?.dominoId ?? null);
@@ -685,7 +674,6 @@ export function PipsPage() {
       ...current.filter((placement) => placement.dominoId !== domino.id),
       nextPlacement,
     ]);
-    setDevSolutionPreview(false);
     setDominoRotation(domino.id, nextRotation);
     if (movingDominoId === domino.id) {
       setSelectedDominoId(domino.id);
@@ -722,7 +710,6 @@ export function PipsPage() {
       return;
     }
 
-    setDevSolutionPreview(false);
     setPlacements((current) =>
       current.map((item) => (item.dominoId === placement.dominoId ? nextPlacement : item)),
     );
@@ -732,7 +719,6 @@ export function PipsPage() {
   const returnPlacedDomino = (event: MouseEvent<HTMLButtonElement>, placement: PipsPlacement) => {
     event.preventDefault();
     if (phase !== "playing" || advanceCountdown != null) return;
-    setDevSolutionPreview(false);
     setPlacements((current) => current.filter((item) => item.dominoId !== placement.dominoId));
     setSelectedDominoId(placement.dominoId);
     setDominoRotation(placement.dominoId, placementToRotation(placement));
@@ -741,7 +727,6 @@ export function PipsPage() {
   const handleStationaryTrayClick = (domino: PipsDomino, nextClickRotation: Rotation) => {
     if (phase !== "playing" || advanceCountdown != null) return;
     if (usedDominoIds.has(domino.id)) return;
-    setDevSolutionPreview(false);
     setSelectedDominoId(domino.id);
     setDominoRotation(domino.id, nextClickRotation);
   };
@@ -821,7 +806,6 @@ export function PipsPage() {
     }
 
     if (isOverTray && currentDrag.origin.kind === "board") {
-      setDevSolutionPreview(false);
       setPlacements((current) => current.filter((placement) => placement.dominoId !== currentDrag.dominoId));
       setSelectedDominoId(currentDrag.dominoId);
       setDominoRotation(currentDrag.dominoId, currentDrag.rotation);
@@ -880,7 +864,7 @@ export function PipsPage() {
   useSoloEvent("pips-dev-skip", () => skipDifficulty());
 
   useEffect(() => {
-    if (!solved || phase !== "playing" || devSolutionPreview) return;
+    if (!solved || phase !== "playing") return;
     const solvedKey = `${seed}-${puzzleIndex}`;
     if (solvedAnnouncedRef.current === solvedKey) return;
     solvedAnnouncedRef.current = solvedKey;
@@ -911,7 +895,7 @@ export function PipsPage() {
     }
     setAdvanceCountdown("solved");
     showToast(`${difficultyLabel(puzzle.difficulty)} solved`, "success");
-  }, [solved, phase, devSolutionPreview, seed, puzzleIndex, puzzle.difficulty, puzzleStartedAt, run.puzzles.length, runMode, leaderboardView, placements]);
+  }, [solved, phase, seed, puzzleIndex, puzzle.difficulty, puzzleStartedAt, run.puzzles.length, runMode, leaderboardView, placements]);
 
   useEffect(() => {
     if (advanceCountdown == null) return;
@@ -1259,8 +1243,6 @@ export function PipsPage() {
               infiniteDifficulty={infiniteDifficulty}
               infiniteSolved={infiniteSolved}
               infiniteTimes={infiniteTimes}
-              leaderboardEntries={finishedLeaderboard.length > 0 ? finishedLeaderboard : leaderboardEntries}
-              personalBest={finishedPersonalBest ?? personalBest}
               scoreSubmitted={scoreSubmitted}
               submittingScore={submittingScore}
               scoreSubmissionStatus={scoreSubmissionStatus}
@@ -1588,6 +1570,12 @@ function PipsMenu({
   );
 }
 
+const PIPS_END_VIEWS: SoloSetupOption[] = [
+  { value: "standings", label: "Standings", icon: <FiTarget size={15} />, weight: 1.2, title: "Top 3, your run and its neighbours, bottom 3" },
+  { value: "top", label: "Top 10", icon: <FiAward size={15} />, title: "The ten fastest runs" },
+  { value: "mine", label: "Yours", icon: <FiUser size={15} />, title: "Your own submitted runs, best first" },
+];
+
 function PipsEndScreen({
   mode,
   outcome,
@@ -1597,8 +1585,6 @@ function PipsEndScreen({
   infiniteDifficulty,
   infiniteSolved,
   infiniteTimes,
-  leaderboardEntries,
-  personalBest,
   scoreSubmitted,
   submittingScore,
   scoreSubmissionStatus,
@@ -1615,8 +1601,6 @@ function PipsEndScreen({
   infiniteDifficulty: PipsDifficulty;
   infiniteSolved: number;
   infiniteTimes: number[];
-  leaderboardEntries: PipsLeaderboardEntry[];
-  personalBest: PipsPersonalBest | null;
   scoreSubmitted: boolean;
   submittingScore: boolean;
   scoreSubmissionStatus: ScoreSubmissionStatus | null;
@@ -1627,191 +1611,131 @@ function PipsEndScreen({
 }) {
   const completed = outcome === "completed";
   const ranked = mode === "ranked";
-  const [endListTab, setEndListTab] = useState<"splits" | "scores">("splits");
-  const showSubmitButton = ranked && completed && (
-    scoreSubmitted ||
-    submittingScore ||
-    Boolean(scoreSubmissionStatus?.canSubmit) ||
-    Boolean(scoreSubmissionStatus?.pending)
-  );
-  const statusLabel = scoreSubmissionStatus?.pending
-    ? "Verifying"
+  const [view, setView] = useState<SoloEndView>("standings");
+  // Refetch once the score lands so the standings show where it actually put you.
+  const board = useSoloEndBoard<PipsLeaderboardEntry, PipsPersonalBest>({
+    game: "pips",
+    active: true,
+    view,
+    refreshKey: scoreSubmitted,
+  });
+
+  const canSubmit = ranked && completed && !scoreSubmitted && !submittingScore
+    && Boolean(scoreSubmissionStatus?.canSubmit) && !scoreSubmissionStatus?.pending;
+  const splits = mode === "infinite"
+    ? infiniteTimes.slice(-6).map((time, index) => ({
+        label: `Puzzle ${Math.max(1, infiniteSolved - Math.min(6, infiniteTimes.length) + index + 1)}`,
+        value: formatTime(time),
+      }))
+    : PIPS_DIFFICULTIES
+      .filter((difficulty) => ranked || runSplits[difficulty] != null)
+      .map((difficulty) => ({ label: difficultyLabel(difficulty), value: formatSplitTime(runSplits[difficulty]) }));
+
+  const rankValue = board.personalBest
+    ? `#${board.personalBest.rank}`
     : scoreSubmitted
       ? "Submitted"
-      : scoreSubmissionStatus?.canSubmit
+      : canSubmit
         ? "Ready"
-        : "Status";
-  const splitRows = ranked
-    ? PIPS_DIFFICULTIES.map((difficulty) => ({ label: difficultyLabel(difficulty), time: runSplits[difficulty] }))
-    : mode === "seeded"
-      ? PIPS_DIFFICULTIES.filter((difficulty) => runSplits[difficulty] != null)
-        .map((difficulty) => ({ label: difficultyLabel(difficulty), time: runSplits[difficulty] }))
-    : infiniteTimes.slice(-6).map((time, index) => ({ label: `Puzzle ${Math.max(1, infiniteSolved - infiniteTimes.slice(-6).length + index + 1)}`, time }));
-  const topEntries = leaderboardEntries.slice(0, 5);
-  const hasSplits = splitRows.length > 0;
-  const hasLeaderboard = ranked && topEntries.length > 0;
-  const rankedStatus = personalBest
-    ? `#${personalBest.rank}`
-    : scoreSubmitted
-      ? "Submitted"
-      : scoreSubmissionStatus?.canSubmit
-        ? "Ready"
-        : ranked
-          ? "Unsubmitted"
-          : "Unranked";
-  const endTitle = mode === "infinite"
-    ? "Infinite Run Over"
-    : completed
-      ? "Run Complete!"
-      : "Run Over";
-  const puzzleCount = mode === "infinite" ? infiniteSolved : splitRows.length;
-  const endSub = mode === "infinite"
-    ? `Solved ${infiniteSolved} ${difficultyLabel(infiniteDifficulty)} puzzle${infiniteSolved === 1 ? "" : "s"}`
-    : mode === "seeded"
-      ? completed
-        ? `Seed ${seed} - ${puzzleCount === 1 ? `${splitRows[0]?.label ?? "Practice"} puzzle solved` : `all ${puzzleCount} puzzles solved`}`
-        : `Seed ${seed} - practice abandoned`
-      : completed
-        ? "All 3 puzzles solved"
-        : "Run abandoned before every board was cleared";
-  const splitListLabel = mode === "infinite" ? "Recent Solves" : "Splits";
+        : "Unranked";
+  const puzzleCount = splits.length;
 
   return (
-    <main className="pips-end-wrap">
-      <div className="pips-finished pips-finished-enter">
-        <section className={`pips-end-header ${completed || mode === "infinite" ? "pips-end-header--success" : "pips-end-header--abandoned"}`}>
-          <p className="pips-end-title">{endTitle}</p>
-          <p className="pips-end-sub">{endSub}</p>
-        </section>
-
-        <section className={`pips-end-grid${hasSplits || hasLeaderboard ? "" : " pips-end-grid--stats-only"}`}>
-          <div className={`pips-end-stats${mode === "infinite" ? " pips-end-stats--infinite" : ""}`}>
-            <div className="pips-end-tile pips-stat-pop" style={{ animationDelay: "0.1s" }}>
-              <span className="pips-end-tile-label">Time</span>
-              <span className="pips-end-tile-value">{formatTime(elapsedMs)}</span>
-            </div>
-            <div className="pips-end-tile pips-stat-pop" style={{ animationDelay: "0.2s" }}>
-              <span className="pips-end-tile-label">{mode === "infinite" ? "Puzzles" : "Status"}</span>
-              <span className="pips-end-tile-value">
-                {mode === "infinite" ? infiniteSolved : rankedStatus}
-                {mode !== "ranked" && <span className="pips-end-unranked">(unranked)</span>}
-              </span>
-            </div>
-            <div className="pips-end-tile pips-stat-pop" style={{ animationDelay: "0.3s" }}>
-              <span className="pips-end-tile-label">Mode</span>
-              <span className="pips-end-tile-value">{runModeLabel(mode)}</span>
-            </div>
-            {personalBest && ranked && (
-              <div className="pips-end-tile pips-end-tile--accent pips-stat-pop" style={{ animationDelay: "0.36s" }}>
-                <span className="pips-end-tile-label">Rank</span>
-                <span className="pips-end-tile-value">#{personalBest.rank}</span>
-              </div>
-            )}
-            <div className="pips-end-tile pips-end-tile--seed pips-stat-pop" style={{ animationDelay: "0.42s" }}>
-              <button
-                className="pips-seed-copy-btn"
-                type="button"
-                onClick={() => navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied", "info")).catch(() => undefined)}
-                aria-label="Copy seed"
-                data-tooltip="Copy seed"
-              >
-                <FiHash size={12} />
-              </button>
-              <span className="pips-end-tile-label">Seed</span>
-              <span className="pips-end-tile-value">{seed}</span>
-            </div>
-          </div>
-
-          {(hasSplits || hasLeaderboard) && (
-            <section className="pips-end-list-tile">
-              {hasSplits && hasLeaderboard ? (
-                <div className="pips-end-tab-bar">
-                  <button
-                    className={`pips-end-tab${endListTab === "splits" ? " pips-end-tab--active" : ""}`}
-                    type="button"
-                    onClick={() => setEndListTab("splits")}
-                  >
-                    <FiClock size={12} /> {splitListLabel}
-                  </button>
-                  <button
-                    className={`pips-end-tab${endListTab === "scores" ? " pips-end-tab--active" : ""}`}
-                    type="button"
-                    onClick={() => setEndListTab("scores")}
-                  >
-                    <FiAward size={12} /> Top Times
-                  </button>
-                </div>
-              ) : (
-                <div className="pips-end-list-header">
-                  <span>{hasLeaderboard ? <><FiAward size={12} /> Top Times</> : splitListLabel}</span>
-                  <span>Time</span>
-                </div>
-              )}
-
-              <div className="pips-end-list-body">
-                {(endListTab === "splits" || !hasLeaderboard) && hasSplits && (
-                  splitRows.map((row) => (
-                    <div className="pips-end-list-row" key={row.label}>
-                      <span>{row.label}</span>
-                      <span>{formatSplitTime(row.time)}</span>
-                    </div>
-                  ))
-                )}
-
-                {(endListTab === "scores" || !hasSplits) && hasLeaderboard && (
-                  topEntries.map((entry, index) => (
-                    <div className={`pips-end-list-row${entry.isOwn ? " pips-end-list-row--self" : ""}`} key={entry.id}>
-                      <span>#{index + 1} {entry.name}</span>
-                      <span>{formatTime(entry.totalMs)}</span>
-                    </div>
-                  ))
-                )}
-
-                {!hasSplits && !hasLeaderboard && (
-                  <div className="pips-end-list-empty">No solved puzzles yet</div>
-                )}
-              </div>
-            </section>
-          )}
-        </section>
-
-        <div className="pips-end-actions">
-          {showSubmitButton && (
-            <button
-              className={`btn ${scoreSubmitted ? "btn-muted" : "btn-primary"} game-action-btn`}
-              type="button"
-              onClick={onSubmitScore}
-              disabled={scoreSubmitted || submittingScore || scoreSubmissionStatus?.pending}
-              data-tooltip={scoreSubmitted ? "Score already submitted" : "Submit your verified Pips run"}
-            >
-              {submittingScore ? (
-                <>Submitting...</>
-              ) : scoreSubmitted ? (
-                <><FiCheck size={16} /> Submitted</>
-              ) : (
-                <><FiUploadCloud size={16} /> Submit Score</>
-              )}
-            </button>
-          )}
-          <button className="btn btn-primary game-action-btn" type="button" onClick={onNewRanked}>
-            <FiFlag size={16} /> New Ranked
-          </button>
-          <button className="btn btn-muted" type="button" onClick={onMenu}>
-            Menu
-          </button>
-          <button className="btn btn-muted game-action-btn" type="button" onClick={onOpenLeaderboard}>
-            <FiAward size={16} /> Leaderboard
-          </button>
-        </div>
-
-        {scoreSubmissionStatus && (
-          <div className={`pips-end-status pips-end-status--${scoreSubmissionStatus.tone}${scoreSubmissionStatus.pending ? " pips-end-status--pending" : ""}`}>
-            <span className="pips-end-status-label">{statusLabel}</span>
-            <p className="pips-end-status-message">{scoreSubmissionStatus.message}</p>
-          </div>
-        )}
-      </div>
-    </main>
+    <SoloEndScreen
+      title={mode === "infinite" ? "Endless Run Over" : completed ? "Run Complete" : "Run Over"}
+      subtitle={mode === "infinite"
+        ? `Solved ${infiniteSolved} ${difficultyLabel(infiniteDifficulty)} puzzle${infiniteSolved === 1 ? "" : "s"}`
+        : mode === "seeded"
+          ? completed
+            ? `Seed ${seed}, ${puzzleCount === 1 ? "one puzzle" : `all ${puzzleCount} puzzles`} solved`
+            : `Seed ${seed}, practice abandoned`
+          : completed
+            ? "All 3 puzzles solved"
+            : "Abandoned before every board was cleared"}
+      tone={completed || mode === "infinite" ? "success" : "ended"}
+      stats={[
+        { label: "Time", value: formatTime(elapsedMs) },
+        mode === "infinite"
+          ? { label: "Puzzles", value: String(infiniteSolved), note: "unranked" }
+          : { label: "Rank", value: rankValue, ...(ranked ? {} : { note: "unranked" }) },
+        { label: "Mode", value: runModeLabel(mode), accent: "var(--muted-foreground)" },
+        {
+          label: "Seed",
+          value: String(seed),
+          accent: "var(--muted-foreground)",
+          onCopy: () => navigator.clipboard.writeText(String(seed))
+            .then(() => showToast("Seed copied", "info"))
+            .catch(() => undefined),
+        },
+      ]}
+      splits={splits}
+      board={{
+        columns: ["Total", "Easy", "Med", "Hard"],
+        rows: board.entries.map((entry) => ({
+          id: entry.id,
+          rank: entry.rank ?? 0,
+          name: entry.name,
+          isOwn: Boolean(entry.isOwn),
+          seed: entry.seed,
+          cells: [
+            formatTime(entry.totalMs),
+            formatSplitTime(entry.easyMs),
+            formatSplitTime(entry.mediumMs),
+            formatSplitTime(entry.hardMs),
+          ],
+        })),
+        loading: board.loading,
+        empty: view === "mine" ? "No submitted runs on this device yet." : "No ranked runs yet, be the first.",
+        total: board.total,
+        view,
+        views: PIPS_END_VIEWS,
+        onViewChange: (next) => setView(next as SoloEndView),
+      }}
+      {...(scoreSubmissionStatus ? {
+        status: {
+          tone: scoreSubmissionStatus.tone,
+          pending: scoreSubmissionStatus.pending,
+          title: soloStatusTitle({
+            tone: scoreSubmissionStatus.tone,
+            pending: scoreSubmissionStatus.pending,
+            submitting: submittingScore,
+            submitted: scoreSubmitted,
+            canSubmit: scoreSubmissionStatus.canSubmit,
+          }),
+          message: scoreSubmissionStatus.message,
+          facts: [
+            // "Best" rather than "this run": the leaderboard keeps your fastest,
+            // which is only this run when this run beat the others.
+            ...(ranked && board.personalBest ? [`Best #${board.personalBest.rank} of ${board.total}`] : []),
+            `This run ${formatTime(elapsedMs)}`,
+            `Seed ${seed}`,
+            ...(scoreSubmissionStatus.tone === "error" && scoreSubmissionStatus.canSubmit
+              ? ["Run kept, Submit again"]
+              : []),
+          ],
+        },
+      } : {})}
+      primary={canSubmit || submittingScore
+        ? {
+            label: submittingScore ? "Submitting" : "Submit Score",
+            icon: <FiUploadCloud size={18} />,
+            onClick: onSubmitScore,
+            disabled: submittingScore,
+            title: "Submit your verified Pips run",
+          }
+        : {
+            label: "New Ranked Run",
+            icon: <FiFlag size={18} />,
+            onClick: onNewRanked,
+          }}
+      links={[
+        ...(canSubmit || submittingScore
+          ? [{ label: "New Ranked Run", icon: <FiFlag size={14} />, onClick: onNewRanked, confirm: true }]
+          : []),
+        { label: "Menu", icon: <FiHome size={14} />, onClick: onMenu, confirm: true },
+        { label: "Full Leaderboard", icon: <FiAward size={14} />, onClick: onOpenLeaderboard },
+      ]}
+    />
   );
 }
 
@@ -2108,6 +2032,7 @@ function normalizePipsLeaderboardEntry(entry: Partial<PipsLeaderboardEntry> | nu
   if (Number.isFinite(entry.mediumMs)) normalized.mediumMs = getRunScoreTime(Number(entry.mediumMs));
   if (Number.isFinite(entry.hardMs)) normalized.hardMs = getRunScoreTime(Number(entry.hardMs));
   if (Number.isFinite(entry.createdAt)) normalized.createdAt = Number(entry.createdAt);
+  if (Number.isFinite(entry.rank)) normalized.rank = Number(entry.rank);
   return normalized;
 }
 

@@ -295,6 +295,8 @@ export function Sidebar() {
     canLeaderboard: boolean;
     showScrollControls: boolean;
     canScroll: { up: boolean; down: boolean; left: boolean; right: boolean };
+    showDevTools: boolean;
+    canDevSkip: boolean;
   }>({
     phase: "menu",
     infiniteMode: false,
@@ -310,6 +312,8 @@ export function Sidebar() {
     canLeaderboard: true,
     showScrollControls: false,
     canScroll: { up: false, down: false, left: false, right: false },
+    showDevTools: false,
+    canDevSkip: false,
   });
   const [pipsState, setPipsState] = useState<{
     phase: string;
@@ -640,6 +644,31 @@ export function Sidebar() {
                   className="sidebar-link--shikaku"
                   onClick={() => {
                     emitSolo("shikaku-scroll-right");
+                    setMobileOpen(false);
+                  }}
+                />
+              </>
+            )}
+            {shikakuState.showDevTools && (
+              <>
+                <span className="sidebar-separator" aria-hidden="true" />
+                <SidebarButton
+                  icon={<FiEye size={24} />}
+                  label="DEV Solve"
+                  disabled={shikakuState.phase !== "playing"}
+                  className="sidebar-link--shikaku"
+                  onClick={() => {
+                    emitSolo("shikaku-dev-solve");
+                    setMobileOpen(false);
+                  }}
+                />
+                <SidebarButton
+                  icon={<FiSkipForward size={24} />}
+                  label="DEV Skip"
+                  disabled={!shikakuState.canDevSkip}
+                  className="sidebar-link--shikaku"
+                  onClick={() => {
+                    emitSolo("shikaku-dev-skip");
                     setMobileOpen(false);
                   }}
                 />
