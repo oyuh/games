@@ -1570,6 +1570,119 @@
   opacity: 1;
 }
 
+/* ── Select: a bordered control and a floating list ────────
+   For settings with too many choices to sit in a segmented row. The
+   trigger is one of the same bordered controls; the list is a panel
+   with a hairline, six pixels of padding, and rows inset inside it so
+   the highlight reads as a pill rather than a full-width band. Both
+   themes come out of the tokens, so there is no second colour set. */
+.solo-select {
+  position: relative;
+  display: block;
+}
+
+.solo-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  height: var(--solo-control-h);
+  padding: 0 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius);
+  background: var(--background);
+  color: var(--select-accent, var(--primary));
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: border-color 0.18s, background 0.18s;
+}
+
+.solo-select-trigger:hover {
+  border-color: color-mix(in srgb, var(--select-accent, var(--primary)) 45%, transparent);
+}
+
+.solo-select-trigger[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--select-accent, var(--primary)) 65%, transparent);
+}
+
+.solo-select-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.solo-select-chevron {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  transition: transform 0.18s;
+}
+
+.solo-select-trigger[aria-expanded="true"] .solo-select-chevron {
+  transform: rotate(180deg);
+}
+
+.solo-select-popup {
+  position: fixed;
+  z-index: 60;
+  max-height: 15rem;
+  padding: 0.35rem 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  animation: solo-select-open 0.12s ease-out;
+}
+
+/* The page's own shadows lighten up in the light theme, and so does this. */
+[data-theme="light"] .solo-select-popup {
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.14);
+}
+
+@keyframes solo-select-open {
+  from { opacity: 0; transform: translateY(-3px); }
+}
+
+.solo-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0.35rem;
+  padding: 0.34rem 0.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.solo-select-option[data-active] {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.solo-select-option[data-selected] {
+  color: var(--select-accent, var(--primary));
+  font-weight: 700;
+}
+
+.solo-select-option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.solo-select-check {
+  flex-shrink: 0;
+}
+
 /* ── Drawers hung off the bottom of a picker ──────────────── */
 /* Exactly one drawer is open in every mode, so the block below them
    never shifts and the card is the same height throughout. */
