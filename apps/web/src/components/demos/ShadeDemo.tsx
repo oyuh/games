@@ -1,6 +1,6 @@
 import { useRef, useState, FormEvent } from "react";
-import { FiSend } from "react-icons/fi";
-import { DemoModal, DemoGlow, type DemoStep } from "./DemoModal";
+import { FiEdit3, FiGrid, FiRefreshCw, FiSend, FiUser } from "react-icons/fi";
+import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
 import { ColorGrid, generateGridColor } from "../shade/ColorGrid";
 import { GameIcon } from "../shared/GameIcon";
 import "../../styles/game-shared.css";
@@ -31,7 +31,7 @@ const GUESS_MARKERS_ROUND1 = [
 ];
 
 const REVEAL_MARKERS = [
-  { sessionId: P.bob, name: "Bob", row: 3, col: 5, isOwn: false, tooltip: "Bob\nGuess: Clue 2\nDistance: Exact! 🎯\nPoints: +5" },
+  { sessionId: P.bob, name: "Bob", row: 3, col: 5, isOwn: false, tooltip: "Bob\nGuess: Clue 2\nDistance: Exact!\nPoints: +5" },
   { sessionId: P.diana, name: "Diana", row: 3, col: 6, isOwn: false, tooltip: "Diana\nGuess: Clue 2\nDistance: 1 away\nPoints: +3" },
   { sessionId: P.you, name: "You", row: 4, col: 4, isOwn: true, tooltip: "You (you)\nGuess: Clue 2\nDistance: 1 away\nPoints: +3" },
 ];
@@ -69,7 +69,12 @@ const steps: DemoStep[] = [
   {
     label: "Reveal",
     description: "The target is revealed with scoring zones. Players score based on distance (Chebyshev). Leader gets bonus points too!",
-    hint: "Exact = 5pts, 1 away = 3pts, 2 away = 2pts, 3 away = 1pt. Every player takes a turn as Leader.",
+    hint: "Every player takes a turn as Leader before the game ends.",
+  },
+  {
+    label: "Scoring",
+    description: "Guessers score on how many grid steps their pick sits from the target. Diagonals count as one step, so the scoring zones come out as squares around the target.",
+    hint: "The Leader scores the average of their guessers, so a clue everyone reads well pays you too.",
   },
 ];
 
@@ -90,7 +95,7 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       case 0: // Lobby
         return (
           <div className="game-page shade-page" data-game-theme="shade">
-            <DemoGlow label="Explore the grid - click cells to preview scoring zones">
+            <DemoPoint label="Explore the grid - click cells to preview scoring zones">
               <ColorGrid
                 rows={GRID.rows}
                 cols={GRID.cols}
@@ -102,7 +107,7 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
                 showZones={!!lobbyPreview}
                 showScoreTooltips={!!lobbyPreview}
               />
-            </DemoGlow>
+            </DemoPoint>
             {lobbyPreview && <ScoringLegend />}
           </div>
         );
@@ -110,10 +115,10 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
       case 1: // Leader picks
         return (
           <div className="game-page shade-page" data-game-theme="shade">
-            <DemoGlow label="As the Leader, pick your target color">
+            <DemoPoint label="As the Leader, pick your target color">
               <div className="game-section shade-clue-section">
                 <div className="shade-clue-leader-info">
-                  <h3>Pick your target color! 🎨</h3>
+                  <h3>Pick your target color!</h3>
                   <p>Tap the color you want to give clues about.</p>
                 </div>
                 <ColorGrid
@@ -135,17 +140,17 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
                   </div>
                 )}
               </div>
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
       case 2: // Clue 1 + Guess 1
         return (
           <div className="game-page shade-page" data-game-theme="shade">
-            <DemoGlow label="Leader view - give a one-word clue about your target">
+            <DemoPoint label="Leader view - give a one-word clue about your target">
               <div className="game-section shade-clue-section">
                 <div className="shade-clue-leader-info">
-                  <h3>You are the Leader! 🎨</h3>
+                  <h3>You are the Leader!</h3>
                   <p>Give a <strong>one-word</strong> clue to help guessers find your target color.</p>
                 </div>
                 <div className="shade-target-preview">
@@ -166,11 +171,11 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
                   </button>
                 </form>
               </div>
-            </DemoGlow>
+            </DemoPoint>
 
             <hr style={{ border: 0, borderTop: "1px dashed var(--border)", margin: "1rem 0" }} />
 
-            <DemoGlow label="Guesser view - click a cell based on the clue">
+            <DemoPoint label="Guesser view - click a cell based on the clue">
               <div className="game-section shade-guess-section">
                 <div className="shade-clue-display-row">
                   <div className="shade-clue-display">
@@ -188,17 +193,17 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
                   interactive
                 />
               </div>
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
       case 3: // Clue 2 + Guess 2 (Leader sees guess1 markers)
         return (
           <div className="game-page shade-page" data-game-theme="shade">
-            <DemoGlow label="Leader sees where guessers picked and gives a better clue">
+            <DemoPoint label="Leader sees where guessers picked and gives a better clue">
               <div className="game-section shade-clue-section">
                 <div className="shade-clue-leader-info">
-                  <h3>Give a second clue! 🎨</h3>
+                  <h3>Give a second clue!</h3>
                   <p>Give a <strong>second clue</strong> (up to 2 words) to help guessers refine their guess.</p>
                 </div>
                 <ColorGrid
@@ -213,16 +218,16 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
                   Showing where guessers picked after your first clue
                 </p>
               </div>
-            </DemoGlow>
+            </DemoPoint>
           </div>
         );
 
       case 4: // Reveal
         return (
           <div className="game-page shade-page" data-game-theme="shade">
-            <DemoGlow label="Target revealed with scoring zones and guess markers">
+            <DemoPoint label="Target revealed with scoring zones and guess markers">
               <div className="game-section shade-reveal-section">
-                <h3 className="shade-reveal-title">🎯 Reveal!</h3>
+                <h3 className="shade-reveal-title">Reveal!</h3>
                 <div className="shade-reveal-target">
                   <div className="shade-reveal-swatch" style={{ background: targetColor }} />
                   <div className="shade-reveal-info">
@@ -243,8 +248,28 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
                 />
                 <ScoringLegend />
               </div>
-            </DemoGlow>
+            </DemoPoint>
           </div>
+        );
+
+      case 5: // Scoring
+        return (
+          <DemoScoring
+            columns={["Steps from the target", "Points"]}
+            rows={[
+              { label: "Exact cell", value: "5" },
+              { label: "1 away", value: "3" },
+              { label: "2 away", value: "2" },
+              { label: "3 away", value: "1" },
+              { label: "4 or more away", value: "0" },
+            ]}
+            rules={[
+              { icon: <FiUser size={13} />, title: "Leader's score", text: "The Leader banks the average of every guesser's score for the round, rounded." },
+              { icon: <FiEdit3 size={13} />, title: "Clue rules", text: "Clue 1 is one word, clue 2 can be two. Hard mode blocks plain colour names." },
+              { icon: <FiGrid size={13} />, title: "The grid", text: "Every game generates its own colour grid from a seed, so no two boards match." },
+              { icon: <FiRefreshCw size={13} />, title: "Rotation", text: "Everyone takes a turn leading, then the highest total score wins." },
+            ]}
+          />
         );
 
       default:

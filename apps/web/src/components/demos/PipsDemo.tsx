@@ -1,6 +1,6 @@
 import { type CSSProperties, useMemo, useRef, useState } from "react";
-import { FiCheck, FiClock, FiMove, FiRotateCw } from "react-icons/fi";
-import { DemoModal, type DemoStep } from "./DemoModal";
+import { FiAward, FiCheck, FiClock, FiMove, FiRefreshCw, FiRotateCw } from "react-icons/fi";
+import { DemoModal, DemoScoring, type DemoStep } from "./DemoModal";
 import { GameIcon } from "../shared/GameIcon";
 import "../../styles/game-shared.css";
 import "../../styles/pips.css";
@@ -30,6 +30,11 @@ const steps: DemoStep[] = [
     label: "Submit",
     description: "When all three ranked puzzles are solved, submit your verified time. The leaderboard ranks total time and still shows each split.",
     hint: "The score check runs before the submit button appears and again when you submit.",
+  },
+  {
+    label: "Scoring",
+    description: "Pips has no points. A ranked run is one clock across three boards, and the leaderboard sorts on that total, fastest first.",
+    hint: "Only ranked runs submit. Seeded and infinite runs never touch the board.",
   },
 ];
 
@@ -313,7 +318,25 @@ export function PipsDemo({ onClose, initialStep = 0 }: { onClose: () => void; in
       onClose={onClose}
     >
       <div className="game-page" data-game-theme="pips">
-        <MiniPipsBoard step={step} />
+        {step === 5 ? (
+          <DemoScoring
+            columns={["Ranked run split", "Dominoes"]}
+            rows={[
+              { label: "1. Easy", value: "6" },
+              { label: "2. Medium", value: "10" },
+              { label: "3. Hard", value: "15" },
+              { label: "Your result", value: "Total time" },
+            ]}
+            rules={[
+              { icon: <FiClock size={13} />, title: "One clock", text: "The timer runs across all three boards and pauses on the countdown between them." },
+              { icon: <FiAward size={13} />, title: "Ranking", text: "Fastest total time wins. The board still shows each split so you can see where it went." },
+              { icon: <FiCheck size={13} />, title: "Verified", text: "Every ranked run is replayed against the seeded boards before it counts." },
+              { icon: <FiRefreshCw size={13} />, title: "Practice modes", text: "Seeded and infinite runs play identically but never submit a score." },
+            ]}
+          />
+        ) : (
+          <MiniPipsBoard step={step} />
+        )}
       </div>
     </DemoModal>
   );

@@ -1,9 +1,11 @@
 import { GAME_META, getGameSlugFromPath, type GameSlug } from "@games/shared";
-import { FiX } from "react-icons/fi";
+import { FiArrowRight, FiGithub, FiInfo } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
-import { useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { getCustomStatus, subscribeCustomStatus } from "../../hooks/useAdminBroadcast";
+import { ModalSection, ModalShell } from "./ModalShell";
+import { ClipboardText } from "./ClipboardText";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
 const BUG_REPORT_URL = `${GITHUB_REPO}/issues/new?title=%5BBug%5D%20`;
@@ -96,101 +98,61 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
   const location = useLocation();
   const page = getPageInfo(location.pathname);
   const sessionId = getOrCreateSessionId();
-  const [copied, setCopied] = useState(false);
-
   const customStatus = useCustomStatus();
 
-  const copySessionId = () => {
-    void navigator.clipboard.writeText(sessionId).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
-
   return (
-    <div
-      className="modal-overlay"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
-      role="presentation"
+    <ModalShell
+      icon={<FiInfo size={18} />}
+      kicker="About"
+      title={siteInfo.title}
+      onClose={onClose}
+      footer={(
+        <div className="info-footer">
+          <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" className="info-footer-link">
+            <FiGithub size={13} /> Source
+          </a>
+          <span className="info-footer-by">
+            Built by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson</a>
+          </span>
+        </div>
+      )}
     >
-      <div className="modal-panel info-modal-panel">
-        {/* Header */}
-        <div className="modal-header">
-          <h2 className="modal-title">{siteInfo.title}</h2>
-          <button className="modal-close" onClick={onClose}>
-            <FiX size={18} />
-          </button>
+      <p className="info-site-desc">{siteInfo.description}</p>
+
+      {customStatus?.text && (
+        <div className="info-status" style={{ borderColor: customStatus.color || "var(--primary)" }}>
+          {customStatus.link ? (
+            <a href={customStatus.link} target="_blank" rel="noopener noreferrer">{customStatus.text}</a>
+          ) : customStatus.text}
         </div>
+      )}
 
-        <div className="modal-body info-modal-body">
-          {/* Description */}
-          <p className="info-site-desc">{siteInfo.description}</p>
+      <ModalSection label={page.title} hint={page.description}>
+        {page.tips && page.tips.length > 0 && (
+          <ul className="info-tips">
+            {page.tips.map((tip) => (
+              <li key={`${page.title}-${tip}`} className="info-tip">
+                <FiArrowRight size={12} aria-hidden="true" />
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </ModalSection>
 
-          {/* Custom status banner */}
-          {customStatus?.text && (
-            <div className="info-custom-banner" style={{ borderColor: customStatus.color || "var(--primary)" }}>
-              {customStatus.link ? (
-                <a href={customStatus.link} target="_blank" rel="noopener noreferrer">{customStatus.text}</a>
-              ) : customStatus.text}
-            </div>
-          )}
-
-          {/* Current page context */}
-          <div className="info-current-page">
-            <div className="info-current-page-header">
-              <span className="info-current-page-kicker">Current page</span>
-              <h3>{page.title}</h3>
-            </div>
-            <p className="info-current-page-desc">{page.description}</p>
-            {page.tips && page.tips.length > 0 && (
-              <ul className="info-tips">
-                {page.tips.map((tip) => (
-                  <li key={`${page.title}-${tip}`} className="info-tip">{tip}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="info-feedback">
-            <div className="info-feedback-copy">
-              <span className="info-feedback-label">Feedback</span>
-              <p>Found a bug or have an idea? Send it over on GitHub.</p>
-            </div>
-            <div className="info-feedback-links">
-              {supportLinks.map((link) => (
-                <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="info-feedback-link">
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Session row */}
-          <div className="info-session-card">
-            <div className="info-session-heading">
-              <span className="info-session-label">Session</span>
-              <button className="info-session-copy" onClick={copySessionId}>
-                {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
-            <code className="info-session-id">{sessionId}</code>
-            <p className="info-session-helper">Include this when reporting lobby or sync issues.</p>
-          </div>
-
-          {/* Footer */}
-          <div className="info-footer">
-            <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" className="info-footer-link">
-              Source (Repo)
+      <ModalSection label="Feedback" hint="Found a bug or have an idea? Send it over on GitHub.">
+        <div className="info-links">
+          {supportLinks.map((link) => (
+            <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="info-link">
+              {link.label}
             </a>
-            <span className="info-footer-sep">|</span>
-            <span>
-              Made with <span style={{ color: "#ef4444" }}>❤️</span> by{" "}
-              <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" className="info-footer-author">Lawson</a>
-            </span>
-          </div>
+          ))}
         </div>
-      </div>
-    </div>
+      </ModalSection>
+
+      <ModalSection label="Session" hint="Include this when reporting lobby or sync issues.">
+        <ClipboardText text={sessionId} label="Copy session id" />
+      </ModalSection>
+    </ModalShell>
   );
 }

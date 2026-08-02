@@ -1,0 +1,141 @@
+/* ─── Shared controls ───────────────────────────────────────
+   Small primitives used across desktop and mobile: the switch and the
+   clipboard field. Both follow the same rules as everything else here,
+   no glows and depth from borders and fills, and both take their colour
+   from --modal-accent where one is set and --primary everywhere else. */
+
+/* ── Switch ─────────────────────────────────────────────────
+   The thumb is the full height of the track and travels exactly its own
+   width. That is what stops it reading as a small dot rattling around
+   inside a bigger pill. */
+.ui-switch {
+  --sw-h: 1.15rem;
+  --sw-w: calc(var(--sw-h) * 2);
+  position: relative;
+  flex-shrink: 0;
+  display: inline-block;
+  width: var(--sw-w);
+  height: var(--sw-h);
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.ui-switch[data-size="sm"] {
+  --sw-h: 1rem;
+}
+
+.ui-switch[aria-checked="true"] {
+  background: color-mix(in srgb, var(--modal-accent, var(--primary)) 62%, transparent);
+}
+
+.ui-switch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ui-switch-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--sw-h);
+  height: var(--sw-h);
+  border-radius: 999px;
+  background: var(--background);
+  box-shadow:
+    0 0 1px 0.5px rgba(255, 255, 255, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: left 0.15s cubic-bezier(0, 0, 0.2, 1), background 0.15s cubic-bezier(0, 0, 0.2, 1);
+}
+
+[data-theme="light"] .ui-switch-thumb {
+  box-shadow:
+    0 0 1px 0.5px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.16);
+}
+
+.ui-switch[aria-checked="true"] .ui-switch-thumb {
+  left: 50%;
+  background: color-mix(in srgb, var(--modal-accent, var(--primary)) 42%, #fff);
+}
+
+.ui-switch:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--modal-accent, var(--primary)) 60%, transparent);
+  outline-offset: 2px;
+}
+
+/* ── A switch with a visible label ──────────────────────── */
+.ui-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.35rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius, var(--radius-lg));
+  background: var(--background);
+}
+
+.ui-switch-row + .ui-switch-row {
+  margin-top: 0.35rem;
+}
+
+.ui-switch-row-label {
+  color: var(--foreground);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* ── Clipboard field ────────────────────────────────────────
+   One control, split: the value fills it and truncates, the copy button
+   is a full-height segment welded to the right edge with only the outer
+   corners rounded. */
+.ui-clip {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  height: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius, var(--radius-lg));
+  background: var(--background);
+}
+
+.ui-clip-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 0.5rem 0 0.75rem;
+  color: var(--muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.76rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ui-clip-btn {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.6rem;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+
+.ui-clip-btn:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.ui-clip-btn[aria-label="Copied"] {
+  color: var(--modal-accent, var(--primary));
+}
