@@ -619,8 +619,16 @@ function assertCallerValue(userId: string, claimed: unknown, field: string) {
   }
 }
 
+/**
+ * Mutators that only exist to seed or drive games while developing. They
+ * impersonate players by design, so they are never allowed to run in prod.
+ */
+function isDevOnlyMutator(name: string) {
+  return name.startsWith("demo.") || name.startsWith("dev.");
+}
+
 function requiresMutatorSessionProof(name: string, args: unknown) {
-  if (name.startsWith("demo.") && process.env.NODE_ENV !== "production") {
+  if (isDevOnlyMutator(name) && process.env.NODE_ENV !== "production") {
     return false;
   }
   if (args == null || typeof args !== "object") {
@@ -2624,8 +2632,8 @@ app.post("/api/zero/mutate", async (c) => {
             const normalizedArgs = applyCanonicalMutatorCaller(resolvedCallerUserId, name, args);
             enforceMutatorCaller(resolvedCallerUserId, name, normalizedArgs);
             await assertAllowedSessionNameMutation(name, normalizedArgs);
-            if (name.startsWith("demo.") && process.env.NODE_ENV === "production") {
-              throw new Error("Demo mutators are disabled in production");
+            if (isDevOnlyMutator(name) && process.env.NODE_ENV === "production") {
+              throw new Error("Dev mutators are disabled in production");
             }
             const mutator = mustGetMutator(mutators, name);
             return mutator.fn({

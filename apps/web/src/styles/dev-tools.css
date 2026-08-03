@@ -1,0 +1,143 @@
+/* Dev tools panel.
+   Same rules as the solo menu the site's look comes from: no shadows on the
+   content, no glows, depth from borders and fills. It borrows .mshell-action
+   for its buttons so it tracks the house style without redefining it. */
+
+.devp {
+  --solo-pad: 0.2rem;
+  --solo-radius: var(--radius-md);
+  --solo-control-h: 1.9rem;
+  position: fixed;
+  /* Default resting place; dragging sets inline left/top which wins over this. */
+  left: 12px;
+  bottom: 12px;
+  z-index: 60;
+  width: 15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  color: var(--foreground);
+  overflow: hidden;
+}
+
+.devp-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.devp[data-dragging] .devp-head {
+  cursor: grabbing;
+}
+
+.devp-grip {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  border-radius: var(--radius-sm, 0.35rem);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+}
+
+.devp-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.devp-collapse {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 0.35rem);
+  background: var(--card);
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.devp-collapse:hover {
+  color: var(--foreground);
+}
+
+.devp-body {
+  padding: 0.55rem;
+}
+
+/* Phase / player readout */
+.devp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 0.55rem;
+}
+
+.devp-chip {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 0.35rem);
+  background: var(--background);
+  color: var(--muted-foreground);
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.devp-chip strong {
+  color: var(--foreground);
+  font-weight: 800;
+}
+
+.devp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.devp-row + .devp-row {
+  margin-top: 0.3rem;
+}
+
+/* Compact variant of the shared modal button. */
+.devp .mshell-action {
+  height: 1.85rem;
+  padding: 0 0.5rem;
+  border-radius: var(--radius-md);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.devp-grow {
+  flex: 1;
+}
+
+/* Native selects for the create row. Matches the chip fill so the panel keeps
+   one flat surface instead of gaining a second style of control. */
+.devp-select {
+  min-width: 0;
+  height: 1.85rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
