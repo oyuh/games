@@ -21,6 +21,9 @@ const ConnectionDebugPanel = lazy(() =>
   import("./shared/ConnectionDebugPanel").then(({ ConnectionDebugPanel }) => ({ default: ConnectionDebugPanel }))
 );
 const MobileLayout = lazy(() => import("../mobile/MobileLayout").then(({ MobileLayout }) => ({ default: MobileLayout })));
+const DevGamePanel = lazy(() =>
+  import("./shared/DevGamePanel").then(({ DevGamePanel }) => ({ default: DevGamePanel }))
+);
 
 export function AppShell() {
   return (
@@ -102,6 +105,7 @@ function AppShellDesktop() {
       <TooltipLayer />
       <Suspense fallback={null}>
         <ConnectionDebugPanel />
+        {import.meta.env.DEV && <DevGamePanel />}
         {inGame && !isSpectator && <ChatWindow hostId={hostId} myName={myName} />}
       </Suspense>
     </div>

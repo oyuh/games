@@ -225,11 +225,45 @@ start_zero_container() {
     rocicorp/zero:1.8.0 >/dev/null
 }
 
+# The zero-cache image and the installed client speak a versioned wire
+# protocol. When they drift, the socket still opens but the handshake never
+# completes, so the app just sits on "Sync server is waking up" forever. A stale
+# node_modules after a version bump is the usual cause, and it is invisible
+# unless you go looking, so check it up front.
+assert_zero_versions_match() {
+  local image_version installed_path installed_version
+  image_version="$(grep -oE 'rocicorp/zero:[0-9A-Za-z.\-]+' "$root_dir/scripts/local-dev.sh" | head -1 | cut -d: -f2)"
+  [[ -z "$image_version" ]] && return 0
+
+  installed_path="$root_dir/packages/shared/node_modules/@rocicorp/zero/package.json"
+  if [[ -f "$installed_path" ]]; then
+    installed_version="$(node -p "require('$installed_path').version" 2>/dev/null || echo "")"
+    [[ "$installed_version" == "$image_version" ]] && return 0
+    echo "zero-cache image is $image_version but the installed client is $installed_version. Running bun install..."
+  else
+    echo "@rocicorp/zero is not installed yet. Running bun install..."
+  fi
+
+  (cd "$root_dir" && bun install)
+
+  installed_version="$(node -p "require('$installed_path').version" 2>/dev/null || echo "")"
+  if [[ "$installed_version" != "$image_version" ]]; then
+    echo "Zero version mismatch: docker image $image_version vs installed $installed_version. Sync will never connect." >&2
+    echo "Line up the version in this script and the package.json files, then rerun." >&2
+    exit 1
+  fi
+
+  # Vite serves @rocicorp/zero from its own pre-bundle, which survives an
+  # install and would keep handing the browser the old client.
+  rm -rf "$root_dir/apps/web/node_modules/.vite"
+}
+
 echo "Checking required tools..."
 if [[ "$skip_docker" == false ]]; then
   assert_command_available docker
   assert_docker_running
 fi
+assert_zero_versions_match
 if [[ "$skip_db_push" == false || "$skip_dev" == false ]]; then
   assert_command_available bun
 fi
