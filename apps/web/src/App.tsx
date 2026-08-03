@@ -630,6 +630,20 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
 
     const mapAndTrack = (next: ConnectionState) => {
       setZeroConnectionState(next);
+      // Zero stops retrying for good once it has failed to connect for 60s
+      // ("was disconnected"). Nothing ever brings it back, so the app sits on
+      // "Sync server is waking up" until someone reloads. In dev that happens
+      // every time the API restarts under a live client. Swap in a fresh client
+      // instead; resetZeroClient is already throttled so a server that stays
+      // down can't make us churn.
+      if (next.name === "disconnected") {
+        addConnectionDebugEvent({
+          level: "warn",
+          source: "zero",
+          message: `Zero gave up (${next.reason}); swapping in a fresh client`
+        });
+        resetZeroClient();
+      }
     };
 
     mapAndTrack(zero.connection.state.current);
@@ -647,7 +661,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
       unsubscribeConnection();
       unsubscribeOnline();
     };
-  }, [zero]);
+  }, [zero, resetZeroClient]);
 
   if (styleOnly) {
     return (

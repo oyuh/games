@@ -25,7 +25,7 @@ async function maybeDecryptPasswordWord(ctx: unknown, gameId: string, value: str
   return decryptSecret(value, key);
 }
 
-async function resolveActiveRoundWord(
+export async function resolveActiveRoundWord(
   ctx: unknown,
   gameId: string,
   round: { word: string | null; encryptedWord?: string | null }

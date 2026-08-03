@@ -134,6 +134,57 @@ function Invoke-LocalDbPush {
   bun db:push
 }
 
+function Assert-ZeroVersionsMatch {
+  # The zero-cache image and the installed client speak a versioned wire
+  # protocol. When they drift, the socket still opens but the handshake never
+  # completes, so the app just sits on "Sync server is waking up" forever.
+  # A stale node_modules after a version bump is the usual cause, and it is
+  # invisible unless you go looking, so check it up front.
+  $composePath = Join-Path $ROOT_DIR "docker-compose.yml"
+  $imageVersion = $null
+  if (Test-Path $composePath) {
+    foreach ($line in Get-Content $composePath) {
+      if ($line -match "rocicorp/zero:([\w\.\-]+)") {
+        $imageVersion = $matches[1]
+        break
+      }
+    }
+  }
+  if (-not $imageVersion) {
+    return
+  }
+
+  $installedPath = Join-Path $ROOT_DIR "packages\shared\node_modules\@rocicorp\zero\package.json"
+  if (-not (Test-Path $installedPath)) {
+    Write-Host "@rocicorp/zero is not installed yet. Running bun install..." -ForegroundColor Yellow
+    Push-Location $ROOT_DIR
+    try { bun install } finally { Pop-Location }
+    return
+  }
+
+  $installedVersion = (Get-Content $installedPath -Raw | ConvertFrom-Json).version
+  if ($installedVersion -eq $imageVersion) {
+    return
+  }
+
+  Write-Host "zero-cache image is $imageVersion but the installed client is $installedVersion. Running bun install..." -ForegroundColor Yellow
+  Push-Location $ROOT_DIR
+  try { bun install } finally { Pop-Location }
+
+  $installedVersion = (Get-Content $installedPath -Raw | ConvertFrom-Json).version
+  if ($installedVersion -ne $imageVersion) {
+    throw "Zero version mismatch: docker image $imageVersion vs installed $installedVersion. Sync will never connect. Line up the version in docker-compose.yml and the package.json files, then rerun."
+  }
+
+  # Vite serves @rocicorp/zero from its own pre-bundle, which survives an
+  # install and would keep handing the browser the old client.
+  $viteCache = Join-Path $ROOT_DIR "apps\web\node_modules\.vite"
+  if (Test-Path $viteCache) {
+    Write-Host "Clearing Vite dep cache so the browser picks up the new client..." -ForegroundColor Yellow
+    Remove-Item -Recurse -Force $viteCache -ErrorAction SilentlyContinue
+  }
+}
+
 Write-Host "Checking required tools..." -ForegroundColor Cyan
 if (-not $SkipDocker) {
   Assert-CommandAvailable -CommandName "docker"
@@ -141,6 +192,8 @@ if (-not $SkipDocker) {
 if ((-not $SkipDbPush) -or (-not $SkipDev)) {
   Assert-CommandAvailable -CommandName "bun"
 }
+
+Assert-ZeroVersionsMatch
 
 if ((-not $SkipDev) -and (-not $SkipPorts)) {
   Stop-DevPorts
