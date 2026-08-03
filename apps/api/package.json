@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/index.ts",
+    "dev": "node ../../scripts/dev-api.mjs",
     "build": "tsc -p tsconfig.json",
     "start": "bun src/index.ts",
     "test": "vitest run",

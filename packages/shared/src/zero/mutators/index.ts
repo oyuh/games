@@ -7,6 +7,7 @@ import { chainReactionMutators } from "./chain-reaction";
 import { shadeSignalMutators } from "./shade-signal";
 import { locationSignalMutators } from "./location-signal";
 import { demoMutators } from "./demo";
+import { devMutators } from "./dev";
 
 export { imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, passwordCategories, passwordCategoryLabels, gameCategories, gameCategoryLabels } from "./word-banks";
 
@@ -18,5 +19,6 @@ export const mutators = defineMutators({
   chainReaction: chainReactionMutators,
   shadeSignal: shadeSignalMutators,
   locationSignal: locationSignalMutators,
-  demo: demoMutators
+  demo: demoMutators,
+  dev: devMutators
 });
