@@ -9,7 +9,7 @@ import { nanoid } from "nanoid";
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
-import { FiArrowLeft, FiArrowRight, FiBookOpen, FiCheck, FiChevronDown, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
+import { FiArrowDown, FiArrowLeft, FiArrowRight, FiBookOpen, FiCheck, FiChevronDown, FiChevronRight, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { isNameRestricted } from "../hooks/useAdminBroadcast";
@@ -323,15 +323,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       {/* ── Card 1: Utils ──────────────────────────────────── */}
       <div className={`home-card home-card--utils${firstVisitGlowClass}`}>
         <div className="home-card-body">
-          {/* First-visit hint */}
-          {firstVisit && (
-            <div className="hc-first-visit-hint">
-              <span className="hc-first-visit-hint-icon">&#9889;</span>
-              <p>Welcome! Set a display name to get started, or just skip and jump into a game.</p>
-            </div>
-          )}
-
-
           {/* Join section */}
           <section className="hc-section">
             <h3 className="hc-label" data-tooltip="Enter a 6-character room code to join a friend's game" data-tooltip-variant="info">
@@ -367,6 +358,20 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           {/* Name section - inline editable */}
           <section className="hc-section">
             <h3 className="hc-label" data-tooltip="Your in-game identity - visible to other players" data-tooltip-variant="info">Display Name</h3>
+            {/* Sits directly on the field it is about, and points at it. A
+                banner at the top of the card named something two sections
+                down, which told you nothing about what to actually do. */}
+            {firstVisit && (
+              <div className="hc-first-visit-hint">
+                <span className="hc-first-visit-hint-icon">
+                  <FiArrowDown size={15} aria-hidden="true" />
+                </span>
+                <div className="hc-first-visit-hint-text">
+                  <strong>Type a name here</strong>
+                  <span>Or skip it, you get a random one and can change it later.</span>
+                </div>
+              </div>
+            )}
             <div className="hc-name-display" title="Click to edit your name" data-tooltip-variant="info">
               <input
                 className="hc-name-inline-input"
