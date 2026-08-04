@@ -3,7 +3,7 @@ import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGithub } from "react-icons/fi";
+import { FiArrowDown, FiArrowLeft, FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGithub } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
@@ -110,24 +110,29 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
 
       {/* Display Name */}
       <div className="m-card">
+        <h3 className="m-home-section-title">Display Name</h3>
+        {/* Same hint the desktop card uses: it sits on the field it is about
+            instead of being a banner about the page. */}
         {firstVisit && (
           <div className="m-home-welcome">
             <div className="m-home-welcome-row">
-              <span style={{ fontSize: "1.3rem" }}>&#9889;</span>
-              <p>Welcome! Set a display name below to get started.</p>
+              <span className="m-home-welcome-icon"><FiArrowDown size={15} aria-hidden="true" /></span>
+              <div className="m-home-welcome-text">
+                <strong>Type a name here</strong>
+                <span>Or skip it, you get a random one and can change it later.</span>
+              </div>
             </div>
             <div className="m-home-welcome-divider" />
             <div className="m-home-welcome-row">
-              <FiShare size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
-              <p>
-                Tap <strong>Share</strong> then <strong>Add to Home Screen</strong> to
-                install as an app!
-              </p>
+              <span className="m-home-welcome-icon"><FiShare size={14} aria-hidden="true" /></span>
+              <div className="m-home-welcome-text">
+                <strong>Install it as an app</strong>
+                <span>Tap Share, then Add to Home Screen.</span>
+              </div>
             </div>
           </div>
         )}
 
-        <h3 className="m-home-section-title">Display Name</h3>
         {savedName && (
           <p className="m-home-sublabel">
             Playing as <span style={{ color: "var(--primary)", fontWeight: 600 }}>{savedName}</span>

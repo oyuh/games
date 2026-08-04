@@ -402,7 +402,7 @@
 
 .mshell--md { width: 92vw; max-width: 470px; }
 .mshell--lg { width: 94vw; max-width: 580px; }
-.mshell--xl { width: 96vw; max-width: 820px; }
+.mshell--xl { width: 96vw; max-width: 920px; }
 
 .mshell-head {
   display: flex;
@@ -545,6 +545,28 @@
 
 /* ─── How to Play: what the shell doesn't cover ──────────── */
 
+/* The panel is a fixed box on desktop. Every step used to size it itself, so
+   the modal grew and shrank as you clicked through, which is the one thing a
+   step-by-step walkthrough must not do. Height is set here, the body scrolls,
+   and short steps sit centered in it. Mobile keeps the fullscreen sheet the
+   600px query above sets, so this is guarded to desktop. */
+@media (min-width: 601px) {
+  .howto {
+    height: min(86vh, 720px);
+  }
+}
+
+/* Auto margins center the step's content when it is short, and collapse to
+   nothing when it overflows, so centering never eats the top of a tall step. */
+.howto .mshell-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.howto .mshell-body > * {
+  margin-block: auto;
+}
+
 /* Step picker plus the drawer hanging off it, read as one unit. */
 .howto-guide {
   display: flex;
@@ -559,7 +581,11 @@
 .howto .howto-step {
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.3rem;
+  /* Room for a name, two lines of description and a hint. Steps that use less
+     do not pull the demo below them upwards. */
+  min-height: 7.25rem;
   padding: 0.7rem 0.85rem;
   text-align: center;
 }
@@ -571,7 +597,9 @@
   font-weight: 800;
 }
 
+/* Capped so the wider panel does not stretch a sentence into one long line. */
 .howto-step-desc {
+  max-width: 88ch;
   margin: 0;
   color: var(--secondary);
   font-size: 0.8rem;
@@ -582,6 +610,7 @@
   display: flex;
   align-items: flex-start;
   gap: 0.35rem;
+  max-width: 88ch;
   margin: 0;
   color: var(--muted-foreground);
   font-size: 0.74rem;
@@ -1843,6 +1872,25 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+/* The panel is wide enough now to read the table and the rules side by side
+   instead of scrolling one under the other. */
+@media (min-width: 900px) {
+  .demo-scoring {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .demo-scoring-table {
+    flex: 0 0 15rem;
+  }
+
+  .demo-rules-grid {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .demo-scoring-table {
