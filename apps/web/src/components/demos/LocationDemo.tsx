@@ -83,7 +83,7 @@ const REVEAL_SCORES = [
 
 const steps: DemoStep[] = [
   {
-    label: "Overview",
+    label: "The Basics",
     description: "Location Signal is a map-based guessing game. One player picks a secret location, gives text clues, and everyone else guesses where it is on the world map.",
     hint: "Think GeoGuessr meets party game - the closer your guess, the more points you get!",
   },
@@ -108,7 +108,7 @@ const steps: DemoStep[] = [
     hint: "After every player has been Leader once, the game ends. Highest total score wins!",
   },
   {
-    label: "Scoring",
+    label: "Overview",
     description: "Points fall off with distance from the target. Anything inside 120 km counts as a bullseye, and the curve is generous enough that a wrong continent still scores something.",
     hint: "The decay is exponential, so the first few hundred kilometres cost you almost nothing.",
   },

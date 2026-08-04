@@ -117,7 +117,7 @@ const steps: DemoStep[] = [
     hint: "Check the round history at the bottom to see every clue, guess, and solve timeline.",
   },
   {
-    label: "Scoring",
+    label: "Overview",
     description: "A team banks points the moment its guesser lands the word. How many points depends only on how many guesses it took.",
     hint: "Nailing it first try is worth triple a slow solve, so a sharp clue pays for itself.",
   },

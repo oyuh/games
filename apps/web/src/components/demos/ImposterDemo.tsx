@@ -83,7 +83,7 @@ const steps: DemoStep[] = [
     hint: "The imposter wins if no one catches them! Then a new round starts with a different word.",
   },
   {
-    label: "Scoring",
+    label: "Overview",
     description: "Imposter keeps no running score. Each round is settled on its own by the vote, and whoever got the most votes is the one revealed.",
     hint: "That makes every round a fresh start, so a blown round costs you nothing later.",
   },
