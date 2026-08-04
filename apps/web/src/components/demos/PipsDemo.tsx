@@ -32,7 +32,7 @@ const steps: DemoStep[] = [
     hint: "The score check runs before the submit button appears and again when you submit.",
   },
   {
-    label: "Scoring",
+    label: "Overview",
     description: "Pips has no points. A ranked run is one clock across three boards, and the leaderboard sorts on that total, fastest first.",
     hint: "Only ranked runs submit. Seeded and infinite runs never touch the board.",
   },

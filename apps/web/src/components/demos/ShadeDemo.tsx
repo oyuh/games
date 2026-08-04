@@ -72,7 +72,7 @@ const steps: DemoStep[] = [
     hint: "Every player takes a turn as Leader before the game ends.",
   },
   {
-    label: "Scoring",
+    label: "Overview",
     description: "Guessers score on how many grid steps their pick sits from the target. Diagonals count as one step, so the scoring zones come out as squares around the target.",
     hint: "The Leader scores the average of their guessers, so a clue everyone reads well pays you too.",
   },

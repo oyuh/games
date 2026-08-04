@@ -29,7 +29,7 @@ const steps: DemoStep[] = [
     hint: "Giving up still submits a score with a penalty - try to finish all 5 puzzles for the best result.",
   },
   {
-    label: "Scoring",
+    label: "Overview",
     description: "A run is worth 5,000 base points (1,000 per puzzle), multiplied by the difficulty and then by how far under par you finished.",
     hint: "Speed bonus is 2 minus your time over par, floored at 0.1. Half par is the 2x cap.",
   },
