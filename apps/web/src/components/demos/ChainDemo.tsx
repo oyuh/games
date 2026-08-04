@@ -60,7 +60,7 @@ const steps: DemoStep[] = [
     hint: "Play again to swap chains - you'll solve what your opponent wrote!",
   },
   {
-    label: "Scoring",
+    label: "Overview",
     description: "Each word you crack is worth points based on how much of it was showing when you got it. Letters get revealed by hints and by wrong guesses alike.",
     hint: "A clean word is worth three times a word you brute-forced open.",
   },
