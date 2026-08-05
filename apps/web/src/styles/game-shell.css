@@ -1,0 +1,374 @@
+/* ── Game shell header ───────────────────────────────────────────
+   The rules the player card set, carried up to the top of the page:
+   depth comes from borders and fills, never from a shadow or a glow, and
+   colour means something rather than decorating.
+
+   Two rows. The top one is who and what: the game, its pills, your role,
+   the code. The bottom one is when: how far through the round you are and
+   how long is left. Splitting them is what stops the phase and the clock
+   from being two more pills in a row of pills. */
+
+.gsh {
+  --gsh-accent: var(--primary);
+  --gsh-line: var(--border);
+
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-bottom);
+  color: var(--foreground);
+  overflow: clip;
+}
+
+/* ── Top row ────────────────────────────────────────────────── */
+.gsh-top {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  min-width: 0;
+}
+
+.gsh-game {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.gsh-game-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gsh-line);
+  background: color-mix(in srgb, var(--gsh-accent) 10%, transparent);
+  color: var(--gsh-accent);
+}
+
+.gsh-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Takes the slack, so the role case and the code stay pinned right. */
+.gsh-pills {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.gsh-pill {
+  --gsh-pill: var(--secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.6;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--gsh-pill) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gsh-pill) 30%, transparent);
+  color: var(--gsh-pill);
+  /* Tooltips anchored on a pill take the pill's colour. */
+  --tt-color: var(--gsh-pill);
+}
+
+/* The palette is picked for a dark page; on light an outline pill in grey or
+   amber all but vanishes, so pull the text toward black. */
+[data-theme="light"] .gsh-pill {
+  background: color-mix(in srgb, var(--gsh-pill) 20%, transparent);
+  color: color-mix(in srgb, var(--gsh-pill) 65%, #000);
+}
+
+.gsh-pill-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.gsh-pill-icon svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 2.6;
+}
+
+/* ── Role case ──────────────────────────────────────────────────
+   Both roles in one bordered case rather than loose beside the code, so
+   "what am I in this game" is one object on the header and not two. */
+.gsh-roles {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gsh-line);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  overflow: clip;
+}
+
+.gsh-role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  color: var(--secondary);
+  --tt-color: var(--secondary);
+}
+
+/* A hairline between them, the same one the card splits its score with. */
+.gsh-role + .gsh-role {
+  border-left: 1px solid var(--gsh-line);
+}
+
+.gsh-role svg {
+  width: 13px;
+  height: 13px;
+}
+
+.gsh-role--host {
+  color: #fbbf24;
+  background: color-mix(in srgb, #fbbf24 12%, transparent);
+  --tt-color: #fbbf24;
+}
+
+/* ── Code ───────────────────────────────────────────────────────
+   Shut by default. Mid-game the only reason to want the code is to pull a
+   spectator in, and a code sitting open on screen all match is readable by
+   whoever is stood behind you. */
+.gsh-code {
+  flex: 0 0 auto;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gsh-line);
+  background: transparent;
+  color: var(--secondary);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  --tt-color: var(--gsh-accent);
+}
+
+.gsh-code:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--gsh-accent) 45%, transparent);
+}
+
+.gsh-code:focus-visible {
+  outline: 2px solid var(--gsh-accent);
+  outline-offset: 2px;
+}
+
+.gsh-code.is-shown {
+  color: var(--gsh-accent);
+  border-color: color-mix(in srgb, var(--gsh-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--gsh-accent) 12%, transparent);
+}
+
+.gsh-code-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.gsh-code-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Tabular, and wide enough that revealing a code does not shove the header
+   around. Codes are short and all the same length. */
+.gsh-code.is-shown .gsh-code-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+}
+
+/* ── Bottom row ─────────────────────────────────────────────── */
+.gsh-bottom {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.55rem 0.75rem 0.65rem;
+  border-top: 1px solid var(--gsh-line);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.gsh-phase {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Phase track ────────────────────────────────────────────────
+   A pill can tell you the phase is called "Voting". It cannot tell you that
+   voting is the third of four things and the game is nearly over. The track
+   is here to answer the second question, which is the one people actually
+   have. */
+.gsh-track {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0 0 0.3rem;
+  padding: 0;
+  list-style: none;
+}
+
+.gsh-tick {
+  flex: 1 1 0;
+  height: 3px;
+  min-width: 10px;
+  max-width: 46px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.gsh-tick.is-done {
+  background: color-mix(in srgb, var(--gsh-accent) 45%, transparent);
+}
+
+/* The one you are on is the brightest thing on the row and slightly taller,
+   so it reads at a glance without needing the label underneath. */
+.gsh-tick.is-now {
+  height: 5px;
+  background: var(--gsh-accent);
+}
+
+.gsh-phase-text {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.gsh-phase-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gsh-phase-count {
+  flex: 0 0 auto;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Says what to do, not what it is called. The whole reason the phase gets a
+   row of its own instead of a pill. */
+.gsh-phase-hint {
+  margin: 0.1rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--secondary);
+}
+
+/* ── Timer ──────────────────────────────────────────────────────
+   The one thing up here that is always moving, so it is drawn as a reading
+   rather than a label: big tabular figures over a track that drains. */
+.gsh-timer {
+  --gsh-clock: var(--gsh-accent);
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  min-width: 4.2rem;
+  --tt-color: var(--gsh-clock);
+}
+
+.gsh-timer-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gsh-clock);
+}
+
+.gsh-timer-track {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+  overflow: clip;
+}
+
+/* Scaled rather than resized: width animations lay out, transforms do not,
+   and this one runs every second for the whole game. */
+.gsh-timer-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gsh-clock);
+  transform-origin: left center;
+  transition: transform 0.95s linear;
+}
+
+.gsh-timer.is-urgent {
+  --gsh-clock: #f87171;
+}
+
+.gsh-timer.is-urgent .gsh-timer-value {
+  animation: gsh-pulse 1s ease-in-out infinite;
+}
+
+.gsh-timer.is-done {
+  --gsh-clock: var(--secondary);
+}
+
+@keyframes gsh-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gsh-timer-value { animation: none; }
+  .gsh-timer-fill { transition: none; }
+}
+
+/* ── Narrow ─────────────────────────────────────────────────────
+   The pills wrap first, then the phase and the clock stack. The role case
+   and the code never split up: they are the two things you reach for. */
+@media (max-width: 33rem) {
+  .gsh-top {
+    flex-wrap: wrap;
+  }
+
+  .gsh-pills {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .gsh-game {
+    flex: 1;
+  }
+}
