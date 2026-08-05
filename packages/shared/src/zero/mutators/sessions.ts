@@ -30,6 +30,24 @@ export const sessionMutators = {
       });
     }
   ),
+  /**
+   * The player's chosen avatar, base64 of its build string. Empty clears it and
+   * puts them back on the look derived from their session id.
+   *
+   * Stored opaque on purpose: the server has no opinion on what an avatar build
+   * says, so the shape and palette can grow without a migration.
+   */
+  setAvatar: defineMutator(
+    z.object({ id: z.string(), avatar: z.string().max(256).regex(/^[A-Za-z0-9+/=]*$/, "avatar must be base64") }),
+    async ({ args, tx, ctx }) => {
+      assertCaller(tx, ctx, args.id);
+      await tx.mutate.sessions.update({
+        id: args.id,
+        avatar: args.avatar || null,
+        last_seen: now()
+      });
+    }
+  ),
   attachGame: defineMutator(
     z.object({
       id: z.string(),

@@ -1,5 +1,5 @@
 import { FiCheck } from "react-icons/fi";
-import { BorringAvatar } from "../shared/BorringAvatar";
+import { PlayerAvatar } from "../shared/PlayerAvatar";
 import { getDisplayName } from "../../lib/session";
 
 type Player = { sessionId: string };
@@ -77,9 +77,8 @@ export function ImposterVoteSection({
                     data-tooltip-variant="game"
                   >
                     <div className="game-player-avatar">
-                      <BorringAvatar
-                        seed={player.sessionId}
-                        playerIndex={playerIndex}
+                      <PlayerAvatar
+                        seed={player.sessionId}
                       />
                     </div>
                     <span>{name}</span>

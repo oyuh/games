@@ -1,0 +1,45 @@
+/* ── Player avatar ───────────────────────────────────────────────
+   avvvatars draws at a fixed pixel size in colors of its own choosing. Every
+   avatar on this site fills a slot the layout already sized and wears a color
+   the player picked, so this file overrides both. The !important is
+   load-bearing: goober writes those as real class rules, not defaults.
+
+   The squircle corner lives on --avatar-radius in base.css. */
+
+.player-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
+  line-height: 0;
+  border-radius: var(--avatar-radius);
+  overflow: clip;
+}
+
+/* avvvatars' outer tile: its size and its background color both go. */
+.player-avatar > * {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: var(--avatar-radius) !important;
+  background-color: var(--av-bg, #e0e6eb) !important;
+}
+
+/* The shape's own span. Sizing it explicitly is what fixes the art drifting
+   off-centre: the svg used to size itself against a shrink-to-fit parent,
+   which resolves to nothing useful. */
+.player-avatar > * > * {
+  width: 62% !important;
+  height: 62% !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  color: var(--av-fg, #2d3a46) !important;
+}
+
+/* Shapes are drawn in currentColor, so the color above is the whole override. */
+.player-avatar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

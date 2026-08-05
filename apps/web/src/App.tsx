@@ -47,6 +47,9 @@ const ShadeSignalPage = lazy(() =>
 const LocationSignalPage = lazy(() =>
   import("./pages/LocationSignalPage").then(({ LocationSignalPage }) => ({ default: LocationSignalPage }))
 );
+const PlayerCardsPage = lazy(() =>
+  import("./pages/PlayerCardsPage").then(({ PlayerCardsPage }) => ({ default: PlayerCardsPage }))
+);
 const ShikakuPage = lazy(() => import("./pages/ShikakuPage").then(({ ShikakuPage }) => ({ default: ShikakuPage })));
 const PipsPage = lazy(() => import("./pages/PipsPage").then(({ PipsPage }) => ({ default: PipsPage })));
 
@@ -711,6 +714,8 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/location/:id" element={<LazyRoute><LocationSignalPage sessionId={session.id} /></LazyRoute>} />
               <Route path="/shikaku" element={<LazyRoute><ShikakuPage /></LazyRoute>} />
               <Route path="/pips" element={<LazyRoute><PipsPage /></LazyRoute>} />
+              {/* Gallery for the shared PlayerCard. Not linked from anywhere on purpose. */}
+              <Route path="/dev/player-cards" element={<LazyRoute><PlayerCardsPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

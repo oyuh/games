@@ -1,4 +1,4 @@
-import { BorringAvatar } from "../shared/BorringAvatar";
+import { PlayerAvatar } from "../shared/PlayerAvatar";
 import { getDisplayName } from "../../lib/session";
 
 type Player = { sessionId: string; name: string | null; connected: boolean; role?: "imposter" | "player"; eliminated?: boolean };
@@ -41,9 +41,8 @@ export function ImposterPlayersCard({
                 {isEliminated ? (
                   "☠"
                 ) : (
-                  <BorringAvatar
-                    seed={player.sessionId}
-                    playerIndex={playerIndex}
+                  <PlayerAvatar
+                    seed={player.sessionId}
                   />
                 )}
               </div>
