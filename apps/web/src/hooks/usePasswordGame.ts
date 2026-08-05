@@ -1,5 +1,6 @@
 import { decryptSecret, isEncrypted, mutators, queries } from "@games/shared";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { buildPasswordPlayerNames } from "../lib/password-names";
@@ -28,6 +29,7 @@ export function usePasswordGame(sessionId: string) {
 
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
+  usePublishedAvatars(sessions);
   const game = games[0];
   const isHost = game?.host_id === sessionId;
 

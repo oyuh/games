@@ -1,5 +1,6 @@
 import { mutators, queries } from "@games/shared";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { fitRepeatingMapBounds } from "../components/location/WorldMap";
@@ -51,6 +52,7 @@ export function useLocationSignalGame(
 
   const [games] = useQuery(queries.locationSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "location_signal", gameId }));
+  usePublishedAvatars(sessions);
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
 

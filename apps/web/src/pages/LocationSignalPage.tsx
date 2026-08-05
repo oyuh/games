@@ -9,7 +9,7 @@ import { PasswordHeader } from "../components/password/PasswordHeader";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { BorringAvatar } from "../components/shared/BorringAvatar";
+import { PlayerAvatar } from "../components/shared/PlayerAvatar";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -199,9 +199,8 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
             >
               <div className={`game-player-avatar${isCurrentLeader ? " game-player-avatar--leader" : ""}`}>
                 {isCurrentLeader ? "📍" : isLockedIn ? "✅" : (
-                  <BorringAvatar
-                    seed={p.sessionId}
-                    playerIndex={playerIndex}
+                  <PlayerAvatar
+                    seed={p.sessionId}
                   />
                 )}
               </div>
@@ -273,9 +272,8 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
                     data-tooltip-variant="info"
                   >
                     <div className="game-player-avatar">
-                      <BorringAvatar
-                        seed={p.sessionId}
-                        playerIndex={playerIndex}
+                      <PlayerAvatar
+                        seed={p.sessionId}
                       />
                     </div>
                     <span className="game-player-name">{name}</span>
