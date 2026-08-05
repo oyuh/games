@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { FiRefreshCw, FiTag, FiUsers } from "react-icons/fi";
+import { FiAward, FiEdit3, FiEye, FiMapPin, FiMessageSquare, FiRefreshCw, FiTag, FiUsers } from "react-icons/fi";
+import { GAME_META, type GameSlug } from "@games/shared";
 import { GameShellHeader, ShellPill, type GamePhase } from "../components/shared/GameShellHeader";
 import "../styles/game-shared.css";
 
@@ -8,19 +9,23 @@ import "../styles/game-shared.css";
  * eyeball a change before it lands on top of five games at once.
  */
 
+/* The icons stand in for what will live in each game's metadata later. */
 const IMPOSTER_PHASES: GamePhase[] = [
-  { id: "lobby", label: "Lobby", hint: "Waiting for everyone to join. The host starts the round." },
-  { id: "clues", label: "Clues", hint: "Everyone writes one clue about the secret word." },
-  { id: "voting", label: "Voting", hint: "Pick the player you think never saw the word." },
-  { id: "results", label: "Results", hint: "See who the imposter was and who caught them." },
+  { id: "lobby", label: "Lobby", icon: <FiUsers />, hint: "Waiting for everyone to join. The host starts the round." },
+  { id: "clues", label: "Clues", icon: <FiEdit3 />, hint: "Everyone writes one clue about the secret word." },
+  { id: "voting", label: "Voting", icon: <FiEye />, hint: "Pick the player you think never saw the word." },
+  { id: "results", label: "Results", icon: <FiAward />, hint: "See who the imposter was and who caught them." },
 ];
 
 const SIGNAL_PHASES: GamePhase[] = [
-  { id: "picking", label: "Picking", hint: "The leader is choosing a spot on the map." },
-  { id: "clue", label: "Clue", hint: "The leader is writing a one word clue." },
-  { id: "guess", label: "Guessing", hint: "Everyone else drops a pin where they think it is." },
-  { id: "reveal", label: "Reveal", hint: "Scores for how close each guess landed." },
+  { id: "picking", label: "Picking", icon: <FiMapPin />, hint: "The leader is choosing a spot on the map." },
+  { id: "clue", label: "Clue", icon: <FiMessageSquare />, hint: "The leader is writing a one word clue." },
+  { id: "guess", label: "Guessing", icon: <FiMapPin />, hint: "Everyone else drops a pin where they think it is." },
+  { id: "reveal", label: "Reveal", icon: <FiAward />, hint: "Scores for how close each guess landed." },
 ];
+
+/** Every game wearing its own accent, straight from its metadata. */
+const EVERY_GAME: GameSlug[] = ["imposter", "password", "chain", "shade", "location"];
 
 function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
@@ -91,7 +96,25 @@ export function GameShellPage() {
         <Live />
       </Section>
 
-      <Section title="Every phase" note="the track fills as the round runs, so where you are is a glance not a read">
+      <Section title="Every game" note="each one wears its own accent, straight out of its metadata">
+        {EVERY_GAME.map((slug) => (
+          <GameShellHeader
+            key={slug}
+            game={slug}
+            title={GAME_META[slug].title}
+            phases={SIGNAL_PHASES}
+            phase="clue"
+            round={{ current: 2, total: 4 }}
+            endsAt={Date.now() + 52_000}
+            duration={90}
+            code="H4TQ9"
+            isHost
+            pills={<ShellPill tone={GAME_META[slug].accent} tooltip="This game's accent">{GAME_META[slug].accent}</ShellPill>}
+          />
+        ))}
+      </Section>
+
+      <Section title="Every phase" note="named, counted and iconned. the number carries the progress, so no second track">
         {IMPOSTER_PHASES.map((p, i) => (
           <GameShellHeader
             key={p.id}
