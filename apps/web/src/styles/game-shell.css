@@ -3,10 +3,14 @@
    depth comes from borders and fills, never from a shadow or a glow, and
    colour means something rather than decorating.
 
-   Two rows. The top one is who and what: the game, its pills, your role,
-   the code. The bottom one is when: how far through the round you are and
-   how long is left. Splitting them is what stops the phase and the clock
-   from being two more pills in a row of pills. */
+   Two rows, and only one of them is a box. The top row is who and what: the
+   game, its pills, your role, the code. Those are read once and left alone,
+   so they sit straight on the page. The bottom row is when: which phase and
+   how long is left, the pair you keep glancing back at, so that is the pair
+   that gets an edge drawn round it.
+
+   Boxing both would put a box inside the page's other boxes and say nothing
+   by it. One container earns its border by marking the part that moves. */
 
 .gsh {
   --gsh-accent: var(--primary);
@@ -14,19 +18,17 @@
 
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: var(--surface-bottom);
+  gap: 0.5rem;
   color: var(--foreground);
-  overflow: clip;
 }
 
-/* ── Top row ────────────────────────────────────────────────── */
+/* ── Top row ─────────────────────────────────────────────────────
+   No background, no border, no padding of its own. It is a line of things
+   on the page, not a panel. */
 .gsh-top {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.65rem 0.75rem;
   min-width: 0;
 }
 
@@ -203,54 +205,51 @@
   letter-spacing: 0.12em;
 }
 
-/* ── Bottom row ─────────────────────────────────────────────── */
+/* ── Bottom row ─────────────────────────────────────────────────
+   The one container. Relative, because the clock's bar is pinned across its
+   bottom edge, and clipped so the bar's ends meet the corners. */
 .gsh-bottom {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.9rem;
-  padding: 0.55rem 0.75rem 0.65rem;
-  border-top: 1px solid var(--gsh-line);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  padding: 0.7rem 0.85rem 0.8rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gsh-line);
+  background: var(--surface-bottom);
+  overflow: clip;
 }
 
 .gsh-phase {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   min-width: 0;
 }
 
-/* ── Phase track ────────────────────────────────────────────────
-   A pill can tell you the phase is called "Voting". It cannot tell you that
-   voting is the third of four things and the game is nearly over. The track
-   is here to answer the second question, which is the one people actually
-   have. */
-.gsh-track {
-  display: flex;
+/* Same shell the game icon wears up top, so a phase reads as a thing with a
+   name rather than a caption. The glyph comes from the game's metadata. */
+.gsh-phase-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
-  margin: 0 0 0.3rem;
-  padding: 0;
-  list-style: none;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--gsh-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--gsh-accent) 12%, transparent);
+  color: var(--gsh-accent);
 }
 
-.gsh-tick {
-  flex: 1 1 0;
-  height: 3px;
-  min-width: 10px;
-  max-width: 46px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--foreground) 12%, transparent);
-  transition: background 0.2s, box-shadow 0.2s;
+.gsh-phase-icon svg {
+  width: 15px;
+  height: 15px;
 }
 
-.gsh-tick.is-done {
-  background: color-mix(in srgb, var(--gsh-accent) 45%, transparent);
-}
-
-/* The one you are on is the brightest thing on the row and slightly taller,
-   so it reads at a glance without needing the label underneath. */
-.gsh-tick.is-now {
-  height: 5px;
-  background: var(--gsh-accent);
+.gsh-phase-body {
+  min-width: 0;
 }
 
 .gsh-phase-text {
@@ -262,7 +261,7 @@
 }
 
 .gsh-phase-name {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: 0.01em;
   color: var(--foreground);
@@ -296,29 +295,30 @@
   --gsh-clock: var(--gsh-accent);
   flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
-  min-width: 4.2rem;
+  align-items: center;
   --tt-color: var(--gsh-clock);
 }
 
+/* Big enough to read from across the room, which is the whole point of it. */
 .gsh-timer-value {
-  font-size: 1.15rem;
+  font-size: 1.9rem;
   font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
   color: var(--gsh-clock);
 }
 
+/* Pinned across the bottom edge of .gsh-bottom rather than sat under the
+   figures: the time left is about the whole phase, so it is drawn as the
+   whole container emptying out. Standalone use wants a positioned wrapper. */
 .gsh-timer-track {
-  display: block;
-  width: 100%;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 3px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--foreground) 12%, transparent);
-  overflow: clip;
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
 }
 
 /* Scaled rather than resized: width animations lay out, transforms do not,
@@ -327,7 +327,6 @@
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 999px;
   background: var(--gsh-clock);
   transform-origin: left center;
   transition: transform 0.95s linear;
