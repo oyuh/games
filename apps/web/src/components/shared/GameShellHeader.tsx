@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { FaCrown } from "react-icons/fa";
 import { FiCheck, FiCopy, FiEye, FiKey } from "react-icons/fi";
-import type { GameSlug } from "@games/shared";
+import { GAME_META, type GameSlug } from "@games/shared";
 import { GameIcon } from "./GameIcon";
 import "../../styles/game-shell.css";
 
@@ -10,10 +10,14 @@ import "../../styles/game-shell.css";
  * the phase, the clock and the room code sit in the same place whichever game
  * you wandered into.
  *
- * Four things live up here and each is drawn as what it is, rather than all
- * four being pills:
- *   - the phase, as a track you can see your way along
- *   - the clock, as a clock, draining
+ * Only the phase and the clock get a container. They are the pair you keep
+ * glancing back at, so they are the pair that gets an edge; the title, the
+ * pills, your role and the code sit straight on the page. Boxing all of it
+ * would just be a box inside the page's other boxes.
+ *
+ * Each of the four is drawn as what it is rather than all four being pills:
+ *   - the phase, named and counted, with its own icon
+ *   - the clock, draining along the bottom of the container
  *   - who you are, as icons in one case
  *   - the code, hidden until asked for
  * Anything else a game wants to say is a pill, via `pills`.
@@ -27,6 +31,9 @@ export interface GamePhase {
   /** One line saying what is happening. Worth writing: it is the difference
    *  between knowing the phase's name and knowing what to do. */
   hint?: string;
+  /** Sits beside the name. Belongs in each game's metadata eventually, so a
+   *  phase looks the same everywhere it is mentioned. */
+  icon?: ReactNode;
 }
 
 export interface GameShellHeaderProps {
@@ -48,6 +55,8 @@ export interface GameShellHeaderProps {
   isSpectator?: boolean;
   /** Whatever else this game is doing: a category, a word bank, a turn. */
   pills?: ReactNode;
+  /** Overrides the game's own accent from its metadata. Rarely wanted. */
+  accent?: string;
   className?: string;
 }
 
@@ -183,13 +192,21 @@ export function GameShellHeader({
   isHost,
   isSpectator,
   pills,
+  accent,
   className = "",
 }: GameShellHeaderProps) {
   const index = phases.findIndex((p) => p.id === phase);
   const current = phases[index];
 
+  /* Each game already carries an accent in its metadata, so the header wears
+     it without every caller having to hand it over. */
+  const tone = accent ?? GAME_META[game]?.accent;
+
   return (
-    <header className={`gsh ${className}`.trim()}>
+    <header
+      className={`gsh ${className}`.trim()}
+      style={tone ? ({ "--gsh-accent": tone } as CSSProperties) : undefined}
+    >
       <div className="gsh-top">
         <span className="gsh-game">
           <span className="gsh-game-icon"><GameIcon game={game} size={18} /></span>
@@ -227,24 +244,20 @@ export function GameShellHeader({
 
       <div className="gsh-bottom">
         <div className="gsh-phase">
-          <ol className="gsh-track">
-            {phases.map((p, i) => (
-              <li
-                key={p.id}
-                className={`gsh-tick${i < index ? " is-done" : ""}${i === index ? " is-now" : ""}`}
-                {...(i === index ? { "aria-current": "step" as const } : {})}
-                data-tooltip={p.label}
-                data-tooltip-variant="game"
-              />
-            ))}
-          </ol>
+          {current?.icon && <span className="gsh-phase-icon" aria-hidden="true">{current.icon}</span>}
 
-          <p className="gsh-phase-text">
-            <span className="gsh-phase-name">{current?.label ?? phase}</span>
-            {index >= 0 && <span className="gsh-phase-count">{index + 1} of {phases.length}</span>}
-          </p>
+          <div className="gsh-phase-body">
+            <p className="gsh-phase-text">
+              <span className="gsh-phase-name">{current?.label ?? phase}</span>
+              {index >= 0 && (
+                <span className="gsh-phase-count" aria-label={`Phase ${index + 1} of ${phases.length}`}>
+                  {index + 1} of {phases.length}
+                </span>
+              )}
+            </p>
 
-          {current?.hint && <p className="gsh-phase-hint">{current.hint}</p>}
+            {current?.hint && <p className="gsh-phase-hint">{current.hint}</p>}
+          </div>
         </div>
 
         <GameTimer endsAt={endsAt} duration={duration} />
