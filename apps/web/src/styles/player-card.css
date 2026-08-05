@@ -11,6 +11,8 @@
   --pc-line: var(--border);
   --pc-avatar: 30px;
   --pc-pad: 0.45rem 0.6rem;
+  /* What colour a tooltip anchored anywhere in this card should take. */
+  --tt-color: var(--pc-accent);
 
   display: flex;
   flex-direction: column;
@@ -294,6 +296,7 @@
 
 .pc-badge {
   --pc-badge: var(--pc-accent);
+  --tt-color: var(--pc-badge);
   display: inline-flex;
   align-items: center;
   gap: 0.22rem;
@@ -341,8 +344,8 @@
 
 /* ── Condensed ──────────────────────────────────────────────── */
 .pc--sm {
-  --pc-avatar: 22px;
-  --pc-pad: 0.28rem 0.45rem;
+  --pc-avatar: 24px;
+  --pc-pad: 0.4rem 0.55rem;
   border-radius: var(--radius-md);
 }
 
@@ -354,7 +357,7 @@
 .pc--sm .pc-points-value { font-size: 0.76rem; }
 
 .pc--sm .pc-badges {
-  padding: 0.2rem 0.45rem;
+  padding: 0.28rem 0.55rem;
   gap: 0.22rem;
 }
 
@@ -434,6 +437,7 @@
   --tc-color: var(--primary);
   --tc-line: var(--border);
   --pc-line: var(--tc-line);
+  --tt-color: var(--tc-color);
 
   display: flex;
   flex-direction: column;
@@ -483,8 +487,8 @@
 .tc-head {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.65rem;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
   min-width: 0;
   background: color-mix(in srgb, var(--tc-color) 7%, transparent);
 }
@@ -531,6 +535,49 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+}
+
+/* ── Fold ───────────────────────────────────────────────────── */
+.tc-toggle {
+  flex: 0 0 auto;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tc-toggle:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.tc-toggle:focus-visible {
+  outline: 2px solid var(--tc-color);
+  outline-offset: 2px;
+}
+
+/* Down when the roster is open, right when it is folded away. */
+.tc-toggle svg {
+  width: 15px;
+  height: 15px;
+  transition: transform 0.18s;
+}
+
+.tc--folded .tc-toggle svg {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tc-toggle svg { transition: none; }
 }
 
 /* ── Condensed roster: a stack of faces ─────────────────────────
@@ -585,13 +632,13 @@
 .tc-body {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.45rem;
+  gap: 0.4rem;
+  padding: 0.55rem;
   border-top: 1px solid var(--tc-line);
 }
 
 .tc-empty {
-  padding: 0.35rem 0.2rem;
+  padding: 0.75rem 0.2rem;
   text-align: center;
   font-size: 0.7rem;
   color: var(--secondary);
@@ -601,7 +648,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.4rem 0.65rem;
+  padding: 0.5rem 0.75rem;
   border-top: 1px solid var(--tc-line);
 }
 
@@ -610,7 +657,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   align-items: start;
-  gap: 0.6rem;
+  gap: 0.75rem;
 }
 
 .pc-grid {
