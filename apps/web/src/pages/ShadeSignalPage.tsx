@@ -12,7 +12,7 @@ import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggl
 import { RoundCountdown } from "../components/shared/RoundCountdown";
 import { SpectatorBadge, HostBadge } from "../components/shared/SpectatorBadge";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { BorringAvatar } from "../components/shared/BorringAvatar";
+import { PlayerAvatar } from "../components/shared/PlayerAvatar";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -194,9 +194,8 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
               >
                 <div className={`game-player-avatar${isCurrentLeader ? " game-player-avatar--leader" : ""}`}>
                   {isCurrentLeader ? "🎨" : isLockedIn ? "✅" : (
-                    <BorringAvatar
-                      seed={player.sessionId}
-                      playerIndex={playerIndex}
+                    <PlayerAvatar
+                      seed={player.sessionId}
                     />
                   )}
                 </div>

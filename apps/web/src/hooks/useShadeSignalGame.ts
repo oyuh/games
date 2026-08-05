@@ -1,5 +1,6 @@
 import { mutators, queries } from "@games/shared";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { generateGridColor } from "../components/shade/ColorGrid";
@@ -33,6 +34,7 @@ export function useShadeSignalGame(sessionId: string) {
 
   const [games] = useQuery(queries.shadeSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "shade_signal", gameId }));
+  usePublishedAvatars(sessions);
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
 

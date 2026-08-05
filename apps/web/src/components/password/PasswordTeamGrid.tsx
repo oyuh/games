@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { FiArrowRight, FiCheck, FiChevronUp, FiLock } from "react-icons/fi";
-import { BorringAvatar } from "../shared/BorringAvatar";
+import { PlayerAvatar } from "../shared/PlayerAvatar";
 import { getPasswordPlayerName } from "../../lib/password-names";
 
 type Team = { name: string; members: string[] };
@@ -136,9 +136,8 @@ export function PasswordTeamGrid({
                         <div key={id} className="game-team-member-row">
                           <div className="game-team-member-info">
                             <span className={`game-team-avatar${isMe ? " game-team-avatar--me" : ""}`}>
-                              <BorringAvatar
-                                seed={id}
-                                playerIndex={playerIndex}
+                              <PlayerAvatar
+                                seed={id}
                               />
                             </span>
                             <div className="game-team-member-copy">

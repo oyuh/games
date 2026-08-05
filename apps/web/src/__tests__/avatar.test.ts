@@ -1,11 +1,17 @@
 /**
- * Tests for avatar color utilities.
+ * Tests for the marker palette and the chosen-avatar fallback.
  */
 import { describe, it, expect } from "vitest";
 import {
+  AVATAR_COLOR_COUNT,
   AVATAR_COLORS,
+  AVATAR_SHAPE_COUNT,
+  decodeAvatar,
+  derivedLook,
+  encodeAvatar,
+  formatAvatar,
+  parseAvatar,
   getPlayerColor,
-  getAvatarColors,
 } from "../lib/avatar";
 
 describe("AVATAR_COLORS", () => {
@@ -46,33 +52,49 @@ describe("getPlayerColor", () => {
   });
 });
 
-describe("getAvatarColors", () => {
-  it("always returns exactly 5 colors", () => {
-    for (let i = 0; i < 20; i++) {
-      expect(getAvatarColors(i)).toHaveLength(5);
+describe("avatar looks", () => {
+  it("round-trips a look through its stored code", () => {
+    const look = { shape: 12, color: 4 };
+    expect(parseAvatar(formatAvatar(look))).toEqual(look);
+  });
+
+  it("rejects codes that would index off the end", () => {
+    expect(parseAvatar(`${AVATAR_SHAPE_COUNT}.0`)).toBeNull();
+    expect(parseAvatar(`0.${AVATAR_COLOR_COUNT}`)).toBeNull();
+    expect(parseAvatar("nonsense")).toBeNull();
+    expect(parseAvatar("-1.-1")).toBeNull();
+  });
+
+  it("derives a look in range, and the same one every time", () => {
+    for (const seed of ["a", "session-xyz", "", "ééé"]) {
+      const look = derivedLook(seed);
+      expect(look.shape).toBeGreaterThanOrEqual(0);
+      expect(look.shape).toBeLessThan(AVATAR_SHAPE_COUNT);
+      expect(look.color).toBeGreaterThanOrEqual(0);
+      expect(look.color).toBeLessThan(AVATAR_COLOR_COUNT);
+      expect(derivedLook(seed)).toEqual(look);
     }
   });
 
-  it("all returned colors are from the palette", () => {
-    for (let i = 0; i < 20; i++) {
-      for (const color of getAvatarColors(i)) {
-        expect(AVATAR_COLORS).toContain(color);
-      }
-    }
+  it("round-trips a build through the base64 the column stores", () => {
+    const code = formatAvatar({ shape: 41, color: 17 });
+    const wire = encodeAvatar(code);
+    expect(wire).toMatch(/^[A-Za-z0-9+/=]+$/);
+    expect(decodeAvatar(wire)).toBe(code);
+    expect(parseAvatar(decodeAvatar(wire))).toEqual({ shape: 41, color: 17 });
   });
 
-  it("different player indices produce different starting points", () => {
-    const a = getAvatarColors(0);
-    const b = getAvatarColors(2);
-    // Different offsets should yield at least some different colors
-    expect(a).not.toEqual(b);
+  it("treats an empty or corrupt column as no pick at all", () => {
+    expect(decodeAvatar(null)).toBe("");
+    expect(decodeAvatar("")).toBe("");
+    expect(parseAvatar(decodeAvatar("!!!not base64!!!"))).toBeNull();
+    expect(encodeAvatar("")).toBe("");
   });
 
-  it("returns consecutive colors from palette with offset", () => {
-    const colors = getAvatarColors(0);
-    // start = (0 * 3) % 15 = 0 → colors[0..4]
-    for (let i = 0; i < 5; i++) {
-      expect(colors[i]).toBe(AVATAR_COLORS[i % AVATAR_COLORS.length]);
-    }
+  it("spreads different sessions across different looks", () => {
+    const seen = new Set(
+      Array.from({ length: 200 }, (_, i) => formatAvatar(derivedLook(`session-${i}`)))
+    );
+    expect(seen.size).toBeGreaterThan(150);
   });
 });

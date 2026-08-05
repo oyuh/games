@@ -1,0 +1,122 @@
+/* ── Avatar picker ───────────────────────────────────────────────
+   Same house rules as the solo menus: borders and fills for depth, no
+   shadows, no glows. The preview is pinned above the scrolling body so
+   your pick is always visible while you browse. */
+
+.ap-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.ap-preview-avatar {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+}
+
+.ap-preview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.ap-preview-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ap-preview-hint {
+  font-size: 0.72rem;
+  color: var(--secondary);
+}
+
+/* ── Color row ──────────────────────────────────────────────── */
+.ap-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* The swatch is the pairing itself: its own ground with its own shape color
+   as the tick, so you are picking what you will actually see. */
+.ap-color {
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--avatar-radius);
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.ap-color:hover {
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+.ap-color:active {
+  transform: translateY(1px);
+}
+
+.ap-color:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.ap-color--on {
+  border-color: var(--foreground);
+  border-width: 2px;
+}
+
+/* ── Shape grid ─────────────────────────────────────────────────
+   auto-fill, not auto-fit: the tiles keep their size instead of stretching
+   into slabs when the last row comes up short. */
+.ap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
+  gap: 0.4rem;
+}
+
+.ap-opt {
+  position: relative;
+  appearance: none;
+  aspect-ratio: 1;
+  padding: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-bottom);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.ap-opt:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  background: color-mix(in srgb, var(--foreground) 5%, var(--surface-bottom));
+}
+
+.ap-opt:active {
+  transform: translateY(1px);
+}
+
+.ap-opt:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.ap-opt--on {
+  border-color: var(--primary);
+  border-width: 2px;
+  padding: calc(0.3rem - 1px);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-bottom));
+}

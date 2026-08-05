@@ -1,0 +1,634 @@
+/* ── Player card ─────────────────────────────────────────────────
+   The shared multiplayer player card. Everything hangs off three vars:
+   --pc-accent (who this player is: your color, their team color),
+   --pc-state (what they are doing: waiting, right, wrong) and --pc-line
+   (the hairline the score and the badge strip are separated by).
+   Sizes only change the geometry, never the colors. */
+
+.pc {
+  --pc-accent: var(--primary);
+  --pc-state: transparent;
+  --pc-line: var(--border);
+  --pc-avatar: 30px;
+  --pc-pad: 0.45rem 0.6rem;
+
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-bottom);
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  overflow: clip;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s, transform 0.12s;
+}
+
+/* State lives in the border and the corner mark on the avatar, nothing else.
+   No colored rails: a lobby full of these should still read as a list. */
+.pc--waiting { --pc-state: #f59e0b; }
+.pc--success { --pc-state: #22c55e; }
+.pc--error   { --pc-state: #f87171; }
+
+.pc--waiting,
+.pc--success,
+.pc--error {
+  border-color: color-mix(in srgb, var(--pc-state) 45%, transparent);
+  --pc-line: color-mix(in srgb, var(--pc-state) 28%, var(--border));
+}
+
+.pc--you {
+  border-color: color-mix(in srgb, var(--pc-accent) 40%, transparent);
+  --pc-line: color-mix(in srgb, var(--pc-accent) 25%, var(--border));
+}
+
+/* Mid-answer beats "this is you", so a card never hides why it turned. */
+.pc--you.pc--waiting,
+.pc--you.pc--success,
+.pc--you.pc--error {
+  border-color: color-mix(in srgb, var(--pc-state) 45%, transparent);
+}
+
+.pc--selected {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pc-accent) 45%, transparent);
+  border-color: color-mix(in srgb, var(--pc-accent) 55%, transparent);
+}
+
+.pc--offline {
+  opacity: 0.55;
+}
+
+.pc--eliminated {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.pc--eliminated .pc-name {
+  text-decoration: line-through;
+  color: var(--secondary);
+}
+
+/* ── Clickable ──────────────────────────────────────────────── */
+.pc--button {
+  cursor: pointer;
+  appearance: none;
+}
+
+.pc--button:hover {
+  border-color: color-mix(in srgb, var(--pc-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--foreground) 5%, var(--surface-bottom));
+}
+
+.pc--button:active {
+  transform: translateY(1px);
+}
+
+.pc--button:focus-visible {
+  outline: 2px solid var(--pc-accent);
+  outline-offset: 2px;
+}
+
+/* ── Main row ───────────────────────────────────────────────── */
+.pc-main {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: var(--pc-pad);
+  min-width: 0;
+}
+
+/* ── Avatar ─────────────────────────────────────────────────── */
+.pc-avatar {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--pc-avatar);
+  height: var(--pc-avatar);
+  border-radius: var(--avatar-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pc-avatar .player-avatar {
+  border-radius: var(--avatar-radius);
+  overflow: clip;
+}
+
+/* Corner mark. Small enough to never fight the avatar, loud enough to be
+   the first thing you notice when a whole grid of them turns green. */
+.pc-mark {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pc-state);
+  color: #14161a;
+  border: 2px solid var(--surface-bottom);
+  font-size: 8px;
+  /* avvvatars lifts its own tile to z-index 3 on hover. Sit above that or the
+     mark vanishes the moment you point at the face it belongs to. */
+  z-index: 4;
+  transform-origin: bottom right;
+  transition: transform 0.15s;
+}
+
+/* Hovering the face shrinks its mark instead of hiding it, so the art you
+   reached for is the thing you see. */
+.pc-avatar:hover .pc-mark {
+  transform: scale(0.66);
+}
+
+.pc-mark svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 3.5;
+}
+
+.pc-mark--offline {
+  background: var(--secondary);
+}
+
+.pc--waiting .pc-mark {
+  animation: pc-tick 1.8s ease-in-out infinite;
+}
+
+@keyframes pc-tick {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc--waiting .pc-mark { animation: none; }
+}
+
+/* ── Body ───────────────────────────────────────────────────── */
+.pc-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.pc-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.pc-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--foreground);
+  /* Caps how wide one long name can push a card in a wrapping grid. */
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-you {
+  flex: 0 0 auto;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pc-accent);
+}
+
+.pc-caption {
+  font-size: 0.66rem;
+  color: var(--secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Points ─────────────────────────────────────────────────────
+   Part of the same row, told apart by a hairline rather than a pill,
+   the way the solo end screen splits its stats. */
+.pc-points {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  padding-left: 0.6rem;
+  margin-left: 0.1rem;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-points::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 1.5rem;
+  transform: translateY(-50%);
+  background: var(--pc-line);
+}
+
+.pc-points-value {
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.pc-points-suffix {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.pc-action {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Whatever the game drops in the action slot (kick, promote, vote) gets the
+   same square icon-button shell, so no game has to invent one. */
+.pc-action > button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.pc-action > button:hover {
+  color: #f87171;
+  border-color: color-mix(in srgb, #f87171 45%, transparent);
+  background: color-mix(in srgb, #f87171 12%, transparent);
+}
+
+/* ── Badge strip ────────────────────────────────────────────────
+   Hangs off the bottom of the card behind a hairline, like the drawers
+   under the solo pickers. Roles and teams live down here so the top row
+   stays a name and a score in every game. */
+.pc-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.6rem;
+  border-top: 1px solid var(--pc-line);
+  background: color-mix(in srgb, var(--foreground) 3.5%, transparent);
+}
+
+.pc-badge {
+  --pc-badge: var(--pc-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+  background: color-mix(in srgb, var(--pc-badge) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pc-badge) 32%, transparent);
+  color: var(--pc-badge);
+  max-width: 14ch;
+}
+
+/* The badge palette is picked for a dark page. On light, an outline badge in
+   amber or grey all but disappears, so pull the text toward black. */
+[data-theme="light"] .pc-badge:not(.pc-badge--solid) {
+  background: color-mix(in srgb, var(--pc-badge) 22%, transparent);
+  color: color-mix(in srgb, var(--pc-badge) 65%, #000);
+}
+
+.pc-badge--solid {
+  background: var(--pc-badge);
+  border-color: var(--pc-badge);
+  color: #14161a;
+}
+
+.pc-badge-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.pc-badge-icon svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 2.6;
+}
+
+.pc-badge-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Condensed ──────────────────────────────────────────────── */
+.pc--sm {
+  --pc-avatar: 22px;
+  --pc-pad: 0.28rem 0.45rem;
+  border-radius: var(--radius-md);
+}
+
+.pc--sm .pc-main { gap: 0.4rem; }
+.pc--sm .pc-name { font-size: 0.74rem; }
+.pc--sm .pc-caption { display: none; }
+.pc--sm .pc-points { padding-left: 0.45rem; }
+.pc--sm .pc-points::before { height: 1.1rem; }
+.pc--sm .pc-points-value { font-size: 0.76rem; }
+
+.pc--sm .pc-badges {
+  padding: 0.2rem 0.45rem;
+  gap: 0.22rem;
+}
+
+.pc--sm .pc-badge {
+  padding: 0.05rem 0.28rem;
+  font-size: 0.55rem;
+}
+
+.pc--sm .pc-mark {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+
+.pc--sm .pc-mark svg { width: 7px; height: 7px; }
+
+/* ── Duel portrait ──────────────────────────────────────────── */
+.pc--lg {
+  --pc-avatar: 58px;
+  --pc-pad: 1rem 0.9rem 0.75rem;
+  min-width: 10.5rem;
+  border-radius: var(--radius-2xl);
+}
+
+.pc--lg .pc-main {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.pc--lg .pc-body {
+  flex: 0 0 auto;
+  align-items: center;
+  width: 100%;
+}
+
+.pc--lg .pc-name-row { justify-content: center; max-width: 100%; }
+.pc--lg .pc-name { font-size: 1rem; font-weight: 700; }
+
+.pc--lg .pc-mark {
+  width: 22px;
+  height: 22px;
+  right: 0;
+  bottom: 0;
+}
+
+.pc--lg .pc-mark svg { width: 13px; height: 13px; }
+
+/* Stacked, so the score's hairline runs across the card instead of beside it. */
+.pc--lg .pc-points {
+  width: 100%;
+  justify-content: center;
+  padding: 0.55rem 0 0;
+  margin: 0.1rem 0 0;
+}
+
+.pc--lg .pc-points::before {
+  left: 0;
+  right: 0;
+  top: 0;
+  width: auto;
+  height: 1px;
+  transform: none;
+}
+
+.pc--lg .pc-points-value { font-size: 1.5rem; line-height: 1.1; }
+.pc--lg .pc-badges { justify-content: center; padding: 0.4rem 0.6rem; }
+
+/* ── Team card ───────────────────────────────────────────────────
+   Same parts as a player card, one level up: a header row with the score
+   behind a hairline, a roster of sm player cards, and the badge strip along
+   the bottom. The team's color lives in the swatch and a faint header wash,
+   never in a border, so a grid of four teams is not four loud outlines. */
+
+.tc {
+  --tc-color: var(--primary);
+  --tc-line: var(--border);
+  --pc-line: var(--tc-line);
+
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-bottom);
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  overflow: clip;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.12s;
+}
+
+.tc--waiting { border-color: color-mix(in srgb, #f59e0b 45%, transparent); --tc-line: color-mix(in srgb, #f59e0b 28%, var(--border)); }
+.tc--success { border-color: color-mix(in srgb, #22c55e 45%, transparent); --tc-line: color-mix(in srgb, #22c55e 28%, var(--border)); }
+.tc--error   { border-color: color-mix(in srgb, #f87171 45%, transparent); --tc-line: color-mix(in srgb, #f87171 28%, var(--border)); }
+
+.tc--you {
+  border-color: color-mix(in srgb, var(--tc-color) 40%, transparent);
+  --tc-line: color-mix(in srgb, var(--tc-color) 25%, var(--border));
+}
+
+.tc--selected {
+  border-color: color-mix(in srgb, var(--tc-color) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc-color) 40%, transparent);
+}
+
+.tc--button {
+  cursor: pointer;
+  appearance: none;
+}
+
+.tc--button:hover {
+  border-color: color-mix(in srgb, var(--tc-color) 55%, transparent);
+}
+
+.tc--button:active {
+  transform: translateY(1px);
+}
+
+.tc--button:focus-visible {
+  outline: 2px solid var(--tc-color);
+  outline-offset: 2px;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.tc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  min-width: 0;
+  background: color-mix(in srgb, var(--tc-color) 7%, transparent);
+}
+
+.tc-swatch {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--tc-color);
+}
+
+.tc-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.tc-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tc-caption {
+  font-size: 0.66rem;
+  color: var(--secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tc-score {
+  /* The hairline and tabular figures come from .pc-points. */
+  align-self: center;
+}
+
+.tc-action {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── Condensed roster: a stack of faces ─────────────────────── */
+.tc-stack {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding-left: 0.2rem;
+}
+
+/* The ring has to be the color actually behind the stack, or it reads as an
+   outline drawn around each face instead of the next face cutting into the
+   one before it. The header carries a 7% team wash, so mix the same thing. */
+.tc-face {
+  --tc-overlap: 6px;
+  --tc-ring: 2px;
+
+  width: 22px;
+  height: 22px;
+  border-radius: var(--avatar-radius);
+  overflow: clip;
+  box-shadow: 0 0 0 var(--tc-ring) color-mix(in srgb, var(--tc-color) 7%, var(--surface-bottom));
+}
+
+.tc-face + .tc-face {
+  margin-left: calc(var(--tc-overlap) * -1);
+}
+
+/* A stacked photo can be half covered and still read, because the subject
+   fills the frame. These are one small glyph floating in a lot of ground, so
+   an overlapped face has to slide its glyph into the half that still shows,
+   or the art sits visibly off to the right of where the face appears to be.
+   Half the covered width (overlap plus the next face's ring) recentres it.
+
+   Only faces followed by another face: the count chip sits clear, so the one
+   before it is not covered and must not be nudged. */
+.tc-face:has(+ .tc-face:not(.tc-face--more)) svg {
+  transform: translateX(calc((var(--tc-overlap) + var(--tc-ring)) / -2));
+}
+
+/* A count, not a face, so it sits clear of the stack rather than cutting into
+   the last one. */
+.tc-face--more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 0 0.2rem;
+  width: auto;
+  min-width: 22px;
+  box-shadow: none;
+}
+
+.tc-face + .tc-face--more {
+  margin-left: 0.25rem;
+}
+
+/* ── Roster ─────────────────────────────────────────────────── */
+.tc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.45rem;
+  border-top: 1px solid var(--tc-line);
+}
+
+.tc-empty {
+  padding: 0.35rem 0.2rem;
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--secondary);
+}
+
+.tc-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.65rem;
+  border-top: 1px solid var(--tc-line);
+}
+
+/* ── Grid ───────────────────────────────────────────────────── */
+.tc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  align-items: start;
+  gap: 0.6rem;
+}
+
+.pc-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.pc-grid--fill > .pc {
+  flex: 1 1 12rem;
+}

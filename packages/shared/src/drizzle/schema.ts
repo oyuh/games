@@ -29,6 +29,9 @@ export const sessions = pgTable(
     // "pips", "shikaku", or a multiplayer game type). Lets the admin panel
     // see single-player / idle clients that aren't attached to a game row.
     activity: text("activity"),
+    // The player's chosen avatar, base64 of its "shape.color" build. Null means
+    // they never picked one and it gets derived from the session id instead.
+    avatar: text("avatar"),
     ip: text("ip"),
     userAgent: text("user_agent"),
     region: text("region"),

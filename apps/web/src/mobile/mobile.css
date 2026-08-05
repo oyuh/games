@@ -465,7 +465,7 @@
   flex-shrink: 0;
 }
 
-.m-player-avatar:has(.boring-avatar) {
+.m-player-avatar:has(.player-avatar) {
   background: transparent;
 }
 
@@ -2221,7 +2221,7 @@
   font-weight: 700;
 }
 
-.m-cr-slot-avatar:has(.boring-avatar) { background: transparent; }
+.m-cr-slot-avatar:has(.player-avatar) { background: transparent; }
 
 .m-cr-slot-avatar--empty {
   background: var(--muted);
@@ -2347,7 +2347,7 @@
   flex-shrink: 0;
 }
 
-.m-cr-vs-avatar:has(.boring-avatar) { background: transparent; }
+.m-cr-vs-avatar:has(.player-avatar) { background: transparent; }
 
 .m-cr-vs-avatar--opp { background: #f87171; color: #fff; }
 

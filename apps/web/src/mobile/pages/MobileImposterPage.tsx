@@ -7,7 +7,7 @@ import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGam
 import { showToast } from "../../lib/toast";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { useImposterGame } from "../../hooks/useImposterGame";
-import { BorringAvatar } from "../../components/shared/BorringAvatar";
+import { PlayerAvatar } from "../../components/shared/PlayerAvatar";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { MobileGameHeader } from "../components/MobileGameHeader";
@@ -130,9 +130,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                 style={isEliminated ? { opacity: 0.45, textDecoration: "line-through" } : undefined}
               >
                 <span className="m-player-avatar">{isEliminated ? "☠" : (
-                  <BorringAvatar
-                    seed={p.sessionId}
-                    playerIndex={playerIndex}
+                  <PlayerAvatar
+                    seed={p.sessionId}
                   />
                 )}</span>
                 <span className="m-player-name">{name}</span>
@@ -343,9 +342,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                           onClick={() => setVoteTarget(p.sessionId)}
                         >
                           <span className="m-player-avatar">
-                            <BorringAvatar
-                              seed={p.sessionId}
-                              playerIndex={game.players.findIndex(pl => pl.sessionId === p.sessionId)}
+                            <PlayerAvatar
+                              seed={p.sessionId}
                             />
                           </span>
                           <span>{name}</span>
@@ -452,9 +450,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
                       <div className="m-vote-total-head">
                         <div className="m-vote-total-player">
                           <span className="m-player-avatar">
-                            <BorringAvatar
-                              seed={p.sessionId}
-                              playerIndex={game.players.findIndex((pl) => pl.sessionId === p.sessionId)}
+                            <PlayerAvatar
+                              seed={p.sessionId}
                             />
                           </span>
                           <span className={`m-vote-total-name${isVotedOut ? " m-result-name--danger" : ""}`}>{name}</span>

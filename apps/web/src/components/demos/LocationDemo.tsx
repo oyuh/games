@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, FormEvent } from "react";
 import { FiClock, FiMapPin, FiRefreshCw, FiSend, FiSlash, FiTarget, FiAward } from "react-icons/fi";
 import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
-import { BorringAvatar } from "../shared/BorringAvatar";
+import { PlayerAvatar } from "../shared/PlayerAvatar";
 import { WorldMap, type MapMarker } from "../location/WorldMap";
 import "../../styles/game-shared.css";
 import "../../styles/location-signal.css";
@@ -288,7 +288,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
                   <div key={r.id} className={`locdemo-reveal-row${r.id === P.you ? " locdemo-reveal-row--me" : ""}`}>
                     <span className="locdemo-reveal-rank">#{i + 1}</span>
                     <div className="locdemo-reveal-avatar">
-                      <BorringAvatar seed={r.id} playerIndex={i} />
+                      <PlayerAvatar seed={r.id} />
                     </div>
                     <span className="locdemo-reveal-name">{r.name}</span>
                     <span className="locdemo-reveal-dist">{r.dist}</span>

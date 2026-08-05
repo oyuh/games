@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { BorringAvatar } from "../shared/BorringAvatar";
+import { PlayerAvatar } from "../shared/PlayerAvatar";
 
 const EMPTY_MARKERS: NonNullable<GridProps["markers"]> = [];
 const EMPTY_PLAYER_INDEX_MAP: NonNullable<GridProps["playerIndexMap"]> = {};
@@ -170,7 +170,7 @@ export function ColorGrid({
                           data-tooltip={m.tooltip ?? m.name}
                           data-tooltip-pos="top"
                         >
-                          <BorringAvatar seed={m.sessionId} playerIndex={playerIndexMap[m.sessionId] ?? 0} />
+                          <PlayerAvatar seed={m.sessionId} />
                         </div>
                       ))}
                     </div>

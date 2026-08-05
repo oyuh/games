@@ -16,7 +16,7 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileChainReactionPage } from "../mobile/pages/MobileChainReactionPage";
 import { ChainDemo } from "../components/demos/ChainDemo";
-import { BorringAvatar } from "../components/shared/BorringAvatar";
+import { PlayerAvatar } from "../components/shared/PlayerAvatar";
 import { useChainReactionGame, type ChainSlot } from "../hooks/useChainReactionGame";
 import { playHint } from "../lib/sounds";
 
@@ -96,9 +96,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
             tabIndex={0}
           >
             <div className="cr-vs-avatar">
-              <BorringAvatar
-                seed={sessionId}
-                playerIndex={0}
+              <PlayerAvatar
+                seed={sessionId}
               />
             </div>
             <div className="cr-vs-info">
@@ -127,9 +126,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
               {game.phase === "playing" && <span className="cr-vs-progress" data-tooltip="Words solved this round" data-tooltip-variant="info">{oppProgress}/{oppTotal}</span>}
             </div>
             <div className="cr-vs-avatar cr-vs-avatar--opp">
-              <BorringAvatar
-                seed={opponentId ?? ""}
-                playerIndex={1}
+              <PlayerAvatar
+                seed={opponentId ?? ""}
               />
             </div>
             {oppDone && <span className="cr-vs-done-badge" data-tooltip="Finished this round" data-tooltip-variant="success">✓</span>}
@@ -148,9 +146,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
               return (
                 <div className={`cr-lobby-slot cr-lobby-slot--filled${isMe ? " cr-lobby-slot--me" : ""}`}>
                   <div className="cr-lobby-avatar">
-                    <BorringAvatar
-                      seed={p.sessionId}
-                      playerIndex={0}
+                    <PlayerAvatar
+                      seed={p.sessionId}
                     />
                   </div>
                   <span className="cr-lobby-name">{name}</span>
@@ -180,9 +177,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
               return (
                 <div className={`cr-lobby-slot cr-lobby-slot--filled${isMe ? " cr-lobby-slot--me" : ""}`}>
                   <div className="cr-lobby-avatar cr-lobby-avatar--opp">
-                    <BorringAvatar
-                      seed={p.sessionId}
-                      playerIndex={1}
+                    <PlayerAvatar
+                      seed={p.sessionId}
                     />
                   </div>
                   <span className="cr-lobby-name">{name}</span>

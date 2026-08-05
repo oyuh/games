@@ -1,5 +1,6 @@
 import { mutators, queries } from "@games/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { buildPasswordPlayerNames } from "../lib/password-names";
@@ -24,6 +25,7 @@ export function usePasswordBegin(sessionId: string) {
 
   const [games] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
+  usePublishedAvatars(sessions);
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
 

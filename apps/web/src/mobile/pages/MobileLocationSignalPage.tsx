@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FiLogIn, FiLogOut, FiSend, FiMapPin, FiClock } from "react-icons/fi";
 import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
-import { BorringAvatar } from "../../components/shared/BorringAvatar";
+import { PlayerAvatar } from "../../components/shared/PlayerAvatar";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
@@ -226,9 +226,8 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
                   className={`m-player-chip${isMe ? " m-player-chip--me" : ""}${isCurrentLeader ? " m-player-chip--leader" : ""}${isLockedIn ? " m-player-chip--locked" : ""}`}>
                   <div className={`m-player-avatar${isCurrentLeader ? " m-player-avatar--leader" : ""}`}>
                     {isCurrentLeader ? "📍" : isLockedIn ? "✅" : (
-                      <BorringAvatar
-                        seed={p.sessionId}
-                        playerIndex={playerIndex}
+                      <PlayerAvatar
+                        seed={p.sessionId}
                       />
                     )}
                   </div>
@@ -285,9 +284,8 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
               return (
                 <div key={p.sessionId} className={`m-player-chip${isMe ? " m-player-chip--me" : ""}`}>
                   <div className="m-player-avatar">
-                    <BorringAvatar
-                      seed={p.sessionId}
-                      playerIndex={playerIndex}
+                    <PlayerAvatar
+                      seed={p.sessionId}
                     />
                   </div>
                   <span className="m-player-name">{name}</span>

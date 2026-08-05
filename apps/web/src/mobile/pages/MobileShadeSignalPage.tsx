@@ -8,7 +8,7 @@ import { MobileGameHeader } from "../components/MobileGameHeader";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
-import { BorringAvatar } from "../../components/shared/BorringAvatar";
+import { PlayerAvatar } from "../../components/shared/PlayerAvatar";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/SpectatorBadge";
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
@@ -148,9 +148,8 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
                 className={`m-player-chip${isMe ? " m-player-chip--me" : ""}${isCurrentLeader ? " m-player-chip--leader" : ""}${isLockedIn ? " m-player-chip--locked" : ""}`}>
                 <div className={`m-player-avatar${isCurrentLeader ? " m-player-avatar--leader" : ""}`}>
                   {isCurrentLeader ? "🎨" : isLockedIn ? "✅" : (
-                    <BorringAvatar
-                      seed={player.sessionId}
-                      playerIndex={playerIndex}
+                    <PlayerAvatar
+                      seed={player.sessionId}
                     />
                   )}
                 </div>

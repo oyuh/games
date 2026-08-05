@@ -1,5 +1,6 @@
 import { isEncrypted, mutators, queries } from "@games/shared";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
@@ -24,6 +25,7 @@ export function useImposterGame(sessionId: string) {
 
   const [games] = useQuery(queries.imposter.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "imposter", gameId }));
+  usePublishedAvatars(sessions);
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
   const game = games[0];
 

@@ -1680,6 +1680,56 @@ a.solo-card-title-link {
 .hc-name-display:active {
   transform: translateY(0);
 }
+/* Avatar tile and name field side by side, each its own control. */
+.hc-identity-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.hc-identity-row .hc-name-display {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-avatar-btn {
+  position: relative;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--avatar-radius);
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+}
+
+/* The pencil only shows up when you go near it, so the row stays an identity
+   row until you actually want to change your face. */
+.hc-avatar-pencil {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--avatar-radius);
+  background: color-mix(in srgb, #000 55%, transparent);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.hc-avatar-btn:hover .hc-avatar-pencil,
+.hc-avatar-btn:focus-visible .hc-avatar-pencil {
+  opacity: 1;
+}
+
+.hc-avatar-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .hc-name-inline-input {
   background: transparent;
   border: none;

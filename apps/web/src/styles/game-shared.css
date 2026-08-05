@@ -411,12 +411,12 @@
   flex-shrink: 0;
 }
 
-/* Remove background when boring-avatar is inside */
-.game-player-avatar:has(.boring-avatar),
-.game-team-avatar:has(.boring-avatar),
-.cr-vs-avatar:has(.boring-avatar),
-.cr-lobby-avatar:has(.boring-avatar),
-.shade-marker:has(.boring-avatar) {
+/* Remove background when the avatar art is inside */
+.game-player-avatar:has(.player-avatar),
+.game-team-avatar:has(.player-avatar),
+.cr-vs-avatar:has(.player-avatar),
+.cr-lobby-avatar:has(.player-avatar),
+.shade-marker:has(.player-avatar) {
   background: transparent;
 }
 

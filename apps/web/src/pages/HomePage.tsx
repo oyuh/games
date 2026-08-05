@@ -19,6 +19,9 @@ import { InSessionModal } from "../components/shared/InSessionModal";
 import { ActiveGameModal } from "../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../components/shared/PublicGamesBrowser";
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
+import { PlayerAvatar } from "../components/shared/PlayerAvatar";
+import { encodeAvatar, useStoredAvatar } from "../lib/avatar";
+import { useAvatarSync } from "../hooks/useAvatars";
 import { GameIcon } from "../components/shared/GameIcon";
 import { type HomeRouteGame } from "../lib/home-route-highlight";
 import { useHomePage } from "../hooks/useHomePage";
@@ -28,6 +31,9 @@ const PasswordDemo = lazy(() => import("../components/demos/PasswordDemo").then(
 const ChainDemo = lazy(() => import("../components/demos/ChainDemo").then(({ ChainDemo }) => ({ default: ChainDemo })));
 const ShadeDemo = lazy(() => import("../components/demos/ShadeDemo").then(({ ShadeDemo }) => ({ default: ShadeDemo })));
 const LocationDemo = lazy(() => import("../components/demos/LocationDemo").then(({ LocationDemo }) => ({ default: LocationDemo })));
+const AvatarPickerModal = lazy(() =>
+  import("../components/shared/AvatarPickerModal").then(({ AvatarPickerModal }) => ({ default: AvatarPickerModal }))
+);
 const ShikakuDemo = lazy(() => import("../components/demos/ShikakuDemo").then(({ ShikakuDemo }) => ({ default: ShikakuDemo })));
 const PipsDemo = lazy(() => import("../components/demos/PipsDemo").then(({ PipsDemo }) => ({ default: PipsDemo })));
 
@@ -283,6 +289,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const [shadeBrowsing, setShadeBrowsing] = useState(false);
   const [locationBrowsing, setLocationBrowsing] = useState(false);
   const [activeDemo, setActiveDemo] = useState<string | null>(null);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  // The home card is the only place an avatar can be changed, so this is the
+  // one place that has to push it up to the session row.
+  useAvatarSync(zero, sessionId, encodeAvatar(useStoredAvatar()));
   const [recentCollapsed, setRecentCollapsed] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -372,7 +382,21 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </div>
               </div>
             )}
-            <div className="hc-name-display" title="Click to edit your name" data-tooltip-variant="info">
+            <div className="hc-identity-row">
+              {/* Its own tile beside the name field, not inside it: the avatar
+                  and the name are two different things to change. */}
+              <button
+                className="hc-avatar-btn"
+                type="button"
+                aria-label="Change your avatar"
+                data-tooltip="Change avatar"
+                data-tooltip-variant="info"
+                onClick={() => setAvatarPickerOpen(true)}
+              >
+                <PlayerAvatar seed={sessionId} />
+                <span className="hc-avatar-pencil" aria-hidden="true"><FiEdit2 size={14} /></span>
+              </button>
+              <div className="hc-name-display" title="Click to edit your name" data-tooltip-variant="info">
               <input
                 className="hc-name-inline-input"
                 ref={nameInputRef}
@@ -391,6 +415,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 maxLength={32}
               />
               <FiEdit2 className="hc-name-edit-icon" size={14} />
+              </div>
             </div>
           </section>
 
@@ -1209,6 +1234,13 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       {activeDemo === "location" && <LocationDemo onClose={() => setActiveDemo(null)} />}
       {activeDemo === "shikaku" && <ShikakuDemo onClose={() => setActiveDemo(null)} />}
       {activeDemo === "pips" && <PipsDemo onClose={() => setActiveDemo(null)} />}
+      {avatarPickerOpen && (
+        <AvatarPickerModal
+          sessionId={sessionId}
+          name={savedName || getDisplayName(null, sessionId)}
+          onClose={() => setAvatarPickerOpen(false)}
+        />
+      )}
     </Suspense>
     </>
   );
