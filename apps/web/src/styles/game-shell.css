@@ -222,40 +222,29 @@
 
 .gsh-phase {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
   min-width: 0;
 }
 
-/* Same shell the game icon wears up top, so a phase reads as a thing with a
-   name rather than a caption. The glyph comes from the game's metadata. */
+/* No shell of its own. The game icon up top is a badge standing in for the
+   whole game, but this one is just the phase's mark, so it sits beside the
+   name at the size of the name and lets the name be the thing you read. */
 .gsh-phase-icon {
   flex: 0 0 auto;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--gsh-accent) 28%, transparent);
-  background: color-mix(in srgb, var(--gsh-accent) 12%, transparent);
+  line-height: 0;
   color: var(--gsh-accent);
 }
 
 .gsh-phase-icon svg {
   width: 15px;
   height: 15px;
-}
-
-.gsh-phase-body {
-  min-width: 0;
+  stroke-width: 2.4;
 }
 
 .gsh-phase-text {
   display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
+  align-items: center;
+  gap: 0.4rem;
   margin: 0;
   min-width: 0;
 }
@@ -310,8 +299,8 @@
 }
 
 /* Pinned across the bottom edge of .gsh-bottom rather than sat under the
-   figures: the time left is about the whole phase, so it is drawn as the
-   whole container emptying out. Standalone use wants a positioned wrapper. */
+   figures: the time left is about the whole phase, so it is drawn on the
+   whole container. Standalone use wants a positioned wrapper. */
 .gsh-timer-track {
   position: absolute;
   left: 0;
@@ -319,9 +308,13 @@
   bottom: 0;
   height: 3px;
   background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  overflow: clip;
 }
 
-/* Scaled rather than resized: width animations lay out, transforms do not,
+/* Fills toward the end of the phase rather than retreating from it, which is
+   the direction a progress bar is read in.
+
+   Scaled rather than resized: width animations lay out, transforms do not,
    and this one runs every second for the whole game. */
 .gsh-timer-fill {
   display: block;
@@ -329,7 +322,30 @@
   height: 100%;
   background: var(--gsh-clock);
   transform-origin: left center;
+  transform: scaleX(var(--gsh-progress, 0));
   transition: transform 0.95s linear;
+}
+
+/* The head of the fill. A bar creeping a percent a second is motion you
+   cannot see, so the leading edge breathes: enough to tell you the thing is
+   running, not enough to look at. It rides the same var as the fill, so the
+   two arrive together. */
+.gsh-timer-track::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--gsh-progress, 0) * 100%);
+  width: 26px;
+  transform: translateX(-100%);
+  background: color-mix(in srgb, var(--gsh-clock) 55%, #fff);
+  transition: left 0.95s linear;
+  animation: gsh-creep 2.4s ease-in-out infinite;
+}
+
+@keyframes gsh-creep {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 0.7; }
 }
 
 .gsh-timer.is-urgent {
@@ -352,6 +368,13 @@
 @media (prefers-reduced-motion: reduce) {
   .gsh-timer-value { animation: none; }
   .gsh-timer-fill { transition: none; }
+
+  /* Still visible, just not breathing. */
+  .gsh-timer-track::after {
+    animation: none;
+    transition: none;
+    opacity: 0.5;
+  }
 }
 
 /* ── Narrow ─────────────────────────────────────────────────────
