@@ -1,7 +1,14 @@
-import type { CSSProperties, ReactNode } from "react";
-import { FiAlertCircle, FiCheck, FiClock, FiEye, FiStar, FiUserX, FiWifiOff, FiZap } from "react-icons/fi";
+import type { CSSProperties, DragEvent, ReactNode } from "react";
+import { FiAlertCircle, FiCheck, FiClock, FiEye, FiMove, FiStar, FiUserX, FiWifiOff, FiZap } from "react-icons/fi";
 import { PlayerAvatar } from "./PlayerAvatar";
 import "../../styles/player-card.css";
+
+/**
+ * What a player drag carries. Lowercase because the drag-and-drop API
+ * lowercases every type it is handed, so a mixed-case constant would never
+ * match what comes back out on drop.
+ */
+export const PLAYER_DRAG_TYPE = "application/x-player-id";
 
 /**
  * One player, everywhere. Lobbies, duels, vote lists, results tables all draw
@@ -75,6 +82,9 @@ export interface PlayerCardProps {
   accent?: string;
   /** Makes the whole card a button. Leave off for a plain display card. */
   onClick?: () => void;
+  /** Lets a host pick this player up and drop them on another team. The drag
+   *  carries the session id, so a drop target needs nothing from this card. */
+  movable?: boolean;
   /** Trailing slot: a kick button, a vote count, whatever the game needs. */
   action?: ReactNode;
   tooltip?: string;
@@ -97,6 +107,7 @@ export function PlayerCard({
   selected,
   accent,
   onClick,
+  movable,
   action,
   tooltip,
   className = "",
@@ -111,6 +122,7 @@ export function PlayerCard({
     disconnected ? "pc--offline" : "",
     selected ? "pc--selected" : "",
     onClick ? "pc--button" : "",
+    movable ? "pc--movable" : "",
     className,
   ].filter(Boolean).join(" ");
 
@@ -123,8 +135,23 @@ export function PlayerCard({
       style={style}
       {...(onClick ? { type: "button" as const, onClick } : {})}
       {...(tooltip ? { "data-tooltip": tooltip, "data-tooltip-variant": "game" } : {})}
+      {...(movable
+        ? {
+            draggable: true,
+            onDragStart: (e: DragEvent<HTMLElement>) => {
+              e.dataTransfer.setData(PLAYER_DRAG_TYPE, sessionId);
+              e.dataTransfer.effectAllowed = "move";
+            },
+          }
+        : {})}
     >
       <span className="pc-main">
+        {movable && (
+          <span className="pc-grip" aria-hidden="true">
+            <FiMove />
+          </span>
+        )}
+
         <span className="pc-avatar">
           <PlayerAvatar seed={sessionId} />
           {mark && <span className="pc-mark" aria-hidden="true">{mark}</span>}

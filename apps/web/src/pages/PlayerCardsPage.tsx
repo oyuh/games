@@ -1,4 +1,5 @@
-import { FiArrowRight, FiCheck, FiLock, FiX } from "react-icons/fi";
+import { useState } from "react";
+import { FiArrowRight, FiCheck, FiLock, FiUnlock, FiX } from "react-icons/fi";
 import { PlayerCard, playerBadges, type PlayerCardSize } from "../components/shared/PlayerCard";
 import { TeamCard } from "../components/shared/TeamCard";
 import "../styles/game-shared.css";
@@ -19,6 +20,77 @@ const CAST = [
 
 const BLUE = "#7ecbff";
 const RED = "#f87171";
+const GREEN = "#34d399";
+
+const TEAMS = [
+  { name: "Blue Team", color: BLUE },
+  { name: "Red Team", color: RED },
+  { name: "Green Team", color: GREEN },
+];
+
+/**
+ * The host's view of the teams: drag a player onto another team to move them,
+ * flip a padlock to close one, or close the lot. Locked teams refuse drops,
+ * so the only way to fill one is to open it again.
+ */
+function HostTeams() {
+  const [roster, setRoster] = useState<Record<string, string[]>>({
+    "Blue Team": ["seed-ada", "seed-bram"],
+    "Red Team": ["seed-cleo", "seed-dov"],
+    "Green Team": ["seed-esme"],
+  });
+  const [locks, setLocks] = useState<Record<string, boolean>>({ "Red Team": true });
+
+  const allLocked = TEAMS.every((t) => locks[t.name]);
+
+  function move(to: string, sessionId: string) {
+    setRoster((prev) => {
+      if (prev[to]?.includes(sessionId)) return prev;
+      const next: Record<string, string[]> = {};
+      for (const [team, ids] of Object.entries(prev)) next[team] = ids.filter((id) => id !== sessionId);
+      next[to] = [...(next[to] ?? []), sessionId];
+      return next;
+    });
+  }
+
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.5rem" }}>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ fontSize: "0.72rem", padding: "0.3rem 0.6rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          onClick={() => setLocks(allLocked ? {} : Object.fromEntries(TEAMS.map((t) => [t.name, true])))}
+        >
+          {allLocked ? <FiUnlock size={12} /> : <FiLock size={12} />}
+          {allLocked ? "Unlock all teams" : "Lock all teams"}
+        </button>
+      </div>
+
+      <div className="tc-grid">
+        {TEAMS.map((team) => (
+          <TeamCard
+            key={team.name}
+            name={team.name}
+            color={team.color}
+            collapsible
+            locked={!!locks[team.name]}
+            onToggleLock={() => setLocks((prev) => ({ ...prev, [team.name]: !prev[team.name] }))}
+            onDropPlayer={(sessionId) => move(team.name, sessionId)}
+            score={roster[team.name]?.length ?? 0}
+            scoreSuffix="here"
+            caption={locks[team.name] ? "Locked" : "Drop a player here"}
+            emptyLabel={locks[team.name] ? "Locked" : "Drag someone over"}
+            players={(roster[team.name] ?? []).map((id) => {
+              const player = CAST.find((p) => p.sessionId === id)!;
+              return { ...player, index: CAST.indexOf(player), movable: true };
+            })}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
 
 function Row({ title, note, grid = "pc-grid", children }: { title: string; note?: string; grid?: string; children: React.ReactNode }) {
   return (
@@ -158,6 +230,12 @@ export function PlayerCardsPage() {
         />
         <TeamCard collapsible name="Green Team" color="#34d399" score={0} scoreSuffix="/ 7" players={[]} />
       </Row>
+
+      <section className="game-section">
+        <h3 className="game-section-label">Teams, host controls</h3>
+        <p className="game-section-subtle">drag a player onto another team to move them, flip a padlock to close one</p>
+        <HostTeams />
+      </section>
 
       <Row title="Teams, condensed" note="faces instead of a roster, for headers and sidebars" grid="tc-grid">
         <TeamCard condensed name="Blue Team" color={BLUE} score={4} scoreSuffix="/ 7" you state="success" caption="Got it in 12s" players={CAST.slice(0, 3).map((p, i) => ({ ...p, index: i }))} />

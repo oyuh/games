@@ -99,6 +99,38 @@
   min-width: 0;
 }
 
+/* ── Drag handle ────────────────────────────────────────────────
+   Holds its width whether or not it is showing, so a row of cards does not
+   jump sideways as the pointer travels down a roster. */
+.pc-grip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--secondary);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.pc-grip svg {
+  width: 13px;
+  height: 13px;
+}
+
+.pc--movable {
+  cursor: grab;
+}
+
+.pc--movable:hover .pc-grip,
+.pc--movable:focus-visible .pc-grip {
+  opacity: 1;
+}
+
+.pc--movable:active {
+  cursor: grabbing;
+}
+
+.pc--sm .pc-grip svg { width: 11px; height: 11px; }
+
 /* ── Avatar ─────────────────────────────────────────────────── */
 .pc-avatar {
   position: relative;
@@ -535,6 +567,69 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+}
+
+/* ── Lock ───────────────────────────────────────────────────────
+   Shares the fold button's shell. A locked team turns its padlock the team
+   colour, which is the only thing on the card that changes: a closed team is
+   still a team, so it should not read as an error. */
+.tc-lock {
+  flex: 0 0 auto;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tc-lock:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.tc-lock:focus-visible {
+  outline: 2px solid var(--tc-color);
+  outline-offset: 2px;
+}
+
+.tc-lock svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tc--locked .tc-lock {
+  color: var(--tc-color);
+}
+
+/* Not a control, so it takes none of the button's affordances. */
+.tc-lock--static {
+  cursor: default;
+}
+
+.tc-lock--static:hover {
+  background: transparent;
+  color: var(--tc-color);
+}
+
+/* ── Drop target ────────────────────────────────────────────────
+   Only while a player is actually over the card. A permanent outline on
+   every team would turn a lobby into a grid of dashed boxes. */
+.tc--dropping {
+  border-color: color-mix(in srgb, var(--tc-color) 70%, transparent);
+  border-style: dashed;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc-color) 22%, transparent);
+}
+
+.tc--dropping .tc-head {
+  background: color-mix(in srgb, var(--tc-color) 16%, transparent);
 }
 
 /* ── Fold ───────────────────────────────────────────────────── */
