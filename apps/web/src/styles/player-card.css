@@ -546,7 +546,13 @@
   gap: 3px;
 }
 
+/* Circles down here, not the site squircle. 30% of 22px is a 6.6px corner,
+   which at this size stops reading as a squircle and starts reading as a
+   rounded square. Overriding the knob rather than the border-radius lets it
+   reach the avatar's own tile, which sets its corner from the same var. */
 .tc-face {
+  --avatar-radius: 999px;
+
   width: 22px;
   height: 22px;
   border-radius: var(--avatar-radius);
