@@ -459,6 +459,105 @@
 .pc--lg .pc-points-value { font-size: 1.5rem; line-height: 1.1; }
 .pc--lg .pc-badges { padding: 0.4rem 0.6rem; }
 
+/* ── Hover card ──────────────────────────────────────────────────
+   A player boiled down to a face or a name, with the whole card on hover.
+   The bubble is a real .pc in a portal, so nothing here restyles the card
+   itself, it only positions it and dresses the little thing you point at. */
+
+.ph {
+  --pc-accent: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+  transition: opacity 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.ph:focus-visible {
+  outline: 2px solid var(--pc-accent);
+  outline-offset: 2px;
+}
+
+.ph--avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--avatar-radius);
+  overflow: clip;
+}
+
+/* Your own face is ringed, the way your own card is bordered. */
+.ph--avatar.ph--you {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pc-accent) 60%, transparent);
+}
+
+.ph--avatar:hover {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pc-accent) 75%, transparent);
+}
+
+/* Dotted, not solid: it is something to point at, not somewhere to go. */
+.ph--name {
+  padding: 0.1rem 0.15rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: underline dotted color-mix(in srgb, var(--secondary) 55%, transparent);
+  text-underline-offset: 3px;
+}
+
+.ph--name:hover,
+.ph--name.ph--you {
+  color: var(--pc-accent);
+}
+
+.ph--offline { opacity: 0.55; }
+
+.ph--eliminated { opacity: 0.45; }
+
+.ph--eliminated.ph--name {
+  text-decoration-line: line-through;
+  color: var(--secondary);
+}
+
+/* Sits in the top layer like the text tooltip, and is just as untouchable:
+   the card is there to be read, not poked at. */
+.ph-pop {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5));
+  /* Its own keyframe: the text tooltip's lives in footer.css, which only
+     loads with the footer, and this card shows up on pages without one. */
+  animation: ph-in 0.12s ease-out;
+}
+
+@keyframes ph-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-pop { animation: none; }
+}
+
+.ph-pop .pc {
+  min-width: 11rem;
+}
+
+/* A board of faces, and a sentence of names. */
+.ph-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ph-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.1rem 0.6rem;
+}
+
 /* ── Team card ───────────────────────────────────────────────────
    Same parts as a player card, one level up: a header row with the score
    behind a hairline, a roster of sm player cards, and the badge strip along
