@@ -120,6 +120,11 @@ export function GameTimer({
   const done = left <= 0;
   const urgent = left <= 10 && !done;
 
+  /* How much of the phase has gone, not how much is left. The line fills
+     toward the end of the phase rather than retreating from it, which is the
+     direction people read a progress bar in. */
+  const progress = Math.min(1, Math.max(0, 1 - left / Math.max(1, total)));
+
   return (
     <div
       className={`gsh-timer${done ? " is-done" : ""}${urgent ? " is-urgent" : ""}`}
@@ -131,8 +136,14 @@ export function GameTimer({
       <span className="gsh-timer-value">
         {String(Math.floor(left / 60)).padStart(2, "0")}:{String(left % 60).padStart(2, "0")}
       </span>
-      <span className="gsh-timer-track" aria-hidden="true">
-        <span className="gsh-timer-fill" style={{ transform: `scaleX(${Math.min(1, left / total)})` }} />
+      {/* The progress rides on a var so the fill and the little head that
+          marks its leading edge can both read it and stay together. */}
+      <span
+        className="gsh-timer-track"
+        aria-hidden="true"
+        style={{ "--gsh-progress": progress } as CSSProperties}
+      >
+        <span className="gsh-timer-fill" />
       </span>
     </div>
   );
@@ -244,20 +255,17 @@ export function GameShellHeader({
 
       <div className="gsh-bottom">
         <div className="gsh-phase">
-          {current?.icon && <span className="gsh-phase-icon" aria-hidden="true">{current.icon}</span>}
+          <p className="gsh-phase-text">
+            {current?.icon && <span className="gsh-phase-icon" aria-hidden="true">{current.icon}</span>}
+            <span className="gsh-phase-name">{current?.label ?? phase}</span>
+            {index >= 0 && (
+              <span className="gsh-phase-count" aria-label={`Phase ${index + 1} of ${phases.length}`}>
+                {index + 1} of {phases.length}
+              </span>
+            )}
+          </p>
 
-          <div className="gsh-phase-body">
-            <p className="gsh-phase-text">
-              <span className="gsh-phase-name">{current?.label ?? phase}</span>
-              {index >= 0 && (
-                <span className="gsh-phase-count" aria-label={`Phase ${index + 1} of ${phases.length}`}>
-                  {index + 1} of {phases.length}
-                </span>
-              )}
-            </p>
-
-            {current?.hint && <p className="gsh-phase-hint">{current.hint}</p>}
-          </div>
+          {current?.hint && <p className="gsh-phase-hint">{current.hint}</p>}
         </div>
 
         <GameTimer endsAt={endsAt} duration={duration} />
