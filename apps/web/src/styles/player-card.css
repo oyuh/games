@@ -533,44 +533,52 @@
   align-items: center;
 }
 
-/* ── Condensed roster: a row of faces ───────────────────────────
-   Not overlapped. A stacked photo survives being half covered because the
-   subject fills the frame, but these are one small glyph floating in a lot of
-   ground, so an overlap crops the glyph to a sliver it fills edge to edge and
-   drags it off the centre of its own tile. A plain row keeps every face
-   identical and costs about 16px. */
+/* ── Condensed roster: a stack of faces ─────────────────────────
+   The shadcn avatar-group shape: circles overlapped by a quarter, each ringed
+   in the colour actually behind the stack so the next one reads as cutting
+   into the one before it instead of as an outline drawn around every face.
+   The header carries a 7% team wash, so the ring mixes the same thing.
+
+   Circles, not the site squircle: 30% of a 24px tile is a 7px corner, which
+   at this size reads as a rounded square. Overriding the knob rather than the
+   border-radius lets it reach the avatar wrapper and avvvatars' own tile,
+   which both take their corner from the same var. */
 .tc-stack {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 3px;
 }
 
-/* Circles down here, not the site squircle. 30% of 22px is a 6.6px corner,
-   which at this size stops reading as a squircle and starts reading as a
-   rounded square. Overriding the knob rather than the border-radius lets it
-   reach the avatar's own tile, which sets its corner from the same var. */
 .tc-face {
   --avatar-radius: 999px;
+  --tc-ring: 2px;
 
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--avatar-radius);
   overflow: clip;
+  box-shadow: 0 0 0 var(--tc-ring) color-mix(in srgb, var(--tc-color) 7%, var(--surface-bottom));
 }
 
-/* A count rather than a face, so it fits its digits instead of the tile. */
+/* A quarter of the tile. Enough to read as a stack, little enough that a
+   centred glyph is never cropped to a sliver. */
+.tc-face + .tc-face {
+  margin-left: -6px;
+}
+
+/* A count rather than a face, but still a circle in the stack. Grows to a
+   pill only if the overflow ever hits three digits. */
 .tc-face--more {
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--muted);
   color: var(--muted-foreground);
-  font-size: 0.58rem;
+  font-size: 0.55rem;
   font-weight: 800;
-  padding: 0 0.2rem;
+  padding: 0 0.15rem;
   width: auto;
-  min-width: 22px;
+  min-width: 24px;
 }
 
 /* ── Roster ─────────────────────────────────────────────────── */
