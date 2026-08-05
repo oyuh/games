@@ -1,12 +1,18 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
-type Pos = "top" | "bottom" | "left" | "right";
+export type Pos = "top" | "bottom" | "left" | "right";
 
 const GAP = 8;
 const PAD = 8;
 
-function place(
+/**
+ * Where a bubble of size `t` goes next to an anchor of size `a`: the preferred
+ * side if it fits, the first fallback that does otherwise, clamped so it never
+ * leaves the viewport. Shared with PlayerHoverCard so the app has one copy of
+ * this and not two that drift.
+ */
+export function place(
   a: DOMRect,
   t: DOMRect,
   preferred: Pos,

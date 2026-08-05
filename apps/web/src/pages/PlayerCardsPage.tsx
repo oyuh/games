@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FiArrowRight, FiCheck, FiLock, FiUnlock, FiX } from "react-icons/fi";
 import { PlayerCard, playerBadges, type PlayerCardSize } from "../components/shared/PlayerCard";
+import { PlayerHoverCard } from "../components/shared/PlayerHoverCard";
 import { TeamCard } from "../components/shared/TeamCard";
 import "../styles/game-shared.css";
 
@@ -229,6 +230,24 @@ export function PlayerCardsPage() {
           players={CAST.map((p, i) => ({ ...p, index: i }))}
         />
         <TeamCard collapsible name="Green Team" color="#34d399" score={0} scoreSuffix="/ 7" players={[]} />
+      </Row>
+
+      <Row title="Hover card, faces" note="one face on the board, the whole card on hover. for the shade grid and the signal map" grid="ph-row">
+        <PlayerHoverCard {...CAST[0]!} index={0} you badges={[playerBadges.host()]} points={12} pointsSuffix="pts" caption="Ready" />
+        <PlayerHoverCard {...CAST[1]!} index={1} state="waiting" caption="Still picking" />
+        <PlayerHoverCard {...CAST[2]!} index={2} state="success" caption="Signalled" points={3} badges={[playerBadges.leader()]} />
+        <PlayerHoverCard {...CAST[3]!} index={3} state="error" caption="Wrong colour" points={0} />
+        <PlayerHoverCard {...CAST[4]!} index={4} disconnected caption="Dropped out" />
+        <PlayerHoverCard {...CAST[5]!} index={5} eliminated badges={[playerBadges.out()]} />
+      </Row>
+
+      <Row title="Hover card, names" note="the same card behind a list of names. for end screens and round history" grid="ph-names">
+        <PlayerHoverCard trigger="name" {...CAST[0]!} index={0} you points={12} pointsSuffix="pts" badges={[playerBadges.host()]} caption="Won the round" />
+        <PlayerHoverCard trigger="name" {...CAST[1]!} index={1} points={9} pointsSuffix="pts" badges={[playerBadges.team("Blue Team", BLUE)]} />
+        <PlayerHoverCard trigger="name" {...CAST[2]!} index={2} points={7} pointsSuffix="pts" state="success" caption="Got it in 12s" />
+        <PlayerHoverCard trigger="name" {...CAST[3]!} index={3} points={4} pointsSuffix="pts" badges={[playerBadges.team("Red Team", RED)]} />
+        <PlayerHoverCard trigger="name" {...CAST[4]!} index={4} points={2} pointsSuffix="pts" badges={[playerBadges.imposter()]} state="error" />
+        <PlayerHoverCard trigger="name" {...CAST[5]!} index={5} eliminated points={0} pointsSuffix="pts" badges={[playerBadges.out()]} />
       </Row>
 
       <section className="game-section">
