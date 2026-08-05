@@ -285,6 +285,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 0.3rem;
   padding: 0.28rem 0.6rem;
   border-top: 1px solid var(--pc-line);
@@ -421,7 +422,7 @@
 }
 
 .pc--lg .pc-points-value { font-size: 1.5rem; line-height: 1.1; }
-.pc--lg .pc-badges { justify-content: center; padding: 0.4rem 0.6rem; }
+.pc--lg .pc-badges { padding: 0.4rem 0.6rem; }
 
 /* ── Team card ───────────────────────────────────────────────────
    Same parts as a player card, one level up: a header row with the score
@@ -532,46 +533,27 @@
   align-items: center;
 }
 
-/* ── Condensed roster: a stack of faces ─────────────────────── */
+/* ── Condensed roster: a row of faces ───────────────────────────
+   Not overlapped. A stacked photo survives being half covered because the
+   subject fills the frame, but these are one small glyph floating in a lot of
+   ground, so an overlap crops the glyph to a sliver it fills edge to edge and
+   drags it off the centre of its own tile. A plain row keeps every face
+   identical and costs about 16px. */
 .tc-stack {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  padding-left: 0.2rem;
+  gap: 3px;
 }
 
-/* The ring has to be the color actually behind the stack, or it reads as an
-   outline drawn around each face instead of the next face cutting into the
-   one before it. The header carries a 7% team wash, so mix the same thing. */
 .tc-face {
-  --tc-overlap: 6px;
-  --tc-ring: 2px;
-
   width: 22px;
   height: 22px;
   border-radius: var(--avatar-radius);
   overflow: clip;
-  box-shadow: 0 0 0 var(--tc-ring) color-mix(in srgb, var(--tc-color) 7%, var(--surface-bottom));
 }
 
-.tc-face + .tc-face {
-  margin-left: calc(var(--tc-overlap) * -1);
-}
-
-/* A stacked photo can be half covered and still read, because the subject
-   fills the frame. These are one small glyph floating in a lot of ground, so
-   an overlapped face has to slide its glyph into the half that still shows,
-   or the art sits visibly off to the right of where the face appears to be.
-   Half the covered width (overlap plus the next face's ring) recentres it.
-
-   Only faces followed by another face: the count chip sits clear, so the one
-   before it is not covered and must not be nudged. */
-.tc-face:has(+ .tc-face:not(.tc-face--more)) svg {
-  transform: translateX(calc((var(--tc-overlap) + var(--tc-ring)) / -2));
-}
-
-/* A count, not a face, so it sits clear of the stack rather than cutting into
-   the last one. */
+/* A count rather than a face, so it fits its digits instead of the tile. */
 .tc-face--more {
   display: flex;
   align-items: center;
@@ -583,11 +565,6 @@
   padding: 0 0.2rem;
   width: auto;
   min-width: 22px;
-  box-shadow: none;
-}
-
-.tc-face + .tc-face--more {
-  margin-left: 0.25rem;
 }
 
 /* ── Roster ─────────────────────────────────────────────────── */
