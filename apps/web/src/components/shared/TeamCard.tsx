@@ -1,4 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { FiChevronDown } from "react-icons/fi";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerCard, type PlayerBadge, type PlayerCardProps, type PlayerCardState } from "./PlayerCard";
 import "../../styles/player-card.css";
@@ -27,6 +28,11 @@ export interface TeamCardProps {
   caption?: string;
   /** Faces and score only, no roster. For sidebars and results headers. */
   condensed?: boolean;
+  /** Adds a chevron that folds the roster down to the row of faces. Takes
+   *  precedence over `onClick`: a card cannot be a button and hold one. */
+  collapsible?: boolean;
+  /** Start folded. Only means anything alongside `collapsible`. */
+  defaultCollapsed?: boolean;
   /** Your team. Same treatment a player card gives you. */
   you?: boolean;
   /** Ring around the card, e.g. the team currently guessing. */
@@ -51,6 +57,8 @@ export function TeamCard({
   badges,
   caption,
   condensed,
+  collapsible,
+  defaultCollapsed,
   you,
   selected,
   onClick,
@@ -59,25 +67,35 @@ export function TeamCard({
   emptyLabel = "No one yet",
   className = "",
 }: TeamCardProps) {
+  const [collapsed, setCollapsed] = useState(!!defaultCollapsed);
+
+  /* Folding a team down is the condensed presentation it already had, so the
+     two share one branch instead of the card growing a second small layout. */
+  const folded = !!condensed || (!!collapsible && collapsed);
+
+  /* A chevron inside a button would be a button inside a button. */
+  const asButton = !!onClick && !collapsible;
+
   const classes = [
     "tc",
-    condensed ? "tc--condensed" : "",
+    folded ? "tc--condensed" : "",
+    collapsible && collapsed ? "tc--folded" : "",
     `tc--${state}`,
     you ? "tc--you" : "",
     selected ? "tc--selected" : "",
-    onClick ? "tc--button" : "",
+    asButton ? "tc--button" : "",
     className,
   ].filter(Boolean).join(" ");
 
   const shown = players.slice(0, STACK_LIMIT);
   const overflow = players.length - shown.length;
-  const Tag = onClick ? "button" : "div";
+  const Tag = asButton ? "button" : "div";
 
   return (
     <Tag
       className={classes}
       style={{ "--tc-color": color } as CSSProperties}
-      {...(onClick ? { type: "button" as const, onClick } : {})}
+      {...(asButton ? { type: "button" as const, onClick } : {})}
     >
       <span className="tc-head">
         <span className="tc-swatch" aria-hidden="true" />
@@ -86,7 +104,7 @@ export function TeamCard({
           {caption && <span className="tc-caption">{caption}</span>}
         </span>
 
-        {condensed && players.length > 0 && (
+        {folded && players.length > 0 && (
           <span className="tc-stack" aria-label={`${players.length} players`}>
             {shown.map((player) => (
               <span className="tc-face" key={player.sessionId} data-tooltip={player.name} data-tooltip-variant="game">
@@ -105,9 +123,21 @@ export function TeamCard({
         )}
 
         {action && <span className="tc-action">{action}</span>}
+
+        {collapsible && (
+          <button
+            type="button"
+            className="tc-toggle"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-expanded={!collapsed}
+            aria-label={`${collapsed ? "Expand" : "Collapse"} ${name}`}
+          >
+            <FiChevronDown aria-hidden="true" />
+          </button>
+        )}
       </span>
 
-      {!condensed && (
+      {!folded && (
         <span className="tc-body">
           {players.length > 0
             ? players.map((player) => <PlayerCard key={player.sessionId} {...player} size="sm" />)
@@ -115,7 +145,7 @@ export function TeamCard({
         </span>
       )}
 
-      {footer && <span className="tc-footer">{footer}</span>}
+      {footer && !folded && <span className="tc-footer">{footer}</span>}
 
       {badges && badges.length > 0 && (
         <span className="pc-badges">
