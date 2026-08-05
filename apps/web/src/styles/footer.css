@@ -388,9 +388,14 @@
 
 /* ── Variant: game (blue accent) ─────────────────────────────── */
 .tt--game {
-  background: #172033;
-  border-color: rgba(126, 203, 255, 0.15);
-  color: #b8dcf5;
+  /* Blue only when nothing better is on offer. The bubble is portalled into
+     <body> so it cannot inherit the badge or team colour it belongs to;
+     TooltipLayer copies --tt-color off the target and these three mixes
+     rebuild the bubble around whatever it found. */
+  --tt-color: #7ecbff;
+  background: color-mix(in srgb, var(--tt-color) 14%, #101216);
+  border-color: color-mix(in srgb, var(--tt-color) 22%, transparent);
+  color: color-mix(in srgb, var(--tt-color) 55%, #eaf4fb);
 }
 
 /* ── Variant: info (muted) ───────────────────────────────────── */

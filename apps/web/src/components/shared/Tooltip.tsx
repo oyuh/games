@@ -101,6 +101,12 @@ export function TooltipLayer() {
       // Set variant class
       tip.className = `tt tt--${variant}`;
 
+      // The bubble is portalled into <body>, so it cannot inherit the colour
+      // of the thing it describes. Copy it across by hand: a badge exposes its
+      // own colour, a team card its team colour. Cleared when the target has
+      // none, which drops the variant back to its default tone.
+      tip.style.setProperty("--tt-color", getComputedStyle(target).getPropertyValue("--tt-color").trim());
+
       // Show invisible at 0,0 to measure - getBoundingClientRect forces
       // a synchronous layout so we get exact dimensions in the same frame
       Object.assign(tip.style, {

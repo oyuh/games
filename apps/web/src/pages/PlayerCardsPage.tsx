@@ -135,6 +135,30 @@ export function PlayerCardsPage() {
         <TeamCard name="Green Team" color="#34d399" score={0} scoreSuffix="/ 7" players={[]} />
       </Row>
 
+      <Row title="Teams, collapsible" note="the chevron folds a roster down to its faces, so a long lobby stays scannable" grid="tc-grid">
+        <TeamCard
+          collapsible
+          name="Blue Team"
+          color={BLUE}
+          score={4}
+          scoreSuffix="/ 7"
+          you
+          caption="Guessing now"
+          players={CAST.slice(0, 3).map((p, i) => ({ ...p, index: i }))}
+        />
+        <TeamCard
+          collapsible
+          defaultCollapsed
+          name="Red Team"
+          color={RED}
+          score={6}
+          scoreSuffix="/ 7"
+          caption="Starts folded"
+          players={CAST.map((p, i) => ({ ...p, index: i }))}
+        />
+        <TeamCard collapsible name="Green Team" color="#34d399" score={0} scoreSuffix="/ 7" players={[]} />
+      </Row>
+
       <Row title="Teams, condensed" note="faces instead of a roster, for headers and sidebars" grid="tc-grid">
         <TeamCard condensed name="Blue Team" color={BLUE} score={4} scoreSuffix="/ 7" you state="success" caption="Got it in 12s" players={CAST.slice(0, 3).map((p, i) => ({ ...p, index: i }))} />
         <TeamCard condensed name="Red Team" color={RED} score={6} scoreSuffix="/ 7" caption="Up next" players={CAST.map((p, i) => ({ ...p, index: i }))} />
