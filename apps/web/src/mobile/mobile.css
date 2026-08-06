@@ -1810,18 +1810,18 @@
   color: var(--secondary);
 }
 
-/* Same treatment the desktop card gives its headings: hairlines either side,
-   so a centred label has the width of the section it names. */
-.m-home-section-title::before,
-.m-home-section-title::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
+/* No rules either side of the label. Each section here is its own .m-card
+   with a border of its own, so a hairline just inside it lands a couple of
+   pixels under the card edge and reads as a doubled line.
 
+   The nudge is optical, not a fix for a centring bug. The icon is centred on
+   the text's box correctly, but the label is uppercase and caps carry no
+   descender, so the glyphs sit about a pixel above the middle of that box.
+   Transform rather than margin: a negative margin on a centre-aligned flex
+   item only moves it half as far, and does it by resizing the item. */
 .m-home-section-title svg {
   flex: 0 0 auto;
+  transform: translateY(-1px);
 }
 
 .m-home-sublabel {
