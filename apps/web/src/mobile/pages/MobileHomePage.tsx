@@ -3,7 +3,7 @@ import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiArrowDown, FiArrowLeft, FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGithub } from "react-icons/fi";
+import { FiArrowDown, FiArrowLeft, FiSearch, FiChevronDown, FiChevronUp, FiShare, FiGlobe, FiGithub, FiUserCheck } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../../components/shared/PublicGamesBrowser";
@@ -67,7 +67,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       {/* Join Game – top of page */}
       <div className="m-card">
         <h3 className="m-home-section-title">
-          <FiSearch size={14} style={{ opacity: 0.6 }} /> Join Game
+          <FiSearch size={14} /> Join Game
         </h3>
         <div className="m-home-row">
           <input
@@ -110,7 +110,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
 
       {/* Display Name */}
       <div className="m-card">
-        <h3 className="m-home-section-title">Display Name</h3>
+        <h3 className="m-home-section-title"><FiUserCheck size={14} /> Display</h3>
         {/* Same hint the desktop card uses: it sits on the field it is about
             instead of being a banner about the page. */}
         {firstVisit && (

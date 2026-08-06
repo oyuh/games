@@ -1805,8 +1805,23 @@
   margin-bottom: 0.5rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   color: var(--secondary);
+}
+
+/* Same treatment the desktop card gives its headings: hairlines either side,
+   so a centred label has the width of the section it names. */
+.m-home-section-title::before,
+.m-home-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.m-home-section-title svg {
+  flex: 0 0 auto;
 }
 
 .m-home-sublabel {
