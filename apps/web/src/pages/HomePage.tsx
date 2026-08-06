@@ -336,7 +336,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           {/* Join section */}
           <section className="hc-section">
             <h3 className="hc-label" data-tooltip="Enter a 6-character room code to join a friend's game" data-tooltip-variant="info">
-              <FiSearch size={14} style={{ opacity: 0.6 }} /> Join Game
+              <FiSearch size={14} /> Join Game
               {syncPending && <SyncMiniSpinner className="hc-sync-mini-spinner--label" />}
               {syncAttention && <FiWifiOff className="hc-sync-offline-icon hc-sync-offline-icon--label" size={14} />}
             </h3>
@@ -367,7 +367,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           </section>
           {/* Name section - inline editable */}
           <section className="hc-section">
-            <h3 className="hc-label" data-tooltip="Your in-game identity - visible to other players" data-tooltip-variant="info">Display Name</h3>
+            <h3 className="hc-label" data-tooltip="Your in-game identity - visible to other players" data-tooltip-variant="info">
+              <FiUserCheck size={14} /> Display
+            </h3>
             {/* Sits directly on the field it is about, and points at it. A
                 banner at the top of the card named something two sections
                 down, which told you nothing about what to actually do. */}

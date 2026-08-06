@@ -1651,6 +1651,29 @@ a.solo-card-title-link {
   gap: 0.35rem;
 }
 
+/* Only the section headings. The recents heading lives inside a toggle with a
+   chevron after it, so it stays left and keeps its row. */
+.hc-section > .hc-label {
+  justify-content: center;
+}
+
+/* A centred label floats unless something gives it the width of its section.
+   Hairlines either side, the same ones the cards separate with. */
+.hc-section > .hc-label::before,
+.hc-section > .hc-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* The icon is part of the label, so it takes the label's colour instead of
+   being the same grey knocked back with an opacity. */
+.hc-section > .hc-label svg {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+}
+
 .hc-sublabel {
   font-size: 0.78rem;
   color: var(--secondary);
