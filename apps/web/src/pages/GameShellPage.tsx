@@ -126,19 +126,18 @@ export function GameShellPage() {
             caption: i < 4 ? "Ready" : "Still joining",
             ...(i >= 4 ? { state: "waiting" as const } : {}),
           }))}
-          footer="The host starts the round when everyone is in."
         />
       </Section>
 
       <Section title="Roster, mid game" note="sm cards for a longer list, with what each of them is doing">
+        {/* No points anywhere in here on purpose: what a point means is each
+            game's own business, so the roster never assumes there are any. */}
         <GameRoster
-          size="sm"
-          title="Clues in"
+          label="Clues in"
           action={<GameButton variant="ghost" size="sm">Skip waiting</GameButton>}
           players={CAST.map((p, i) => ({
             ...p,
             index: i,
-            points: [3, 2, 2, 1, 0, 0][i]!,
             ...(i < 3
               ? { state: "success" as const, caption: "Clue in" }
               : i < 5
@@ -150,13 +149,10 @@ export function GameShellPage() {
 
       <Section title="Roster, teams" note="for password and chain reaction, where the unit is a team and a loose player is the exception">
         <GameTeamRoster
-          collapsible
           teams={[
             {
               name: "Red Team",
               color: RED,
-              score: 4,
-              scoreSuffix: "/ 7",
               caption: "Guessing now",
               state: "waiting",
               players: [
@@ -167,18 +163,15 @@ export function GameShellPage() {
             {
               name: "Blue Team",
               color: BLUE,
-              score: 6,
-              scoreSuffix: "/ 7",
               caption: "Up next",
               players: [
                 { ...CAST[2]!, index: 2 },
                 { ...CAST[3]!, index: 3 },
               ],
             },
-            { name: "Green Team", color: GREEN, score: 0, scoreSuffix: "/ 7", players: [] },
+            { name: "Green Team", color: GREEN, players: [] },
           ]}
           bench={[{ ...CAST[4]!, index: 4 }, { ...CAST[5]!, index: 5 }]}
-          footer="Anyone still on the bench gets put on the smallest team at start."
         />
       </Section>
 

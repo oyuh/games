@@ -1,112 +1,155 @@
-import type { ReactNode } from "react";
-import { FiUsers } from "react-icons/fi";
-import { GameEmpty, GamePanel } from "./GameKit";
-import { PlayerCard, type PlayerCardProps, type PlayerCardSize } from "./PlayerCard";
+import { useState, type ReactNode } from "react";
+import { FiMaximize2, FiMinimize2 } from "react-icons/fi";
+import { PlayerCard, type PlayerCardProps } from "./PlayerCard";
 import { TeamCard, type TeamCardProps } from "./TeamCard";
 import "../../styles/game-kit.css";
 
 /**
  * Who is in the game, under the shell header, in the lobby and during it.
  *
- * The point is room. A roster squeezed into a sidebar turns the player card
- * into a line of text with a face on it, and the card is carrying state,
- * points and badges that are worth seeing. So this lays out across the full
- * width and wraps, rather than stacking one narrow column.
+ * No container. A list of players is a heading and then the players; a border
+ * round it only adds an edge inside the page's other edges. The heading is a
+ * line of small caps and a count, the way the home card's sections label
+ * themselves.
  *
- * Team games get their own version below, since for them the unit is a team
- * and the loose players are the exception rather than the whole list.
+ * Condensed by default. The player card already has a small size that says
+ * name, face, state and badges in one row, and that is the whole point of a
+ * roster; the roomy version is one button away for when someone wants to
+ * actually look at everybody.
+ *
+ * Nothing here knows about scores. What a point means is different in every
+ * game, so games pass whatever the card should show and this stays out of it.
  */
+
+interface RosterHeadProps {
+  label: ReactNode;
+  count: number;
+  action?: ReactNode;
+  expanded?: boolean;
+  onToggle?: () => void;
+}
+
+function RosterHead({ label, count, action, expanded, onToggle }: RosterHeadProps) {
+  return (
+    <div className="gk-roster-head">
+      <span className="gk-roster-label">{label}</span>
+      <span className="gk-roster-count">{count}</span>
+
+      <span className="gk-roster-gap" />
+
+      {action}
+
+      {onToggle && (
+        <button
+          type="button"
+          className="gk-roster-expand"
+          onClick={onToggle}
+          aria-expanded={!!expanded}
+          aria-label={expanded ? "Show the short list" : "Show the full cards"}
+          data-tooltip={expanded ? "Condense" : "Expand"}
+          data-tooltip-variant="game"
+        >
+          {expanded ? <FiMinimize2 aria-hidden="true" /> : <FiMaximize2 aria-hidden="true" />}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export interface GameRosterProps {
   players: Array<PlayerCardProps>;
-  /** md is the lobby default. sm is for a long list mid-game. */
-  size?: PlayerCardSize;
-  title?: ReactNode;
-  /** Right of the heading. Left off, it shows how many are here. */
+  label?: ReactNode;
+  /** Sits before the expand button. */
   action?: ReactNode;
-  footer?: ReactNode;
-  emptyTitle?: string;
-  emptyHint?: string;
-  /** Narrowest a card may get before the row drops a column. */
-  min?: string;
+  /** Left on, the list can be opened out to full size cards. */
+  expandable?: boolean;
+  defaultExpanded?: boolean;
+  emptyLabel?: string;
   className?: string;
 }
 
 export function GameRoster({
   players,
-  size = "md",
-  title = "Players",
+  label = "Players",
   action,
-  footer,
-  emptyTitle = "Nobody here yet",
-  emptyHint = "Share the code and they will turn up in this list.",
-  min,
+  expandable = true,
+  defaultExpanded,
+  emptyLabel = "Nobody here yet",
   className = "",
 }: GameRosterProps) {
+  const [expanded, setExpanded] = useState(!!defaultExpanded);
+
   return (
-    <GamePanel
-      title={title}
-      action={action ?? <span className="gk-roster-count">{players.length}</span>}
-      {...(footer ? { footer } : {})}
-      className={className}
-    >
+    <div className={`gk-roster-block ${className}`.trim()}>
+      <RosterHead
+        label={label}
+        count={players.length}
+        action={action}
+        expanded={expanded}
+        {...(expandable ? { onToggle: () => setExpanded((v) => !v) } : {})}
+      />
+
       {players.length > 0 ? (
-        <div className="gk-roster" style={min ? { "--gk-roster-min": min } as React.CSSProperties : undefined}>
+        <div className={`gk-roster${expanded ? " gk-roster--roomy" : ""}`}>
           {players.map((player) => (
-            <PlayerCard key={player.sessionId} {...player} size={size} />
+            <PlayerCard key={player.sessionId} {...player} size={expanded ? "md" : "sm"} />
           ))}
         </div>
       ) : (
-        <GameEmpty icon={<FiUsers />} title={emptyTitle} hint={emptyHint} />
+        <p className="gk-roster-empty">{emptyLabel}</p>
       )}
-    </GamePanel>
+    </div>
   );
 }
 
 export interface GameTeamRosterProps {
   teams: Array<TeamCardProps>;
-  title?: ReactNode;
+  label?: ReactNode;
   action?: ReactNode;
-  footer?: ReactNode;
-  /** Every team gets a chevron, for a lobby with more teams than room. */
-  collapsible?: boolean;
-  /** Players who have not picked a side. Shown under the teams, because in a
-   *  team game being on no team is the state worth noticing. */
+  /** Left on, the teams fold down to their faces and back. */
+  expandable?: boolean;
+  defaultExpanded?: boolean;
+  /** Players who have not picked a side. In a team game that is the state
+   *  worth noticing, so they sit apart rather than in with everyone else. */
   bench?: Array<PlayerCardProps>;
-  benchLabel?: string;
-  min?: string;
+  benchLabel?: ReactNode;
   className?: string;
 }
 
 export function GameTeamRoster({
   teams,
-  title = "Teams",
+  label = "Teams",
   action,
-  footer,
-  collapsible,
+  expandable = true,
+  defaultExpanded,
   bench,
-  benchLabel = "Not on a team yet",
-  min,
+  benchLabel = "No team yet",
   className = "",
 }: GameTeamRosterProps) {
+  const [expanded, setExpanded] = useState(!!defaultExpanded);
   const seated = teams.reduce((n, t) => n + (t.players?.length ?? 0), 0);
 
   return (
-    <GamePanel
-      title={title}
-      action={action ?? <span className="gk-roster-count">{seated + (bench?.length ?? 0)}</span>}
-      {...(footer ? { footer } : {})}
-      className={className}
-    >
-      <div className="gk-roster gk-roster--teams" style={min ? { "--gk-roster-min": min } as React.CSSProperties : undefined}>
+    <div className={`gk-roster-block ${className}`.trim()}>
+      <RosterHead
+        label={label}
+        count={seated + (bench?.length ?? 0)}
+        action={action}
+        expanded={expanded}
+        {...(expandable ? { onToggle: () => setExpanded((v) => !v) } : {})}
+      />
+
+      {/* Condensed is the team card's own faces row, which is exactly this:
+          the team, its colour, and who is on it, in one line. */}
+      <div className={`gk-roster gk-roster--teams${expanded ? " gk-roster--roomy" : ""}`}>
         {teams.map((team) => (
-          <TeamCard key={team.name} {...team} {...(collapsible ? { collapsible: true } : {})} />
+          <TeamCard key={team.name} {...team} {...(expanded ? {} : { condensed: true })} />
         ))}
       </div>
 
       {bench && bench.length > 0 && (
         <div className="gk-bench">
-          <p className="gk-bench-label">{benchLabel}</p>
+          <span className="gk-roster-label">{benchLabel}</span>
           <div className="gk-roster gk-roster--bench">
             {bench.map((player) => (
               <PlayerCard key={player.sessionId} {...player} size="sm" />
@@ -114,6 +157,6 @@ export function GameTeamRoster({
           </div>
         </div>
       )}
-    </GamePanel>
+    </div>
   );
 }
