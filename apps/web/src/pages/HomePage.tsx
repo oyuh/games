@@ -235,27 +235,33 @@ const IMPOSTER_PREVIEW = [
   { who: "Ada", clue: "“Fluffy”", out: false },
   { who: "Bram", clue: "“Loyal”", out: false },
   { who: "Cleo", clue: "“Meow?”", out: true },
+  { who: "Dov", clue: "“Walks”", out: false },
+  { who: "Esme", clue: "“Fetch”", out: false },
 ];
 
 /* The card's map is the real one, not a drawing of one. Four zoom-1 tiles from
    the same provider the game itself uses cover the whole world, which is all a
    preview needs, and four images cost a lot less than the map component with
    its panning and zooming dragged into the home page bundle. */
+const LOC_ZOOM = 3;
 const LOC_TILES = [
-  { x: 0, y: 0 }, { x: 1, y: 0 },
-  { x: 0, y: 1 }, { x: 1, y: 1 },
+  { x: 3, y: 2 }, { x: 4, y: 2 },
+  { x: 3, y: 3 }, { x: 4, y: 3 },
 ];
 
+/* Roadmap, not satellite. Satellite at card size is a lot of colour fighting
+   the card it sits in; a plain roadmap inverted into dark reads as a map at a
+   glance and stays out of the way. */
 const locTileUrl = (x: number, y: number) =>
-  `https://mt${(x + y) % 4}.google.com/vt/lyrs=y&x=${x}&y=${y}&z=1&hl=en&gl=US`;
+  `https://mt${(x + y) % 4}.google.com/vt/lyrs=m&x=${x}&y=${y}&z=${LOC_ZOOM}&hl=en&gl=US`;
 
-/* Percentages down the cropped band, not lat and lng: the crop is fixed, so
-   working them out once here beats doing Mercator maths at render. One answer
-   and two guesses landing near it, which is what a round looks like. */
+/* Percentages across the four tiles above, worked out from lat and lng once,
+   since the view never moves. One answer and two guesses landing near it,
+   which is what the end of a round looks like. */
 const LOC_PINS = [
-  { label: "answer", x: 50.7, y: 27.7, answer: true },
-  { label: "guess-a", x: 50.0, y: 26.1, answer: false },
-  { label: "guess-b", x: 53.5, y: 31.7, answer: false },
+  { label: "answer", x: 52.6, y: 37.6, answer: true },
+  { label: "guess-a", x: 49.9, y: 33.0, answer: false },
+  { label: "guess-b", x: 63.9, y: 48.6, answer: false },
 ];
 
 function SyncMiniSpinner({ className = "" }: { className?: string }) {
@@ -285,17 +291,19 @@ function CardTitle({
   onDemo: (demo: string) => void;
 }) {
   return (
-    <div className="hc-title-row">
+    <div className="solo-card-title-row hc-title-row">
       <h2 className={`hc-game-title-lg${compact ? " hc-game-title-lg--compact" : ""}`}>{title}</h2>
+      {/* The solo cards' own mark, classes and all, so the two sets of cards
+          cannot drift apart on the one control they share. */}
       <button
+        className="solo-card-help"
         type="button"
-        className="hc-title-help"
-        onClick={() => onDemo(demo)}
         aria-label={`How to play ${title}`}
-        data-tooltip="How to play"
+        data-tooltip="How to Play"
         data-tooltip-variant="info"
+        onClick={() => onDemo(demo)}
       >
-        <FiHelpCircle size={15} aria-hidden="true" />
+        <FiHelpCircle size={18} />
       </button>
     </div>
   );
@@ -328,20 +336,22 @@ function CardCreate({
 
   return (
     <div className="hc-create">
-      <button type="button" className="btn btn-primary hc-create-btn" onClick={onCreate}>
+      <button type="button" className="hc-create-btn" onClick={onCreate}>
         Create Game
       </button>
 
+      {/* Joined to the button rather than floating under it: it is the same
+          subject, one strip saying what is already running. */}
       <button
         type="button"
-        className={`hc-public-toggle${live ? " is-live" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`}
+        className={`hc-public-strip${live ? " is-live" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`}
         onClick={onBrowse}
         data-tooltip={syncStatusTooltip}
         data-tooltip-variant="info"
       >
-        {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={12} /> : <FiGlobe size={12} />}
-        <span>{live ? `${count} public game${count === 1 ? "" : "s"}` : "Browse public games"}</span>
-        <FiChevronRight size={12} aria-hidden="true" />
+        {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={11} /> : <FiGlobe size={11} />}
+        <span>{live ? `${count} game${count === 1 ? "" : "s"} to join` : "No public games"}</span>
+        <FiChevronRight size={11} aria-hidden="true" />
       </button>
     </div>
   );
@@ -694,17 +704,20 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               <div className="hc-coming-preview">
                 <div className="hc-imp-preview" aria-hidden="true">
                   <div className="hc-imp-word">
-                    <span className="hc-imp-word-label">Everyone sees</span>
+                    <span className="hc-imp-word-label">Secret word</span>
                     <span className="hc-imp-word-value">DOG</span>
-                    <span className="hc-imp-word-note">except one of you</span>
                   </div>
 
                   <div className="hc-imp-rows">
-                    {IMPOSTER_PREVIEW.map((row) => (
-                      <div key={row.who} className={`hc-imp-row${row.out ? " hc-imp-row--out" : ""}`}>
+                    {IMPOSTER_PREVIEW.map((row, i) => (
+                      <div
+                        key={row.who}
+                        className={`hc-imp-row${row.out ? " hc-imp-row--out" : ""}`}
+                        style={{ animationDelay: `${i * 0.55}s` }}
+                      >
                         <span className="hc-imp-who">{row.who}</span>
                         <span className="hc-imp-clue">{row.clue}</span>
-                        <span className="hc-imp-mark">{row.out ? "Voted out" : <FiCheck size={11} />}</span>
+                        <span className="hc-imp-mark">{row.out ? "Imposter" : <FiCheck size={11} />}</span>
                       </div>
                     ))}
                   </div>
@@ -811,10 +824,17 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               <p className="hc-game-desc">One-word clues. Team guessing. First to target wins.</p>
               <div className="hc-coming-preview">
                 <div className="hc-pw-preview" aria-hidden="true">
-                  <div className="hc-pw-teams">
-                    <span className="hc-pw-team hc-pw-team--red">Red<b>2</b></span>
-                    <span className="hc-pw-vs">vs</span>
-                    <span className="hc-pw-team hc-pw-team--blue">Blue<b>1</b></span>
+                  {/* One scoreboard split by a hairline, not two pills adrift
+                      in a row. Teams are opposite sides of one thing. */}
+                  <div className="hc-pw-score">
+                    <span className="hc-pw-side hc-pw-side--red">
+                      <span className="hc-pw-side-name">Red</span>
+                      <b>2</b>
+                    </span>
+                    <span className="hc-pw-side hc-pw-side--blue">
+                      <b>1</b>
+                      <span className="hc-pw-side-name">Blue</span>
+                    </span>
                   </div>
 
                   <div className="hc-pw-word">
