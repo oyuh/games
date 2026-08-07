@@ -1640,6 +1640,106 @@ a.solo-card-title-link {
   gap: 0.5rem;
 }
 
+/* ── Game card heading ───────────────────────────────────────────
+   The title with its how-to beside it. The mark sits on the title because it
+   is about the game; the row at the bottom is about starting one. */
+.hc-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.hc-title-help {
+  flex: 0 0 auto;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.hc-title-help:hover {
+  color: var(--card-accent, var(--foreground));
+  border-color: color-mix(in srgb, var(--card-accent, var(--foreground)) 45%, transparent);
+  background: color-mix(in srgb, var(--card-accent, var(--foreground)) 10%, transparent);
+}
+
+.hc-title-help:focus-visible {
+  outline: 2px solid var(--card-accent, var(--primary));
+  outline-offset: 2px;
+}
+
+/* ── Game card footer ────────────────────────────────────────────
+   One big button for the thing people came to do, and a quiet line under it
+   for the other thing. The old row put making a game, browsing games and the
+   rules all at the same weight, so the button that matters was a third of a
+   row wide. */
+.hc-create {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.hc-create-btn {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border-radius: var(--radius-lg);
+}
+
+/* A line, not a button: it changes what the card is showing rather than
+   doing anything, so it should not look like a second call to action. */
+.hc-public-toggle {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.hc-public-toggle:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.hc-public-toggle:focus-visible {
+  outline: 2px solid var(--card-accent, var(--primary));
+  outline-offset: 2px;
+}
+
+/* Something is actually running, so the line is worth looking at. */
+.hc-public-toggle.is-live {
+  color: var(--card-accent, var(--primary));
+}
+
+.hc-public-toggle svg {
+  flex: 0 0 auto;
+}
+
 .hc-label {
   font-size: 0.72rem;
   font-weight: 700;
