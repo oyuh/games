@@ -73,7 +73,10 @@
 }
 
 .gsh-pill {
-  --gsh-pill: var(--secondary);
+  /* The game's own colour unless the pill names one. Grey was the safe pick
+     when pills were one row of many; on a folded header they are most of what
+     is left, and a row of grey chips under a coloured clock reads as disabled. */
+  --gsh-pill: var(--gsh-accent);
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -152,15 +155,24 @@
    Shut by default. Mid-game the only reason to want the code is to pull a
    spectator in, and a code sitting open on screen all match is readable by
    whoever is stood behind you. */
+/* One case for the two things you press, the way the roles share one. The
+   case draws the edge; the buttons inside are flat and split by a hairline. */
+.gsh-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gsh-line);
+  overflow: clip;
+}
+
 .gsh-code {
   flex: 0 0 auto;
   appearance: none;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
   padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--gsh-line);
+  border: 0;
   background: transparent;
   color: var(--secondary);
   font: inherit;
@@ -168,23 +180,22 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition: color 0.15s, background 0.15s;
   --tt-color: var(--gsh-accent);
 }
 
 .gsh-code:hover {
   color: var(--foreground);
-  border-color: color-mix(in srgb, var(--gsh-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
 .gsh-code:focus-visible {
   outline: 2px solid var(--gsh-accent);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .gsh-code.is-shown {
   color: var(--gsh-accent);
-  border-color: color-mix(in srgb, var(--gsh-accent) 45%, transparent);
   background: color-mix(in srgb, var(--gsh-accent) 12%, transparent);
 }
 
@@ -205,6 +216,27 @@
   letter-spacing: 0.12em;
 }
 
+/* Margin rather than the button's gap, so the label can take itself to
+   nothing without leaving a gap behind where it used to be. */
+.gsh-code-value {
+  margin-left: 0.35rem;
+  max-width: 8rem;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.22s ease, opacity 0.16s ease, margin-left 0.22s ease;
+}
+
+/* Once play has started the code is down to its key until asked for. */
+.gsh-code--compact:not(.is-shown) .gsh-code-value {
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gsh-code-value { transition: none; }
+}
+
 /* Holds the gap open where the pills were, so the role case and the code
    stay pinned right instead of sliding in against the title. */
 .gsh-spacer {
@@ -213,7 +245,7 @@
 }
 
 /* ── Fold ───────────────────────────────────────────────────────
-   Same shell as the code button, since they sit next to each other. */
+   Flat, because the case around it draws the edge for both buttons. */
 .gsh-fold {
   flex: 0 0 auto;
   appearance: none;
@@ -221,25 +253,23 @@
   align-items: center;
   justify-content: center;
   width: 26px;
-  height: 26px;
   padding: 0;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--gsh-line);
+  border: 0;
   background: transparent;
   color: var(--secondary);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition: color 0.15s, background 0.15s;
   --tt-color: var(--gsh-accent);
 }
 
 .gsh-fold:hover {
   color: var(--foreground);
-  border-color: color-mix(in srgb, var(--gsh-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
 .gsh-fold:focus-visible {
   outline: 2px solid var(--gsh-accent);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .gsh-fold svg {
@@ -250,6 +280,12 @@
 
 .gsh--folded .gsh-fold svg {
   transform: rotate(180deg);
+}
+
+/* After both button rules, which each zero their own border: at equal
+   specificity the later one wins, and this is the one that has to. */
+.gsh-actions > * + * {
+  border-left: 1px solid var(--gsh-line);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -311,17 +347,21 @@
   color: var(--gsh-accent);
 }
 
-/* Next to a clock this size, chips with their own outlines start competing
-   with it. Folded they drop to plain text and let the clock be the loud one. */
+/* Folded, the pills are the only thing left beside the clock, so they get to
+   be a size you can actually read rather than the small print they are when
+   a whole phase panel is competing with them. */
 .gsh--folded .gsh-pill {
-  padding-left: 0;
-  padding-right: 0;
-  border-color: transparent;
-  background: transparent;
+  padding: 0.18rem 0.6rem;
+  font-size: 0.7rem;
+}
+
+.gsh--folded .gsh-pill-icon svg {
+  width: 12px;
+  height: 12px;
 }
 
 .gsh--folded .gsh-bottom .gsh-pills {
-  gap: 0.85rem;
+  gap: 0.4rem;
   animation: gsh-fade 0.2s ease;
 }
 
