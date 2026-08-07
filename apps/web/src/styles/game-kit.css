@@ -1,0 +1,245 @@
+/* ── Game kit ────────────────────────────────────────────────────
+   The shared controls, following the rules the player cards set:
+   1. Depth is borders and fills. No shadows, no glows.
+   2. Colour means something. An accent marks the thing you are meant to
+      press, not every surface it sits on.
+   3. One accent per surface, on --game-accent, so a game sets it once and
+      the buttons, panels and empty states below all agree.
+
+   Nothing here is filled solid with the accent. A page of loud buttons has no
+   loud button, and the shell header and the home cards both learned that. */
+
+.gk-btn,
+.gk-panel,
+.gk-empty {
+  --game-accent: var(--card-accent, var(--primary));
+}
+
+/* ── Button ─────────────────────────────────────────────────── */
+.gk-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.gk-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.gk-btn:focus-visible {
+  outline: 2px solid var(--game-accent);
+  outline-offset: 2px;
+}
+
+/* Disabled says "not now", so it goes quiet rather than disappearing. */
+.gk-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.gk-btn--full {
+  width: 100%;
+}
+
+/* Sizes only change the geometry, never the colours. */
+.gk-btn--sm {
+  padding: 0.28rem 0.55rem;
+  font-size: 0.7rem;
+  gap: 0.3rem;
+}
+
+.gk-btn--md {
+  padding: 0.45rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.gk-btn--lg {
+  padding: 0.7rem 1.1rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+  border-radius: var(--radius-lg);
+}
+
+/* The one you are meant to press. Colour in the text over a wash, not a
+   solid fill: it still wins the row without shouting down the game. */
+.gk-btn--primary {
+  border-color: color-mix(in srgb, var(--game-accent) 38%, transparent);
+  background: color-mix(in srgb, var(--game-accent) 12%, transparent);
+  color: var(--game-accent);
+}
+
+.gk-btn--primary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--game-accent) 58%, transparent);
+  background: color-mix(in srgb, var(--game-accent) 20%, transparent);
+  color: var(--foreground);
+}
+
+.gk-btn--secondary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--foreground) 26%, transparent);
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.gk-btn--ghost {
+  border-color: transparent;
+  color: var(--secondary);
+}
+
+.gk-btn--ghost:hover:not(:disabled) {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.gk-btn--danger {
+  border-color: color-mix(in srgb, #f87171 35%, transparent);
+  background: color-mix(in srgb, #f87171 10%, transparent);
+  color: #f87171;
+}
+
+.gk-btn--danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, #f87171 55%, transparent);
+  background: color-mix(in srgb, #f87171 18%, transparent);
+  color: #fca5a5;
+}
+
+.gk-btn-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.gk-btn-icon svg {
+  width: 1em;
+  height: 1em;
+}
+
+.gk-btn-label {
+  min-width: 0;
+}
+
+/* Sits where the icon was, so the label never moves while you wait. */
+.gk-spinner {
+  flex: 0 0 auto;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-top-color: currentColor;
+  animation: gk-spin 0.7s linear infinite;
+}
+
+@keyframes gk-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Panel ──────────────────────────────────────────────────── */
+.gk-panel {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-bottom);
+  color: var(--foreground);
+  overflow: clip;
+}
+
+.gk-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.gk-panel-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.gk-panel-action {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.gk-panel-body {
+  padding: 0.75rem;
+}
+
+/* For a panel holding its own rows, where the rows want the full width. */
+.gk-panel-body--flush {
+  padding: 0;
+}
+
+.gk-panel-foot {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  font-size: 0.7rem;
+  color: var(--secondary);
+}
+
+/* ── Empty ──────────────────────────────────────────────────────
+   An invitation, not an apology: name the space, say what fills it. */
+.gk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 1.4rem 1rem;
+  text-align: center;
+}
+
+.gk-empty-icon {
+  display: inline-flex;
+  margin-bottom: 0.15rem;
+  color: color-mix(in srgb, var(--game-accent) 65%, var(--secondary));
+}
+
+.gk-empty-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.gk-empty-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.gk-empty-hint {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--secondary);
+  max-width: 32ch;
+}
+
+.gk-empty-action {
+  margin-top: 0.45rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gk-spinner { animation-duration: 1.6s; }
+  .gk-btn { transition: none; }
+}
