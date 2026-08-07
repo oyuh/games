@@ -160,7 +160,7 @@ export function GameTimer({
  * is stood behind you for the whole match. Revealing also copies, because
  * wanting to see it and wanting to send it are the same wish.
  */
-function CodeButton({ code }: { code: string }) {
+function CodeButton({ code, compact }: { code: string; compact?: boolean }) {
   const [shown, setShown] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -182,7 +182,7 @@ function CodeButton({ code }: { code: string }) {
   return (
     <button
       type="button"
-      className={`gsh-code${shown ? " is-shown" : ""}`}
+      className={`gsh-code${shown ? " is-shown" : ""}${compact ? " gsh-code--compact" : ""}`}
       onClick={reveal}
       aria-label={shown ? `Room code ${code.split("").join(" ")}, click to copy again` : "Show the room code"}
       data-tooltip={shown ? (copied ? "Copied. Hides again shortly" : "Click to copy") : "Show the code to invite someone"}
@@ -222,6 +222,12 @@ export function GameShellHeader({
   const tone = accent ?? GAME_META[game]?.accent;
 
   const folded = !!collapsible && collapsed;
+
+  /* In the lobby the code is the point of the screen, so it sits there
+     readable. Once play starts the only reason to want it is to pull a
+     spectator in, so it shrinks to its key and opens on a click. The lobby is
+     taken to be the phase a game opens on. */
+  const inLobby = index === 0;
 
   /* Folded, the pills drop under the line and take the room the phase panel
      was using. Rendered in one place or the other, never both. */
@@ -267,22 +273,26 @@ export function GameShellHeader({
           </span>
         )}
 
-        {code && <CodeButton code={code} />}
+        {(code || collapsible) && (
+          <span className="gsh-actions">
+            {code && <CodeButton code={code} compact={!inLobby} />}
 
-        {collapsible && (
-          <button
-            type="button"
-            className="gsh-fold"
-            onClick={() => setCollapsed((v) => !v)}
-            aria-expanded={!collapsed}
-            aria-label={`${collapsed ? "Show" : "Hide"} the phase panel`}
-            /* Folded, the phase name is the thing you gave up, so the button
-               that gives it back is where it goes. */
-            data-tooltip={collapsed ? `Show the panel. ${current?.label ?? phase}` : "Hide the panel, keep the line and the clock"}
-            data-tooltip-variant="game"
-          >
-            <FiChevronUp aria-hidden="true" />
-          </button>
+            {collapsible && (
+              <button
+                type="button"
+                className="gsh-fold"
+                onClick={() => setCollapsed((v) => !v)}
+                aria-expanded={!collapsed}
+                aria-label={`${collapsed ? "Show" : "Hide"} the phase panel`}
+                /* Folded, the phase name is the thing you gave up, so the
+                   button that gives it back is where it goes. */
+                data-tooltip={collapsed ? `Show the panel. ${current?.label ?? phase}` : "Hide the panel, keep the line and the clock"}
+                data-tooltip-variant="game"
+              >
+                <FiChevronUp aria-hidden="true" />
+              </button>
+            )}
+          </span>
         )}
       </div>
 
