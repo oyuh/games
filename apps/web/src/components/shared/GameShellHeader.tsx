@@ -287,7 +287,10 @@ export function GameShellHeader({
       </div>
 
       <div className="gsh-bottom">
-        {!folded && (
+        {/* Kept mounted and collapsed rather than removed, so folding has
+            something to animate. Hidden from screen readers once it is shut,
+            since it is still in the tree at nothing high. */}
+        <div className="gsh-phase-wrap" {...(folded ? { inert: true, "aria-hidden": true } : {})}>
           <div className="gsh-phase">
             <p className="gsh-phase-text">
               {current?.icon && <span className="gsh-phase-icon" aria-hidden="true">{current.icon}</span>}
@@ -301,7 +304,7 @@ export function GameShellHeader({
 
             {current?.hint && <p className="gsh-phase-hint">{current.hint}</p>}
           </div>
-        )}
+        </div>
 
         {folded && pillStrip}
 
