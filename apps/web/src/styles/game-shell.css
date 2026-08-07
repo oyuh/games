@@ -272,16 +272,28 @@
 }
 
 /* ── Folded ─────────────────────────────────────────────────────
-   The container is the thing being given up, so it goes entirely: no border,
-   no fill, no corners. What is left is the line and the clock, and the line
-   moves to the top edge where it now does a second job, separating the title
-   row from the pills that have dropped underneath it. */
+   The container is the thing being given up, so it goes: no fill, no corners,
+   and every edge but the top turned transparent. Transparent rather than
+   removed, so the width does not jump by two pixels mid-animation.
+
+   The line moves to the top edge where it picks up a second job, separating
+   the title row from the pills that have dropped underneath it. The clock is
+   not touched: it is meant to be the loudest thing here, and folding the
+   panel away only makes that more true. */
 .gsh--folded .gsh-bottom {
-  border: 0;
-  border-top: 1px solid var(--gsh-line);
+  border-color: transparent;
+  border-top-color: var(--gsh-line);
   border-radius: 0;
   background: transparent;
   padding: 0.5rem 0 0;
+  /* The panel is still in the row at no width, and the row's gap still counts
+     it, which walks the pills in off the edge. The clock carries the spacing
+     instead, where it is actually wanted. */
+  gap: 0;
+}
+
+.gsh--folded .gsh-timer {
+  margin-left: 0.9rem;
 }
 
 .gsh--folded .gsh-timer-track {
@@ -289,13 +301,77 @@
   bottom: auto;
 }
 
-/* Nothing left to sit beside, so it stops shouting. */
-.gsh--folded .gsh-timer-value {
-  font-size: 1.35rem;
+/* Just the mark and the name. The badge shell is what the panel's own icon
+   contrasted against, and with the panel gone it is only chrome. */
+.gsh--folded .gsh-game-icon {
+  width: auto;
+  height: auto;
+  border-color: transparent;
+  background: transparent;
+  color: var(--gsh-accent);
+}
+
+/* Next to a clock this size, chips with their own outlines start competing
+   with it. Folded they drop to plain text and let the clock be the loud one. */
+.gsh--folded .gsh-pill {
+  padding-left: 0;
+  padding-right: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.gsh--folded .gsh-bottom .gsh-pills {
+  gap: 0.85rem;
+  animation: gsh-fade 0.2s ease;
+}
+
+@keyframes gsh-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Folding ────────────────────────────────────────────────────
+   Rows of 1fr to 0fr is what lets a panel of unknown height animate shut
+   without a max-height guessed at from the outside. The child carries the
+   overflow, or its content spills while the row is closing. */
+.gsh-phase-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.24s ease, opacity 0.18s ease, flex-basis 0.24s ease;
+}
+
+.gsh-phase-wrap > * {
+  overflow: hidden;
+}
+
+.gsh--folded .gsh-phase-wrap {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  flex: 0 1 0;
+}
+
+/* Folding takes the panel's width to nothing, and a sentence given no width
+   rewraps into a tall thin column. That happens in one frame, before the row
+   has closed at all, so the panel visibly shoots up before it goes down.
+   Holding it on one line while it is shut costs nothing, since it is being
+   clipped anyway. */
+.gsh--folded .gsh-phase-wrap > * {
+  white-space: nowrap;
+}
+
+.gsh-bottom {
+  transition: padding 0.24s ease, background 0.24s ease, border-color 0.24s ease, border-radius 0.24s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gsh-phase-wrap,
+  .gsh-bottom { transition: none; }
+  .gsh--folded .gsh-bottom .gsh-pills { animation: none; }
 }
 
 .gsh-phase {
-  flex: 1;
   min-width: 0;
 }
 
