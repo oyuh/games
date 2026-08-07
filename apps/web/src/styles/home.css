@@ -1271,173 +1271,63 @@ a.solo-card-title-link {
   margin-inline: auto;
 }
 
-.hc-loc-map-stage {
+/* ── Location card map ───────────────────────────────────────────
+   Real satellite tiles, not a drawing. The old version was hand-cut CSS
+   continents in three panels, and it read as coloured blobs rather than
+   anywhere on earth.
+
+   Zoom 1 is four tiles covering the whole world in a square. Land sits
+   between about 60N and 55S, so the square is cropped to the middle band
+   and the empty poles are dropped: 70% of the height, offset by 15%. */
+.hc-loc-map {
   position: relative;
-  aspect-ratio: 1.62;
+  aspect-ratio: 1.43;
   border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, #f59e0b 22%, transparent);
-  overflow: hidden;
-  background:
-    repeating-linear-gradient(0deg, transparent 0 21px, rgba(147, 197, 253, 0.06) 21px 22px),
-    repeating-linear-gradient(90deg, transparent 0 25px, rgba(147, 197, 253, 0.05) 25px 26px),
-    linear-gradient(135deg, #0d2234, #102840 58%, #172536);
-  box-shadow: inset 0 0 22px rgba(5, 10, 16, 0.48);
+  overflow: clip;
+  background: #0b1a2b;
 }
 
-.hc-loc-map-stage::after {
-  content: "";
+.hc-loc-tiles {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 38%, rgba(0, 0, 0, 0.16));
-  z-index: 5;
+  left: 0;
+  right: 0;
+  top: -21.43%;
+  height: 142.86%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
 }
 
-.hc-loc-map-panel {
+.hc-loc-tiles img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Satellite at this size is busy and bright next to the card. Knocking it
+     back lets the pins read without a scrim over the whole thing. */
+  filter: saturate(0.75) brightness(0.72);
+}
+
+/* Positions are percentages worked out from lat and lng once, in the page. */
+.hc-loc-pin {
   position: absolute;
-  inset: 0;
-  opacity: 0;
-}
-
-.hc-loc-map-panel--america {
-  background:
-    radial-gradient(circle at 72% 70%, rgba(14, 165, 233, 0.14), transparent 30%),
-    linear-gradient(135deg, #0f2b3f, #102a38);
-  animation: hc-loc-map-america 12s ease-in-out infinite;
-}
-
-.hc-loc-map-panel--europe {
-  background:
-    radial-gradient(circle at 44% 58%, rgba(56, 189, 248, 0.13), transparent 28%),
-    linear-gradient(135deg, #102a3a, #162b37);
-  animation: hc-loc-map-europe 12s ease-in-out infinite;
-}
-
-.hc-loc-map-panel--asia {
-  background:
-    radial-gradient(circle at 70% 66%, rgba(14, 165, 233, 0.16), transparent 34%),
-    linear-gradient(135deg, #112a35, #172e32);
-  animation: hc-loc-map-asia 12s ease-in-out infinite;
-}
-
-@keyframes hc-loc-map-america {
-  0%, 24% { opacity: 1; }
-  33%, 90% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
-@keyframes hc-loc-map-europe {
-  0%, 24% { opacity: 0; }
-  33%, 57% { opacity: 1; }
-  66%, 100% { opacity: 0; }
-}
-
-@keyframes hc-loc-map-asia {
-  0%, 57% { opacity: 0; }
-  66%, 90% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-.hc-loc-land,
-.hc-loc-dot {
-  position: absolute;
-}
-
-.hc-loc-land {
-  z-index: 1;
-  opacity: 0.94;
-  background:
-    repeating-radial-gradient(circle at 45% 45%, transparent 0 9px, rgba(255, 255, 255, 0.045) 10px 11px),
-    linear-gradient(135deg, rgba(132, 204, 22, 0.28), rgba(245, 158, 11, 0.15));
-  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.16));
-}
-
-.hc-loc-land--north-america {
-  width: 64%;
-  height: 62%;
-  left: 6%;
-  top: 5%;
-  clip-path: polygon(6% 22%, 27% 6%, 54% 12%, 72% 0, 94% 21%, 82% 38%, 89% 55%, 65% 63%, 58% 82%, 37% 72%, 23% 84%, 13% 60%, 0 48%);
-}
-
-.hc-loc-land--south-america {
-  width: 26%;
-  height: 50%;
-  left: 43%;
-  top: 46%;
-  clip-path: polygon(38% 0, 68% 12%, 84% 35%, 66% 52%, 76% 72%, 48% 100%, 30% 74%, 12% 55%, 24% 32%, 0 16%);
-}
-
-.hc-loc-land--europe-main {
-  width: 70%;
-  height: 54%;
-  left: 18%;
-  top: 12%;
-  clip-path: polygon(3% 42%, 18% 18%, 38% 25%, 46% 4%, 62% 16%, 79% 10%, 100% 31%, 85% 53%, 67% 48%, 52% 70%, 36% 58%, 23% 76%, 8% 62%);
-}
-
-.hc-loc-land--europe-south {
-  width: 44%;
-  height: 38%;
-  left: 31%;
-  top: 48%;
-  clip-path: polygon(0 20%, 22% 4%, 41% 22%, 61% 11%, 82% 30%, 100% 60%, 78% 76%, 56% 56%, 39% 92%, 18% 67%);
-}
-
-.hc-loc-land--asia-main {
-  width: 88%;
-  height: 68%;
-  left: 7%;
-  top: 12%;
-  clip-path: polygon(0 28%, 14% 10%, 31% 18%, 40% 4%, 58% 13%, 77% 6%, 100% 23%, 92% 43%, 98% 64%, 76% 69%, 64% 92%, 44% 75%, 30% 83%, 22% 60%, 5% 58%);
-}
-
-.hc-loc-land--asia-islands {
-  width: 34%;
-  height: 36%;
-  left: 61%;
-  top: 58%;
-  clip-path: polygon(8% 16%, 21% 8%, 28% 21%, 42% 18%, 50% 39%, 68% 36%, 85% 55%, 76% 72%, 58% 62%, 45% 83%, 27% 70%, 14% 88%, 0 62%);
-}
-
-.hc-loc-dot {
   width: 7px;
   height: 7px;
+  margin: -3.5px 0 0 -3.5px;
   border-radius: 999px;
-  transform: translate(-50%, -50%);
-  z-index: 3;
-  border: 1px solid rgba(255, 255, 255, 0.58);
-  animation: hc-loc-dot-signal 3.2s ease-in-out infinite;
+  background: #f8fafc;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55);
 }
 
-.hc-loc-dot:nth-of-type(4n) { animation-delay: 0.35s; }
-.hc-loc-dot:nth-of-type(4n + 1) { animation-delay: 0.7s; }
-.hc-loc-dot:nth-of-type(4n + 2) { animation-delay: 1.05s; }
-
-.hc-loc-dot:nth-of-type(3n) {
-  background: #60a5fa;
-  box-shadow: 0 0 8px rgba(96, 165, 250, 0.42);
-}
-
-.hc-loc-dot:nth-of-type(3n + 1) {
-  background: #34d399;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.48);
-}
-
-.hc-loc-dot:nth-of-type(3n + 2) {
+/* The one that was right, marked the way the real map marks it. */
+.hc-loc-pin--answer {
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
   background: #f59e0b;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.46);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 0 0 5px color-mix(in srgb, #f59e0b 30%, transparent);
 }
-
-.hc-loc-dot--america-a { left: 29%; top: 35%; }
-.hc-loc-dot--america-b { left: 51%; top: 44%; }
-.hc-loc-dot--america-c { left: 59%; top: 70%; }
-.hc-loc-dot--europe-a { left: 37%; top: 37%; }
-.hc-loc-dot--europe-b { left: 58%; top: 44%; }
-.hc-loc-dot--europe-c { left: 50%; top: 69%; }
-.hc-loc-dot--asia-a { left: 32%; top: 45%; }
-.hc-loc-dot--asia-b { left: 61%; top: 36%; }
-.hc-loc-dot--asia-c { left: 78%; top: 63%; }
 
 .hc-loc-clues {
   display: grid;
@@ -1459,11 +1349,6 @@ a.solo-card-title-link {
 .hc-loc-clues strong {
   color: #f59e0b;
   font-weight: 800;
-}
-
-@keyframes hc-loc-dot-signal {
-  0%, 100% { opacity: 0.72; }
-  38%, 58% { opacity: 1; }
 }
 
 /* ── Chain word example ──────────────────────────────────────── */
@@ -1618,18 +1503,8 @@ a.solo-card-title-link {
   .home-card--shade .hc-shade-cell,
   .home-card--route-highlight,
   .solo-suggestion-line,
-  .solo-suggestion-check,
-  .hc-loc-map-panel,
-  .hc-loc-dot {
+  .solo-suggestion-check {
     animation: none !important;
-  }
-
-  .hc-loc-map-panel {
-    opacity: 0;
-  }
-
-  .hc-loc-map-panel--europe {
-    opacity: 1;
   }
 }
 

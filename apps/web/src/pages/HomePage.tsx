@@ -229,6 +229,27 @@ function ConfigSummary({ items }: { items: SummaryItem[] }) {
   );
 }
 
+/* The card's map is the real one, not a drawing of one. Four zoom-1 tiles from
+   the same provider the game itself uses cover the whole world, which is all a
+   preview needs, and four images cost a lot less than the map component with
+   its panning and zooming dragged into the home page bundle. */
+const LOC_TILES = [
+  { x: 0, y: 0 }, { x: 1, y: 0 },
+  { x: 0, y: 1 }, { x: 1, y: 1 },
+];
+
+const locTileUrl = (x: number, y: number) =>
+  `https://mt${(x + y) % 4}.google.com/vt/lyrs=y&x=${x}&y=${y}&z=1&hl=en&gl=US`;
+
+/* Percentages down the cropped band, not lat and lng: the crop is fixed, so
+   working them out once here beats doing Mercator maths at render. One answer
+   and two guesses landing near it, which is what a round looks like. */
+const LOC_PINS = [
+  { label: "answer", x: 50.7, y: 27.7, answer: true },
+  { label: "guess-a", x: 50.0, y: 26.1, answer: false },
+  { label: "guess-b", x: 53.5, y: 31.7, answer: false },
+];
+
 function SyncMiniSpinner({ className = "" }: { className?: string }) {
   return (
     <span
@@ -1145,32 +1166,23 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               <p className="hc-game-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
               <div className="hc-coming-preview">
                 <div className="hc-loc-preview" aria-hidden="true">
-                  <div className="hc-loc-map-stage">
-                    <div className="hc-loc-map-panel hc-loc-map-panel--america">
-                      <span className="hc-loc-land hc-loc-land--north-america" />
-                      <span className="hc-loc-land hc-loc-land--south-america" />
-                      <span className="hc-loc-dot hc-loc-dot--america-a" />
-                      <span className="hc-loc-dot hc-loc-dot--america-b" />
-                      <span className="hc-loc-dot hc-loc-dot--america-c" />
+                  <div className="hc-loc-map">
+                    <div className="hc-loc-tiles">
+                      {LOC_TILES.map((t) => (
+                        <img key={`${t.x}-${t.y}`} src={locTileUrl(t.x, t.y)} alt="" decoding="async" draggable={false} />
+                      ))}
                     </div>
-                    <div className="hc-loc-map-panel hc-loc-map-panel--europe">
-                      <span className="hc-loc-land hc-loc-land--europe-main" />
-                      <span className="hc-loc-land hc-loc-land--europe-south" />
-                      <span className="hc-loc-dot hc-loc-dot--europe-a" />
-                      <span className="hc-loc-dot hc-loc-dot--europe-b" />
-                      <span className="hc-loc-dot hc-loc-dot--europe-c" />
-                    </div>
-                    <div className="hc-loc-map-panel hc-loc-map-panel--asia">
-                      <span className="hc-loc-land hc-loc-land--asia-main" />
-                      <span className="hc-loc-land hc-loc-land--asia-islands" />
-                      <span className="hc-loc-dot hc-loc-dot--asia-a" />
-                      <span className="hc-loc-dot hc-loc-dot--asia-b" />
-                      <span className="hc-loc-dot hc-loc-dot--asia-c" />
-                    </div>
+                    {LOC_PINS.map((pin) => (
+                      <span
+                        key={pin.label}
+                        className={`hc-loc-pin${pin.answer ? " hc-loc-pin--answer" : ""}`}
+                        style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
+                      />
+                    ))}
                   </div>
                   <div className="hc-loc-clues">
-                    <span><strong>Clue 1:</strong> Here</span>
-                    <span><strong>Clue 2:</strong> There</span>
+                    <span><strong>Clue 1:</strong> Rivers</span>
+                    <span><strong>Clue 2:</strong> Towers</span>
                   </div>
                 </div>
               </div>
