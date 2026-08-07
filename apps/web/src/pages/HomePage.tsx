@@ -229,6 +229,14 @@ function ConfigSummary({ items }: { items: SummaryItem[] }) {
   );
 }
 
+/* One round, told in order: the word everyone but the imposter saw, then what
+   each of them said about it, then who that got voted out. */
+const IMPOSTER_PREVIEW = [
+  { who: "Ada", clue: "“Fluffy”", out: false },
+  { who: "Bram", clue: "“Loyal”", out: false },
+  { who: "Cleo", clue: "“Meow?”", out: true },
+];
+
 /* The card's map is the real one, not a drawing of one. Four zoom-1 tiles from
    the same provider the game itself uses cover the whole world, which is all a
    preview needs, and four images cost a lot less than the map component with
@@ -684,26 +692,21 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             <div className="hc-card-anim" key="default">
               <p className="hc-game-desc">Find the liar. Give clues. Vote them out.</p>
               <div className="hc-coming-preview">
-                <div className="hc-mini-board">
-                  <div className="hc-mini-board-header hc-mini-board-header--imposter">
-                    <span>Secret Word: DOG</span>
+                <div className="hc-imp-preview" aria-hidden="true">
+                  <div className="hc-imp-word">
+                    <span className="hc-imp-word-label">Everyone sees</span>
+                    <span className="hc-imp-word-value">DOG</span>
+                    <span className="hc-imp-word-note">except one of you</span>
                   </div>
-                  <div className="hc-mini-board-rows">
-                    <div className="hc-mini-row">
-                      <span className="hc-mini-avatar hc-mini-avatar--imposter">A</span>
-                      <span className="hc-mini-clue">"Fluffy"</span>
-                      <span className="hc-mini-badge hc-mini-badge--ok">✓</span>
-                    </div>
-                    <div className="hc-mini-row">
-                      <span className="hc-mini-avatar hc-mini-avatar--imposter">B</span>
-                      <span className="hc-mini-clue">"Loyal"</span>
-                      <span className="hc-mini-badge hc-mini-badge--ok">✓</span>
-                    </div>
-                    <div className="hc-mini-row hc-mini-row--suspect">
-                      <span className="hc-mini-avatar hc-mini-avatar--suspect">C</span>
-                      <span className="hc-mini-clue hc-mini-clue--wrong">&quot;Meow?&quot;</span>
-                      <span className="hc-mini-badge hc-mini-badge--wrong">Wrong</span>
-                    </div>
+
+                  <div className="hc-imp-rows">
+                    {IMPOSTER_PREVIEW.map((row) => (
+                      <div key={row.who} className={`hc-imp-row${row.out ? " hc-imp-row--out" : ""}`}>
+                        <span className="hc-imp-who">{row.who}</span>
+                        <span className="hc-imp-clue">{row.clue}</span>
+                        <span className="hc-imp-mark">{row.out ? "Voted out" : <FiCheck size={11} />}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -807,31 +810,27 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             <div className="hc-card-anim" key="default">
               <p className="hc-game-desc">One-word clues. Team guessing. First to target wins.</p>
               <div className="hc-coming-preview">
-                <div className="hc-pw-preview">
+                <div className="hc-pw-preview" aria-hidden="true">
                   <div className="hc-pw-teams">
-                    <div className="hc-pw-team hc-pw-team--red">
-                      <span className="hc-pw-team-name">Red</span>
-                      <span className="hc-pw-team-score">2</span>
-                    </div>
+                    <span className="hc-pw-team hc-pw-team--red">Red<b>2</b></span>
                     <span className="hc-pw-vs">vs</span>
-                    <div className="hc-pw-team hc-pw-team--blue">
-                      <span className="hc-pw-team-name">Blue</span>
-                      <span className="hc-pw-team-score">1</span>
-                    </div>
+                    <span className="hc-pw-team hc-pw-team--blue">Blue<b>1</b></span>
                   </div>
+
                   <div className="hc-pw-word">
-                    <span className="hc-pw-word-label">Target</span>
-                    <span className="hc-pw-letter">O</span>
-                    <span className="hc-pw-letter">C</span>
-                    <span className="hc-pw-letter">E</span>
-                    <span className="hc-pw-letter">A</span>
-                    <span className="hc-pw-letter">N</span>
+                    <span className="hc-pw-word-label">Your team's word</span>
+                    <span className="hc-pw-word-value">OCEAN</span>
                   </div>
-                  <div className="hc-pw-flow">
-                    <span className="hc-pw-flow-clue">"Waves"</span>
-                    <span className="hc-pw-flow-arrow">→</span>
-                    <span className="hc-pw-flow-guess">OCEAN</span>
-                    <span className="hc-pw-flow-result">✓</span>
+
+                  <div className="hc-pw-steps">
+                    <div className="hc-pw-step">
+                      <span className="hc-pw-role">Ada says</span>
+                      <span className="hc-pw-said">“Waves”</span>
+                    </div>
+                    <div className="hc-pw-step">
+                      <span className="hc-pw-role">Bram guesses</span>
+                      <span className="hc-pw-said hc-pw-said--right">OCEAN <FiCheck size={11} /></span>
+                    </div>
                   </div>
                 </div>
               </div>

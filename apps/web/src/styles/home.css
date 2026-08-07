@@ -895,373 +895,6 @@ a.solo-card-title-link {
   min-height: 80px; /* Ensures minimal space so grid renders properly */
 }
 
-/* ── Mini game board preview (Imposter / Password) ───────────── */
-.hc-mini-board {
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--secondary) 18%, transparent);
-  background: color-mix(in srgb, var(--secondary) 5%, transparent);
-}
-
-.hc-mini-board-header {
-  padding: 0.3rem 0.55rem;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  text-align: center;
-}
-
-.hc-mini-board-header--imposter {
-  background: color-mix(in srgb, #7eb8ff 12%, transparent);
-  color: #7eb8ff;
-  border-bottom: 1px solid color-mix(in srgb, #7eb8ff 20%, transparent);
-}
-
-.hc-mini-board-header--password {
-  background: color-mix(in srgb, #a78bfa 12%, transparent);
-  color: #a78bfa;
-  border-bottom: 1px solid color-mix(in srgb, #a78bfa 20%, transparent);
-}
-
-.hc-mini-board-header--location {
-  background: color-mix(in srgb, #f59e0b 12%, transparent);
-  color: #f59e0b;
-  border-bottom: 1px solid color-mix(in srgb, #f59e0b 20%, transparent);
-}
-
-.hc-mini-board-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.hc-mini-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.55rem;
-  background: color-mix(in srgb, var(--secondary) 3%, transparent);
-  position: relative;
-}
-
-.hc-mini-row--suspect {
-  background: color-mix(in srgb, #f87171 6%, transparent);
-}
-
-.hc-mini-row::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  opacity: 0;
-  background: var(--hc-row-scan, var(--card-accent, var(--primary)));
-  pointer-events: none;
-}
-
-.hc-mini-avatar {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.5rem;
-  font-weight: 800;
-  flex-shrink: 0;
-}
-
-.hc-mini-avatar--imposter {
-  background: color-mix(in srgb, #7eb8ff 20%, transparent);
-  color: #7eb8ff;
-  border: 1px solid color-mix(in srgb, #7eb8ff 30%, transparent);
-}
-
-.hc-mini-avatar--suspect {
-  background: color-mix(in srgb, #f87171 20%, transparent);
-  color: #f87171;
-  border: 1px solid color-mix(in srgb, #f87171 30%, transparent);
-}
-
-.hc-mini-avatar--password {
-  background: color-mix(in srgb, #a78bfa 20%, transparent);
-  color: #a78bfa;
-  border: 1px solid color-mix(in srgb, #a78bfa 30%, transparent);
-}
-
-.hc-mini-avatar--location {
-  background: color-mix(in srgb, #f59e0b 20%, transparent);
-  color: #f59e0b;
-  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
-}
-
-.hc-mini-clue {
-  font-size: 0.62rem;
-  color: var(--secondary);
-  flex: 1;
-  text-align: left;
-}
-
-.hc-mini-badge {
-  font-size: 0.52rem;
-  font-weight: 800;
-  padding: 0.08rem 0.3rem;
-  border-radius: var(--radius-xs);
-  flex-shrink: 0;
-}
-
-.hc-mini-badge--ok {
-  background: color-mix(in srgb, #4ade80 12%, transparent);
-  color: #4ade80;
-}
-
-.hc-mini-badge--caught {
-  background: color-mix(in srgb, #f87171 12%, transparent);
-  color: #f87171;
-}
-
-.hc-mini-badge--correct {
-  background: color-mix(in srgb, #4ade80 15%, transparent);
-  color: #4ade80;
-  border: 1px solid color-mix(in srgb, #4ade80 25%, transparent);
-}
-
-.hc-mini-row--location-hit {
-  background: color-mix(in srgb, #4ade80 6%, transparent);
-}
-
-/* ── Lightweight multiplayer preview motion ─────────────────── */
-.hc-mini-clue--wrong {
-  color: #fca5a5;
-}
-
-.hc-mini-badge--wrong {
-  background: color-mix(in srgb, #f87171 12%, transparent);
-  color: #fca5a5;
-  border: 1px solid color-mix(in srgb, #f87171 24%, transparent);
-}
-
-.home-card--imposter .hc-mini-row--suspect {
-  animation: hc-imposter-wrong-clue 7.2s ease-in-out infinite;
-}
-
-.home-card--imposter .hc-mini-row--suspect::before {
-  --hc-row-scan: #f87171;
-  animation: hc-imposter-suspect-marker 7.2s ease-in-out infinite;
-}
-
-.home-card--imposter .hc-mini-clue--wrong,
-.home-card--imposter .hc-mini-badge--wrong {
-  animation: hc-imposter-wrong-text 7.2s ease-in-out infinite;
-}
-
-@keyframes hc-imposter-suspect-marker {
-  0%, 30%, 100% { opacity: 0; }
-  42%, 72% { opacity: 0.9; }
-}
-
-@keyframes hc-imposter-wrong-clue {
-  0%, 30%, 100% {
-    background: color-mix(in srgb, #f87171 6%, transparent);
-  }
-  42%, 72% {
-    background: color-mix(in srgb, #f87171 15%, transparent);
-  }
-}
-
-@keyframes hc-imposter-wrong-text {
-  0%, 30%, 100% { opacity: 0.72; }
-  42%, 72% { opacity: 1; }
-}
-
-/* ── Password team-vs preview ────────────────────────────────── */
-.hc-pw-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.hc-pw-teams {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  justify-content: center;
-}
-
-.hc-pw-team {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.5rem 1.2rem;
-  border-radius: var(--radius-md);
-  min-width: 76px;
-}
-
-.hc-pw-team--red {
-  --team-preview-color: #f87171;
-  background: color-mix(in srgb, #f87171 10%, transparent);
-  border: 1px solid color-mix(in srgb, #f87171 25%, transparent);
-}
-
-.hc-pw-team--blue {
-  --team-preview-color: #60a5fa;
-  background: color-mix(in srgb, #60a5fa 10%, transparent);
-  border: 1px solid color-mix(in srgb, #60a5fa 25%, transparent);
-}
-
-.hc-pw-team-name {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.hc-pw-team--red .hc-pw-team-name { color: #f87171; }
-.hc-pw-team--blue .hc-pw-team-name { color: #60a5fa; }
-
-.hc-pw-team-score {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--foreground);
-}
-
-.home-card--password .hc-pw-team {
-  animation: hc-password-team-ready 6.8s ease-in-out infinite;
-}
-
-.home-card--password .hc-pw-team--blue {
-  animation-delay: 1.7s;
-}
-
-.home-card--password .hc-pw-team-score {
-  animation: hc-password-score-tick 6.8s ease-in-out infinite;
-}
-
-.home-card--password .hc-pw-team--blue .hc-pw-team-score {
-  animation-delay: 1.7s;
-}
-
-.hc-pw-vs {
-  font-size: 0.6rem;
-  font-weight: 700;
-  color: var(--muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.hc-pw-word {
-  display: flex;
-  align-items: center;
-  gap: 0.18rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  color: var(--muted-foreground);
-  padding: 0.28rem 0.5rem;
-  border-radius: var(--radius-sm);
-  border: 1px dashed color-mix(in srgb, #a78bfa 30%, transparent);
-  background: color-mix(in srgb, #a78bfa 6%, transparent);
-}
-
-.hc-pw-word-label {
-  margin-right: 0.18rem;
-  font-size: 0.52rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: color-mix(in srgb, #a78bfa 72%, var(--secondary));
-}
-
-.hc-pw-letter {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1rem;
-  height: 1.25rem;
-  border-radius: var(--radius-xs);
-  background: color-mix(in srgb, #a78bfa 8%, transparent);
-  color: var(--muted-foreground);
-  border: 1px solid color-mix(in srgb, #a78bfa 16%, transparent);
-  animation: hc-password-letter-guess 6.8s ease-in-out infinite;
-}
-
-.home-card--password .hc-pw-letter:nth-child(3) { animation-delay: 0.45s; }
-.home-card--password .hc-pw-letter:nth-child(4) { animation-delay: 0.9s; }
-.home-card--password .hc-pw-letter:nth-child(5) { animation-delay: 1.35s; }
-.home-card--password .hc-pw-letter:nth-child(6) { animation-delay: 1.8s; }
-
-.hc-pw-flow {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.hc-pw-flow-clue {
-  color: var(--secondary);
-  font-style: italic;
-}
-
-.hc-pw-flow-arrow {
-  color: var(--muted-foreground);
-  opacity: 0.5;
-}
-
-.hc-pw-flow-guess {
-  color: #a78bfa;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-
-.hc-pw-flow-result {
-  color: #4ade80;
-  font-weight: 800;
-}
-
-.home-card--password .hc-pw-flow > span {
-  animation: hc-password-flow-step 6.8s ease-in-out infinite;
-}
-
-.home-card--password .hc-pw-flow-arrow { animation-delay: 0.85s; }
-.home-card--password .hc-pw-flow-guess { animation-delay: 1.7s; }
-.home-card--password .hc-pw-flow-result { animation-delay: 2.55s; }
-
-@keyframes hc-password-team-ready {
-  0%, 18%, 100% {
-    background: color-mix(in srgb, var(--team-preview-color, var(--card-accent)) 10%, transparent);
-  }
-  28%, 42% {
-    background: color-mix(in srgb, var(--team-preview-color, var(--card-accent)) 18%, transparent);
-  }
-}
-
-@keyframes hc-password-score-tick {
-  0%, 22%, 100% { color: var(--foreground); }
-  30%, 44% { color: var(--team-preview-color, var(--card-accent)); }
-}
-
-@keyframes hc-password-flow-step {
-  0%, 16% { opacity: 0.42; }
-  24%, 42% { opacity: 1; }
-  56%, 100% { opacity: 0.42; }
-}
-
-@keyframes hc-password-letter-guess {
-  0%, 18%, 100% {
-    color: var(--muted-foreground);
-    border-color: color-mix(in srgb, #a78bfa 16%, transparent);
-    background: color-mix(in srgb, #a78bfa 8%, transparent);
-  }
-  28%, 56% {
-    color: #c4b5fd;
-    border-color: color-mix(in srgb, #a78bfa 42%, transparent);
-    background: color-mix(in srgb, #a78bfa 16%, transparent);
-  }
-}
 
 /* ── Location map preview ────────────────────────────────────── */
 .hc-loc-preview {
@@ -1269,6 +902,215 @@ a.solo-card-title-link {
   gap: 0.5rem;
   width: min(100%, 238px);
   margin-inline: auto;
+}
+
+/* ── Imposter card preview ───────────────────────────────────────
+   One round in order: the word, then what each player said about it, then who
+   that got voted out. The old one squeezed all three into a strip of avatars
+   and ticks that never said what the game was.
+
+   Taller on purpose. The word is the whole premise, so it gets to be the size
+   of a headline instead of a caption on a header bar. */
+.hc-imp-preview {
+  display: grid;
+  gap: 0.5rem;
+  width: min(100%, 238px);
+  margin-inline: auto;
+  text-align: left;
+}
+
+.hc-imp-word {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  padding: 0.6rem 0.5rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--card-accent, #7eb8ff) 25%, transparent);
+  background: color-mix(in srgb, var(--card-accent, #7eb8ff) 9%, transparent);
+}
+
+.hc-imp-word-label,
+.hc-imp-word-note {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.hc-imp-word-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.1;
+  color: var(--card-accent, #7eb8ff);
+}
+
+.hc-imp-rows {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.hc-imp-row {
+  display: grid;
+  grid-template-columns: 3.1rem 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.32rem 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  font-size: 0.68rem;
+}
+
+.hc-imp-who {
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.hc-imp-clue {
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-imp-mark {
+  display: inline-flex;
+  align-items: center;
+  color: #22c55e;
+}
+
+/* The one who never saw the word, and what it cost them. */
+.hc-imp-row--out {
+  border-color: color-mix(in srgb, #f87171 40%, transparent);
+  background: color-mix(in srgb, #f87171 10%, transparent);
+}
+
+.hc-imp-row--out .hc-imp-clue {
+  color: #fca5a5;
+}
+
+.hc-imp-row--out .hc-imp-mark {
+  color: #f87171;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ── Password card preview ───────────────────────────────────────
+   Named the two jobs. The old one showed a word spelled out in letter tiles
+   and an arrow between a clue and a guess, which looked like a spelling game.
+   Password is one player saying a word and their team mate naming it, so the
+   preview says who is doing which. */
+.hc-pw-preview {
+  display: grid;
+  gap: 0.5rem;
+  width: min(100%, 238px);
+  margin-inline: auto;
+}
+
+.hc-pw-teams {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.hc-pw-team {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+
+.hc-pw-team b {
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-pw-team--red {
+  color: #f87171;
+  background: color-mix(in srgb, #f87171 14%, transparent);
+}
+
+.hc-pw-team--blue {
+  color: #7ecbff;
+  background: color-mix(in srgb, #7ecbff 14%, transparent);
+}
+
+.hc-pw-vs {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.hc-pw-word {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  padding: 0.55rem 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--card-accent, #a78bfa) 25%, transparent);
+  background: color-mix(in srgb, var(--card-accent, #a78bfa) 9%, transparent);
+}
+
+.hc-pw-word-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.hc-pw-word-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.15;
+  color: var(--card-accent, #a78bfa);
+}
+
+.hc-pw-steps {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.hc-pw-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.32rem 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  font-size: 0.68rem;
+}
+
+.hc-pw-role {
+  font-weight: 700;
+  color: var(--secondary);
+  white-space: nowrap;
+}
+
+.hc-pw-said {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.hc-pw-said--right {
+  color: #22c55e;
+  letter-spacing: 0.06em;
 }
 
 /* ── Location card map ───────────────────────────────────────────
@@ -1491,14 +1333,6 @@ a.solo-card-title-link {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-card--imposter .hc-mini-row,
-  .home-card--imposter .hc-mini-row::before,
-  .home-card--imposter .hc-mini-clue--wrong,
-  .home-card--imposter .hc-mini-badge--wrong,
-  .home-card--password .hc-pw-team,
-  .home-card--password .hc-pw-team-score,
-  .home-card--password .hc-pw-letter,
-  .home-card--password .hc-pw-flow > span,
   .home-card--chain .hc-chain-word,
   .home-card--shade .hc-shade-cell,
   .home-card--route-highlight,
