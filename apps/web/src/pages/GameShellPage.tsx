@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { FiAward, FiEdit3, FiEye, FiMapPin, FiMessageSquare, FiRefreshCw, FiTag, FiUsers } from "react-icons/fi";
+import { FiAward, FiChevronRight, FiEdit3, FiEye, FiMapPin, FiMessageSquare, FiPlay, FiRefreshCw, FiTag, FiUsers } from "react-icons/fi";
 import { GAME_META, type GameSlug } from "@games/shared";
 import { GameShellHeader, ShellPill, type GamePhase } from "../components/shared/GameShellHeader";
+import { GameButton, GameEmpty, GamePanel, type GameButtonSize, type GameButtonVariant } from "../components/shared/GameKit";
 import "../styles/game-shared.css";
 
 /**
@@ -92,6 +93,50 @@ export function GameShellPage() {
         <h1 style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "0.04em" }}>Game shell</h1>
         <p className="game-section-subtle">The header every multiplayer game wears. Phase, clock, role, code.</p>
       </header>
+
+      <Section title="Buttons" note="one accent per surface, and none of them filled solid">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+          {(["primary", "secondary", "ghost", "danger"] as GameButtonVariant[]).map((v) => (
+            <GameButton key={v} variant={v} icon={<FiPlay />}>{v}</GameButton>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+          {(["sm", "md", "lg"] as GameButtonSize[]).map((s) => (
+            <GameButton key={s} variant="primary" size={s}>{s}</GameButton>
+          ))}
+          <GameButton variant="primary" loading>Starting</GameButton>
+          <GameButton variant="secondary" disabled>Waiting</GameButton>
+          <GameButton variant="secondary" trailing={<FiChevronRight />}>Next</GameButton>
+        </div>
+
+        <GameButton variant="primary" size="lg" full icon={<FiPlay />}>Start the round</GameButton>
+      </Section>
+
+      <Section title="Panels" note="the shape the shell header and the solo end screen already use">
+        <GamePanel title="Scores" action={<GameButton variant="ghost" size="sm">Full table</GameButton>}>
+          <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--secondary)" }}>
+            Anything a game wants to put in a box goes here.
+          </p>
+        </GamePanel>
+
+        <GamePanel title="Players" flush footer="Four in, two still picking.">
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {["Ada", "Bram", "Cleo"].map((n) => (
+              <span key={n} style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid var(--border)", fontSize: "0.78rem" }}>{n}</span>
+            ))}
+          </div>
+        </GamePanel>
+
+        <GamePanel>
+          <GameEmpty
+            icon={<FiUsers />}
+            title="Nobody here yet"
+            hint="Share the code and they will show up in this list."
+            action={<GameButton variant="primary" size="sm" icon={<FiTag />}>Copy the code</GameButton>}
+          />
+        </GamePanel>
+      </Section>
 
       <Section title="Live" note="drive it the way a game would">
         <Live />
