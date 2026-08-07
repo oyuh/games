@@ -884,15 +884,21 @@ a.solo-card-title-link {
   opacity: 0.85;
 }
 
+/* The demo is a panel of its own, the way the solo end screen stacks its
+   stats and its table, so the card reads as sections rather than one open
+   box of content that happens to finish with a button. */
 .hc-coming-preview {
   margin-top: auto;
-  padding-top: 0.5rem;
   width: 100%;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-height: 80px; /* Ensures minimal space so grid renders properly */
+  padding: 0.6rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
 }
 
 
@@ -919,19 +925,21 @@ a.solo-card-title-link {
   text-align: left;
 }
 
+/* A line, not a panel. Five rows underneath need the room, and the word only
+   has to say what they are all talking about. */
 .hc-imp-word {
-  display: grid;
-  justify-items: center;
-  gap: 0.1rem;
-  padding: 0.6rem 0.5rem 0.65rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem;
   border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, var(--card-accent, #7eb8ff) 25%, transparent);
   background: color-mix(in srgb, var(--card-accent, #7eb8ff) 9%, transparent);
 }
 
-.hc-imp-word-label,
-.hc-imp-word-note {
-  font-size: 0.58rem;
+.hc-imp-word-label {
+  font-size: 0.55rem;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -939,10 +947,9 @@ a.solo-card-title-link {
 }
 
 .hc-imp-word-value {
-  font-size: 1.5rem;
+  font-size: 0.92rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  line-height: 1.1;
+  letter-spacing: 0.14em;
   color: var(--card-accent, #7eb8ff);
 }
 
@@ -951,16 +958,25 @@ a.solo-card-title-link {
   gap: 0.25rem;
 }
 
+/* Clues land one after another, the way they do in a round. The whole set
+   restarts, so a card sat on screen keeps telling the same short story. */
 .hc-imp-row {
   display: grid;
   grid-template-columns: 3.1rem 1fr auto;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.32rem 0.5rem;
+  padding: 0.3rem 0.5rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--foreground) 3%, transparent);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
+  animation: hc-imp-land 5s ease-in-out infinite;
+}
+
+@keyframes hc-imp-land {
+  0%, 6% { opacity: 0.25; transform: translateY(2px); }
+  14%, 88% { opacity: 1; transform: none; }
+  100% { opacity: 0.25; transform: translateY(2px); }
 }
 
 .hc-imp-who {
@@ -1011,44 +1027,52 @@ a.solo-card-title-link {
   margin-inline: auto;
 }
 
-.hc-pw-teams {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.65rem;
+/* One scoreboard split down the middle rather than two pills floating either
+   side of a "vs". Two teams are two halves of one score, so they are drawn
+   as one object with a hairline between them. */
+.hc-pw-score {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: clip;
+  font-size: 0.66rem;
   font-weight: 700;
 }
 
-.hc-pw-team {
-  display: inline-flex;
+.hc-pw-side {
+  display: flex;
   align-items: baseline;
-  gap: 0.3rem;
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.5rem;
 }
 
-.hc-pw-team b {
-  font-size: 0.8rem;
+.hc-pw-side + .hc-pw-side {
+  border-left: 1px solid var(--border);
+}
+
+.hc-pw-side b {
+  font-size: 0.95rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
-.hc-pw-team--red {
-  color: #f87171;
-  background: color-mix(in srgb, #f87171 14%, transparent);
-}
-
-.hc-pw-team--blue {
-  color: #7ecbff;
-  background: color-mix(in srgb, #7ecbff 14%, transparent);
-}
-
-.hc-pw-vs {
-  font-size: 0.55rem;
-  letter-spacing: 0.08em;
+.hc-pw-side-name {
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  font-size: 0.58rem;
   color: var(--muted-foreground);
+}
+
+.hc-pw-side--red {
+  color: #f87171;
+  background: color-mix(in srgb, #f87171 10%, transparent);
+}
+
+.hc-pw-side--blue {
+  color: #7ecbff;
+  background: color-mix(in srgb, #7ecbff 10%, transparent);
 }
 
 .hc-pw-word {
@@ -1082,6 +1106,8 @@ a.solo-card-title-link {
   gap: 0.25rem;
 }
 
+/* The clue lands, then the guess: the order is the game, so the preview
+   plays it rather than showing both at once. */
 .hc-pw-step {
   display: flex;
   align-items: center;
@@ -1092,6 +1118,11 @@ a.solo-card-title-link {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--foreground) 3%, transparent);
   font-size: 0.68rem;
+  animation: hc-imp-land 5s ease-in-out infinite;
+}
+
+.hc-pw-step:nth-child(2) {
+  animation-delay: 1.1s;
 }
 
 .hc-pw-role {
@@ -1123,32 +1154,32 @@ a.solo-card-title-link {
    and the empty poles are dropped: 70% of the height, offset by 15%. */
 .hc-loc-map {
   position: relative;
-  aspect-ratio: 1.43;
+  aspect-ratio: 1;
   border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, #f59e0b 22%, transparent);
   overflow: clip;
-  background: #0b1a2b;
+  background: #12161c;
 }
 
+/* Four tiles at zoom 3, so the card shows one part of the world close enough
+   to recognise instead of the whole globe at thumbnail size. */
 .hc-loc-tiles {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: -21.43%;
-  height: 142.86%;
+  inset: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
 }
 
+/* Roadmap turned dark. Google serve a light map, and inverting it with a hue
+   rotation to put the colours back the right way round is the usual way to
+   get a dark one. Satellite was too much colour for a card this size. */
 .hc-loc-tiles img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* Satellite at this size is busy and bright next to the card. Knocking it
-     back lets the pins read without a scrim over the whole thing. */
-  filter: saturate(0.75) brightness(0.72);
+  filter: invert(1) hue-rotate(180deg) saturate(0.5) brightness(0.95) contrast(0.9);
 }
 
 /* Positions are percentages worked out from lat and lng once, in the page. */
@@ -1162,13 +1193,21 @@ a.solo-card-title-link {
   box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55);
 }
 
-/* The one that was right, marked the way the real map marks it. */
+/* The one that was right, marked the way the real map marks it, and pinging
+   so a still card still reads as a round that just ended. */
 .hc-loc-pin--answer {
   width: 9px;
   height: 9px;
   margin: -4.5px 0 0 -4.5px;
   background: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 0 0 5px color-mix(in srgb, #f59e0b 30%, transparent);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+  animation: hc-loc-ping 3.4s ease-out infinite;
+}
+
+@keyframes hc-loc-ping {
+  0%   { box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 0 0 0 color-mix(in srgb, #f59e0b 45%, transparent); }
+  55%  { box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 0 0 9px color-mix(in srgb, #f59e0b 0%, transparent); }
+  100% { box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 0 0 0 color-mix(in srgb, #f59e0b 0%, transparent); }
 }
 
 .hc-loc-clues {
@@ -1337,7 +1376,10 @@ a.solo-card-title-link {
   .home-card--shade .hc-shade-cell,
   .home-card--route-highlight,
   .solo-suggestion-line,
-  .solo-suggestion-check {
+  .solo-suggestion-check,
+  .hc-imp-row,
+  .hc-pw-step,
+  .hc-loc-pin--answer {
     animation: none !important;
   }
 }
@@ -1349,103 +1391,100 @@ a.solo-card-title-link {
   gap: 0.5rem;
 }
 
-/* ── Game card heading ───────────────────────────────────────────
-   The title with its how-to beside it. The mark sits on the title because it
-   is about the game; the row at the bottom is about starting one. */
+/* Keeps the title from pushing the mark off the end when it wraps. */
 .hc-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
+  max-width: 100%;
+}
+
+.hc-title-row .hc-game-title-lg {
   min-width: 0;
 }
 
-.hc-title-help {
-  flex: 0 0 auto;
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border-radius: 999px;
+/* ── Game card sections ──────────────────────────────────────────
+   The solo end screen's shape: the card is a stack of bordered panels rather
+   than one open box, so the demo and the action below it read as two separate
+   things instead of a run of content that happens to end in a button. */
+.hc-panel {
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-
-.hc-title-help:hover {
-  color: var(--card-accent, var(--foreground));
-  border-color: color-mix(in srgb, var(--card-accent, var(--foreground)) 45%, transparent);
-  background: color-mix(in srgb, var(--card-accent, var(--foreground)) 10%, transparent);
-}
-
-.hc-title-help:focus-visible {
-  outline: 2px solid var(--card-accent, var(--primary));
-  outline-offset: 2px;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  padding: 0.7rem;
 }
 
 /* ── Game card footer ────────────────────────────────────────────
-   One big button for the thing people came to do, and a quiet line under it
-   for the other thing. The old row put making a game, browsing games and the
-   rules all at the same weight, so the button that matters was a third of a
-   row wide. */
+   One box holding the button and, joined to its bottom edge, a short strip
+   saying what is already running. Same subject, so one object: the strip is
+   the button's own footer rather than a second control under it. */
 .hc-create {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 30%, transparent);
+  overflow: clip;
 }
 
 .hc-create-btn {
+  appearance: none;
   width: 100%;
-  padding: 0.8rem 1rem;
-  font-size: 0.92rem;
+  padding: 0.85rem 1rem;
+  border: 0;
+  background: var(--card-accent, var(--primary));
+  color: #14161a;
+  font: inherit;
+  font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: 0.02em;
-  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: filter 0.15s;
 }
 
-/* A line, not a button: it changes what the card is showing rather than
-   doing anything, so it should not look like a second call to action. */
-.hc-public-toggle {
+.hc-create-btn:hover {
+  filter: brightness(1.08);
+}
+
+.hc-create-btn:focus-visible {
+  outline: 2px solid var(--card-accent, var(--primary));
+  outline-offset: -3px;
+}
+
+/* The short one. Deliberately a fraction of the button's height: it is a
+   footnote on the button, not a rival to it. */
+.hc-public-strip {
   appearance: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   width: 100%;
-  padding: 0.35rem 0.5rem;
+  padding: 0.3rem 0.5rem;
   border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
+  border-top: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 30%, transparent);
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 10%, transparent);
   color: var(--muted-foreground);
   font: inherit;
-  font-size: 0.68rem;
+  font-size: 0.63rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
 }
 
-.hc-public-toggle:hover {
+.hc-public-strip:hover {
   color: var(--foreground);
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 18%, transparent);
 }
 
-.hc-public-toggle:focus-visible {
+.hc-public-strip:focus-visible {
   outline: 2px solid var(--card-accent, var(--primary));
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
-/* Something is actually running, so the line is worth looking at. */
-.hc-public-toggle.is-live {
+/* Something is actually running, so the strip is worth a look. */
+.hc-public-strip.is-live {
   color: var(--card-accent, var(--primary));
 }
 
-.hc-public-toggle svg {
+.hc-public-strip svg {
   flex: 0 0 auto;
 }
 
@@ -2010,13 +2049,18 @@ a.solo-card-title-link {
   color: var(--foreground);
 }
 
+/* Smaller and tighter than it was. Half these names run to two lines in a
+   column this wide, and at 1.6rem with default leading a two line title ate
+   the top of the card before it had said anything. */
 .hc-game-title-lg {
-  font-size: 1.6rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
   color: var(--foreground);
   margin-top: 0;
   margin-bottom: 0;
+  text-wrap: balance;
 }
 
 .hc-game-title-lg--compact {
