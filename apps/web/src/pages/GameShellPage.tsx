@@ -68,6 +68,7 @@ function Live() {
       </div>
 
       <GameShellHeader
+        collapsible
         game="imposter"
         title="Imposter"
         phases={IMPOSTER_PHASES}
@@ -94,6 +95,36 @@ export function GameShellPage() {
 
       <Section title="Live" note="drive it the way a game would">
         <Live />
+      </Section>
+
+      <Section title="Folded" note="the container goes, the line moves up to separate the rows, and the pills drop under it beside the clock">
+        <GameShellHeader
+          collapsible
+          defaultCollapsed
+          game="imposter"
+          title="Imposter"
+          phases={IMPOSTER_PHASES}
+          phase="voting"
+          round={{ current: 2, total: 5 }}
+          endsAt={Date.now() + 40_000}
+          duration={90}
+          code="H4TQ9"
+          isHost
+          pills={<ShellPill icon={<FiTag />} tooltip="Word bank">Films</ShellPill>}
+        />
+        <GameShellHeader
+          collapsible
+          game="location"
+          title="Location Signal"
+          phases={SIGNAL_PHASES}
+          phase="guess"
+          round={{ current: 3, total: 4 }}
+          endsAt={Date.now() + 70_000}
+          duration={120}
+          code="PL4NE"
+          isSpectator
+          pills={<ShellPill icon={<FiUsers />} tone="#34d399" tooltip="Whose turn">Blue Team</ShellPill>}
+        />
       </Section>
 
       <Section title="Every game" note="each one wears its own accent, straight out of its metadata">
