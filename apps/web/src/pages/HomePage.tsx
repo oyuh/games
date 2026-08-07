@@ -1,4 +1,4 @@
-import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, GAME_META, IMPOSTER_CLUE_VISIBILITY_OPTIONS, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries } from "@games/shared";
+import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, GAME_META, IMPOSTER_CLUE_VISIBILITY_OPTIONS, imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, multiplayerTypeToGameSlug, passwordCategories, passwordCategoryLabels, mutators, queries, type GameSlug } from "@games/shared";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { Select } from "../components/shared/Select";
 import { Segmented, type SoloSetupOption } from "../components/shared/SoloGameMenu";
@@ -249,11 +249,12 @@ const LOC_TILES = [
   { x: 3, y: 3 }, { x: 4, y: 3 },
 ];
 
-/* Roadmap, not satellite. Satellite at card size is a lot of colour fighting
-   the card it sits in; a plain roadmap inverted into dark reads as a map at a
-   glance and stays out of the way. */
+/* Terrain, which is the one layer this provider serves with no place names on
+   it. Satellite was too much colour and the roadmap came covered in country
+   labels, which at card size is just text nobody is meant to read. Landforms
+   alone say "map" perfectly well. */
 const locTileUrl = (x: number, y: number) =>
-  `https://mt${(x + y) % 4}.google.com/vt/lyrs=m&x=${x}&y=${y}&z=${LOC_ZOOM}&hl=en&gl=US`;
+  `https://mt${(x + y) % 4}.google.com/vt/lyrs=t&x=${x}&y=${y}&z=${LOC_ZOOM}&hl=en&gl=US`;
 
 /* Percentages across the four tiles above, worked out from lat and lng once,
    since the view never moves. One answer and two guesses landing near it,
@@ -316,6 +317,7 @@ function CardTitle({
  * one somebody else made is the other thing, so it gets a line.
  */
 function CardCreate({
+  game,
   onCreate,
   onBrowse,
   count,
@@ -324,6 +326,7 @@ function CardCreate({
   syncAttention,
   syncStatusTooltip,
 }: {
+  game: GameSlug;
   onCreate: () => void;
   onBrowse: () => void;
   count: number;
@@ -336,7 +339,11 @@ function CardCreate({
 
   return (
     <div className="hc-create">
+      {/* The game's own mark leads the label. The cards used to carry it as a
+          tiled wash behind everything, which was a lot of work for something
+          nobody could quite see; one icon on the thing you press says it. */}
       <button type="button" className="hc-create-btn" onClick={onCreate}>
+        <GameIcon game={game} size={17} />
         Create Game
       </button>
 
@@ -700,7 +707,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           ) : (
             <div className="hc-card-anim" key="default">
-              <p className="hc-game-desc">Find the liar. Give clues. Vote them out.</p>
               <div className="hc-coming-preview">
                 <div className="hc-imp-preview" aria-hidden="true">
                   <div className="hc-imp-word">
@@ -745,6 +751,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
             ) : !imposterExpanded ? (
               <CardCreate
+                game="imposter"
                 onCreate={() => setImposterExpanded(true)}
                 onBrowse={() => { setImposterExpanded(false); setImposterBrowsing(true); }}
                 count={imposterPublicCount}
@@ -821,7 +828,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           ) : (
             <div className="hc-card-anim" key="default">
-              <p className="hc-game-desc">One-word clues. Team guessing. First to target wins.</p>
               <div className="hc-coming-preview">
                 <div className="hc-pw-preview" aria-hidden="true">
                   {/* One scoreboard split by a hairline, not two pills adrift
@@ -875,6 +881,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
             ) : !passwordExpanded ? (
               <CardCreate
+                game="password"
                 onCreate={() => setPasswordExpanded(true)}
                 onBrowse={() => { setPasswordExpanded(false); setPasswordBrowsing(true); }}
                 count={passwordPublicCount}
@@ -962,7 +969,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           ) : (
             <div className="hc-card-anim" key="default">
-              <p className="hc-game-desc">Race to solve a chain of linked words.</p>
               <div className="hc-coming-preview">
                 <div className="hc-chain-example">
                   <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
@@ -994,6 +1000,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
             ) : !chainExpanded ? (
               <CardCreate
+                game="chain"
                 onCreate={() => setChainExpanded(true)}
                 onBrowse={() => { setChainExpanded(false); setChainBrowsing(true); }}
                 count={chainPublicCount}
@@ -1081,7 +1088,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           ) : (
             <div className="hc-card-anim" key="default">
-              <p className="hc-game-desc">One leader, one color. Give clues and guess the target shade.</p>
               <div className="hc-coming-preview">
                 <div className="hc-shade-grid">
                   {SHADE_PREVIEW_CELLS.map((cell) => (
@@ -1114,6 +1120,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
             ) : !shadeExpanded ? (
               <CardCreate
+                game="shade"
                 onCreate={() => setShadeExpanded(true)}
                 onBrowse={() => { setShadeExpanded(false); setShadeBrowsing(true); }}
                 count={shadePublicCount}
@@ -1182,7 +1189,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
             </div>
           ) : (
             <div className="hc-card-anim" key="default">
-              <p className="hc-game-desc">Pick a spot on the globe. Give clues. Guess the location.</p>
               <div className="hc-coming-preview">
                 <div className="hc-loc-preview" aria-hidden="true">
                   <div className="hc-loc-map">
@@ -1191,11 +1197,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                         <img key={`${t.x}-${t.y}`} src={locTileUrl(t.x, t.y)} alt="" decoding="async" draggable={false} />
                       ))}
                     </div>
-                    {LOC_PINS.map((pin) => (
+                    {LOC_PINS.map((pin, i) => (
                       <span
                         key={pin.label}
                         className={`hc-loc-pin${pin.answer ? " hc-loc-pin--answer" : ""}`}
-                        style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
+                        style={{ left: `${pin.x}%`, top: `${pin.y}%`, animationDelay: `${i * 0.5}s` }}
                       />
                     ))}
                   </div>
@@ -1225,6 +1231,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               </div>
             ) : !locationExpanded ? (
               <CardCreate
+                game="location"
                 onCreate={() => setLocationExpanded(true)}
                 onBrowse={() => { setLocationExpanded(false); setLocationBrowsing(true); }}
                 count={locationPublicCount}
