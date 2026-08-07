@@ -239,6 +239,58 @@
   margin-top: 0.45rem;
 }
 
+/* ── Roster ─────────────────────────────────────────────────────
+   Across the width and wrapping, not down one narrow column. The player card
+   carries state, points and badges, and a roster squeezed into a sidebar
+   turns all of that into a line of text with a face on it.
+
+   auto-fill rather than auto-fit: a lobby of two should show two cards their
+   own size, not two cards stretched across the whole row. */
+.gk-roster {
+  --gk-roster-min: 13rem;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--gk-roster-min), 1fr));
+  align-items: start;
+  gap: 0.5rem;
+}
+
+/* Teams are wider than players, and they hold cards of their own. */
+.gk-roster--teams {
+  --gk-roster-min: 15rem;
+  gap: 0.6rem;
+}
+
+.gk-roster--bench {
+  --gk-roster-min: 10rem;
+  gap: 0.4rem;
+}
+
+.gk-roster-count {
+  font-size: 0.7rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondary);
+}
+
+/* ── Bench ──────────────────────────────────────────────────────
+   Behind a hairline, because in a team game having no team is a state worth
+   noticing rather than just more of the list. */
+.gk-bench {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.gk-bench-label {
+  margin: 0 0 0.45rem;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gk-spinner { animation-duration: 1.6s; }
   .gk-btn { transition: none; }

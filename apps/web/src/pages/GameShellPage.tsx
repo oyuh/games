@@ -3,7 +3,22 @@ import { FiAward, FiChevronRight, FiEdit3, FiEye, FiMapPin, FiMessageSquare, FiP
 import { GAME_META, type GameSlug } from "@games/shared";
 import { GameShellHeader, ShellPill, type GamePhase } from "../components/shared/GameShellHeader";
 import { GameButton, GameEmpty, GamePanel, type GameButtonSize, type GameButtonVariant } from "../components/shared/GameKit";
+import { GameRoster, GameTeamRoster } from "../components/shared/GameRoster";
+import { playerBadges } from "../components/shared/PlayerCard";
 import "../styles/game-shared.css";
+
+const CAST = [
+  { sessionId: "seed-ada", name: "Ada" },
+  { sessionId: "seed-bram", name: "Bram" },
+  { sessionId: "seed-cleo", name: "Cleo" },
+  { sessionId: "seed-dov", name: "Dov" },
+  { sessionId: "seed-esme", name: "Esme" },
+  { sessionId: "seed-finn", name: "Finn" },
+];
+
+const RED = "#f87171";
+const BLUE = "#7ecbff";
+const GREEN = "#34d399";
 
 /**
  * Every state the shell header can be in, on one page. This is the place to
@@ -93,6 +108,79 @@ export function GameShellPage() {
         <h1 style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "0.04em" }}>Game shell</h1>
         <p className="game-section-subtle">The header every multiplayer game wears. Phase, clock, role, code.</p>
       </header>
+
+      <Section title="Roster, lobby" note="under the shell, across the width, cards at the size they were drawn">
+        <GameShellHeader
+          game="imposter"
+          title="Imposter"
+          phases={IMPOSTER_PHASES}
+          phase="lobby"
+          code="H4TQ9"
+          isHost
+        />
+        <GameRoster
+          players={CAST.map((p, i) => ({
+            ...p,
+            index: i,
+            ...(i === 0 ? { you: true, badges: [playerBadges.host()] } : {}),
+            caption: i < 4 ? "Ready" : "Still joining",
+            ...(i >= 4 ? { state: "waiting" as const } : {}),
+          }))}
+          footer="The host starts the round when everyone is in."
+        />
+      </Section>
+
+      <Section title="Roster, mid game" note="sm cards for a longer list, with what each of them is doing">
+        <GameRoster
+          size="sm"
+          title="Clues in"
+          action={<GameButton variant="ghost" size="sm">Skip waiting</GameButton>}
+          players={CAST.map((p, i) => ({
+            ...p,
+            index: i,
+            points: [3, 2, 2, 1, 0, 0][i]!,
+            ...(i < 3
+              ? { state: "success" as const, caption: "Clue in" }
+              : i < 5
+                ? { state: "waiting" as const, caption: "Still typing" }
+                : { disconnected: true, caption: "Dropped out" }),
+          }))}
+        />
+      </Section>
+
+      <Section title="Roster, teams" note="for password and chain reaction, where the unit is a team and a loose player is the exception">
+        <GameTeamRoster
+          collapsible
+          teams={[
+            {
+              name: "Red Team",
+              color: RED,
+              score: 4,
+              scoreSuffix: "/ 7",
+              caption: "Guessing now",
+              state: "waiting",
+              players: [
+                { ...CAST[0]!, index: 0, you: true, badges: [playerBadges.leader()] },
+                { ...CAST[1]!, index: 1, state: "waiting", caption: "Typing" },
+              ],
+            },
+            {
+              name: "Blue Team",
+              color: BLUE,
+              score: 6,
+              scoreSuffix: "/ 7",
+              caption: "Up next",
+              players: [
+                { ...CAST[2]!, index: 2 },
+                { ...CAST[3]!, index: 3 },
+              ],
+            },
+            { name: "Green Team", color: GREEN, score: 0, scoreSuffix: "/ 7", players: [] },
+          ]}
+          bench={[{ ...CAST[4]!, index: 4 }, { ...CAST[5]!, index: 5 }]}
+          footer="Anyone still on the bench gets put on the smallest team at start."
+        />
+      </Section>
 
       <Section title="Buttons" note="one accent per surface, and none of them filled solid">
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
