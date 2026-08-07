@@ -1130,15 +1130,15 @@ a.solo-card-title-link {
   grid-template-rows: 1fr 1fr;
 }
 
-/* Roadmap turned dark. Google serve a light map, and inverting it with a hue
-   rotation to put the colours back the right way round is the usual way to
-   get a dark one. Satellite was too much colour for a card this size. */
+/* Satellite, pulled most of the way to grey. No invert: the imagery is already
+   dark, and inverting it turns oceans white. Taking the colour out here rather
+   than choosing a paler layer keeps a real map under the pins. */
 .hc-loc-tiles img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: invert(1) hue-rotate(180deg) saturate(0.5) brightness(0.95) contrast(0.9);
+  filter: saturate(0.45) brightness(0.82) contrast(1.08);
 }
 
 /* Positions are percentages worked out from lat and lng once, in the page.

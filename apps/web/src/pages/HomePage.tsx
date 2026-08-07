@@ -249,12 +249,13 @@ const LOC_TILES = [
   { x: 3, y: 3 }, { x: 4, y: 3 },
 ];
 
-/* Terrain, which is the one layer this provider serves with no place names on
-   it. Satellite was too much colour and the roadmap came covered in country
-   labels, which at card size is just text nobody is meant to read. Landforms
-   alone say "map" perfectly well. */
+/* Satellite with nothing on top. Of the layers this provider serves, the
+   roadmap arrives covered in country names, and terrain is a near white relief
+   that leaves the labels as the only thing you can see. Plain satellite is the
+   only one that is all map and no text; the colour that made it too much last
+   time is taken out in the filter rather than by picking a paler layer. */
 const locTileUrl = (x: number, y: number) =>
-  `https://mt${(x + y) % 4}.google.com/vt/lyrs=t&x=${x}&y=${y}&z=${LOC_ZOOM}&hl=en&gl=US`;
+  `https://mt${(x + y) % 4}.google.com/vt/lyrs=s&x=${x}&y=${y}&z=${LOC_ZOOM}&hl=en&gl=US`;
 
 /* Percentages across the four tiles above, worked out from lat and lng once,
    since the view never moves. One answer and two guesses landing near it,
