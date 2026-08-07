@@ -663,29 +663,6 @@ a.solo-card-title-link {
   box-shadow: var(--surface-shadow-hover);
 }
 
-/* ── Icon pattern background for game cards ──────────────────── */
-.home-card--imposter::before,
-.home-card--password::before {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  z-index: 0;
-  opacity: 0.04;
-  filter: blur(2px);
-  pointer-events: none;
-  background-size: 48px 48px;
-  transform: rotate(-20deg);
-}
-
-.home-card--imposter::before {
-  /* eye icon pattern via SVG data URI */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%237eb8ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
-}
-
-.home-card--password::before {
-  /* shield icon pattern via SVG data URI */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3C/svg%3E");
-}
 
 .home-card-body {
   /* Named so anything wanting to break out to the card's edges can cancel
@@ -712,47 +689,6 @@ a.solo-card-title-link {
 .hc-centered {
   align-items: center;
   text-align: center;
-}
-
-
-
-.home-card--chain::before {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  z-index: 0;
-  opacity: 0.04;
-  filter: blur(2px);
-  pointer-events: none;
-  background-size: 48px 48px;
-  transform: rotate(-20deg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%2334d399' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
-}
-
-.home-card--shade::before {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  z-index: 0;
-  opacity: 0.04;
-  filter: blur(2px);
-  pointer-events: none;
-  background-size: 48px 48px;
-  transform: rotate(-20deg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23f472b6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18.37 2.63a2.12 2.12 0 0 1 3 3L14 13l-4 1 1-4Z'/%3E%3Cpath d='M9 3.5a8 8 0 1 0 5.59 13.77'/%3E%3Cpath d='M14 13l1.07-1.07'/%3E%3C/svg%3E");
-}
-
-.home-card--location::before {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  z-index: 0;
-  opacity: 0.04;
-  filter: blur(2px);
-  pointer-events: none;
-  background-size: 48px 48px;
-  transform: rotate(-20deg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23f59e0b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'/%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3C/svg%3E");
 }
 
 /* ── First-visit: glow on utils card ─────────────────────────── */
@@ -1205,7 +1141,8 @@ a.solo-card-title-link {
   filter: invert(1) hue-rotate(180deg) saturate(0.5) brightness(0.95) contrast(0.9);
 }
 
-/* Positions are percentages worked out from lat and lng once, in the page. */
+/* Positions are percentages worked out from lat and lng once, in the page.
+   Guesses drop in one after another, the way they land in a round. */
 .hc-loc-pin {
   position: absolute;
   width: 7px;
@@ -1214,6 +1151,14 @@ a.solo-card-title-link {
   border-radius: 999px;
   background: #f8fafc;
   box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55);
+  animation: hc-loc-drop 5s ease-in-out infinite;
+}
+
+@keyframes hc-loc-drop {
+  0%, 8%   { opacity: 0; transform: translateY(-5px) scale(0.6); }
+  16%      { opacity: 1; transform: translateY(0) scale(1.25); }
+  22%, 88% { opacity: 1; transform: none; }
+  100%     { opacity: 0; transform: translateY(-5px) scale(0.6); }
 }
 
 /* The one that was right, marked the way the real map marks it, and pinging
@@ -1224,7 +1169,10 @@ a.solo-card-title-link {
   margin: -4.5px 0 0 -4.5px;
   background: #f59e0b;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
-  animation: hc-loc-ping 3.4s ease-out infinite;
+  /* Drops in with the rest, and keeps pinging once it is there. */
+  animation:
+    hc-loc-drop 5s ease-in-out infinite,
+    hc-loc-ping 3.4s ease-out infinite;
 }
 
 @keyframes hc-loc-ping {
@@ -1402,6 +1350,7 @@ a.solo-card-title-link {
   .solo-suggestion-check,
   .hc-imp-row,
   .hc-pw-step,
+  .hc-loc-pin,
   .hc-loc-pin--answer {
     animation: none !important;
   }
@@ -1417,6 +1366,13 @@ a.solo-card-title-link {
 /* Keeps the title from pushing the mark off the end when it wraps. */
 .hc-title-row {
   max-width: 100%;
+}
+
+/* Optical, and only here: these titles are bigger than the solo cards' and
+   they carry descenders, so centring the mark on the line box drops it a
+   pixel below the middle of the capitals it sits beside. */
+.hc-title-row .solo-card-help {
+  transform: translateY(-1px);
 }
 
 .hc-title-row .hc-game-title-lg {
@@ -1456,6 +1412,10 @@ a.solo-card-title-link {
    brightest thing on a page of six cards and pulled the eye off the game. */
 .hc-create-btn {
   appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   width: 100%;
   padding: 0.85rem 1rem;
   border: 0;
@@ -2293,13 +2253,22 @@ a.solo-card-title-link {
   padding: 0;
 }
 
-/* Theme-colored primary buttons inside game cards */
+/* Theme-coloured primary buttons inside game cards.
+
+   The colour is in the text, matching the create section at the bottom of the
+   card. Solid accent panels were the loudest thing on a page of six cards,
+   and this is the one rule the config form's Create It and the public games
+   browser both come through, so they all quieten together. */
 .home-card .btn-primary {
-  background: var(--card-accent, var(--primary));
-  color: #111;
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 12%, transparent);
+  color: var(--card-accent, var(--primary));
+  border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 35%, transparent);
 }
+
 .home-card .btn-primary:hover {
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 85%, #fff);
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 20%, transparent);
+  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 55%, transparent);
+  color: var(--foreground);
 }
 .home-card .btn-primary:disabled {
   background: color-mix(in srgb, var(--card-accent, var(--primary)) 40%, transparent);
