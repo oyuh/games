@@ -239,6 +239,85 @@ function SyncMiniSpinner({ className = "" }: { className?: string }) {
   );
 }
 
+/**
+ * A game card's heading. The how-to moved up here off the action row: it is
+ * about the game, not about starting one, and the row below is now a single
+ * button that should stay a single button.
+ */
+function CardTitle({
+  title,
+  compact,
+  demo,
+  onDemo,
+}: {
+  title: string;
+  compact: boolean;
+  demo: string;
+  onDemo: (demo: string) => void;
+}) {
+  return (
+    <div className="hc-title-row">
+      <h2 className={`hc-game-title-lg${compact ? " hc-game-title-lg--compact" : ""}`}>{title}</h2>
+      <button
+        type="button"
+        className="hc-title-help"
+        onClick={() => onDemo(demo)}
+        aria-label={`How to play ${title}`}
+        data-tooltip="How to play"
+        data-tooltip-variant="info"
+      >
+        <FiHelpCircle size={15} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * The bottom of a game card: one big button that starts a game, and a quiet
+ * line under it that swaps the card over to whatever is already running.
+ * Making a game is what people came to do, so it gets the whole width; joining
+ * one somebody else made is the other thing, so it gets a line.
+ */
+function CardCreate({
+  onCreate,
+  onBrowse,
+  count,
+  syncOffline,
+  syncPending,
+  syncAttention,
+  syncStatusTooltip,
+}: {
+  onCreate: () => void;
+  onBrowse: () => void;
+  count: number;
+  syncOffline: boolean;
+  syncPending: boolean;
+  syncAttention: boolean;
+  syncStatusTooltip: string | undefined;
+}) {
+  const live = !syncOffline && count > 0;
+
+  return (
+    <div className="hc-create">
+      <button type="button" className="btn btn-primary hc-create-btn" onClick={onCreate}>
+        Create Game
+      </button>
+
+      <button
+        type="button"
+        className={`hc-public-toggle${live ? " is-live" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`}
+        onClick={onBrowse}
+        data-tooltip={syncStatusTooltip}
+        data-tooltip-variant="info"
+      >
+        {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={12} /> : <FiGlobe size={12} />}
+        <span>{live ? `${count} public game${count === 1 ? "" : "s"}` : "Browse public games"}</span>
+        <FiChevronRight size={12} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
 function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
   const {
@@ -536,7 +615,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="imposter"
       >
         <div className="home-card-body hc-centered">
-          <h2 className={`hc-game-title-lg${imposterExpanded || imposterBrowsing ? " hc-game-title-lg--compact" : ""}`}>Imposter</h2>
+          <CardTitle title="Imposter" compact={imposterExpanded || imposterBrowsing} demo="imposter" onDemo={setActiveDemo} />
 
           {imposterBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -628,20 +707,15 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !imposterExpanded ? (
-              <>
-              <div className="hc-row">
-                <button className={`btn hc-browse-globe${imposterPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setImposterExpanded(false); setImposterBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
-                  {!syncOffline && imposterPublicCount > 0 && <span className="hc-globe-badge">{imposterPublicCount}</span>}
-                </button>
-                <button className="btn btn-primary flex-1" onClick={() => setImposterExpanded(true)}>
-                  Create Game
-                </button>
-                <button className="btn hc-help-btn" onClick={() => setActiveDemo("imposter")} data-tooltip="How to Play" data-tooltip-variant="info">
-                  <FiHelpCircle size={18} />
-                </button>
-              </div>
-              </>
+              <CardCreate
+                onCreate={() => setImposterExpanded(true)}
+                onBrowse={() => { setImposterExpanded(false); setImposterBrowsing(true); }}
+                count={imposterPublicCount}
+                syncOffline={syncOffline}
+                syncPending={syncPending}
+                syncAttention={syncAttention}
+                syncStatusTooltip={syncStatusTooltip}
+              />
             ) : (
               <div className="hc-row hc-create-action-row">
                 <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Imposter preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setImposterExpanded(false)}>
@@ -675,7 +749,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="password"
       >
         <div className="home-card-body hc-centered">
-          <h2 className={`hc-game-title-lg${passwordExpanded || passwordBrowsing ? " hc-game-title-lg--compact" : ""}`}>Password</h2>
+          <CardTitle title="Password" compact={passwordExpanded || passwordBrowsing} demo="password" onDemo={setActiveDemo} />
 
           {passwordBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -760,20 +834,15 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !passwordExpanded ? (
-              <>
-              <div className="hc-row">
-                <button className={`btn hc-browse-globe${passwordPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setPasswordExpanded(false); setPasswordBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
-                  {!syncOffline && passwordPublicCount > 0 && <span className="hc-globe-badge">{passwordPublicCount}</span>}
-                </button>
-                <button className="btn btn-primary flex-1" onClick={() => setPasswordExpanded(true)}>
-                  Create Game
-                </button>
-                <button className="btn hc-help-btn" onClick={() => setActiveDemo("password")} data-tooltip="How to Play" data-tooltip-variant="info">
-                  <FiHelpCircle size={18} />
-                </button>
-              </div>
-              </>
+              <CardCreate
+                onCreate={() => setPasswordExpanded(true)}
+                onBrowse={() => { setPasswordExpanded(false); setPasswordBrowsing(true); }}
+                count={passwordPublicCount}
+                syncOffline={syncOffline}
+                syncPending={syncPending}
+                syncAttention={syncAttention}
+                syncStatusTooltip={syncStatusTooltip}
+              />
             ) : (
               <div className="hc-row hc-create-action-row">
                 <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Password preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setPasswordExpanded(false)}>
@@ -807,7 +876,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="chain"
       >
         <div className="home-card-body hc-centered">
-          <h2 className={`hc-game-title-lg${chainExpanded || chainBrowsing ? " hc-game-title-lg--compact" : ""}`}>Chain Reaction</h2>
+          <CardTitle title="Chain Reaction" compact={chainExpanded || chainBrowsing} demo="chain" onDemo={setActiveDemo} />
 
           {chainBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -884,20 +953,15 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !chainExpanded ? (
-              <>
-              <div className="hc-row">
-                <button className={`btn hc-browse-globe${chainPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setChainExpanded(false); setChainBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
-                  {!syncOffline && chainPublicCount > 0 && <span className="hc-globe-badge">{chainPublicCount}</span>}
-                </button>
-                <button className="btn btn-primary flex-1" onClick={() => setChainExpanded(true)}>
-                  Create Game
-                </button>
-                <button className="btn hc-help-btn" onClick={() => setActiveDemo("chain")} data-tooltip="How to Play" data-tooltip-variant="info">
-                  <FiHelpCircle size={18} />
-                </button>
-              </div>
-              </>
+              <CardCreate
+                onCreate={() => setChainExpanded(true)}
+                onBrowse={() => { setChainExpanded(false); setChainBrowsing(true); }}
+                count={chainPublicCount}
+                syncOffline={syncOffline}
+                syncPending={syncPending}
+                syncAttention={syncAttention}
+                syncStatusTooltip={syncStatusTooltip}
+              />
             ) : (
               <div className="hc-row hc-create-action-row">
                 <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Chain Reaction preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setChainExpanded(false)}>
@@ -931,7 +995,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="shade"
       >
         <div className="home-card-body hc-centered">
-          <h2 className={`hc-game-title-lg${shadeExpanded || shadeBrowsing ? " hc-game-title-lg--compact" : ""}`}>Shade Signal</h2>
+          <CardTitle title="Shade Signal" compact={shadeExpanded || shadeBrowsing} demo="shade" onDemo={setActiveDemo} />
 
           {shadeBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -1009,20 +1073,15 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !shadeExpanded ? (
-              <>
-              <div className="hc-row">
-                <button className={`btn hc-browse-globe${shadePublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setShadeExpanded(false); setShadeBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
-                  {!syncOffline && shadePublicCount > 0 && <span className="hc-globe-badge">{shadePublicCount}</span>}
-                </button>
-                <button className="btn btn-primary flex-1" onClick={() => setShadeExpanded(true)}>
-                  Create Game
-                </button>
-                <button className="btn hc-help-btn" onClick={() => setActiveDemo("shade")} data-tooltip="How to Play" data-tooltip-variant="info">
-                  <FiHelpCircle size={18} />
-                </button>
-              </div>
-              </>
+              <CardCreate
+                onCreate={() => setShadeExpanded(true)}
+                onBrowse={() => { setShadeExpanded(false); setShadeBrowsing(true); }}
+                count={shadePublicCount}
+                syncOffline={syncOffline}
+                syncPending={syncPending}
+                syncAttention={syncAttention}
+                syncStatusTooltip={syncStatusTooltip}
+              />
             ) : (
               <div className="hc-row hc-create-action-row">
                 <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Shade Signal preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setShadeExpanded(false)}>
@@ -1056,7 +1115,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="location"
       >
         <div className="home-card-body hc-centered">
-          <h2 className={`hc-game-title-lg${locationExpanded || locationBrowsing ? " hc-game-title-lg--compact" : ""}`}>Location Signal</h2>
+          <CardTitle title="Location Signal" compact={locationExpanded || locationBrowsing} demo="location" onDemo={setActiveDemo} />
 
           {locationBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -1134,20 +1193,15 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               </div>
             ) : !locationExpanded ? (
-              <>
-              <div className="hc-row">
-                <button className={`btn hc-browse-globe${locationPublicCount === 0 ? " hc-globe-empty" : ""}${syncOffline ? " hc-sync-pending-control" : ""}${syncAttention ? " hc-sync-unavailable-control" : ""}`} onClick={() => { setLocationExpanded(false); setLocationBrowsing(true); }} data-tooltip={syncStatusTooltip} data-tooltip-variant="info">
-                  {syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff size={18} /> : <FiGlobe size={18} />}
-                  {!syncOffline && locationPublicCount > 0 && <span className="hc-globe-badge">{locationPublicCount}</span>}
-                </button>
-                <button className="btn btn-primary flex-1" onClick={() => setLocationExpanded(true)}>
-                  Create Game
-                </button>
-                <button className="btn hc-help-btn" onClick={() => setActiveDemo("location")} data-tooltip="How to Play" data-tooltip-variant="info">
-                  <FiHelpCircle size={18} />
-                </button>
-              </div>
-              </>
+              <CardCreate
+                onCreate={() => setLocationExpanded(true)}
+                onBrowse={() => { setLocationExpanded(false); setLocationBrowsing(true); }}
+                count={locationPublicCount}
+                syncOffline={syncOffline}
+                syncPending={syncPending}
+                syncAttention={syncAttention}
+                syncStatusTooltip={syncStatusTooltip}
+              />
             ) : (
               <div className="hc-row hc-create-action-row">
                 <button className="btn btn-muted hc-config-back-btn" aria-label="Back to Location Signal preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setLocationExpanded(false)}>
