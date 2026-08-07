@@ -259,9 +259,9 @@ const locTileUrl = (x: number, y: number) =>
    since the view never moves. One answer and two guesses landing near it,
    which is what the end of a round looks like. */
 const LOC_PINS = [
-  { label: "answer", x: 52.6, y: 37.6, answer: true },
-  { label: "guess-a", x: 49.9, y: 33.0, answer: false },
-  { label: "guess-b", x: 63.9, y: 48.6, answer: false },
+  { label: "answer", x: 52.6, y: 32.6, answer: true },
+  { label: "guess-a", x: 49.9, y: 26.2, answer: false },
+  { label: "guess-b", x: 63.9, y: 48.0, answer: false },
 ];
 
 function SyncMiniSpinner({ className = "" }: { className?: string }) {
