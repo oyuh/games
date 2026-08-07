@@ -205,6 +205,57 @@
   letter-spacing: 0.12em;
 }
 
+/* Holds the gap open where the pills were, so the role case and the code
+   stay pinned right instead of sliding in against the title. */
+.gsh-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Fold ───────────────────────────────────────────────────────
+   Same shell as the code button, since they sit next to each other. */
+.gsh-fold {
+  flex: 0 0 auto;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gsh-line);
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  --tt-color: var(--gsh-accent);
+}
+
+.gsh-fold:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--gsh-accent) 45%, transparent);
+}
+
+.gsh-fold:focus-visible {
+  outline: 2px solid var(--gsh-accent);
+  outline-offset: 2px;
+}
+
+.gsh-fold svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.18s;
+}
+
+.gsh--folded .gsh-fold svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gsh-fold svg { transition: none; }
+}
+
 /* ── Bottom row ─────────────────────────────────────────────────
    The one container. Relative, because the clock's bar is pinned across its
    bottom edge, and clipped so the bar's ends meet the corners. */
@@ -218,6 +269,29 @@
   border: 1px solid var(--gsh-line);
   background: var(--surface-bottom);
   overflow: clip;
+}
+
+/* ── Folded ─────────────────────────────────────────────────────
+   The container is the thing being given up, so it goes entirely: no border,
+   no fill, no corners. What is left is the line and the clock, and the line
+   moves to the top edge where it now does a second job, separating the title
+   row from the pills that have dropped underneath it. */
+.gsh--folded .gsh-bottom {
+  border: 0;
+  border-top: 1px solid var(--gsh-line);
+  border-radius: 0;
+  background: transparent;
+  padding: 0.5rem 0 0;
+}
+
+.gsh--folded .gsh-timer-track {
+  top: -1px;
+  bottom: auto;
+}
+
+/* Nothing left to sit beside, so it stops shouting. */
+.gsh--folded .gsh-timer-value {
+  font-size: 1.35rem;
 }
 
 .gsh-phase {
@@ -385,7 +459,9 @@
     flex-wrap: wrap;
   }
 
-  .gsh-pills {
+  /* Top row only. Folded, the pills live in the bottom row beside the clock,
+     where dropping them onto their own line would put them past it. */
+  .gsh-top > .gsh-pills {
     order: 3;
     flex-basis: 100%;
   }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { FaCrown } from "react-icons/fa";
-import { FiCheck, FiCopy, FiEye, FiKey } from "react-icons/fi";
+import { FiCheck, FiChevronUp, FiCopy, FiEye, FiKey } from "react-icons/fi";
 import { GAME_META, type GameSlug } from "@games/shared";
 import { GameIcon } from "./GameIcon";
 import "../../styles/game-shell.css";
@@ -57,6 +57,11 @@ export interface GameShellHeaderProps {
   pills?: ReactNode;
   /** Overrides the game's own accent from its metadata. Rarely wanted. */
   accent?: string;
+  /** Adds the button that folds the phase panel away. Folded, the container
+   *  goes with it and only the line and the clock are left. */
+  collapsible?: boolean;
+  /** Start folded, for anyone who would rather have the room back. */
+  defaultCollapsed?: boolean;
   className?: string;
 }
 
@@ -204,8 +209,11 @@ export function GameShellHeader({
   isSpectator,
   pills,
   accent,
+  collapsible,
+  defaultCollapsed,
   className = "",
 }: GameShellHeaderProps) {
+  const [collapsed, setCollapsed] = useState(!!defaultCollapsed);
   const index = phases.findIndex((p) => p.id === phase);
   const current = phases[index];
 
@@ -213,9 +221,24 @@ export function GameShellHeader({
      it without every caller having to hand it over. */
   const tone = accent ?? GAME_META[game]?.accent;
 
+  const folded = !!collapsible && collapsed;
+
+  /* Folded, the pills drop under the line and take the room the phase panel
+     was using. Rendered in one place or the other, never both. */
+  const pillStrip = (
+    <span className="gsh-pills">
+      {round && (
+        <ShellPill tooltip="Which round you are on">
+          Round {round.current}{round.total ? ` / ${round.total}` : ""}
+        </ShellPill>
+      )}
+      {pills}
+    </span>
+  );
+
   return (
     <header
-      className={`gsh ${className}`.trim()}
+      className={`gsh${folded ? " gsh--folded" : ""} ${className}`.trim()}
       style={tone ? ({ "--gsh-accent": tone } as CSSProperties) : undefined}
     >
       <div className="gsh-top">
@@ -224,14 +247,8 @@ export function GameShellHeader({
           <h1 className="gsh-title">{title}</h1>
         </span>
 
-        <span className="gsh-pills">
-          {round && (
-            <ShellPill tooltip="Which round you are on">
-              Round {round.current}{round.total ? ` / ${round.total}` : ""}
-            </ShellPill>
-          )}
-          {pills}
-        </span>
+        {!folded && pillStrip}
+        {folded && <span className="gsh-spacer" />}
 
         {(isHost || isSpectator) && (
           <span className="gsh-roles">
@@ -251,22 +268,42 @@ export function GameShellHeader({
         )}
 
         {code && <CodeButton code={code} />}
+
+        {collapsible && (
+          <button
+            type="button"
+            className="gsh-fold"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-expanded={!collapsed}
+            aria-label={`${collapsed ? "Show" : "Hide"} the phase panel`}
+            /* Folded, the phase name is the thing you gave up, so the button
+               that gives it back is where it goes. */
+            data-tooltip={collapsed ? `Show the panel. ${current?.label ?? phase}` : "Hide the panel, keep the line and the clock"}
+            data-tooltip-variant="game"
+          >
+            <FiChevronUp aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       <div className="gsh-bottom">
-        <div className="gsh-phase">
-          <p className="gsh-phase-text">
-            {current?.icon && <span className="gsh-phase-icon" aria-hidden="true">{current.icon}</span>}
-            <span className="gsh-phase-name">{current?.label ?? phase}</span>
-            {index >= 0 && (
-              <span className="gsh-phase-count" aria-label={`Phase ${index + 1} of ${phases.length}`}>
-                {index + 1} of {phases.length}
-              </span>
-            )}
-          </p>
+        {!folded && (
+          <div className="gsh-phase">
+            <p className="gsh-phase-text">
+              {current?.icon && <span className="gsh-phase-icon" aria-hidden="true">{current.icon}</span>}
+              <span className="gsh-phase-name">{current?.label ?? phase}</span>
+              {index >= 0 && (
+                <span className="gsh-phase-count" aria-label={`Phase ${index + 1} of ${phases.length}`}>
+                  {index + 1} of {phases.length}
+                </span>
+              )}
+            </p>
 
-          {current?.hint && <p className="gsh-phase-hint">{current.hint}</p>}
-        </div>
+            {current?.hint && <p className="gsh-phase-hint">{current.hint}</p>}
+          </div>
+        )}
+
+        {folded && pillStrip}
 
         <GameTimer endsAt={endsAt} duration={duration} />
       </div>
