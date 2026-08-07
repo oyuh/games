@@ -240,36 +240,116 @@
 }
 
 /* ── Roster ─────────────────────────────────────────────────────
-   Across the width and wrapping, not down one narrow column. The player card
-   carries state, points and badges, and a roster squeezed into a sidebar
-   turns all of that into a line of text with a face on it.
+   No panel. A list of players is a heading and then the players, and a border
+   round that only puts an edge inside the page's other edges.
 
-   auto-fill rather than auto-fit: a lobby of two should show two cards their
-   own size, not two cards stretched across the whole row. */
+   Condensed is the default: the small player card already says name, face,
+   state and badges in one row, which is the whole job. The roomy version is
+   one button away for anyone who wants to look at everybody properly. */
+.gk-roster-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.gk-roster-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.gk-roster-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.gk-roster-count {
+  padding: 0.02rem 0.32rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  font-size: 0.62rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondary);
+}
+
+/* Pushes whatever follows to the far end of the line. */
+.gk-roster-gap {
+  flex: 1;
+  min-width: 0;
+}
+
+.gk-roster-expand {
+  flex: 0 0 auto;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.gk-roster-expand:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.gk-roster-expand:focus-visible {
+  outline: 2px solid var(--game-accent, var(--primary));
+  outline-offset: 2px;
+}
+
+.gk-roster-expand svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Condensed packs small cards tight; roomy gives the full ones their width.
+   auto-fill rather than auto-fit, so a lobby of two shows two cards their own
+   size instead of two stretched across the whole row. */
 .gk-roster {
-  --gk-roster-min: 13rem;
+  --gk-roster-min: 9.5rem;
 
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--gk-roster-min), 1fr));
   align-items: start;
+  gap: 0.4rem;
+}
+
+.gk-roster--roomy {
+  --gk-roster-min: 13rem;
   gap: 0.5rem;
 }
 
-/* Teams are wider than players, and they hold cards of their own. */
+/* A condensed team is its faces row, which is already about this wide. */
 .gk-roster--teams {
+  --gk-roster-min: 13rem;
+}
+
+.gk-roster--teams.gk-roster--roomy {
   --gk-roster-min: 15rem;
   gap: 0.6rem;
 }
 
 .gk-roster--bench {
-  --gk-roster-min: 10rem;
-  gap: 0.4rem;
+  --gk-roster-min: 9.5rem;
 }
 
-.gk-roster-count {
-  font-size: 0.7rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
+.gk-roster-empty {
+  margin: 0;
+  padding: 0.55rem 0;
+  font-size: 0.72rem;
   color: var(--secondary);
 }
 
@@ -277,18 +357,12 @@
    Behind a hairline, because in a team game having no team is a state worth
    noticing rather than just more of the list. */
 .gk-bench {
-  margin-top: 0.75rem;
-  padding-top: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
   border-top: 1px solid var(--border);
-}
-
-.gk-bench-label {
-  margin: 0 0 0.45rem;
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
 }
 
 @media (prefers-reduced-motion: reduce) {
