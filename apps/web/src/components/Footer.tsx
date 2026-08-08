@@ -104,64 +104,67 @@ export function Footer() {
           </button>
 
           {expanded && (
-            <div className="footer-popover">
-              {/* Overall status bar */}
-              <div className={`fp-status-bar ${allHealthy ? "fp-status-bar--ok" : isLoading ? "fp-status-bar--loading" : "fp-status-bar--err"}`}>
+            <div className={`footer-popover fp--${isLoading ? "loading" : allHealthy ? "ok" : "err"}`}>
+              {/* The answer, in the tone it deserves. */}
+              <div className="fp-head">
                 <span className={`status-dot ${allHealthy ? "status-dot--ok" : isLoading ? "status-dot--loading" : "status-dot--err"}`} />
-                <span>{overallLabel}</span>
+                <span className="fp-head-label">{overallLabel}</span>
               </div>
 
-              {/* Service rows */}
+              {/* One row per service, state as the same pill every other fact
+                  on the site is drawn as. */}
               <div className="fp-services">
-                <div className="fp-service">
-                  <span className="fp-service-name">API</span>
-                  <span className={`fp-service-badge ${apiOk ? "fp-badge--ok" : isLoading ? "fp-badge--loading" : "fp-badge--err"}`}>
-                    {apiOk ? "Online" : isLoading ? "Checking" : "Offline"}
-                  </span>
-                </div>
-                <div className="fp-service">
-                  <span className="fp-service-name">Database</span>
-                  <span className={`fp-service-badge ${dbOk ? "fp-badge--ok" : isLoading ? "fp-badge--loading" : "fp-badge--err"}`}>
-                    {dbOk ? "Connected" : isLoading ? "Checking" : "Disconnected"}
-                  </span>
-                </div>
+                {[
+                  { name: "API", ok: apiOk, label: apiOk ? "Online" : isLoading ? "Checking" : "Offline" },
+                  { name: "Database", ok: dbOk, label: dbOk ? "Connected" : isLoading ? "Checking" : "Disconnected" },
+                ].map((service) => (
+                  <div className="fp-service" key={service.name}>
+                    <span className="fp-service-name">{service.name}</span>
+                    <span className={`fp-pill fp-pill--${service.ok ? "ok" : isLoading ? "loading" : "err"}`}>
+                      {service.label}
+                    </span>
+                  </div>
+                ))}
               </div>
 
-              {/* Info section */}
-              <div className="fp-info">
-                {latency != null && (
-                  <div className="fp-info-row">
-                    <span className="fp-info-label">Latency</span>
-                    <span className="fp-info-value">{latency}ms</span>
-                  </div>
-                )}
-                {uptimeText && (
-                  <div className="fp-info-row">
-                    <span className="fp-info-label">Uptime</span>
-                    <span className="fp-info-value">{uptimeText}</span>
-                  </div>
-                )}
-                {buildTime && (
-                  <div className="fp-info-row">
-                    <span className="fp-info-label">Built</span>
-                    <span className="fp-info-value">{buildTime}</span>
-                  </div>
-                )}
-                {commitShort && (
-                  <div className="fp-info-row">
-                    <span className="fp-info-label">Commit</span>
-                    <a
-                      className="fp-info-value fp-commit-link"
-                      href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <code className="fp-commit-hash">{commitShort}</code>
-                      {commitMsg && <span className="fp-commit-msg">{commitMsg}</span>}
-                    </a>
-                  </div>
-                )}
-              </div>
+              {/* The numbers, as the tiles the solo end screen uses: the label
+                  small over the value, and a hairline doing the dividing. */}
+              {(latency != null || uptimeText || buildTime) && (
+                <div className="fp-stats">
+                  {latency != null && (
+                    <div className="fp-stat">
+                      <span className="fp-stat-label">Latency</span>
+                      <span className="fp-stat-value">{latency}ms</span>
+                    </div>
+                  )}
+                  {uptimeText && (
+                    <div className="fp-stat">
+                      <span className="fp-stat-label">Uptime</span>
+                      <span className="fp-stat-value">{uptimeText}</span>
+                    </div>
+                  )}
+                  {buildTime && (
+                    <div className="fp-stat">
+                      <span className="fp-stat-label">Built</span>
+                      <span className="fp-stat-value">{buildTime}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Along the bottom behind a hairline, the way the solo pickers
+                  hang their seed drawer. */}
+              {commitShort && (
+                <a
+                  className="fp-commit"
+                  href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <code className="fp-commit-hash">{commitShort}</code>
+                  {commitMsg && <span className="fp-commit-msg">{commitMsg}</span>}
+                </a>
+              )}
             </div>
           )}
         </div>
