@@ -335,6 +335,7 @@ function LiveResult() {
         key={run}
         players={ROUND_CAST}
         votes={caught ? CAUGHT : WRONG}
+        clues={ROUND_CLUES}
         secretWord="Titanic"
         skipVotes={skips}
         hasVotedSkip={skipped}
@@ -598,10 +599,11 @@ export function ImposterKitPage() {
       </Section>
 
       <Section title="Every ending" note="caught, wrong, a tie, and a room that could not be bothered">
-        <ImposterRoundResult players={ROUND_CAST} votes={CAUGHT} secretWord="Titanic" skipVotes={0} onSkip={NOOP} />
-        <ImposterRoundResult players={ROUND_CAST} votes={WRONG} secretWord="Titanic" skipVotes={2} onSkip={NOOP} />
+        <ImposterRoundResult players={ROUND_CAST} votes={CAUGHT} clues={ROUND_CLUES} secretWord="Titanic" skipVotes={0} onSkip={NOOP} />
+        <ImposterRoundResult players={ROUND_CAST} votes={WRONG} clues={ROUND_CLUES} secretWord="Titanic" skipVotes={2} onSkip={NOOP} />
         <ImposterRoundResult
           players={ROUND_CAST}
+          clues={ROUND_CLUES}
           secretWord="Titanic"
           skipVotes={3}
           hasVotedSkip
@@ -615,11 +617,11 @@ export function ImposterKitPage() {
             { voterId: "seed-dov", targetId: "seed-bram" },
           ]}
         />
-        <ImposterRoundResult players={ROUND_CAST} votes={[]} secretWord="Titanic" skipVotes={0} onSkip={NOOP} />
+        <ImposterRoundResult players={ROUND_CAST} votes={[]} clues={ROUND_CLUES} secretWord="Titanic" skipVotes={0} onSkip={NOOP} />
       </Section>
 
       <Section title="Watching the result" note="a spectator cannot hurry the room, so there is no button to press">
-        <ImposterRoundResult canSkip={false} players={ROUND_CAST} votes={CAUGHT} secretWord="Titanic" onSkip={NOOP} />
+        <ImposterRoundResult canSkip={false} players={ROUND_CAST} votes={CAUGHT} clues={ROUND_CLUES} secretWord="Titanic" onSkip={NOOP} />
       </Section>
 
       <Section title="The end" note="who won, who was who, and every round folded down to its headline. the last one opens itself">

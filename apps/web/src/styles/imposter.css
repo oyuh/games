@@ -935,6 +935,221 @@ label.imp-ballot:hover {
   color: color-mix(in srgb, var(--imp-tone) 55%, #000);
 }
 
+/* ── On a game page ─────────────────────────────────────────────
+   Everything above is sized for a component gallery. A real game page reads
+   at 1.12rem and has a whole screen to fill, so the game scales up to meet it
+   the same way .btn and .input already do. Geometry only. */
+.game-page .imp-word {
+  padding: 1.6rem 1.25rem 1.4rem;
+}
+
+.game-page .imp-word-role {
+  font-size: 0.74rem;
+}
+
+.game-page .imp-word-role-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.game-page .imp-word-value {
+  font-size: clamp(2rem, 7vw, 3rem);
+}
+
+.game-page .imp-word-hint {
+  max-width: 40rem;
+  font-size: 0.92rem;
+}
+
+.game-page .imp-composer {
+  padding: 0.5rem;
+}
+
+.game-page .imp-composer-input {
+  padding: 0.65rem 0.75rem;
+  font-size: 1.15rem;
+}
+
+.game-page .imp-composer-count {
+  font-size: 0.82rem;
+}
+
+.game-page .imp-composer-done-clue {
+  font-size: 1.3rem;
+}
+
+.game-page .imp-composer-done-note {
+  font-size: 0.84rem;
+}
+
+.game-page .imp-composer-done-mark svg {
+  width: 21px;
+  height: 21px;
+}
+
+/* Rows are the bulk of a screen in this game, so they get the most of it. */
+.game-page .imp-row {
+  padding: 0.55rem 0.8rem;
+  gap: 0.7rem;
+}
+
+.game-page .imp-row-face {
+  width: 34px;
+  height: 34px;
+}
+
+.game-page .imp-row-name {
+  min-width: 7rem;
+  max-width: 11rem;
+  font-size: 0.95rem;
+}
+
+.game-page .imp-row-you {
+  font-size: 0.68rem;
+}
+
+.game-page .imp-slot {
+  font-size: 0.92rem;
+}
+
+.game-page .imp-slot--empty,
+.game-page .imp-slot--writing,
+.game-page .imp-slot--locked {
+  font-size: 0.86rem;
+}
+
+.game-page .imp-slot--redacted {
+  font-size: 0.9rem;
+}
+
+.game-page .imp-slot--locked svg {
+  width: 14px;
+  height: 14px;
+}
+
+.game-page .imp-vote-rules {
+  font-size: 0.9rem;
+}
+
+.game-page .imp-vote-clue {
+  font-size: 0.98rem;
+}
+
+.game-page .imp-vote-status {
+  font-size: 0.78rem;
+}
+
+.game-page .imp-vote-status svg {
+  width: 13px;
+  height: 13px;
+}
+
+.game-page .imp-ballot-mark {
+  width: 18px;
+  height: 18px;
+}
+
+.game-page .imp-ballot-mark svg {
+  width: 12px;
+  height: 12px;
+}
+
+.game-page .imp-vote-note {
+  padding: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.game-page .imp-result {
+  padding: 1.6rem 1.25rem 1.4rem;
+}
+
+.game-page .imp-result-face {
+  width: 84px;
+  height: 84px;
+}
+
+.game-page .imp-result-name {
+  font-size: 1.6rem;
+}
+
+.game-page .imp-result--final .imp-result-name {
+  font-size: 2rem;
+}
+
+.game-page .imp-result-kicker {
+  font-size: 0.74rem;
+}
+
+.game-page .imp-result-verdict {
+  font-size: 1.4rem;
+}
+
+.game-page .imp-result--final .imp-result-verdict {
+  font-size: 1.25rem;
+}
+
+.game-page .imp-result-verdict-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.game-page .imp-result-word {
+  font-size: 0.92rem;
+}
+
+.game-page .imp-result-foot-note {
+  font-size: 0.82rem;
+}
+
+.game-page .imp-tally-row {
+  grid-template-columns: auto minmax(5rem, 8.5rem) minmax(3rem, 1fr) 1.4rem;
+  padding: 0.5rem 0.15rem;
+  font-size: 0.88rem;
+}
+
+.game-page .imp-tally-face {
+  width: 26px;
+  height: 26px;
+}
+
+.game-page .imp-tally-track {
+  height: 8px;
+}
+
+.game-page .imp-tally-clue {
+  font-size: 0.9rem;
+}
+
+.game-page .imp-tally-meta {
+  font-size: 0.78rem;
+}
+
+.game-page .imp-round-head {
+  padding: 0.65rem 0.8rem;
+}
+
+.game-page .imp-round-n {
+  font-size: 0.74rem;
+}
+
+.game-page .imp-round-word {
+  padding: 0.1rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.game-page .imp-round-outcome {
+  font-size: 0.88rem;
+}
+
+.game-page .imp-round-chevron svg {
+  width: 17px;
+  height: 17px;
+}
+
+.game-page .imp-round-body {
+  padding: 0.25rem 0.8rem 0.6rem;
+}
+
 @media (max-width: 30rem) {
   .imp-composer {
     flex-wrap: wrap;
@@ -975,6 +1190,16 @@ label.imp-ballot:hover {
 
   .imp-ballot .imp-row-name {
     flex: 1 1 auto;
+  }
+
+  /* The indents clear the face and the radio, both of which are bigger on a
+     game page, so the wrapped lines have to clear more. */
+  .game-page .imp-slot {
+    padding-left: calc(34px + 0.7rem);
+  }
+
+  .game-page .imp-vote-clue {
+    padding-left: calc(18px + 0.7rem + 34px + 0.7rem);
   }
 
   /* The outcome drops under the word rather than being cut to two letters. */
