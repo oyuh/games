@@ -376,8 +376,10 @@
 }
 
 /* ── Facts ──────────────────────────────────────────────────────
-   Settings, not controls, so they get an edge and no accent. Value over
-   label, because the value is the thing you came to read. */
+   The same pill every other small fact on the site is drawn as: a tinted
+   fill, a matching edge, and the text in the tone. Settings are not controls,
+   so the default tone is the quiet one and only a fact worth picking out of
+   the row gets a colour. */
 .gk-facts-block {
   display: flex;
   flex-direction: column;
@@ -387,49 +389,55 @@
 .gk-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .gk-fact {
+  --gk-fact-tone: var(--secondary);
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  gap: 0.3rem;
+  padding: 0.14rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  line-height: 1.7;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--gk-fact-tone) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gk-fact-tone) 28%, transparent);
+  color: var(--gk-fact-tone);
+  /* Tooltips anchored on a fact take the fact's colour. */
+  --tt-color: var(--gk-fact-tone);
 }
 
 .gk-fact-icon {
   display: inline-flex;
-  color: var(--secondary);
+  line-height: 0;
+  opacity: 0.85;
 }
 
 .gk-fact-icon svg {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.4;
 }
 
-.gk-fact-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
-  min-width: 0;
-  line-height: 1.1;
-}
-
+/* The number is the thing you came to read, so it is the one part pulled
+   toward the page's own text rather than sitting in the tint. */
 .gk-fact-value {
-  font-size: 0.74rem;
   font-weight: 700;
-  color: var(--foreground);
+  color: color-mix(in srgb, var(--gk-fact-tone) 35%, var(--foreground));
 }
 
 .gk-fact-label {
-  font-size: 0.56rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* The tints are picked for a dark page. On light, an outline pill in grey
+   all but vanishes, so pull it toward black the way the shell pills do. */
+[data-theme="light"] .gk-fact {
+  background: color-mix(in srgb, var(--gk-fact-tone) 18%, transparent);
+  color: color-mix(in srgb, var(--gk-fact-tone) 65%, #000);
 }
 
 /* ── Actions ────────────────────────────────────────────────── */

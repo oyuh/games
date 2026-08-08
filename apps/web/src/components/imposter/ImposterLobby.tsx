@@ -129,28 +129,29 @@ export function ImposterLobby({
         label="Setup"
         facts={[
           {
-            label: "Word bank",
+            /* The one fact worth a colour: it is the only setting that
+               changes what you will actually be looking at. */
             value: category ? (imposterCategoryLabels[category] ?? category) : "Anything",
             icon: <FiBookOpen />,
-            accent: "var(--game-accent)",
+            tone: "var(--game-accent)",
             tooltip: "Where the secret word gets picked from",
           },
-          { label: "Rounds", value: settings.rounds, icon: <FiFlag />, tooltip: "How many words the game runs through" },
+          { value: settings.rounds, label: "rounds", icon: <FiFlag />, tooltip: "How many words the game runs through" },
           {
-            label: "Imposters",
             value: settings.imposters,
+            label: settings.imposters === 1 ? "imposter" : "imposters",
             icon: <FiZap />,
             tooltip: "How many players never see the word",
           },
           {
-            label: "Clue peek",
             value: formatClueVisibility(settings.clueVisibility),
+            label: "peek",
             icon: <FiEye />,
             tooltip: "How much of everyone else's clues the imposter gets to read first",
           },
           {
-            label: "Clue time",
             value: `${settings.roundDurationSec}s`,
+            label: "to write",
             icon: <FiClock />,
             tooltip: "How long each round gives you to write a clue",
           },
