@@ -53,6 +53,9 @@ const PlayerCardsPage = lazy(() =>
 const GameShellPage = lazy(() =>
   import("./pages/GameShellPage").then(({ GameShellPage }) => ({ default: GameShellPage }))
 );
+const ImposterKitPage = lazy(() =>
+  import("./pages/ImposterKitPage").then(({ ImposterKitPage }) => ({ default: ImposterKitPage }))
+);
 const ShikakuPage = lazy(() => import("./pages/ShikakuPage").then(({ ShikakuPage }) => ({ default: ShikakuPage })));
 const PipsPage = lazy(() => import("./pages/PipsPage").then(({ PipsPage }) => ({ default: PipsPage })));
 
@@ -720,6 +723,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               {/* Gallery for the shared PlayerCard. Not linked from anywhere on purpose. */}
               <Route path="/dev/player-cards" element={<LazyRoute><PlayerCardsPage /></LazyRoute>} />
               <Route path="/dev/game-shell" element={<LazyRoute><GameShellPage /></LazyRoute>} />
+              <Route path="/dev/imposter" element={<LazyRoute><ImposterKitPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { FiAward, FiChevronRight, FiEdit3, FiEye, FiMapPin, FiMessageSquare, FiPlay, FiRefreshCw, FiTag, FiUsers } from "react-icons/fi";
+import { FiChevronRight, FiMapPin, FiMessageSquare, FiPlay, FiRefreshCw, FiTag, FiUsers, FiAward } from "react-icons/fi";
 import { GAME_META, type GameSlug } from "@games/shared";
+import { IMPOSTER_PHASES } from "../components/imposter/ImposterLobby";
 import { GameShellHeader, ShellPill, type GamePhase } from "../components/shared/GameShellHeader";
 import { GameButton, GameEmpty, GamePanel, type GameButtonSize, type GameButtonVariant } from "../components/shared/GameKit";
 import { GameRoster, GameTeamRoster, GameVersus } from "../components/shared/GameRoster";
@@ -26,13 +27,6 @@ const GREEN = "#34d399";
  */
 
 /* The icons stand in for what will live in each game's metadata later. */
-const IMPOSTER_PHASES: GamePhase[] = [
-  { id: "lobby", label: "Lobby", icon: <FiUsers />, hint: "Waiting for everyone to join. The host starts the round." },
-  { id: "clues", label: "Clues", icon: <FiEdit3 />, hint: "Everyone writes one clue about the secret word." },
-  { id: "voting", label: "Voting", icon: <FiEye />, hint: "Pick the player you think never saw the word." },
-  { id: "results", label: "Results", icon: <FiAward />, hint: "See who the imposter was and who caught them." },
-];
-
 const SIGNAL_PHASES: GamePhase[] = [
   { id: "picking", label: "Picking", icon: <FiMapPin />, hint: "The leader is choosing a spot on the map." },
   { id: "clue", label: "Clue", icon: <FiMessageSquare />, hint: "The leader is writing a one word clue." },

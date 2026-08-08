@@ -11,7 +11,8 @@
 
 .gk-btn,
 .gk-panel,
-.gk-empty {
+.gk-empty,
+.gk-fact {
   --game-accent: var(--card-accent, var(--primary));
 }
 
@@ -372,6 +373,98 @@
   margin-top: 0.55rem;
   padding-top: 0.55rem;
   border-top: 1px solid var(--border);
+}
+
+/* ── Facts ──────────────────────────────────────────────────────
+   Settings, not controls, so they get an edge and no accent. Value over
+   label, because the value is the thing you came to read. */
+.gk-facts-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.gk-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.gk-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.gk-fact-icon {
+  display: inline-flex;
+  color: var(--secondary);
+}
+
+.gk-fact-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.gk-fact-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  line-height: 1.1;
+}
+
+.gk-fact-value {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.gk-fact-label {
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* ── Actions ────────────────────────────────────────────────── */
+.gk-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.gk-actions-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--secondary);
+}
+
+.gk-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* For the text that stands in for a button you do not get, like the wait for
+   the host to start. Reads as a line, not a dead control. */
+.gk-actions-note {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--secondary);
+}
+
+/* One button per line beats four half ones. */
+@media (max-width: 30rem) {
+  .gk-actions-row > .gk-btn {
+    flex: 1 1 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
