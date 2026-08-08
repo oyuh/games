@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
+import { FaCrown } from "react-icons/fa";
 import { FiAlertCircle, FiCheck, FiClock, FiEye, FiMove, FiStar, FiUserX, FiWifiOff, FiZap } from "react-icons/fi";
 import { PlayerAvatar } from "./PlayerAvatar";
 import "../../styles/player-card.css";
@@ -44,7 +45,6 @@ const TONE = {
 export const playerBadges = {
   imposter: (label = "Imposter"): PlayerBadge => ({ label, icon: <FiZap />, color: TONE.imposter, solid: true }),
   leader: (label = "Leader"): PlayerBadge => ({ label, icon: <FiStar />, color: TONE.leader }),
-  host: (label = "Host"): PlayerBadge => ({ label, icon: <FiStar />, color: TONE.host }),
   spectator: (label = "Spectating"): PlayerBadge => ({ label, icon: <FiEye />, color: TONE.spectator }),
   out: (label = "Out"): PlayerBadge => ({ label, icon: <FiUserX />, color: TONE.out }),
   team: (name: string, color: string): PlayerBadge => ({ label: name, color, solid: true }),
@@ -72,6 +72,13 @@ export interface PlayerCardProps {
   /** Second line under the name. Gets out of the way at sm. */
   caption?: string;
   you?: boolean;
+  /**
+   * A crown beside the name. Being host is not a role in any of these games,
+   * it is who happens to hold the buttons, and as a badge it grew the card a
+   * whole second row and put a kink in every lobby it appeared in. One mark
+   * next to the name says the same thing and costs no height.
+   */
+  host?: boolean;
   /** Dashed border, greyed out, name struck through. */
   eliminated?: boolean;
   /** Faded with a wifi mark. Independent of state, someone can drop mid-guess. */
@@ -106,6 +113,7 @@ export function PlayerCard({
   pointsSuffix,
   caption,
   you,
+  host,
   eliminated,
   disconnected,
   selected,
@@ -188,6 +196,11 @@ export function PlayerCard({
 
         <span className="pc-body">
           <span className="pc-name-row">
+            {host && (
+              <span className="pc-host" data-tooltip="Host" data-tooltip-variant="game">
+                <FaCrown aria-label="Host" />
+              </span>
+            )}
             <span className="pc-name">{name}</span>
             {you && <span className="pc-you">you</span>}
           </span>

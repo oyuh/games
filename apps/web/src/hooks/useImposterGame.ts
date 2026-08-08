@@ -104,6 +104,9 @@ export function useImposterGame(sessionId: string) {
     gameId,
     sessionId,
     enabled: Boolean(game && game.phase !== "lobby"),
+    /* Who is allowed the word changes with the phase: the imposter is turned
+       away all round and then handed it at the reveal. */
+    resetOn: game?.phase ?? "",
   });
 
   useEffect(() => {
