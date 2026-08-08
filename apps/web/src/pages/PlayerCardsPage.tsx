@@ -131,7 +131,7 @@ export function PlayerCardsPage() {
             caption="Ready"
             points={12}
             pointsSuffix="pts"
-            badges={[playerBadges.host()]}
+            host
           />
         ))}
       </Row>
@@ -141,7 +141,7 @@ export function PlayerCardsPage() {
         <PlayerCard {...CAST[1]!} index={1} badges={[playerBadges.leader()]} />
         <PlayerCard {...CAST[2]!} index={2} badges={[playerBadges.team("Blue Team", "#7ecbff")]} points={4} pointsSuffix="/ 7" />
         <PlayerCard {...CAST[3]!} index={3} badges={[playerBadges.team("Red Team", "#f87171")]} points={6} pointsSuffix="/ 7" />
-        <PlayerCard {...CAST[4]!} index={4} badges={[playerBadges.host(), playerBadges.leader()]} />
+        <PlayerCard {...CAST[4]!} index={4} host badges={[playerBadges.leader()]} />
         <PlayerCard {...CAST[5]!} index={5} badges={[playerBadges.spectator()]} />
       </Row>
 
@@ -233,7 +233,7 @@ export function PlayerCardsPage() {
       </Row>
 
       <Row title="Hover card, faces" note="one face on the board, the whole card on hover. for the shade grid and the signal map" grid="ph-row">
-        <PlayerHoverCard {...CAST[0]!} index={0} you badges={[playerBadges.host()]} points={12} pointsSuffix="pts" caption="Ready" />
+        <PlayerHoverCard {...CAST[0]!} index={0} you host points={12} pointsSuffix="pts" caption="Ready" />
         <PlayerHoverCard {...CAST[1]!} index={1} state="waiting" caption="Still picking" />
         <PlayerHoverCard {...CAST[2]!} index={2} state="success" caption="Signalled" points={3} badges={[playerBadges.leader()]} />
         <PlayerHoverCard {...CAST[3]!} index={3} state="error" caption="Wrong colour" points={0} />
@@ -242,7 +242,7 @@ export function PlayerCardsPage() {
       </Row>
 
       <Row title="Hover card, names" note="the same card behind a list of names. for end screens and round history" grid="ph-names">
-        <PlayerHoverCard trigger="name" {...CAST[0]!} index={0} you points={12} pointsSuffix="pts" badges={[playerBadges.host()]} caption="Won the round" />
+        <PlayerHoverCard trigger="name" {...CAST[0]!} index={0} you host points={12} pointsSuffix="pts" caption="Won the round" />
         <PlayerHoverCard trigger="name" {...CAST[1]!} index={1} points={9} pointsSuffix="pts" badges={[playerBadges.team("Blue Team", BLUE)]} />
         <PlayerHoverCard trigger="name" {...CAST[2]!} index={2} points={7} pointsSuffix="pts" state="success" caption="Got it in 12s" />
         <PlayerHoverCard trigger="name" {...CAST[3]!} index={3} points={4} pointsSuffix="pts" badges={[playerBadges.team("Red Team", RED)]} />

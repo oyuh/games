@@ -118,7 +118,7 @@ export function GameShellPage() {
           players={CAST.map((p, i) => ({
             ...p,
             index: i,
-            ...(i === 0 ? { you: true, badges: [playerBadges.host()] } : {}),
+            ...(i === 0 ? { you: true, host: true } : {}),
             caption: i < 4 ? "Ready" : "Still joining",
             ...(i >= 4 ? { state: "waiting" as const } : {}),
           }))}
@@ -137,7 +137,7 @@ export function GameShellPage() {
             ...p,
             index: i,
             collapseBadges: true,
-            ...(i === 0 ? { you: true, accent: BLUE, badges: [playerBadges.host(), playerBadges.team("Blue", BLUE)] } : {}),
+            ...(i === 0 ? { you: true, host: true, accent: BLUE, badges: [playerBadges.team("Blue", BLUE)] } : {}),
             ...(i === 1 ? { badges: [playerBadges.leader()] } : {}),
             ...(i === 2 ? { accent: RED, badges: [playerBadges.team("Red", RED)] } : {}),
             ...(i < 3

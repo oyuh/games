@@ -227,6 +227,20 @@
   white-space: nowrap;
 }
 
+/* Before the name, because it is a thing about the person rather than
+   something they did. Same amber the shell header's host mark uses. */
+.pc-host {
+  flex: 0 0 auto;
+  display: inline-flex;
+  line-height: 0;
+  color: #fbbf24;
+}
+
+.pc-host svg {
+  width: 0.78em;
+  height: 0.78em;
+}
+
 .pc-you {
   flex: 0 0 auto;
   font-size: 0.58rem;
@@ -898,6 +912,10 @@
   gap: 0.5rem;
 }
 
+/* Cards keep their width whether or not they fill the row. Growing the last
+   three to eat the leftover space made a lobby's bottom row a different shape
+   from every row above it, which read as those players being something other
+   than the rest. A ragged edge is the honest one. */
 .pc-grid--fill > .pc {
-  flex: 1 1 12rem;
+  flex: 0 1 13rem;
 }

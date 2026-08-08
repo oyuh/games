@@ -10,7 +10,22 @@ interface UseGameSecretOptions {
   sessionId: string;
   /** Enable fetching; set to false until the game is in a phase where secrets are needed. */
   enabled?: boolean;
+  /**
+   * Changing this starts the attempts over. Pass the phase: who is allowed the
+   * key depends on it, so a refusal during one phase says nothing about the
+   * next. The imposter is turned away all through the round and then handed
+   * the key at the reveal.
+   */
+  resetOn?: string | number;
 }
+
+/* The server decides from the row in the database, and the client asks the
+   moment its own optimistic copy says the round has started, which is a beat
+   earlier. So the first ask can be refused for a game that is, a blink later,
+   perfectly happy to answer. One shot and a shrug left the whole room staring
+   at four dots for the rest of the round. */
+const RETRY_MS = 1500;
+const MAX_TRIES = 6;
 
 interface UseGameSecretResult {
   /** True while the key is being fetched. */
@@ -36,51 +51,91 @@ interface UseGameSecretResult {
  * The key is only fetched once per mount and cached in memory.
  * Authorized players (e.g. non-imposters in Imposter) get the key; others get a 403.
  */
-export function useGameSecret({ gameType, gameId, sessionId, enabled = true }: UseGameSecretOptions): UseGameSecretResult {
+export function useGameSecret({ gameType, gameId, sessionId, enabled = true, resetOn }: UseGameSecretOptions): UseGameSecretResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* The key is state as well as a ref. Callers decrypt inside an effect keyed
+     on decryptValue, so the arriving key has to change its identity or nothing
+     re-runs and the value they already gave up on stays given up on. */
+  const [key, setKey] = useState<string | null>(null);
   const keyRef = useRef<string | null>(null);
-  const fetchedRef = useRef(false);
+  const triesRef = useRef(0);
   const keyFetchPromiseRef = useRef<Promise<string | null> | null>(null);
 
-  useEffect(() => {
+  const reset = () => {
     keyRef.current = null;
-    fetchedRef.current = false;
+    triesRef.current = 0;
     keyFetchPromiseRef.current = null;
+    setKey(null);
     setError(null);
     setLoading(false);
-  }, [gameType, gameId, sessionId]);
+  };
+
+  useEffect(reset, [gameType, gameId, sessionId]);
+
+  /* Not a full reset: a key that already works keeps working across phases,
+     and only the attempt budget goes back on the table. */
+  useEffect(() => {
+    triesRef.current = 0;
+  }, [resetOn]);
 
   useEffect(() => {
-    if (!enabled || !gameId || !sessionId || fetchedRef.current) return;
-    fetchedRef.current = true;
-    setLoading(true);
+    if (!enabled || !gameId || !sessionId || key) return;
 
-    const keyFetchPromise = fetch(`${API_BASE}/api/game-secret/key`, {
-      method: "POST",
-      credentials: "include",
-      headers: getSessionRequestHeaders(sessionId, {
-        "Content-Type": "application/json"
-      }),
-      body: JSON.stringify({ gameType, gameId, sessionId })
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { error?: string };
-          throw new Error(body.error ?? `HTTP ${res.status}`);
-        }
-        const data = await res.json() as { key: string };
-        keyRef.current = data.key;
-        return data.key;
-      })
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : String(err));
-        return null;
-      })
-      .finally(() => setLoading(false));
+    let cancelled = false;
 
-    keyFetchPromiseRef.current = keyFetchPromise;
-  }, [enabled, gameType, gameId, sessionId]);
+    const attempt = (): Promise<string | null> => {
+      triesRef.current += 1;
+      setLoading(true);
+
+      const promise = fetch(`${API_BASE}/api/game-secret/key`, {
+        method: "POST",
+        credentials: "include",
+        headers: getSessionRequestHeaders(sessionId, {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({ gameType, gameId, sessionId })
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({})) as { error?: string };
+            throw new Error(body.error ?? `HTTP ${res.status}`);
+          }
+          const data = await res.json() as { key: string };
+          keyRef.current = data.key;
+          if (!cancelled) {
+            setKey(data.key);
+            setError(null);
+          }
+          return data.key;
+        })
+        .catch((err: unknown) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+          return null;
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+
+      keyFetchPromiseRef.current = promise;
+      return promise;
+    };
+
+    void attempt();
+
+    /* Keep asking, but not forever. Some refusals are the honest answer for
+       this phase: the imposter is not supposed to have the word, and pestering
+       the server about it every second and a half all round is rude. */
+    const timer = setInterval(() => {
+      if (cancelled || keyRef.current || triesRef.current >= MAX_TRIES) return;
+      void attempt();
+    }, RETRY_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [enabled, gameType, gameId, sessionId, key, resetOn]);
 
   const decryptValue = useCallback(async (value: string | null | undefined): Promise<string | null> => {
     if (!value) return null;
@@ -94,7 +149,7 @@ export function useGameSecret({ gameType, gameId, sessionId, enabled = true }: U
     } catch {
       return null;
     }
-  }, []);
+  }, [key]);
 
   return { loading, error, decryptValue };
 }
