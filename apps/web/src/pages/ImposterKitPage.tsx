@@ -4,6 +4,7 @@ import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader
 import { GameActions, GameButton, GameFacts } from "../components/shared/GameKit";
 import { IMPOSTER_PHASES, ImposterLobby, MIN_IMPOSTER_PLAYERS, type ImposterPlayer } from "../components/imposter/ImposterLobby";
 import { ImposterCluePhase, ImposterClueWall, ImposterComposer, ImposterWordCard } from "../components/imposter/ImposterClues";
+import { ImposterVotePhase } from "../components/imposter/ImposterVote";
 import "../styles/game-shared.css";
 
 /**
@@ -213,6 +214,67 @@ function LiveClues() {
   );
 }
 
+const ROUND_CLUES = [
+  { sessionId: "seed-ada", text: "cold ending" },
+  { sessionId: "seed-bram", text: "the boat one" },
+  { sessionId: "seed-cleo", text: "three hours long" },
+  { sessionId: "seed-dov", text: "big and blue" },
+];
+
+/** The ballot with a hand on it, so picking, sending and changing your mind
+ *  are three things you can actually feel the difference between. */
+function LiveVote() {
+  const [voteTarget, setVoteTarget] = useState("");
+  const [submittedTarget, setSubmittedTarget] = useState<string | null>(null);
+  const [voted, setVoted] = useState<string[]>(["seed-bram"]);
+
+  const reset = () => { setVoteTarget(""); setSubmittedTarget(null); setVoted(["seed-bram"]); };
+
+  return (
+    <>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={toggle}
+          onClick={() => setVoted((v) => (v.length < CLUE_CAST.length ? [...v, CLUE_CAST[v.length]!.sessionId] : v))}
+        >
+          One more vote lands
+        </button>
+        <button type="button" className="btn btn-ghost" style={toggle} onClick={reset}>
+          <FiRefreshCw size={12} /> Start over
+        </button>
+      </div>
+
+      <GameShellHeader
+        collapsible
+        game="imposter"
+        title="Imposter"
+        phases={IMPOSTER_PHASES}
+        phase="voting"
+        round={{ current: 2, total: 5 }}
+        endsAt={Date.now() + 45_000}
+        duration={60}
+        code="H4TQ9"
+      />
+
+      <ImposterVotePhase
+        players={CLUE_CAST}
+        clues={ROUND_CLUES}
+        sessionId="seed-ada"
+        voted={voted}
+        voteTarget={voteTarget}
+        submittedTarget={submittedTarget}
+        onVoteTargetChange={setVoteTarget}
+        onSubmit={() => {
+          setSubmittedTarget(voteTarget);
+          setVoted((v) => (v.includes("seed-ada") ? v : [...v, "seed-ada"]));
+        }}
+      />
+    </>
+  );
+}
+
 export function ImposterKitPage() {
   return (
     <main
@@ -323,6 +385,76 @@ export function ImposterKitPage() {
           clue=""
           submitted={false}
           onClueChange={NOOP}
+          onSubmit={NOOP}
+        />
+      </Section>
+
+      <Section title="The vote, live" note="pick, send, change your mind. three states people usually have to guess at">
+        <LiveVote />
+      </Section>
+
+      <Section title="The ballot" note="nothing picked, pointing at someone, and a vote that is already in">
+        <ImposterVotePhase
+          players={CLUE_CAST}
+          clues={ROUND_CLUES}
+          sessionId="seed-ada"
+          voted={["seed-bram", "seed-cleo"]}
+          voteTarget=""
+          onVoteTargetChange={NOOP}
+          onSubmit={NOOP}
+        />
+        <ImposterVotePhase
+          players={CLUE_CAST}
+          clues={ROUND_CLUES}
+          sessionId="seed-ada"
+          voted={["seed-bram", "seed-cleo"]}
+          voteTarget="seed-cleo"
+          onVoteTargetChange={NOOP}
+          onSubmit={NOOP}
+        />
+        <ImposterVotePhase
+          players={CLUE_CAST}
+          clues={ROUND_CLUES}
+          sessionId="seed-ada"
+          voted={["seed-ada", "seed-bram", "seed-cleo"]}
+          voteTarget="seed-cleo"
+          submittedTarget="seed-cleo"
+          onVoteTargetChange={NOOP}
+          onSubmit={NOOP}
+        />
+        <ImposterVotePhase
+          players={CLUE_CAST}
+          clues={ROUND_CLUES}
+          sessionId="seed-ada"
+          voted={["seed-ada", "seed-bram", "seed-cleo"]}
+          voteTarget="seed-dov"
+          submittedTarget="seed-cleo"
+          onVoteTargetChange={NOOP}
+          onSubmit={NOOP}
+        />
+      </Section>
+
+      <Section title="Nothing to go on" note="somebody ran the clock out. the gap is worth seeing, so it gets said rather than left blank">
+        <ImposterVotePhase
+          players={CLUE_CAST}
+          clues={ROUND_CLUES.slice(0, 2)}
+          sessionId="seed-ada"
+          voted={["seed-bram"]}
+          voteTarget=""
+          onVoteTargetChange={NOOP}
+          onSubmit={NOOP}
+        />
+      </Section>
+
+      <Section title="Watching the vote" note="a spectator reads the room, and the ballot goes quiet instead of teasing a button">
+        <ImposterVotePhase
+          canVote={false}
+          players={CLUE_CAST}
+          clues={ROUND_CLUES}
+          sessionId="seed-zed"
+          voted={["seed-bram", "seed-cleo"]}
+          voteTarget=""
+          onVoteTargetChange={NOOP}
           onSubmit={NOOP}
         />
       </Section>

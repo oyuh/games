@@ -9,7 +9,8 @@
 
 .imp-word,
 .imp-composer,
-.imp-wall {
+.imp-wall,
+.imp-vote {
   --imp-accent: var(--game-accent, var(--primary));
 }
 
@@ -322,6 +323,172 @@
   30% { opacity: 1; }
 }
 
+/* ── The vote ───────────────────────────────────────────────────
+   The clue list again with a radio on each row, so the thing you watched
+   fill in is the thing you press. Everything a first timer needs to know is
+   written on the page: the rule line, the mark, and a button that names who
+   it is about to vote for. */
+.imp-vote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.imp-vote-rules {
+  margin: 0 0 0.15rem;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--secondary);
+}
+
+.imp-vote-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.imp-ballot {
+  cursor: pointer;
+  user-select: none;
+}
+
+.imp-ballot--self,
+.imp-vote-rows > div.imp-ballot {
+  cursor: default;
+}
+
+label.imp-ballot:hover {
+  border-color: color-mix(in srgb, var(--imp-accent) 30%, transparent);
+}
+
+/* The radio itself is hidden, so the ring has to carry the focus. */
+.imp-ballot:focus-within {
+  outline: 2px solid var(--imp-accent);
+  outline-offset: 2px;
+}
+
+/* Where your vote is right now, but you have pointed somewhere else. It keeps
+   its mark and gives up the fill, because two rows lit at the same strength
+   reads as two votes. */
+.imp-ballot--cast {
+  border-color: color-mix(in srgb, var(--imp-accent) 22%, transparent);
+}
+
+.imp-ballot--picked {
+  border-color: color-mix(in srgb, var(--imp-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--imp-accent) 10%, transparent);
+}
+
+.imp-ballot--self {
+  opacity: 0.72;
+}
+
+/* Empty ring while you are only pointing at someone, filled once the vote is
+   actually in. Two states, because "picked" and "sent" are two different
+   things and the difference is the one people get wrong. */
+.imp-ballot-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--foreground) 25%, transparent);
+  color: var(--primary-foreground, #181a1b);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.imp-ballot--picked .imp-ballot-mark {
+  border-color: var(--imp-accent);
+  box-shadow: inset 0 0 0 3px var(--imp-accent);
+}
+
+.imp-ballot-mark--cast {
+  border-color: var(--imp-accent);
+  background: var(--imp-accent);
+  box-shadow: none;
+}
+
+.imp-ballot--cast .imp-ballot-mark {
+  box-shadow: none;
+}
+
+.imp-ballot-mark svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 3.4;
+}
+
+/* What they said, which is the thing actually on trial. */
+.imp-vote-clue {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.imp-vote-clue--none {
+  font-size: 0.74rem;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+/* Whether they have voted, never who for. */
+.imp-vote-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.imp-vote-status svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.6;
+}
+
+.imp-vote-foot {
+  margin-top: 0.2rem;
+}
+
+.imp-vote-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--imp-accent) 28%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--imp-accent) 7%, transparent);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--secondary);
+  text-align: center;
+}
+
+.imp-vote-note-mark {
+  display: inline-flex;
+  line-height: 0;
+  color: var(--imp-accent);
+}
+
+.imp-vote-note-mark svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+}
+
 @media (max-width: 30rem) {
   .imp-composer {
     flex-wrap: wrap;
@@ -348,6 +515,20 @@
   .imp-slot {
     flex: 1 1 100%;
     padding-left: calc(26px + 0.55rem);
+  }
+
+  /* The clue drops under the name it belongs to rather than being squeezed
+     to three words and an ellipsis. The indent clears the radio and the face
+     so it lines up with the name it belongs to. */
+  .imp-vote-clue {
+    order: 1;
+    flex: 1 1 100%;
+    white-space: normal;
+    padding-left: calc(15px + 0.55rem + 26px + 0.55rem);
+  }
+
+  .imp-ballot .imp-row-name {
+    flex: 1 1 auto;
   }
 }
 
