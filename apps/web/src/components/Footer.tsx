@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useConnectionDebug } from "../lib/connection-debug";
 import "../styles/footer.css";
 import { getCustomStatus, subscribeCustomStatus } from "../hooks/useAdminBroadcast";
-import { getOrCreateSessionId } from "../lib/session";
+import { getOrCreateSessionId, getOrCreateStoredName } from "../lib/session";
+import { PlayerHoverCard } from "./shared/PlayerHoverCard";
+import { showToast } from "../lib/toast";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
 
@@ -92,7 +94,7 @@ export function Footer() {
         </span>
         <div className="footer-status-wrap" ref={wrapRef}>
           <button
-            className="footer-status-pill"
+            className="footer-status"
             onClick={() => setExpanded((v) => !v)}
             data-tooltip="Toggle service status"
           >
@@ -163,7 +165,24 @@ export function Footer() {
             </div>
           )}
         </div>
-        <span className="footer-session-id">{sessionId}</span>
+        {/* The id is the handle, but nobody recognises themselves by one, so
+            hovering shows the face and the name it belongs to. Pressing it
+            copies, which is the only reason anyone reads it in the first
+            place: they are about to paste it into a bug report. */}
+        <span className="footer-session-id">
+          <PlayerHoverCard
+            trigger="name"
+            sessionId={sessionId}
+            name={getOrCreateStoredName(sessionId)}
+            you
+            label={sessionId}
+            onActivate={() => {
+              void navigator.clipboard.writeText(sessionId)
+                .then(() => showToast("Session id copied", "info"))
+                .catch(() => showToast("Couldn't copy it", "error"));
+            }}
+          />
+        </span>
       </div>
     </footer>
   );
