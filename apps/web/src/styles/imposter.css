@@ -10,7 +10,8 @@
 .imp-word,
 .imp-composer,
 .imp-wall,
-.imp-vote {
+.imp-vote,
+.imp-result-block {
   --imp-accent: var(--game-accent, var(--primary));
 }
 
@@ -487,6 +488,247 @@ label.imp-ballot:hover {
   width: 14px;
   height: 14px;
   stroke-width: 3;
+}
+
+/* ── The round result ───────────────────────────────────────────
+   Eight seconds, so it is one beat rather than a page. The timing is the
+   whole thing: the face lands, you get a moment to think it, and then the
+   verdict arrives. Told both at once it is a receipt, not a reveal.
+
+   All of it is keyframes with delays and no javascript, so nothing has to be
+   kept in step with a timer that a re-render could restart. */
+.imp-result-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.imp-result {
+  --imp-verdict: var(--secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 1.25rem 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  text-align: center;
+  animation: imp-rise 0.35s ease-out, imp-wash 0.5s 0.95s both;
+}
+
+.imp-result--imposter { --imp-verdict: #f87171; }
+.imp-result--innocent { --imp-verdict: #4ade80; }
+.imp-result--nobody { --imp-verdict: var(--secondary); }
+
+@keyframes imp-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The card takes the answer's colour at the same moment the answer lands. */
+@keyframes imp-wash {
+  from {
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  }
+  to {
+    border-color: color-mix(in srgb, var(--imp-verdict) 34%, transparent);
+    background: color-mix(in srgb, var(--imp-verdict) 9%, transparent);
+  }
+}
+
+.imp-result-face {
+  width: 66px;
+  height: 66px;
+  margin-bottom: 0.4rem;
+  border-radius: var(--avatar-radius);
+  overflow: clip;
+  animation: imp-drop 0.4s 0.06s ease-out both;
+}
+
+@keyframes imp-drop {
+  from { opacity: 0; transform: scale(0.86); }
+  to { opacity: 1; transform: none; }
+}
+
+.imp-result-name {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+  animation: imp-rise 0.3s 0.28s ease-out both;
+}
+
+.imp-result-kicker {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  animation: imp-rise 0.3s 0.38s ease-out both;
+}
+
+/* The line the whole round was for. It gets the overshoot, and it is the one
+   thing on the card that waits. */
+.imp-result-verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.65rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--imp-verdict) 78%, var(--foreground));
+  animation: imp-verdict 0.45s 0.95s cubic-bezier(0.18, 1.3, 0.5, 1) both;
+}
+
+@keyframes imp-verdict {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: none; }
+}
+
+.imp-result-verdict-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.imp-result-verdict-icon svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.6;
+}
+
+.imp-result-word {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--secondary);
+  animation: imp-rise 0.35s 1.25s ease-out both;
+}
+
+.imp-result-word strong {
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+[data-theme="light"] .imp-result-verdict {
+  color: color-mix(in srgb, var(--imp-verdict) 62%, #000);
+}
+
+/* ── The numbers ────────────────────────────────────────────────
+   Under the beat, for whoever is already arguing about it. Each row carries
+   its own delay so they arrive as a run rather than a block. */
+.imp-tally {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.imp-tally-row {
+  display: grid;
+  grid-template-columns: minmax(4rem, 7rem) minmax(3rem, 1fr) 1.1rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.22rem 0.1rem;
+  font-size: 0.74rem;
+  animation: imp-rise 0.3s var(--imp-delay, 1.05s) ease-out both;
+}
+
+.imp-tally-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.imp-tally-row--out .imp-tally-name {
+  color: var(--foreground);
+}
+
+.imp-tally-track {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+  overflow: clip;
+}
+
+.imp-tally-bar {
+  display: block;
+  width: var(--imp-bar, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--imp-accent) 55%, transparent);
+  /* A beat behind its own row, so the row is there before it fills. */
+  animation: imp-fill 0.5s calc(var(--imp-delay, 1.05s) + 0.1s) ease-out both;
+}
+
+.imp-tally-row--out .imp-tally-bar {
+  background: var(--imp-accent);
+}
+
+@keyframes imp-fill {
+  from { width: 0; }
+  to { width: var(--imp-bar, 0%); }
+}
+
+.imp-tally-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-align: right;
+  color: var(--secondary);
+}
+
+/* Who put them there, which is the bit people actually argue about. */
+.imp-tally-voters {
+  grid-column: 2 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.64rem;
+  color: var(--muted-foreground);
+}
+
+.imp-tally-voters:empty {
+  display: none;
+}
+
+.imp-result-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  animation: imp-rise 0.3s 1.4s ease-out both;
+}
+
+.imp-result-foot-note {
+  margin: 0;
+  font-size: 0.68rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+/* Nobody asked for a light show, they asked what happened. Everything lands
+   at once and the answer is just there. */
+@media (prefers-reduced-motion: reduce) {
+  .imp-result,
+  .imp-result-face,
+  .imp-result-name,
+  .imp-result-kicker,
+  .imp-result-verdict,
+  .imp-result-word,
+  .imp-tally-row,
+  .imp-tally-bar,
+  .imp-result-foot {
+    animation: none;
+  }
+
+  .imp-result {
+    border-color: color-mix(in srgb, var(--imp-verdict) 34%, transparent);
+    background: color-mix(in srgb, var(--imp-verdict) 9%, transparent);
+  }
 }
 
 @media (max-width: 30rem) {
