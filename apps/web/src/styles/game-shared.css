@@ -994,21 +994,6 @@
   transform: translateY(-1px);
 }
 
-.host-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  padding: 0.15rem 0.5rem;
-  border-radius: 99px;
-}
-
-
 /* ── Team Detail Styles ───────────────────────────────── */
 
 .game-team-header {
@@ -1176,7 +1161,6 @@
   justify-content: flex-end;
   gap: 0.3rem;
 }
-
 
 /* ── Deprecated / Shared overrides ───────────────────── */
 /* ── Deprecated / Shared overrides ───────────────────── */

@@ -241,55 +241,6 @@
   color: var(--secondary);
 }
 
-/* ── Chain Mode Toggle ───────────────────────────────── */
-.cr-mode-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  margin-top: 0.75rem;
-}
-
-.cr-mode-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--secondary);
-}
-
-.cr-mode-options {
-  display: flex;
-  gap: 0;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1.5px solid color-mix(in srgb, var(--foreground) 12%, transparent);
-}
-
-.cr-mode-btn {
-  background: transparent;
-  border: none;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--secondary);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.cr-mode-btn:hover {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
-}
-
-.cr-mode-btn--active {
-  background: var(--primary);
-  color: var(--background);
-}
-
-.cr-mode-btn--active:hover {
-  background: var(--primary);
-}
-
 .cr-mode-info {
   text-align: center;
   font-size: 0.75rem;
@@ -530,81 +481,6 @@
   text-transform: uppercase;
   color: var(--foreground);
   font-family: "JetBrains Mono", monospace;
-}
-
-.cr-word-text--draft {
-  color: var(--primary);
-}
-
-.cr-remote-draft {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.cr-remote-draft-live {
-  font-size: 0.55rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--primary);
-  opacity: 0.75;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-/* Inline guess form: input + ↵ button inside slot */
-.cr-inline-form {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: 100%;
-  justify-content: flex-start;
-}
-
-.cr-inline-input {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-family: "JetBrains Mono", monospace;
-  color: var(--primary);
-  caret-color: var(--primary);
-  padding: 0;
-  text-align: left;
-}
-
-.cr-inline-input::placeholder {
-  color: var(--secondary);
-  opacity: 0.4;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: none;
-}
-
-.cr-inline-go {
-  background: var(--primary);
-  color: var(--background);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 800;
-  padding: 0.15rem 0.45rem;
-  cursor: pointer;
-  line-height: 1;
-  transition: opacity 0.15s;
-}
-
-.cr-inline-go:disabled {
-  opacity: 0.3;
-  cursor: default;
 }
 
 /* ── Tags / Badges ───────────────────────────────────── */

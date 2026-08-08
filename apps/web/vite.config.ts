@@ -35,10 +35,6 @@ export default defineConfig({
             return "vendor-icons";
           }
 
-          if (normalized.includes("/boring-avatars/")) {
-            return "vendor-avatar";
-          }
-
           return undefined;
         }
       }

@@ -389,11 +389,6 @@ body.locsig-map-expanded .app-footer {
   gap: 0.75rem;
   justify-content: center;
 }
-.locsig-guess-counter {
-  text-align: center;
-  font-size: 0.8rem;
-  color: var(--secondary);
-}
 
 /* Waiting */
 .locsig-waiting-section {
@@ -460,18 +455,13 @@ body.locsig-map-expanded .app-footer {
   flex: 1;
   font-weight: 600;
 }
-.locsig-score-dist {
-  color: var(--secondary);
-  font-size: 0.78rem;
-}
+
 .locsig-score-pts {
   font-weight: 700;
   min-width: 2.5rem;
   text-align: right;
 }
-.locsig-score-pts--great {
-  color: #34d399;
-}
+
 .locsig-score-pts--ok {
   color: var(--locsig-accent);
 }
@@ -538,26 +528,6 @@ body.locsig-map-expanded .app-footer {
   border-radius: var(--radius);
   overflow: hidden;
   animation: locsig-map-reveal 0.5s ease-out both;
-}
-
-/* Search bar */
-.locsig-search-row {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-/* Auto-advance countdown */
-.locsig-auto-advance {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--locsig-accent) 10%, transparent);
-  font-size: 0.85rem;
-  font-weight: 600;
 }
 
 @media (max-width: 640px) {

@@ -31,8 +31,7 @@ import { MobileInfoSheet } from "./components/MobileInfoSheet";
 import { MobileHostControlsSheet } from "./components/MobileHostControlsSheet";
 import { MobileLeaderboardSheet } from "./components/MobileLeaderboardSheet";
 import { ToastContainer } from "../components/shared/ToastContainer";
-import { ConnectionDebugPanel } from "../components/shared/ConnectionDebugPanel";
-import { DevGamePanel } from "../components/shared/DevGamePanel";
+import { DebugPanels } from "../components/shared/DebugPanels";
 import { showToast } from "../lib/toast";
 import { GameIcon } from "../components/shared/GameIcon";
 import { emitSolo, useSoloEvent, type PipsState, type ShikakuState } from "../lib/solo-bus";
@@ -548,8 +547,7 @@ function MobileLayoutInner() {
       {sheet === "actions" && hasGameActions && renderGameActionsSheet()}
 
       <ToastContainer />
-      <ConnectionDebugPanel />
-      {import.meta.env.DEV && <DevGamePanel />}
+      <DebugPanels />
     </div>
   );
 }
