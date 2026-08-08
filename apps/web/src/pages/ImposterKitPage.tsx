@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { FiBookOpen, FiClock, FiEye, FiFlag, FiGlobe, FiLock, FiPlay, FiZap } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
+import { FiBookOpen, FiClock, FiEye, FiFlag, FiGlobe, FiLock, FiPlay, FiRefreshCw, FiZap } from "react-icons/fi";
 import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
 import { GameActions, GameButton, GameFacts } from "../components/shared/GameKit";
 import { IMPOSTER_PHASES, ImposterLobby, MIN_IMPOSTER_PLAYERS, type ImposterPlayer } from "../components/imposter/ImposterLobby";
+import { ImposterCluePhase, ImposterClueWall, ImposterComposer, ImposterWordCard } from "../components/imposter/ImposterClues";
 import "../styles/game-shared.css";
 
 /**
@@ -134,6 +135,84 @@ function Live() {
   );
 }
 
+/* Who writes what, and in what order. Real games do not arrive all at once
+   and neither does this, because the whole point of the wall is watching it
+   fill in. */
+const SCRIPT: Array<{ typing?: string; clue?: [string, string] }> = [
+  { typing: "seed-bram" },
+  { typing: "seed-dov" },
+  { clue: ["seed-bram", "cold ending"] },
+  { typing: "seed-cleo" },
+  { clue: ["seed-dov", "three hours long"] },
+  { clue: ["seed-cleo", "the boat one"] },
+];
+
+const CLUE_CAST = CAST.slice(0, 4);
+
+/** The clue phase running on its own, so the live parts actually move. */
+function LiveClues() {
+  const [step, setStep] = useState(0);
+  const [isImposter, setIsImposter] = useState(false);
+  const [clue, setClue] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const timer = useRef<number>(0);
+
+  useEffect(() => {
+    if (step >= SCRIPT.length) return;
+    timer.current = window.setTimeout(() => setStep((n) => n + 1), 1800);
+    return () => window.clearTimeout(timer.current);
+  }, [step]);
+
+  const done = SCRIPT.slice(0, step);
+  const typing = done.flatMap((e) => (e.typing ? [e.typing] : []));
+  const clues = done.flatMap((e) => (e.clue ? [{ sessionId: e.clue[0], text: e.clue[1] }] : []));
+  const mine = submitted ? [{ sessionId: "seed-ada", text: clue }] : [];
+
+  const reset = () => { setStep(0); setClue(""); setSubmitted(false); };
+
+  return (
+    <>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
+        <button type="button" className={`btn ${isImposter ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsImposter((v) => !v)}>
+          You are the imposter
+        </button>
+        <button type="button" className="btn btn-ghost" style={toggle} onClick={reset}>
+          <FiRefreshCw size={12} /> Run it again
+        </button>
+      </div>
+
+      <GameShellHeader
+        collapsible
+        game="imposter"
+        title="Imposter"
+        phases={IMPOSTER_PHASES}
+        phase="playing"
+        round={{ current: 2, total: 5 }}
+        endsAt={Date.now() + 90_000}
+        duration={90}
+        code="H4TQ9"
+        pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Movies &amp; Shows</ShellPill>}
+      />
+
+      <ImposterCluePhase
+        role={isImposter ? "imposter" : "player"}
+        secretWord="Titanic"
+        category="moviesAndShows"
+        players={CLUE_CAST}
+        sessionId="seed-ada"
+        clues={[...mine, ...clues]}
+        typing={typing}
+        clueVisibility={0.65}
+        clue={clue}
+        submitted={submitted}
+        onClueChange={setClue}
+        onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}
+        onTyping={NOOP}
+      />
+    </>
+  );
+}
+
 export function ImposterKitPage() {
   return (
     <main
@@ -169,15 +248,94 @@ export function ImposterKitPage() {
         <ImposterLobby {...LOBBY} players={CAST.slice(0, 4)} sessionId="seed-zed" isHost={false} inGame={false} isSpectator />
       </Section>
 
+      <Section title="Clues, live" note="the phase the game actually is. watch the room fill in">
+        <LiveClues />
+      </Section>
+
+      <Section title="What you know" note="the one loud thing in the game. being the imposter is a different state, so it looks like one">
+        <ImposterWordCard role="player" secretWord="Titanic" category="moviesAndShows" />
+        <ImposterWordCard role="imposter" secretWord={null} category="moviesAndShows" />
+        <ImposterWordCard role="player" secretWord="Titanic" />
+      </Section>
+
+      <Section title="The box" note="empty, mid thought, and sent. it stays on screen after, because defending it is the next thing you do">
+        <ImposterComposer role="player" value="" submitted={false} onChange={NOOP} onSubmit={NOOP} />
+        <ImposterComposer role="imposter" value="" submitted={false} onChange={NOOP} onSubmit={NOOP} />
+        <ImposterComposer role="player" value="cold ending" submitted={false} onChange={NOOP} onSubmit={NOOP} />
+        <ImposterComposer role="player" value="cold ending" submitted onChange={NOOP} onSubmit={NOOP} />
+      </Section>
+
+      <Section title="The room" note="every slot at once: nothing, started, locked, and yours">
+        <ImposterClueWall
+          players={CAST}
+          sessionId="seed-ada"
+          typing={["seed-esme"]}
+          clues={[
+            { sessionId: "seed-ada", text: "cold ending" },
+            { sessionId: "seed-bram", text: "the boat one" },
+            { sessionId: "seed-cleo", text: "three hours long" },
+          ]}
+        />
+      </Section>
+
+      <Section title="The peek" note="what the imposter buys with the clue peek setting. same wall, more of it legible">
+        <ImposterClueWall
+          isImposter
+          clueVisibility={0.65}
+          players={CLUE_CAST}
+          sessionId="seed-ada"
+          clues={[
+            { sessionId: "seed-bram", text: "the boat one" },
+            { sessionId: "seed-cleo", text: "three hours long" },
+          ]}
+        />
+        <ImposterClueWall
+          isImposter
+          clueVisibility={0.25}
+          players={CLUE_CAST}
+          sessionId="seed-ada"
+          clues={[
+            { sessionId: "seed-bram", text: "the boat one" },
+            { sessionId: "seed-cleo", text: "three hours long" },
+          ]}
+        />
+        <ImposterClueWall
+          isImposter
+          clueVisibility={0}
+          players={CLUE_CAST}
+          sessionId="seed-ada"
+          clues={[
+            { sessionId: "seed-bram", text: "the boat one" },
+            { sessionId: "seed-cleo", text: "three hours long" },
+          ]}
+        />
+      </Section>
+
+      <Section title="Watching" note="a spectator or someone already out gets the room and nothing to write with">
+        <ImposterCluePhase
+          canWrite={false}
+          role={undefined}
+          secretWord={null}
+          players={CLUE_CAST}
+          sessionId="seed-zed"
+          clues={[{ sessionId: "seed-bram", text: "the boat one" }]}
+          typing={["seed-cleo"]}
+          clue=""
+          submitted={false}
+          onClueChange={NOOP}
+          onSubmit={NOOP}
+        />
+      </Section>
+
       <Section title="Setup" note="the settings on their own. same facts the home card summarised before anyone joined">
         <GameFacts
           label="Setup"
           facts={[
-            { label: "Word bank", value: "Movies & Shows", icon: <FiBookOpen />, accent: "var(--game-accent)", tooltip: "Where the secret word gets picked from" },
-            { label: "Rounds", value: 5, icon: <FiFlag /> },
-            { label: "Imposters", value: 2, icon: <FiZap /> },
-            { label: "Clue peek", value: "None", icon: <FiEye />, tooltip: "The imposter reads nothing before writing" },
-            { label: "Clue time", value: "90s", icon: <FiClock /> },
+            { value: "Movies & Shows", icon: <FiBookOpen />, tone: "var(--game-accent)", tooltip: "Where the secret word gets picked from" },
+            { value: 5, label: "rounds", icon: <FiFlag /> },
+            { value: 2, label: "imposters", icon: <FiZap /> },
+            { value: "None", label: "peek", icon: <FiEye />, tooltip: "The imposter reads nothing before writing" },
+            { value: "90s", label: "to write", icon: <FiClock /> },
           ]}
         />
       </Section>

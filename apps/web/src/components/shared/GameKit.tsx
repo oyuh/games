@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
 import "../../styles/game-kit.css";
 
 /**
@@ -111,20 +111,24 @@ export function GamePanel({ title, action, footer, flush, children, className = 
 /* ── Facts ──────────────────────────────────────────────────── */
 
 export interface GameFact {
-  /** The small line under the value. Two words at most. */
-  label: string;
   value: ReactNode;
+  /** Reads straight after the value, so write it that way: "5 rounds". Left
+   *  off for a value that already says what it is, like a word bank's name. */
+  label?: string;
   icon?: ReactNode;
-  /** Colours the icon. One of them wearing the game accent is plenty. */
-  accent?: string;
+  /** Any css colour, for the one fact worth picking out of the row. */
+  tone?: string;
   /** Worth writing. Half of these settings need a sentence to mean anything. */
   tooltip?: string;
 }
 
 /**
  * What a game was set up with, read only: rounds, timers, word bank, whatever
- * the host picked before anyone joined. The home card's setup summary already
- * reads this way, so the lobby carries the same shape through.
+ * the host picked before anyone joined.
+ *
+ * Pills, like every other small fact on the site. They are quiet by default
+ * because five of them in a row all shouting is five of them saying nothing;
+ * `tone` is there for the one that is actually worth a colour.
  */
 export function GameFacts({ label, facts, className = "" }: { label?: ReactNode; facts: GameFact[]; className?: string }) {
   return (
@@ -132,21 +136,16 @@ export function GameFacts({ label, facts, className = "" }: { label?: ReactNode;
       {label && <span className="gk-roster-label">{label}</span>}
 
       <div className="gk-facts">
-        {facts.map((fact) => (
+        {facts.map((fact, i) => (
           <span
-            key={fact.label}
+            key={i}
             className="gk-fact"
+            style={fact.tone ? ({ "--gk-fact-tone": fact.tone } as CSSProperties) : undefined}
             {...(fact.tooltip ? { "data-tooltip": fact.tooltip, "data-tooltip-variant": "game" } : {})}
           >
-            {fact.icon && (
-              <span className="gk-fact-icon" style={fact.accent ? { color: fact.accent } : undefined} aria-hidden="true">
-                {fact.icon}
-              </span>
-            )}
-            <span className="gk-fact-text">
-              <span className="gk-fact-value">{fact.value}</span>
-              <span className="gk-fact-label">{fact.label}</span>
-            </span>
+            {fact.icon && <span className="gk-fact-icon" aria-hidden="true">{fact.icon}</span>}
+            <span className="gk-fact-value">{fact.value}</span>
+            {fact.label && <span className="gk-fact-label">{fact.label}</span>}
           </span>
         ))}
       </div>

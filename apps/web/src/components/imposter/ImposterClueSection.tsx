@@ -1,28 +1,8 @@
 import { FormEvent, useEffect, useRef } from "react";
 import { FiEye, FiEyeOff, FiSend, FiCheck } from "react-icons/fi";
-import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, imposterCategoryLabels } from "@games/shared";
+import { imposterCategoryLabels } from "@games/shared";
 import { getDisplayName } from "../../lib/session";
-
-/** Redact a clue by showing one contiguous chunk of each word. */
-function redactClue(text: string, visibility = DEFAULT_IMPOSTER_CLUE_VISIBILITY): string {
-  const clampedVisibility = Number.isFinite(visibility)
-    ? Math.min(1, Math.max(0, visibility))
-    : DEFAULT_IMPOSTER_CLUE_VISIBILITY;
-
-  if (clampedVisibility >= 1) return text;
-
-  return text.split(" ").map((word) => {
-    const len = word.length;
-    if (clampedVisibility <= 0) return "_".repeat(len);
-    if (len <= 2) return "_".repeat(len);
-    const showCount = Math.max(1, Math.floor(len * clampedVisibility));
-    // Start the revealed chunk at a deterministic offset (~20% in)
-    const start = Math.min(Math.floor(len * 0.2), len - showCount);
-    return word.split("").map((ch, i) =>
-      i >= start && i < start + showCount ? ch : "_"
-    ).join("");
-  }).join(" ");
-}
+import { redactClue } from "./ImposterClues";
 
 export function ImposterClueSection({
   role,

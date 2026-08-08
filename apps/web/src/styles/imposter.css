@@ -1,0 +1,359 @@
+/* ── Imposter ────────────────────────────────────────────────────
+   The clue phase. Same three rules as the rest of the game kit: depth is
+   borders and fills rather than shadows, colour means something, and one
+   accent per surface off --game-accent.
+
+   The one place that breaks the "stay quiet" habit is the word itself. It is
+   the thing the whole round hangs on and you look at it once, so it gets the
+   room. */
+
+.imp-word,
+.imp-composer,
+.imp-wall {
+  --imp-accent: var(--game-accent, var(--primary));
+}
+
+/* ── The word ───────────────────────────────────────────────── */
+.imp-word {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.1rem 1rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--imp-accent) 28%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--imp-accent) 8%, transparent);
+  text-align: center;
+}
+
+/* Being the imposter is the one genuinely different state in the game, so it
+   is allowed to look like one. */
+.imp-word--imposter {
+  --imp-accent: #f87171;
+}
+
+.imp-word-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--imp-accent) 75%, var(--foreground));
+}
+
+.imp-word-role-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.imp-word-role-icon svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.4;
+}
+
+.imp-word-value {
+  margin: 0;
+  font-size: clamp(1.5rem, 6vw, 2.1rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+/* Fixed width blanks. One block per letter would hand the imposter the
+   length of the word, which is most of the way to the word. */
+.imp-word-blanks {
+  letter-spacing: 0.22em;
+  color: color-mix(in srgb, var(--imp-accent) 55%, var(--muted-foreground));
+}
+
+.imp-word-hint {
+  max-width: 34rem;
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--secondary);
+}
+
+.imp-word-hint strong {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--imp-accent) 60%, var(--foreground));
+}
+
+[data-theme="light"] .imp-word-hint strong,
+[data-theme="light"] .imp-word-role {
+  color: color-mix(in srgb, var(--imp-accent) 55%, #000);
+}
+
+/* ── The box ────────────────────────────────────────────────── */
+.imp-composer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  transition: border-color 0.15s;
+}
+
+.imp-composer:focus-within {
+  border-color: color-mix(in srgb, var(--imp-accent) 45%, transparent);
+}
+
+.imp-composer-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.imp-composer-input:focus {
+  outline: none;
+}
+
+.imp-composer-input::placeholder {
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.imp-composer-count {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+/* Sent. The clue stays on screen because the next thing you do is defend it. */
+.imp-composer--done {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border-color: color-mix(in srgb, #22c55e 30%, transparent);
+  background: color-mix(in srgb, #22c55e 8%, transparent);
+  text-align: center;
+}
+
+.imp-composer-done-mark {
+  display: inline-flex;
+  line-height: 0;
+  color: #4ade80;
+}
+
+.imp-composer-done-mark svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.6;
+}
+
+.imp-composer-done-clue {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.imp-composer-done-note {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--secondary);
+}
+
+/* ── The room ───────────────────────────────────────────────── */
+.imp-wall {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.imp-wall-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.imp-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+/* In beats waiting, so the row that has landed is the one with an edge. */
+.imp-row--in {
+  border-color: color-mix(in srgb, #22c55e 26%, transparent);
+  background: color-mix(in srgb, #22c55e 5%, transparent);
+}
+
+.imp-row--mine {
+  border-color: color-mix(in srgb, var(--imp-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--imp-accent) 6%, transparent);
+}
+
+.imp-row-face {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--avatar-radius);
+  overflow: clip;
+}
+
+.imp-row-name {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  min-width: 5.5rem;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.imp-row-you {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--imp-accent);
+}
+
+/* ── The slot ───────────────────────────────────────────────── */
+.imp-slot {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imp-slot--empty,
+.imp-slot--writing {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--muted-foreground);
+}
+
+.imp-slot--locked,
+.imp-slot--text {
+  animation: imp-land 0.28s ease-out;
+}
+
+.imp-slot--locked {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #4ade80;
+}
+
+.imp-slot--locked svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.6;
+}
+
+.imp-slot--text {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Underscores need to line up to read as a redaction rather than a typo. */
+.imp-slot--redacted {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  color: var(--secondary);
+}
+
+/* The clue drops into place, once. The only movement on the page, so it
+   reads as "that just happened" without anything else competing. */
+@keyframes imp-land {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Writing ────────────────────────────────────────────────────
+   Deliberately dumb: it says someone started, never how fast or how much.
+   A live word count would point straight at whoever is stuck, and whoever
+   is stuck is usually the imposter. */
+.imp-dots {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding-bottom: 2px;
+}
+
+.imp-dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: imp-dot 1.1s ease-in-out infinite;
+}
+
+.imp-dots i:nth-child(2) { animation-delay: 0.15s; }
+.imp-dots i:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes imp-dot {
+  0%, 60%, 100% { opacity: 0.25; }
+  30% { opacity: 1; }
+}
+
+@media (max-width: 30rem) {
+  .imp-composer {
+    flex-wrap: wrap;
+  }
+
+  .imp-composer-input {
+    flex: 1 1 100%;
+  }
+
+  .imp-composer .gk-btn {
+    flex: 1;
+  }
+
+  /* The name and the clue stop fighting over one line. */
+  .imp-row {
+    flex-wrap: wrap;
+  }
+
+  .imp-row-name {
+    flex: 1;
+    max-width: none;
+  }
+
+  .imp-slot {
+    flex: 1 1 100%;
+    padding-left: calc(26px + 0.55rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imp-slot--locked,
+  .imp-slot--text { animation: none; }
+  .imp-dots i { animation-duration: 2.4s; }
+  .imp-row { transition: none; }
+}
