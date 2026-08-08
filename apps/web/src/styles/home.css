@@ -516,39 +516,6 @@ a.solo-card-title-link {
 .solo-pips-face--5 .solo-pips-dot:nth-child(4) { grid-area: 3 / 1; }
 .solo-pips-face--5 .solo-pips-dot:nth-child(5) { grid-area: 3 / 3; }
 
-/* ── Crossword mini preview ──────────────────────────────────── */
-.solo-preview-crossword {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 2px;
-  width: 100%;
-  max-width: 140px;
-}
-
-.solo-xw-cell {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-xs);
-  font-size: 0.55rem;
-  font-weight: 800;
-  background: color-mix(in srgb, var(--secondary) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--secondary) 16%, transparent);
-  color: var(--muted-foreground);
-}
-
-.solo-xw-cell--black {
-  background: transparent;
-  border-color: transparent;
-}
-
-.solo-xw-cell--filled {
-  background: color-mix(in srgb, var(--card-accent) 14%, transparent);
-  border-color: color-mix(in srgb, var(--card-accent) 28%, transparent);
-  color: var(--card-accent);
-}
-
 /* ── Coming soon suggestion preview ──────────────────────────── */
 .solo-preview-suggestion {
   display: grid;
@@ -663,7 +630,6 @@ a.solo-card-title-link {
   box-shadow: var(--surface-shadow-hover);
 }
 
-
 .home-card-body {
   /* Named so anything wanting to break out to the card's edges can cancel
      exactly what it is inside, instead of repeating the numbers. */
@@ -754,20 +720,6 @@ a.solo-card-title-link {
   }
 }
 
-/* ── Coming Soon badge ───────────────────────────────────────── */
-.hc-coming-soon-badge {
-  font-size: 0.6rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  padding: 0.2rem 0.7rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
-  margin-bottom: 0.75rem;
-}
-
 /* ── First-visit hint ─────────────────────────────────────────
    Lives inside the Display Name section, right above the input, so it
    reads as a label on that field rather than a banner about the page.
@@ -820,11 +772,6 @@ a.solo-card-title-link {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.hc-coming-icon {
-  margin-bottom: 0.25rem;
-  opacity: 0.85;
-}
-
 /* No surface of its own. The demo is the card's picture, not a panel sat
    inside it, and a box around it only added a second edge inside an edge.
 
@@ -852,7 +799,6 @@ a.solo-card-title-link {
   max-height: 100%;
   margin-inline: auto;
 }
-
 
 /* ── Location map preview ────────────────────────────────────── */
 .hc-loc-preview {
@@ -1288,13 +1234,6 @@ a.solo-card-title-link {
   }
 }
 
-
-/* smaller game description variant */
-.hc-game-desc--sm {
-  font-size: 0.72rem;
-  margin-bottom: -0.15rem;
-}
-
 /* ── Shade grid preview ──────────────────────────────────────── */
 .hc-shade-grid {
   display: grid;
@@ -1377,17 +1316,6 @@ a.solo-card-title-link {
 
 .hc-title-row .hc-game-title-lg {
   min-width: 0;
-}
-
-/* ── Game card sections ──────────────────────────────────────────
-   The solo end screen's shape: the card is a stack of bordered panels rather
-   than one open box, so the demo and the action below it read as two separate
-   things instead of a run of content that happens to end in a button. */
-.hc-panel {
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
-  padding: 0.7rem;
 }
 
 /* ── Game card footer ────────────────────────────────────────────
@@ -1515,11 +1443,6 @@ a.solo-card-title-link {
   color: var(--muted-foreground);
 }
 
-.hc-sublabel {
-  font-size: 0.78rem;
-  color: var(--secondary);
-}
-
 /* ── Inline-editable name display ────────────────────────────── */
 .hc-name-display {
   display: flex;
@@ -1630,29 +1553,6 @@ a.solo-card-title-link {
   height: 1px;
   background: var(--border);
   margin: 0.75rem 0;
-}
-
-.hc-error {
-  font-size: 0.78rem;
-  color: #f87171;
-  margin-top: 0.2rem;
-}
-
-.hc-text-btn {
-  background: none;
-  border: none;
-  font: inherit;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--secondary);
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.7;
-  transition: opacity 0.15s;
-}
-.hc-text-btn:hover {
-  opacity: 1;
 }
 
 /* ── Join input styles ───────────────────────────────────────── */
@@ -1790,12 +1690,6 @@ a.solo-card-title-link {
 .hc-sync-pending-control .hc-sync-mini-spinner {
   width: 1rem;
   height: 1rem;
-  color: currentColor;
-}
-
-.hc-go-btn .hc-sync-mini-spinner {
-  width: 0.86rem;
-  height: 0.86rem;
   color: currentColor;
 }
 
@@ -2004,36 +1898,6 @@ a.solo-card-title-link {
   color: var(--destructive);
 }
 
-/* ── Game card header ────────────────────────────────────────── */
-.hc-game-header {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  margin-bottom: 0.75rem;
-}
-
-.hc-game-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: var(--radius-lg);
-  flex-shrink: 0;
-}
-
-.hc-game-icon--imposter {
-  background: color-mix(in srgb, #7eb8ff 15%, transparent);
-  color: #7eb8ff;
-  border: 1px solid color-mix(in srgb, #7eb8ff 25%, transparent);
-}
-
-.hc-game-icon--password {
-  background: color-mix(in srgb, #a78bfa 15%, transparent);
-  color: #a78bfa;
-  border: 1px solid color-mix(in srgb, #a78bfa 25%, transparent);
-}
-
 .hc-game-title {
   font-size: 1.1rem;
   font-weight: 800;
@@ -2059,31 +1923,6 @@ a.solo-card-title-link {
   font-size: 1.1rem;
   margin-top: 0;
   margin-bottom: -0.15rem;
-}
-
-.hc-game-sub {
-  font-size: 0.78rem;
-  color: var(--secondary);
-  margin-top: 0.1rem;
-}
-
-.hc-game-desc {
-  font-size: 0.82rem;
-  color: var(--secondary);
-  margin-top: -0.1rem;
-  margin-bottom: 0;
-  width: 100%;
-  max-width: 24ch;
-  margin-inline: auto;
-  line-height: 1.4;
-  text-align: center;
-}
-
-.hc-empty-text {
-  font-size: 0.78rem;
-  color: var(--secondary);
-  opacity: 0.6;
-  font-style: italic;
 }
 
 /* ── Collapsible section toggle ──────────────────────────────── */
@@ -2310,76 +2149,6 @@ a.solo-card-title-link {
   }
 }
 
-.hc-go-btn {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  transform: translateZ(0) scale(1);
-  box-shadow: 0 12px 30px color-mix(in srgb, var(--card-accent, var(--primary)) 20%, transparent);
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, filter 0.22s ease, background 0.18s ease;
-}
-
-.hc-go-btn::before {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  z-index: -1;
-  opacity: 0;
-  transform: scale(0.55);
-  background: radial-gradient(circle, color-mix(in srgb, #fff 30%, var(--card-accent, var(--primary)) 70%) 0%, transparent 62%);
-  transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.hc-go-btn::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(115deg, transparent 18%, rgba(255, 255, 255, 0.08) 34%, rgba(255, 255, 255, 0.28) 49%, rgba(255, 255, 255, 0.08) 64%, transparent 82%);
-  transform: translateX(-135%) skewX(-18deg);
-  opacity: 0;
-  transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
-}
-
-.hc-go-btn:hover:not(:disabled) {
-  transform: translateZ(0) scale(1.035);
-  box-shadow: 0 16px 36px color-mix(in srgb, var(--card-accent, var(--primary)) 30%, transparent);
-  filter: saturate(1.08);
-}
-
-.hc-go-btn:hover:not(:disabled)::before {
-  opacity: 0.4;
-  transform: scale(1);
-}
-
-.hc-go-btn:hover:not(:disabled)::after {
-  opacity: 1;
-  transform: translateX(135%) skewX(-18deg);
-}
-
-.hc-go-btn:active:not(:disabled) {
-  transform: translateZ(0) scale(0.985);
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--card-accent, var(--primary)) 20%, transparent);
-}
-
-.hc-go-btn[data-creating="true"] {
-  animation: hc-go-button-pulse 0.72s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-
-.hc-go-btn[data-creating="true"]::before {
-  opacity: 0.48;
-  transform: scale(1);
-  animation: hc-go-button-core 0.88s ease-out infinite;
-}
-
-.hc-go-btn[data-creating="true"]::after {
-  opacity: 1;
-  transform: translateX(135%) skewX(-18deg);
-}
-
-.home-card .hc-go-btn:disabled .hc-sync-button-content {
-  color: rgba(255, 255, 255, 0.78);
-}
-
 /* ? help button */
 .hc-help-btn {
   width: 36px;
@@ -2562,29 +2331,7 @@ a.solo-card-title-link {
 }
 
 /* ── Globe Browse Buttons ──────────────────────────────── */
-/* ── Globe Browse Button (desktop cards) ────────────────── */
-.hc-browse-globe {
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--card-accent, var(--secondary));
-  opacity: 0.5;
-  border-radius: var(--radius-md);
-}
-.hc-browse-globe:hover {
-  opacity: 1;
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 12%, transparent);
-  color: var(--card-accent, var(--secondary));
-}
-.hc-browse-globe {
-  position: relative;
-}
+
 .hc-globe-badge {
   position: absolute;
   top: 2px;
@@ -2602,43 +2349,10 @@ a.solo-card-title-link {
   pointer-events: none;
   transition: top 0.15s ease, right 0.15s ease;
 }
-.hc-browse-globe:hover .hc-globe-badge,
+
 .m-browse-globe:hover .hc-globe-badge {
   top: -5px;
   right: -5px;
-}
-.hc-browse-globe.hc-sync-pending-control {
-  color: color-mix(in srgb, var(--card-accent, var(--primary)) 72%, var(--foreground));
-  opacity: 0.72;
-}
-
-.hc-browse-globe.hc-sync-pending-control:disabled {
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 10%, transparent);
-  color: color-mix(in srgb, var(--card-accent, var(--primary)) 72%, var(--foreground));
-  opacity: 0.72;
-}
-
-.hc-globe-empty {
-  color: var(--muted-foreground);
-  opacity: 0.35;
-}
-.hc-globe-empty:hover {
-  color: var(--muted-foreground);
-  opacity: 0.6;
-  background: color-mix(in srgb, var(--muted-foreground) 8%, transparent);
-}
-
-.hc-browse-globe.hc-globe-empty.hc-sync-pending-control:disabled {
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 10%, transparent);
-  color: color-mix(in srgb, var(--card-accent, var(--primary)) 72%, var(--foreground));
-  opacity: 0.72;
-}
-
-.hc-browse-globe.hc-globe-empty.hc-sync-pending-control,
-.hc-browse-globe.hc-globe-empty.hc-sync-unavailable-control {
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 10%, transparent);
-  color: color-mix(in srgb, var(--card-accent, var(--primary)) 72%, var(--foreground));
-  opacity: 0.72;
 }
 
 /* ── Globe Browse Button (mobile cards) ─────────────────── */
@@ -2677,7 +2391,6 @@ a.solo-card-title-link {
   opacity: 0.6;
   background: color-mix(in srgb, var(--muted-foreground) 8%, transparent);
 }
-
 
 /* ── Card content enter animation + Public Games list ──── */
 /* ── Card content enter animation ──────────────────────── */

@@ -53,14 +53,6 @@
   background: rgba(200, 197, 193, 0.4);
 }
 
-/* .home-card, .solo-card and the mobile cards used to each carry their
-   own light-mode override here. They all read the --surface-* tokens
-   above now, so the overrides are gone. */
-
-[data-theme="light"] .home-icon-layer {
-  opacity: 0.06;
-}
-
 /* ─── Sidebar Position: Right ───────────────────────────── */
 
 [data-sidebar="right"] .sidebar {
@@ -87,15 +79,6 @@
   width: 1px;
   height: 28px;
   margin: 0 0.15rem;
-}
-
-[data-sidebar="top"] .sidebar-toggle {
-  display: none;
-}
-
-[data-sidebar="top"] .sidebar-nav {
-  flex-direction: row;
-  gap: 0.15rem;
 }
 
 @media (max-width: 768px) {
