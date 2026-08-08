@@ -102,6 +102,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
           role={me?.role}
           secretWord={visibleSecretWord}
           category={game.category}
+          imposters={game.settings.imposters}
           players={active}
           clues={game.clues}
           typing={typing}
