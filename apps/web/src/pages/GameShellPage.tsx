@@ -3,7 +3,7 @@ import { FiAward, FiChevronRight, FiEdit3, FiEye, FiMapPin, FiMessageSquare, FiP
 import { GAME_META, type GameSlug } from "@games/shared";
 import { GameShellHeader, ShellPill, type GamePhase } from "../components/shared/GameShellHeader";
 import { GameButton, GameEmpty, GamePanel, type GameButtonSize, type GameButtonVariant } from "../components/shared/GameKit";
-import { GameRoster, GameTeamRoster } from "../components/shared/GameRoster";
+import { GameRoster, GameTeamRoster, GameVersus } from "../components/shared/GameRoster";
 import { playerBadges } from "../components/shared/PlayerCard";
 import "../styles/game-shared.css";
 
@@ -118,7 +118,9 @@ export function GameShellPage() {
           code="H4TQ9"
           isHost
         />
+        {/* md, and the host gets an X on everyone. */}
         <GameRoster
+          onKick={() => {}}
           players={CAST.map((p, i) => ({
             ...p,
             index: i,
@@ -130,14 +132,20 @@ export function GameShellPage() {
       </Section>
 
       <Section title="Roster, mid game" note="sm cards for a longer list, with what each of them is doing">
-        {/* No points anywhere in here on purpose: what a point means is each
-            game's own business, so the roster never assumes there are any. */}
+        {/* sm, badges folded until pointed at, state on the edge and the mark.
+            Ada and Cleo carry a team accent, which outranks their state on the
+            border while the mark over the face still shows it. */}
         <GameRoster
+          size="sm"
           label="Clues in"
           action={<GameButton variant="ghost" size="sm">Skip waiting</GameButton>}
           players={CAST.map((p, i) => ({
             ...p,
             index: i,
+            collapseBadges: true,
+            ...(i === 0 ? { you: true, accent: BLUE, badges: [playerBadges.host(), playerBadges.team("Blue", BLUE)] } : {}),
+            ...(i === 1 ? { badges: [playerBadges.leader()] } : {}),
+            ...(i === 2 ? { accent: RED, badges: [playerBadges.team("Red", RED)] } : {}),
             ...(i < 3
               ? { state: "success" as const, caption: "Clue in" }
               : i < 5
@@ -175,6 +183,16 @@ export function GameShellPage() {
         />
       </Section>
 
+      <Section title="Versus" note="for chain reaction and anything else that comes down to a pair">
+        <GameVersus
+          label="Head to head"
+          players={[
+            { ...CAST[0]!, index: 0, you: true, state: "success", caption: "3 of 5 solved", points: 7, pointsSuffix: "pts" },
+            { ...CAST[1]!, index: 1, state: "waiting", caption: "1 of 5 solved", points: 5, pointsSuffix: "pts" },
+          ]}
+        />
+      </Section>
+
       <Section title="Buttons" note="one accent per surface, and none of them filled solid">
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
           {(["primary", "secondary", "ghost", "danger"] as GameButtonVariant[]).map((v) => (
@@ -199,14 +217,6 @@ export function GameShellPage() {
           <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--secondary)" }}>
             Anything a game wants to put in a box goes here.
           </p>
-        </GamePanel>
-
-        <GamePanel title="Players" flush footer="Four in, two still picking.">
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {["Ada", "Bram", "Cleo"].map((n) => (
-              <span key={n} style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid var(--border)", fontSize: "0.78rem" }}>{n}</span>
-            ))}
-          </div>
         </GamePanel>
 
         <GamePanel>
