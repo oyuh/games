@@ -326,6 +326,43 @@
   background: color-mix(in srgb, var(--foreground) 3.5%, transparent);
 }
 
+/* ── Folded badges ──────────────────────────────────────────────
+   Mid-game the roles matter less than the room they take, so the strip is
+   folded away entirely. What someone is already shows in the card's colour;
+   a stripe of badge colours under every name was a second, worse way of
+   saying it. Pointing at the card opens the real strip, and it stays open for
+   ten seconds so reading a badge does not mean holding the pointer still.
+
+   Not rendered at all while folded, rather than collapsed to nothing. Both a
+   0fr grid row and a zero max-height left the strip stubbornly at its content
+   height, and a card this small does not need a closing animation badly
+   enough to keep fighting a box that will not shut. */
+.pc-badges--revealed {
+  animation: pc-badges-in 0.2s ease-out;
+}
+
+@keyframes pc-badges-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-badges--revealed { animation: none; }
+}
+
+/* ── Team colour ────────────────────────────────────────────────
+   An accent is a team, and a team outranks a state: whose side you are on
+   does not stop being true because you are mid-answer. The state keeps the
+   mark over the face, which is where it reads anyway. */
+.pc--accented,
+.pc--accented.pc--waiting,
+.pc--accented.pc--success,
+.pc--accented.pc--error,
+.pc--accented.pc--you {
+  border-color: color-mix(in srgb, var(--pc-accent) 55%, transparent);
+  --pc-line: color-mix(in srgb, var(--pc-accent) 30%, var(--border));
+}
+
 .pc-badge {
   --pc-badge: var(--pc-accent);
   --tt-color: var(--pc-badge);

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { FiMaximize2, FiMinimize2 } from "react-icons/fi";
+import { FiMaximize2, FiMinimize2, FiX } from "react-icons/fi";
 import { PlayerCard, type PlayerCardProps } from "./PlayerCard";
 import { TeamCard, type TeamCardProps } from "./TeamCard";
 import "../../styles/game-kit.css";
@@ -7,18 +7,16 @@ import "../../styles/game-kit.css";
 /**
  * Who is in the game, under the shell header, in the lobby and during it.
  *
- * No container. A list of players is a heading and then the players; a border
- * round it only adds an edge inside the page's other edges. The heading is a
- * line of small caps and a count, the way the home card's sections label
- * themselves.
+ * No container: a list of players is a heading and then the players. The cards
+ * wrap at their own width rather than being stretched into grid columns, which
+ * is what .pc-grid was already doing everywhere else.
  *
- * Condensed by default. The player card already has a small size that says
- * name, face, state and badges in one row, and that is the whole point of a
- * roster; the roomy version is one button away for when someone wants to
- * actually look at everybody.
+ * The card does the work. Size says how much room to give it, state colours
+ * its edge and marks the face, an accent says which team, and badges fold away
+ * until pointed at. None of that is re-invented here.
  *
- * Nothing here knows about scores. What a point means is different in every
- * game, so games pass whatever the card should show and this stays out of it.
+ * Nothing here knows about scores. What a point means differs per game, so
+ * games pass whatever their cards should carry.
  */
 
 interface RosterHeadProps {
@@ -59,11 +57,15 @@ function RosterHead({ label, count, action, expanded, onToggle }: RosterHeadProp
 export interface GameRosterProps {
   players: Array<PlayerCardProps>;
   label?: ReactNode;
+  /** md is the lobby, where there is room to see everyone properly. sm is the
+   *  mid-game list, where the point is a glance. */
+  size?: "sm" | "md";
   /** Sits before the expand button. */
   action?: ReactNode;
-  /** Left on, the list can be opened out to full size cards. */
+  /** Left on, sm lists can be opened out to full size cards. */
   expandable?: boolean;
-  defaultExpanded?: boolean;
+  /** Given, every card grows the host's kick button. */
+  onKick?: (sessionId: string) => void;
   emptyLabel?: string;
   className?: string;
 }
@@ -71,13 +73,15 @@ export interface GameRosterProps {
 export function GameRoster({
   players,
   label = "Players",
+  size = "md",
   action,
   expandable = true,
-  defaultExpanded,
+  onKick,
   emptyLabel = "Nobody here yet",
   className = "",
 }: GameRosterProps) {
-  const [expanded, setExpanded] = useState(!!defaultExpanded);
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? "md" : size;
 
   return (
     <div className={`gk-roster-block ${className}`.trim()}>
@@ -86,13 +90,32 @@ export function GameRoster({
         count={players.length}
         action={action}
         expanded={expanded}
-        {...(expandable ? { onToggle: () => setExpanded((v) => !v) } : {})}
+        {...(expandable && size === "sm" ? { onToggle: () => setExpanded((v) => !v) } : {})}
       />
 
       {players.length > 0 ? (
-        <div className={`gk-roster${expanded ? " gk-roster--roomy" : ""}`}>
+        <div className={`pc-grid${shown === "md" ? " pc-grid--fill" : ""}`}>
           {players.map((player) => (
-            <PlayerCard key={player.sessionId} {...player} size={expanded ? "md" : "sm"} />
+            <PlayerCard
+              key={player.sessionId}
+              {...player}
+              size={shown}
+              {...(onKick && !player.action
+                ? {
+                    action: (
+                      <button
+                        type="button"
+                        aria-label={`Remove ${player.name}`}
+                        data-tooltip={`Remove ${player.name}`}
+                        data-tooltip-variant="game"
+                        onClick={() => onKick(player.sessionId)}
+                      >
+                        <FiX size={13} />
+                      </button>
+                    ),
+                  }
+                : {})}
+            />
           ))}
         </div>
       ) : (
@@ -106,9 +129,8 @@ export interface GameTeamRosterProps {
   teams: Array<TeamCardProps>;
   label?: ReactNode;
   action?: ReactNode;
-  /** Left on, the teams fold down to their faces and back. */
-  expandable?: boolean;
-  defaultExpanded?: boolean;
+  /** Teams start folded down to their faces. */
+  startFolded?: boolean;
   /** Players who have not picked a side. In a team game that is the state
    *  worth noticing, so they sit apart rather than in with everyone else. */
   bench?: Array<PlayerCardProps>;
@@ -120,43 +142,72 @@ export function GameTeamRoster({
   teams,
   label = "Teams",
   action,
-  expandable = true,
-  defaultExpanded,
+  startFolded,
   bench,
   benchLabel = "No team yet",
   className = "",
 }: GameTeamRosterProps) {
-  const [expanded, setExpanded] = useState(!!defaultExpanded);
   const seated = teams.reduce((n, t) => n + (t.players?.length ?? 0), 0);
 
   return (
     <div className={`gk-roster-block ${className}`.trim()}>
-      <RosterHead
-        label={label}
-        count={seated + (bench?.length ?? 0)}
-        action={action}
-        expanded={expanded}
-        {...(expandable ? { onToggle: () => setExpanded((v) => !v) } : {})}
-      />
+      <RosterHead label={label} count={seated + (bench?.length ?? 0)} action={action} />
 
-      {/* Condensed is the team card's own faces row, which is exactly this:
-          the team, its colour, and who is on it, in one line. */}
-      <div className={`gk-roster gk-roster--teams${expanded ? " gk-roster--roomy" : ""}`}>
+      {/* Every team folds on its own. That is what the team card's chevron is
+          for, and it beats one switch that opens or shuts all of them. */}
+      <div className="tc-grid">
         {teams.map((team) => (
-          <TeamCard key={team.name} {...team} {...(expanded ? {} : { condensed: true })} />
+          <TeamCard
+            key={team.name}
+            {...team}
+            collapsible
+            {...(startFolded ? { defaultCollapsed: true } : {})}
+          />
         ))}
       </div>
 
       {bench && bench.length > 0 && (
         <div className="gk-bench">
           <span className="gk-roster-label">{benchLabel}</span>
-          <div className="gk-roster gk-roster--bench">
+          <div className="pc-grid">
             {bench.map((player) => (
               <PlayerCard key={player.sessionId} {...player} size="sm" />
             ))}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export interface GameVersusProps {
+  /** Two of them. More than two is a roster, not a duel. */
+  players: [PlayerCardProps, PlayerCardProps];
+  label?: ReactNode;
+  /** Sits between the two cards. */
+  divider?: ReactNode;
+  className?: string;
+}
+
+/**
+ * Two players facing each other, for Chain Reaction and anything else that
+ * comes down to a pair. The lg card was drawn for exactly this: face on top,
+ * name under it, and the score behind a rule across the bottom.
+ */
+export function GameVersus({ players, label, divider = "vs", className = "" }: GameVersusProps) {
+  return (
+    <div className={`gk-versus-block ${className}`.trim()}>
+      {label && (
+        <div className="gk-roster-head">
+          <span className="gk-roster-label">{label}</span>
+        </div>
+      )}
+
+      <div className="gk-versus">
+        <PlayerCard {...players[0]} size="lg" />
+        <span className="gk-versus-mark" aria-hidden="true">{divider}</span>
+        <PlayerCard {...players[1]} size="lg" />
+      </div>
     </div>
   );
 }
