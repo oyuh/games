@@ -108,6 +108,67 @@ export function GamePanel({ title, action, footer, flush, children, className = 
   );
 }
 
+/* ── Facts ──────────────────────────────────────────────────── */
+
+export interface GameFact {
+  /** The small line under the value. Two words at most. */
+  label: string;
+  value: ReactNode;
+  icon?: ReactNode;
+  /** Colours the icon. One of them wearing the game accent is plenty. */
+  accent?: string;
+  /** Worth writing. Half of these settings need a sentence to mean anything. */
+  tooltip?: string;
+}
+
+/**
+ * What a game was set up with, read only: rounds, timers, word bank, whatever
+ * the host picked before anyone joined. The home card's setup summary already
+ * reads this way, so the lobby carries the same shape through.
+ */
+export function GameFacts({ label, facts, className = "" }: { label?: ReactNode; facts: GameFact[]; className?: string }) {
+  return (
+    <div className={`gk-facts-block ${className}`.trim()}>
+      {label && <span className="gk-roster-label">{label}</span>}
+
+      <div className="gk-facts">
+        {facts.map((fact) => (
+          <span
+            key={fact.label}
+            className="gk-fact"
+            {...(fact.tooltip ? { "data-tooltip": fact.tooltip, "data-tooltip-variant": "game" } : {})}
+          >
+            {fact.icon && (
+              <span className="gk-fact-icon" style={fact.accent ? { color: fact.accent } : undefined} aria-hidden="true">
+                {fact.icon}
+              </span>
+            )}
+            <span className="gk-fact-text">
+              <span className="gk-fact-value">{fact.value}</span>
+              <span className="gk-fact-label">{fact.label}</span>
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Actions ────────────────────────────────────────────────── */
+
+/**
+ * The row a phase ends on. The hint goes above rather than beside, because the
+ * reason a button is disabled should not be competing with the button.
+ */
+export function GameActions({ hint, children, className = "" }: { hint?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <div className={`gk-actions ${className}`.trim()}>
+      {hint && <p className="gk-actions-hint">{hint}</p>}
+      <div className="gk-actions-row">{children}</div>
+    </div>
+  );
+}
+
 /* ── Empty ──────────────────────────────────────────────────── */
 
 export interface GameEmptyProps {
