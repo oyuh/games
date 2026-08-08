@@ -1,8 +1,9 @@
 import { isEncrypted, mutators, queries } from "@games/shared";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
+import { publishRealtimeEvent, subscribeToRealtimeEvent } from "../lib/realtime";
 import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
@@ -199,6 +200,36 @@ export function useImposterGame(sessionId: string) {
     return () => clearTimeout(timer);
   }, [game, navigate]);
 
+  /* ── Who has started writing ──────────────────────────────────
+     Over the realtime socket rather than the database: it is chatter, not
+     state, and nothing about it is worth a row or a sync round trip. Anyone
+     who missed the ping just sees "thinking" for a bit, which is the same
+     thing they would see a second earlier anyway.
+
+     Sticky for the round. A client announces once, on its first character,
+     and this never removes anyone, so hesitating never shows. A signal that
+     could go off again would point straight at whoever keeps deleting their
+     clue, and whoever keeps deleting their clue is usually the imposter. */
+  const [typing, setTyping] = useState<string[]>([]);
+  const topic = `imposter-game:${gameId}`;
+
+  useEffect(() => {
+    setTyping([]);
+  }, [game?.phase, game?.settings.currentRound]);
+
+  useEffect(() => {
+    if (!gameId || game?.phase !== "playing") return;
+    return subscribeToRealtimeEvent<{ sessionId?: string }>(topic, "typing", (payload) => {
+      const id = payload?.sessionId;
+      if (!id) return;
+      setTyping((current) => (current.includes(id) ? current : [...current, id]));
+    });
+  }, [topic, gameId, game?.phase]);
+
+  const announceTyping = useCallback(() => {
+    publishRealtimeEvent(topic, "typing", { sessionId });
+  }, [topic, sessionId]);
+
   const joinGame = async () => {
     await ensureName(zero, sessionId);
     if (isSpectator) {
@@ -215,6 +246,7 @@ export function useImposterGame(sessionId: string) {
     zero, navigate, gameId, game, me, isHost, inGame, isSpectator,
     sessionById, tally, visibleSecretWord, decryptedRoundWords,
     clue, setClue, voteTarget, setVoteTarget,
+    typing, announceTyping,
     activeGameType, activeGameId, inAnotherGame,
     showInSessionModal, setShowInSessionModal,
     joiningFromOtherGame, setJoiningFromOtherGame,

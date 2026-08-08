@@ -475,6 +475,80 @@
   }
 }
 
+/* ── On a game page ─────────────────────────────────────────────
+   A game page reads at 1.12rem and scales its controls up to match, which
+   game-shared.css has been doing for .btn and .input since the start. The kit
+   has to opt in the same way or it turns up as the one small thing on a page
+   built to be read from the back of a sofa. Sizes only, never colour. */
+.game-page .gk-btn--sm {
+  padding: 0.36rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.game-page .gk-btn--md {
+  padding: 0.58rem 1rem;
+  font-size: 0.95rem;
+}
+
+.game-page .gk-btn--lg {
+  padding: 0.85rem 1.35rem;
+  font-size: 1.08rem;
+}
+
+.game-page .gk-btn-icon svg {
+  width: 1.05em;
+  height: 1.05em;
+}
+
+.game-page .gk-fact {
+  padding: 0.22rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.game-page .gk-fact-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.game-page .gk-roster-label,
+.game-page .gk-roster-count {
+  font-size: 0.75rem;
+}
+
+.game-page .gk-roster-expand {
+  width: 26px;
+  height: 26px;
+}
+
+.game-page .gk-roster-expand svg {
+  width: 15px;
+  height: 15px;
+}
+
+.game-page .gk-roster-empty {
+  font-size: 0.88rem;
+}
+
+.game-page .gk-actions-hint {
+  font-size: 0.88rem;
+}
+
+.game-page .gk-actions-note {
+  font-size: 0.9rem;
+}
+
+.game-page .gk-panel-title {
+  font-size: 0.82rem;
+}
+
+.game-page .gk-empty-title {
+  font-size: 1.02rem;
+}
+
+.game-page .gk-empty-hint {
+  font-size: 0.88rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gk-spinner { animation-duration: 1.6s; }
   .gk-btn { transition: none; }

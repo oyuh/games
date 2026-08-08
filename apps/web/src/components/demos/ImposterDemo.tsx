@@ -1,12 +1,11 @@
 import { useRef, useState, FormEvent } from "react";
-import { FiEdit3, FiEye, FiEyeOff, FiRefreshCw, FiUsers } from "react-icons/fi";
+import { FiBookOpen, FiEdit3, FiEye, FiEyeOff, FiRefreshCw, FiUsers } from "react-icons/fi";
 import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
-import { ImposterHeader } from "../imposter/ImposterHeader";
-import { ImposterPlayersCard } from "../imposter/ImposterPlayersCard";
-import { ImposterLobbyActions } from "../imposter/ImposterLobbyActions";
-import { ImposterClueSection } from "../imposter/ImposterClueSection";
-import { ImposterVoteSection } from "../imposter/ImposterVoteSection";
-import { ImposterResultsSection } from "../imposter/ImposterResultsSection";
+import { GameShellHeader, ShellPill } from "../shared/GameShellHeader";
+import { IMPOSTER_PHASES, ImposterLobby } from "../imposter/ImposterLobby";
+import { ImposterCluePhase } from "../imposter/ImposterClues";
+import { ImposterVotePhase } from "../imposter/ImposterVote";
+import { ImposterRoundResult } from "../imposter/ImposterRoundResult";
 import "../../styles/game-shared.css";
 
 /* ── Fake data ──────────────────────────────────────────── */
@@ -52,7 +51,11 @@ const VOTES = [
   { voterId: P.diana, targetId: P.charlie },
 ];
 
-const TALLY: Record<string, number> = { [P.charlie]: 3, [P.diana]: 1, [P.alice]: 1 };
+const SETTINGS = { rounds: 3, imposters: 1, roundDurationSec: 90, clueVisibility: 0.65 };
+
+const HEADER = { game: "imposter", title: "Imposter", phases: IMPOSTER_PHASES, code: "DEMO" } as const;
+
+const BANK = <ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Animals</ShellPill>;
 
 /* ── Steps ──────────────────────────────────────────────── */
 
@@ -104,12 +107,21 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 0: // Lobby
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="lobby" currentRound={1} totalRounds={3} phaseEndsAt={null} isHost category="animals" />
-            <DemoPoint label="Players waiting in lobby">
-              <ImposterPlayersCard players={PLAYERS} sessionId={P.you} sessionById={NAMES} revealRoles={false} />
-            </DemoPoint>
-            <DemoPoint label="Host starts the game when ready">
-              <ImposterLobbyActions canStart isHost playerCount={5} onStart={() => setStep(1)} onLeave={noop} />
+            <GameShellHeader {...HEADER} phase="lobby" isHost pills={BANK} />
+            <DemoPoint label="Players wait in the lobby, and the host starts it">
+              <ImposterLobby
+                isHost
+                inGame
+                players={PLAYERS}
+                sessionId={P.you}
+                hostId={P.you}
+                sessionById={NAMES}
+                settings={SETTINGS}
+                category="animals"
+                onStart={() => setStep(1)}
+                onLeave={noop}
+                onJoin={noop}
+              />
             </DemoPoint>
           </div>
         );
@@ -117,20 +129,19 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 1: // Clues - player perspective
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
-            <ImposterPlayersCard players={PLAYERS} sessionId={P.you} sessionById={NAMES} revealRoles={false} />
-            <DemoPoint label="You see the secret word and submit a clue">
-              <ImposterClueSection
+            <GameShellHeader {...HEADER} phase="playing" round={{ current: 1, total: 3 }} pills={BANK} />
+            <DemoPoint label="You get the word, and one clue to prove it">
+              <ImposterCluePhase
                 role="player"
                 secretWord={SECRET_WORD}
                 category="animals"
-                clue={clue}
-                clueCount={0}
-                playerCount={5}
-                submitted={false}
-                clues={[]}
+                players={PLAYERS}
+                clues={CLUES.slice(1, 3)}
+                typing={[P.diana]}
                 sessionId={P.you}
                 sessionById={NAMES}
+                clue={clue}
+                submitted={false}
                 onClueChange={setClue}
                 onSubmit={noop}
               />
@@ -141,20 +152,19 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 2: // Clues - imposter perspective
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="playing" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
-            <ImposterPlayersCard players={PLAYERS} sessionId={P.charlie} sessionById={NAMES} revealRoles={false} />
-            <DemoPoint label="The imposter doesn't see the word - only redacted hints!">
-              <ImposterClueSection
+            <GameShellHeader {...HEADER} phase="playing" round={{ current: 1, total: 3 }} pills={BANK} />
+            <DemoPoint label="The imposter never gets the word, only a peek at the clues">
+              <ImposterCluePhase
                 role="imposter"
                 secretWord={null}
                 category="animals"
-                clue={clue}
-                clueCount={3}
-                playerCount={5}
-                submitted={false}
+                players={PLAYERS}
                 clues={CLUES.filter((c) => c.sessionId !== P.charlie).slice(0, 3)}
                 sessionId={P.charlie}
                 sessionById={NAMES}
+                clueVisibility={0.65}
+                clue={clue}
+                submitted={false}
                 onClueChange={setClue}
                 onSubmit={noop}
               />
@@ -165,17 +175,15 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 3: // Voting
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="voting" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
-            <DemoPoint label="Review all clues and vote for the imposter">
-              <ImposterVoteSection
+            <GameShellHeader {...HEADER} phase="voting" round={{ current: 1, total: 3 }} pills={BANK} />
+            <DemoPoint label="Every clue is on the thing you press">
+              <ImposterVotePhase
                 players={PLAYERS}
+                clues={CLUES}
                 sessionId={P.you}
                 sessionById={NAMES}
+                voted={[P.alice, P.bob]}
                 voteTarget={voteTarget}
-                voteCount={0}
-                playerCount={5}
-                clues={CLUES}
-                submitted={false}
                 onVoteTargetChange={setVoteTarget}
                 onSubmit={noop}
               />
@@ -186,21 +194,15 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 4: // Results
         return (
           <div className="game-page" data-game-theme="imposter">
-            <ImposterHeader code="DEMO" phase="results" currentRound={1} totalRounds={3} phaseEndsAt={null} category="animals" />
-            <DemoPoint label="Roles are revealed">
-              <ImposterPlayersCard players={PLAYERS} sessionId={P.you} sessionById={NAMES} revealRoles />
-            </DemoPoint>
-            <DemoPoint label="Vote tally shows who got caught">
-              <ImposterResultsSection
-                tally={TALLY}
-                votes={VOTES}
+            <GameShellHeader {...HEADER} phase="results" round={{ current: 1, total: 3 }} pills={BANK} />
+            <DemoPoint label="Who went, what they were, and which way everyone voted">
+              <ImposterRoundResult
                 players={PLAYERS}
+                votes={VOTES}
+                clues={CLUES}
                 sessionById={NAMES}
                 secretWord={SECRET_WORD}
-                phaseEndsAt={null}
-                skipVotes={0}
-                activePlayerCount={PLAYERS.length}
-                hasVotedSkip={false}
+                skipVotes={1}
                 onSkip={noop}
               />
             </DemoPoint>
