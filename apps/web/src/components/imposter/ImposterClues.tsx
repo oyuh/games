@@ -155,6 +155,26 @@ export interface ImposterClue {
   text: string;
 }
 
+/**
+ * A face and a name, drawn the same way in every list the game puts up. The
+ * clue list and the ballot are the same rows in the same order on purpose:
+ * the thing you watched fill in is the thing you then vote on.
+ */
+export function ImposterFace({ sessionId, name, you }: { sessionId: string; name: string; you?: boolean }) {
+  return (
+    <>
+      <span className="imp-row-face">
+        <PlayerAvatar seed={sessionId} />
+      </span>
+
+      <span className="imp-row-name">
+        {name}
+        {you && <span className="imp-row-you">you</span>}
+      </span>
+    </>
+  );
+}
+
 export interface ImposterClueWallProps {
   players: ImposterPlayer[];
   clues: ImposterClue[];
@@ -205,14 +225,7 @@ export function ImposterClueWall({
               key={player.sessionId}
               className={`imp-row${text ? " imp-row--in" : ""}${mine ? " imp-row--mine" : ""}`}
             >
-              <span className="imp-row-face">
-                <PlayerAvatar seed={player.sessionId} />
-              </span>
-
-              <span className="imp-row-name">
-                {name}
-                {mine && <span className="imp-row-you">you</span>}
-              </span>
+              <ImposterFace sessionId={player.sessionId} name={name} you={mine} />
 
               {/* Three slots, in order of how much they give away: nothing,
                   that they started, and the clue itself. */}
