@@ -624,17 +624,30 @@ label.imp-ballot:hover {
 .imp-tally {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
 }
 
+/* A hairline each, so four rows read as four rows rather than one block of
+   names. The last one has nothing under it to be separated from. */
 .imp-tally-row {
   display: grid;
-  grid-template-columns: minmax(4rem, 7rem) minmax(3rem, 1fr) 1.1rem;
+  grid-template-columns: auto minmax(4rem, 7rem) minmax(3rem, 1fr) 1.1rem;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.22rem 0.1rem;
+  gap: 0.45rem;
+  padding: 0.4rem 0.1rem;
+  border-bottom: 1px solid var(--border);
   font-size: 0.74rem;
   animation: imp-rise 0.3s var(--imp-delay, 1.05s) ease-out both;
+}
+
+.imp-tally-row:last-child {
+  border-bottom: 0;
+}
+
+.imp-tally-face {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--avatar-radius);
+  overflow: clip;
 }
 
 .imp-tally-name {
@@ -682,18 +695,41 @@ label.imp-ballot:hover {
   color: var(--secondary);
 }
 
-/* Who put them there, which is the bit people actually argue about. */
-.imp-tally-voters {
+/* Where their vote went, and who put them where they are. Both directions on
+   one line, because a bar only ever showed one of them. */
+.imp-tally-meta {
   grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  margin-top: 0.15rem;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.64rem;
   color: var(--muted-foreground);
 }
 
-.imp-tally-voters:empty {
-  display: none;
+.imp-tally-meta > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.imp-tally-meta strong {
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.imp-tally-quiet {
+  font-style: italic;
+}
+
+/* A rule rather than a dot. The two halves are different facts, not a list. */
+.imp-tally-sep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 0.7rem;
+  background: var(--border);
 }
 
 .imp-result-foot {

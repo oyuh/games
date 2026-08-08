@@ -117,6 +117,9 @@ export function ImposterRoundResult({
           const voters = votes
             .filter((v) => v.targetId === player.sessionId)
             .map((v) => nameById(v.voterId));
+          /* Who they went for. The bar only ever showed votes coming in, so
+             reading a row told you nothing about what that player did. */
+          const theirVote = votes.find((v) => v.voterId === player.sessionId);
 
           return (
             <div
@@ -127,6 +130,10 @@ export function ImposterRoundResult({
                 "--imp-delay": `${1.05 + i * 0.06}s`,
               } as CSSProperties}
             >
+              <span className="imp-tally-face">
+                <PlayerAvatar seed={player.sessionId} />
+              </span>
+
               <span className="imp-tally-name">{nameOf(player)}</span>
 
               <span className="imp-tally-track">
@@ -134,7 +141,19 @@ export function ImposterRoundResult({
               </span>
 
               <span className="imp-tally-count">{count}</span>
-              <span className="imp-tally-voters">{voters.join(", ")}</span>
+
+              <span className="imp-tally-meta">
+                {theirVote
+                  ? <>voted <strong>{nameById(theirVote.targetId)}</strong></>
+                  : <span className="imp-tally-quiet">did not vote</span>}
+
+                {voters.length > 0 && (
+                  <>
+                    <span className="imp-tally-sep" aria-hidden="true" />
+                    <span>picked by {voters.join(", ")}</span>
+                  </>
+                )}
+              </span>
             </div>
           );
         })}
