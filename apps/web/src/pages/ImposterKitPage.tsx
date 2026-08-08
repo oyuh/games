@@ -455,6 +455,8 @@ export function ImposterKitPage() {
         <ImposterWordCard role="player" secretWord="Titanic" category="moviesAndShows" />
         <ImposterWordCard role="imposter" secretWord={null} category="moviesAndShows" />
         <ImposterWordCard role="player" secretWord="Titanic" />
+        {/* The host can set more than one, and then "one of you" is a lie. */}
+        <ImposterWordCard role="player" secretWord="Titanic" category="moviesAndShows" imposters={2} />
       </Section>
 
       <Section title="The box" note="empty, mid thought, and sent. it stays on screen after, because defending it is the next thing you do">

@@ -44,13 +44,21 @@ export function ImposterWordCard({
   role,
   secretWord,
   category,
+  imposters = 1,
 }: {
   role: "imposter" | "player" | undefined;
   secretWord: string | null;
   category?: string | null;
+  /** How many of them there are. The host can set more than one, and a card
+   *  that says "one of you" in a room with two is quietly lying about the
+   *  thing you are about to spend the round working out. */
+  imposters?: number;
 }) {
   const isImposter = role === "imposter";
   const bank = category ? (imposterCategoryLabels[category] ?? category) : null;
+  /* Not a number. Saying "except two of you" would hand the room a piece of
+     arithmetic the imposters would rather it did not have. */
+  const missing = imposters > 1 ? "some of you" : "one of you";
 
   return (
     <section className={`imp-word${isImposter ? " imp-word--imposter" : ""}`}>
@@ -71,8 +79,8 @@ export function ImposterWordCard({
             ? <>It is something from <strong>{bank}</strong>. Write a clue that sounds like you know which.</>
             : <>Write a clue that sounds like you know the word.</>
           : bank
-            ? <>From <strong>{bank}</strong>. Everyone else has this word too, except one of you.</>
-            : <>Everyone else has this word too, except one of you.</>}
+            ? <>From <strong>{bank}</strong>. Everyone else has this word too, except {missing}.</>
+            : <>Everyone else has this word too, except {missing}.</>}
       </p>
     </section>
   );
@@ -263,6 +271,8 @@ export interface ImposterCluePhaseProps extends Omit<ImposterClueWallProps, "isI
   role: "imposter" | "player" | undefined;
   secretWord: string | null;
   category?: string | null;
+  /** How many imposters the host set. Changes what the word card promises. */
+  imposters?: number;
   clue: string;
   submitted: boolean;
   /** Off for a spectator or anyone already voted out: they get the room and
@@ -278,6 +288,7 @@ export function ImposterCluePhase({
   role,
   secretWord,
   category,
+  imposters,
   clue,
   submitted,
   canWrite = true,
@@ -294,6 +305,7 @@ export function ImposterCluePhase({
           role={role}
           secretWord={secretWord}
           {...(category !== undefined ? { category } : {})}
+          {...(imposters !== undefined ? { imposters } : {})}
         />
       )}
 
