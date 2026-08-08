@@ -232,6 +232,9 @@
 .pc-host {
   flex: 0 0 auto;
   display: inline-flex;
+  /* The row sits on the text baseline, and an icon has no baseline worth
+     sitting on, so it centres against the name instead of hanging off it. */
+  align-self: center;
   line-height: 0;
   color: #fbbf24;
 }
@@ -323,6 +326,13 @@
   color: #f87171;
   border-color: color-mix(in srgb, #f87171 45%, transparent);
   background: color-mix(in srgb, #f87171 12%, transparent);
+}
+
+/* Armed, and obviously so. A confirm step you cannot see is just two clicks. */
+.pc-action > button.pc-kick--armed {
+  color: #f87171;
+  border-color: #f87171;
+  background: color-mix(in srgb, #f87171 20%, transparent);
 }
 
 /* ── Badge strip ────────────────────────────────────────────────
