@@ -6,6 +6,7 @@ import { IMPOSTER_PHASES, ImposterLobby, MIN_IMPOSTER_PLAYERS, type ImposterPlay
 import { ImposterCluePhase, ImposterClueWall, ImposterComposer, ImposterWordCard } from "../components/imposter/ImposterClues";
 import { ImposterVotePhase } from "../components/imposter/ImposterVote";
 import { ImposterRoundResult } from "../components/imposter/ImposterRoundResult";
+import { ImposterGameOver, type ImposterRoundHistory } from "../components/imposter/ImposterGameOver";
 import "../styles/game-shared.css";
 
 /**
@@ -343,6 +344,71 @@ function LiveResult() {
   );
 }
 
+/* Three rounds that actually hang together: a wrong call, a quiet one, and
+   the round the room finally got there. */
+const HISTORY: ImposterRoundHistory[] = [
+  {
+    round: 1,
+    secretWord: "Jaws",
+    votedOutId: "seed-dov",
+    wasImposter: false,
+    clues: [
+      { sessionId: "seed-ada", text: "bigger boat" },
+      { sessionId: "seed-bram", text: "summer of 75" },
+      { sessionId: "seed-cleo", text: "sea creature" },
+      { sessionId: "seed-dov", text: "scary water" },
+    ],
+    votes: [
+      { voterId: "seed-ada", targetId: "seed-dov" },
+      { voterId: "seed-bram", targetId: "seed-dov" },
+      { voterId: "seed-cleo", targetId: "seed-dov" },
+      { voterId: "seed-dov", targetId: "seed-cleo" },
+    ],
+  },
+  {
+    round: 2,
+    secretWord: "Alien",
+    votedOutId: null,
+    wasImposter: false,
+    clues: [
+      { sessionId: "seed-ada", text: "in space nobody hears you" },
+      { sessionId: "seed-bram", text: "chestburster" },
+      { sessionId: "seed-cleo", text: "quite tense" },
+    ],
+    /* Nobody went, so nobody voted. A round with votes in it always ends with
+       somebody leaving, since the server takes the first of any tie. */
+    votes: [],
+  },
+  {
+    round: 3,
+    secretWord: "Titanic",
+    votedOutId: "seed-cleo",
+    wasImposter: true,
+    clues: [
+      { sessionId: "seed-ada", text: "cold ending" },
+      { sessionId: "seed-bram", text: "the boat one" },
+      { sessionId: "seed-cleo", text: "three hours long" },
+    ],
+    votes: [
+      { voterId: "seed-ada", targetId: "seed-cleo" },
+      { voterId: "seed-bram", targetId: "seed-cleo" },
+      { voterId: "seed-cleo", targetId: "seed-bram" },
+    ],
+  },
+];
+
+/** How the cast ends up after those three rounds. */
+const ENDED_CAST: ImposterPlayer[] = [
+  { sessionId: "seed-ada", name: "Ada", connected: true, role: "player" },
+  { sessionId: "seed-bram", name: "Bram", connected: true, role: "player" },
+  { sessionId: "seed-cleo", name: "Cleo", connected: true, role: "imposter", eliminated: true },
+  { sessionId: "seed-dov", name: "Dov", connected: true, role: "player", eliminated: true },
+];
+
+const GOT_AWAY: ImposterPlayer[] = ENDED_CAST.map((p) =>
+  p.sessionId === "seed-cleo" ? { ...p, eliminated: false } : p,
+);
+
 export function ImposterKitPage() {
   return (
     <main
@@ -554,6 +620,29 @@ export function ImposterKitPage() {
 
       <Section title="Watching the result" note="a spectator cannot hurry the room, so there is no button to press">
         <ImposterRoundResult canSkip={false} players={ROUND_CAST} votes={CAUGHT} secretWord="Titanic" onSkip={NOOP} />
+      </Section>
+
+      <Section title="The end" note="who won, who was who, and every round folded down to its headline. the last one opens itself">
+        <ImposterGameOver
+          isHost
+          players={ENDED_CAST}
+          rounds={HISTORY}
+          sessionId="seed-ada"
+          onPlayAgain={NOOP}
+          onEnd={NOOP}
+          onHome={NOOP}
+        />
+      </Section>
+
+      <Section title="The end, the other way" note="the imposter survived, and whoever is not hosting only gets the way out">
+        <ImposterGameOver
+          players={GOT_AWAY}
+          rounds={HISTORY.slice(0, 2)}
+          sessionId="seed-bram"
+          onPlayAgain={NOOP}
+          onEnd={NOOP}
+          onHome={NOOP}
+        />
       </Section>
 
       <Section title="Setup" note="the settings on their own. same facts the home card summarised before anyone joined">

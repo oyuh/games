@@ -11,7 +11,8 @@
 .imp-composer,
 .imp-wall,
 .imp-vote,
-.imp-result-block {
+.imp-result-block,
+.imp-over {
   --imp-accent: var(--game-accent, var(--primary));
 }
 
@@ -695,6 +696,20 @@ label.imp-ballot:hover {
   color: var(--secondary);
 }
 
+/* What they said. It sits above the vote line because the votes were a
+   reaction to it, and it gets the page's own text rather than the muted grey
+   the meta line uses. */
+.imp-tally-clue {
+  grid-column: 2 / -1;
+  margin-top: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
 /* Where their vote went, and who put them where they are. Both directions on
    one line, because a bar only ever showed one of them. */
 .imp-tally-meta {
@@ -722,6 +737,14 @@ label.imp-ballot:hover {
 
 .imp-tally-quiet {
   font-style: italic;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+/* In the history nothing is happening for the first time, so nothing arrives. */
+.imp-tally--still .imp-tally-row,
+.imp-tally--still .imp-tally-bar {
+  animation: none;
 }
 
 /* A rule rather than a dot. The two halves are different facts, not a list. */
@@ -767,6 +790,151 @@ label.imp-ballot:hover {
   }
 }
 
+/* ── The end ────────────────────────────────────────────────────
+   Same card as the round beat, sized for the thing it is announcing. */
+.imp-over {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.imp-result--final {
+  padding: 1.5rem 1rem 1.35rem;
+}
+
+.imp-result--final .imp-result-name {
+  font-size: 1.6rem;
+}
+
+.imp-result--final .imp-result-verdict {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Two imposters is a pair, not a list. They overlap slightly so the group
+   reads as one thing the way the single face does. */
+.imp-over-faces {
+  display: inline-flex;
+  margin-bottom: 0.5rem;
+}
+
+.imp-over-faces .imp-result-face {
+  margin: 0;
+  border: 2px solid var(--background, #1a1a1a);
+}
+
+.imp-over-faces .imp-result-face + .imp-result-face {
+  margin-left: -1rem;
+}
+
+/* ── The history ────────────────────────────────────────────────
+   Every round in full is far too much at once, so each one folds down to its
+   headline. Folded it still answers which round, what the word was, who went
+   and what they were. The fold hides the detail, never the answer. */
+.imp-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.imp-round {
+  --imp-tone: var(--secondary);
+  border: 1px solid var(--border);
+  border-left: 2px solid color-mix(in srgb, var(--imp-tone) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  overflow: clip;
+}
+
+.imp-round--imposter { --imp-tone: #f87171; }
+.imp-round--innocent { --imp-tone: #4ade80; }
+
+.imp-round-head {
+  display: grid;
+  grid-template-columns: 15px auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.15s;
+}
+
+/* Safari draws its own triangle unless told twice. */
+.imp-round-head::-webkit-details-marker {
+  display: none;
+}
+
+.imp-round-head:hover {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+
+.imp-round-head:focus-visible {
+  outline: 2px solid var(--imp-accent);
+  outline-offset: -2px;
+}
+
+.imp-round-chevron {
+  display: inline-flex;
+  line-height: 0;
+  color: var(--muted-foreground);
+  transition: transform 0.18s ease-out;
+}
+
+.imp-round[open] .imp-round-chevron {
+  transform: rotate(90deg);
+}
+
+.imp-round-chevron svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.6;
+}
+
+.imp-round-n {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* The word is the round's name, so it is the one part in the page's own text. */
+.imp-round-word {
+  padding: 0.06rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--imp-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--imp-accent) 26%, transparent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--imp-accent) 30%, var(--foreground));
+  white-space: nowrap;
+}
+
+.imp-round-outcome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  color: var(--secondary);
+  text-align: right;
+}
+
+.imp-round-outcome strong {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--imp-tone) 55%, var(--foreground));
+}
+
+.imp-round-body {
+  padding: 0.15rem 0.6rem 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+[data-theme="light"] .imp-round-outcome strong {
+  color: color-mix(in srgb, var(--imp-tone) 55%, #000);
+}
+
 @media (max-width: 30rem) {
   .imp-composer {
     flex-wrap: wrap;
@@ -807,6 +975,21 @@ label.imp-ballot:hover {
 
   .imp-ballot .imp-row-name {
     flex: 1 1 auto;
+  }
+
+  /* The outcome drops under the word rather than being cut to two letters. */
+  .imp-round-head {
+    grid-template-columns: 15px auto minmax(0, 1fr);
+  }
+
+  /* It is a pill, not a bar. Without this it takes the whole 1fr column. */
+  .imp-round-word {
+    justify-self: start;
+  }
+
+  .imp-round-outcome {
+    grid-column: 2 / -1;
+    text-align: left;
   }
 }
 

@@ -25,10 +25,118 @@ export interface ImposterVote {
   targetId: string;
 }
 
+/* ── The tally ──────────────────────────────────────────────── */
+
+export interface ImposterTallyProps {
+  players: ImposterPlayer[];
+  votes: ImposterVote[];
+  /** What each of them said that round. */
+  clues?: Array<{ sessionId: string; text: string }>;
+  sessionById?: Record<string, string>;
+  /** Marked as the one who went. Worked out from the votes if left off. */
+  outId?: string | null;
+  /** Off in the history, where nothing is happening for the first time. */
+  animate?: boolean;
+  className?: string;
+}
+
+/**
+ * Who got what, and which way everyone went. One row per player: the face,
+ * the bar, what they said, and both directions of their vote.
+ *
+ * The same rows do this job in the round result and again in the game's
+ * history, because "who voted for who" should not be a different shape
+ * depending on how long ago it happened.
+ */
+export function ImposterTally({
+  players,
+  votes,
+  clues = [],
+  sessionById = {},
+  outId,
+  animate,
+  className = "",
+}: ImposterTallyProps) {
+  const tally = votes.reduce<Record<string, number>>((acc, vote) => {
+    acc[vote.targetId] = (acc[vote.targetId] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const top = Math.max(...Object.values(tally), 0);
+  const out = outId ?? Object.entries(tally).find(([, n]) => n === top && top > 0)?.[0] ?? null;
+
+  const nameById = (id: string) => {
+    const player = players.find((p) => p.sessionId === id);
+    return sessionById[id] ?? getDisplayName(player?.name ?? null, id);
+  };
+
+  const clueById = new Map(clues.map((c) => [c.sessionId, c.text]));
+  const ranked = [...players].sort((a, b) => (tally[b.sessionId] ?? 0) - (tally[a.sessionId] ?? 0));
+
+  return (
+    <div className={`imp-tally${animate ? "" : " imp-tally--still"} ${className}`.trim()}>
+      {ranked.map((player, i) => {
+        const count = tally[player.sessionId] ?? 0;
+        const voters = votes.filter((v) => v.targetId === player.sessionId).map((v) => nameById(v.voterId));
+        /* Who they went for. The bar only ever showed votes coming in, so
+           reading a row told you nothing about what that player did. */
+        const theirVote = votes.find((v) => v.voterId === player.sessionId);
+        const clue = clueById.get(player.sessionId);
+
+        return (
+          <div
+            key={player.sessionId}
+            className={`imp-tally-row${player.sessionId === out ? " imp-tally-row--out" : ""}`}
+            style={{
+              "--imp-bar": `${top > 0 ? (count / top) * 100 : 0}%`,
+              "--imp-delay": `${1.05 + i * 0.06}s`,
+            } as CSSProperties}
+          >
+            <span className="imp-tally-face">
+              <PlayerAvatar seed={player.sessionId} />
+            </span>
+
+            <span className="imp-tally-name">{nameById(player.sessionId)}</span>
+
+            <span className="imp-tally-track">
+              <span className="imp-tally-bar" />
+            </span>
+
+            <span className="imp-tally-count">{count}</span>
+
+            {/* What they actually said, which is the thing the votes were a
+                reaction to. Without it the totals are names and numbers. */}
+            <span className="imp-tally-clue">
+              {clue ? <>&ldquo;{clue}&rdquo;</> : <span className="imp-tally-quiet">said nothing</span>}
+            </span>
+
+            <span className="imp-tally-meta">
+              {theirVote
+                ? <>voted <strong>{nameById(theirVote.targetId)}</strong></>
+                : <span className="imp-tally-quiet">did not vote</span>}
+
+              {voters.length > 0 && (
+                <>
+                  <span className="imp-tally-sep" aria-hidden="true" />
+                  <span>picked by {voters.join(", ")}</span>
+                </>
+              )}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── The beat ───────────────────────────────────────────────── */
+
 export interface ImposterRoundResultProps {
   /** Everyone still in when the vote happened, roles included. */
   players: ImposterPlayer[];
   votes: ImposterVote[];
+  /** What each of them said this round, so the totals have a reason on them. */
+  clues?: Array<{ sessionId: string; text: string }>;
   sessionById?: Record<string, string>;
   /** This round's word. The next round draws a new one, so it is safe to say. */
   secretWord?: string | null;
@@ -43,6 +151,7 @@ export interface ImposterRoundResultProps {
 export function ImposterRoundResult({
   players,
   votes,
+  clues,
   sessionById = {},
   secretWord,
   skipVotes = 0,
@@ -52,14 +161,6 @@ export function ImposterRoundResult({
 }: ImposterRoundResultProps) {
   const nameOf = (player: ImposterPlayer) =>
     sessionById[player.sessionId] ?? getDisplayName(player.name, player.sessionId);
-
-  /* A vote is two ids, so the name has to be looked up. The player list is a
-     better source than the session table's fallback, which invents a name
-     from the id for anyone it has not heard of. */
-  const nameById = (id: string) => {
-    const player = players.find((p) => p.sessionId === id);
-    return player ? nameOf(player) : (sessionById[id] ?? getDisplayName(null, id));
-  };
 
   const tally = votes.reduce<Record<string, number>>((acc, vote) => {
     acc[vote.targetId] = (acc[vote.targetId] ?? 0) + 1;
@@ -74,8 +175,6 @@ export function ImposterRoundResult({
   const out = outId ? players.find((p) => p.sessionId === outId) : null;
   const wasImposter = out?.role === "imposter";
   const tied = topIds.length > 1;
-
-  const ranked = [...players].sort((a, b) => (tally[b.sessionId] ?? 0) - (tally[a.sessionId] ?? 0));
 
   return (
     <div className="imp-result-block">
@@ -111,53 +210,14 @@ export function ImposterRoundResult({
         )}
       </section>
 
-      <div className="imp-tally">
-        {ranked.map((player, i) => {
-          const count = tally[player.sessionId] ?? 0;
-          const voters = votes
-            .filter((v) => v.targetId === player.sessionId)
-            .map((v) => nameById(v.voterId));
-          /* Who they went for. The bar only ever showed votes coming in, so
-             reading a row told you nothing about what that player did. */
-          const theirVote = votes.find((v) => v.voterId === player.sessionId);
-
-          return (
-            <div
-              key={player.sessionId}
-              className={`imp-tally-row${player.sessionId === outId ? " imp-tally-row--out" : ""}`}
-              style={{
-                "--imp-bar": `${top > 0 ? (count / top) * 100 : 0}%`,
-                "--imp-delay": `${1.05 + i * 0.06}s`,
-              } as CSSProperties}
-            >
-              <span className="imp-tally-face">
-                <PlayerAvatar seed={player.sessionId} />
-              </span>
-
-              <span className="imp-tally-name">{nameOf(player)}</span>
-
-              <span className="imp-tally-track">
-                <span className="imp-tally-bar" />
-              </span>
-
-              <span className="imp-tally-count">{count}</span>
-
-              <span className="imp-tally-meta">
-                {theirVote
-                  ? <>voted <strong>{nameById(theirVote.targetId)}</strong></>
-                  : <span className="imp-tally-quiet">did not vote</span>}
-
-                {voters.length > 0 && (
-                  <>
-                    <span className="imp-tally-sep" aria-hidden="true" />
-                    <span>picked by {voters.join(", ")}</span>
-                  </>
-                )}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      <ImposterTally
+        animate
+        players={players}
+        votes={votes}
+        clues={clues}
+        sessionById={sessionById}
+        outId={outId}
+      />
 
       {canSkip && (
         <div className="imp-result-foot">
