@@ -10,6 +10,7 @@ import { Footer } from "./Footer";
 import { ToastContainer } from "./shared/ToastContainer";
 import { TooltipLayer } from "./shared/Tooltip";
 import { CustomCursor } from "./shared/CustomCursor";
+import { DebugPanels } from "./shared/DebugPanels";
 import { ChatProvider, useChatContext } from "../lib/chat-context";
 import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useGameMeta } from "../hooks/useGameMeta";
@@ -17,13 +18,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { usePresence } from "../hooks/usePresence";
 
 const ChatWindow = lazy(() => import("./shared/ChatWindow").then(({ ChatWindow }) => ({ default: ChatWindow })));
-const ConnectionDebugPanel = lazy(() =>
-  import("./shared/ConnectionDebugPanel").then(({ ConnectionDebugPanel }) => ({ default: ConnectionDebugPanel }))
-);
 const MobileLayout = lazy(() => import("../mobile/MobileLayout").then(({ MobileLayout }) => ({ default: MobileLayout })));
-const DevGamePanel = lazy(() =>
-  import("./shared/DevGamePanel").then(({ DevGamePanel }) => ({ default: DevGamePanel }))
-);
 
 export function AppShell() {
   return (
@@ -103,9 +98,8 @@ function AppShellDesktop() {
       </div>
       <ToastContainer />
       <TooltipLayer />
+      <DebugPanels />
       <Suspense fallback={null}>
-        <ConnectionDebugPanel />
-        {import.meta.env.DEV && <DevGamePanel />}
         {inGame && !isSpectator && <ChatWindow hostId={hostId} myName={myName} />}
       </Suspense>
     </div>

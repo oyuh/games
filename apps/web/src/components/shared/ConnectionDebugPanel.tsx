@@ -94,9 +94,6 @@ function dbStatusClass(state: ConnectionDebugState["dbState"]) {
 export function ConnectionDebugPanel() {
   const [state, setState] = useState<ConnectionDebugState>(() => ({ ...getConnectionDebugState() }));
   const [open, setOpen] = useState(true);
-  const [enabled, setEnabled] = useState(
-    () => localStorage.getItem("connection-debug") === "enabled"
-  );
 
   useEffect(() => {
     const unsubscribe = subscribeConnectionDebug(() => {
@@ -107,29 +104,6 @@ export function ConnectionDebugPanel() {
       unsubscribe();
     };
   }, []);
-
-  useEffect(() => {
-    (window as unknown as Record<string, unknown>)["connectionDebug"] = (action: unknown) => {
-      if (action === "enable" || action === true) {
-        localStorage.setItem("connection-debug", "enabled");
-        setEnabled(true);
-        console.log("Connection debug panel enabled.");
-      } else if (action === "disable" || action === false) {
-        localStorage.removeItem("connection-debug");
-        setEnabled(false);
-        console.log("Connection debug panel disabled.");
-      } else {
-        console.log("Usage: connectionDebug('enable') or connectionDebug('disable')");
-      }
-    };
-    return () => {
-      delete (window as unknown as Record<string, unknown>)["connectionDebug"];
-    };
-  }, []);
-
-  if (!enabled) {
-    return null;
-  }
 
   return (
     <section className="fixed bottom-3 right-3 z-50 max-w-sm rounded-lg border border-zinc-700 bg-zinc-950/95 p-3 text-xs text-zinc-200 shadow-xl backdrop-blur">

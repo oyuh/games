@@ -255,35 +255,6 @@ body.has-sync-wake-toast .shell > .toast-container {
   background: linear-gradient(90deg, #fde68a, #f59e0b);
 }
 
-.sync-wake-countdown-link,
-.sync-wake-link {
-  appearance: none;
-  border: none;
-  background: none;
-  padding: 0;
-  color: var(--primary);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 0.16em;
-}
-
-.sync-wake-countdown-link {
-  font-variant-numeric: tabular-nums;
-  opacity: 0.8;
-}
-
-.sync-wake-toast--warn .sync-wake-link,
-.sync-wake-toast--warn .sync-wake-countdown-link {
-  color: #fbbf24;
-}
-
-.sync-wake-link {
-  align-self: flex-start;
-}
-
 .sync-wake-dismiss {
   position: absolute;
   top: 0.55rem;
