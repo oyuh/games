@@ -214,7 +214,7 @@ export function ImposterRoundResult({
         animate
         players={players}
         votes={votes}
-        clues={clues}
+        {...(clues ? { clues } : {})}
         sessionById={sessionById}
         outId={outId}
       />

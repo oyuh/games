@@ -289,7 +289,13 @@ export function ImposterCluePhase({
 }: ImposterCluePhaseProps) {
   return (
     <>
-      {canWrite && <ImposterWordCard role={role} secretWord={secretWord} category={category} />}
+      {canWrite && (
+        <ImposterWordCard
+          role={role}
+          secretWord={secretWord}
+          {...(category !== undefined ? { category } : {})}
+        />
+      )}
 
       {canWrite && (
         <ImposterComposer

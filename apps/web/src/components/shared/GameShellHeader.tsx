@@ -23,6 +23,27 @@ import "../../styles/game-shell.css";
  * Anything else a game wants to say is a pill, via `pills`.
  */
 
+/* Storage throws in a few real browsers, private windows among them, and
+   nobody should lose a game page over remembering a chevron. */
+const COLLAPSED_KEY = (game: GameSlug) => `gsh-collapsed:${game}`;
+
+function readCollapsed(game: GameSlug): boolean | null {
+  try {
+    const saved = localStorage.getItem(COLLAPSED_KEY(game));
+    return saved === null ? null : saved === "1";
+  } catch {
+    return null;
+  }
+}
+
+function writeCollapsed(game: GameSlug, value: boolean) {
+  try {
+    localStorage.setItem(COLLAPSED_KEY(game), value ? "1" : "0");
+  } catch {
+    /* Remembering it was never the point of the press. */
+  }
+}
+
 export interface GamePhase {
   /** Matched against the `phase` prop. */
   id: string;
@@ -213,7 +234,24 @@ export function GameShellHeader({
   defaultCollapsed,
   className = "",
 }: GameShellHeaderProps) {
-  const [collapsed, setCollapsed] = useState(!!defaultCollapsed);
+  /* Folding the panel is a preference, not a phase, so it outlives the visit.
+     Kept per game rather than globally: whether you want Imposter's phase
+     panel says nothing about whether you want Location Signal's, and it is
+     not per lobby either, or you would be re-folding it every time somebody
+     started a new room. */
+  const [collapsed, setCollapsed] = useState(() => {
+    if (!collapsible) return !!defaultCollapsed;
+    const saved = readCollapsed(game);
+    return saved ?? !!defaultCollapsed;
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed((v) => {
+      writeCollapsed(game, !v);
+      return !v;
+    });
+  };
+
   const index = phases.findIndex((p) => p.id === phase);
   const current = phases[index];
 
@@ -281,7 +319,7 @@ export function GameShellHeader({
               <button
                 type="button"
                 className="gsh-fold"
-                onClick={() => setCollapsed((v) => !v)}
+                onClick={toggleCollapsed}
                 aria-expanded={!collapsed}
                 aria-label={`${collapsed ? "Show" : "Hide"} the phase panel`}
                 /* Folded, the phase name is the thing you gave up, so the

@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { FiMaximize2, FiMinimize2, FiX } from "react-icons/fi";
+import { useEffect, useState, type ReactNode } from "react";
+import { FiCheck, FiMaximize2, FiMinimize2, FiX } from "react-icons/fi";
 import { PlayerCard, type PlayerCardProps } from "./PlayerCard";
 import { TeamCard, type TeamCardProps } from "./TeamCard";
 import "../../styles/game-kit.css";
@@ -54,6 +54,40 @@ function RosterHead({ label, count, action, expanded, onToggle }: RosterHeadProp
   );
 }
 
+/**
+ * Removing somebody takes two presses. It is a 22 pixel target sitting on a
+ * card you also click for other reasons, it cannot be undone, and the person
+ * it happens to is thrown out of a game they are in the middle of. The first
+ * press arms it and says so; it disarms itself a few seconds later, so a
+ * misclick costs nothing and nobody is left holding a live button.
+ */
+function KickButton({ name, onKick }: { name: string; onKick: () => void }) {
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    if (!armed) return;
+    const id = setTimeout(() => setArmed(false), 3000);
+    return () => clearTimeout(id);
+  }, [armed]);
+
+  return (
+    <button
+      type="button"
+      className={armed ? "pc-kick--armed" : ""}
+      aria-label={armed ? `Confirm removing ${name}` : `Remove ${name}`}
+      data-tooltip={armed ? "Press again to remove them" : `Remove ${name}`}
+      data-tooltip-variant={armed ? "danger" : "game"}
+      onClick={() => {
+        if (armed) onKick();
+        else setArmed(true);
+      }}
+      onBlur={() => setArmed(false)}
+    >
+      {armed ? <FiCheck size={13} /> : <FiX size={13} />}
+    </button>
+  );
+}
+
 export interface GameRosterProps {
   players: Array<PlayerCardProps>;
   label?: ReactNode;
@@ -95,28 +129,23 @@ export function GameRoster({
 
       {players.length > 0 ? (
         <div className={`pc-grid${shown === "md" ? " pc-grid--fill" : ""}`}>
-          {players.map((player) => (
-            <PlayerCard
-              key={player.sessionId}
-              {...player}
-              size={shown}
-              {...(onKick && !player.action
-                ? {
-                    action: (
-                      <button
-                        type="button"
-                        aria-label={`Remove ${player.name}`}
-                        data-tooltip={`Remove ${player.name}`}
-                        data-tooltip-variant="game"
-                        onClick={() => onKick(player.sessionId)}
-                      >
-                        <FiX size={13} />
-                      </button>
-                    ),
-                  }
-                : {})}
-            />
-          ))}
+          {players.map((player) => {
+            /* Never on your own card. Whoever is handed these is the host, and
+               a host who can throw themselves out is a lobby that can end by
+               accident. */
+            const kickable = onKick && !player.action && !player.you;
+
+            return (
+              <PlayerCard
+                key={player.sessionId}
+                {...player}
+                size={shown}
+                {...(kickable
+                  ? { action: <KickButton name={player.name} onKick={() => onKick(player.sessionId)} /> }
+                  : {})}
+              />
+            );
+          })}
         </div>
       ) : (
         <p className="gk-roster-empty">{emptyLabel}</p>
