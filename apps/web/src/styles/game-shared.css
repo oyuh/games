@@ -1180,29 +1180,6 @@
 /* ═══════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE OVERHAUL
 
-/* ── Lobby Visibility Toggle ──────────────────────────── */
-/* ── Lobby Visibility Toggle ─────────────────────────────── */
-.lobby-vis-toggle {
-  background: var(--muted);
-  color: var(--muted-foreground);
-  border: 1px solid var(--border);
-}
-.lobby-vis-toggle:hover:not(:disabled) {
-  background: var(--accent);
-}
-.lobby-vis-toggle:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-.lobby-vis-toggle--public {
-  background: color-mix(in srgb, #22c55e 12%, transparent);
-  color: #22c55e;
-  border-color: color-mix(in srgb, #22c55e 30%, transparent);
-}
-.lobby-vis-toggle--public:hover:not(:disabled) {
-  background: color-mix(in srgb, #22c55e 20%, transparent);
-}
-
 /* ── Waiting state (shared across games) ───────────── */
 
 .game-waiting {

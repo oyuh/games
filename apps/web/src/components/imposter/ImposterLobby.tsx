@@ -70,7 +70,7 @@ export function imposterLobbyCards({
     name: sessionById[player.sessionId] ?? getDisplayName(player.name, player.sessionId),
     index,
     ...(player.sessionId === sessionId ? { you: true } : {}),
-    ...(player.sessionId === hostId ? { badges: [playerBadges.host()] } : {}),
+    ...(player.sessionId === hostId ? { host: true } : {}),
     ...(player.connected ? {} : { disconnected: true, caption: "Dropped out" }),
   }));
 }

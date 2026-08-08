@@ -123,13 +123,15 @@ function Live() {
         starting={starting}
         actions={
           isHost ? (
-            /* Stands in for LobbyVisibilityToggle, which needs zero. */
+            /* Stands in for LobbyVisibilityToggle, which needs zero. Same
+               words as the real one: it is a switch, so it says what pressing
+               it does rather than naming the state you are already in. */
             <GameButton
               variant="secondary"
               icon={isPublic ? <FiGlobe /> : <FiLock />}
               onClick={() => setIsPublic((v) => !v)}
             >
-              {isPublic ? "Public" : "Private"}
+              {isPublic ? "Make it private" : "Make it public"}
             </GameButton>
           ) : undefined
         }
