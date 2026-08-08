@@ -5,6 +5,7 @@ import { GameActions, GameButton, GameFacts } from "../components/shared/GameKit
 import { IMPOSTER_PHASES, ImposterLobby, MIN_IMPOSTER_PLAYERS, type ImposterPlayer } from "../components/imposter/ImposterLobby";
 import { ImposterCluePhase, ImposterClueWall, ImposterComposer, ImposterWordCard } from "../components/imposter/ImposterClues";
 import { ImposterVotePhase } from "../components/imposter/ImposterVote";
+import { ImposterRoundResult } from "../components/imposter/ImposterRoundResult";
 import "../styles/game-shared.css";
 
 /**
@@ -275,6 +276,73 @@ function LiveVote() {
   );
 }
 
+/* Roles only exist once the round has been played, so the result cast carries
+   them where the lobby one does not. */
+const ROUND_CAST: ImposterPlayer[] = [
+  { sessionId: "seed-ada", name: "Ada", connected: true, role: "player" },
+  { sessionId: "seed-bram", name: "Bram", connected: true, role: "player" },
+  { sessionId: "seed-cleo", name: "Cleo", connected: true, role: "imposter" },
+  { sessionId: "seed-dov", name: "Dov", connected: true, role: "player" },
+];
+
+const CAUGHT = [
+  { voterId: "seed-ada", targetId: "seed-cleo" },
+  { voterId: "seed-bram", targetId: "seed-cleo" },
+  { voterId: "seed-dov", targetId: "seed-cleo" },
+  { voterId: "seed-cleo", targetId: "seed-dov" },
+];
+
+const WRONG = [
+  { voterId: "seed-ada", targetId: "seed-dov" },
+  { voterId: "seed-bram", targetId: "seed-dov" },
+  { voterId: "seed-cleo", targetId: "seed-dov" },
+  { voterId: "seed-dov", targetId: "seed-ada" },
+];
+
+/** Replayable, because a reveal you cannot watch twice is hard to tune. */
+function LiveResult() {
+  const [run, setRun] = useState(0);
+  const [caught, setCaught] = useState(true);
+  const [skips, setSkips] = useState(1);
+  const [skipped, setSkipped] = useState(false);
+
+  return (
+    <>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
+        <button type="button" className={`btn ${caught ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setCaught((v) => !v); setRun((n) => n + 1); }}>
+          They got the imposter
+        </button>
+        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => { setRun((n) => n + 1); setSkips(1); setSkipped(false); }}>
+          <FiRefreshCw size={12} /> Watch it again
+        </button>
+      </div>
+
+      <GameShellHeader
+        game="imposter"
+        title="Imposter"
+        phases={IMPOSTER_PHASES}
+        phase="results"
+        round={{ current: 2, total: 5 }}
+        endsAt={Date.now() + 8_000}
+        duration={8}
+        code="H4TQ9"
+      />
+
+      {/* The key restarts the animations, which is the whole point of a
+          replay button. */}
+      <ImposterRoundResult
+        key={run}
+        players={ROUND_CAST}
+        votes={caught ? CAUGHT : WRONG}
+        secretWord="Titanic"
+        skipVotes={skips}
+        hasVotedSkip={skipped}
+        onSkip={() => { setSkipped(true); setSkips((n) => n + 1); }}
+      />
+    </>
+  );
+}
+
 export function ImposterKitPage() {
   return (
     <main
@@ -457,6 +525,35 @@ export function ImposterKitPage() {
           onVoteTargetChange={NOOP}
           onSubmit={NOOP}
         />
+      </Section>
+
+      <Section title="The result, live" note="eight seconds between rounds. the face lands, then the answer">
+        <LiveResult />
+      </Section>
+
+      <Section title="Every ending" note="caught, wrong, a tie, and a room that could not be bothered">
+        <ImposterRoundResult players={ROUND_CAST} votes={CAUGHT} secretWord="Titanic" skipVotes={0} onSkip={NOOP} />
+        <ImposterRoundResult players={ROUND_CAST} votes={WRONG} secretWord="Titanic" skipVotes={2} onSkip={NOOP} />
+        <ImposterRoundResult
+          players={ROUND_CAST}
+          secretWord="Titanic"
+          skipVotes={3}
+          hasVotedSkip
+          onSkip={NOOP}
+          /* A real two all. Nobody can vote for themselves, so a tie in a
+             room of four has to be built carefully. */
+          votes={[
+            { voterId: "seed-bram", targetId: "seed-ada" },
+            { voterId: "seed-cleo", targetId: "seed-ada" },
+            { voterId: "seed-ada", targetId: "seed-bram" },
+            { voterId: "seed-dov", targetId: "seed-bram" },
+          ]}
+        />
+        <ImposterRoundResult players={ROUND_CAST} votes={[]} secretWord="Titanic" skipVotes={0} onSkip={NOOP} />
+      </Section>
+
+      <Section title="Watching the result" note="a spectator cannot hurry the room, so there is no button to press">
+        <ImposterRoundResult canSkip={false} players={ROUND_CAST} votes={CAUGHT} secretWord="Titanic" onSkip={NOOP} />
       </Section>
 
       <Section title="Setup" note="the settings on their own. same facts the home card summarised before anyone joined">
