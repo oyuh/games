@@ -1,4 +1,4 @@
-import type { CSSProperties, DragEvent, ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { FiAlertCircle, FiCheck, FiClock, FiEye, FiMove, FiStar, FiUserX, FiWifiOff, FiZap } from "react-icons/fi";
 import { PlayerAvatar } from "./PlayerAvatar";
 import "../../styles/player-card.css";
@@ -85,6 +85,10 @@ export interface PlayerCardProps {
   /** Lets a host pick this player up and drop them on another team. The drag
    *  carries the session id, so a drop target needs nothing from this card. */
   movable?: boolean;
+  /** Folds the badge strip down to a bar of its colours, opening again for
+   *  ten seconds when you point at the card. For mid-game lists, where the
+   *  roles matter less than the room they take up. */
+  collapseBadges?: boolean;
   /** Trailing slot: a kick button, a vote count, whatever the game needs. */
   action?: ReactNode;
   tooltip?: string;
@@ -108,11 +112,26 @@ export function PlayerCard({
   accent,
   onClick,
   movable,
+  collapseBadges,
   action,
   tooltip,
   className = "",
 }: PlayerCardProps) {
   const mark = STATE_MARK[state];
+
+  /* Pointing at a card opens its badges and leaves them open for ten seconds,
+     rather than shutting the moment the pointer slides off. Reading a badge
+     should not mean holding still. */
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    if (!revealed) return;
+    const id = setTimeout(() => setRevealed(false), 10_000);
+    return () => clearTimeout(id);
+  }, [revealed]);
+
+  const hasBadges = !!badges && badges.length > 0;
+  const folded = !!collapseBadges && hasBadges && !revealed;
   const classes = [
     "pc",
     `pc--${size}`,
@@ -123,6 +142,12 @@ export function PlayerCard({
     selected ? "pc--selected" : "",
     onClick ? "pc--button" : "",
     movable ? "pc--movable" : "",
+    /* An accent means a team, and a team outranks a state: which side someone
+       is on does not stop being true because they are mid-answer. The state
+       still shows, on the mark over their face. */
+    accent ? "pc--accented" : "",
+    collapseBadges && hasBadges ? "pc--folded-badges" : "",
+    folded ? "" : "pc--badges-open",
     className,
   ].filter(Boolean).join(" ");
 
@@ -135,6 +160,9 @@ export function PlayerCard({
       style={style}
       {...(onClick ? { type: "button" as const, onClick } : {})}
       {...(tooltip ? { "data-tooltip": tooltip, "data-tooltip-variant": "game" } : {})}
+      {...(collapseBadges && hasBadges
+        ? { onMouseEnter: () => setRevealed(true), onFocus: () => setRevealed(true) }
+        : {})}
       {...(movable
         ? {
             draggable: true,
@@ -176,9 +204,14 @@ export function PlayerCard({
         {action && <span className="pc-action">{action}</span>}
       </span>
 
-      {badges && badges.length > 0 && (
-        <span className="pc-badges">
-          {badges.map((badge) => (
+      {/* Folded, the strip is simply not drawn: what someone is already shows
+          in the card's own colour, and a bar of badge colours under every name
+          was a second, worse way of saying it. Opening animates on the way in;
+          there is nothing to animate on the way out, which is a fair trade for
+          not having to collapse a box to nothing. */}
+      {hasBadges && !folded && (
+        <span className={`pc-badges${collapseBadges ? " pc-badges--revealed" : ""}`}>
+          {badges!.map((badge) => (
             <span
               key={badge.label}
               className={`pc-badge${badge.solid ? " pc-badge--solid" : ""}`}
