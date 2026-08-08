@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PlayerCard, type PlayerCardProps } from "./PlayerCard";
@@ -20,9 +20,16 @@ import "../../styles/player-card.css";
 export interface PlayerHoverCardProps extends PlayerCardProps {
   /** What sits on the page. The card is what shows on hover either way. */
   trigger?: "avatar" | "name";
+  /** Overrides what the name trigger reads. For the places that show some
+   *  other handle for a player, a session id say, and still want the face and
+   *  the name on hover. */
+  label?: ReactNode;
+  /** Makes the trigger a button. The card is a hover affordance, so pressing
+   *  it has to do something other than open what hovering already opened. */
+  onActivate?: () => void;
 }
 
-export function PlayerHoverCard({ trigger = "avatar", ...player }: PlayerHoverCardProps) {
+export function PlayerHoverCard({ trigger = "avatar", label, onActivate, ...player }: PlayerHoverCardProps) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -65,8 +72,20 @@ export function PlayerHoverCard({ trigger = "avatar", ...player }: PlayerHoverCa
         onMouseLeave={close}
         onFocus={() => setOpen(true)}
         onBlur={close}
+        {...(onActivate
+          ? {
+              role: "button",
+              onClick: onActivate,
+              onKeyDown: (e: KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onActivate();
+                }
+              },
+            }
+          : {})}
       >
-        {trigger === "avatar" ? <PlayerAvatar seed={player.sessionId} /> : player.name}
+        {trigger === "avatar" ? <PlayerAvatar seed={player.sessionId} /> : (label ?? player.name)}
       </span>
 
       {open && createPortal(

@@ -82,25 +82,27 @@
   opacity: 0.7;
 }
 
-.footer-status-pill {
+/* No pill. Three things on one line all setting their own edge was the
+   footer arguing with itself, and the status was the loudest of them while
+   being the least often looked at. It reads as text like its neighbours, and
+   the rules on either side of it do the separating. */
+.footer-status {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  padding: 0.15rem 0.55rem;
+  background: none;
+  border: 0;
+  padding: 0;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: color 0.15s;
   font-family: inherit;
   font-size: inherit;
   color: inherit;
   letter-spacing: inherit;
 }
 
-.footer-status-pill:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: var(--accent);
+.footer-status:hover {
+  color: var(--foreground);
 }
 
 .footer-status-label {
@@ -118,16 +120,56 @@
   justify-self: center;
 }
 
+/* A hairline each side, sitting in the gap the grid already leaves. The
+   status is the middle column, so hanging them off it puts one between every
+   pair without turning three columns into five. */
+.footer-status-wrap::before,
+.footer-status-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 1px;
+  height: 0.85rem;
+  transform: translateY(-50%);
+  background: var(--border);
+}
+
+.footer-status-wrap::before {
+  left: -0.45rem;
+}
+
+.footer-status-wrap::after {
+  right: -0.45rem;
+}
+
+/* Same type as the credit on the other side. It was a size smaller and a
+   shade fainter, which made the row read as two thoughts and an afterthought. */
 .footer-session-id {
   justify-self: start;
   min-width: 0;
   max-width: min(24rem, calc(50vw - 8rem));
   overflow: hidden;
-  color: color-mix(in srgb, var(--secondary) 72%, transparent);
-  font-size: 0.62rem;
-  font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The hover card's name trigger brings its own type and its own accent for
+   you, both of which are right in a game and wrong in a footer. Everything
+   but the dotted underline gets handed back to the row: the underline is the
+   only hint that there is anything to hover. */
+.footer-session-id .ph--name,
+.footer-session-id .ph--name.ph--you {
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.footer-session-id .ph--name:hover,
+.footer-session-id .ph--name:focus-visible {
+  color: var(--foreground);
 }
 
 /* ── Expanded details popover ────────────────────────────────── */
