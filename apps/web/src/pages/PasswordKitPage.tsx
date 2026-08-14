@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiBookOpen, FiClock, FiFlag, FiGlobe, FiLock, FiPlay, FiRefreshCw, FiSkipForward } from "react-icons/fi";
 import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
 import { GameButton, GameFacts } from "../components/shared/GameKit";
@@ -10,6 +10,15 @@ import {
   passwordStartBlock,
   type PasswordTeam,
 } from "../components/password/PasswordLobby";
+import {
+  PasswordComposer,
+  PasswordRound,
+  PasswordScoreboard,
+  PasswordStream,
+  PasswordWordCard,
+  type PasswordClue,
+  type PasswordGuess,
+} from "../components/password/PasswordRound";
 import "../styles/game-shared.css";
 
 /**
@@ -203,6 +212,139 @@ function Live() {
   );
 }
 
+/* One word being worked out, the way it actually goes: a clue, a wrong guess
+   off the back of it, another clue, and then the room gets there. */
+const T0 = 1_700_000_000_000;
+
+const ROUND_CLUES: PasswordClue[] = [
+  { id: "c1", sessionId: "seed-ada", text: "tuxedo", ts: T0 + 1_000, clueNumber: 1 },
+  { id: "c2", sessionId: "seed-cleo", text: "waddles", ts: T0 + 9_000, clueNumber: 2 },
+  { id: "c3", sessionId: "seed-ada", text: "waddles", ts: T0 + 17_000, clueNumber: 3, repeatedText: true },
+];
+
+const ROUND_GUESSES: PasswordGuess[] = [
+  { id: "g1", sessionId: "seed-bram", text: "Waiter", ts: T0 + 5_000, correct: false, guessNumber: 1 },
+  { id: "g2", sessionId: "seed-bram", text: "Duck", ts: T0 + 13_000, correct: false, guessNumber: 2 },
+  { id: "g3", sessionId: "seed-bram", text: "Penguin", ts: T0 + 21_000, correct: true, guessNumber: 3 },
+];
+
+/* What the other side does while you sit there. Whichever end you are on, the
+   script plays the opposite one, because a round with nobody answering is not
+   a round. */
+const CLUE_SCRIPT = ["tuxedo", "waddles", "cold"];
+const GUESS_SCRIPT = ["Waiter", "Duck", "Penguin"];
+
+const ROUND_TEAMS = deal(6, 3);
+
+/** The round with a hand on it: your box works, and the other end answers. */
+function LiveRound() {
+  const [guessing, setGuessing] = useState(false);
+  const [value, setValue] = useState("");
+  const [clues, setClues] = useState<PasswordClue[]>([]);
+  const [guesses, setGuesses] = useState<PasswordGuess[]>([]);
+  const [draft, setDraft] = useState("");
+  const [skips, setSkips] = useState(PASSWORD_SKIPS);
+  const [step, setStep] = useState(0);
+  const timer = useRef<number>(0);
+
+  /* Your team is Team A: Ada is you, Dov is the other half of it. */
+  const me = "seed-ada";
+  const mate = "seed-dov";
+  const rival = "seed-bram";
+
+  const reset = () => {
+    setValue(""); setClues([]); setGuesses([]); setDraft(""); setStep(0); setSkips(PASSWORD_SKIPS);
+  };
+
+  /* The other end types for a moment, then says it. Watching the draft turn
+     into a line is the thing this page exists to check. */
+  useEffect(() => {
+    const script = guessing ? CLUE_SCRIPT : GUESS_SCRIPT;
+    const next = script[step];
+    if (!next) return;
+
+    timer.current = window.setTimeout(() => {
+      setDraft(next);
+      timer.current = window.setTimeout(() => {
+        setDraft("");
+        const ts = Date.now();
+        if (guessing) {
+          setClues((all) => [...all, { id: `s${ts}`, sessionId: mate, text: next, ts, clueNumber: all.length + 1 }]);
+        } else {
+          setGuesses((all) => [...all, {
+            id: `s${ts}`, sessionId: rival, text: next, ts,
+            correct: next === "Penguin", guessNumber: all.length + 1,
+          }]);
+        }
+        setStep((n) => n + 1);
+      }, 1400);
+    }, 2200);
+
+    return () => window.clearTimeout(timer.current);
+  }, [step, guessing]);
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const text = value.trim();
+    if (!text) return;
+    const ts = Date.now();
+    if (guessing) {
+      setGuesses((all) => [...all, {
+        id: `m${ts}`, sessionId: me, text, ts,
+        correct: text.toLowerCase() === "penguin", guessNumber: all.length + 1,
+      }]);
+    } else {
+      setClues((all) => [...all, { id: `m${ts}`, sessionId: me, text, ts, clueNumber: all.length + 1 }]);
+    }
+    setValue("");
+  };
+
+  return (
+    <>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
+        <button type="button" className={`btn ${guessing ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setGuessing((v) => !v); reset(); }}>
+          You are guessing
+        </button>
+        <button type="button" className="btn btn-ghost" style={toggle} onClick={reset}>
+          <FiRefreshCw size={12} /> Run it again
+        </button>
+      </div>
+
+      <GameShellHeader
+        collapsible
+        game="password"
+        title="Password"
+        phases={PASSWORD_PHASES}
+        phase="playing"
+        endsAt={Date.now() + 300_000}
+        duration={300}
+        code="K2WD7"
+        pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Animals</ShellPill>}
+      />
+
+      <PasswordRound
+        role={guessing ? "guess" : "clue"}
+        word={guessing ? null : "Penguin"}
+        category="animals"
+        clues={clues}
+        guesses={guesses}
+        drafts={draft ? [{ sessionId: guessing ? mate : rival, role: guessing ? "clue" : "guess", text: draft }] : []}
+        names={NAMES}
+        sessionId={me}
+        value={value}
+        skipsRemaining={skips}
+        teams={ROUND_TEAMS}
+        scores={{ "Team A": 4, "Team B": 7, "Team C": 2 }}
+        targetScore={10}
+        guessers={{ "Team A": guessing ? me : mate, "Team B": rival, "Team C": "seed-cleo" }}
+        onChange={setValue}
+        onSubmit={submit}
+        onSkip={() => { setSkips((n) => Math.max(0, n - 1)); reset(); }}
+      />
+    </>
+  );
+}
+
 export function PasswordKitPage() {
   return (
     <main
@@ -268,6 +410,50 @@ export function PasswordKitPage() {
           settings={{ ...SETTINGS, teamsLocked: true }}
           isHost={false}
           inGame={false}
+        />
+      </Section>
+
+      <Section title="The round, live" note="the phase the game actually is. type a clue, watch the other side answer it">
+        <LiveRound />
+      </Section>
+
+      <Section title="What you know" note="one of you can see it and one of you cannot. that is the whole game, so the two cards do not look alike">
+        <PasswordWordCard role="clue" word="Penguin" category="animals" />
+        <PasswordWordCard role="guess" word={null} category="animals" />
+        <PasswordWordCard role="clue" word="Penguin" />
+        {/* Decryption can take a beat, and a clue giver with no word cannot
+            do the only thing they are here for. */}
+        <PasswordWordCard role="clue" word={null} category="animals" onRetry={NOOP} />
+      </Section>
+
+      <Section title="The box" note="empty, mid thought, and a guess you have already spent">
+        <PasswordComposer role="clue" value="" onChange={NOOP} onSubmit={NOOP} />
+        <PasswordComposer role="guess" value="" onChange={NOOP} onSubmit={NOOP} />
+        <PasswordComposer role="clue" value="tuxedo" onChange={NOOP} onSubmit={NOOP} />
+        <PasswordComposer role="guess" value="Seal" duplicate onChange={NOOP} onSubmit={NOOP} />
+      </Section>
+
+      <Section title="The stream" note="one conversation in the order it happened. the guess steps in under the clue that caused it">
+        <PasswordStream clues={ROUND_CLUES} guesses={ROUND_GUESSES} names={NAMES} sessionId="seed-ada" />
+        <PasswordStream
+          clues={ROUND_CLUES.slice(0, 2)}
+          guesses={ROUND_GUESSES.slice(0, 1)}
+          drafts={[{ sessionId: "seed-bram", role: "guess", text: "penguin" }]}
+          names={NAMES}
+          sessionId="seed-ada"
+        />
+        <PasswordStream clues={[]} guesses={[]} names={NAMES} sessionId="seed-ada" />
+      </Section>
+
+      <Section title="Racing" note="every team plays at once, so yours is open and the rest are a face and a number">
+        <PasswordScoreboard
+          teams={deal(6, 3)}
+          scores={{ "Team A": 4, "Team B": 7, "Team C": 2 }}
+          targetScore={10}
+          guessers={{ "Team A": "seed-dov", "Team B": "seed-esme", "Team C": "seed-finn" }}
+          solved={["Team B"]}
+          names={NAMES}
+          sessionId="seed-ada"
         />
       </Section>
 

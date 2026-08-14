@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
-import { FiAward, FiBookOpen, FiClock, FiFlag, FiLock, FiLogIn, FiLogOut, FiMessageSquare, FiPlay, FiSkipForward, FiUnlock, FiUserPlus, FiUsers } from "react-icons/fi";
+import { FiAward, FiBookOpen, FiCheck, FiClock, FiFlag, FiLock, FiLogIn, FiLogOut, FiMessageSquare, FiPlay, FiSkipForward, FiUnlock, FiUserPlus, FiUsers } from "react-icons/fi";
 import { passwordCategoryLabels } from "@games/shared";
 import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel } from "../shared/GameKit";
 import { GameTeamRoster } from "../shared/GameRoster";
+import { playerBadges } from "../shared/PlayerCard";
 import type { TeamCardProps } from "../shared/TeamCard";
 import type { GamePhase } from "../shared/GameShellHeader";
 import { getPasswordPlayerName } from "../../lib/password-names";
+import "../../styles/password-kit.css";
 
 /**
  * Password's lobby, out of the same kit Imposter's is built from. Everything is
@@ -68,8 +70,12 @@ export function passwordStartBlock(teams: PasswordTeam[]): string | undefined {
 }
 
 /**
- * Teams as cards. Scores are left off in a lobby on purpose: every team is on
- * zero, and six zeros say nothing the target score in the facts row does not.
+ * Teams as cards, for the lobby and for the middle of the game. One builder
+ * for both, because a team is the same object either way and the only thing
+ * that changes is which of the card's parts are worth switching on.
+ *
+ * Scores are left off in a lobby on purpose: every team is on zero, and six
+ * zeros say nothing the target score in the facts row does not.
  */
 export function passwordTeamCards({
   teams,
@@ -78,7 +84,10 @@ export function passwordTeamCards({
   names = {},
   scores,
   targetScore,
+  guessers,
+  solved = [],
   locked,
+  foldOthers,
   onJoinTeam,
   onMovePlayer,
 }: {
@@ -89,7 +98,14 @@ export function passwordTeamCards({
   /** Given, each card carries its score. Mid game wants this, a lobby does not. */
   scores?: Record<string, number>;
   targetScore?: number;
+  /** Team name to whoever is guessing for them this round. */
+  guessers?: Record<string, string>;
+  /** Teams that just took a word. Marks the card until the next one. */
+  solved?: string[];
   locked?: boolean;
+  /** Your team opens, the rest sit folded down to their faces and their
+   *  score. Mid game that is all you want from somebody else's team. */
+  foldOthers?: boolean;
   /** Puts a join button on every team that is not already yours. */
   onJoinTeam?: (teamName: string) => void;
   /** Host only. Lets a player card be dragged onto another team. */
@@ -99,6 +115,10 @@ export function passwordTeamCards({
 
   return teams.map((team, index) => {
     const mine = team.name === myTeam;
+    const guesser = guessers?.[team.name];
+    /* A team of one cannot play: somebody has to say the clues to somebody.
+       Amber is the card's own way of saying not ready yet. */
+    const short = team.members.length === 1;
 
     return {
       name: team.name,
@@ -109,17 +129,22 @@ export function passwordTeamCards({
         index: seat,
         ...(id === sessionId ? { you: true } : {}),
         ...(id === hostId ? { host: true } : {}),
+        /* The guesser is the one who has to produce the word, so they are the
+           one seat on the team worth naming. */
+        ...(id === guesser ? { badges: [playerBadges.leader("Guessing")], collapseBadges: true } : {}),
         /* ponytail: drag is the host's only way to move somebody, so it is
            mouse only. Everyone can still move themselves with Join. */
         ...(onMovePlayer ? { movable: true } : {}),
       })),
       ...(mine ? { you: true } : {}),
       ...(locked ? { locked: true } : {}),
+      ...(solved.includes(team.name) ? { state: "success" as const } : short ? { state: "waiting" as const } : {}),
       /* The one team fact worth a line. Nobody counts heads, and this is the
          difference between the game starting and not. */
-      ...(team.members.length === 1 ? { caption: "Needs one more" } : {}),
+      ...(short ? { caption: "Needs one more" } : {}),
       ...(scores ? { score: scores[team.name] ?? 0 } : {}),
       ...(scores && targetScore ? { scoreSuffix: `/ ${targetScore}` } : {}),
+      ...(foldOthers && !mine ? { defaultCollapsed: true } : {}),
       ...(onMovePlayer ? { onDropPlayer: (playerId: string) => onMovePlayer(playerId, team.name) } : {}),
       ...(onJoinTeam && !mine && !locked
         ? {
@@ -127,6 +152,17 @@ export function passwordTeamCards({
               <GameButton size="sm" variant="ghost" icon={<FiUserPlus />} onClick={() => onJoinTeam(team.name)}>
                 {myTeam ? "Move here" : "Join"}
               </GameButton>
+            ),
+          }
+        : {}),
+      /* Your own team says so on the card rather than only in a ring, which
+         is the difference between noticing and having to work it out. */
+      ...(mine && onJoinTeam
+        ? {
+            footer: (
+              <span className="pw-team-note">
+                <FiCheck aria-hidden="true" /> You are on this team
+              </span>
             ),
           }
         : {}),
