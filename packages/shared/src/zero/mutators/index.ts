@@ -11,6 +11,11 @@ import { devMutators } from "./dev";
 
 export { imposterCategories, imposterCategoryLabels, chainCategories, chainCategoryLabels, passwordCategories, passwordCategoryLabels, gameCategories, gameCategoryLabels } from "./word-banks";
 
+/* The three rules Password's UI has to agree with the server about: what
+   counts as one word, what is too close to the word, and what a word is
+   worth. A second copy in the client is a second copy that drifts. */
+export { isOneWord, isClueTooSimilar, scorePasswordGuessCount } from "./helpers";
+
 export const mutators = defineMutators({
   sessions: sessionMutators,
   imposter: imposterMutators,
