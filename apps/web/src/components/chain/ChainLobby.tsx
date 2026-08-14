@@ -93,14 +93,20 @@ export function chainSeatCards({
   const cards = seated.slice(0, CHAIN_PLAYERS).map((player, index): PlayerCardProps => {
     const name = sessionById[player.sessionId] ?? getDisplayName(player.name, player.sessionId);
     const you = player.sessionId === sessionId;
+    const host = player.sessionId === hostId;
 
     return {
       sessionId: player.sessionId,
       name,
       index,
+      /* The lg card is a face, a name and a line, and the line is where the
+         only thing a lobby knows about a seat goes: whether they are still
+         there, and which of the two is holding the button everyone is
+         waiting on. */
+      caption: !player.connected ? "Dropped out" : host ? "Starts the duel" : "Waiting on the host",
       ...(you ? { you: true } : {}),
-      ...(player.sessionId === hostId ? { host: true } : {}),
-      ...(player.connected ? {} : { disconnected: true, caption: "Dropped out" }),
+      ...(host ? { host: true } : {}),
+      ...(player.connected ? {} : { disconnected: true }),
       ...(onKick && !you ? { action: <KickButton name={name} onKick={() => onKick(player.sessionId)} /> } : {}),
     };
   });

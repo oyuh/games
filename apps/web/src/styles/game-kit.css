@@ -339,9 +339,19 @@
   gap: 0.75rem;
 }
 
+/* Portraits, not banners. Eighteen rems of card behind a face and a name is
+   mostly air, and the pair stop reading as two people facing each other. */
 .gk-versus > .pc {
   flex: 1 1 0;
-  max-width: 18rem;
+  max-width: 13.5rem;
+}
+
+/* Both cards are stretched to whichever is taller, so what is on them has to
+   sit in the middle of that height rather than at the top of it. The badge
+   strip stays where it is, along the bottom. */
+.gk-versus > .pc .pc-main {
+  flex: 1;
+  justify-content: center;
 }
 
 .gk-versus-mark {
