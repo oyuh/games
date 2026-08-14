@@ -1,5 +1,5 @@
 import { useEffect, useRef, type FormEvent } from "react";
-import { FiAlertCircle, FiCheck, FiEye, FiEyeOff, FiRotateCw, FiSend, FiSkipForward } from "react-icons/fi";
+import { FiAlertCircle, FiAward, FiCheck, FiEye, FiEyeOff, FiHelpCircle, FiMessageSquare, FiRotateCw, FiSend, FiSkipForward } from "react-icons/fi";
 import { isClueTooSimilar, isOneWord, passwordCategoryLabels, scorePasswordGuessCount } from "@games/shared";
 import { GameButton } from "../shared/GameKit";
 import { GameTeamRoster } from "../shared/GameRoster";
@@ -314,6 +314,14 @@ type StreamLine = {
  * and this is what happened, and putting both in one column was what made a
  * game where everybody types at once look like a game of turns.
  */
+/** Clue, guess, and the guess that ended it. One mark per kind, used in the
+ *  rows and in the tally above them so the column teaches its own key. */
+const KIND_ICON = {
+  clue: <FiMessageSquare />,
+  guess: <FiHelpCircle />,
+  right: <FiCheck />,
+} as const;
+
 export function PasswordStream({
   clues,
   guesses,
@@ -351,7 +359,20 @@ export function PasswordStream({
     <section className={`pw-stream ${className}`.trim()}>
       <div className="gk-roster-head">
         <span className="gk-roster-label">This word</span>
-        <span className="gk-roster-count">{lines.length}</span>
+
+        {/* Two counts rather than one total. How many clues it took and how
+            many guesses it cost are different facts, and the second one is
+            the one that decides what the word is worth. */}
+        <span className="pw-tally">
+          <span className="pw-tally-item" data-tooltip={`${clues.length} clues given`} data-tooltip-variant="game">
+            <span className="pw-tally-icon" aria-hidden="true">{KIND_ICON.clue}</span>
+            {clues.length}
+          </span>
+          <span className="pw-tally-item pw-tally-item--guess" data-tooltip={`${guesses.length} guesses spent`} data-tooltip-variant="game">
+            <span className="pw-tally-icon" aria-hidden="true">{KIND_ICON.guess}</span>
+            {guesses.length}
+          </span>
+        </span>
       </div>
 
       {lines.length > 0 ? (
@@ -366,14 +387,14 @@ export function PasswordStream({
                 line.repeat ? "pw-line--repeat" : "",
               ].filter(Boolean).join(" ")}
             >
-              <span className="pw-line-kind" aria-hidden="true">{line.kind === "clue" ? "C" : "G"}</span>
+              {/* The check replaces the kind rather than sitting next to it.
+                  A column this narrow cannot carry both, and a correct guess
+                  is not really a guess any more. */}
+              <span className="pw-line-kind" aria-label={line.right ? "got it" : line.kind}>
+                {line.right ? KIND_ICON.right : KIND_ICON[line.kind]}
+              </span>
               <span className="pw-line-text">{line.text}</span>
               <span className="pw-line-who">{getPasswordPlayerName(names, line.sessionId)}</span>
-              {line.right && (
-                <span className="pw-line-mark" aria-label="got it">
-                  <FiCheck aria-hidden="true" />
-                </span>
-              )}
             </div>
           ))}
         </div>
@@ -390,11 +411,20 @@ export function PasswordStream({
 export function PasswordTakenList({ taken, names }: { taken: PasswordTaken[]; names: Record<string, string> }) {
   if (taken.length === 0) return null;
 
+  const points = taken.reduce((sum, entry) => sum + entry.points, 0);
+
   return (
     <section className="pw-taken">
       <div className="gk-roster-head">
         <span className="gk-roster-label">Taken</span>
-        <span className="gk-roster-count">{taken.length}</span>
+
+        <span className="pw-tally">
+          <span className="pw-tally-item pw-tally-item--right" data-tooltip={`${points} points off these`} data-tooltip-variant="game">
+            <span className="pw-tally-icon" aria-hidden="true"><FiAward /></span>
+            {points}
+          </span>
+          <span className="gk-roster-count">{taken.length}</span>
+        </span>
       </div>
 
       <div className="pw-taken-rows">
@@ -576,32 +606,40 @@ export function PasswordRound({
         />
       )}
 
-      {/* Both boxes, always, side by side. This is the whole point: your team
-          is not taking turns and the page should not look like it is. */}
+      {/* Both boxes, always, one above the other, with the record beside the
+          pair. This is the whole point: your team is not taking turns and the
+          page should not look like it is. Stacked rather than side by side
+          because the clue and the answer to it read down the page, the way
+          you would say them. */}
       <div className="pw-exchange">
-        <PasswordLane
-          {...lane}
-          side="clue"
-          people={cluers}
-          {...(role === "clue" ? { mine: true, value } : {})}
-          {...(wordless ? { disabled: true } : {})}
-          drafts={others.filter((draft) => draft.role === "clue")}
-          {...(lastClue ? { latest: { sessionId: lastClue.sessionId, text: lastClue.text } } : {})}
-          {...(role === "clue" && problem ? { problem } : {})}
-        />
+        <div className="pw-lanes">
+          <PasswordLane
+            {...lane}
+            side="clue"
+            people={cluers}
+            {...(role === "clue" ? { mine: true, value } : {})}
+            {...(wordless ? { disabled: true } : {})}
+            drafts={others.filter((draft) => draft.role === "clue")}
+            {...(lastClue ? { latest: { sessionId: lastClue.sessionId, text: lastClue.text } } : {})}
+            {...(role === "clue" && problem ? { problem } : {})}
+          />
 
-        <PasswordLane
-          {...lane}
-          side="guess"
-          people={guesserId ? [guesserId] : []}
-          {...(guessing ? { mine: true, value } : {})}
-          drafts={others.filter((draft) => draft.role === "guess")}
-          {...(lastGuess
-            ? { latest: { sessionId: lastGuess.sessionId, text: lastGuess.text, ...(lastGuess.correct ? { right: true } : {}) } }
-            : {})}
-          {...(guessing && problem ? { problem } : {})}
-        />
+          <PasswordLane
+            {...lane}
+            side="guess"
+            people={guesserId ? [guesserId] : []}
+            {...(guessing ? { mine: true, value } : {})}
+            drafts={others.filter((draft) => draft.role === "guess")}
+            {...(lastGuess
+              ? { latest: { sessionId: lastGuess.sessionId, text: lastGuess.text, ...(lastGuess.correct ? { right: true } : {}) } }
+              : {})}
+            {...(guessing && problem ? { problem } : {})}
+          />
+        </div>
 
+        {/* Takes its height from the boxes beside it and scrolls inside. A
+            word that runs long should not push the thing you are typing into
+            down the page. */}
         <div className="pw-record">
           <PasswordStream clues={clues} guesses={guesses} names={names} />
           <PasswordTakenList taken={taken} names={names} />
