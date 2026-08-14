@@ -1,11 +1,11 @@
-import { mutators } from "@games/shared";
+import { mutators, passwordCategoryLabels } from "@games/shared";
 import { optimistic } from "../lib/zero";
 import "../styles/game-shared.css";
-import "../styles/password.css";
 import { useState } from "react";
-import { FiPlay, FiLogOut, FiLogIn, FiLock, FiUnlock } from "react-icons/fi";
-import { PasswordHeader } from "../components/password/PasswordHeader";
-import { PasswordTeamGrid } from "../components/password/PasswordTeamGrid";
+import { FiBookOpen } from "react-icons/fi";
+import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
+import { GameEmpty, GamePanel } from "../components/shared/GameKit";
+import { PASSWORD_PHASES, PasswordLobby } from "../components/password/PasswordLobby";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { ensureName, leaveCurrentGame } from "../lib/session";
@@ -15,11 +15,17 @@ import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage
 import { PasswordDemo } from "../components/demos/PasswordDemo";
 import { usePasswordBegin } from "../hooks/usePasswordBegin";
 
+/**
+ * Password's lobby, assembled out of the game kit. Every state of it is a
+ * component with its own states, all of them visible at /dev/password, so this
+ * file is only the wiring: who you are in the room, and which mutator a button
+ * reaches for.
+ */
 function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
   const {
     zero, navigate, gameId, game, names, isHost,
     inGame, isSpectator, activeGameType, activeGameId, inAnotherGame,
-    teamsWithPlayers, canStart, startingGame, startGame,
+    startingGame, startGame,
     showInSessionModal, setShowInSessionModal,
     joiningFromOtherGame, setJoiningFromOtherGame,
   } = usePasswordBegin(sessionId);
@@ -28,11 +34,9 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
   if (!game) {
     return (
       <div className="game-page">
-        <div className="game-empty">
-          <p className="game-empty-title">Game not found</p>
-          <p className="game-empty-sub">Redirecting home…</p>
-          <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
-        </div>
+        <GamePanel>
+          <GameEmpty title="No game here" hint="Taking you home…" />
+        </GamePanel>
       </div>
     );
   }
@@ -79,94 +83,56 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
       .finally(() => setJoiningFromOtherGame(false));
   };
 
+  const bank = game.settings.category
+    ? passwordCategoryLabels[game.settings.category] ?? game.settings.category
+    : null;
+
   return (
     <div className="game-page" data-game-theme="password">
-      <PasswordHeader
+      <GameShellHeader
+        collapsible
+        game="password"
         title="Password"
-        code={game.code}
+        phases={PASSWORD_PHASES}
         phase={game.phase}
-        currentRound={game.current_round}
+        code={game.code}
         isHost={isHost}
-        category={game.settings.category ?? null}
         isSpectator={isSpectator}
+        {...(bank ? { pills: <ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">{bank}</ShellPill> } : {})}
       />
 
-      <PasswordTeamGrid
+      <PasswordLobby
         teams={game.teams}
-        scores={game.scores}
-        names={names}
-        activeTeamIndex={undefined}
         sessionId={sessionId}
-        showScores
-        targetScore={game.settings.targetScore}
-        isLobby
-        defaultExpanded
+        hostId={game.host_id}
+        names={names}
+        settings={game.settings}
         isHost={isHost}
-        teamsLocked={game.settings.teamsLocked}
-        onSwitchTeam={(teamName) =>
+        inGame={inGame}
+        isSpectator={isSpectator}
+        starting={startingGame}
+        onStart={() => void startGame()}
+        onLeave={() => {
+          void optimistic(zero.mutate(mutators.password.leave({ gameId, sessionId })))
+            .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't leave game", "error"));
+        }}
+        onJoin={handleJoinClick}
+        onJoinTeam={(teamName) =>
           void zero.mutate(mutators.password.switchTeam({ gameId, sessionId, teamName }))
             .client.catch(() => showToast("Couldn't switch team", "error"))
         }
-        onMovePlayer={(playerId, teamName) =>
-          void zero.mutate(mutators.password.movePlayer({ gameId, hostId: sessionId, playerId, teamName }))
-            .client.catch(() => showToast("Couldn't move player", "error"))
-        }
+        {...(isHost
+          ? {
+              onMovePlayer: (playerId: string, teamName: string) =>
+                void zero.mutate(mutators.password.movePlayer({ gameId, hostId: sessionId, playerId, teamName }))
+                  .client.catch(() => showToast("Couldn't move player", "error")),
+              onToggleLock: () =>
+                void zero.mutate(mutators.password.lockTeams({ gameId, hostId: sessionId, locked: !game.settings.teamsLocked }))
+                  .client.catch(() => showToast("Couldn't lock the teams", "error")),
+              actions: <LobbyVisibilityToggle gameType="password" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />,
+            }
+          : {})}
       />
-
-      {!inGame && (
-        <div className="game-section game-join-prompt">
-          <p className="game-join-text">{isSpectator ? "You're spectating. Join to play!" : "You're not in this lobby yet."}</p>
-          <button
-            className="btn btn-primary game-action-btn"
-            onClick={handleJoinClick}
-          >
-            <FiLogIn size={16} /> Join Game
-          </button>
-        </div>
-      )}
-
-      {inGame && (
-        <div className="game-section">
-          {teamsWithPlayers < 2 && (
-            <p className="game-hint">Need at least 2 teams with players to start</p>
-          )}
-          <div className="game-actions">
-            {isHost && (
-              <LobbyVisibilityToggle gameType="password" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />
-            )}
-            {isHost && (
-              <button
-                className="btn btn-muted"
-                onClick={() =>
-                  void zero.mutate(mutators.password.lockTeams({ gameId, hostId: sessionId, locked: !game.settings.teamsLocked }))
-                }
-              >
-                {game.settings.teamsLocked ? <><FiUnlock size={14} /> Unlock Teams</> : <><FiLock size={14} /> Lock Teams</>}
-              </button>
-            )}
-            {isHost ? (
-              <button
-                className="btn btn-primary game-action-btn"
-                disabled={!canStart || startingGame}
-                onClick={() => void startGame()}
-              >
-                <FiPlay size={16} /> Start Game
-              </button>
-            ) : (
-              <p className="game-waiting-text">Waiting for host to start…</p>
-            )}
-            <button
-              className="btn btn-muted"
-              onClick={() => {
-                void optimistic(zero.mutate(mutators.password.leave({ gameId, sessionId })))
-                  .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't leave game", "error"));
-              }}
-            >
-              <FiLogOut size={14} /> Leave
-            </button>
-          </div>
-        </div>
-      )}
 
       {showDemo && <PasswordDemo onClose={() => setShowDemo(false)} />}
 
