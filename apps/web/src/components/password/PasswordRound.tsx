@@ -1,11 +1,11 @@
-import { useEffect, useRef, type FormEvent } from "react";
+import { useEffect, useRef, type FormEvent, type ReactNode } from "react";
 import { FiAlertCircle, FiAward, FiCheck, FiEye, FiEyeOff, FiHelpCircle, FiMessageSquare, FiRotateCw, FiSend, FiSkipForward } from "react-icons/fi";
 import { isClueTooSimilar, isOneWord, passwordCategoryLabels, scorePasswordGuessCount } from "@games/shared";
-import { GameButton } from "../shared/GameKit";
+import { GameButton, useArmed } from "../shared/GameKit";
 import { GameTeamRoster } from "../shared/GameRoster";
 import { PlayerAvatar } from "../shared/PlayerAvatar";
 import { getPasswordPlayerName } from "../../lib/password-names";
-import { passwordTeamCards, type PasswordTeam } from "./PasswordLobby";
+import { PASSWORD_SKIPS, passwordTeamCards, type PasswordTeam } from "./PasswordLobby";
 import "../../styles/password-kit.css";
 
 /**
@@ -175,6 +175,39 @@ function LaneHeads({ people, names }: { people: string[]; names: Record<string, 
   );
 }
 
+/**
+ * Throwing the word away, on the corner of your own box. Two presses, because
+ * it spends one of three and the word is gone for the whole team, and nobody
+ * should lose one to a stray click on the thing next to the text field. The
+ * tooltip carries the explaining so the button can stay this small.
+ */
+export function PasswordSkipButton({ left, onSkip }: { left: number; onSkip: () => void }) {
+  const { armed, press, disarm } = useArmed();
+  const spent = left <= 0;
+
+  return (
+    <button
+      type="button"
+      className={`pw-skip${armed ? " pw-skip--armed" : ""}`}
+      disabled={spent}
+      aria-label={armed ? "Press again to throw this word away" : `Throw this word away, ${left} left`}
+      data-tooltip={
+        spent
+          ? "No skips left. This one you talk your way out of."
+          : armed
+            ? "Press again and the word is gone"
+            : `Throw this word away and take a new one. ${left} of ${PASSWORD_SKIPS} left`
+      }
+      data-tooltip-variant={armed ? "danger" : "game"}
+      onClick={() => { if (press()) onSkip(); }}
+      onBlur={disarm}
+    >
+      {armed ? <FiCheck aria-hidden="true" /> : <FiSkipForward aria-hidden="true" />}
+      <span className="pw-skip-left">{left}</span>
+    </button>
+  );
+}
+
 export interface PasswordLaneProps {
   side: "clue" | "guess";
   /** Session ids on this side. Clue side is usually more than one. */
@@ -192,6 +225,8 @@ export interface PasswordLaneProps {
   latest?: { sessionId: string; text: string; right?: boolean } | undefined;
   /** Why the button is off. One short line, already worked out by the round. */
   problem?: string | undefined;
+  /** Top right of the header. Only your own lane gets one. */
+  action?: ReactNode;
   maxLength?: number;
   onChange?: (value: string) => void;
   onSubmit?: (event: FormEvent) => void;
@@ -213,6 +248,7 @@ export function PasswordLane({
   drafts = [],
   latest,
   problem,
+  action,
   maxLength = 80,
   onChange,
   onSubmit,
@@ -239,6 +275,7 @@ export function PasswordLane({
         <span className="pw-lane-label">{guessing ? "Guessing" : "Cluing"}</span>
         <LaneHeads people={people} names={names} />
         {mine && <span className="pw-lane-you">you</span>}
+        {action}
       </header>
 
       {mine ? (
@@ -432,22 +469,25 @@ export function PasswordTakenList({ taken, names }: { taken: PasswordTaken[]; na
         </span>
       </div>
 
-      {/* Pills, not rows. These are done with and the live word is not, so
-          they give up their room to it. Who took it and in how many is a
-          point of order rather than news, and lives in the tooltip. */}
-      <div className="pw-taken-rows">
-        {[...taken].reverse().map((entry) => (
-          <span
-            className="pw-taken-pill"
-            key={entry.roundId}
-            data-tooltip={`${getPasswordPlayerName(names, entry.guesserId)} got it in ${entry.guessCount}`}
-            data-tooltip-variant="game"
-          >
-            <span className="pw-taken-word">{entry.word}</span>
+      {/* A sentence, not a list. These are done with and the live word is not,
+          so they give up their room to it: a run of words with what each was
+          worth, read straight across. Who took it and in how many is a point
+          of order rather than news, and lives in the tooltip. */}
+      <p className="pw-taken-line">
+        {taken.map((entry, i) => (
+          <span key={entry.roundId}>
+            {i > 0 && <span className="pw-taken-sep">, </span>}
+            <span
+              className="pw-taken-word"
+              data-tooltip={`${getPasswordPlayerName(names, entry.guesserId)} got it in ${entry.guessCount}`}
+              data-tooltip-variant="game"
+            >
+              {entry.word}
+            </span>
             <span className="pw-taken-points">+{entry.points}</span>
           </span>
         ))}
-      </div>
+      </p>
     </section>
   );
 }
@@ -597,12 +637,18 @@ export function PasswordRound({
      with a cursor in them. */
   const others = drafts.filter((draft) => draft.sessionId !== sessionId);
 
+  /* onDraft is the only optional one, so it is the only one that has to be
+     spread in rather than named. */
   const lane = {
     names,
-    ...(onChange ? { onChange } : {}),
-    ...(onSubmit ? { onSubmit } : {}),
+    onChange,
+    onSubmit,
     ...(onDraft ? { onDraft } : {}),
   };
+
+  /* Skipping belongs to the team rather than to the guesser, and it lands on
+     whichever box is yours, so either of you can reach it without hunting. */
+  const skip = onSkip ? { action: <PasswordSkipButton left={skipsRemaining} onSkip={onSkip} /> } : {};
 
   return (
     <>
@@ -627,7 +673,7 @@ export function PasswordRound({
             {...lane}
             side="clue"
             people={cluers}
-            {...(role === "clue" ? { mine: true, value } : {})}
+            {...(role === "clue" ? { mine: true, value, ...skip } : {})}
             {...(wordless ? { disabled: true } : {})}
             drafts={others.filter((draft) => draft.role === "clue")}
             {...(lastClue ? { latest: { sessionId: lastClue.sessionId, text: lastClue.text } } : {})}
@@ -638,37 +684,13 @@ export function PasswordRound({
             {...lane}
             side="guess"
             people={guesserId ? [guesserId] : []}
-            {...(guessing ? { mine: true, value } : {})}
+            {...(guessing ? { mine: true, value, ...skip } : {})}
             drafts={others.filter((draft) => draft.role === "guess")}
             {...(lastGuess
               ? { latest: { sessionId: lastGuess.sessionId, text: lastGuess.text, ...(lastGuess.correct ? { right: true } : {}) } }
               : {})}
             {...(guessing && problem ? { problem } : {})}
           />
-
-          {/* Skipping belongs to the team, not to the guesser, so it sits with
-              the boxes where both of them are looking. Everybody stuck on the
-              same word should be able to reach the way out of it. */}
-          {role && onSkip && (
-            <div className="pw-skip">
-              <span className="pw-skip-copy">
-                {skipsRemaining > 0
-                  ? "Nobody getting this one?"
-                  : "No skips left. This one you talk your way out of."}
-              </span>
-
-              <GameButton
-                variant="secondary"
-                icon={<FiSkipForward />}
-                disabled={skipsRemaining <= 0}
-                onClick={onSkip}
-              >
-                Throw it away
-              </GameButton>
-
-              <span className="pw-skip-left">{skipsRemaining} left</span>
-            </div>
-          )}
         </div>
 
         {/* Takes its height from the boxes beside it and scrolls inside, so a

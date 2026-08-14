@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { FiCheck, FiMaximize2, FiMinimize2, FiX } from "react-icons/fi";
+import { useArmed } from "./GameKit";
 import { PlayerCard, type PlayerCardProps } from "./PlayerCard";
 import { TeamCard, type TeamCardProps } from "./TeamCard";
 import "../../styles/game-kit.css";
@@ -57,18 +58,12 @@ function RosterHead({ label, count, action, expanded, onToggle }: RosterHeadProp
 /**
  * Removing somebody takes two presses. It is a 22 pixel target sitting on a
  * card you also click for other reasons, it cannot be undone, and the person
- * it happens to is thrown out of a game they are in the middle of. The first
- * press arms it and says so; it disarms itself a few seconds later, so a
- * misclick costs nothing and nobody is left holding a live button.
+ * it happens to is thrown out of a game they are in the middle of. The arming
+ * itself is useArmed's, since it is the same two presses the skip button in
+ * Password wants.
  */
 function KickButton({ name, onKick }: { name: string; onKick: () => void }) {
-  const [armed, setArmed] = useState(false);
-
-  useEffect(() => {
-    if (!armed) return;
-    const id = setTimeout(() => setArmed(false), 3000);
-    return () => clearTimeout(id);
-  }, [armed]);
+  const { armed, press, disarm } = useArmed();
 
   return (
     <button
@@ -77,11 +72,8 @@ function KickButton({ name, onKick }: { name: string; onKick: () => void }) {
       aria-label={armed ? `Confirm removing ${name}` : `Remove ${name}`}
       data-tooltip={armed ? "Press again to remove them" : `Remove ${name}`}
       data-tooltip-variant={armed ? "danger" : "game"}
-      onClick={() => {
-        if (armed) onKick();
-        else setArmed(true);
-      }}
-      onBlur={() => setArmed(false)}
+      onClick={() => { if (press()) onKick(); }}
+      onBlur={disarm}
     >
       {armed ? <FiCheck size={13} /> : <FiX size={13} />}
     </button>

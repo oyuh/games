@@ -143,7 +143,7 @@ export function PasswordGameOver({
 
                   <span className="pw-past-who">
                     <strong>{getPasswordPlayerName(names, entry.guesserId)}</strong>
-                    {team ? ` · ${team.name}` : ""}
+                    {team ? ` - ${team.name}` : ""}
                   </span>
 
                   <span className="pw-past-count">in {entry.guessCount}</span>

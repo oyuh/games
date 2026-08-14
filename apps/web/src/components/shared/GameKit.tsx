@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
+import { useEffect, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import "../../styles/game-kit.css";
 
 /**
@@ -13,6 +13,41 @@ import "../../styles/game-kit.css";
  * means something rather than decorating; and one accent per surface, taken
  * from --game-accent so a game sets it once and everything below agrees.
  */
+
+/* ── Two presses ────────────────────────────────────────────── */
+
+/**
+ * For the small buttons that cannot be taken back: throwing somebody out of a
+ * lobby, throwing the word away. The first press arms it and the button says
+ * so; it disarms itself a few seconds later, so a misclick costs nothing and
+ * nobody is left holding a live button they have forgotten about.
+ *
+ * `armed` is what to draw, `press` is what to do on click: it returns true
+ * once the thing has actually been confirmed.
+ */
+export function useArmed(timeout = 3000) {
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    if (!armed) return;
+    const id = setTimeout(() => setArmed(false), timeout);
+    return () => clearTimeout(id);
+  }, [armed, timeout]);
+
+  return {
+    armed,
+    /** True when this press was the confirming one. */
+    press: () => {
+      if (armed) {
+        setArmed(false);
+        return true;
+      }
+      setArmed(true);
+      return false;
+    },
+    disarm: () => setArmed(false),
+  };
+}
 
 /* ── Button ─────────────────────────────────────────────────── */
 
