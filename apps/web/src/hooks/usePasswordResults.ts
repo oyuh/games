@@ -7,8 +7,9 @@ import { useGameSecret } from "../lib/game-secrets";
 import { playGameOver } from "../lib/sounds";
 import { showToast } from "../lib/toast";
 
-/** Team swatches, shared so both views colour the same team the same way. */
-export const PASSWORD_TEAM_COLORS = ["#7ecbff", "#a78bfa", "#4ade80", "#f59e0b", "#f87171", "#ec4899"];
+/** Team swatches, shared so both views colour the same team the same way. The
+ *  list itself lives with the lobby now, where the rest of password's kit is. */
+export { PASSWORD_TEAM_COLORS } from "../components/password/PasswordLobby";
 
 /**
  * Everything the password results screen needs that isn't markup: the queries,
