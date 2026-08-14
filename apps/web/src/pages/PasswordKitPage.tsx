@@ -338,9 +338,14 @@ function LiveRound() {
   const other = "seed-dov";
   const guesserId = guessing ? me : other;
 
-  const reset = () => {
-    setValue(""); setClues([]); setGuesses([]); setDraft(""); setStep(0); setSkips(PASSWORD_SKIPS);
+  /* A new word: everything about the one you were on goes, the skips you have
+     spent stay spent. Which is what the real game does when a team either
+     takes a word or throws it away. */
+  const newWord = () => {
+    setValue(""); setClues([]); setGuesses([]); setDraft(""); setStep(0);
   };
+
+  const reset = () => { newWord(); setSkips(PASSWORD_SKIPS); };
 
   /* The other end types for a moment, then says it. Watching somebody else's
      keystrokes land in the box beside yours is the thing this page exists to
@@ -432,7 +437,7 @@ function LiveRound() {
         guessers={{ "Team A": guesserId, "Team B": "seed-bram" }}
         onChange={setValue}
         onSubmit={submit}
-        onSkip={() => { setSkips((n) => Math.max(0, n - 1)); reset(); }}
+        onSkip={() => { setSkips((n) => Math.max(0, n - 1)); newWord(); }}
       />
     </>
   );
