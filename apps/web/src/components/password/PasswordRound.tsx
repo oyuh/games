@@ -148,7 +148,12 @@ export function PasswordWordCard({
               {n}
             </span>
           ))}
-          <span className="pw-worth-label">{worth === 1 ? "point" : "points"} if they get it now</span>
+          {/* Whose go it is. Telling the person holding the box that somebody
+              else is about to earn this is one word wrong and it is the word
+              that matters. */}
+          <span className="pw-worth-label">
+            {worth === 1 ? "point" : "points"} if {guessing ? "you" : "they"} get it now
+          </span>
         </p>
       )}
     </section>
@@ -427,15 +432,20 @@ export function PasswordTakenList({ taken, names }: { taken: PasswordTaken[]; na
         </span>
       </div>
 
+      {/* Pills, not rows. These are done with and the live word is not, so
+          they give up their room to it. Who took it and in how many is a
+          point of order rather than news, and lives in the tooltip. */}
       <div className="pw-taken-rows">
         {[...taken].reverse().map((entry) => (
-          <div className="pw-taken-row" key={entry.roundId}>
+          <span
+            className="pw-taken-pill"
+            key={entry.roundId}
+            data-tooltip={`${getPasswordPlayerName(names, entry.guesserId)} got it in ${entry.guessCount}`}
+            data-tooltip-variant="game"
+          >
             <span className="pw-taken-word">{entry.word}</span>
-            <span className="pw-taken-meta">
-              {getPasswordPlayerName(names, entry.guesserId)} in {entry.guessCount}
-            </span>
             <span className="pw-taken-points">+{entry.points}</span>
-          </div>
+          </span>
         ))}
       </div>
     </section>
@@ -635,26 +645,42 @@ export function PasswordRound({
               : {})}
             {...(guessing && problem ? { problem } : {})}
           />
+
+          {/* Skipping belongs to the team, not to the guesser, so it sits with
+              the boxes where both of them are looking. Everybody stuck on the
+              same word should be able to reach the way out of it. */}
+          {role && onSkip && (
+            <div className="pw-skip">
+              <span className="pw-skip-copy">
+                {skipsRemaining > 0
+                  ? "Nobody getting this one?"
+                  : "No skips left. This one you talk your way out of."}
+              </span>
+
+              <GameButton
+                variant="secondary"
+                icon={<FiSkipForward />}
+                disabled={skipsRemaining <= 0}
+                onClick={onSkip}
+              >
+                Throw it away
+              </GameButton>
+
+              <span className="pw-skip-left">{skipsRemaining} left</span>
+            </div>
+          )}
         </div>
 
-        {/* Takes its height from the boxes beside it and scrolls inside. A
-            word that runs long should not push the thing you are typing into
-            down the page. */}
+        {/* Takes its height from the boxes beside it and scrolls inside, so a
+            word that runs long never pushes the thing you are typing into off
+            the bottom of the page. */}
         <div className="pw-record">
-          <PasswordStream clues={clues} guesses={guesses} names={names} />
-          <PasswordTakenList taken={taken} names={names} />
+          <div className="pw-record-inner">
+            <PasswordStream clues={clues} guesses={guesses} names={names} />
+            <PasswordTakenList taken={taken} names={names} />
+          </div>
         </div>
       </div>
-
-      {/* Skipping is the team's, not the guesser's. Anyone stuck can call it. */}
-      {role && onSkip && skipsRemaining > 0 && (
-        <div className="pw-skip">
-          <GameButton variant="ghost" size="sm" icon={<FiSkipForward />} onClick={onSkip}>
-            Throw this one away
-          </GameButton>
-          <span className="pw-skip-left">{skipsRemaining} left</span>
-        </div>
-      )}
 
       {teams && scores && targetScore !== undefined && (
         <PasswordScoreboard
