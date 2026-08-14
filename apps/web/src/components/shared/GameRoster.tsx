@@ -62,7 +62,7 @@ function RosterHead({ label, count, action, expanded, onToggle }: RosterHeadProp
  * itself is useArmed's, since it is the same two presses the skip button in
  * Password wants.
  */
-function KickButton({ name, onKick }: { name: string; onKick: () => void }) {
+export function KickButton({ name, onKick }: { name: string; onKick: () => void }) {
   const { armed, press, disarm } = useArmed();
 
   return (
