@@ -10,6 +10,7 @@ import {
   passwordStartBlock,
   type PasswordTeam,
 } from "../components/password/PasswordLobby";
+import { PasswordGameOver, type PasswordWordHistory } from "../components/password/PasswordGameOver";
 import {
   PasswordLane,
   PasswordRound,
@@ -254,6 +255,64 @@ const TAKEN: PasswordTaken[] = [
 const CLUE_SCRIPT = ["tuxedo", "waddles", "cold"];
 const GUESS_SCRIPT = ["Waiter", "Duck", "Penguin"];
 
+/* Five words that hang together: one taken cold, one that cost the room four
+   goes, and the pair at the end that decided it. */
+const HISTORY: PasswordWordHistory[] = [
+  {
+    roundId: "h1", round: 1, teamIndex: 0, guesserId: "seed-dov", word: "Otter",
+    guessCount: 1, points: 3,
+    clues: [{ id: "h1c1", sessionId: "seed-ada", text: "river", ts: T0, clueNumber: 1 }],
+    guesses: [{ id: "h1g1", sessionId: "seed-dov", text: "Otter", ts: T0 + 2_000, correct: true, guessNumber: 1 }],
+  },
+  {
+    roundId: "h2", round: 1, teamIndex: 1, guesserId: "seed-bram", word: "Moth",
+    guessCount: 2, points: 2,
+    clues: [
+      { id: "h2c1", sessionId: "seed-esme", text: "lamp", ts: T0 + 1_000, clueNumber: 1 },
+      { id: "h2c2", sessionId: "seed-finn", text: "wings", ts: T0 + 5_000, clueNumber: 2 },
+    ],
+    guesses: [
+      { id: "h2g1", sessionId: "seed-bram", text: "Bat", ts: T0 + 3_000, correct: false, guessNumber: 1 },
+      { id: "h2g2", sessionId: "seed-bram", text: "Moth", ts: T0 + 7_000, correct: true, guessNumber: 2 },
+    ],
+  },
+  {
+    roundId: "h3", round: 2, teamIndex: 0, guesserId: "seed-cleo", word: "Badger",
+    guessCount: 4, points: 1,
+    clues: [
+      { id: "h3c1", sessionId: "seed-ada", text: "stripes", ts: T0 + 10_000, clueNumber: 1 },
+      { id: "h3c2", sessionId: "seed-dov", text: "digs", ts: T0 + 14_000, clueNumber: 2 },
+      { id: "h3c3", sessionId: "seed-ada", text: "stripes", ts: T0 + 18_000, clueNumber: 3, repeatedText: true },
+      { id: "h3c4", sessionId: "seed-dov", text: "sett", ts: T0 + 22_000, clueNumber: 4 },
+    ],
+    guesses: [
+      { id: "h3g1", sessionId: "seed-cleo", text: "Zebra", ts: T0 + 12_000, correct: false, guessNumber: 1 },
+      { id: "h3g2", sessionId: "seed-cleo", text: "Skunk", ts: T0 + 16_000, correct: false, guessNumber: 2 },
+      { id: "h3g3", sessionId: "seed-cleo", text: "Mole", ts: T0 + 20_000, correct: false, guessNumber: 3 },
+      { id: "h3g4", sessionId: "seed-cleo", text: "Badger", ts: T0 + 24_000, correct: true, guessNumber: 4 },
+    ],
+  },
+  {
+    roundId: "h4", round: 3, teamIndex: 1, guesserId: "seed-esme", word: "Crab",
+    guessCount: 3, points: 1,
+    clues: [
+      { id: "h4c1", sessionId: "seed-bram", text: "sideways", ts: T0 + 30_000, clueNumber: 1 },
+      { id: "h4c2", sessionId: "seed-finn", text: "claws", ts: T0 + 34_000, clueNumber: 2 },
+    ],
+    guesses: [
+      { id: "h4g1", sessionId: "seed-esme", text: "Lobster", ts: T0 + 32_000, correct: false, guessNumber: 1 },
+      { id: "h4g2", sessionId: "seed-esme", text: "Scorpion", ts: T0 + 35_000, correct: false, guessNumber: 2 },
+      { id: "h4g3", sessionId: "seed-esme", text: "Crab", ts: T0 + 38_000, correct: true, guessNumber: 3 },
+    ],
+  },
+  {
+    roundId: "h5", round: 4, teamIndex: 0, guesserId: "seed-ada", word: "Penguin",
+    guessCount: 1, points: 3,
+    clues: [{ id: "h5c1", sessionId: "seed-cleo", text: "tuxedo", ts: T0 + 40_000, clueNumber: 1 }],
+    guesses: [{ id: "h5g1", sessionId: "seed-ada", text: "Penguin", ts: T0 + 41_000, correct: true, guessNumber: 1 }],
+  },
+];
+
 /* Two teams of three, so the clue side has more than one person on it. Two
    people cluing at the same guesser is the shape this game actually takes. */
 const ROUND_TEAMS: PasswordTeam[] = [
@@ -483,8 +542,10 @@ export function PasswordKitPage() {
             />
           </div>
           <div className="pw-record">
-            <PasswordStream clues={ROUND_CLUES} guesses={ROUND_GUESSES} names={NAMES} />
-            <PasswordTakenList taken={TAKEN} names={NAMES} />
+            <div className="pw-record-inner">
+              <PasswordStream clues={LONG_CLUES} guesses={LONG_GUESSES} names={NAMES} />
+              <PasswordTakenList taken={TAKEN} names={NAMES} />
+            </div>
           </div>
         </div>
       </Section>
@@ -518,6 +579,51 @@ export function PasswordKitPage() {
           solved={["Team B"]}
           names={NAMES}
           sessionId="seed-ada"
+        />
+      </Section>
+
+      <Section title="The end" note="who took it, and every word on the way there. the last one opens itself">
+        <PasswordGameOver
+          isHost
+          teams={ROUND_TEAMS}
+          scores={{ "Team A": 10, "Team B": 7 }}
+          targetScore={10}
+          rounds={HISTORY}
+          names={NAMES}
+          sessionId="seed-ada"
+          hostId={HOST}
+          onPlayAgain={NOOP}
+          onEnd={NOOP}
+          onHome={NOOP}
+        />
+      </Section>
+
+      <Section title="The end, the other way" note="a level finish, and whoever is not hosting only gets the way out">
+        <PasswordGameOver
+          teams={ROUND_TEAMS}
+          scores={{ "Team A": 8, "Team B": 8 }}
+          targetScore={10}
+          rounds={HISTORY.slice(0, 2)}
+          names={NAMES}
+          sessionId="seed-bram"
+          onPlayAgain={NOOP}
+          onEnd={NOOP}
+          onHome={NOOP}
+        />
+      </Section>
+
+      <Section title="The end, nothing happened" note="the host pulled it before anybody scored, so there is no winner rather than a tie for nothing">
+        <PasswordGameOver
+          isHost
+          teams={ROUND_TEAMS}
+          scores={{ "Team A": 0, "Team B": 0 }}
+          targetScore={10}
+          rounds={[]}
+          names={NAMES}
+          sessionId="seed-ada"
+          onPlayAgain={NOOP}
+          onEnd={NOOP}
+          onHome={NOOP}
         />
       </Section>
 
