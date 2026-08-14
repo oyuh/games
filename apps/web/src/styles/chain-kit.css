@@ -1,0 +1,37 @@
+/* ── Chain Reaction ──────────────────────────────────────────────
+   Same three rules as the rest of the game kit: depth is borders and fills
+   rather than shadows, colour means something, and one accent per surface off
+   --game-accent.
+
+   Chain is two people and nothing else, so the lobby is GameVersus and there
+   is almost nothing here. The only thing the kit could not already draw is a
+   seat with nobody in it, which has to read as a gap rather than a player.
+
+   The old chain-reaction.css stays until the old page comes out. Nothing here
+   shares a class name with it. */
+
+.pc.cr-seat-open {
+  border-style: dashed;
+}
+
+/* The avatar is a real generated shape, and a shape with a face-shaped colour
+   on it reads as somebody. Faded out it reads as the space one would go in. */
+.cr-seat-open .player-avatar {
+  opacity: 0.2;
+  filter: grayscale(1);
+}
+
+.cr-seat-open .pc-name {
+  color: var(--secondary);
+}
+
+/* Pressable, it is an invitation rather than a hole, so it says so on hover
+   instead of sitting there greyed. */
+.cr-seat-open.pc--button:hover .player-avatar {
+  opacity: 0.4;
+  filter: none;
+}
+
+.cr-seat-open.pc--button:hover .pc-name {
+  color: var(--foreground);
+}
