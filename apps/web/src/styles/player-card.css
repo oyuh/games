@@ -698,7 +698,15 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 0.05rem;
+
+  /* Two lines, whether or not there is a caption to put on the second one.
+     A caption is optional and a folded card is only its header, so without
+     this a row of teams stands at two different heights the moment one of
+     them has something to say. Captions never wrap, so two lines is the
+     most this ever needs to be. */
+  min-height: 2.3rem;
 }
 
 .tc-name {
