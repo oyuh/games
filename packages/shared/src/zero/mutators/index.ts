@@ -13,8 +13,11 @@ export { imposterCategories, imposterCategoryLabels, chainCategories, chainCateg
 
 /* The three rules Password's UI has to agree with the server about: what
    counts as one word, what is too close to the word, and what a word is
-   worth. A second copy in the client is a second copy that drifts. */
-export { isOneWord, isClueTooSimilar, scorePasswordGuessCount } from "./helpers";
+   worth. A second copy in the client is a second copy that drifts.
+
+   scoreForLetters is Chain's version of the last one: what a word is still
+   worth once you have burned letters off it. */
+export { isOneWord, isClueTooSimilar, scorePasswordGuessCount, scoreForLetters } from "./helpers";
 
 export const mutators = defineMutators({
   sessions: sessionMutators,

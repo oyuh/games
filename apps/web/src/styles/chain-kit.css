@@ -3,12 +3,29 @@
    rather than shadows, colour means something, and one accent per surface off
    --game-accent.
 
-   Chain is two people and nothing else, so the lobby is GameVersus and there
-   is almost nothing here. The only thing the kit could not already draw is a
-   seat with nobody in it, which has to read as a gap rather than a player.
+   Chain is two people and nothing else, so the lobby is GameVersus and the
+   scoreboard is the same two cards again. What is left for this file is the
+   chain: a column of links with one line running down behind them, which is
+   the only shape on the site that is nobody else's.
+
+   Where it parts company with the old chain-reaction.css: that file drew state
+   with glows and coloured shadows, and drew a separate connector between every
+   pair of words. Here state is a border and a fill like everything else in the
+   kit, and the chain is one line, because it is one chain.
 
    The old chain-reaction.css stays until the old page comes out. Nothing here
    shares a class name with it. */
+
+.cr-links,
+.cr-link,
+.cr-note,
+.cr-count {
+  --cr-accent: var(--game-accent, var(--primary));
+  /* Given away, thrown away. Neither is a thing you did well. */
+  --cr-quiet: var(--secondary);
+}
+
+/* ── The seat with nobody in it ─────────────────────────────── */
 
 .pc.cr-seat-open {
   border-style: dashed;
@@ -34,4 +51,349 @@
 
 .cr-seat-open.pc--button:hover .pc-name {
   color: var(--foreground);
+}
+
+/* ── The chain ───────────────────────────────────────────────────
+   A numbered column with one continuous line behind the numbers. The old page
+   drew a two pixel connector between each pair, which said five joins where
+   the game has one chain. The line stops short at both ends because the first
+   and last words are given: what you are working on starts and finishes
+   inside them. */
+.cr-links {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cr-links::before {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  top: 1.4rem;
+  bottom: 1.4rem;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--border);
+}
+
+/* The board is a heading and then the chain, with no box round the lot. The
+   links already have edges of their own. */
+.cr-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+/* Stretched, so whatever sits beside a link is exactly as tall as it. */
+.cr-link {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Sits on the line with the panel's own background behind it, so the line
+   reads as passing under the number rather than stopping at it. */
+.cr-link-num {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-bottom);
+  font-size: 0.66rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--muted-foreground);
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+}
+
+/* The box the word lives in. A button when it is yours and still hidden, a
+   plain div otherwise, and identical either way until you point at it. */
+.cr-link-face {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  min-height: 2.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-bottom);
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  transition: border-color 0.18s, background 0.18s;
+}
+
+button.cr-link-face {
+  appearance: none;
+  cursor: pointer;
+}
+
+button.cr-link-face:hover {
+  border-color: color-mix(in srgb, var(--cr-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--cr-accent) 6%, var(--surface-bottom));
+}
+
+button.cr-link-face:focus-visible {
+  outline: 2px solid var(--cr-accent);
+  outline-offset: 2px;
+}
+
+.cr-link-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.cr-link-word {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+/* ── What a link is ──────────────────────────────────────────────
+   Four states and one accent. Cracked is the only one that gets the colour,
+   because cracking one is the only thing in here you did. */
+
+/* Given away at the start. Present, readable, and not an achievement. */
+.cr-link--given .cr-link-face {
+  border-style: dashed;
+}
+
+.cr-link--given .cr-link-word {
+  color: var(--cr-quiet);
+}
+
+/* Yours, and still to do. */
+.cr-link--open .cr-link-face {
+  background: color-mix(in srgb, var(--foreground) 3%, var(--surface-bottom));
+}
+
+/* The one you are typing into. */
+.cr-link--now .cr-link-num,
+.cr-link--now .cr-link-face {
+  border-color: color-mix(in srgb, var(--cr-accent) 60%, transparent);
+}
+
+.cr-link--now .cr-link-face {
+  background: color-mix(in srgb, var(--cr-accent) 7%, var(--surface-bottom));
+}
+
+.cr-link--now .cr-link-num {
+  color: var(--cr-accent);
+}
+
+.cr-link--cracked .cr-link-face {
+  border-color: color-mix(in srgb, var(--cr-accent) 38%, transparent);
+  background: color-mix(in srgb, var(--cr-accent) 9%, transparent);
+}
+
+.cr-link--cracked .cr-link-word {
+  color: color-mix(in srgb, var(--cr-accent) 70%, var(--foreground));
+}
+
+.cr-link--cracked .cr-link-num {
+  border-color: color-mix(in srgb, var(--cr-accent) 45%, transparent);
+  color: var(--cr-accent);
+}
+
+/* Thrown away. The word is there, because knowing it is the point of the rest
+   of the chain, but nothing about it is lit up. */
+.cr-link--skipped .cr-link-face {
+  border-style: dashed;
+  opacity: 0.65;
+}
+
+.cr-link--skipped .cr-link-word {
+  color: var(--cr-quiet);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* ── Tags and worth ──────────────────────────────────────────── */
+.cr-link-tag {
+  flex: 0 0 auto;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.cr-link-tag--got {
+  color: color-mix(in srgb, var(--cr-accent) 75%, var(--foreground));
+}
+
+.cr-link-tag--gone {
+  color: var(--cr-quiet);
+}
+
+/* What the word is still worth, on the same square Password's ladder uses. It
+   walks 3, 2, 1 as letters come off, which is the whole reason to think before
+   spending a hint. */
+.cr-link-worth {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.66rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--muted-foreground);
+}
+
+/* ── The two buttons ─────────────────────────────────────────────
+   Beside the link rather than inside it. Both spend something, and neither
+   should sit under the pointer that is trying to open the word.
+
+   One container holding both, split by a hairline, exactly like the host and
+   spectator marks in the shell header. Two loose buttons floating next to a
+   full height row read as debris; one block the same height as the word reads
+   as part of the row. */
+.cr-link-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  overflow: clip;
+}
+
+.cr-link-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+/* The same hairline the card splits its score with. */
+.cr-link-btn + .cr-link-btn {
+  border-left: 1px solid var(--border);
+}
+
+.cr-link-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.4;
+}
+
+.cr-link-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cr-accent) 12%, transparent);
+  color: var(--cr-accent);
+}
+
+.cr-link-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Armed. The second press throws the word away, so it stops being a quiet grey
+   button and says so. */
+.cr-link-btn--armed,
+.cr-link-btn--armed:hover:not(:disabled) {
+  background: color-mix(in srgb, #f87171 18%, transparent);
+  color: #f87171;
+}
+
+/* ── Writing your own ────────────────────────────────────────────
+   The same links, because what you are building and what they will be working
+   on are the same object. */
+.cr-link--write .cr-link-face {
+  border-style: dashed;
+}
+
+.cr-link--write:focus-within .cr-link-face {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--cr-accent) 55%, transparent);
+}
+
+.cr-write-input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--foreground);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cr-write-input::placeholder {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--muted-foreground);
+}
+
+/* ── Lines and counts ────────────────────────────────────────── */
+.cr-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.cr-count svg {
+  width: 12px;
+  height: 12px;
+}
+
+.cr-note {
+  margin: 0 0 0.6rem;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--secondary);
+}
+
+.cr-note--centred {
+  margin: 0;
+  text-align: center;
+}
+
+/* The eye on a watched board's heading. */
+.cr-board .gk-roster-label svg {
+  width: 12px;
+  height: 12px;
+  vertical-align: -1px;
+  margin-right: 0.2rem;
 }
