@@ -230,6 +230,17 @@ const ROUND_GUESSES: PasswordGuess[] = [
   { id: "g3", sessionId: "seed-bram", text: "Penguin", ts: T0 + 21_000, correct: true, guessNumber: 3 },
 ];
 
+/* A word that took a while, for checking the record scrolls instead of
+   shoving the boxes down the page. */
+const LONG_CLUES: PasswordClue[] = ["tuxedo", "waddles", "cold", "swims", "ice", "bird"].map((text, i) => ({
+  id: `lc${i}`, sessionId: i % 2 ? "seed-cleo" : "seed-ada", text, ts: T0 + i * 4_000, clueNumber: i + 1,
+}));
+
+const LONG_GUESSES: PasswordGuess[] = ["Waiter", "Duck", "Seal", "Walrus", "Penguin"].map((text, i) => ({
+  id: `lg${i}`, sessionId: "seed-dov", text, ts: T0 + 2_000 + i * 4_000,
+  correct: text === "Penguin", guessNumber: i + 1,
+}));
+
 /* Words this team already took. The only place the points you earned are
    written down while the clock is still running. */
 const TAKEN: PasswordTaken[] = [
@@ -452,46 +463,49 @@ export function PasswordKitPage() {
 
       <Section title="The two boxes" note="yours takes typing, theirs shows it arriving. both are on screen the whole time, because you are both going at once">
         <div className="pw-exchange">
-          <PasswordLane
-            side="clue"
-            mine
-            people={["seed-ada", "seed-cleo"]}
-            names={NAMES}
-            value="tuxedo"
-            latest={{ sessionId: "seed-cleo", text: "waddles" }}
-            onChange={NOOP}
-            onSubmit={NOOP}
-          />
-          <PasswordLane
-            side="guess"
-            people={["seed-dov"]}
-            names={NAMES}
-            drafts={[{ sessionId: "seed-dov", role: "guess", text: "pengu" }]}
-            latest={{ sessionId: "seed-dov", text: "Duck" }}
-          />
+          <div className="pw-lanes">
+            <PasswordLane
+              side="clue"
+              mine
+              people={["seed-ada", "seed-cleo"]}
+              names={NAMES}
+              value="tuxedo"
+              latest={{ sessionId: "seed-cleo", text: "waddles" }}
+              onChange={NOOP}
+              onSubmit={NOOP}
+            />
+            <PasswordLane
+              side="guess"
+              people={["seed-dov"]}
+              names={NAMES}
+              drafts={[{ sessionId: "seed-dov", role: "guess", text: "pengu" }]}
+              latest={{ sessionId: "seed-dov", text: "Duck" }}
+            />
+          </div>
           <div className="pw-record">
             <PasswordStream clues={ROUND_CLUES} guesses={ROUND_GUESSES} names={NAMES} />
+            <PasswordTakenList taken={TAKEN} names={NAMES} />
           </div>
         </div>
       </Section>
 
-      <Section title="Every state a box has" note="waiting on them, mid word, blocked, and no word to talk about yet">
-        <div className="pw-exchange">
+      <Section title="Every state a box has" note="waiting on them, blocked by a rule, and no word to talk about yet">
+        <div className="pw-lanes">
           <PasswordLane side="clue" people={["seed-cleo"]} names={NAMES} />
           <PasswordLane side="guess" mine people={["seed-ada"]} names={NAMES} value="Seal Otter" problem="One word only." onChange={NOOP} onSubmit={NOOP} />
           <PasswordLane side="clue" mine people={["seed-ada"]} names={NAMES} value="" disabled onChange={NOOP} onSubmit={NOOP} />
         </div>
       </Section>
 
-      <Section title="The record" note="this word so far, beside the boxes rather than in with them. what happened is not what is happening">
-        <div style={{ maxWidth: "16rem" }}>
-          <PasswordStream clues={ROUND_CLUES} guesses={ROUND_GUESSES} names={NAMES} />
-        </div>
-        <div style={{ maxWidth: "16rem" }}>
-          <PasswordStream clues={[]} guesses={[]} names={NAMES} />
-        </div>
-        <div style={{ maxWidth: "16rem" }}>
-          <PasswordTakenList taken={TAKEN} names={NAMES} />
+      <Section title="The record" note="this word so far, beside the boxes rather than in with them. it scrolls rather than pushing them down the page">
+        <div style={{ display: "flex", gap: "0.6rem", alignItems: "start" }}>
+          <div style={{ width: "15rem", height: "13rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            <PasswordStream clues={LONG_CLUES} guesses={LONG_GUESSES} names={NAMES} />
+            <PasswordTakenList taken={TAKEN} names={NAMES} />
+          </div>
+          <div style={{ width: "15rem" }}>
+            <PasswordStream clues={[]} guesses={[]} names={NAMES} />
+          </div>
         </div>
       </Section>
 
