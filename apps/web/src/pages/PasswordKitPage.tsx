@@ -11,13 +11,15 @@ import {
   type PasswordTeam,
 } from "../components/password/PasswordLobby";
 import {
-  PasswordComposer,
+  PasswordLane,
   PasswordRound,
   PasswordScoreboard,
   PasswordStream,
+  PasswordTakenList,
   PasswordWordCard,
   type PasswordClue,
   type PasswordGuess,
+  type PasswordTaken,
 } from "../components/password/PasswordRound";
 import "../styles/game-shared.css";
 
@@ -228,13 +230,25 @@ const ROUND_GUESSES: PasswordGuess[] = [
   { id: "g3", sessionId: "seed-bram", text: "Penguin", ts: T0 + 21_000, correct: true, guessNumber: 3 },
 ];
 
+/* Words this team already took. The only place the points you earned are
+   written down while the clock is still running. */
+const TAKEN: PasswordTaken[] = [
+  { roundId: "r1", word: "Otter", guesserId: "seed-dov", guessCount: 1, points: 3 },
+  { roundId: "r2", word: "Badger", guesserId: "seed-cleo", guessCount: 4, points: 1 },
+];
+
 /* What the other side does while you sit there. Whichever end you are on, the
    script plays the opposite one, because a round with nobody answering is not
    a round. */
 const CLUE_SCRIPT = ["tuxedo", "waddles", "cold"];
 const GUESS_SCRIPT = ["Waiter", "Duck", "Penguin"];
 
-const ROUND_TEAMS = deal(6, 3);
+/* Two teams of three, so the clue side has more than one person on it. Two
+   people cluing at the same guesser is the shape this game actually takes. */
+const ROUND_TEAMS: PasswordTeam[] = [
+  { name: "Team A", members: ["seed-ada", "seed-cleo", "seed-dov"] },
+  { name: "Team B", members: ["seed-bram", "seed-esme", "seed-finn"] },
+];
 
 /** The round with a hand on it: your box works, and the other end answers. */
 function LiveRound() {
@@ -247,17 +261,20 @@ function LiveRound() {
   const [step, setStep] = useState(0);
   const timer = useRef<number>(0);
 
-  /* Your team is Team A: Ada is you, Dov is the other half of it. */
+  /* Your team is Team A. You are Ada; Cleo clues alongside you and Dov
+     guesses, or the other way round when you take the guessing seat. */
   const me = "seed-ada";
-  const mate = "seed-dov";
-  const rival = "seed-bram";
+  const mate = "seed-cleo";
+  const other = "seed-dov";
+  const guesserId = guessing ? me : other;
 
   const reset = () => {
     setValue(""); setClues([]); setGuesses([]); setDraft(""); setStep(0); setSkips(PASSWORD_SKIPS);
   };
 
-  /* The other end types for a moment, then says it. Watching the draft turn
-     into a line is the thing this page exists to check. */
+  /* The other end types for a moment, then says it. Watching somebody else's
+     keystrokes land in the box beside yours is the thing this page exists to
+     check, so the draft sits there a beat before it becomes a line. */
   useEffect(() => {
     const script = guessing ? CLUE_SCRIPT : GUESS_SCRIPT;
     const next = script[step];
@@ -269,10 +286,13 @@ function LiveRound() {
         setDraft("");
         const ts = Date.now();
         if (guessing) {
-          setClues((all) => [...all, { id: `s${ts}`, sessionId: mate, text: next, ts, clueNumber: all.length + 1 }]);
+          /* Both your teammates clue, so they take it in turns to be the one
+             who actually sends. */
+          const from = step % 2 === 0 ? mate : other;
+          setClues((all) => [...all, { id: `s${ts}`, sessionId: from, text: next, ts, clueNumber: all.length + 1 }]);
         } else {
           setGuesses((all) => [...all, {
-            id: `s${ts}`, sessionId: rival, text: next, ts,
+            id: `s${ts}`, sessionId: other, text: next, ts,
             correct: next === "Penguin", guessNumber: all.length + 1,
           }]);
         }
@@ -326,17 +346,20 @@ function LiveRound() {
         role={guessing ? "guess" : "clue"}
         word={guessing ? null : "Penguin"}
         category="animals"
+        teamMembers={ROUND_TEAMS[0]!.members}
+        guesserId={guesserId}
         clues={clues}
         guesses={guesses}
-        drafts={draft ? [{ sessionId: guessing ? mate : rival, role: guessing ? "clue" : "guess", text: draft }] : []}
+        drafts={draft ? [{ sessionId: guessing ? mate : other, role: guessing ? "clue" : "guess", text: draft }] : []}
+        taken={TAKEN}
         names={NAMES}
         sessionId={me}
         value={value}
         skipsRemaining={skips}
         teams={ROUND_TEAMS}
-        scores={{ "Team A": 4, "Team B": 7, "Team C": 2 }}
+        scores={{ "Team A": 4, "Team B": 7 }}
         targetScore={10}
-        guessers={{ "Team A": guessing ? me : mate, "Team B": rival, "Team C": "seed-cleo" }}
+        guessers={{ "Team A": guesserId, "Team B": "seed-bram" }}
         onChange={setValue}
         onSubmit={submit}
         onSkip={() => { setSkips((n) => Math.max(0, n - 1)); reset(); }}
@@ -418,31 +441,58 @@ export function PasswordKitPage() {
       </Section>
 
       <Section title="What you know" note="one of you can see it and one of you cannot. that is the whole game, so the two cards do not look alike">
-        <PasswordWordCard role="clue" word="Penguin" category="animals" />
-        <PasswordWordCard role="guess" word={null} category="animals" />
+        <PasswordWordCard role="clue" word="Penguin" category="animals" worth={3} />
+        <PasswordWordCard role="guess" word={null} category="animals" worth={3} />
+        <PasswordWordCard role="guess" word={null} category="animals" worth={1} />
         <PasswordWordCard role="clue" word="Penguin" />
         {/* Decryption can take a beat, and a clue giver with no word cannot
             do the only thing they are here for. */}
         <PasswordWordCard role="clue" word={null} category="animals" onRetry={NOOP} />
       </Section>
 
-      <Section title="The box" note="empty, mid thought, and a guess you have already spent">
-        <PasswordComposer role="clue" value="" onChange={NOOP} onSubmit={NOOP} />
-        <PasswordComposer role="guess" value="" onChange={NOOP} onSubmit={NOOP} />
-        <PasswordComposer role="clue" value="tuxedo" onChange={NOOP} onSubmit={NOOP} />
-        <PasswordComposer role="guess" value="Seal" duplicate onChange={NOOP} onSubmit={NOOP} />
+      <Section title="The two boxes" note="yours takes typing, theirs shows it arriving. both are on screen the whole time, because you are both going at once">
+        <div className="pw-exchange">
+          <PasswordLane
+            side="clue"
+            mine
+            people={["seed-ada", "seed-cleo"]}
+            names={NAMES}
+            value="tuxedo"
+            latest={{ sessionId: "seed-cleo", text: "waddles" }}
+            onChange={NOOP}
+            onSubmit={NOOP}
+          />
+          <PasswordLane
+            side="guess"
+            people={["seed-dov"]}
+            names={NAMES}
+            drafts={[{ sessionId: "seed-dov", role: "guess", text: "pengu" }]}
+            latest={{ sessionId: "seed-dov", text: "Duck" }}
+          />
+          <div className="pw-record">
+            <PasswordStream clues={ROUND_CLUES} guesses={ROUND_GUESSES} names={NAMES} />
+          </div>
+        </div>
       </Section>
 
-      <Section title="The stream" note="one conversation in the order it happened. the guess steps in under the clue that caused it">
-        <PasswordStream clues={ROUND_CLUES} guesses={ROUND_GUESSES} names={NAMES} sessionId="seed-ada" />
-        <PasswordStream
-          clues={ROUND_CLUES.slice(0, 2)}
-          guesses={ROUND_GUESSES.slice(0, 1)}
-          drafts={[{ sessionId: "seed-bram", role: "guess", text: "penguin" }]}
-          names={NAMES}
-          sessionId="seed-ada"
-        />
-        <PasswordStream clues={[]} guesses={[]} names={NAMES} sessionId="seed-ada" />
+      <Section title="Every state a box has" note="waiting on them, mid word, blocked, and no word to talk about yet">
+        <div className="pw-exchange">
+          <PasswordLane side="clue" people={["seed-cleo"]} names={NAMES} />
+          <PasswordLane side="guess" mine people={["seed-ada"]} names={NAMES} value="Seal Otter" problem="One word only." onChange={NOOP} onSubmit={NOOP} />
+          <PasswordLane side="clue" mine people={["seed-ada"]} names={NAMES} value="" disabled onChange={NOOP} onSubmit={NOOP} />
+        </div>
+      </Section>
+
+      <Section title="The record" note="this word so far, beside the boxes rather than in with them. what happened is not what is happening">
+        <div style={{ maxWidth: "16rem" }}>
+          <PasswordStream clues={ROUND_CLUES} guesses={ROUND_GUESSES} names={NAMES} />
+        </div>
+        <div style={{ maxWidth: "16rem" }}>
+          <PasswordStream clues={[]} guesses={[]} names={NAMES} />
+        </div>
+        <div style={{ maxWidth: "16rem" }}>
+          <PasswordTakenList taken={TAKEN} names={NAMES} />
+        </div>
       </Section>
 
       <Section title="Racing" note="every team plays at once, so yours is open and the rest are a face and a number">
