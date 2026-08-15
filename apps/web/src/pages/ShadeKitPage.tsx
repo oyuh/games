@@ -13,6 +13,7 @@ import {
 import { SHADE_BANDS, ShadeGrid, shadeDistLabel } from "../components/shade/ShadeGrid";
 import { ShadeClue, ShadeClueTag, ShadePick } from "../components/shade/ShadeClue";
 import { ShadeGuess } from "../components/shade/ShadeGuess";
+import { ShadeResult } from "../components/shade/ShadeResult";
 import "../styles/game-shared.css";
 
 /**
@@ -341,6 +342,25 @@ function LiveGuess() {
   );
 }
 
+/* A round that tells the whole ladder in one picture: one spot on, one a ring
+   out, one two out, one who never found it, and one who never locked in. A
+   result screen where everybody did about as well shows nothing about how the
+   scoring reads. */
+const RESULT = {
+  grid: GRID,
+  target: TARGET,
+  clue1: "ocean",
+  clue2: "deep water",
+  leader: { sessionId: "seed-ada", name: "Ada", points: 3 },
+  players: [
+    { sessionId: "seed-bram", name: "Bram", guess: { row: 4, col: 7 }, points: 5 },
+    { sessionId: "seed-cleo", name: "Cleo", guess: { row: 5, col: 8 }, points: 3 },
+    { sessionId: "seed-dov", name: "Dov", guess: { row: 2, col: 5 }, points: 2, you: true },
+    { sessionId: "seed-eve", name: "Eve", guess: { row: 8, col: 1 }, points: 0 },
+    { sessionId: "seed-fin", name: "Fin", points: 0 },
+  ],
+};
+
 /* Everything a guess screen needs that is the same in every state of it. */
 const GUESS = {
   round: 1 as const,
@@ -494,6 +514,39 @@ export function ShadeKitPage() {
       <Section title="Not guessing" note="the leader watches with the color still on their board, and anybody else watches without it. neither gets a button">
         <ShadeGuess {...GUESS} isGuessing={false} target={TARGET} selected={null} lockedCount={3} />
         <ShadeGuess {...GUESS} isGuessing={false} selected={null} lockedCount={3} />
+      </Section>
+
+      <Section title="The round result" note="the eight seconds between rounds. where the color was, everybody stood where they finished, and what that paid. nothing here is a button, the phase moves itself on">
+        <>
+          <GameShellHeader
+            collapsible
+            game="shade"
+            title="Shade Signal"
+            phases={shadePhases(false)}
+            phase="reveal"
+            round={{ current: 2, total: 4 }}
+            endsAt={Date.now() + 8_000}
+            duration={8}
+            code="V7KP2"
+          />
+          <ShadeResult {...RESULT} />
+        </>
+      </Section>
+
+      <Section title="The last round result" note="same screen, and the only thing that changes is the one line saying nothing else is coming">
+        <ShadeResult {...RESULT} last />
+      </Section>
+
+      <Section title="A round nobody got" note="the accent runs out past the last band that pays, so a board of misses is a list of plain cards. the leader still scores the average, which here is nothing">
+        <ShadeResult
+          {...RESULT}
+          leader={{ sessionId: "seed-ada", name: "Ada", points: 0 }}
+          players={[
+            { sessionId: "seed-bram", name: "Bram", guess: { row: 9, col: 0 }, points: 0 },
+            { sessionId: "seed-cleo", name: "Cleo", guess: { row: 0, col: 11 }, points: 0, you: true },
+            { sessionId: "seed-dov", name: "Dov", guess: { row: 8, col: 2 }, points: 0 },
+          ]}
+        />
       </Section>
 
       <Section title="Picking your own color" note="only when the host turned it on. the same board with a confirm under it, and from the other side the same wait">

@@ -125,10 +125,7 @@ export function ShadeGuess({
 
   return (
     <ShadeStage
-      /* Only when there is something to do. Watching the room guess is a
-         board and two lines, and two lines do not need a column of their
-         own. */
-      rail={isGuessing}
+      rail
       foot={
         <>
           {(clue1 || clue2) && (
