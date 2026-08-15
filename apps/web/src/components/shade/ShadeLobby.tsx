@@ -8,7 +8,7 @@ import { GameRoster } from "../shared/GameRoster";
 import type { PlayerCardProps } from "../shared/PlayerCard";
 import type { GamePhase } from "../shared/GameShellHeader";
 import { getDisplayName } from "../../lib/session";
-import { SHADE_BANDS, ShadeGrid, type ShadeCell } from "./ShadeGrid";
+import { ShadeBands, ShadeGrid, type ShadeCell } from "./ShadeGrid";
 import "../../styles/shade-kit.css";
 
 /**
@@ -126,17 +126,7 @@ export function ShadeExplorer({ rows, cols, seed }: { rows: number; cols: number
 
         <ShadeGrid rows={rows} cols={cols} seed={seed} target={pretend} zones scores onSelect={setPretend} />
 
-        {pretend && (
-          <GameFacts
-            facts={SHADE_BANDS.map((band) => ({
-              value: `${band.points} pt${band.points === 1 ? "" : "s"}`,
-              label: band.label,
-              /* One colour getting quieter as the guess gets worse, which is
-                 the same slope the rings on the board are drawn with. */
-              tone: `color-mix(in srgb, var(--game-accent) ${100 - band.dist * 24}%, var(--secondary))`,
-            }))}
-          />
-        )}
+        {pretend && <ShadeBands />}
       </div>
     </GamePanel>
   );

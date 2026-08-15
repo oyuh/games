@@ -50,6 +50,33 @@ export function shadeDistLabel(dist: number): string {
   return dist === 0 ? "Spot on" : `${dist} away`;
 }
 
+/** The strength the board draws each band's ring at, so the legend below can
+ *  draw itself with the same numbers instead of guessing at them. */
+const BAND_INK = [0.9, 0.55, 0.32, 0.16];
+
+/**
+ * The ladder, as four cells lifted off the board. Each one carries the ring it
+ * is describing at the strength the grid draws it, so read left to right the
+ * row is the same fade you are looking at up there, and the target keeps its
+ * dot so the one that is the colour itself is the one that looks like it.
+ */
+export function ShadeBands({ className = "" }: { className?: string }) {
+  return (
+    <div className={`sk-bands ${className}`.trim()}>
+      {SHADE_BANDS.map((band) => (
+        <span key={band.dist} className="sk-band" style={{ "--sk-band": BAND_INK[band.dist] } as CSSProperties}>
+          <span
+            className={`sk-band-swatch${band.dist === 0 ? " sk-band-swatch--target" : ""}`}
+            aria-hidden="true"
+          />
+          <span className="sk-band-points">{band.points} pt{band.points === 1 ? "" : "s"}</span>
+          <span className="sk-band-label">{band.label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export interface ShadeMarker {
   sessionId: string;
   name: string;
@@ -130,9 +157,11 @@ export function ShadeGrid({
             ? `${shadeDistLabel(dist)}, ${shadeScore(dist)} pt${shadeScore(dist) === 1 ? "" : "s"}`
             : undefined;
 
+        const inked = band !== null && zones;
+
         const classes = [
           "sk-cell",
-          band !== null && zones ? `sk-cell--band sk-cell--band-${band}` : "",
+          inked ? "sk-cell--band" : "",
           dist === 0 ? "is-target" : "",
           picked ? "is-picked" : "",
           here ? "is-marked" : "",
@@ -160,7 +189,13 @@ export function ShadeGrid({
 
         const shared = {
           className: classes,
-          style: { background: generateGridColor(row, col, rows, cols, seed) },
+          style: {
+            background: generateGridColor(row, col, rows, cols, seed),
+            /* The ring's strength rides in on a var rather than a class per
+               band, so the board and the legend under it are reading one
+               ladder and there is one place to change it. */
+            ...(inked ? { "--sk-band": BAND_INK[band] } : {}),
+          } as CSSProperties,
           ...(tooltip ? { "data-tooltip": tooltip, "data-tooltip-pos": "top", "data-tooltip-variant": "game" } : {}),
         };
 
