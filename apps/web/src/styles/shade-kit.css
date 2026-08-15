@@ -18,6 +18,8 @@
 .sk-bands,
 .sk-clue,
 .sk-composer,
+.sk-pick,
+.sk-tally,
 .sk-stage {
   --sk-accent: var(--game-accent, var(--primary));
   /* Everything drawn over a cell, in one color. It has to read over any hue
@@ -386,4 +388,100 @@
   color: var(--secondary);
   text-align: center;
   text-wrap: balance;
+}
+
+/* Both clues at once, once there are two of them. */
+.sk-clues {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+/* ── The cell you are pointing at ────────────────────────────────
+   Blown up, because a cell is one of a hundred and twenty small squares and
+   the whole game is deciding whether that one is it. Nobody can make that
+   call off something 40 pixels wide with eleven neighbours touching it. */
+.sk-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.8rem 0.35rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.sk-pick-swatch {
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  /* The same two tone edge the board's own picked cell wears, so the swatch
+     reads as that cell rather than as a color sample. */
+  border: 2px solid var(--background);
+  outline: 2px solid var(--sk-mark);
+  outline-offset: -1px;
+}
+
+.sk-pick-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+.sk-pick-label svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.6;
+}
+
+/* Handed over. Green rather than the game's accent, because this is the one
+   thing on the screen that means "done" and every other game here says done
+   in the same color. */
+.sk-pick.is-locked {
+  border-color: color-mix(in srgb, #22c55e 32%, transparent);
+  background: color-mix(in srgb, #22c55e 8%, transparent);
+}
+
+.sk-pick.is-locked .sk-pick-label {
+  color: #4ade80;
+}
+
+/* ── Who is in ───────────────────────────────────────────────────
+   One dot each. A count is a number you stop to read; the dots go in without
+   stopping, which is what you want on a screen with a clock draining across
+   the top of it. */
+.sk-tally {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sk-tally-dots {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.sk-tally-dots i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--sk-mark) 30%, transparent);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.sk-tally-dots i.is-in {
+  border-color: #4ade80;
+  background: #4ade80;
+}
+
+.sk-tally-text {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondary);
 }
