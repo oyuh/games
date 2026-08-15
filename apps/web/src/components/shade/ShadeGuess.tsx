@@ -125,6 +125,10 @@ export function ShadeGuess({
 
   return (
     <ShadeStage
+      /* Only when there is something to do. Watching the room guess is a
+         board and two lines, and two lines do not need a column of their
+         own. */
+      rail={isGuessing}
       foot={
         <>
           {(clue1 || clue2) && (
@@ -150,7 +154,7 @@ export function ShadeGuess({
                       : "Press the cell you think they mean. Close still pays, so a good guess beats no guess."}
               </p>
 
-              <div className="gk-actions-row">
+              <div className="sk-controls">
                 {locked ? (
                   <GameButton variant="secondary" icon={<FiEdit2 />} onClick={onUnlock}>
                     Move it
