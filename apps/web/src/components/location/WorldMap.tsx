@@ -16,7 +16,9 @@ export interface MapMarker {
 }
 
 interface WorldMapProps {
-  height?: number;
+  /** A number is pixels. A css length works too, so a map can be sized off the
+   *  viewport rather than a number somebody picked once. */
+  height?: number | string;
   onClick?: (coords: { lat: number; lng: number }) => void;
   markers?: MapMarker[];
   interactive?: boolean;
@@ -42,6 +44,11 @@ interface WorldMapProps {
   closeKey?: string | number | null;
   /** Controls shown at the bottom of the expanded map. */
   expandedActions?: React.ReactNode;
+  /** Drawn over the map itself, on both the inline one and the expanded one.
+   *  For the things a phase has to say about the map, which read better on it
+   *  than stacked underneath it. The layer ignores the pointer, so anything in
+   *  here that wants clicking needs `locsig-map-ui` and pointer-events. */
+  overlay?: React.ReactNode;
 }
 
 type WorldPoint = { x: number; y: number };
@@ -52,6 +59,9 @@ const MIN_ZOOM = 2;
 const MAX_ZOOM = 18;
 const MERCATOR_LAT_LIMIT = 85.05112878;
 const CLICK_TOLERANCE_PX = 6;
+/* How much wheel it takes to move one zoom level. About one notch of a mouse
+   wheel, and a short flick of a trackpad. */
+const WHEEL_STEP_PX = 80;
 const MARKER_REPEAT_PADDING = 96;
 const EMPTY_MARKERS: MapMarker[] = [];
 
@@ -199,7 +209,7 @@ export function fitRepeatingMapBounds(
 }
 
 interface MapSurfaceProps {
-  height: number;
+  height: number | string;
   className?: string | undefined;
   centerPx: WorldPoint;
   zoom: number;
@@ -215,6 +225,7 @@ interface MapSurfaceProps {
   onMapClick?: ((coords: { lat: number; lng: number }) => void) | undefined;
   onExpand: () => void;
   actionOverlay?: React.ReactNode;
+  overlay?: React.ReactNode;
 }
 
 function MapSurface({
@@ -234,9 +245,14 @@ function MapSurface({
   onMapClick,
   onExpand,
   actionOverlay,
+  overlay,
 }: MapSurfaceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height });
+  /* Only a pixel height can stand in before the element has been measured. A
+     css one is whatever the browser makes of it, so it starts at nothing and
+     the observer below fills it in on the first frame. */
+  const fallbackHeight = typeof height === "number" ? height : 0;
+  const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height: fallbackHeight });
   const dragRef = useRef<{ pointerId: number; start: WorldPoint; startCenter: WorldPoint; moved: boolean } | null>(null);
   const wheelDeltaRef = useRef(0);
 
@@ -246,7 +262,7 @@ function MapSurface({
 
     const updateSize = () => {
       const rect = element.getBoundingClientRect();
-      setViewport({ width: rect.width, height: rect.height || height });
+      setViewport({ width: rect.width, height: rect.height || fallbackHeight });
     };
 
     updateSize();
@@ -259,7 +275,7 @@ function MapSurface({
 
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, [height]);
+  }, [fallbackHeight]);
 
   const topLeft = useMemo(
     () => ({
@@ -400,20 +416,36 @@ function MapSurface({
     [interactive, onZoomAround, viewport],
   );
 
-  const handleWheel = useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
-      if (!interactive) return;
+  /**
+   * The wheel has to be bound by hand. React registers onWheel as a passive
+   * listener up on the root, and a passive listener is not allowed to call
+   * preventDefault, so the page scrolled away underneath the map while the map
+   * politely asked it not to. Bound here it is allowed to say no.
+   */
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || !interactive) return;
+
+    const onWheel = (event: WheelEvent) => {
       event.preventDefault();
 
-      wheelDeltaRef.current += event.deltaY;
-      if (Math.abs(wheelDeltaRef.current) < 80) return;
+      /* Firefox reports the wheel in lines and some browsers in pages, so the
+         raw number means different things in different places. Everything is
+         put into pixels before it is counted. */
+      const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? (element.clientHeight || 400) : 1;
+      wheelDeltaRef.current += event.deltaY * scale;
+      if (Math.abs(wheelDeltaRef.current) < WHEEL_STEP_PX) return;
 
       const direction = wheelDeltaRef.current < 0 ? 1 : -1;
       wheelDeltaRef.current = 0;
-      zoomAround(zoom + direction, localPointFromEvent(event));
-    },
-    [interactive, localPointFromEvent, zoom, zoomAround],
-  );
+
+      const rect = element.getBoundingClientRect();
+      onZoomAround(clampZoom(zoom + direction), { x: event.clientX - rect.left, y: event.clientY - rect.top }, viewport);
+    };
+
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
+  }, [interactive, onZoomAround, viewport, zoom]);
 
   const zoomButtonAnchor = { x: viewport.width / 2, y: viewport.height / 2 };
 
@@ -429,7 +461,6 @@ function MapSurface({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
       onPointerCancel={handlePointerEnd}
-      onWheel={handleWheel}
       onDragStart={(event) => event.preventDefault()}
       onDoubleClick={(event) => {
         if (!interactive) return;
@@ -590,16 +621,23 @@ function MapSurface({
         </button>
       )}
 
-      <div className="locsig-map-bottom-left" data-cursor="default">
-        {coordsOverlay && (
+      {/* Whatever the phase has to say about the map, said on it. The layer is
+          the whole surface and ignores the pointer, so what goes in here can
+          sit wherever it wants without taking the map's drag away from it. */}
+      {overlay && <div className="locsig-map-overlay">{overlay}</div>}
+
+      {coordsOverlay && (
+        <div className="locsig-map-bottom-left" data-cursor="default">
           <div className="locsig-coords-overlay">
             {coordsOverlay.lat.toFixed(4)}, {coordsOverlay.lng.toFixed(4)}
           </div>
-        )}
-        <div className="locsig-map-credit">
-          Map imagery &copy; Google
         </div>
-      </div>
+      )}
+
+      {/* Google want their name on their tiles, which is fair. It sits in the
+          corner the way every other map's does: small, out of the way, and
+          readable if you go looking for it. */}
+      <div className="locsig-map-credit" data-cursor="default">Imagery &copy; Google</div>
 
       {actionOverlay && (
         <div className="locsig-map-expanded-actions locsig-map-ui" data-cursor="default">
@@ -627,6 +665,7 @@ export function WorldMap({
   timerLabel = "Time",
   closeKey,
   expandedActions,
+  overlay,
 }: WorldMapProps) {
   const initialZoom = clampZoom(controlledZoom ?? defaultZoom);
   const initialCenter = controlledCenter ?? defaultCenter;
@@ -740,7 +779,7 @@ export function WorldMap({
     };
   }, [expanded]);
 
-  const renderMap = (mapHeight: number, showExpand: boolean) => (
+  const renderMap = (mapHeight: number | string, showExpand: boolean) => (
     <MapSurface
       height={mapHeight}
       className={className}
@@ -758,6 +797,7 @@ export function WorldMap({
       onMapClick={interactive ? onClick : undefined}
       onExpand={() => setExpanded(true)}
       actionOverlay={showExpand ? undefined : expandedActions}
+      overlay={overlay}
     />
   );
 
