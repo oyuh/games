@@ -445,14 +445,6 @@
     row-gap: 0.3rem;
   }
 }
-.shikaku-page .game-header .game-header-icon {
-  width: 32px;
-  height: 32px;
-}
-.shikaku-page .game-header .game-header-icon svg {
-  width: 18px;
-  height: 18px;
-}
 .shikaku-page .game-header .game-title {
   font-size: 1.35rem;
 }

@@ -1469,9 +1469,6 @@ export function ShikakuPage() {
         <div className="shikaku-container">
         <div className="game-header">
           <div className="game-header-left">
-            <div className="game-header-icon">
-              <GameIcon game="shikaku" size={20} />
-            </div>
             <h1 className="game-title">Shikaku</h1>
             <GameStatBar>
               <GameStat
@@ -1485,7 +1482,7 @@ export function ShikakuPage() {
                     ? `${infiniteSolved} solved - ∞ mode - ${difficulty}`
                     : `Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN} - ${difficulty}`}
               />
-              <GameTimer ms={elapsedMs} running={phase === "playing" && !showPuzzleSolvedAnim} />
+              <GameTimer ms={elapsedMs} />
               {(infiniteMode || customMode) && (
                 <GameStat
                   icon={<FiHash size={13} />}

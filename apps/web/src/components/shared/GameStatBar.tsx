@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { FiClock } from "react-icons/fi";
 
 /**
  * The strip of numbers above a solo board: which puzzle you are on, how it is
@@ -26,6 +27,7 @@ export function GameStat({
   accent,
   tooltip,
   onClick,
+  className,
 }: {
   icon?: ReactNode;
   value: ReactNode;
@@ -35,8 +37,10 @@ export function GameStat({
   accent?: string | undefined;
   tooltip?: string | undefined;
   onClick?: (() => void) | undefined;
+  className?: string | undefined;
 }) {
   const style = accent ? ({ "--stat-accent": accent } as CSSProperties) : undefined;
+  const classes = `game-stat${className ? ` ${className}` : ""}`;
   const inner = (
     <>
       {icon && <span className="game-stat-icon">{icon}</span>}
@@ -49,7 +53,7 @@ export function GameStat({
     return (
       <button
         type="button"
-        className="game-stat game-stat--action"
+        className={`${classes} game-stat--action`}
         style={style}
         data-tooltip={tooltip}
         data-tooltip-variant="info"
@@ -61,43 +65,36 @@ export function GameStat({
   }
 
   return (
-    <div className="game-stat" style={style} data-tooltip={tooltip} data-tooltip-variant="info">
+    <div className={classes} style={style} data-tooltip={tooltip} data-tooltip-variant="info">
       {inner}
     </div>
   );
 }
 
 /**
- * A stopwatch. The minutes and seconds are the number you read; the
- * hundredths are along for the ride, so they sit smaller and dimmer. The dot
- * only pulses while the clock is actually running, which is the whole reason
- * it is there.
+ * The stopwatch is a stat like any other: clock icon, the number you read,
+ * and the hundredths in the quiet slot. Same parts as the rest of the strip
+ * so the digits line up with the text either side of them.
  */
 export function GameTimer({
   ms,
-  running = false,
   accent,
   tooltip = "Elapsed time",
 }: {
   ms: number;
-  running?: boolean;
-  accent?: string;
-  tooltip?: string;
+  accent?: string | undefined;
+  tooltip?: string | undefined;
 }) {
   const [clock, centis] = formatTime(ms).split(".");
 
   return (
-    <div
-      className="game-stat game-timer"
-      style={accent ? ({ "--stat-accent": accent } as CSSProperties) : undefined}
-      data-running={running || undefined}
-      data-tooltip={tooltip}
-      data-tooltip-variant="info"
-      role="timer"
-    >
-      <span className="game-timer-dot" aria-hidden="true" />
-      <span className="game-timer-clock">{clock}</span>
-      <span className="game-timer-centis">.{centis}</span>
-    </div>
+    <GameStat
+      className="game-timer"
+      icon={<FiClock size={13} />}
+      value={clock}
+      hint={`.${centis}`}
+      accent={accent}
+      tooltip={tooltip}
+    />
   );
 }
