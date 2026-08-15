@@ -77,23 +77,6 @@
   border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
-.pips-seed-badge {
-  cursor: pointer;
-  font: inherit;
-}
-
-.pips-progress-badge {
-  color: #fbbf24;
-  border-color: color-mix(in srgb, #fbbf24 34%, transparent);
-  background: color-mix(in srgb, #fbbf24 10%, transparent);
-}
-
-.pips-progress-badge--solved {
-  color: #2dd4bf;
-  border-color: color-mix(in srgb, #2dd4bf 38%, transparent);
-  background: color-mix(in srgb, #2dd4bf 10%, transparent);
-}
-
 .pips-run-track {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1164,8 +1147,7 @@
     overflow: visible;
   }
 
-  .pips-game-header .badge,
-  .pips-game-header .pips-seed-badge {
+  .pips-game-header .game-stat {
     flex: 0 0 auto;
   }
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FiAward, FiCheck, FiClock, FiFlag, FiHash, FiHome, FiPlay, FiRepeat, FiTarget, FiUploadCloud, FiUser } from "react-icons/fi";
+import { FiAward, FiCheck, FiFlag, FiGrid, FiHash, FiHome, FiPlay, FiRepeat, FiTarget, FiUploadCloud, FiUser } from "react-icons/fi";
+import { formatTime, GameStat, GameStatBar, GameTimer } from "../components/shared/GameStatBar";
 import {
   ShikakuLeaderboard,
   SHIKAKU_DIFFICULTY_ACCENTS,
@@ -101,15 +102,6 @@ interface ScoreEligibilityResponse {
   code?: string;
   reason?: string;
   willReplace?: boolean;
-}
-
-/* ── Format time ──────────────────────────────────────────── */
-function formatTime(ms: number): string {
-  const totalSec = Math.floor(ms / 1000);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  const centis = Math.floor((ms % 1000) / 10);
-  return `${min}:${sec.toString().padStart(2, "0")}.${centis.toString().padStart(2, "0")}`;
 }
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -1481,37 +1473,31 @@ export function ShikakuPage() {
               <GameIcon game="shikaku" size={20} />
             </div>
             <h1 className="game-title">Shikaku</h1>
-            <span className="badge badge-warn" data-tooltip={challengeMode ? `Challenge - ${difficulty}` : infiniteMode ? `${infiniteSolved} solved - ∞ mode - ${difficulty}` : `Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN} - ${difficulty}`} data-tooltip-variant="info">
-              {challengeMode
-                ? <>Challenge / {difficulty}</>
-                : infiniteMode
-                  ? <>{infiniteSolved} solved <span style={{ opacity: 0.5 }}>∞</span> / {difficulty}</>
-                  : <>{currentPuzzleIdx + 1} / {PUZZLES_PER_RUN} - {difficulty}</>}
-            </span>
-            <span className="badge" data-tooltip="Elapsed time" data-tooltip-variant="info" style={{ fontVariantNumeric: "tabular-nums" }}>
-              <FiClock size={12} /> {formatTime(elapsedMs)}
-            </span>
-            {(infiniteMode || customMode) && (
-              <span
-                className="badge"
-                data-tooltip={`Seed: ${seed} - click to copy`}
-                data-tooltip-variant="info"
-                style={{ cursor: "pointer", fontVariantNumeric: "tabular-nums" }}
-                onClick={() => {
-                  navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
+            <GameStatBar>
+              <GameStat
+                icon={<FiGrid size={13} />}
+                value={challengeMode ? "Challenge" : infiniteMode ? infiniteSolved : `${currentPuzzleIdx + 1}/${PUZZLES_PER_RUN}`}
+                hint={infiniteMode ? `solved / ${difficulty}` : difficulty}
+                accent={SHIKAKU_DIFFICULTY_ACCENTS[difficulty]}
+                tooltip={challengeMode
+                  ? `Challenge - ${difficulty}`
+                  : infiniteMode
+                    ? `${infiniteSolved} solved - ∞ mode - ${difficulty}`
+                    : `Puzzle ${currentPuzzleIdx + 1} of ${PUZZLES_PER_RUN} - ${difficulty}`}
+              />
+              <GameTimer ms={elapsedMs} running={phase === "playing" && !showPuzzleSolvedAnim} />
+              {(infiniteMode || customMode) && (
+                <GameStat
+                  icon={<FiHash size={13} />}
+                  value={seed}
+                  hint={customMode && !challengeMode ? "custom" : undefined}
+                  tooltip={`Seed: ${seed} - click to copy`}
+                  onClick={() => {
                     navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied!", "info")).catch(() => {});
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <FiHash size={12} /> {seed}{customMode && !challengeMode && <span style={{ opacity: 0.5 }}> / custom</span>}
-              </span>
-            )}
+                  }}
+                />
+              )}
+            </GameStatBar>
           </div>
         </div>
 
