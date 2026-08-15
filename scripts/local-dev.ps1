@@ -228,6 +228,19 @@ if (-not $SkipDocker) {
     }
   } catch {}
 
+  # The replica lives in the volume above, but zero's record of who has synced
+  # what lives in postgres, and nothing was ever clearing it. Every reset above
+  # orphaned another browser's worth of clients, each still holding a mutation
+  # the server had already applied, and zero-cache re-pushed the lot on every
+  # reconnect. That is where the wall of "already processed. Expected: 2" in the
+  # api log comes from. Clearing them here, with zero-cache stopped and the
+  # replica already gone, is the same fresh start the volume delete is for.
+  Write-Host "Clearing stale zero client records..." -ForegroundColor Cyan
+  try {
+    docker compose exec -T postgres psql -U postgres -d games -q -c `
+      "truncate table zero_0.clients, zero_0.mutations" 2>&1 | Out-Null
+  } catch {}
+
   Write-Host "Starting zero-cache (fresh replica)..." -ForegroundColor Cyan
   docker compose up -d zero-cache
 
