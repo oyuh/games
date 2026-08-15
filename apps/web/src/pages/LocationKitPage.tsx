@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { FiGlobe, FiLock, FiPlay } from "react-icons/fi";
+import { LocationClueTag, LocationPickClue, type Coords } from "../components/location/LocationRound";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { GameButton } from "../components/shared/GameKit";
 import {
@@ -174,6 +175,60 @@ function Live() {
   );
 }
 
+const LEADER = { sessionId: "seed-ada", name: "Ada" };
+
+/**
+ * The merged phase with a hand on it. Drop a pin, the box wakes up, write the
+ * line, send. What used to be two screens with a page turn between them.
+ */
+function LivePickClue() {
+  const [isLeader, setIsLeader] = useState(true);
+  const [target, setTarget] = useState<Coords | null>(null);
+  const [value, setValue] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const send = (event: FormEvent) => {
+    event.preventDefault();
+    setSubmitting(true);
+    /* Stands in for the two mutators the real one fires back to back, so the
+       button gets held the way it would be while they are in the air. */
+    setTimeout(() => { setSubmitting(false); setTarget(null); setValue(""); }, 1100);
+  };
+
+  return (
+    <>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
+        <button type="button" className={`btn ${isLeader ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsLeader((v) => !v)}>Leading</button>
+        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => { setTarget(null); setValue(""); }}>Clear the pin</button>
+      </div>
+
+      <GameShellHeader
+        collapsible
+        game="location"
+        title="Location Signal"
+        phases={locationPhases(2)}
+        phase="picking"
+        round={{ current: 1, total: 4 }}
+        code="M4RC0"
+        isHost
+      />
+
+      <LocationPickClue
+        isLeader={isLeader}
+        leader={LEADER}
+        target={target}
+        value={value}
+        submitting={submitting}
+        endsAt={Date.now() + 45_000}
+        duration={45}
+        onPick={setTarget}
+        onChange={setValue}
+        onSubmit={send}
+      />
+    </>
+  );
+}
+
 export function LocationKitPage() {
   return (
     <main
@@ -188,6 +243,23 @@ export function LocationKitPage() {
 
       <Section title="Live" note="drive the lobby the way a player would meet it. the room fills, the round count follows it, and the start hint says what the mutator would have said">
         <Live />
+      </Section>
+
+      <Section title="The place and the first clue, live" note="one screen where there were two. drop a pin and the box wakes up, because handing somebody a text box for a place they have not chosen yet is asking them to write a clue about nothing">
+        <LivePickClue />
+      </Section>
+
+      <Section title="The same screen, both sides" note="before the pin, after the pin, and what everybody else is looking at while it happens">
+        <LocationPickClue isLeader leader={LEADER} target={null} value="" onPick={NOOP} onChange={NOOP} onSubmit={NOOP} />
+        <LocationPickClue isLeader leader={LEADER} target={{ lat: 35.68, lng: 139.69 }} value="where the trains are always on time" onPick={NOOP} onChange={NOOP} onSubmit={NOOP} endsAt={Date.now() + 45_000} duration={45} />
+        <LocationPickClue isLeader={false} leader={LEADER} target={null} value="" onPick={NOOP} onChange={NOOP} onSubmit={NOOP} endsAt={Date.now() + 45_000} duration={45} />
+      </Section>
+
+      <Section title="A clue once it has been said" note="drawn over the map, because it is the thing you are reading the map against">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+          <LocationClueTag round={1} text="where the trains are always on time" />
+          <LocationClueTag round={2} text="and the fish market never sleeps" />
+        </div>
       </Section>
 
       <Section title="Waiting on somebody" note="one of the two. the map is already there to be poked at, which is the point of putting it in the lobby">
