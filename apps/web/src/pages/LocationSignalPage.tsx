@@ -1,31 +1,32 @@
-import { mutators, queries } from "@games/shared";
-import { optimistic, useQuery, useZero } from "../lib/zero";
+import { mutators } from "@games/shared";
+import { optimistic } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/location-signal.css";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { FiLogIn, FiLogOut, FiSend, FiMapPin, FiHelpCircle } from "react-icons/fi";
-import { PasswordHeader } from "../components/password/PasswordHeader";
+import { useState } from "react";
+import { FiSend, FiMapPin } from "react-icons/fi";
+import { GameShellHeader } from "../components/shared/GameShellHeader";
+import { LocationLobby, locationPhases } from "../components/location/LocationLobby";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { PlayerAvatar } from "../components/shared/PlayerAvatar";
-import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets";
 
 import { MobileLocationSignalPage } from "../mobile/pages/MobileLocationSignalPage";
-import { WorldMap, MapMarker, fitRepeatingMapBounds } from "../components/location/WorldMap";
-import { LocationDemo } from "../components/demos/LocationDemo";
-import { useLocationSignalGame, type LocPhase } from "../hooks/useLocationSignalGame";
+import { WorldMap, MapMarker } from "../components/location/WorldMap";
+import { useLocationSignalGame } from "../hooks/useLocationSignalGame";
 
-
-
-/** Compute center + zoom that fits all points in the repeating map viewport */
+/**
+ * Location Signal. The lobby is a component with its own states, all of them
+ * visible at /dev/location, so that half of this file is only wiring: who you
+ * are, and which mutator a button reaches for. The map phases below are still
+ * drawing their own markup and move onto the kit next.
+ */
 function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
-
-  const [showDemo, setShowDemo] = useState(false);
+  /* Held while the start mutator is in the air, so nothing can be pressed
+     twice into two of the same thing. */
+  const [starting, setStarting] = useState(false);
 
   const {
     zero, navigate, gameId, game, me, isHost, isLeader, inGame, isSpectator,
@@ -200,7 +201,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
               <div className={`game-player-avatar${isCurrentLeader ? " game-player-avatar--leader" : ""}`}>
                 {isCurrentLeader ? "📍" : isLockedIn ? "✅" : (
                   <PlayerAvatar
-                    seed={p.sessionId}
+                    seed={p.sessionId}
                   />
                 )}
               </div>
@@ -237,14 +238,21 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="game-page locsig-page" data-game-theme="location">
-      <PasswordHeader
+      <GameShellHeader
+        collapsible
+        game="location"
         title="Location Signal"
-        code={game.code}
+        phases={locationPhases(cluePairs)}
         phase={game.phase}
-        {...(isGameActive ? { currentRound: game.settings.currentRound } : {})}
+        code={game.code}
         endsAt={game.settings.phaseEndsAt}
         isHost={isHost}
         isSpectator={isSpectator}
+        {...(isCluePhase ? { duration: game.settings.clueDurationSec } : {})}
+        {...(isGuessPhase ? { duration: game.settings.guessDurationSec } : {})}
+        {...(isGameActive && totalRounds > 0
+          ? { round: { current: game.settings.currentRound, total: totalRounds } }
+          : {})}
       />
 
       {/* ─── Players bar (always visible during game) ─── */}
@@ -253,79 +261,38 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
       {/* ─── Map (always visible during game) ─── */}
       {isGameActive && renderMap()}
 
-      {/* ─── Lobby ─── */}
       {phase === "lobby" && (
-        <>
-          <div className="game-section">
-            <h3 className="game-section-label">
-              Players <span className="game-section-count">{game.players.length}</span>
-            </h3>
-            <div className="game-players-grid">
-              {game.players.map((p, playerIndex) => {
-                const name = playerName(p.sessionId);
-                const isMe = p.sessionId === sessionId;
-                return (
-                  <div
-                    key={p.sessionId}
-                    className={`game-player-chip${isMe ? " game-player-chip--me" : ""}`}
-                    data-tooltip={`${name}${isMe ? " (you)" : ""}`}
-                    data-tooltip-variant="info"
-                  >
-                    <div className="game-player-avatar">
-                      <PlayerAvatar
-                        seed={p.sessionId}
-                      />
-                    </div>
-                    <span className="game-player-name">{name}</span>
-                    {isMe && <span className="game-player-you">you</span>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="game-section">
-            <div className="locsig-map-wrap">
-              <WorldMap
-                height={520}
-                interactive
-                markers={draftMarker ? [{ lat: draftMarker.lat, lng: draftMarker.lng, color: "var(--primary)", label: "Preview", size: 2, ring: true }] : []}
-                onClick={(coords) => setDraftMarker(coords)}
-              />
-            </div>
-          </div>
-
-          {!inGame && !isSpectator && (
-            <div className="game-section game-join-prompt">
-              <p className="game-join-text">You're not in this lobby yet.</p>
-              <button className="btn btn-primary game-action-btn" data-tooltip="Join this game" data-tooltip-variant="info"
-                onClick={handleJoinClick}>
-                <FiLogIn size={16} /> Join Game
-              </button>
-            </div>
-          )}
-
-          {inGame && (
-            <div className="game-actions" style={{ marginTop: "0.75rem" }}>
-              {isHost && <LobbyVisibilityToggle gameType="location_signal" gameId={game.id} sessionId={sessionId} isPublic={game.is_public} />}
-              {isHost ? (
-                <button className="btn btn-primary game-action-btn" disabled={game.players.length < 2}
-                  data-tooltip={game.players.length < 2 ? "Need at least 2 players to start" : "Start the game"} data-tooltip-variant="info"
-                  onClick={() => void optimistic(zero.mutate(mutators.locationSignal.start({ gameId: game.id, hostId: sessionId }))).catch((e: unknown) => showToast(e instanceof Error ? e.message : "Start failed", "error"))}>
-                  {game.players.length < 2
-                    ? `Need ${2 - game.players.length} more player${2 - game.players.length > 1 ? "s" : ""}`
-                    : "Start Game"}
-                </button>
-              ) : (
-                <p className="game-waiting-text">Waiting for host to start&hellip;</p>
-              )}
-              <button className="btn btn-muted game-action-btn" data-tooltip="Leave this game" data-tooltip-variant="info"
-                onClick={() => void optimistic(zero.mutate(mutators.locationSignal.leave({ gameId: game.id, sessionId })))}>
-                <FiLogOut size={14} /> Leave
-              </button>
-            </div>
-          )}
-        </>
+        <LocationLobby
+          players={game.players}
+          sessionId={sessionId}
+          hostId={game.host_id}
+          sessionById={sessionById}
+          settings={game.settings}
+          isHost={isHost}
+          inGame={inGame}
+          isSpectator={isSpectator}
+          starting={starting}
+          onStart={() => {
+            setStarting(true);
+            void optimistic(zero.mutate(mutators.locationSignal.start({ gameId, hostId: sessionId })))
+              .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't start the round", "error"))
+              .finally(() => setStarting(false));
+          }}
+          onLeave={() => {
+            void optimistic(zero.mutate(mutators.locationSignal.leave({ gameId, sessionId })))
+              .then(() => navigate("/"))
+              .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't leave", "error"));
+          }}
+          onJoin={handleJoinClick}
+          {...(isHost
+            ? {
+                onKick: (targetId: string) =>
+                  void zero.mutate(mutators.locationSignal.kick({ gameId, hostId: sessionId, targetId }))
+                    .client.catch(() => showToast("Couldn't remove them", "error")),
+                actions: <LobbyVisibilityToggle gameType="location_signal" gameId={gameId} sessionId={sessionId} isPublic={game.is_public} />,
+              }
+            : {})}
+        />
       )}
 
       {/* ─── Picking (leader) ─── */}
@@ -559,8 +526,6 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           </div>
         </div>
       )}
-
-      {showDemo && <LocationDemo onClose={() => setShowDemo(false)} />}
 
       {showInSessionModal && activeGameType && (
         <InSessionModal
