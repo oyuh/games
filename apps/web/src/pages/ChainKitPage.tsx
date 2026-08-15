@@ -16,6 +16,7 @@ import {
   ChainWrite,
   type ChainLink,
 } from "../components/chain/ChainRound";
+import { ChainGameOver, type ChainRoundHistory } from "../components/chain/ChainGameOver";
 import "../styles/game-shared.css";
 
 /**
@@ -380,6 +381,112 @@ const EVERY_STATE: ChainLink[] = [
   { word: "WALK", revealed: true, lettersShown: 0, solvedBy: null },
 ];
 
+/* Three rounds that tell a story: one you took, one they ran away with, and a
+   last one that came down to a word each of you gave up on.
+
+   The round scores are what the server's own ladder would have paid for these
+   boards: three a word down to one as letters come off it, and one more for
+   finishing the chain. A reference page with arithmetic that does not hold up
+   is a reference for nothing. */
+const HISTORY: ChainRoundHistory[] = [
+  {
+    /* WAVE, SURF and BOARD, one letter spent between them, and the chain
+       finished. Bram gave up on SEAL and never got the bonus. */
+    round: 1,
+    scores: { "seed-ada": 10, "seed-bram": 6 },
+    chains: {
+      "seed-ada": [
+        { word: "OCEAN", solvedBy: null, lettersShown: 0 },
+        { word: "WAVE", solvedBy: "seed-ada", lettersShown: 0 },
+        { word: "SURF", solvedBy: "seed-ada", lettersShown: 1 },
+        { word: "BOARD", solvedBy: "seed-ada", lettersShown: 0 },
+        { word: "WALK", solvedBy: null, lettersShown: 0 },
+      ],
+      "seed-bram": [
+        { word: "CANDLE", solvedBy: null, lettersShown: 0 },
+        { word: "WAX", solvedBy: "seed-bram", lettersShown: 2 },
+        { word: "SEAL", solvedBy: null, lettersShown: 3 },
+        { word: "LETTER", solvedBy: "seed-bram", lettersShown: 1 },
+        { word: "BOX", solvedBy: null, lettersShown: 0 },
+      ],
+    },
+  },
+  {
+    /* The one that got away: GLASS at three letters is worth two, and the rest
+       of the board went nowhere. */
+    round: 2,
+    scores: { "seed-ada": 2, "seed-bram": 10 },
+    chains: {
+      "seed-ada": [
+        { word: "WINTER", solvedBy: null, lettersShown: 0 },
+        { word: "FROST", solvedBy: null, lettersShown: 4 },
+        { word: "GLASS", solvedBy: "seed-ada", lettersShown: 3 },
+        { word: "HOUSE", solvedBy: null, lettersShown: 2 },
+        { word: "PLANT", solvedBy: null, lettersShown: 0 },
+      ],
+      "seed-bram": [
+        { word: "PAPER", solvedBy: null, lettersShown: 0 },
+        { word: "PLANE", solvedBy: "seed-bram", lettersShown: 0 },
+        { word: "SKY", solvedBy: "seed-bram", lettersShown: 0 },
+        { word: "LINE", solvedBy: "seed-bram", lettersShown: 1 },
+        { word: "DANCE", solvedBy: null, lettersShown: 0 },
+      ],
+    },
+  },
+  {
+    /* Decided it: Ada cleared hers, Bram gave up on FENCE and finished a point
+       short of the round he needed. */
+    round: 3,
+    scores: { "seed-ada": 10, "seed-bram": 5 },
+    chains: {
+      "seed-ada": [
+        { word: "SILVER", solvedBy: null, lettersShown: 0 },
+        { word: "SPOON", solvedBy: "seed-ada", lettersShown: 0 },
+        { word: "FEED", solvedBy: "seed-ada", lettersShown: 2 },
+        { word: "BACK", solvedBy: "seed-ada", lettersShown: 0 },
+        { word: "PACK", solvedBy: null, lettersShown: 0 },
+      ],
+      "seed-bram": [
+        { word: "COPPER", solvedBy: null, lettersShown: 0 },
+        { word: "WIRE", solvedBy: "seed-bram", lettersShown: 1 },
+        { word: "FENCE", solvedBy: null, lettersShown: 4 },
+        { word: "POST", solvedBy: "seed-bram", lettersShown: 3 },
+        { word: "CARD", solvedBy: null, lettersShown: 0 },
+      ],
+    },
+  },
+];
+
+/* One round each way. Ada gave up on SURF rather than finishing, so both of
+   them come out on six and the duel has nothing to separate it. */
+const LEVEL: ChainRoundHistory[] = [
+  {
+    round: 1,
+    scores: { "seed-ada": 6, "seed-bram": 6 },
+    chains: {
+      "seed-ada": [
+        { word: "OCEAN", solvedBy: null, lettersShown: 0 },
+        { word: "WAVE", solvedBy: "seed-ada", lettersShown: 0 },
+        { word: "SURF", solvedBy: null, lettersShown: 2 },
+        { word: "BOARD", solvedBy: "seed-ada", lettersShown: 0 },
+        { word: "WALK", solvedBy: null, lettersShown: 0 },
+      ],
+      "seed-bram": HISTORY[0]!.chains["seed-bram"]!,
+    },
+  },
+];
+
+const OVER = {
+  rounds: HISTORY,
+  names: { "seed-ada": "Ada", "seed-bram": "Bram" },
+  onPlayAgain: NOOP,
+  onEnd: NOOP,
+  onHome: NOOP,
+};
+
+const ADA = { sessionId: "seed-ada", name: "Ada" };
+const BRAM = { sessionId: "seed-bram", name: "Bram" };
+
 export function ChainKitPage() {
   return (
     <main
@@ -465,6 +572,19 @@ export function ChainKitPage() {
 
       <Section title="Writing your own" note="custom mode. the same links they will be cracking, so what you are building looks like what they will get">
         <LiveWrite />
+      </Section>
+
+      <Section title="The end" note="who took it, and every chain either of you was handed. the last round opens itself, since it is the one that just decided it">
+        <ChainGameOver {...OVER} you={{ ...ADA, score: 22 }} them={{ ...BRAM, score: 21 }} isHost />
+      </Section>
+
+      <Section title="The end, when it was not you" note="the same duel from the other side. no colour on the verdict, and whoever is not hosting only gets the way out">
+        <ChainGameOver {...OVER} you={{ ...BRAM, score: 21 }} them={{ ...ADA, score: 22 }} />
+      </Section>
+
+      <Section title="The end, the other two ways" note="a duel with nothing to separate it, and one the host pulled before either of them got going">
+        <ChainGameOver {...OVER} rounds={LEVEL} you={{ ...ADA, score: 6 }} them={{ ...BRAM, score: 6 }} isHost />
+        <ChainGameOver {...OVER} rounds={[]} you={{ ...ADA, score: 0 }} them={{ ...BRAM, score: 0 }} isHost />
       </Section>
 
       <Section title="What the hint says" note="the start rule in the server's own words, so the lobby never promises a start that bounces">

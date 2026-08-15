@@ -362,6 +362,193 @@ button.cr-link-face:focus-visible {
   color: var(--muted-foreground);
 }
 
+/* ── The end ─────────────────────────────────────────────────────
+   Who took it, then the two of you a third time, then every round you played.
+   The verdict is the one place in this game allowed a bit of colour for its
+   own sake, and only when the duel actually went somewhere. */
+.cr-over {
+  --cr-accent: var(--game-accent, var(--primary));
+  --cr-quiet: var(--secondary);
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.cr-verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.2rem 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--cr-accent) 28%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--cr-accent) 8%, transparent);
+  text-align: center;
+}
+
+/* Lost, level, or nothing at all. None of those is a win, so none of them
+   wears the colour a cracked word wears. */
+.cr-verdict--quiet {
+  --cr-accent: var(--secondary);
+}
+
+.cr-verdict-kicker {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cr-accent) 75%, var(--foreground));
+}
+
+.cr-verdict-name {
+  margin: 0;
+  font-size: clamp(1.4rem, 5.5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.cr-verdict-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--secondary);
+}
+
+.cr-verdict-line strong {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--cr-accent) 60%, var(--foreground));
+}
+
+.cr-verdict-dash {
+  opacity: 0.5;
+}
+
+.cr-verdict-icon {
+  display: inline-flex;
+  line-height: 0;
+  color: color-mix(in srgb, var(--cr-accent) 75%, var(--foreground));
+}
+
+.cr-verdict-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.4;
+}
+
+/* ── Every round ─────────────────────────────────────────────── */
+.cr-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cr-past {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  overflow: clip;
+}
+
+.cr-past-head {
+  display: grid;
+  grid-template-columns: 14px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.15s;
+}
+
+/* Safari draws its own triangle unless told twice. */
+.cr-past-head::-webkit-details-marker {
+  display: none;
+}
+
+.cr-past-head:hover {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+
+.cr-past-head:focus-visible {
+  outline: 2px solid var(--cr-accent);
+  outline-offset: -2px;
+}
+
+.cr-past-chevron {
+  display: inline-flex;
+  line-height: 0;
+  color: var(--muted-foreground);
+  transition: transform 0.18s ease-out;
+}
+
+.cr-past[open] .cr-past-chevron {
+  transform: rotate(90deg);
+}
+
+.cr-past-chevron svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.6;
+}
+
+.cr-past-round {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--foreground);
+}
+
+.cr-past-who {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  color: var(--secondary);
+}
+
+.cr-past-who strong {
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.cr-past-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+/* The higher number is the whole point of the row, so it is the one that is
+   readable at a glance. Level, and they both are. */
+.cr-past-score strong.is-top {
+  color: color-mix(in srgb, var(--cr-accent) 70%, var(--foreground));
+}
+
+.cr-past-dash {
+  opacity: 0.45;
+}
+
+/* Both boards at once. They stack the moment there is not room for two, since
+   a chain squeezed to nothing is worse than a chain further down. */
+.cr-past-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+
 /* ── Lines and counts ────────────────────────────────────────── */
 .cr-count {
   display: inline-flex;
