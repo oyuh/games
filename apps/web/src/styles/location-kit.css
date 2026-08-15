@@ -229,40 +229,49 @@
   white-space: nowrap;
 }
 
+/* ── What you were working with ──────────────────────────────────
+   The clues and the ladder in one panel. They were separate pills before, each
+   with its own glass and its own outline, which is seven floating blobs where
+   there is one idea. One surface, one edge, and the rows inside it are just
+   rows. */
+.lk-mapinfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--lk-edge);
+  border-radius: var(--radius-md);
+  background: var(--lk-glass);
+  box-shadow: var(--lk-lift);
+  backdrop-filter: blur(10px);
+}
+
 .lk-clues {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.3rem;
+  gap: 0.1rem 0.9rem;
 }
 
+/* No pill of its own. Inside the panel it is a numbered line of text, and the
+   number is a quiet marker rather than a badge shouting its own index. */
 .lk-clue {
   display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.6rem 0.25rem 0.3rem;
-  border: 1px solid var(--lk-edge);
-  border-radius: 999px;
-  background: var(--lk-glass);
-  backdrop-filter: blur(10px);
-  font-size: 0.78rem;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.8rem;
 }
 
 .lk-clue-tag {
-  display: grid;
-  place-items: center;
-  width: 1.15rem;
-  height: 1.15rem;
-  border-radius: 50%;
-  background: var(--lk-accent);
-  color: #181a1b;
-  font-size: 0.64rem;
-  font-weight: 800;
+  color: var(--lk-accent);
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .lk-clue-text {
-  color: #fff;
-  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 /* ── The bar along the bottom ────────────────────────────────────
@@ -353,16 +362,20 @@
   gap: 0.25rem;
 }
 
+/* Inside the panel there is already a surface, so the bands drop their own
+   outlines and become a row of figures with a divider between them. */
 .lk-band {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.35rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, calc(0.08 + var(--lk-band) * 0.22));
+  gap: 0.3rem;
+  padding: 0 0.45rem;
   font-size: 0.66rem;
-  line-height: 1.6;
+  line-height: 1.5;
   white-space: nowrap;
+}
+
+.lk-band + .lk-band {
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .lk-band-dist {
