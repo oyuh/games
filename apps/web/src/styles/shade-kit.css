@@ -1,14 +1,14 @@
 /* ── Shade Signal ────────────────────────────────────────────────
    Same three rules as the rest of the game kit: depth is borders and fills
-   rather than shadows, colour means something, and one accent per surface off
+   rather than shadows, color means something, and one accent per surface off
    --game-accent.
 
    Shade is the hard case for the second rule, because the surface already has
-   a hundred and twenty colours on it and none of them mean anything, they are
+   a hundred and twenty colors on it and none of them mean anything, they are
    the puzzle. So nothing drawn on top gets a hue: every mark is --foreground,
    and distance is that one mark fading out as it goes. The old sheet answered
    the same question with a white glow, a yellow glow and four unrelated zone
-   colours, which is five accents on the one surface that can least afford
+   colors, which is five accents on the one surface that can least afford
    them, and the bands read as decoration rather than as a ladder.
 
    The old shade-signal.css stays until the old page comes out. Nothing here
@@ -16,10 +16,12 @@
 
 .sk-grid,
 .sk-bands,
-.sk-explore {
+.sk-clue,
+.sk-composer,
+.sk-stage {
   --sk-accent: var(--game-accent, var(--primary));
-  /* Everything drawn over a cell, in one colour. It has to read over any hue
-     at any lightness, which is what the page's own text colour is already
+  /* Everything drawn over a cell, in one color. It has to read over any hue
+     at any lightness, which is what the page's own text color is already
      picked to do. */
   --sk-mark: var(--foreground);
 }
@@ -54,7 +56,7 @@
   padding: 0;
   border: 0;
   border-radius: var(--radius-xs);
-  /* The colour is the content, so it comes in as an inline background and
+  /* The color is the content, so it comes in as an inline background and
      nothing here may fill over it. */
   background: transparent;
 }
@@ -63,7 +65,7 @@
   cursor: pointer;
 }
 
-/* Sits in the gap rather than eating into the colour, so pointing at a cell
+/* Sits in the gap rather than eating into the color, so pointing at a cell
    never changes the cell you are trying to read. */
 .sk-grid--live .sk-cell:hover,
 .sk-cell:focus-visible {
@@ -87,7 +89,7 @@
 /* ── The two cells that matter ───────────────────────────────────
    Both get the same ring, because both mean "this one". Which one it is comes
    from the dot: the target has one, your pick does not. Ringing them the same
-   way and separating them by content beats inventing a second colour for a
+   way and separating them by content beats inventing a second color for a
    board that has no room left for one.
 
    The inner edge is the page's own background, so the ring holds up even when
@@ -149,15 +151,18 @@
   z-index: 1;
 }
 
-.sk-mark .player-avatar {
+/* avvvatars fills whatever slot it lands in, and both of ours are sized by
+   width with the square coming off the aspect ratio. */
+.sk-mark .player-avatar,
+.sk-waiting-face .player-avatar {
   width: 100%;
   height: auto;
   display: block;
 }
 
 /* ── The ladder ──────────────────────────────────────────────────
-   What a guess pays, under the board and centred on it, because the board is
-   centred and a legend that does not line up with the thing it explains is
+   What a guess pays, under the board and centered on it, because the board is
+   centered and a legend that does not line up with the thing it explains is
    just a row of numbers.
 
    Each one carries the ring it is describing, drawn at exactly the strength
@@ -188,8 +193,8 @@
   white-space: nowrap;
 }
 
-/* A cell off the board, at this distance from the colour. Same border, same
-   ink, same dot on the one that is the colour itself. */
+/* A cell off the board, at this distance from the color. Same border, same
+   ink, same dot on the one that is the color itself. */
 .sk-band-swatch {
   position: relative;
   width: 0.95rem;
@@ -223,34 +228,162 @@
   color: var(--secondary);
 }
 
-/* ── The lobby's grid ────────────────────────────────────────────
-   The board with nothing at stake on it, so you can find out what the game
-   pays before it costs you anything.
-
-   No panel round this either. The board wants to be the first thing you see,
-   and a heading saying "The grid" over a picture of a grid is a label on a
-   thing that is already the label. What is left is the board, and a caption
-   under it. */
-.sk-explore {
+/* ── The stage ───────────────────────────────────────────────────
+   Every phase of this game is a board with a caption. No panel round it: the
+   board wants to be the first thing you see, and a heading saying "The grid"
+   over a picture of a grid is a label on the thing that is already the label.
+   So the section it sits in is the container, and everything the phase has to
+   say goes underneath, centered on the board it is about. */
+.sk-stage {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
 }
 
-/* Everything that is not the board, centred on it. */
-.sk-explore-foot {
+/* Everything that is not the board, centered on it. */
+.sk-stage-foot {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.55rem;
 }
 
-.sk-explore-hint {
+.sk-stage-hint {
   margin: 0;
   max-width: 46ch;
   color: var(--secondary);
   font-size: 0.78rem;
   line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* ── Waiting on somebody ─────────────────────────────────────────
+   A face and a name rather than a spinner. You are not waiting on the page,
+   you are waiting on Ada, and the difference matters when the thing you are
+   about to do is guess what Ada meant. */
+.sk-waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.sk-waiting-face {
+  display: block;
+  width: 1.65rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.sk-waiting strong {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+/* ── A clue, once it has been said ───────────────────────────────
+   Drawn once here and used everywhere after: while the next one is being
+   written, over the board you are guessing on, and back at the reveal. The
+   accent goes on the round rather than the word, because which clue it is is
+   the label and the word is the content. */
+.sk-clue {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--sk-accent) 30%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sk-accent) 9%, transparent);
+  max-width: 100%;
+}
+
+.sk-clue-round {
+  flex: 0 0 auto;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--sk-accent) 72%, var(--foreground));
+}
+
+.sk-clue-text {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+/* ── The composer ────────────────────────────────────────────────
+   The same box Imposter types its clue into, because it is the same job. */
+.sk-composer-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 30rem;
+}
+
+.sk-composer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  transition: border-color 0.15s;
+}
+
+.sk-composer:focus-within {
+  border-color: color-mix(in srgb, var(--sk-accent) 45%, transparent);
+}
+
+/* Something in the box that will not send. Not red: nothing has gone wrong
+   yet, they are mid sentence, and a box that turns red at you while you are
+   still typing into it is a box shouting about a word you have not finished. */
+.sk-composer.is-off:focus-within {
+  border-color: color-mix(in srgb, var(--foreground) 30%, transparent);
+}
+
+.sk-composer-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.sk-composer-input:focus {
+  outline: none;
+}
+
+.sk-composer-input::placeholder {
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.sk-composer-count {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.sk-composer-problem {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--secondary);
   text-align: center;
   text-wrap: balance;
 }

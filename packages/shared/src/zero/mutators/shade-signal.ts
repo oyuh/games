@@ -3,6 +3,45 @@ import { z } from "zod";
 import { zql } from "../schema";
 import { now, code, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
 
+/**
+ * The colors the hard mode rule bans. Naming one is the whole game handed
+ * over in a word, which is the point of the setting.
+ */
+export const SHADE_COLOR_WORDS = [
+  "red", "blue", "green", "yellow", "orange", "purple", "pink", "brown",
+  "cyan", "magenta", "teal", "violet", "indigo", "maroon", "navy", "lime",
+  "aqua", "crimson", "scarlet", "turquoise", "coral", "salmon", "lavender",
+  "beige", "tan", "ivory", "grey", "gray", "white", "black", "gold", "silver",
+  "amber", "ruby", "emerald", "sapphire", "jade", "rose", "peach", "plum",
+  "mint", "olive", "rust", "copper", "bronze", "charcoal", "cream", "khaki",
+  "mauve", "burgundy", "cerulean", "periwinkle", "fuchsia", "chartreuse",
+];
+
+/**
+ * What is wrong with a clue, in the words the leader is going to read, or
+ * nothing if there is nothing wrong with it.
+ *
+ * The mutator below throws these and the composer shows them before the press,
+ * so the send button is never live on a clue the server is about to bounce. It
+ * is the same arrangement Password's isOneWord is in, and for the same reason:
+ * a second copy of a rule in the client is a second copy that drifts.
+ */
+export function shadeClueProblem(round: 1 | 2, text: string, hardMode?: boolean): string | undefined {
+  const clue = text.trim().replace(/\s+/g, " ");
+  if (!clue) return "Write a clue first.";
+
+  const words = clue.split(" ");
+  if (round === 1 && words.length > 1) return "The first clue is one word.";
+  if (round === 2 && words.length > 2) return "The second clue is two words at most.";
+
+  if (hardMode) {
+    const named = words.find((word) => SHADE_COLOR_WORDS.includes(word.toLowerCase()));
+    if (named) return `"${named}" is a color name, and this room turned those off.`;
+  }
+
+  return undefined;
+}
+
 export const shadeSignalMutators = {
   create: defineMutator(
     z.object({
@@ -315,27 +354,16 @@ export const shadeSignalMutators = {
       if (game.leader_id !== args.sessionId) throw new Error("Only the leader can give clues");
 
       const clueText = sanitizeText(args.text);
-      if (!clueText) throw new Error("Clue cannot be empty");
 
-      // Hard mode: reject color-family names
-      if (game.settings.hardMode) {
-        const banned = [
-          "red", "blue", "green", "yellow", "orange", "purple", "pink", "brown",
-          "cyan", "magenta", "teal", "violet", "indigo", "maroon", "navy", "lime",
-          "aqua", "crimson", "scarlet", "turquoise", "coral", "salmon", "lavender",
-          "beige", "tan", "ivory", "grey", "gray", "white", "black", "gold", "silver",
-          "amber", "ruby", "emerald", "sapphire", "jade", "rose", "peach", "plum",
-          "mint", "olive", "rust", "copper", "bronze", "charcoal", "cream", "khaki",
-          "mauve", "burgundy", "cerulean", "periwinkle", "fuchsia", "chartreuse",
-        ];
-        const words = clueText.toLowerCase().split(/\s+/);
-        const found = words.find((w) => banned.includes(w));
-        if (found) throw new Error(`"${found}" is a color name, which isn't allowed with the No Color Names rule!`);
-      }
+      const round = game.phase === "clue1" ? 1 : game.phase === "clue2" ? 2 : null;
+      if (round === null) throw new Error("Game is not in a clue phase");
+
+      /* One rule, checked here and drawn in the composer, so what the leader
+         is told before pressing is what happens when they do. */
+      const problem = shadeClueProblem(round, clueText, game.settings.hardMode);
+      if (problem) throw new Error(problem);
 
       if (game.phase === "clue1") {
-        // Clue 1: must be a single word
-        if (clueText.split(/\s+/).length > 1) throw new Error("First clue must be a single word");
         await tx.mutate.shade_signal_games.update({
           id: game.id,
           clue1: clueText,
@@ -346,9 +374,7 @@ export const shadeSignalMutators = {
           },
           updated_at: now()
         });
-      } else if (game.phase === "clue2") {
-        // Clue 2: one or two words
-        if (clueText.split(/\s+/).length > 2) throw new Error("Second clue can be at most two words");
+      } else {
         await tx.mutate.shade_signal_games.update({
           id: game.id,
           clue2: clueText,
@@ -359,8 +385,6 @@ export const shadeSignalMutators = {
           },
           updated_at: now()
         });
-      } else {
-        throw new Error("Game is not in a clue phase");
       }
     }
   ),

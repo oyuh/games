@@ -24,21 +24,21 @@ import "../../styles/shade-kit.css";
  * standing around anyway.
  */
 
-/** One leader and two people to disagree about the colour. The mutator says
+/** One leader and two people to disagree about the color. The mutator says
  *  so, so the hint below never promises a start that comes straight back. */
 export const MIN_SHADE_PLAYERS = 3;
 
 const PHASE_LOBBY: GamePhase = { id: "lobby", label: "Lobby", icon: <FiUsers />, hint: "Waiting for everyone to turn up. The host starts the round." };
-const PHASE_PICKING: GamePhase = { id: "picking", label: "The shade", icon: <FiDroplet />, hint: "The leader is choosing the colour everyone else has to find." };
-const PHASE_CLUE1: GamePhase = { id: "clue1", label: "Clue 1", icon: <FiEdit3 />, hint: "One word from the leader, and it has to point at a colour." };
+const PHASE_PICKING: GamePhase = { id: "picking", label: "The shade", icon: <FiDroplet />, hint: "The leader is choosing the color everyone else has to find." };
+const PHASE_CLUE1: GamePhase = { id: "clue1", label: "Clue 1", icon: <FiEdit3 />, hint: "One word from the leader, and it has to point at a color." };
 const PHASE_GUESS1: GamePhase = { id: "guess1", label: "Guess 1", icon: <FiCrosshair />, hint: "Pick the cell you think they mean. Closest wins the most." };
 const PHASE_CLUE2: GamePhase = { id: "clue2", label: "Clue 2", icon: <FiEdit3 />, hint: "A second clue, up to two words. The leader can see where you all went." };
 const PHASE_GUESS2: GamePhase = { id: "guess2", label: "Guess 2", icon: <FiCrosshair />, hint: "Move if the second clue changed your mind, or stay where you are." };
-const PHASE_REVEAL: GamePhase = { id: "reveal", label: "Reveal", icon: <FiEye />, hint: "The colour, everybody's guesses, and what each of them paid." };
+const PHASE_REVEAL: GamePhase = { id: "reveal", label: "Reveal", icon: <FiEye />, hint: "The color, everybody's guesses, and what each of them paid." };
 const PHASE_FINISHED: GamePhase = { id: "finished", label: "Finished", icon: <FiAward />, hint: "Everyone has led. The scores are final." };
 
 /**
- * The leader only picks their own colour when the host turned that on. Left
+ * The leader only picks their own color when the host turned that on. Left
  * off, the grid deals one and the game opens straight into the first clue, so
  * a track with a picking step on it would be counting a phase that never
  * happens.
@@ -97,34 +97,34 @@ export function shadeLobbyCards({
 
 /**
  * The board, with nothing riding on it. Press a cell and it stands in for the
- * leader's colour, so the rings around it are the ones you would have been
+ * leader's color, so the rings around it are the ones you would have been
  * scored against, and hovering anything says what that guess would have paid.
  *
- * The pills only appear once there is a colour to measure from. A scoring
+ * The pills only appear once there is a color to measure from. A scoring
  * ladder with no ladder on screen is four numbers to take on trust.
  */
 export function ShadeExplorer({ rows, cols, seed }: { rows: number; cols: number; seed: number }) {
   const [pretend, setPretend] = useState<ShadeCell | null>(null);
 
   return (
-    <div className="sk-explore">
+    <div className="sk-stage">
       <ShadeGrid rows={rows} cols={cols} seed={seed} target={pretend} zones scores onSelect={setPretend} />
 
       {/* Everything else goes underneath. A board wants to be the first thing
           you look at, not the thing you get to after a heading and a
           paragraph, and the words read better as a caption anyway. */}
-      <div className="sk-explore-foot">
+      <div className="sk-stage-foot">
         {pretend && <ShadeBands />}
 
-        <p className="sk-explore-hint">
+        <p className="sk-stage-hint">
           {pretend
-            ? "That is the colour, and those are the rings you get paid inside. Point at any cell to see what guessing it would have been worth."
-            : "This is the board you will be guessing on. Press a cell to pretend it is the leader's colour and see how the scoring falls around it."}
+            ? "That is the color, and those are the rings you get paid inside. Point at any cell to see what guessing it would have been worth."
+            : "This is the board you will be guessing on. Press a cell to pretend it is the leader's color and see how the scoring falls around it."}
         </p>
 
         {pretend && (
           <GameButton size="sm" variant="ghost" icon={<FiRotateCcw />} onClick={() => setPretend(null)}>
-            Clear the colour
+            Clear the color
           </GameButton>
         )}
       </div>
@@ -138,7 +138,7 @@ export interface ShadeLobbyProps {
   hostId: string;
   sessionById?: Record<string, string>;
   settings: ShadeLobbySettings;
-  /** The board's shape and its colours, so the explorer is the real one. */
+  /** The board's shape and its colors, so the explorer is the real one. */
   grid: { rows: number; cols: number; seed: number };
   isHost: boolean;
   /** In the player list. Someone spectating or following a link is not. */
@@ -195,21 +195,21 @@ export function ShadeLobby({
         facts={[
           {
             /* The one that changes how the game feels rather than how long it
-               runs, so it is the one that gets the colour, and only when it is
+               runs, so it is the one that gets the color, and only when it is
                actually on. Off is the ordinary way to play. */
-            value: settings.hardMode ? "No colour names" : "Any clue goes",
+            value: settings.hardMode ? "No color names" : "Any clue goes",
             icon: settings.hardMode ? <FiSlash /> : <FiEdit3 />,
             ...(settings.hardMode ? { tone: "var(--game-accent)" } : {}),
             tooltip: settings.hardMode
               ? "The leader cannot say red, blue, green and the rest, so the clues have to come at it sideways"
-              : "The leader can name a colour outright if they want to",
+              : "The leader can name a color outright if they want to",
           },
           {
             value: settings.leaderPick ? "Leader picks" : "Grid picks",
             icon: <FiDroplet />,
             tooltip: settings.leaderPick
-              ? "Whoever is leading chooses the colour they have to describe"
-              : "The colour is dealt at random, so the leader gets what everyone else gets",
+              ? "Whoever is leading chooses the color they have to describe"
+              : "The color is dealt at random, so the leader gets what everyone else gets",
           },
           {
             value: rounds || settings.roundsPerPlayer,
@@ -221,7 +221,7 @@ export function ShadeLobby({
             value: `${grid.cols} x ${grid.rows}`,
             label: "grid",
             icon: <FiGrid />,
-            tooltip: `${grid.rows * grid.cols} colours to pick out of`,
+            tooltip: `${grid.rows * grid.cols} colors to pick out of`,
           },
           {
             value: `${settings.clueDurationSec}s`,
@@ -270,7 +270,7 @@ export function ShadeLobby({
             title={isSpectator ? "You are watching this one" : "You are not in this room yet"}
             hint={
               isSpectator
-                ? "Spectators see the colour and every guess, and score neither. Join to take a turn leading."
+                ? "Spectators see the color and every guess, and score neither. Join to take a turn leading."
                 : "Join and you are in the order the moment the host starts. Everyone leads a round."
             }
             action={<GameButton variant="primary" icon={<FiLogIn />} onClick={onJoin}>Join the game</GameButton>}
