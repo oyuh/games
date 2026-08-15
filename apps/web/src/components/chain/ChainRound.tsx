@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode, type Ref } from "react";
 import { FiCheck, FiClock, FiEye, FiHelpCircle, FiLock, FiSend, FiX } from "react-icons/fi";
 import { chainCategoryLabels, scoreForLetters } from "@games/shared";
 import { GameActions, GameButton, GameEmpty, GamePanel, useArmed } from "../shared/GameKit";
@@ -341,6 +341,10 @@ export function ChainBoard({
 export interface ChainWriteProps {
   /** One box per link, however long the host set the chain. */
   words: string[];
+  /** The first box, so a caller can put the cursor in it when the phase opens.
+   *  Not done in here: a page with two of these on it would fight over the
+   *  focus, and /dev/chain is exactly that page. */
+  firstInputRef?: Ref<HTMLInputElement>;
   category?: string | undefined;
   /** Locked in. The boxes become the chain you handed over. */
   locked?: boolean;
@@ -358,6 +362,7 @@ export interface ChainWriteProps {
  */
 export function ChainWrite({
   words,
+  firstInputRef,
   category,
   locked,
   waitingOn,
@@ -383,6 +388,7 @@ export function ChainWrite({
                   <span className="cr-link-word">{word.toUpperCase()}</span>
                 ) : (
                   <input
+                    {...(index === 0 && firstInputRef ? { ref: firstInputRef } : {})}
                     className="cr-write-input"
                     value={word}
                     maxLength={30}
