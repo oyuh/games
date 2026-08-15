@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, FormEvent } from "react";
 import { FiClock, FiMapPin, FiRefreshCw, FiSend, FiSlash, FiTarget, FiAward } from "react-icons/fi";
 import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
 import { PlayerAvatar } from "../shared/PlayerAvatar";
+import { scoreForDistance } from "@games/shared";
+import { LocationGuess, LocationPickClue } from "../location/LocationRound";
 import { WorldMap, type MapMarker } from "../location/WorldMap";
 import "../../styles/game-shared.css";
 import "../../styles/location-signal.css";
@@ -28,56 +30,52 @@ const TARGET = { lat: 41.9, lng: 12.5 };
 const CLUE_1 = "Ancient empire";
 const CLUE_2 = "Colosseum city";
 
-// Round 1 guesses (after clue 1 - spread out)
+/* The pins wear faces in the game, so they wear them here. A how-to that draws
+   its own version of the thing is a second thing to keep in step. */
 const GUESS_ROUND1: MapMarker[] = [
-  { lat: 37.9, lng: 23.7, color: "#7ecbff", label: "Alice (Athens?)", size: 2.5 },
-  { lat: 48.8, lng: 2.3, color: "#ef476f", label: "Bob (Paris?)", size: 2.5 },
-  { lat: 40.4, lng: -3.7, color: "#06d6a0", label: "You (Madrid?)", size: 2.5, ring: true },
-  { lat: 30.0, lng: 31.2, color: "#a78bfa", label: "Diana (Cairo?)", size: 2.5 },
+  { lat: 37.9, lng: 23.7, color: "#7ecbff", avatar: P.alice, label: "Alice - Athens?", size: 2.5, ring: true },
+  { lat: 48.8, lng: 2.3, color: "#ef476f", avatar: P.bob, label: "Bob - Paris?", size: 2.5, ring: true },
+  { lat: 40.4, lng: -3.7, color: "#06d6a0", avatar: P.you, label: "You - Madrid?", size: 2.5, ring: true },
+  { lat: 30.0, lng: 31.2, color: "#a78bfa", avatar: P.diana, label: "Diana - Cairo?", size: 2.5, ring: true },
 ];
 
-// Leader view of Guess 1 - target + all guesses
+// Leader view of guess 1: the place, and everyone circling it
 const LEADER_GUESS1: MapMarker[] = [
-  { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "Your Target", size: 3.5, ring: true },
+  { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "Your place", size: 3.4, ring: true, alwaysLabel: true },
   ...GUESS_ROUND1,
 ];
 
-// Round 2 guesses (after clue 2 - closer)
-const GUESS_ROUND2: MapMarker[] = [
-  { lat: 43.7, lng: 11.2, color: "#7ecbff", label: "Alice", size: 2.5 },
-  { lat: 45.4, lng: 9.2, color: "#ef476f", label: "Bob", size: 2.5 },
-  { lat: 41.9, lng: 12.5, color: "#06d6a0", label: "You", size: 2.5, ring: true },
-  { lat: 40.8, lng: 14.3, color: "#a78bfa", label: "Diana", size: 2.5 },
-];
-
-// Reveal markers: target + all final guesses
+// Reveal: the place, and where everybody finished
 const REVEAL_MARKERS: MapMarker[] = [
-  { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "Target - Rome", size: 4.5, pulse: true, ring: true },
-  { lat: 43.7, lng: 11.2, color: "#7ecbff", label: "Alice", size: 2.5 },
-  { lat: 45.4, lng: 9.2, color: "#ef476f", label: "Bob", size: 2.5 },
-  { lat: 41.9, lng: 12.5, color: "#06d6a0", label: "You", size: 2.5, ring: true },
-  { lat: 40.8, lng: 14.3, color: "#a78bfa", label: "Diana", size: 2.5 },
+  { lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "It was here - Rome", size: 4, pulse: true, ring: true, alwaysLabel: true },
+  { lat: 43.7, lng: 11.2, color: "#06d6a0", avatar: P.alice, label: "Alice", size: 2.4, ring: true },
+  { lat: 45.4, lng: 9.2, color: "#06d6a0", avatar: P.bob, label: "Bob", size: 2.4, ring: true },
+  { lat: 41.9, lng: 12.5, color: "#06d6a0", avatar: P.you, label: "You", size: 2.4, ring: true },
+  { lat: 40.8, lng: 14.3, color: "#06d6a0", avatar: P.diana, label: "Diana", size: 2.4, ring: true },
 ];
 
-/* Straight off scoreForDistance() in the location-signal mutator: anything
-   inside 120.7 km is a full 5,000, and past that it decays by
-   5000 * e^-((km - 120.7) / 3000). The old table here was guesswork and read
-   far too harsh, e.g. it claimed 0 past 5,000 km when you still bank ~1,000. */
-const SCORING_TABLE = [
-  { label: "Within 120 km", value: "5,000" },
-  { label: "~500 km", value: "~4,400" },
-  { label: "~1,500 km", value: "~3,150" },
-  { label: "~3,000 km", value: "~1,900" },
-  { label: "~5,000 km", value: "~1,000" },
-  { label: "~10,000 km", value: "~190" },
-];
+/* Run through the mutator's own scoreForDistance, so the how-to cannot teach a
+   scoring curve the game does not use. The old table here was hand written and
+   read far too harsh: it claimed nothing past 5,000 km when you still bank a
+   thousand. */
+const SCORING_TABLE = [120.7, 500, 1500, 3000, 5000, 10000].map((km) => ({
+  label: km === 120.7 ? "Within 120 km" : `~${km.toLocaleString()} km`,
+  value: scoreForDistance(km).toLocaleString(),
+}));
 
 const REVEAL_SCORES = [
-  { name: "You", pts: 5000, dist: "0 km - exact!", color: "#06d6a0", id: P.you },
-  { name: "Alice", pts: 4264, dist: "~200 km", color: "#7ecbff", id: P.alice },
-  { name: "Bob", pts: 3785, dist: "~400 km", color: "#ef476f", id: P.bob },
-  { name: "Diana", pts: 2930, dist: "~750 km", color: "#a78bfa", id: P.diana },
-];
+  { name: "You", km: 0, color: "#06d6a0", id: P.you },
+  { name: "Alice", km: 200, color: "#7ecbff", id: P.alice },
+  { name: "Bob", km: 400, color: "#ef476f", id: P.bob },
+  { name: "Diana", km: 750, color: "#a78bfa", id: P.diana },
+].map((row) => ({
+  ...row,
+  pts: scoreForDistance(row.km),
+  dist: row.km === 0 ? "0 km - exact!" : `~${row.km} km`,
+}));
+
+/** Whoever is leading in the worked example. */
+const DEMO_LEADER = { sessionId: P.alice, name: "Alice" };
 
 /* ── Steps ──────────────────────────────────────────────── */
 
@@ -88,14 +86,14 @@ const steps: DemoStep[] = [
     hint: "Think GeoGuessr meets party game - the closer your guess, the more points you get!",
   },
   {
-    label: "Leader Picks",
-    description: "Each round, one player is the Leader. They click anywhere on the world map to secretly place a target pin. Nobody else can see it.",
-    hint: "Pick somewhere interesting: not too obscure, not too obvious.",
+    label: "The place, and the first clue",
+    description: "Each round one player leads. They click anywhere on the world map to drop a secret pin, and the box under the map wakes up so they can describe it. Both go in on one press.",
+    hint: "Don't name the place. 'Mediterranean coast' is fine, 'Rome' is not.",
   },
   {
-    label: "Clues & Guesses",
-    description: "The Leader types a text clue (up to 80 characters). Guessers see the clue and click the map to place their guess. Then a second clue is given and guessers can update their guess.",
-    hint: "Clue rules: don't name the place directly! 'Mediterranean coast' is fine, 'Rome' is not.",
+    label: "Guessing",
+    description: "Everyone else reads the clue and drops their own pin. Lock it in before the clock runs out. After that the leader writes another clue, and you can move your pin or stay where you were.",
+    hint: "Only where you finish counts, so a bad first guess costs you nothing.",
   },
   {
     label: "Leader's View",
@@ -120,6 +118,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
   const initialStepRef = useRef(initialStep);
   const [step, setStep] = useState(initialStepRef.current);
   const [draftMarker, setDraftMarker] = useState<{ lat: number; lng: number } | null>(null);
+  const [guessPin, setGuessPin] = useState<{ lat: number; lng: number } | null>(null);
   const [clue, setClue] = useState("");
 
   // Force WorldMap remount after modal animation settles so the map
@@ -183,82 +182,47 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
           </div>
         );
 
-      /* ─── Leader Picks ─── */
+      /* ─── The place and the first clue ─── */
       case 1:
         return (
           <div className="locdemo-step">
-            <DemoPoint label="Click anywhere to drop your secret pin">
-              <div className="locdemo-map-preview">
-                <WorldMap
-                  height={260}
-                  onClick={(coords) => setDraftMarker(coords)}
-                  interactive
-                  markers={draftMarker
-                    ? [{ lat: draftMarker.lat, lng: draftMarker.lng, color: "#ef476f", label: "Your pick", size: 3.5, pulse: true }]
-                    : [{ lat: TARGET.lat, lng: TARGET.lng, color: "#ffd166", label: "e.g. Rome", size: 3, ring: true }]}
-                  defaultCenter={[38, 12]}
-                  defaultZoom={4}
-                />
-              </div>
-            </DemoPoint>
-            {draftMarker && (
-              <div className="locdemo-action-row">
-                <button className="btn btn-primary game-action-btn" onClick={noop}>
-                  <FiMapPin size={14} /> Lock Target
-                </button>
-              </div>
-            )}
+            {/* The real screen, not a drawing of it. It is all props and
+                callbacks, so the how-to can run the actual thing and never
+                drift from what the game does. */}
+            <LocationPickClue
+              isLeader
+              leader={DEMO_LEADER}
+              target={draftMarker}
+              value={clue}
+              height={230}
+              onPick={setDraftMarker}
+              onChange={setClue}
+              onSubmit={noop}
+            />
           </div>
         );
 
-      /* ─── Clues & Guesses ─── */
+      /* ─── Guessing ─── */
       case 2:
         return (
           <div className="locdemo-step">
-            <div className="locdemo-split">
-              {/* Clue 1 block */}
-              <div className="locdemo-split-section">
-                <div className="locdemo-phase-label">Round 1 - First Clue</div>
-                <DemoPoint label="Leader types a clue">
-                  <div className="locdemo-clue-card">
-                    <form className="locsig-clue-form" onSubmit={noop}>
-                      <input className="input locsig-clue-input" value={clue} onChange={(e) => setClue(e.target.value)} placeholder='e.g. "Ancient empire"' maxLength={80} />
-                      <button className="btn btn-primary" type="button" disabled={!clue.trim()}>
-                        <FiSend size={14} />
-                      </button>
-                    </form>
-                  </div>
-                </DemoPoint>
-                <div className="locdemo-clue-reveal">
-                  <div className="locsig-clue-display">
-                    <span className="locsig-clue-tag">Clue 1</span>
-                    <span className="locsig-clue-word">{CLUE_1}</span>
-                  </div>
-                </div>
-                <div className="locdemo-map-preview">
-                  <WorldMap height={180} interactive={false} markers={GUESS_ROUND1} defaultCenter={[40, 12]} defaultZoom={3} />
-                  <p className="locdemo-map-caption">Guesses are spread out - clue is vague!</p>
-                </div>
-              </div>
-              {/* Clue 2 block */}
-              <div className="locdemo-split-section">
-                <div className="locdemo-phase-label">Round 2 - Second Clue</div>
-                <div className="locdemo-clue-reveal">
-                  <div className="locsig-clue-display">
-                    <span className="locsig-clue-tag">Clue 1</span>
-                    <span className="locsig-clue-word">{CLUE_1}</span>
-                  </div>
-                  <div className="locsig-clue-display">
-                    <span className="locsig-clue-tag">Clue 2</span>
-                    <span className="locsig-clue-word">{CLUE_2}</span>
-                  </div>
-                </div>
-                <div className="locdemo-map-preview">
-                  <WorldMap height={180} interactive={false} markers={GUESS_ROUND2} defaultCenter={[42, 12]} defaultZoom={5} />
-                  <p className="locdemo-map-caption">Guesses converge after the better clue!</p>
-                </div>
-              </div>
-            </div>
+            <LocationGuess
+              round={2}
+              isGuessing
+              leader={DEMO_LEADER}
+              clues={[{ round: 1, text: CLUE_1 }, { round: 2, text: CLUE_2 }]}
+              selected={guessPin}
+              previous={{ lat: 41.4, lng: 2.2 }}
+              onKeep={() => setGuessPin({ lat: 41.4, lng: 2.2 })}
+              lockedCount={2}
+              guesserCount={4}
+              height={230}
+              onSelect={setGuessPin}
+              onLock={() => {}}
+            />
+            <p className="locdemo-map-caption">
+              The grey pin is where you went last time. Stay there, or click anywhere to move.
+            </p>
           </div>
         );
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
-  FiCheck, FiChevronDown, FiCornerUpLeft, FiCrosshair, FiHome, FiMapPin,
+  FiCheck, FiChevronDown, FiCornerUpLeft, FiCrosshair, FiEdit3, FiHome, FiMapPin,
   FiRotateCcw, FiSend, FiX,
 } from "react-icons/fi";
 import { haversineKm, scoreForDistance } from "@games/shared";
@@ -156,6 +156,7 @@ export function LocationPickClue({
   submitting,
   endsAt,
   duration,
+  height,
   onHideClock,
   onPick,
   onChange,
@@ -169,6 +170,8 @@ export function LocationPickClue({
   submitting?: boolean;
   endsAt?: number | null;
   duration?: number;
+  /** Only the how-to passes this, which shows the real screen inside a modal. */
+  height?: number | string;
   onHideClock?: () => void;
   onPick: (coords: Coords) => void;
   onChange: (value: string) => void;
@@ -192,6 +195,7 @@ export function LocationPickClue({
     return (
       <LocationStage
         markers={[]}
+        {...(height !== undefined ? { height } : {})}
         {...(endsAt !== undefined ? { endsAt } : {})}
         {...(duration !== undefined ? { duration } : {})}
         {...(onHideClock ? { onHideClock } : {})}
@@ -207,6 +211,7 @@ export function LocationPickClue({
     <LocationStage
       markers={markers}
       onClick={onPick}
+      {...(height !== undefined ? { height } : {})}
       {...(endsAt !== undefined ? { endsAt } : {})}
       {...(duration !== undefined ? { duration } : {})}
       {...(onHideClock ? { onHideClock } : {})}
@@ -265,6 +270,134 @@ function LocationTally({ locked, total }: { locked: number; total: number }) {
   );
 }
 
+/**
+ * The clues after the first one.
+ *
+ * The first is written on the picking screen, because it comes out of choosing
+ * the place. Every one after it comes out of something else entirely: the
+ * leader can see where the room actually went, and the whole point of a second
+ * clue is finding out that "ancient empire" sent three people to Rome.
+ */
+export function LocationClue({
+  round,
+  isLeader,
+  leader,
+  target,
+  clues,
+  guesses,
+  value,
+  submitting,
+  endsAt,
+  duration,
+  onHideClock,
+  onChange,
+  onSubmit,
+}: {
+  round: number;
+  isLeader: boolean;
+  leader: { sessionId: string; name: string };
+  /** Only ever passed to the leader, who already knows it. */
+  target?: Coords | null;
+  clues: Array<{ round: number; text: string }>;
+  /** Where the room went on the clue before this one. The leader's reason for
+   *  writing a different sort of clue this time. */
+  guesses?: Array<{ sessionId: string; name: string; lat: number; lng: number }>;
+  value: string;
+  submitting?: boolean;
+  endsAt?: number | null;
+  duration?: number;
+  onHideClock?: () => void;
+  onChange: (value: string) => void;
+  onSubmit: (event: FormEvent) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  /* Nothing to do here but type, so the cursor starts in the box. Re-armed on
+     the round, since clue 3 is a fresh empty box on the same screen. */
+  useEffect(() => {
+    if (!isLeader) return;
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [round, isLeader]);
+
+  const markers: MapMarker[] = [
+    ...(target ? [{ ...target, color: "#ffd166", label: "Your place", icon: <FiMapPin />, ring: true } as MapMarker] : []),
+    ...(guesses ?? []).map((guess) => ({
+      lat: guess.lat,
+      lng: guess.lng,
+      color: "#7ecbff",
+      avatar: guess.sessionId,
+      label: `${guess.name} - guess ${round - 1}`,
+      size: 2.2,
+      ring: true,
+    })),
+  ];
+
+  const overlay = clues.length > 0 ? (
+    <div className="lk-mapinfo">
+      <div className="lk-clues">
+        {clues.map((clue) => <LocationClueTag key={clue.round} round={clue.round} text={clue.text} />)}
+      </div>
+    </div>
+  ) : undefined;
+
+  return (
+    <LocationStage
+      markers={markers}
+      {...(overlay ? { overlay } : {})}
+      {...(endsAt !== undefined ? { endsAt } : {})}
+      {...(duration !== undefined ? { duration } : {})}
+      {...(onHideClock ? { onHideClock } : {})}
+    >
+      {isLeader ? (
+        <>
+          <form className="lk-composer" onSubmit={onSubmit}>
+            <span className="lk-step is-done">
+              <FiEdit3 aria-hidden="true" />
+              Clue {round}
+            </span>
+
+            <input
+              ref={inputRef}
+              className="lk-composer-input"
+              value={value}
+              maxLength={80}
+              placeholder="Narrow it down…"
+              aria-label={`Clue ${round}`}
+              onChange={(event) => onChange(event.target.value)}
+            />
+
+            <span className="lk-composer-count" aria-hidden="true">{80 - value.length}</span>
+
+            <GameButton
+              type="submit"
+              variant="primary"
+              icon={<FiSend />}
+              disabled={!value.trim()}
+              {...(submitting ? { loading: true } : {})}
+            >
+              Send it
+            </GameButton>
+          </form>
+
+          <p className="lk-console-hint">
+            {guesses && guesses.length > 0
+              ? "The blue pins are where they went last time. Say the thing that moves them."
+              : "Nobody guessed last time, so this one is a fresh start."}
+          </p>
+        </>
+      ) : (
+        <>
+          <LocationWaitingOn sessionId={leader.sessionId} name={leader.name}>
+            is writing clue {round}, and can see where you all went.
+          </LocationWaitingOn>
+          <p className="lk-console-hint">Your pin from last time stays where it is unless you move it.</p>
+        </>
+      )}
+    </LocationStage>
+  );
+}
+
 export interface LocationGuessProps {
   /** Which guess this is. Anything past the first is a move, not a fresh pick. */
   round: number;
@@ -298,6 +431,8 @@ export interface LocationGuessProps {
   guesserCount: number;
   endsAt?: number | null;
   duration?: number;
+  /** Only the how-to passes this, which shows the real screen inside a modal. */
+  height?: number | string;
   onHideClock?: () => void;
 }
 
@@ -331,6 +466,7 @@ export function LocationGuess({
   guesserCount,
   endsAt,
   duration,
+  height,
   onHideClock,
 }: LocationGuessProps) {
   const markers: MapMarker[] = [...(others ?? [])];
@@ -359,6 +495,7 @@ export function LocationGuess({
     <LocationStage
       markers={markers}
       {...(isGuessing ? { onClick: onSelect } : {})}
+      {...(height !== undefined ? { height } : {})}
       {...(endsAt !== undefined ? { endsAt } : {})}
       {...(duration !== undefined ? { duration } : {})}
       {...(onHideClock ? { onHideClock } : {})}

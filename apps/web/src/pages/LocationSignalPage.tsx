@@ -3,28 +3,27 @@ import { optimistic } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/location-signal.css";
 import { useState } from "react";
-import { FiClock, FiSend, FiMapPin } from "react-icons/fi";
+import { FiClock, FiEye, FiMapPin } from "react-icons/fi";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { LocationLobby, locationPhases, locationTrackPhase } from "../components/location/LocationLobby";
-import { LocationGameOver, LocationGuess, LocationPickClue, LocationResult } from "../components/location/LocationRound";
+import { LocationClue, LocationGameOver, LocationGuess, LocationPickClue, LocationResult } from "../components/location/LocationRound";
 import { GameEmpty, GamePanel } from "../components/shared/GameKit";
+import { GameRoster } from "../components/shared/GameRoster";
 import { callGameSecretInit } from "../lib/game-secrets";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
-import { PlayerAvatar } from "../components/shared/PlayerAvatar";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 
 import { MobileLocationSignalPage } from "../mobile/pages/MobileLocationSignalPage";
-import { WorldMap, MapMarker } from "../components/location/WorldMap";
 import { useLocationSignalGame } from "../hooks/useLocationSignalGame";
 
 /**
- * Location Signal. The lobby is a component with its own states, all of them
- * visible at /dev/location, so that half of this file is only wiring: who you
- * are, and which mutator a button reaches for. The map phases below are still
- * drawing their own markup and move onto the kit next.
+ * Location Signal, assembled out of the game kit. Every phase is a component
+ * with its own states, all of them visible at /dev/location, so this file is
+ * only the wiring: who you are this round, and which mutator a button reaches
+ * for. Every phase brings its own map, so the page draws none of its own.
  */
 function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   /* Held while a mutator is in the air, so nothing can be pressed twice into
@@ -45,15 +44,12 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     zero, navigate, gameId, game, me, isHost, isLeader, inGame, isSpectator,
     sessionById, playerName, myRoundGuess, guesserColorMap,
     draftClue, setDraftClue, draftMarker, setDraftMarker,
-    leaderTarget, setLeaderTarget, mapCenter, mapZoom, handleBoundsChanged, mapWrapRef, clueInputRef,
-    activeGameType, activeGameId, inAnotherGame,
-    showInSessionModal, setShowInSessionModal,
-    joiningFromOtherGame, setJoiningFromOtherGame,
+    leaderTarget, setLeaderTarget,
+    activeGameType, showInSessionModal, setShowInSessionModal, joiningFromOtherGame,
     phase, cluePairs, currentClueRound, currentGuessRound,
-    isCluePhase, isGuessPhase, isLastGuessPhase, isGameActive,
-    leaderName, roundGuessers, guessesThisRound, totalRounds, sortedPlayers,
-    mapClickable, getClue, visibleClues,
-    submitClue, submitGuess, lockTarget, handleJoinClick, confirmLeaveAndJoin,
+    isCluePhase, isGuessPhase, isGameActive,
+    leaderName, roundGuessers, guessesThisRound, totalRounds, visibleClues,
+    submitClue, submitGuess, handleJoinClick, confirmLeaveAndJoin,
   } = useLocationSignalGame(sessionId, { fallbackWidth: 900, height: 520 });
 
   if (!game) {
@@ -67,109 +63,6 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
       </div>
     );
   }
-
-  const buildMarkers = (): MapMarker[] => {
-    const markers: MapMarker[] = [];
-    const guessBySessionRound = new Map(
-      game.guesses.map((guess) => [`${guess.sessionId}:${guess.round}`, guess])
-    );
-
-    // Draft marker (picking or guessing)
-    if (draftMarker && (phase === "picking" || isGuessPhase)) {
-      markers.push({ lat: draftMarker.lat, lng: draftMarker.lng, color: "#ef476f", label: "Your pick", size: 3.5, pulse: true });
-    }
-
-    // Leader sees their target from local state throughout the entire round
-    if (isLeader && leaderTarget && phase !== "picking") {
-      markers.push({ lat: leaderTarget.lat, lng: leaderTarget.lng, color: "#ffd166", label: "Your Target", size: 3.5, ring: true });
-    }
-
-    // My locked-in guess for current round
-    if (myRoundGuess && isGuessPhase) {
-      markers.push({ lat: myRoundGuess.lat, lng: myRoundGuess.lng, color: guesserColorMap[sessionId] ?? "#06d6a0", label: "Your guess", size: 3, ring: true });
-    }
-
-    // Non-leader: show my own previous guesses at all times (clue + guess phases)
-    if (!isLeader && isGameActive && phase !== "picking") {
-      const maxVisible = isGuessPhase ? currentGuessRound : (isCluePhase ? currentClueRound : cluePairs);
-      for (let r = 1; r <= maxVisible; r++) {
-        const prev = guessBySessionRound.get(`${sessionId}:${r}`);
-        if (prev && !(isGuessPhase && r === currentGuessRound)) {
-          markers.push({ lat: prev.lat, lng: prev.lng, color: guesserColorMap[sessionId] ?? "#06d6a0", label: `Your G${r}`, size: 1.5 });
-        }
-      }
-    }
-
-    // Leader sees all guesses during clue phases (all rounds so far)
-    if (isLeader && isCluePhase) {
-      for (let r = 1; r < currentClueRound; r++) {
-        const roundGuesses = game.guesses.filter((g) => g.round === r);
-        for (const g of roundGuesses) {
-          const name = playerName(g.sessionId);
-          const color = guesserColorMap[g.sessionId] ?? "#7ecbff";
-          markers.push({ lat: g.lat, lng: g.lng, color, label: `${name} (G${g.round})`, size: 2, ring: true });
-        }
-      }
-    }
-
-    // Leader sees all guesses during guess phases
-    if (isLeader && isGuessPhase) {
-      const currentGuesses = game.guesses.filter((g) => g.round === currentGuessRound);
-      for (const g of currentGuesses) {
-        const name = playerName(g.sessionId);
-        const color = guesserColorMap[g.sessionId] ?? "#7ecbff";
-        markers.push({ lat: g.lat, lng: g.lng, color, label: `${name} (G${g.round})`, size: 2.5, ring: true });
-      }
-      // Also show previous round guesses as smaller dots
-      for (let r = 1; r < currentGuessRound; r++) {
-        const oldGuesses = game.guesses.filter((g) => g.round === r);
-        for (const g of oldGuesses) {
-          const name = playerName(g.sessionId);
-          const color = guesserColorMap[g.sessionId] ?? "#7ecbff";
-          markers.push({ lat: g.lat, lng: g.lng, color, label: `${name} (G${g.round})`, size: 1.5 });
-        }
-      }
-    }
-
-    // Reveal: show target + most-recent guess per player prominently; older guesses tiny & label-hidden
-    if (phase === "reveal") {
-      if (!game.encrypted_target && game.target_lat != null && game.target_lng != null) {
-        markers.push({ lat: game.target_lat, lng: game.target_lng, color: "#ffd166", label: "Target", size: 4.5, pulse: true, ring: true });
-      }
-      const maxRound = Math.max(...game.guesses.map((g) => g.round), 1);
-      for (const g of game.guesses) {
-        const name = playerName(g.sessionId);
-        const isMe = g.sessionId === sessionId;
-        const isLatest = g.round === maxRound;
-        const color = isLatest ? (guesserColorMap[g.sessionId] ?? "#7ecbff") : "#888";
-        markers.push({
-          lat: g.lat, lng: g.lng, color,
-          label: `${isMe ? "You" : name}${isLatest ? "" : ` (G${g.round})`}`,
-          size: isLatest ? 3 : 0.8,
-          ring: isLatest,
-          alwaysLabel: isLatest,
-        });
-      }
-    }
-
-    return markers;
-  };
-
-  // Leader can always interact (pan/zoom) with map; guessers can click during guess phases; leader can click during picking
-  const mapInteractive = true;
-
-  /* Dropping the pin and writing the first clue are one screen. The server
-     still runs them as `picking` then `clue1`, so both land here, and that
-     screen brings its own map rather than using the shared one below. */
-  const pickClue = phase === "picking" || phase === "clue1";
-  const pickedTarget = draftMarker ?? leaderTarget;
-
-  /* Where you went on the clue before this one, so a second guess can offer to
-     leave you there rather than making you find it on the map again. */
-  const previousGuess = currentGuessRound > 1
-    ? game.guesses.find((g) => g.sessionId === sessionId && g.round === currentGuessRound - 1)
-    : undefined;
-  const myPreviousGuess = previousGuess ? { lat: previousGuess.lat, lng: previousGuess.lng } : null;
 
   /* The place, once it is allowed out. Encrypted until the host's pre-reveal
      call has run, so an empty one means the scores are still being worked out
@@ -186,102 +79,23 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     if (!held || guess.round > held.round) finalGuesses.set(guess.sessionId, guess);
   }
 
-  /* The phases that bring their own map, and so their own clock. */
-  const onStage = (pickClue || isGuessPhase || phase === "reveal") && !isSpectator;
+  /* Where you went on the clue before this one, so a second guess can offer to
+     leave you there rather than making you find it on the map again. */
+  const previousGuess = currentGuessRound > 1
+    ? game.guesses.find((g) => g.sessionId === sessionId && g.round === currentGuessRound - 1)
+    : undefined;
+  const myPreviousGuess = previousGuess ? { lat: previousGuess.lat, lng: previousGuess.lng } : null;
+
+  /* Dropping the pin and writing the first clue are one screen. The server
+     still runs them as `picking` then `clue1`, so both land here. */
+  const pickClue = phase === "picking" || phase === "clue1";
+  const pickedTarget = draftMarker ?? leaderTarget;
+
+  /* Every phase brings its own map now, so the page has none of its own. */
+  const onStage = isGameActive && !isSpectator;
   const clockProps = clockOnMap
     ? { endsAt: game.settings.phaseEndsAt, onHideClock: () => moveClock(false) }
     : { endsAt: null };
-
-  const expandedMapActions = phase === "picking" && isLeader ? (
-    <>
-      <span className="locsig-map-action-hint">
-        {draftMarker ? "Ready to lock this target." : "Click the map to pick a target."}
-      </span>
-      <button
-        className="btn btn-primary game-action-btn"
-        disabled={!draftMarker}
-        data-tooltip={draftMarker ? "Confirm this location as the target" : "Click the map first to pick a target"}
-        data-tooltip-variant="info"
-        onClick={lockTarget}
-      >
-        <FiMapPin size={14} /> Lock Target
-      </button>
-    </>
-  ) : isGuessPhase && !isLeader && inGame ? (
-    <>
-      <span className="locsig-map-action-hint">
-        {draftMarker ? "Ready to submit this guess." : "Click the map to place your guess."}
-      </span>
-      <button
-        className="btn btn-primary game-action-btn"
-        disabled={!draftMarker}
-        data-tooltip={draftMarker ? "Submit your guess location" : "Click the map to pick a location first"}
-        data-tooltip-variant="info"
-        onClick={() => void submitGuess(currentGuessRound)}
-      >
-        <FiMapPin size={14} /> {myRoundGuess ? "Update Guess" : isLastGuessPhase ? "Place Final Guess" : "Place Guess"}
-      </button>
-    </>
-  ) : null;
-
-  /* ── Players bar (shared across phases) ── */
-  const renderPlayersBar = () => (
-    <div className="game-section">
-      <h3 className="game-section-label">
-        Players <span className="game-section-count">{game.players.length}</span>
-      </h3>
-      <div className="game-players-grid">
-        {game.players.map((p, playerIndex) => {
-          const name = playerName(p.sessionId);
-          const isMe = p.sessionId === sessionId;
-          const isCurrentLeader = p.sessionId === game.leader_id;
-          const inAGuessPhase = currentGuessRound > 0;
-          const hasGuessed = inAGuessPhase && game.guesses.some((g) => g.sessionId === p.sessionId && g.round === currentGuessRound);
-          const isLockedIn = inAGuessPhase && !isCurrentLeader && hasGuessed;
-          return (
-            <div
-              key={p.sessionId}
-              className={`game-player-chip${isMe ? " game-player-chip--me" : ""}${isCurrentLeader ? " game-player-chip--leader" : ""}${isLockedIn ? " game-player-chip--locked" : ""}`}
-              data-tooltip={`${name}${isCurrentLeader ? " - Leader 📍" : ""}${isLockedIn ? " - Locked in ✅" : ""}${isMe ? " (you)" : ""}\n${p.totalScore} pts`}
-              data-tooltip-variant={isCurrentLeader ? "game" : isLockedIn ? "success" : "info"}
-            >
-              <div className={`game-player-avatar${isCurrentLeader ? " game-player-avatar--leader" : ""}`}>
-                {isCurrentLeader ? "📍" : isLockedIn ? "✅" : (
-                  <PlayerAvatar
-                    seed={p.sessionId}
-                  />
-                )}
-              </div>
-              <span className="game-player-name">{name}</span>
-              {isGameActive && <span className="badge" data-tooltip={`${name}'s score`} data-tooltip-variant="info" style={{ fontSize: "0.75rem" }}>{p.totalScore}</span>}
-              {isMe && <span className="game-player-you">you</span>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  /* ── Map section (shared across gameplay phases) ── */
-  const renderMap = () => (
-    <div className="game-section">
-      <div className="locsig-map-wrap" ref={mapWrapRef}>
-        <WorldMap
-          height={520}
-          {...(mapClickable ? { onClick: (coords: { lat: number; lng: number }) => setDraftMarker(coords) } : {})}
-          interactive={mapInteractive}
-          markers={buildMarkers()}
-          coordsOverlay={draftMarker && mapClickable ? draftMarker : null}
-          center={mapCenter}
-          zoom={mapZoom}
-          onBoundsChanged={handleBoundsChanged}
-          timerEndsAt={game.settings.phaseEndsAt}
-          closeKey={`${game.phase}:${game.settings.currentRound}`}
-          expandedActions={expandedMapActions}
-        />
-      </div>
-    </div>
-  );
 
   return (
     <div className="game-page locsig-page" data-game-theme="location">
@@ -307,11 +121,23 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           : {})}
       />
 
-      {/* ─── Players bar (always visible during game) ─── */}
-      {isGameActive && renderPlayersBar()}
-
-      {/* ─── Map (for the phases that do not bring their own) ─── */}
-      {isGameActive && !onStage && renderMap()}
+      {/* Who is in and what they are on, out of the kit. The phase below says
+          who is doing what right now, so this is only the running total. */}
+      {isGameActive && phase !== "finished" && (
+        <GameRoster
+          size="sm"
+          label="Players"
+          players={game.players.map((player, index) => ({
+            sessionId: player.sessionId,
+            name: playerName(player.sessionId),
+            index,
+            points: player.totalScore,
+            pointsSuffix: "pts",
+            ...(player.sessionId === game.leader_id ? { caption: "Leading" } : {}),
+            ...(player.sessionId === sessionId ? { you: true } : {}),
+          }))}
+        />
+      )}
 
       {phase === "lobby" && (
         <LocationLobby
@@ -384,50 +210,34 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         />
       )}
 
-      {/* ─── Clue phase (leader writes) ─── */}
-      {isCluePhase && !pickClue && isLeader && (
-        <div className="game-section locsig-clue-section">
-          <div className="locsig-clue-leader-info">
-            <h3>{currentClueRound === 1 ? "You are the Leader! 📍" : `Write clue ${currentClueRound}! 📍`}</h3>
-            <p>{currentClueRound === 1 ? "Give a text clue to hint at the location - don't name it directly!" : "Help them narrow it down - you can see their previous guesses on the map!"}</p>
-          </div>
-          {visibleClues(currentClueRound - 1).length > 0 && (
-            <div className="locsig-clue-display-row">
-              {visibleClues(currentClueRound - 1).map((c) => (
-                <div key={c.round} className="locsig-clue-display">
-                  <span className="locsig-clue-tag">Clue {c.round}</span>
-                  <span className="locsig-clue-word">{c.text}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <form onSubmit={(e) => void submitClue(e, currentClueRound)} className="locsig-clue-form">
-            <input ref={clueInputRef} className="input locsig-clue-input" onFocus={(e) => e.currentTarget.select()} value={draftClue} onChange={(e) => setDraftClue(e.target.value)} placeholder={currentClueRound === 1 ? "e.g. Ancient empire" : `Clue ${currentClueRound}`} maxLength={80} />
-            <button className="btn btn-primary" type="submit" disabled={!draftClue.trim()} data-tooltip="Submit this clue to the guessers" data-tooltip-variant="info" onMouseDown={(event) => event.preventDefault()}>
-              <FiSend size={14} /> Send
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* ─── Clue phase (non-leader waits) ─── */}
-      {isCluePhase && !pickClue && !isLeader && inGame && (
-        <div className="game-section locsig-waiting-section">
-          {visibleClues(currentClueRound - 1).length > 0 && (
-            <div className="locsig-clue-display-row">
-              {visibleClues(currentClueRound - 1).map((c) => (
-                <div key={c.round} className="locsig-clue-display">
-                  <span className="locsig-clue-tag">Clue {c.round}</span>
-                  <span className="locsig-clue-word">{c.text}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="game-waiting">
-            <div className="game-waiting-pulse" />
-            <p><strong>{leaderName}</strong> is writing clue {currentClueRound}&hellip;</p>
-          </div>
-        </div>
+      {/* ─── The clues after the first ─── */}
+      {isCluePhase && !pickClue && !isSpectator && (
+        <LocationClue
+          round={currentClueRound}
+          isLeader={isLeader}
+          leader={{ sessionId: game.leader_id ?? "", name: leaderName }}
+          {...(isLeader && leaderTarget ? { target: leaderTarget } : {})}
+          clues={visibleClues(currentClueRound - 1)}
+          {...(isLeader
+            ? {
+                guesses: guessesThisRound(currentClueRound - 1).map((guess) => ({
+                  sessionId: guess.sessionId,
+                  name: playerName(guess.sessionId),
+                  lat: guess.lat,
+                  lng: guess.lng,
+                })),
+              }
+            : {})}
+          value={draftClue}
+          submitting={sending}
+          {...clockProps}
+          duration={game.settings.clueDurationSec}
+          onChange={setDraftClue}
+          onSubmit={(event) => {
+            setSending(true);
+            void submitClue(event, currentClueRound).finally(() => setSending(false));
+          }}
+        />
       )}
 
       {/* ─── Guessing ─── */}
@@ -550,14 +360,12 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         />
       )}
 
-      {/* ─── Not in game, game in progress ─── */}
+      {/* Somebody who followed a link into a round already running. They see
+          the board above but have nothing to do with it until the next one. */}
       {!inGame && !isSpectator && isGameActive && (
-        <div className="game-section">
-          <div className="game-waiting">
-            <div className="game-waiting-pulse" />
-            <p>Game in progress - watching!</p>
-          </div>
-        </div>
+        <GamePanel>
+          <GameEmpty icon={<FiEye />} title="This round is under way" hint="You can watch it out, or join and you are in the next one." />
+        </GamePanel>
       )}
 
       {showInSessionModal && activeGameType && (
