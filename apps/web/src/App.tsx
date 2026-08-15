@@ -59,6 +59,9 @@ const ImposterKitPage = lazy(() =>
 const PasswordKitPage = lazy(() =>
   import("./pages/PasswordKitPage").then(({ PasswordKitPage }) => ({ default: PasswordKitPage }))
 );
+const ShadeKitPage = lazy(() =>
+  import("./pages/ShadeKitPage").then(({ ShadeKitPage }) => ({ default: ShadeKitPage }))
+);
 const ChainKitPage = lazy(() =>
   import("./pages/ChainKitPage").then(({ ChainKitPage }) => ({ default: ChainKitPage }))
 );
@@ -732,6 +735,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/dev/imposter" element={<LazyRoute><ImposterKitPage /></LazyRoute>} />
               <Route path="/dev/password" element={<LazyRoute><PasswordKitPage /></LazyRoute>} />
               <Route path="/dev/chain" element={<LazyRoute><ChainKitPage /></LazyRoute>} />
+              <Route path="/dev/shade" element={<LazyRoute><ShadeKitPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
