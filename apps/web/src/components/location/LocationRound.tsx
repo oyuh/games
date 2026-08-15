@@ -360,8 +360,10 @@ export function LocationGuess({
       {...(onHideClock ? { onHideClock } : {})}
       overlay={
         clues.length > 0 ? (
-          <div className="lk-clues">
-            {clues.map((clue) => <LocationClueTag key={clue.round} round={clue.round} text={clue.text} />)}
+          <div className="lk-mapinfo">
+            <div className="lk-clues">
+              {clues.map((clue) => <LocationClueTag key={clue.round} round={clue.round} text={clue.text} />)}
+            </div>
           </div>
         ) : undefined
       }
@@ -550,14 +552,17 @@ export function LocationResult({
       {...(duration !== undefined ? { duration } : {})}
       {...(onHideClock ? { onHideClock } : {})}
       overlay={
-        <>
+        /* One panel rather than seven floating pills. The clues and the ladder
+           are both "here is what you were working with", so they read as one
+           thing sat on the map instead of a scattering of blobs. */
+        <div className="lk-mapinfo">
           {clues.length > 0 && (
             <div className="lk-clues">
               {clues.map((clue) => <LocationClueTag key={clue.round} round={clue.round} text={clue.text} />)}
             </div>
           )}
           <LocationBands />
-        </>
+        </div>
       }
     >
       <ol className="lk-scores">
