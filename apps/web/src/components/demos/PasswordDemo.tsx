@@ -1,12 +1,20 @@
-import { useRef, useState, FormEvent } from "react";
-import { FiEdit3, FiFlag, FiShield, FiUsers, FiZap } from "react-icons/fi";
+import { useRef, useState, type FormEvent } from "react";
+import { FiBookOpen, FiEdit3, FiFlag, FiShield, FiUsers, FiZap } from "react-icons/fi";
 import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
-import { PasswordHeader } from "../password/PasswordHeader";
-import { PasswordTeamGrid } from "../password/PasswordTeamGrid";
-import { PasswordActiveRound } from "../password/PasswordActiveRound";
-import { PasswordRoundsTable } from "../password/PasswordRoundsTable";
+import { GameShellHeader, ShellPill } from "../shared/GameShellHeader";
+import { PASSWORD_PHASES, PasswordLobby, type PasswordTeam } from "../password/PasswordLobby";
+import { PasswordRound, type PasswordClue, type PasswordGuess } from "../password/PasswordRound";
+import { PasswordGameOver, type PasswordWordHistory } from "../password/PasswordGameOver";
 import "../../styles/game-shared.css";
-import "../../styles/password.css";
+
+/**
+ * How to play Password, drawn with the game's own components.
+ *
+ * This used to be a hand copy of the real screens, which is exactly why it
+ * went stale the moment the real screens changed. Every panel below is the
+ * component the game actually renders, handed made up data and no callbacks,
+ * so the tutorial cannot show you something the game no longer does.
+ */
 
 /* ── Fake data ──────────────────────────────────────────── */
 
@@ -24,72 +32,47 @@ const NAMES: Record<string, string> = {
   [P.charlie]: "Charlie",
 };
 
-const TEAMS = [
-  { name: "Red", members: [P.you, P.alice] },
-  { name: "Blue", members: [P.bob, P.charlie] },
+const NOOP = () => {};
+
+const TEAMS: PasswordTeam[] = [
+  { name: "Team A", members: [P.you, P.alice] },
+  { name: "Team B", members: [P.bob, P.charlie] },
 ];
 
-const SCORES_ZERO: Record<string, number> = { Red: 0, Blue: 0 };
-const SCORES_MID: Record<string, number> = { Red: 2, Blue: 1 };
+const SETTINGS = { targetScore: 5, roundDurationSec: 300, category: "food" };
 
-const ROUND_CLUE_PHASE = {
-  teamIndex: 0,
-  guesserId: P.alice,
-  roundId: "demo-round-1",
-  word: "Piano",
-  clues: [] as Array<{ id: string; sessionId: string; text: string; ts: number; clueNumber: number; repeatedText?: boolean }>,
-  guesses: [] as Array<{ id: string; sessionId: string; text: string; ts: number; correct: boolean; guessNumber: number }>,
-  guess: null as string | null,
-  guessCount: 0,
-};
+const SCORES: Record<string, number> = { "Team A": 2, "Team B": 1 };
 
-const ROUND_GUESS_PHASE = {
-  ...ROUND_CLUE_PHASE,
-  clues: [{ id: "demo-clue-1", sessionId: P.you, text: "Keys", ts: Date.now() - 2_000, clueNumber: 1 }],
-};
+const T0 = Date.now() - 30_000;
 
-const ROUNDS_HISTORY = [
+/* One word being worked out, the way it actually goes: a clue, a guess off the
+   back of it, and then the word. */
+const CLUES: PasswordClue[] = [
+  { id: "c1", sessionId: P.you, text: "keys", ts: T0, clueNumber: 1 },
+];
+
+const GUESSES: PasswordGuess[] = [
+  { id: "g1", sessionId: P.alice, text: "Organ", ts: T0 + 4_000, correct: false, guessNumber: 1 },
+];
+
+const HISTORY: PasswordWordHistory[] = [
   {
-    round: 1,
-    teamIndex: 0,
-    guesserId: P.alice,
-    roundId: "demo-history-1",
-    word: "Piano",
-    clues: [{ id: "demo-history-clue-1", sessionId: P.you, text: "Keys", ts: Date.now() - 30_000, clueNumber: 1 }],
-    guesses: [{ id: "demo-history-guess-1", sessionId: P.alice, text: "Piano", ts: Date.now() - 26_000, correct: true, guessNumber: 1 }],
-    guess: "Piano",
-    guessCount: 1,
-    points: 3,
-    correct: true
+    roundId: "h1", round: 1, teamIndex: 0, guesserId: P.alice, word: "Piano",
+    guessCount: 1, points: 3,
+    clues: [{ id: "h1c1", sessionId: P.you, text: "keys", ts: T0, clueNumber: 1 }],
+    guesses: [{ id: "h1g1", sessionId: P.alice, text: "Piano", ts: T0 + 2_000, correct: true, guessNumber: 1 }],
   },
   {
-    round: 2,
-    teamIndex: 1,
-    guesserId: P.charlie,
-    roundId: "demo-history-2",
-    word: "Sunset",
-    clues: [{ id: "demo-history-clue-2", sessionId: P.bob, text: "Evening", ts: Date.now() - 24_000, clueNumber: 1 }],
-    guesses: [{ id: "demo-history-guess-2", sessionId: P.charlie, text: "Sunrise", ts: Date.now() - 20_000, correct: false, guessNumber: 1 }],
-    guess: "Sunrise",
-    guessCount: 1,
-    points: 0,
-    correct: false
-  },
-  {
-    round: 3,
-    teamIndex: 1,
-    guesserId: P.charlie,
-    roundId: "demo-history-3",
-    word: "Sunset",
+    roundId: "h2", round: 2, teamIndex: 1, guesserId: P.charlie, word: "Sunset",
+    guessCount: 2, points: 2,
     clues: [
-      { id: "demo-history-clue-3", sessionId: P.bob, text: "Horizon", ts: Date.now() - 18_000, clueNumber: 1 },
-      { id: "demo-history-clue-4", sessionId: P.bob, text: "Orange", ts: Date.now() - 16_000, clueNumber: 2 },
+      { id: "h2c1", sessionId: P.bob, text: "evening", ts: T0 + 8_000, clueNumber: 1 },
+      { id: "h2c2", sessionId: P.bob, text: "orange", ts: T0 + 14_000, clueNumber: 2 },
     ],
-    guesses: [{ id: "demo-history-guess-3", sessionId: P.charlie, text: "Sunset", ts: Date.now() - 12_000, correct: true, guessNumber: 2 }],
-    guess: "Sunset",
-    guessCount: 2,
-    points: 2,
-    correct: true
+    guesses: [
+      { id: "h2g1", sessionId: P.charlie, text: "Sunrise", ts: T0 + 11_000, correct: false, guessNumber: 1 },
+      { id: "h2g2", sessionId: P.charlie, text: "Sunset", ts: T0 + 16_000, correct: true, guessNumber: 2 },
+    ],
   },
 ];
 
@@ -97,33 +80,45 @@ const ROUNDS_HISTORY = [
 
 const steps: DemoStep[] = [
   {
-    label: "Team Lobby",
-    description: "Pick a team before the host starts. Each team needs at least 2 players - one to give clues and one to guess.",
-    hint: "The host can lock teams and move players between them.",
+    label: "The lobby",
+    description: "Pick a side before the host starts. Every team needs two: one to give clues and one to guess.",
+    hint: "The host can lock the teams, and drag anybody onto a different one.",
   },
   {
-    label: "Give Clues",
-    description: "Clue givers see the secret word and can keep feeding one-word clues while the guesser watches the live round unfold.",
-    hint: "Make each clue descriptive but not too obvious - follow-up clues are allowed now.",
+    label: "Giving clues",
+    description: "You can see the word. Send one-word clues and watch the answers land in the box beside yours.",
+    hint: "The number of guesses your team has used is what the word is still worth.",
   },
   {
-    label: "Guess the Word",
-    description: "The guesser can start guessing at any time and everyone sees the live clue-and-guess timeline update together.",
-    hint: "Repeated guesses are blocked, so every new try needs to be genuinely different.",
+    label: "Guessing",
+    description: "You cannot see the word, only the clues arriving. Type what you think it is.",
+    hint: "Both boxes are on screen the whole time, because your team is not taking turns.",
   },
   {
-    label: "Scoring & Results",
-    description: "Correct solves are worth more when your team needs fewer guesses. All teams play simultaneously - first team to the target score wins!",
-    hint: "Check the round history at the bottom to see every clue, guess, and solve timeline.",
+    label: "The end",
+    description: "First team to the target takes it. Every word opens up to the clues and guesses that got there.",
+    hint: "The word that ended it opens itself.",
   },
   {
-    label: "Overview",
-    description: "A team banks points the moment its guesser lands the word. How many points depends only on how many guesses it took.",
+    label: "Scoring",
+    description: "A team banks points the moment its guesser lands the word, and how many depends only on how many guesses it took.",
     hint: "Nailing it first try is worth triple a slow solve, so a sharp clue pays for itself.",
   },
 ];
 
 /* ── Component ──────────────────────────────────────────── */
+
+const header = (phase: string) => (
+  <GameShellHeader
+    game="password"
+    title="Password"
+    phases={PASSWORD_PHASES}
+    phase={phase}
+    code="DEMO"
+    isHost
+    pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Food</ShellPill>}
+  />
+);
 
 export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void; initialStep?: number }) {
   const initialStepRef = useRef(initialStep);
@@ -131,116 +126,107 @@ export function PasswordDemo({ onClose, initialStep = 0 }: { onClose: () => void
   const [clue, setClue] = useState("");
   const [guess, setGuess] = useState("");
 
-  const noop = (e?: FormEvent) => e?.preventDefault();
+  const stop = (event: FormEvent) => event.preventDefault();
+
+  const round = {
+    category: SETTINGS.category,
+    teamMembers: TEAMS[0]!.members,
+    guesserId: P.alice,
+    clues: CLUES,
+    guesses: GUESSES,
+    names: NAMES,
+    teams: TEAMS,
+    scores: SCORES,
+    targetScore: SETTINGS.targetScore,
+    guessers: { "Team A": P.alice, "Team B": P.charlie },
+    onSubmit: stop,
+  };
 
   const renderStep = () => {
     switch (step) {
-      case 0: // Lobby
+      case 0:
         return (
           <div className="game-page" data-game-theme="password">
-            <PasswordHeader title="Password" code="DEMO" phase="lobby" isHost category="food" />
-            <DemoPoint label="Join a team before the game starts">
-              <PasswordTeamGrid
+            {header("lobby")}
+            <DemoPoint label="Two a side, and the host presses go">
+              <PasswordLobby
                 teams={TEAMS}
-                scores={SCORES_ZERO}
-                names={NAMES}
-                activeTeamIndex={undefined}
                 sessionId={P.you}
-                isLobby
+                hostId={P.you}
+                names={NAMES}
+                settings={SETTINGS}
                 isHost
+                inGame
+                onStart={NOOP}
+                onLeave={NOOP}
+                onJoin={NOOP}
+                onJoinTeam={NOOP}
               />
             </DemoPoint>
           </div>
         );
 
-      case 1: // Clue giver phase
+      case 1:
         return (
           <div className="game-page" data-game-theme="password">
-            <PasswordHeader title="Password" code="DEMO" phase="playing" currentRound={1} category="food" />
-            <PasswordTeamGrid
-              teams={TEAMS}
-              scores={SCORES_MID}
-              names={NAMES}
-              activeTeamIndex={0}
-              sessionId={P.you}
-              showScores
-              targetScore={5}
-            />
-            <DemoPoint label="You see the secret word - type a one-word clue">
-              <PasswordActiveRound
-                activeRound={ROUND_CLUE_PHASE}
-                names={NAMES}
+            {header("playing")}
+            <DemoPoint label="You have the word. One word back is all you get">
+              <PasswordRound
+                {...round}
+                role="clue"
+                word="Piano"
                 sessionId={P.you}
-                teamMembers={TEAMS[0]!.members}
-                clue={clue}
-                guess=""
-                liveEntries={[]}
+                value={clue}
                 skipsRemaining={2}
-                onClueChange={setClue}
-                onGuessChange={() => {}}
-                onSubmitClue={noop}
-                onSubmitGuess={noop}
-                onSkip={noop}
+                onChange={setClue}
+                onSkip={NOOP}
               />
             </DemoPoint>
           </div>
         );
 
-      case 2: // Guesser phase
+      case 2:
         return (
           <div className="game-page" data-game-theme="password">
-            <PasswordHeader title="Password" code="DEMO" phase="playing" currentRound={1} category="food" />
-            <PasswordTeamGrid
-              teams={TEAMS}
-              scores={SCORES_MID}
-              names={NAMES}
-              activeTeamIndex={0}
-              sessionId={P.alice}
-              showScores
-              targetScore={5}
-            />
-            <DemoPoint label="The guesser sees the clues and types a guess">
-              <PasswordActiveRound
-                activeRound={ROUND_GUESS_PHASE}
-                names={NAMES}
+            {header("playing")}
+            <DemoPoint label="No word, just the clues coming in">
+              <PasswordRound
+                {...round}
+                role="guess"
+                word={null}
                 sessionId={P.alice}
-                teamMembers={TEAMS[0]!.members}
-                clue=""
-                guess={guess}
-                liveEntries={[]}
+                value={guess}
                 skipsRemaining={2}
-                onClueChange={() => {}}
-                onGuessChange={setGuess}
-                onSubmitClue={noop}
-                onSubmitGuess={noop}
-                onSkip={noop}
+                onChange={setGuess}
+                onSkip={NOOP}
               />
             </DemoPoint>
           </div>
         );
 
-      case 3: // Results
+      case 3:
         return (
           <div className="game-page" data-game-theme="password">
-            <PasswordHeader title="Password" code="DEMO" phase="results" currentRound={3} category="food" />
-            <DemoPoint label="Final scores - first to the target wins">
-              <PasswordTeamGrid
+            {header("results")}
+            <DemoPoint label="Who took it, and every word on the way there">
+              <PasswordGameOver
                 teams={TEAMS}
-                scores={SCORES_MID}
+                scores={{ "Team A": 5, "Team B": 3 }}
+                targetScore={SETTINGS.targetScore}
+                rounds={HISTORY}
                 names={NAMES}
-                activeTeamIndex={undefined}
                 sessionId={P.you}
-                showScores
-                targetScore={5}
+                hostId={P.you}
+                isHost
+                onPlayAgain={NOOP}
+                onEnd={NOOP}
+                onHome={NOOP}
               />
-            </DemoPoint>
-            <DemoPoint label="Full round history with all words, clues, and guesses">
-              <PasswordRoundsTable rounds={ROUNDS_HISTORY} teams={TEAMS} names={NAMES} defaultOpen />
             </DemoPoint>
           </div>
         );
 
-      case 4: // Scoring
+      case 4:
         return (
           <DemoScoring
             columns={["Guesses your team used", "Points"]}
