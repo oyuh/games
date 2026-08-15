@@ -55,6 +55,16 @@ export function shadeDistLabel(dist: number): string {
 const BAND_INK = [0.9, 0.55, 0.32, 0.16];
 
 /**
+ * How loudly a guess that far out gets drawn, 0 to 1, or nothing once it is
+ * far enough out to have paid nothing. The board's rings, the ladder's
+ * swatches and the result cards' accents all come off this, so closeness
+ * looks like one idea everywhere it turns up rather than three.
+ */
+export function shadeBandInk(dist: number): number | null {
+  return BAND_INK[dist] ?? null;
+}
+
+/**
  * The ladder, as four cells lifted off the board. Each one carries the ring it
  * is describing at the strength the grid draws it, so read left to right the
  * row is the same fade you are looking at up there, and the target keeps its
@@ -82,13 +92,16 @@ export function ShadeBands({ className = "" }: { className?: string }) {
  * this game is that shape, so it is one component rather than each phase
  * laying itself out and getting the spacing slightly different.
  *
- * Two ways round. A phase with nothing to do in it puts its words under the
- * board as a caption. A phase with controls puts them in a rail beside it,
- * because a board, a clue, a swatch, a hint, two buttons and a tally in one
- * column is a screen you have to scroll to play, and the board is the thing
- * you are meant to be looking at while you use them. Under a certain width
- * there is no room for two of anything, so the rail goes back to being a
- * caption.
+ * Two ways round. Every phase of a round uses the rail, which puts its words
+ * and controls in a column beside the board: a board, a clue, a swatch, a
+ * hint, two buttons and a tally stacked underneath is a screen you scroll to
+ * play, and all of that is stuff you read while looking at the board. Even the
+ * phases where you are only waiting read better beside it than under it, since
+ * a wide line of text on a page this wide is a long way for an eye to travel.
+ *
+ * The caption form is left for the lobby's board, which is a thing to poke at
+ * rather than a phase to play. Under a certain width there is no room for two
+ * of anything, so the rail goes back to being a caption anyway.
  */
 export function ShadeStage({
   children,

@@ -320,6 +320,15 @@
     max-width: none;
     text-align: left;
   }
+
+  /* A scoreboard in a rail is one card per line. The cards are drawn to sit
+     in a lobby's wrapping grid at their own width, and two of those crammed
+     into a 17rem column would be a scoreboard you cannot read a name off. */
+  .sk-stage--rail .gk-roster-block,
+  .sk-stage--rail .pc-grid > .pc {
+    width: 100%;
+    flex: 1 1 100%;
+  }
 }
 
 /* The row a phase's buttons sit on. Its own class rather than the kit's
