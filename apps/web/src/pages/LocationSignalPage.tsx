@@ -5,7 +5,9 @@ import "../styles/location-signal.css";
 import { useState } from "react";
 import { FiSend, FiMapPin } from "react-icons/fi";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
-import { LocationLobby, locationPhases } from "../components/location/LocationLobby";
+import { LocationLobby, locationPhases, locationTrackPhase } from "../components/location/LocationLobby";
+import { LocationPickClue } from "../components/location/LocationRound";
+import { callGameSecretInit } from "../lib/game-secrets";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
@@ -24,15 +26,16 @@ import { useLocationSignalGame } from "../hooks/useLocationSignalGame";
  * drawing their own markup and move onto the kit next.
  */
 function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
-  /* Held while the start mutator is in the air, so nothing can be pressed
-     twice into two of the same thing. */
+  /* Held while a mutator is in the air, so nothing can be pressed twice into
+     two of the same thing. */
   const [starting, setStarting] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const {
     zero, navigate, gameId, game, me, isHost, isLeader, inGame, isSpectator,
     sessionById, playerName, myRoundGuess, guesserColorMap,
     draftClue, setDraftClue, draftMarker, setDraftMarker,
-    leaderTarget, mapCenter, mapZoom, handleBoundsChanged, mapWrapRef, clueInputRef,
+    leaderTarget, setLeaderTarget, mapCenter, mapZoom, handleBoundsChanged, mapWrapRef, clueInputRef,
     activeGameType, activeGameId, inAnotherGame,
     showInSessionModal, setShowInSessionModal,
     joiningFromOtherGame, setJoiningFromOtherGame,
@@ -145,6 +148,12 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   // Leader can always interact (pan/zoom) with map; guessers can click during guess phases; leader can click during picking
   const mapInteractive = true;
 
+  /* Dropping the pin and writing the first clue are one screen. The server
+     still runs them as `picking` then `clue1`, so both land here, and that
+     screen brings its own map rather than using the shared one below. */
+  const pickClue = phase === "picking" || phase === "clue1";
+  const pickedTarget = draftMarker ?? leaderTarget;
+
   const expandedMapActions = phase === "picking" && isLeader ? (
     <>
       <span className="locsig-map-action-hint">
@@ -243,7 +252,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         game="location"
         title="Location Signal"
         phases={locationPhases(cluePairs)}
-        phase={game.phase}
+        phase={locationTrackPhase(game.phase)}
         code={game.code}
         endsAt={game.settings.phaseEndsAt}
         isHost={isHost}
@@ -259,7 +268,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
       {isGameActive && renderPlayersBar()}
 
       {/* ─── Map (always visible during game) ─── */}
-      {isGameActive && renderMap()}
+      {isGameActive && !pickClue && renderMap()}
 
       {phase === "lobby" && (
         <LocationLobby
@@ -295,35 +304,45 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         />
       )}
 
-      {/* ─── Picking (leader) ─── */}
-      {phase === "picking" && isLeader && (
-        <div className="game-section locsig-clue-section">
-          <div className="locsig-clue-leader-info">
-            <h3>Pick your target location! 📍</h3>
-            <p>Click anywhere on the map to place your target. Nobody else can see it.</p>
-          </div>
-          <div className="game-actions">
-            <button className="btn btn-primary game-action-btn" disabled={!draftMarker}
-              data-tooltip={draftMarker ? "Confirm this location as the target" : "Click the map first to pick a target"} data-tooltip-variant="info"
-              onClick={lockTarget}>
-              <FiMapPin size={14} /> Lock Target
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ─── The place and the first clue, one screen ─── */}
+      {pickClue && !isSpectator && (
+        <LocationPickClue
+          isLeader={isLeader}
+          leader={{ sessionId: game.leader_id ?? "", name: leaderName }}
+          target={pickedTarget}
+          value={draftClue}
+          submitting={sending}
+          endsAt={game.settings.phaseEndsAt}
+          duration={game.settings.clueDurationSec}
+          onPick={setDraftMarker}
+          onChange={setDraftClue}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!pickedTarget || !draftClue.trim()) return;
+            setSending(true);
 
-      {/* ─── Picking (non-leader) ─── */}
-      {phase === "picking" && !isLeader && inGame && (
-        <div className="game-section locsig-waiting-section">
-          <div className="game-waiting">
-            <div className="game-waiting-pulse" />
-            <p><strong>{leaderName}</strong> is picking a location&hellip;</p>
-          </div>
-        </div>
+            /* Two mutators, one press. The server still has a picking step and
+               a clue step, so the place is locked first and the clue goes in
+               behind it. Between them the target gets encrypted, which has to
+               happen after it lands and before anyone can read the row. */
+            const clue = draftClue.trim();
+            const placed = phase === "clue1"
+              ? Promise.resolve()
+              : zero.mutate(mutators.locationSignal.setTarget({ gameId, sessionId, lat: pickedTarget.lat, lng: pickedTarget.lng }))
+                  .server.then(() => { setLeaderTarget(pickedTarget); })
+                  .then(() => callGameSecretInit("location_signal", gameId, sessionId));
+
+            void placed
+              .then(() => optimistic(zero.mutate(mutators.locationSignal.submitClue({ gameId, sessionId, round: 1, text: clue }))))
+              .then(() => setDraftClue(""))
+              .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't send that", "error"))
+              .finally(() => setSending(false));
+          }}
+        />
       )}
 
       {/* ─── Clue phase (leader writes) ─── */}
-      {isCluePhase && isLeader && (
+      {isCluePhase && !pickClue && isLeader && (
         <div className="game-section locsig-clue-section">
           <div className="locsig-clue-leader-info">
             <h3>{currentClueRound === 1 ? "You are the Leader! 📍" : `Write clue ${currentClueRound}! 📍`}</h3>
@@ -349,7 +368,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ─── Clue phase (non-leader waits) ─── */}
-      {isCluePhase && !isLeader && inGame && (
+      {isCluePhase && !pickClue && !isLeader && inGame && (
         <div className="game-section locsig-waiting-section">
           {visibleClues(currentClueRound - 1).length > 0 && (
             <div className="locsig-clue-display-row">

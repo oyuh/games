@@ -30,7 +30,10 @@ import "../../styles/location-kit.css";
 export const MIN_LOCATION_PLAYERS = 2;
 
 const PHASE_LOBBY: GamePhase = { id: "lobby", label: "Lobby", icon: <FiUsers />, hint: "Waiting for everyone to turn up. The host starts the round." };
-const PHASE_PICKING: GamePhase = { id: "picking", label: "The place", icon: <FiMapPin />, hint: "The leader is dropping a pin somewhere on earth. Nobody else can see it." };
+/* Picking the place and writing the first clue are one step for whoever is
+   leading, so they are one step on the track. The server still moves through
+   `clue1` on the way, but nobody is ever sat looking at it. */
+const PHASE_PICKING: GamePhase = { id: "picking", label: "The place", icon: <FiMapPin />, hint: "The leader is picking somewhere and writing the first clue about it." };
 const PHASE_REVEAL: GamePhase = { id: "reveal", label: "Reveal", icon: <FiEye />, hint: "Where it was, where everybody went, and what the distance paid." };
 const PHASE_FINISHED: GamePhase = { id: "finished", label: "Finished", icon: <FiAward />, hint: "Everyone has led. The scores are final." };
 
@@ -44,14 +47,16 @@ export function locationPhases(cluePairs = 2): GamePhase[] {
   const pairs: GamePhase[] = [];
 
   for (let n = 1; n <= cluePairs; n++) {
-    pairs.push({
-      id: `clue${n}`,
-      label: `Clue ${n}`,
-      icon: <FiEdit3 />,
-      hint: n === 1
-        ? "A line from the leader, and it cannot just name the place."
-        : "Another line. The leader can see where everybody went last time.",
-    });
+    /* The first clue is written on the same screen as the pin, so it is not a
+       step of its own. Every clue after it is. */
+    if (n > 1) {
+      pairs.push({
+        id: `clue${n}`,
+        label: `Clue ${n}`,
+        icon: <FiEdit3 />,
+        hint: "Another line. The leader can see where everybody went last time.",
+      });
+    }
     pairs.push({
       id: `guess${n}`,
       label: `Guess ${n}`,
@@ -63,6 +68,15 @@ export function locationPhases(cluePairs = 2): GamePhase[] {
   }
 
   return [PHASE_LOBBY, PHASE_PICKING, ...pairs, PHASE_REVEAL, PHASE_FINISHED];
+}
+
+/**
+ * Which step on the track a live phase belongs to. `clue1` is written on the
+ * picking screen, so it has no step of its own and the track stays on the
+ * place while the server passes through it.
+ */
+export function locationTrackPhase(phase: string) {
+  return phase === "clue1" ? "picking" : phase;
 }
 
 /** The player shape the game row already carries. */

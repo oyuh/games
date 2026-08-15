@@ -4,6 +4,9 @@
    their radius, their blur. One look for everything that floats over tiles,
    rather than a second one invented next to it. */
 
+/* The console sits outside the map, so the shared ink has to be declared
+   somewhere they can both see it. */
+.lk-stage,
 .lk-map {
   --lk-accent: var(--game-accent, var(--primary));
   /* Straight off .locsig-zoom-btn, so the panel and the buttons are the same
@@ -11,11 +14,184 @@
   --lk-glass: rgba(6, 12, 22, 0.82);
   --lk-edge: rgba(255, 255, 255, 0.22);
   --lk-lift: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
 
+.lk-map {
   position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+}
+
+/* ── The map and its console ─────────────────────────────────────
+   Welded, not stacked. Shade's controls go in a rail down the right of its
+   board, but a map has no width to spare, so the same idea is turned on its
+   side: the map keeps the full frame and the things you do with it hang off
+   its bottom edge, sharing one border so the two read as one object. */
+.lk-stage {
+  display: flex;
+  flex-direction: column;
+}
+
+.lk-map--joined {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: 0;
+}
+
+.lk-console {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--card, var(--background));
+}
+
+.lk-console-hint {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+/* ── The composer ────────────────────────────────────────────────
+   One line: where you are up to, the box, what is left, and the button. */
+.lk-composer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.lk-composer-input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.lk-composer-input:focus-visible {
+  outline: none;
+  border-color: var(--lk-accent, var(--primary));
+}
+
+/* Nothing to describe yet, so the box says so by being obviously not ready
+   rather than by being missing and shifting everything when it arrives. */
+.lk-composer-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.lk-composer-count {
+  color: var(--secondary);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 1.6rem;
+  text-align: right;
+}
+
+/* Where they are up to, in the one step that has two halves. It goes green
+   when the pin lands, so the screen acknowledges the click without a toast. */
+.lk-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lk-step.is-done {
+  border-color: color-mix(in srgb, var(--lk-accent, var(--primary)) 55%, transparent);
+  background: color-mix(in srgb, var(--lk-accent, var(--primary)) 12%, transparent);
+  color: var(--foreground);
+}
+
+/* ── Waiting on somebody ─────────────────────────────────────────
+   A face and a name rather than a spinner. You are not waiting on the page,
+   you are waiting on Ada. */
+.lk-waiting {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--secondary);
+  font-size: 0.85rem;
+}
+
+.lk-waiting-face {
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: 0 0 auto;
+}
+
+.lk-waiting strong {
+  color: var(--foreground);
+}
+
+/* ── On the map ──────────────────────────────────────────────────
+   The clock and the clues, which are facts about the round rather than things
+   you press, so they ride on the map and leave the console to the controls. */
+.lk-clock {
+  position: absolute;
+  top: 0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--lk-edge);
+  border-radius: var(--radius-md);
+  background: var(--lk-glass);
+  box-shadow: var(--lk-lift);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.lk-clues {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.lk-clue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem 0.25rem 0.3rem;
+  border: 1px solid var(--lk-edge);
+  border-radius: 999px;
+  background: var(--lk-glass);
+  backdrop-filter: blur(10px);
+  font-size: 0.78rem;
+}
+
+.lk-clue-tag {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: var(--lk-accent);
+  color: #181a1b;
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.lk-clue-text {
+  color: #fff;
+  font-weight: 600;
 }
 
 /* ── The bar along the bottom ────────────────────────────────────
