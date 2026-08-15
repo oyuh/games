@@ -19,6 +19,11 @@ export { imposterCategories, imposterCategoryLabels, chainCategories, chainCateg
    worth once you have burned letters off it. */
 export { isOneWord, isClueTooSimilar, scorePasswordGuessCount, scoreForLetters } from "./helpers";
 
+/* Shade's version of the same deal: what makes a clue legal, so the composer
+   can say why the send button is off in the words the mutator would have
+   thrown. */
+export { shadeClueProblem, SHADE_COLOR_WORDS } from "./shade-signal";
+
 export const mutators = defineMutators({
   sessions: sessionMutators,
   imposter: imposterMutators,
