@@ -37,11 +37,15 @@ export type ChainLink = {
 /** Somebody mid-keystroke on a board you are watching. Never persisted. */
 export type ChainDraft = { wordIndex: number; text: string };
 
-/** One side of the duel, as the scoreboard needs it. */
-export interface ChainDuelist {
+/** One of the two, and what they have scored. All the end screen needs. */
+export interface ChainSide {
   sessionId: string;
   name: string;
   score: number;
+}
+
+/** One side of the duel, as the scoreboard needs it mid round. */
+export interface ChainDuelist extends ChainSide {
   /** Hidden words cracked, and how many there were. The two given ends are in
    *  neither number: nobody solved those. */
   progress: number;
