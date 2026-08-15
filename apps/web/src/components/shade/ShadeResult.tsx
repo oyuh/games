@@ -17,6 +17,30 @@ import "../../styles/shade-kit.css";
  * happens when it does.
  */
 
+/**
+ * The guess that actually counted, per player: the second one if they moved
+ * after the second clue, otherwise the first.
+ *
+ * This has to agree with the reveal mutator, which scores `g2 ?? g1`. A
+ * results screen that adds up a different guess from the one the server paid
+ * for is a results screen that argues with the scoreboard next to it.
+ */
+export function shadeFinalGuesses(
+  guesses: ReadonlyArray<{ sessionId: string; round: 1 | 2; row: number; col: number }>,
+): Array<{ sessionId: string; row: number; col: number }> {
+  const final = new Map<string, { sessionId: string; row: number; col: number }>();
+
+  for (const guess of guesses) {
+    /* Round 2 always wins, and round 1 only lands if nothing is there yet, so
+       the order they arrive in does not change the answer. */
+    if (guess.round === 2 || !final.has(guess.sessionId)) {
+      final.set(guess.sessionId, { sessionId: guess.sessionId, row: guess.row, col: guess.col });
+    }
+  }
+
+  return [...final.values()];
+}
+
 export interface ShadeResultPlayer {
   sessionId: string;
   name: string;
