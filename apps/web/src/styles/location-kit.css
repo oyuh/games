@@ -530,23 +530,41 @@
   gap: 0.9rem;
 }
 
-.lk-over-head {
+/* The box every game ends on. Same panel, same kicker, same full size card as
+   Shade's, because finishing a game should look like finishing a game whichever
+   one you were playing. */
+.lk-verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.2rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--lk-accent) 28%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--lk-accent) 8%, transparent);
   text-align: center;
 }
 
-.lk-over-title {
+.lk-verdict-kicker {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 0.64rem;
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--lk-accent) 75%, var(--foreground));
 }
 
-.lk-over-sub {
-  margin: 0.1rem 0 0;
-  color: var(--lk-accent);
-  font-size: 0.95rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+.lk-verdict-faces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.lk-verdict-line {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--secondary);
 }
 
 .lk-standings {
