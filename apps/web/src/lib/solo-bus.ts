@@ -15,7 +15,6 @@ import type { PipsDifficulty } from "./pips-engine";
 
 export type ShikakuPhase =
   | "menu"
-  | "generating"
   | "countdown"
   | "playing"
   | "puzzle-complete"

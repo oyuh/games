@@ -1232,32 +1232,6 @@ export function PipsPage() {
     );
   }
 
-  if (phase === "countdown") {
-    return (
-      <>
-        <div className="game-page pips-page pips-page--countdown" data-game-theme="pips" data-phase={phase}>
-          <div className="pips-container pips-container--countdown">
-            <div className="game-start-countdown">
-              <p className="game-start-countdown-kicker">{runModeLabel(runMode)} Run</p>
-              <div className="game-start-countdown-number" key={countdownNum}>
-                {countdownNum > 0 ? countdownNum : "GO!"}
-              </div>
-              <p className="game-start-countdown-label">
-                {runMode === "infinite"
-                  ? `${difficultyLabel(infiniteDifficulty)} forever`
-                  : runMode === "seeded"
-                    ? `Seed ${seed}`
-                    : "Easy, Medium, Hard"}
-              </p>
-            </div>
-          </div>
-        </div>
-        {leaderboardPanel}
-        {howToPanel}
-      </>
-    );
-  }
-
   if (phase === "complete") {
     return (
       <>
@@ -1457,6 +1431,22 @@ export function PipsPage() {
             </div>
           </aside>
         </main>
+
+        {phase === "countdown" && (
+          <div className="game-start-countdown" aria-live="polite">
+            <p className="game-start-countdown-kicker">{runModeLabel(runMode)} Run</p>
+            <div className="game-start-countdown-number" key={countdownNum}>
+              {countdownNum > 0 ? countdownNum : "GO!"}
+            </div>
+            <p className="game-start-countdown-label">
+              {runMode === "infinite"
+                ? `${difficultyLabel(infiniteDifficulty)} forever`
+                : runMode === "seeded"
+                  ? `Seed ${seed}`
+                  : "Easy, Medium, Hard"}
+            </p>
+          </div>
+        )}
 
         {advanceCountdown != null && (
           <div className={`pips-advance-countdown${advanceCountdown === "solved" ? " pips-advance-countdown--solved" : ""}`} aria-live="polite">
