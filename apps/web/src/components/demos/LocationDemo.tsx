@@ -74,6 +74,12 @@ const REVEAL_SCORES = [
   dist: row.km === 0 ? "0 km - exact!" : `~${row.km} km`,
 }));
 
+/* The how-to is a modal on a scrolling body, so the map is sized off the
+   viewport rather than a number that was picked for a laptop. 220px of world
+   map is a letterbox you cannot recognise a country in, which rather defeats
+   the point of a page teaching you to recognise countries. */
+const DEMO_MAP_H = "clamp(240px, 42vh, 460px)";
+
 /** Whoever is leading in the worked example. */
 const DEMO_LEADER = { sessionId: P.alice, name: "Alice" };
 
@@ -170,7 +176,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
             <div className="locdemo-map-preview">
               <WorldMap
                 key={mapKey}
-                height={220}
+                height={DEMO_MAP_H}
                 defaultZoom={2}
                 defaultCenter={[25, 10]}
                 onClick={(coords) => setDraftMarker(coords)}
@@ -194,7 +200,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
               leader={DEMO_LEADER}
               target={draftMarker}
               value={clue}
-              height={230}
+              height={DEMO_MAP_H}
               onPick={setDraftMarker}
               onChange={setClue}
               onSubmit={noop}
@@ -216,7 +222,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
               onKeep={() => setGuessPin({ lat: 41.4, lng: 2.2 })}
               lockedCount={2}
               guesserCount={4}
-              height={230}
+              height={DEMO_MAP_H}
               onSelect={setGuessPin}
               onLock={() => {}}
             />
@@ -232,7 +238,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
           <div className="locdemo-step">
             <DemoPoint label="Your target in gold, every guess around it">
               <div className="locdemo-map-preview">
-                <WorldMap height={280} interactive={false} markers={LEADER_GUESS1} defaultCenter={[40, 12]} defaultZoom={3} />
+                <WorldMap height={DEMO_MAP_H} interactive={false} markers={LEADER_GUESS1} defaultCenter={[40, 12]} defaultZoom={3} />
                 <p className="locdemo-map-caption">Leader sees everything - target (gold) + all player guesses</p>
               </div>
             </DemoPoint>
@@ -244,7 +250,7 @@ export function LocationDemo({ onClose, initialStep = 0 }: { onClose: () => void
         return (
           <div className="locdemo-step">
             <div className="locdemo-map-preview">
-              <WorldMap height={260} interactive={false} markers={REVEAL_MARKERS} defaultCenter={[42, 12]} defaultZoom={5} />
+              <WorldMap height={DEMO_MAP_H} interactive={false} markers={REVEAL_MARKERS} defaultCenter={[42, 12]} defaultZoom={5} />
             </div>
             <DemoPoint label="Closer pins score more">
               <div className="locdemo-reveal-scores">
