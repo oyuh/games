@@ -61,34 +61,34 @@ const BANK = <ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game
 
 const steps: DemoStep[] = [
   {
-    label: "Lobby",
-    description: "Players join the lobby and wait for the host to start. You need at least 3 players.",
-    hint: "Share the room code with friends so they can join!",
+    label: "The lobby",
+    description: "Everyone joins and waits on the host. Three players minimum, and one of them will not get the word.",
+    hint: "Share the code. The room is the whole game.",
   },
   {
-    label: "Clues (as Player)",
-    description: "You see the secret word and give a one-word clue that proves you know it - without being too obvious.",
-    hint: "Be subtle! If your clue is too direct, the imposter can piggyback off it.",
+    label: "Your clue",
+    description: "You get the word. One clue, and it has to prove you know it without handing it over.",
+    hint: "Too direct and the imposter just repeats it back at you.",
   },
   {
-    label: "Clues (as Imposter)",
-    description: "The imposter doesn't know the word! They see redacted hints from other clues and must bluff a convincing clue.",
-    hint: "Watch the patterns in others' redacted clues and try to blend in.",
+    label: "Their clue",
+    description: "The imposter never sees the word. They get a peek at the clues already in, redacted, and have to write one that fits.",
+    hint: "Whatever is showing through is all they have to aim at.",
   },
   {
     label: "Voting",
-    description: "Everyone reviews all the clues side by side and votes on who they think the imposter is.",
-    hint: "Look for the vaguest or most off-topic clue - that's usually the imposter!",
+    description: "Every clue sits on the card you press. Pick whoever you think never saw the word.",
+    hint: "The vaguest clue in the room is usually the one written by somebody guessing.",
   },
   {
     label: "Results",
-    description: "Votes are tallied and the imposter is revealed. Did the group catch them, or did they escape?",
-    hint: "The imposter wins if no one catches them! Then a new round starts with a different word.",
+    description: "The votes are counted and the imposter is named. Either the room caught them or they walked it.",
+    hint: "Next round is a new word and a new imposter, so nothing carries over.",
   },
   {
-    label: "Overview",
-    description: "Imposter keeps no running score. Each round is settled on its own by the vote, and whoever got the most votes is the one revealed.",
-    hint: "That makes every round a fresh start, so a blown round costs you nothing later.",
+    label: "Scoring",
+    description: "Imposter keeps no running score. Each round is settled on its own by the vote, and whoever took the most votes is the one revealed.",
+    hint: "Every round is a fresh start, so a blown one costs you nothing later.",
   },
 ];
 
