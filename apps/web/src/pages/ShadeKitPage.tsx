@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { FiGlobe, FiLock, FiPlay } from "react-icons/fi";
+import { useEffect, useState, type ReactNode } from "react";
+import { FiGlobe, FiLock, FiPlay, FiRefreshCw } from "react-icons/fi";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { GameButton } from "../components/shared/GameKit";
 import {
@@ -12,6 +12,7 @@ import {
 } from "../components/shade/ShadeLobby";
 import { SHADE_BANDS, ShadeGrid, shadeDistLabel } from "../components/shade/ShadeGrid";
 import { ShadeClue, ShadeClueTag, ShadePick } from "../components/shade/ShadeClue";
+import { ShadeGuess } from "../components/shade/ShadeGuess";
 import "../styles/game-shared.css";
 
 /**
@@ -253,6 +254,105 @@ const GUESS_1 = [
   { sessionId: "seed-dov", name: "Dov", row: 7, col: 3, note: "Guess 1" },
 ];
 
+/**
+ * The guess with a hand on it. Picking, locking, moving and staying put all
+ * write to the same local state the mutator writes to, so the two states a
+ * pick has (held and handed over) behave here the way they behave in a game.
+ */
+function LiveGuess() {
+  const [round, setRound] = useState<1 | 2>(1);
+  const [isGuessing, setIsGuessing] = useState(true);
+  const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [previous, setPrevious] = useState<{ row: number; col: number } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  /* The rest of the room comes in on its own while you deliberate, which is
+     the pressure the phase actually runs on. */
+  const [others, setOthers] = useState(0);
+  useEffect(() => {
+    if (others >= 3) return;
+    const id = setTimeout(() => setOthers((n) => n + 1), 2600);
+    return () => clearTimeout(id);
+  }, [others]);
+
+  const lock = () => {
+    setSubmitting(true);
+    setTimeout(() => { setSubmitting(false); setLocked(true); }, 700);
+  };
+
+  const toRound2 = () => {
+    setRound(2);
+    setPrevious(selected ?? { row: 5, col: 6 });
+    setSelected(null);
+    setLocked(false);
+    setOthers(0);
+  };
+
+  const reset = () => {
+    setRound(1); setSelected(null); setLocked(false); setPrevious(null); setOthers(0);
+  };
+
+  return (
+    <>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
+        <button type="button" className={`btn ${round === 1 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={reset}>Guess 1</button>
+        <button type="button" className={`btn ${round === 2 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={toRound2}>Guess 2</button>
+
+        <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
+
+        <button type="button" className={`btn ${isGuessing ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsGuessing((v) => !v)}>Guessing</button>
+        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => setOthers(0)}>
+          <FiRefreshCw size={12} /> Empty the room
+        </button>
+      </div>
+
+      <GameShellHeader
+        collapsible
+        game="shade"
+        title="Shade Signal"
+        phases={shadePhases(false)}
+        phase={round === 1 ? "guess1" : "guess2"}
+        round={{ current: 2, total: 4 }}
+        endsAt={Date.now() + 30_000}
+        duration={30}
+        code="V7KP2"
+      />
+
+      <ShadeGuess
+        round={round}
+        grid={GRID}
+        isGuessing={isGuessing}
+        clue1="ocean"
+        {...(round === 2 ? { clue2: "deep water" } : {})}
+        {...(isGuessing ? {} : { target: TARGET })}
+        selected={selected}
+        locked={locked}
+        submitting={submitting}
+        previous={previous}
+        lockedCount={others + (locked ? 1 : 0)}
+        guesserCount={4}
+        onSelect={(cell) => setSelected(cell)}
+        onLock={lock}
+        onUnlock={() => setLocked(false)}
+        onKeep={() => { setSelected(previous); lock(); }}
+      />
+    </>
+  );
+}
+
+/* Everything a guess screen needs that is the same in every state of it. */
+const GUESS = {
+  round: 1 as const,
+  grid: GRID,
+  isGuessing: true,
+  clue1: "ocean",
+  guesserCount: 4,
+  onSelect: NOOP,
+  onLock: NOOP,
+  onUnlock: NOOP,
+};
+
 /** The leader choosing, with the board actually responding. */
 function LivePick() {
   const [picked, setPicked] = useState<{ row: number; col: number } | null>(null);
@@ -371,6 +471,29 @@ export function ShadeKitPage() {
             />
           ))}
         </div>
+      </Section>
+
+      <Section title="Guessing, live" note="pick, lock, move it, stay put. the rest of the room comes in on its own while you deliberate, which is the pressure the phase actually runs on">
+        <LiveGuess />
+      </Section>
+
+      <Section title="The two states a pick has" note="the one you are holding and the one you have handed over. they look different and they undo differently, which is how nobody ends up thinking they locked in when they did not">
+        <ShadeGuess {...GUESS} selected={{ row: 5, col: 6 }} lockedCount={1} />
+        <ShadeGuess {...GUESS} selected={{ row: 5, col: 6 }} locked lockedCount={2} />
+      </Section>
+
+      <Section title="Nothing picked yet" note="no swatch, no lock button that would do nothing. the hint is the only thing that changes, and it says what closeness is worth">
+        <ShadeGuess {...GUESS} selected={null} lockedCount={0} />
+      </Section>
+
+      <Section title="The second guess" note="a move rather than a fresh pick, so where you already went stays on the board and staying there is one press. step onto it and that button goes, because then it is just the lock button">
+        <ShadeGuess {...GUESS} round={2} clue2="deep water" selected={null} previous={{ row: 5, col: 6 }} onKeep={NOOP} lockedCount={2} />
+        <ShadeGuess {...GUESS} round={2} clue2="deep water" selected={{ row: 5, col: 6 }} previous={{ row: 5, col: 6 }} onKeep={NOOP} lockedCount={2} />
+      </Section>
+
+      <Section title="Not guessing" note="the leader watches with the color still on their board, and anybody else watches without it. neither gets a button">
+        <ShadeGuess {...GUESS} isGuessing={false} target={TARGET} selected={null} lockedCount={3} />
+        <ShadeGuess {...GUESS} isGuessing={false} selected={null} lockedCount={3} />
       </Section>
 
       <Section title="Picking your own color" note="only when the host turned it on. the same board with a confirm under it, and from the other side the same wait">
