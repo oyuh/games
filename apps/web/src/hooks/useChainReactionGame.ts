@@ -236,6 +236,20 @@ export function useChainReactionGame(
     selectSlot(next);
   };
 
+  const giveUp = async (i: number) => {
+    setGiveUpConfirm(null);
+    clearDraft();
+    // Same hop as a correct guess, minus the points - flagged wrong so a view
+    // that draws its own feedback shows it as a loss rather than a win.
+    onGuessResult?.(i, false);
+    moveSelection(i, 1, i);
+    try {
+      await optimistic(zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })));
+    } catch {
+      // Already revealed
+    }
+  };
+
   const joinGame = async () => {
     await ensureName(zero, sessionId);
     void zero.mutate(mutators.chainReaction.join({ gameId, sessionId })).client.catch(() => showToast("Couldn't join", "error"));
@@ -318,22 +332,17 @@ export function useChainReactionGame(
       }
     },
 
+    /** Throw the word away, no questions asked. For views that do their own
+     *  asking: the kit's skip button arms itself, so a second confirm in here
+     *  would be a second state saying the same thing. */
+    giveUp,
+
     handleGiveUp: async (i: number) => {
       if (giveUpConfirm !== i) {
         setGiveUpConfirm(i);
         return;
       }
-      setGiveUpConfirm(null);
-      clearDraft();
-      // Same hop as a correct guess, minus the points - flagged wrong so the view
-      // flashes it red rather than green.
-      onGuessResult?.(i, false);
-      moveSelection(i, 1, i);
-      try {
-        await optimistic(zero.mutate(mutators.chainReaction.giveUp({ gameId, sessionId, wordIndex: i })));
-      } catch {
-        // Already revealed
-      }
+      await giveUp(i);
     },
 
     submitChain: async (event: FormEvent) => {
