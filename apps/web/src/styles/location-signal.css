@@ -249,8 +249,7 @@ body.locsig-map-expanded .app-footer {
   pointer-events: none;
 }
 
-.locsig-coords-overlay,
-.locsig-map-credit {
+.locsig-coords-overlay {
   background: rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-sm);
@@ -259,12 +258,45 @@ body.locsig-map-expanded .app-footer {
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
+/* Where every other map puts it: bottom right, no box round it, dark enough to
+   read over pale coastline and quiet enough that it is not competing with the
+   pins. It leans on its own shadow rather than a panel, so it does not read as
+   another piece of the interface. */
 .locsig-map-credit {
-  font-size: 0.62rem;
+  position: absolute;
+  right: 7px;
+  bottom: 5px;
+  z-index: 20;
+  pointer-events: none;
+  font-size: 0.6rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.72);
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.68);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.7);
+}
+
+/* ── The overlay layer ───────────────────────────────────────────
+   The whole surface, transparent to the pointer, for whatever a phase wants
+   said on the map rather than under it. Anything in here that wants clicking
+   turns pointer events back on for itself. */
+.locsig-map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 16;
+  pointer-events: none;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  /* Clear of the zoom buttons up top and the credit along the bottom. */
+  padding: 0.6rem 3.5rem 1.5rem;
+}
+
+.locsig-map-overlay > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .locsig-map-expanded-actions {

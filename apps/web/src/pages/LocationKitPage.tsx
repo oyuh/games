@@ -235,7 +235,7 @@ export function LocationKitPage() {
       </Section>
 
       <Section title="The ladder" note="one place says what a distance pays, and the readout, the pills and the tooltips all read it. these are the server's own numbers, not a second copy of them">
-        <LocationBands />
+        <LocationBands plain />
       </Section>
 
       <Section title="What the hint says" note="the start rule in the mutator's own words, so the lobby never promises a start that bounces">
