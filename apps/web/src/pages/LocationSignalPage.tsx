@@ -6,7 +6,7 @@ import { useState } from "react";
 import { FiSend, FiMapPin } from "react-icons/fi";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { LocationLobby, locationPhases, locationTrackPhase } from "../components/location/LocationLobby";
-import { LocationPickClue } from "../components/location/LocationRound";
+import { LocationGuess, LocationPickClue } from "../components/location/LocationRound";
 import { callGameSecretInit } from "../lib/game-secrets";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
@@ -30,6 +30,15 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
      two of the same thing. */
   const [starting, setStarting] = useState(false);
   const [sending, setSending] = useState(false);
+
+  /* Which clock they want. On the map by default, since the time matters most
+     next to the thing being timed, but it is their screen. Remembered, because
+     somebody who moved it once did not mean "just for this round". */
+  const [clockOnMap, setClockOnMap] = useState(() => localStorage.getItem("locsig-clock") !== "header");
+  const moveClock = (onMap: boolean) => {
+    setClockOnMap(onMap);
+    localStorage.setItem("locsig-clock", onMap ? "map" : "header");
+  };
 
   const {
     zero, navigate, gameId, game, me, isHost, isLeader, inGame, isSpectator,
@@ -154,6 +163,19 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
   const pickClue = phase === "picking" || phase === "clue1";
   const pickedTarget = draftMarker ?? leaderTarget;
 
+  /* Where you went on the clue before this one, so a second guess can offer to
+     leave you there rather than making you find it on the map again. */
+  const previousGuess = currentGuessRound > 1
+    ? game.guesses.find((g) => g.sessionId === sessionId && g.round === currentGuessRound - 1)
+    : undefined;
+  const myPreviousGuess = previousGuess ? { lat: previousGuess.lat, lng: previousGuess.lng } : null;
+
+  /* The phases that bring their own map, and so their own clock. */
+  const onStage = (pickClue || isGuessPhase) && !isSpectator;
+  const clockProps = clockOnMap
+    ? { endsAt: game.settings.phaseEndsAt, onHideClock: () => moveClock(false) }
+    : { endsAt: null };
+
   const expandedMapActions = phase === "picking" && isLeader ? (
     <>
       <span className="locsig-map-action-hint">
@@ -254,7 +276,12 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         phases={locationPhases(cluePairs)}
         phase={locationTrackPhase(game.phase)}
         code={game.code}
-        endsAt={game.settings.phaseEndsAt}
+        /* One clock, in whichever of the two places they asked for. Two of them
+           counting down the same phase is one too many. */
+        endsAt={onStage && clockOnMap ? null : game.settings.phaseEndsAt}
+        {...(onStage && !clockOnMap
+          ? { timerMove: { label: "Put the clock back on the map", icon: <FiMapPin />, onClick: () => moveClock(true) } }
+          : {})}
         isHost={isHost}
         isSpectator={isSpectator}
         {...(isCluePhase ? { duration: game.settings.clueDurationSec } : {})}
@@ -267,8 +294,8 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
       {/* ─── Players bar (always visible during game) ─── */}
       {isGameActive && renderPlayersBar()}
 
-      {/* ─── Map (always visible during game) ─── */}
-      {isGameActive && !pickClue && renderMap()}
+      {/* ─── Map (for the phases that do not bring their own) ─── */}
+      {isGameActive && !onStage && renderMap()}
 
       {phase === "lobby" && (
         <LocationLobby
@@ -312,7 +339,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           target={pickedTarget}
           value={draftClue}
           submitting={sending}
-          endsAt={game.settings.phaseEndsAt}
+          {...clockProps}
           duration={game.settings.clueDurationSec}
           onPick={setDraftMarker}
           onChange={setDraftClue}
@@ -387,46 +414,41 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {/* ─── Guess phase (guessers) ─── */}
-      {isGuessPhase && !isLeader && inGame && (
-        <div className="game-section locsig-guess-section">
-          <div className="locsig-clue-display-row">
-            {visibleClues(currentGuessRound).map((c) => (
-              <div key={c.round} className="locsig-clue-display">
-                <span className="locsig-clue-tag">Clue {c.round}</span>
-                <span className="locsig-clue-word">{c.text}</span>
-              </div>
-            ))}
-          </div>
-          <p className="locsig-guess-prompt">
-            {myRoundGuess ? "Guess placed! Click the map to update it." : "Click on the map to place your guess"}
-          </p>
-          <div className="locsig-guess-actions">
-            <button className="btn btn-primary game-action-btn" disabled={!draftMarker}
-              data-tooltip={draftMarker ? "Submit your guess location" : "Click the map to pick a location first"} data-tooltip-variant="info"
-              onClick={() => void submitGuess(currentGuessRound)}>
-              <FiMapPin size={14} /> {myRoundGuess ? "Update Guess" : isLastGuessPhase ? "Place Final Guess" : "Place Guess"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Guess phase (leader watches) ─── */}
-      {isGuessPhase && isLeader && (
-        <div className="game-section locsig-waiting-section">
-          <div className="locsig-clue-display-row">
-            {visibleClues(currentGuessRound).map((c) => (
-              <div key={c.round} className="locsig-clue-display">
-                <span className="locsig-clue-tag">{c.round === currentGuessRound ? "Your Clue" : `Clue ${c.round}`}</span>
-                <span className="locsig-clue-word">{c.text}</span>
-              </div>
-            ))}
-          </div>
-          <div className="game-waiting">
-            <div className="game-waiting-pulse" />
-            <p>Guessers are choosing&hellip; ({guessesThisRound(currentGuessRound).length}/{roundGuessers.length})</p>
-          </div>
-        </div>
+      {/* ─── Guessing ─── */}
+      {isGuessPhase && !isSpectator && (
+        <LocationGuess
+          round={currentGuessRound}
+          isGuessing={inGame && !isLeader}
+          leader={{ sessionId: game.leader_id ?? "", name: leaderName }}
+          clues={visibleClues(currentGuessRound)}
+          /* Only the leader is handed the answer. */
+          {...(isLeader && leaderTarget ? { target: leaderTarget } : {})}
+          {...(isLeader
+            ? {
+                others: guessesThisRound(currentGuessRound).map((g) => ({
+                  lat: g.lat,
+                  lng: g.lng,
+                  color: guesserColorMap[g.sessionId] ?? "#7ecbff",
+                  label: playerName(g.sessionId),
+                  size: 2.5,
+                  ring: true,
+                })),
+              }
+            : {})}
+          selected={draftMarker ?? (myRoundGuess ? { lat: myRoundGuess.lat, lng: myRoundGuess.lng } : null)}
+          locked={!!myRoundGuess}
+          submitting={sending}
+          {...(myPreviousGuess ? { previous: myPreviousGuess, onKeep: () => setDraftMarker(myPreviousGuess) } : {})}
+          lockedCount={guessesThisRound(currentGuessRound).length}
+          guesserCount={roundGuessers.length}
+          {...clockProps}
+          duration={game.settings.guessDurationSec}
+          onSelect={setDraftMarker}
+          onLock={() => {
+            setSending(true);
+            void submitGuess(currentGuessRound).finally(() => setSending(false));
+          }}
+        />
       )}
 
       {/* ─── Reveal ─── */}

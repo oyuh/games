@@ -1,5 +1,5 @@
 import { useEffect, useRef, type FormEvent, type ReactNode } from "react";
-import { FiMapPin, FiSend } from "react-icons/fi";
+import { FiCheck, FiCornerUpLeft, FiCrosshair, FiMapPin, FiSend, FiX } from "react-icons/fi";
 import { GameButton } from "../shared/GameKit";
 import { GameTimer } from "../shared/GameShellHeader";
 import { PlayerAvatar } from "../shared/PlayerAvatar";
@@ -61,6 +61,7 @@ export function LocationStage({
   overlay,
   endsAt,
   duration,
+  onHideClock,
   children,
 }: {
   height?: number | string;
@@ -72,6 +73,10 @@ export function LocationStage({
   overlay?: ReactNode;
   endsAt?: number | null;
   duration?: number;
+  /** Given, the clock grows a button on hover that sends it back to the shell
+   *  header. Some people want the time by the thing being timed, some would
+   *  rather have the map. */
+  onHideClock?: () => void;
   /** The console. What you do, as opposed to what you are looking at. */
   children: ReactNode;
 }) {
@@ -95,6 +100,19 @@ export function LocationStage({
                     {endsAt != null && (
                       <div className="lk-clock locsig-map-ui">
                         <GameTimer endsAt={endsAt} {...(duration !== undefined ? { duration } : {})} />
+
+                        {onHideClock && (
+                          <button
+                            type="button"
+                            className="lk-clock-hide"
+                            onClick={onHideClock}
+                            aria-label="Move the clock to the header"
+                            data-tooltip="Put it back in the header"
+                            data-tooltip-variant="game"
+                          >
+                            <FiX aria-hidden="true" />
+                          </button>
+                        )}
                       </div>
                     )}
                     {overlay}
@@ -132,6 +150,7 @@ export function LocationPickClue({
   submitting,
   endsAt,
   duration,
+  onHideClock,
   onPick,
   onChange,
   onSubmit,
@@ -144,6 +163,7 @@ export function LocationPickClue({
   submitting?: boolean;
   endsAt?: number | null;
   duration?: number;
+  onHideClock?: () => void;
   onPick: (coords: Coords) => void;
   onChange: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
@@ -168,6 +188,7 @@ export function LocationPickClue({
         markers={[]}
         {...(endsAt !== undefined ? { endsAt } : {})}
         {...(duration !== undefined ? { duration } : {})}
+        {...(onHideClock ? { onHideClock } : {})}
       >
         <LocationWaitingOn sessionId={leader.sessionId} name={leader.name}>
           is finding somewhere and working out how to describe it.
@@ -182,6 +203,7 @@ export function LocationPickClue({
       onClick={onPick}
       {...(endsAt !== undefined ? { endsAt } : {})}
       {...(duration !== undefined ? { duration } : {})}
+      {...(onHideClock ? { onHideClock } : {})}
     >
       <form className="lk-composer" onSubmit={onSubmit}>
         <span className={`lk-step${target ? " is-done" : ""}`}>
@@ -218,6 +240,186 @@ export function LocationPickClue({
           ? "Anywhere on earth. Nobody else can see where you put it."
           : "One line, and it cannot just name the place. Move the pin any time before you send."}
       </p>
+    </LocationStage>
+  );
+}
+
+/** How many have handed one in, as dots and as words. Same shape Shade's uses,
+ *  because a guess phase is a guess phase. */
+function LocationTally({ locked, total }: { locked: number; total: number }) {
+  return (
+    <span className="lk-tally">
+      <span className="lk-tally-dots" aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => (
+          <i key={i} className={i < locked ? "is-in" : ""} />
+        ))}
+      </span>
+      <span className="lk-tally-text">{locked} of {total} in</span>
+    </span>
+  );
+}
+
+export interface LocationGuessProps {
+  /** Which guess this is. Anything past the first is a move, not a fresh pick. */
+  round: number;
+  /** You are one of the people guessing. The leader and anyone who wandered in
+   *  watch instead. */
+  isGuessing: boolean;
+  leader: { sessionId: string; name: string };
+  /** Every clue said so far, oldest first. They go on the map, because they are
+   *  the thing you are reading the map against. */
+  clues: Array<{ round: number; text: string }>;
+  /**
+   * The place. Only ever passed to somebody allowed to see it, which during a
+   * guess is the leader alone. Everyone else is not sent the answer to the
+   * question they are being asked.
+   */
+  target?: Coords | null;
+  /** Where everybody else went, for the leader watching it happen. */
+  others?: MapMarker[];
+  /** What you are holding. Not handed over until the button. */
+  selected: Coords | null;
+  onSelect: (coords: Coords) => void;
+  /** Handed over. Still movable, since the mutator takes the newest one. */
+  locked?: boolean;
+  onLock: () => void;
+  /** Round 2 and up: where you went last time. */
+  previous?: Coords | null;
+  /** Locks the previous spot without hunting for it on the map again. */
+  onKeep?: () => void;
+  submitting?: boolean;
+  lockedCount: number;
+  guesserCount: number;
+  endsAt?: number | null;
+  duration?: number;
+  onHideClock?: () => void;
+}
+
+/**
+ * Dropping a pin on where you think it is.
+ *
+ * The second guess onwards is a move rather than a fresh start, so where you
+ * went last time stays on the map in a quieter colour and there is a button to
+ * stay there. Making somebody find their own last guess again to say "still
+ * that one" is the kind of busywork that loses a round to the clock.
+ *
+ * Locking does not take the map away. The mutator keeps the newest guess for
+ * the round, so moving after you have locked is allowed, and a board that went
+ * dead on you would be inventing a rule the server does not have.
+ */
+export function LocationGuess({
+  round,
+  isGuessing,
+  leader,
+  clues,
+  target,
+  others,
+  selected,
+  onSelect,
+  locked,
+  onLock,
+  previous,
+  onKeep,
+  submitting,
+  lockedCount,
+  guesserCount,
+  endsAt,
+  duration,
+  onHideClock,
+}: LocationGuessProps) {
+  const markers: MapMarker[] = [...(others ?? [])];
+
+  /* Where you went last time, kept quiet. It is context, not your answer. */
+  if (previous && !(selected && selected.lat === previous.lat && selected.lng === previous.lng)) {
+    markers.push({ ...previous, color: "#7b8794", label: `Guess ${round - 1}`, size: 1.6, hideLabel: true });
+  }
+
+  if (target) markers.push({ ...target, color: "#ffd166", label: "The place", icon: <FiMapPin />, ring: true });
+
+  if (selected) {
+    markers.push({
+      ...selected,
+      color: "#06d6a0",
+      label: locked ? "Locked in" : "Your guess",
+      icon: locked ? <FiCheck /> : <FiCrosshair />,
+      ring: true,
+      pulse: !locked,
+    });
+  }
+
+  const onPrevious = !!(selected && previous && selected.lat === previous.lat && selected.lng === previous.lng);
+
+  return (
+    <LocationStage
+      markers={markers}
+      {...(isGuessing ? { onClick: onSelect } : {})}
+      {...(endsAt !== undefined ? { endsAt } : {})}
+      {...(duration !== undefined ? { duration } : {})}
+      {...(onHideClock ? { onHideClock } : {})}
+      overlay={
+        clues.length > 0 ? (
+          <div className="lk-clues">
+            {clues.map((clue) => <LocationClueTag key={clue.round} round={clue.round} text={clue.text} />)}
+          </div>
+        ) : undefined
+      }
+    >
+      {isGuessing ? (
+        <>
+          <div className="lk-controls">
+            <span className={`lk-step${selected ? " is-done" : ""}`}>
+              <FiCrosshair aria-hidden="true" />
+              {locked ? "Locked in" : selected ? "Pin dropped" : "Click the map"}
+            </span>
+
+            {/* Only while they are still stood on it. Once they move off, the
+                old pin is on the map to click and the button is a third way to
+                do a thing there are already two ways to do. */}
+            {previous && !onPrevious && onKeep && (
+              <GameButton size="sm" variant="secondary" icon={<FiCornerUpLeft />} onClick={onKeep}>
+                Stay where I was
+              </GameButton>
+            )}
+
+            <GameButton
+              variant="primary"
+              icon={locked ? <FiCheck /> : <FiMapPin />}
+              disabled={!selected}
+              {...(submitting ? { loading: true } : {})}
+              onClick={onLock}
+            >
+              {locked ? "Move it here" : "Lock it in"}
+            </GameButton>
+
+            <LocationTally locked={lockedCount} total={guesserCount} />
+          </div>
+
+          <p className="lk-console-hint">
+            {!selected
+              ? round > 1
+                ? "Your last guess is the grey pin. Click anywhere to move, or stay where you were."
+                : "Anywhere on earth. The closer you land, the more it pays."
+              : locked
+                ? "That is your answer. You can still move it until the clock runs out."
+                : "Lock it in before the time goes, or it does not count."}
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="lk-controls">
+            <LocationWaitingOn sessionId={leader.sessionId} name={leader.name}>
+              {target ? "is watching everyone hunt for it." : "already knows where it is."}
+            </LocationWaitingOn>
+            <LocationTally locked={lockedCount} total={guesserCount} />
+          </div>
+
+          <p className="lk-console-hint">
+            {target
+              ? "Your place is the gold pin. Everyone else's guesses come in as they lock them."
+              : "Sit tight. The pins come in as they are locked."}
+          </p>
+        </>
+      )}
     </LocationStage>
   );
 }

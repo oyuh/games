@@ -83,6 +83,9 @@ export interface GameShellHeaderProps {
   collapsible?: boolean;
   /** Start folded, for anyone who would rather have the room back. */
   defaultCollapsed?: boolean;
+  /** Given, the header's clock grows a button on hover that moves it. For
+   *  games that can also show the time next to what is being timed. */
+  timerMove?: { label: string; icon: ReactNode; onClick: () => void };
   className?: string;
 }
 
@@ -118,9 +121,14 @@ export function ShellPill({
 export function GameTimer({
   endsAt,
   duration,
+  move,
 }: {
   endsAt?: number | null | undefined;
   duration?: number | undefined;
+  /** Given, the clock grows a small button on hover that sends it somewhere
+   *  else. Games that keep a second clock nearer the thing you are timing use
+   *  it to let people choose which one they want. */
+  move?: { label: string; icon: ReactNode; onClick: () => void } | undefined;
 }) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -171,6 +179,19 @@ export function GameTimer({
       >
         <span className="gsh-timer-fill" />
       </span>
+
+      {move && (
+        <button
+          type="button"
+          className="gsh-timer-move"
+          onClick={move.onClick}
+          aria-label={move.label}
+          data-tooltip={move.label}
+          data-tooltip-variant="game"
+        >
+          {move.icon}
+        </button>
+      )}
     </div>
   );
 }
@@ -232,6 +253,7 @@ export function GameShellHeader({
   accent,
   collapsible,
   defaultCollapsed,
+  timerMove,
   className = "",
 }: GameShellHeaderProps) {
   /* Folding the panel is a preference, not a phase, so it outlives the visit.
@@ -356,7 +378,7 @@ export function GameShellHeader({
 
         {folded && pillStrip}
 
-        <GameTimer endsAt={endsAt} duration={duration} />
+        <GameTimer endsAt={endsAt} duration={duration} move={timerMove} />
       </div>
     </header>
   );
