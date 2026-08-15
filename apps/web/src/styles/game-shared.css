@@ -123,6 +123,140 @@
   z-index: 1;
 }
 
+/* ── Solo run stat strip ────────────────────────────
+   Same bordered surfaces as the solo menu, shrunk to a header row, so the
+   run reads as a continuation of the screen you started it from. */
+.game-stat-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.game-stat {
+  --stat-accent: var(--foreground);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  height: 2.1rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.game-stat-icon {
+  display: grid;
+  place-items: center;
+  color: var(--stat-accent);
+  line-height: 0;
+  opacity: 0.85;
+}
+
+.game-stat-value {
+  color: var(--stat-accent);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The quiet half of the pill. Uppercase so it reads as a label next to a
+   number rather than as more number. */
+.game-stat-hint {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.game-stat--action {
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+}
+
+.game-stat--action:hover {
+  border-color: color-mix(in srgb, var(--stat-accent) 45%, var(--border));
+  background: var(--card);
+}
+
+/* ── Stopwatch ──────────────────────────────────────── */
+.game-timer {
+  --stat-accent: var(--primary);
+  gap: 0.45rem;
+  padding: 0 0.75rem;
+}
+
+.game-timer-clock {
+  color: var(--foreground);
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* Hundredths are a blur at this speed, so they get the small dim slot. */
+.game-timer-centis {
+  margin-left: -0.14rem;
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-timer-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--stat-accent);
+  opacity: 0.3;
+}
+
+.game-timer[data-running] .game-timer-dot {
+  box-shadow: 0 0 8px color-mix(in srgb, var(--stat-accent) 65%, transparent);
+  animation: game-timer-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes game-timer-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* On a phone the strip takes its own row under the title. Sharing a row with
+   the title leaves it about 200px wide, which stacks every stat and eats the
+   board. */
+@media (max-width: 768px) {
+  .game-stat-bar {
+    flex: 1 0 100%;
+    gap: 0.28rem;
+  }
+
+  .game-stat {
+    height: 1.85rem;
+    gap: 0.3rem;
+    padding: 0 0.45rem;
+    font-size: 0.76rem;
+  }
+
+  .game-stat-hint {
+    font-size: 0.62rem;
+  }
+
+  .game-timer-clock {
+    font-size: 0.92rem;
+  }
+
+  .game-timer-centis {
+    font-size: 0.7rem;
+  }
+}
+
 /* ── Shared intro countdown ─────────────────────────
    Sits over the real board while it builds itself in, so the three seconds
    are spent looking at the puzzle you are about to play. */
@@ -207,7 +341,8 @@
     animation: none;
   }
 
-  .game-start-countdown-number {
+  .game-start-countdown-number,
+  .game-timer[data-running] .game-timer-dot {
     animation: none;
   }
 }

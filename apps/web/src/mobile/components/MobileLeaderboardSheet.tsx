@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FiAward, FiCopy } from "react-icons/fi";
+import { formatTime } from "../../components/shared/GameStatBar";
 import { Difficulty, DIFFICULTY_CONFIG } from "../../lib/shikaku-engine";
 import { getOrCreateSessionId } from "../../lib/session";
 import { showToast } from "../../lib/toast";
@@ -27,14 +28,6 @@ interface PersonalBest {
 }
 
 type LeaderboardView = "all" | "mine";
-
-function formatTime(ms: number) {
-  const totalSec = Math.floor(ms / 1000);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  const centis = Math.floor((ms % 1000) / 10);
-  return `${min}:${sec.toString().padStart(2, "0")}.${centis.toString().padStart(2, "0")}`;
-}
 
 export function MobileLeaderboardSheet({ onClose }: { onClose: () => void }) {
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
