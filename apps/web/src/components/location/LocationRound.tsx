@@ -333,7 +333,7 @@ export function LocationGuess({
 
   /* Where you went last time, kept quiet. It is context, not your answer. */
   if (previous && !(selected && selected.lat === previous.lat && selected.lng === previous.lng)) {
-    markers.push({ ...previous, color: "#7b8794", label: `Guess ${round - 1}`, size: 1.6, hideLabel: true });
+    markers.push({ ...previous, color: "#7b8794", label: `Guess ${round - 1}`, size: 1.6 });
   }
 
   if (target) markers.push({ ...target, color: "#ffd166", label: "The place", icon: <FiMapPin />, ring: true });
@@ -520,16 +520,20 @@ export function LocationResult({
     .sort((a, b) => b.points - a.points);
 
   const markers: MapMarker[] = [
-    { ...target, color: "#ffd166", label: "It was here", icon: <FiMapPin />, ring: true, pulse: true, size: 4 },
+    /* The one pin on the map that keeps its name. Everything else is a person
+       and wears their face, but this is the answer and it has to say so. */
+    { ...target, color: "#ffd166", label: "It was here", icon: <FiMapPin />, ring: true, pulse: true, size: 4, alwaysLabel: true },
     ...scored.flatMap((player) =>
       player.guess
         ? [{
             lat: player.guess.lat,
             lng: player.guess.lng,
             color: player.points > 0 ? "#06d6a0" : "#7b8794",
-            /* How far out, not whose. By the reveal you know which pin is
-               yours, and the thing you want off the map is the damage. */
-            label: `${player.name} · ${locationKmLabel(player.km!)}`,
+            /* Their face, so the map says whose pin it is without a name tag
+               sat next to it. The name and the damage are on the hover, and
+               the row underneath has both anyway. */
+            avatar: player.sessionId,
+            label: `${player.name} - ${locationKmLabel(player.km!)}`,
             size: 2.4,
             ring: true,
           }]
