@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { FiGlobe, FiLock, FiMapPin, FiPlay } from "react-icons/fi";
-import { LocationClueTag, LocationGuess, LocationPickClue, type Coords } from "../components/location/LocationRound";
+import { LocationClueTag, LocationGuess, LocationPickClue, LocationResult, type Coords } from "../components/location/LocationRound";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { GameButton } from "../components/shared/GameKit";
 import {
@@ -302,6 +302,21 @@ function LiveGuess() {
   );
 }
 
+/* Four finishes that land in four different places on the ladder, so the result
+   below shows the whole slope rather than three people who all did about as
+   well. The place is Tokyo. */
+const RESULT = {
+  target: { lat: 35.68, lng: 139.69 },
+  clues: CLUES,
+  leader: LEADER,
+  players: [
+    { sessionId: "seed-bram", name: "Bram", guess: { lat: 35.02, lng: 135.76 } },
+    { sessionId: "seed-cleo", name: "Cleo", guess: { lat: 37.57, lng: 126.98 }, you: true },
+    { sessionId: "seed-dov", name: "Dov", guess: { lat: 22.32, lng: 114.17 } },
+    { sessionId: "seed-eve", name: "Eve", guess: { lat: 51.51, lng: -0.13 } },
+  ],
+};
+
 export function LocationKitPage() {
   return (
     <main
@@ -341,6 +356,33 @@ export function LocationKitPage() {
       <Section title="Not guessing" note="the leader watches with the place still on their board and everyone's pins coming in. anybody else watches without it, because hiding the answer in the markup is not hiding it">
         <LocationGuess round={2} isGuessing={false} leader={LEADER} clues={CLUES} target={{ lat: 35.68, lng: 139.69 }} others={OTHERS} selected={null} lockedCount={2} guesserCount={3} onSelect={NOOP} onLock={NOOP} />
         <LocationGuess round={2} isGuessing={false} leader={LEADER} clues={CLUES} selected={null} lockedCount={2} guesserCount={3} onSelect={NOOP} onLock={NOOP} />
+      </Section>
+
+      <Section title="The round result" note="the ten seconds between rounds, built to answer one question: why did i get that. the distance sits next to the points that came off it, the bar makes two rows comparable before you have read either number, and the ladder they were scored on is right there on the map">
+        <>
+          <GameShellHeader
+            collapsible
+            game="location"
+            title="Location Signal"
+            phases={locationPhases(2)}
+            phase="reveal"
+            round={{ current: 2, total: 4 }}
+            code="M4RC0"
+          />
+          <LocationResult {...RESULT} />
+        </>
+      </Section>
+
+      <Section title="The last one, and one nobody got" note="the only thing that changes at the end is the line saying nothing else is coming. a round of misses is a row of empty bars, because the bar runs against a full five thousand rather than against whoever won, so a bad round looks like one">
+        <LocationResult {...RESULT} last />
+        <LocationResult
+          {...RESULT}
+          players={[
+            { sessionId: "seed-bram", name: "Bram", guess: { lat: -33.9, lng: 151.2 } },
+            { sessionId: "seed-cleo", name: "Cleo", guess: { lat: 55.8, lng: -4.3 }, you: true },
+            { sessionId: "seed-dov", name: "Dov" },
+          ]}
+        />
       </Section>
 
       <Section title="A clue once it has been said" note="drawn over the map, because it is the thing you are reading the map against">

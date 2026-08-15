@@ -402,3 +402,106 @@
     font-size: 1.15rem;
   }
 }
+
+/* ── The round result ────────────────────────────────────────────
+   Built to answer one question: why did I get that. So the distance is on the
+   row next to the points, and the bar makes the two comparable at a glance
+   before anyone has read a figure. */
+.lk-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lk-score {
+  display: grid;
+  grid-template-columns: 1.1rem 1.6rem minmax(4rem, 1fr) auto minmax(3rem, 7rem) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+}
+
+.lk-score.is-you {
+  background: color-mix(in srgb, var(--lk-accent, var(--primary)) 10%, transparent);
+}
+
+.lk-score-rank {
+  color: var(--secondary);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.lk-score-face {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.lk-score-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.lk-score-you {
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lk-accent, var(--primary)) 22%, transparent);
+  color: var(--foreground);
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The cause, sat immediately before the effect. */
+.lk-score-dist {
+  color: var(--secondary);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Against a full 5,000 rather than against the winner, so a round everybody
+   missed looks like a round everybody missed. */
+.lk-score-bar {
+  height: 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  overflow: hidden;
+}
+
+.lk-score-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lk-accent, var(--primary));
+}
+
+.lk-score-pts {
+  min-width: 3.4rem;
+  color: var(--foreground);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (max-width: 620px) {
+  .lk-score {
+    grid-template-columns: 1.1rem 1.6rem minmax(3rem, 1fr) auto auto;
+  }
+
+  .lk-score-bar {
+    display: none;
+  }
+}

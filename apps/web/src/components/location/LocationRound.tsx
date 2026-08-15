@@ -1,8 +1,10 @@
 import { useEffect, useRef, type FormEvent, type ReactNode } from "react";
 import { FiCheck, FiCornerUpLeft, FiCrosshair, FiMapPin, FiSend, FiX } from "react-icons/fi";
+import { haversineKm, scoreForDistance } from "@games/shared";
 import { GameButton } from "../shared/GameKit";
 import { GameTimer } from "../shared/GameShellHeader";
 import { PlayerAvatar } from "../shared/PlayerAvatar";
+import { LocationBands, locationKmLabel } from "./LocationLobby";
 import { WorldMap, type MapMarker } from "./WorldMap";
 import "../../styles/location-kit.css";
 
@@ -420,6 +422,165 @@ export function LocationGuess({
           </p>
         </>
       )}
+    </LocationStage>
+  );
+}
+
+/**
+ * One player's round, and why it came out the way it did.
+ *
+ * The bar is the point of this row. Two numbers on their own do not tell you
+ * whether 2,900 was a good result, but a bar that is most of the way along next
+ * to one that is barely started says it before you have read either figure. It
+ * is drawn against a full score rather than against the winner, so a round
+ * everybody misses looks like a round everybody missed.
+ */
+function LocationScoreRow({
+  name,
+  sessionId,
+  km,
+  points,
+  you,
+  rank,
+}: {
+  name: string;
+  sessionId: string;
+  km: number | null;
+  points: number;
+  you?: boolean;
+  rank: number;
+}) {
+  return (
+    <li className={`lk-score${you ? " is-you" : ""}`}>
+      <span className="lk-score-rank">{rank}</span>
+
+      <span className="lk-score-face">
+        <PlayerAvatar seed={sessionId} />
+      </span>
+
+      <span className="lk-score-name">
+        {name}
+        {you && <span className="lk-score-you">you</span>}
+      </span>
+
+      {/* Distance first, because it is the thing that caused the points. */}
+      <span className="lk-score-dist">
+        {km === null ? "never guessed" : locationKmLabel(km)}
+      </span>
+
+      <span className="lk-score-bar" aria-hidden="true">
+        <span style={{ width: `${Math.round((points / 5000) * 100)}%` }} />
+      </span>
+
+      <span className="lk-score-pts">{points > 0 ? `+${points.toLocaleString()}` : "0"}</span>
+    </li>
+  );
+}
+
+export interface LocationResultProps {
+  /** Where it actually was. */
+  target: Coords;
+  clues: Array<{ round: number; text: string }>;
+  leader: { sessionId: string; name: string; you?: boolean };
+  /** Everyone who was guessing, and where they finished. Points are worked out
+   *  here from the distance rather than passed in, so the number and the reason
+   *  for it cannot drift apart. */
+  players: Array<{ sessionId: string; name: string; guess?: Coords | null; you?: boolean }>;
+  /** Nothing else is coming after this one. */
+  last?: boolean;
+  endsAt?: number | null;
+  duration?: number;
+  onHideClock?: () => void;
+}
+
+/**
+ * The few seconds between rounds. Where it was, where everybody went, and what
+ * that paid.
+ *
+ * The whole screen is built to answer one question, which is "why did I get
+ * that". So the distance sits next to the points on every row, the ladder the
+ * points came off is on the map, and the pins are labelled with how far out
+ * they were rather than with whose they are, since by now you know whose.
+ */
+export function LocationResult({
+  target,
+  clues,
+  leader,
+  players,
+  last,
+  endsAt,
+  duration,
+  onHideClock,
+}: LocationResultProps) {
+  const scored = players
+    .map((player) => {
+      const km = player.guess ? haversineKm(target.lat, target.lng, player.guess.lat, player.guess.lng) : null;
+      return { ...player, km, points: km === null ? 0 : scoreForDistance(km) };
+    })
+    .sort((a, b) => b.points - a.points);
+
+  const markers: MapMarker[] = [
+    { ...target, color: "#ffd166", label: "It was here", icon: <FiMapPin />, ring: true, pulse: true, size: 4 },
+    ...scored.flatMap((player) =>
+      player.guess
+        ? [{
+            lat: player.guess.lat,
+            lng: player.guess.lng,
+            color: player.points > 0 ? "#06d6a0" : "#7b8794",
+            /* How far out, not whose. By the reveal you know which pin is
+               yours, and the thing you want off the map is the damage. */
+            label: `${player.name} · ${locationKmLabel(player.km!)}`,
+            size: 2.4,
+            ring: true,
+          }]
+        : [],
+    ),
+  ];
+
+  const best = scored[0];
+
+  return (
+    <LocationStage
+      markers={markers}
+      {...(endsAt !== undefined ? { endsAt } : {})}
+      {...(duration !== undefined ? { duration } : {})}
+      {...(onHideClock ? { onHideClock } : {})}
+      overlay={
+        <>
+          {clues.length > 0 && (
+            <div className="lk-clues">
+              {clues.map((clue) => <LocationClueTag key={clue.round} round={clue.round} text={clue.text} />)}
+            </div>
+          )}
+          <LocationBands />
+        </>
+      }
+    >
+      <ol className="lk-scores">
+        {scored.map((player, index) => (
+          <LocationScoreRow
+            key={player.sessionId}
+            sessionId={player.sessionId}
+            name={player.name}
+            km={player.km}
+            points={player.points}
+            rank={index + 1}
+            {...(player.you ? { you: true } : {})}
+          />
+        ))}
+      </ol>
+
+      {/* The leader is the one person on the board who cannot score, and a zero
+          with no explanation next to it reads as a bug. */}
+      <p className="lk-console-hint">
+        <strong>{leader.name}{leader.you ? " (you)" : ""}</strong> was leading, so {leader.you ? "you score" : "they score"} nothing this round.
+        {" "}
+        {best && best.points > 0
+          ? `Closest was ${best.you ? "you" : best.name}, ${locationKmLabel(best.km!)} out.`
+          : "Nobody landed close enough to score."}
+        {" "}
+        {last ? "That was the last round." : "Next round in a moment."}
+      </p>
     </LocationStage>
   );
 }

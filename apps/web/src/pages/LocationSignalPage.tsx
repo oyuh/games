@@ -3,10 +3,11 @@ import { optimistic } from "../lib/zero";
 import "../styles/game-shared.css";
 import "../styles/location-signal.css";
 import { useState } from "react";
-import { FiSend, FiMapPin } from "react-icons/fi";
+import { FiClock, FiSend, FiMapPin } from "react-icons/fi";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { LocationLobby, locationPhases, locationTrackPhase } from "../components/location/LocationLobby";
-import { LocationGuess, LocationPickClue } from "../components/location/LocationRound";
+import { LocationGuess, LocationPickClue, LocationResult } from "../components/location/LocationRound";
+import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { callGameSecretInit } from "../lib/game-secrets";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
@@ -170,8 +171,23 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     : undefined;
   const myPreviousGuess = previousGuess ? { lat: previousGuess.lat, lng: previousGuess.lng } : null;
 
+  /* The place, once it is allowed out. Encrypted until the host's pre-reveal
+     call has run, so an empty one means the scores are still being worked out
+     rather than that there was never a target. */
+  const revealTarget = !game.encrypted_target && game.target_lat != null && game.target_lng != null
+    ? { lat: game.target_lat, lng: game.target_lng }
+    : null;
+
+  /* The one that counted. The mutator scores whichever round a player got
+     furthest into, so this picks the same one it did. */
+  const finalGuesses = new Map<string, { lat: number; lng: number; round: number }>();
+  for (const guess of game.guesses) {
+    const held = finalGuesses.get(guess.sessionId);
+    if (!held || guess.round > held.round) finalGuesses.set(guess.sessionId, guess);
+  }
+
   /* The phases that bring their own map, and so their own clock. */
-  const onStage = (pickClue || isGuessPhase) && !isSpectator;
+  const onStage = (pickClue || isGuessPhase || phase === "reveal") && !isSpectator;
   const clockProps = clockOnMap
     ? { endsAt: game.settings.phaseEndsAt, onHideClock: () => moveClock(false) }
     : { endsAt: null };
@@ -451,56 +467,35 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         />
       )}
 
-      {/* ─── Reveal ─── */}
-      {phase === "reveal" && (
-        <div className="game-section locsig-reveal-section">
-          <h3 className="locsig-reveal-title">Reveal!</h3>
-
-          {visibleClues(cluePairs).length > 0 && (
-            <div className="locsig-clue-display-row">
-              {visibleClues(cluePairs).map((c) => (
-                <div key={c.round} className="locsig-clue-display">
-                  <span className="locsig-clue-tag">Clue {c.round}</span>
-                  <span className="locsig-clue-word">{c.text}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="locsig-score-table">
-            <h4>Round {game.settings.currentRound} Scores</h4>
-            <div className="locsig-score-rows">
-              {(() => {
-                const prevHistory = game.round_history.length > 1 ? game.round_history[game.round_history.length - 2] : null;
-                const scorePlayers = sortedPlayers.reduce<typeof sortedPlayers>((players, player) => {
-                  if (player.sessionId !== game.leader_id) {
-                    players.push(player);
-                  }
-                  return players;
-                }, []);
-                return scorePlayers.map((p) => {
-                  const isMe = p.sessionId === sessionId;
-                  const name = playerName(p.sessionId);
-                  const roundPts = p.totalScore - (prevHistory?.scores[p.sessionId] ?? 0);
-                  return (
-                    <div key={p.sessionId} className="locsig-score-row" data-tooltip={`${name} - ${p.totalScore} pts`} data-tooltip-variant="info">
-                      <span className="locsig-score-name">
-                        {name} {isMe && <span className="game-player-you">you</span>}
-                      </span>
-                      <span className="locsig-score-pts locsig-score-pts--ok">
-                        {p.totalScore} pts {roundPts > 0 && <span style={{ opacity: 0.7, fontSize: "0.85em" }}>(+{roundPts})</span>}
-                      </span>
-                    </div>
-                  );
-                });
-              })()}
-              <div className="locsig-score-row locsig-score-row--leader">
-                <span className="locsig-score-name">Leader: {leaderName}</span>
-                <span className="locsig-score-pts">📍</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* ─── The round result ─── */}
+      {phase === "reveal" && !isSpectator && (
+        revealTarget ? (
+          <LocationResult
+            target={revealTarget}
+            clues={visibleClues(cluePairs)}
+            leader={{
+              sessionId: game.leader_id ?? "",
+              name: leaderName,
+              ...(isLeader ? { you: true } : {}),
+            }}
+            players={roundGuessers.map((player) => {
+              const finalGuess = finalGuesses.get(player.sessionId);
+              return {
+                sessionId: player.sessionId,
+                name: playerName(player.sessionId),
+                ...(finalGuess ? { guess: { lat: finalGuess.lat, lng: finalGuess.lng } } : {}),
+                ...(player.sessionId === sessionId ? { you: true } : {}),
+              };
+            })}
+            last={game.settings.currentRound >= totalRounds}
+            {...clockProps}
+            duration={10}
+          />
+        ) : (
+          <GamePanel>
+            <GameEmpty icon={<FiClock />} title="Working out the scores" hint="The map comes back in a second with everybody on it." />
+          </GamePanel>
+        )
       )}
 
       {/* ─── Finished ─── */}
