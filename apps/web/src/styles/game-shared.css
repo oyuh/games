@@ -159,6 +159,13 @@
   opacity: 0.85;
 }
 
+/* Value and hint carry the same line box, so the text sits at one height in
+   every pill no matter which parts a given stat happens to have. */
+.game-stat-value,
+.game-stat-hint {
+  line-height: 1.15rem;
+}
+
 .game-stat-value {
   color: var(--stat-accent);
   font-weight: 750;
@@ -188,44 +195,14 @@
 /* ── Stopwatch ──────────────────────────────────────── */
 .game-timer {
   --stat-accent: var(--primary);
-  gap: 0.45rem;
-  padding: 0 0.75rem;
 }
 
-.game-timer-clock {
-  color: var(--foreground);
-  font-size: 1rem;
-  font-weight: 800;
+/* Hundredths sit in the hint slot, but they are digits, so they lose the
+   label's letter-spacing and get the same tabular figures as the clock. */
+.game-timer .game-stat-hint {
+  margin-left: -0.22rem;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-}
-
-/* Hundredths are a blur at this speed, so they get the small dim slot. */
-.game-timer-centis {
-  margin-left: -0.14rem;
-  color: var(--muted-foreground);
-  font-size: 0.76rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.game-timer-dot {
-  width: 0.4rem;
-  height: 0.4rem;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--stat-accent);
-  opacity: 0.3;
-}
-
-.game-timer[data-running] .game-timer-dot {
-  box-shadow: 0 0 8px color-mix(in srgb, var(--stat-accent) 65%, transparent);
-  animation: game-timer-pulse 1.1s ease-in-out infinite;
-}
-
-@keyframes game-timer-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
 }
 
 /* On a phone the strip takes its own row under the title. Sharing a row with
@@ -246,14 +223,6 @@
 
   .game-stat-hint {
     font-size: 0.62rem;
-  }
-
-  .game-timer-clock {
-    font-size: 0.92rem;
-  }
-
-  .game-timer-centis {
-    font-size: 0.7rem;
   }
 }
 
@@ -341,8 +310,7 @@
     animation: none;
   }
 
-  .game-start-countdown-number,
-  .game-timer[data-running] .game-timer-dot {
+  .game-start-countdown-number {
     animation: none;
   }
 }

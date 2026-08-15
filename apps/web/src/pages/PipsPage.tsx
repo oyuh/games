@@ -1306,7 +1306,7 @@ export function PipsPage() {
                       accent={solved ? "#22c55e" : undefined}
                       tooltip="Puzzle progress"
                     />
-                    <GameTimer ms={elapsedMs} running={phase === "playing" && advanceCountdown == null && !solved} />
+                    <GameTimer ms={elapsedMs} />
                     <GameStat
                       icon={<FiHash size={13} />}
                       value={seed}
@@ -1408,9 +1408,10 @@ export function PipsPage() {
 
           <aside className="pips-domino-rail" aria-label="Domino collection" data-pips-tray>
             <div className="pips-rail-head">
-              <span>{placedCount}</span>
-              <span>/</span>
-              <span>{puzzle.dominoes.length}</span>
+              <span className="pips-rail-label">Dominoes</span>
+              <span className="pips-rail-count">
+                {puzzle.dominoes.length - placedCount} left
+              </span>
             </div>
             <div className="pips-tray">
               {puzzle.dominoes.map((domino) => {

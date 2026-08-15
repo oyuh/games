@@ -263,27 +263,45 @@
 }
 
 /* -- Domino rail --------------------------------------------- */
+/* The dominoes get a box of their own. Loose on the page they read as part
+   of the board; inside a panel it is obvious they are the pieces you have
+   left to place. Same surface as the header stats. */
 .pips-domino-rail {
   width: 100%;
   max-width: min(900px, 100%);
   max-height: min(26dvh, 15rem);
   display: flex;
   flex-direction: column;
-  gap: 0.28rem;
   align-self: center;
   justify-content: flex-start;
   min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--background);
 }
 
 .pips-rail-head {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.22rem;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.34rem 0.7rem 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.pips-rail-label {
   color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pips-rail-count {
+  color: var(--foreground);
   font-size: 0.72rem;
-  font-weight: 850;
-  letter-spacing: 0.08em;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
 }
 
 .pips-tray {
@@ -294,7 +312,7 @@
   align-content: center;
   align-items: center;
   overflow-y: auto;
-  padding: 0.06rem 0.2rem 0.18rem;
+  padding: 0.3rem 0.4rem 0.35rem;
   scrollbar-width: thin;
 }
 
