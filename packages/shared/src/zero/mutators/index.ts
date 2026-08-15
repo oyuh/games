@@ -24,6 +24,11 @@ export { isOneWord, isClueTooSimilar, scorePasswordGuessCount, scoreForLetters }
    thrown. */
 export { shadeClueProblem, SHADE_COLOR_WORDS } from "./shade-signal";
 
+/* Location's version: how far apart two points are and what that pays. The
+   lobby explains the scoring with the same two functions that do it, so the
+   ladder it shows you cannot drift from the one you get scored on. */
+export { haversineKm, scoreForDistance, PERFECT_KM } from "./location-signal";
+
 export const mutators = defineMutators({
   sessions: sessionMutators,
   imposter: imposterMutators,

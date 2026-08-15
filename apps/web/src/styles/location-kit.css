@@ -1,0 +1,89 @@
+/* ── Location Signal, on the kit ─────────────────────────────────
+   Same three rules the rest of the kit follows: depth is borders and fills,
+   colour means something, and one accent per surface taken from --game-accent.
+   Everything here is the map and the things said about it. */
+
+.lk-stage,
+.lk-bands {
+  --lk-accent: var(--game-accent, var(--primary));
+}
+
+/* The map is the thing you look at first, so no heading over it and nothing
+   framing it beyond the one edge that stops it bleeding into the page.
+   Whatever section it sits in is the container. */
+.lk-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.lk-map {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Everything that is not the map, centered on it. */
+.lk-stage-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.lk-stage-hint {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* The one number the whole exercise is for, so it is the one thing here that
+   is allowed to be loud. */
+.lk-readout {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--foreground);
+}
+
+.lk-readout strong {
+  color: var(--lk-accent, var(--primary));
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── The ladder ──────────────────────────────────────────────────
+   Five distances and what each pays, fading out as the points do, so the row
+   reads as one slope rather than five boxes with different numbers in them. */
+.lk-bands {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.lk-band {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.24rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--foreground) calc(12% + var(--lk-band) * 25%), transparent);
+  background: color-mix(in srgb, var(--foreground) calc(var(--lk-band) * 7%), transparent);
+  font-size: 0.7rem;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.lk-band-dist {
+  color: var(--secondary);
+}
+
+.lk-band-pts {
+  color: var(--foreground);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
