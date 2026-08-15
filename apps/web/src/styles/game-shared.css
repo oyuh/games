@@ -123,14 +123,27 @@
   z-index: 1;
 }
 
-/* ── Shared intro countdown ───────────────────────── */
+/* ── Shared intro countdown ─────────────────────────
+   Sits over the real board while it builds itself in, so the three seconds
+   are spent looking at the puzzle you are about to play. */
 .game-start-countdown {
   --countdown-accent: var(--game-accent, var(--primary));
+  position: fixed;
+  inset: 0;
+  z-index: 850;
   display: grid;
   justify-items: center;
-  gap: 0.8rem;
-  min-height: min(50vh, 420px);
+  align-content: center;
+  gap: 0.65rem;
   text-align: center;
+  background: color-mix(in srgb, var(--background) 66%, transparent);
+  backdrop-filter: blur(3px);
+  animation: game-start-countdown-in 0.25s ease both;
+}
+
+@keyframes game-start-countdown-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .game-start-countdown-kicker {
@@ -147,9 +160,7 @@
   font-size: clamp(5.5rem, 16vw, 8.75rem);
   font-weight: 950;
   line-height: 0.86;
-  text-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.78),
-    0 0 42px color-mix(in srgb, var(--countdown-accent) 62%, transparent);
+  text-shadow: 0 0 34px color-mix(in srgb, var(--countdown-accent) 45%, transparent);
   animation: game-start-countdown-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -168,6 +179,37 @@
   0% { transform: scale(2.5); opacity: 0; }
   50% { transform: scale(0.9); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* The board wipes itself into existence behind the numbers. One diagonal
+   sweep, timed to land just as the countdown hits GO. */
+.game-page[data-phase="countdown"] .pips-board,
+.game-page[data-phase="countdown"] .shikaku-grid {
+  -webkit-mask-image: linear-gradient(112deg, transparent 0 33%, #000 66% 100%);
+  mask-image: linear-gradient(112deg, transparent 0 33%, #000 66% 100%);
+  -webkit-mask-size: 300% 100%;
+  mask-size: 300% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: game-board-build 1.9s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+@keyframes game-board-build {
+  from { -webkit-mask-position: 0% 0; mask-position: 0% 0; }
+  to { -webkit-mask-position: 100% 0; mask-position: 100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-page[data-phase="countdown"] .pips-board,
+  .game-page[data-phase="countdown"] .shikaku-grid {
+    -webkit-mask-image: none;
+    mask-image: none;
+    animation: none;
+  }
+
+  .game-start-countdown-number {
+    animation: none;
+  }
 }
 
 /* Per-game icon patterns (filled SVGs for visibility through blur) */
