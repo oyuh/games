@@ -209,7 +209,10 @@ export function PlayerCard({
 
         {points !== undefined && (
           <span className="pc-points">
-            <span className="pc-points-value">{points}</span>
+            {/* Grouped, because the games that score in thousands run into five
+                figures and 12840 is not a number anybody reads at a glance.
+                Below a thousand this changes nothing. */}
+            <span className="pc-points-value">{points.toLocaleString()}</span>
             {pointsSuffix && <span className="pc-points-suffix">{pointsSuffix}</span>}
           </span>
         )}

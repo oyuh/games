@@ -7,6 +7,7 @@ import { haversineKm, scoreForDistance } from "@games/shared";
 import { GameButton } from "../shared/GameKit";
 import { GameTimer } from "../shared/GameShellHeader";
 import { PlayerAvatar } from "../shared/PlayerAvatar";
+import { PlayerCard } from "../shared/PlayerCard";
 import { LocationBands, locationKmLabel } from "./LocationLobby";
 import { WorldMap, type MapMarker } from "./WorldMap";
 import "../../styles/location-kit.css";
@@ -745,16 +746,40 @@ export function LocationGameOver({ players, rounds, isHost, onPlayAgain, onEnd, 
 
   return (
     <div className="lk-over">
-      <div className="lk-over-head">
-        <p className="lk-over-title">
+      {/* The same verdict box the other games end on: a kicker, the winner as
+          a full size card, and one quiet line of context. A game should look
+          like it finished the same way whichever one you were playing. */}
+      <section className="lk-verdict">
+        <p className="lk-verdict-kicker">
           {winners.length === 0
-            ? "Nobody scored"
-            : winners.length === 1
-              ? `${winners[0]!.you ? "You" : winners[0]!.name} took it`
-              : `${winners.map((w) => (w.you ? "you" : w.name)).join(" and ")} tied it`}
+            ? "nobody scored"
+            : winners.length > 1
+              ? "it ended level between"
+              : "the game goes to"}
         </p>
-        {top > 0 && <p className="lk-over-sub">{top.toLocaleString()} points</p>}
-      </div>
+
+        {winners.length > 0 && (
+          <div className="lk-verdict-faces">
+            {winners.map((player) => (
+              <PlayerCard
+                key={player.sessionId}
+                sessionId={player.sessionId}
+                name={player.name}
+                size="lg"
+                points={player.score}
+                pointsSuffix="pts"
+                {...(player.you ? { you: true } : {})}
+              />
+            ))}
+          </div>
+        )}
+
+        <p className="lk-verdict-line">
+          {rounds.length === 0
+            ? "Nothing finished, so there is nothing to add up."
+            : `over ${rounds.length} ${rounds.length === 1 ? "round" : "rounds"}, everybody leading`}
+        </p>
+      </section>
 
       <ol className="lk-standings">
         {table.map((player, index) => (
