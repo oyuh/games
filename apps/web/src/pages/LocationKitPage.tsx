@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { FiGlobe, FiLock, FiPlay } from "react-icons/fi";
-import { LocationClueTag, LocationPickClue, type Coords } from "../components/location/LocationRound";
+import { FiGlobe, FiLock, FiMapPin, FiPlay } from "react-icons/fi";
+import { LocationClueTag, LocationGuess, LocationPickClue, type Coords } from "../components/location/LocationRound";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { GameButton } from "../components/shared/GameKit";
 import {
@@ -229,6 +229,79 @@ function LivePickClue() {
   );
 }
 
+const CLUES = [
+  { round: 1, text: "where the trains are always on time" },
+  { round: 2, text: "and the fish market never sleeps" },
+];
+
+/* Where the room went, for the leader watching it happen. */
+const OTHERS = [
+  { lat: 48.85, lng: 2.35, color: "#7ecbff", label: "Bram", size: 2.5, ring: true },
+  { lat: 41.9, lng: 12.5, color: "#ef476f", label: "Cleo", size: 2.5, ring: true },
+];
+
+/**
+ * Guessing with a hand on it. Drop a pin, lock it, move it after. The second
+ * guess keeps the first one on the map in grey with a button to stay there,
+ * which is the whole difference between a guess and a re-guess.
+ */
+function LiveGuess() {
+  const [round, setRound] = useState(1);
+  const [isGuessing, setIsGuessing] = useState(true);
+  const [selected, setSelected] = useState<Coords | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [clockOnMap, setClockOnMap] = useState(true);
+
+  const previous = round > 1 ? { lat: 35.0, lng: 135.7 } : null;
+
+  return (
+    <>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
+        <button type="button" className={`btn ${round === 1 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setRound(1); setSelected(null); setLocked(false); }}>Guess 1</button>
+        <button type="button" className={`btn ${round === 2 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setRound(2); setSelected(null); setLocked(false); }}>Guess 2</button>
+
+        <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
+
+        <button type="button" className={`btn ${isGuessing ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsGuessing((v) => !v)}>Guessing</button>
+        <button type="button" className={`btn ${clockOnMap ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setClockOnMap((v) => !v)}>Clock on the map</button>
+      </div>
+
+      <GameShellHeader
+        collapsible
+        game="location"
+        title="Location Signal"
+        phases={locationPhases(2)}
+        phase={`guess${round}`}
+        round={{ current: 1, total: 4 }}
+        endsAt={clockOnMap ? null : Date.now() + 45_000}
+        {...(clockOnMap ? {} : { timerMove: { label: "Put the clock back on the map", icon: <FiMapPin />, onClick: () => setClockOnMap(true) } })}
+        code="M4RC0"
+        isHost
+      />
+
+      <LocationGuess
+        round={round}
+        isGuessing={isGuessing}
+        leader={LEADER}
+        clues={CLUES.slice(0, round)}
+        {...(isGuessing ? {} : { target: { lat: 35.68, lng: 139.69 }, others: OTHERS })}
+        selected={selected}
+        locked={locked}
+        submitting={submitting}
+        {...(previous ? { previous, onKeep: () => setSelected(previous) } : {})}
+        lockedCount={isGuessing ? (locked ? 2 : 1) : 2}
+        guesserCount={3}
+        endsAt={clockOnMap ? Date.now() + 45_000 : null}
+        duration={45}
+        onHideClock={() => setClockOnMap(false)}
+        onSelect={setSelected}
+        onLock={() => { setSubmitting(true); setTimeout(() => { setSubmitting(false); setLocked(true); }, 900); }}
+      />
+    </>
+  );
+}
+
 export function LocationKitPage() {
   return (
     <main
@@ -253,6 +326,21 @@ export function LocationKitPage() {
         <LocationPickClue isLeader leader={LEADER} target={null} value="" onPick={NOOP} onChange={NOOP} onSubmit={NOOP} />
         <LocationPickClue isLeader leader={LEADER} target={{ lat: 35.68, lng: 139.69 }} value="where the trains are always on time" onPick={NOOP} onChange={NOOP} onSubmit={NOOP} endsAt={Date.now() + 45_000} duration={45} />
         <LocationPickClue isLeader={false} leader={LEADER} target={null} value="" onPick={NOOP} onChange={NOOP} onSubmit={NOOP} endsAt={Date.now() + 45_000} duration={45} />
+      </Section>
+
+      <Section title="Guessing, live" note="drop a pin, lock it, move it after. locking does not take the map away, because the mutator keeps the newest guess for the round and a board that went dead would be inventing a rule the server does not have">
+        <LiveGuess />
+      </Section>
+
+      <Section title="The three states a guess has" note="nothing yet, held, and handed over. the second guess keeps the first on the map in grey with one press to stay there, so nobody loses a round hunting for where they already were">
+        <LocationGuess round={1} isGuessing leader={LEADER} clues={CLUES.slice(0, 1)} selected={null} lockedCount={0} guesserCount={3} onSelect={NOOP} onLock={NOOP} />
+        <LocationGuess round={1} isGuessing leader={LEADER} clues={CLUES.slice(0, 1)} selected={{ lat: 35.0, lng: 135.7 }} lockedCount={1} guesserCount={3} onSelect={NOOP} onLock={NOOP} />
+        <LocationGuess round={2} isGuessing leader={LEADER} clues={CLUES} selected={null} previous={{ lat: 35.0, lng: 135.7 }} onKeep={NOOP} lockedCount={2} guesserCount={3} onSelect={NOOP} onLock={NOOP} />
+      </Section>
+
+      <Section title="Not guessing" note="the leader watches with the place still on their board and everyone's pins coming in. anybody else watches without it, because hiding the answer in the markup is not hiding it">
+        <LocationGuess round={2} isGuessing={false} leader={LEADER} clues={CLUES} target={{ lat: 35.68, lng: 139.69 }} others={OTHERS} selected={null} lockedCount={2} guesserCount={3} onSelect={NOOP} onLock={NOOP} />
+        <LocationGuess round={2} isGuessing={false} leader={LEADER} clues={CLUES} selected={null} lockedCount={2} guesserCount={3} onSelect={NOOP} onLock={NOOP} />
       </Section>
 
       <Section title="A clue once it has been said" note="drawn over the map, because it is the thing you are reading the map against">
