@@ -8,6 +8,12 @@ const EMPTY_PLAYER_INDEX_MAP: NonNullable<GridProps["playerIndexMap"]> = {};
  * Deterministic color grid generation from seed.
  * Uses HSL: hue varies across columns, lightness varies across rows,
  * with slight saturation variation seeded for visual interest.
+ *
+ * The rows used to run 28% to 72%, which over ten of them is a five point step
+ * between neighbours, and five points of lightness is a difference you have to
+ * go looking for. Two cells apart looked like one cell twice, which makes a
+ * guessing game about telling colours apart rather harder to be fair at. The
+ * range is wider now and the saturation is up, so a step is a step.
  */
 export function generateGridColor(row: number, col: number, rows: number, cols: number, seed: number): string {
   // Seeded pseudo-random for saturation jitter
@@ -15,8 +21,11 @@ export function generateGridColor(row: number, col: number, rows: number, cols: 
   const satJitter = (hash / 1000) * 12 - 6; // ±6%
 
   const hue = (col / cols) * 360;
-  const lightness = 28 + (row / (rows - 1)) * 44; // 28%–72%
-  const saturation = Math.max(40, Math.min(90, 70 + satJitter));
+  const lightness = 16 + (row / (rows - 1)) * 68; // 16%–84%
+  // Pulled back at the top and bottom rows, where a fully saturated near-black
+  // or near-white is a hue nobody can actually see.
+  const edge = Math.abs(row / (rows - 1) - 0.5) * 2;
+  const saturation = Math.max(40, Math.min(95, 86 - edge * 22 + satJitter));
 
   return `hsl(${hue.toFixed(1)}, ${saturation.toFixed(1)}%, ${lightness.toFixed(1)}%)`;
 }
