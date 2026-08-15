@@ -125,9 +125,9 @@ export function locationKmLabel(km: number) {
  * function that does the scoring, so the ladder the lobby shows you and the
  * one you get paid on are one ladder.
  */
-export function LocationBands() {
+export function LocationBands({ plain }: { plain?: boolean }) {
   return (
-    <div className="lk-bands">
+    <div className={`lk-bands${plain ? " lk-bands--plain" : ""}`}>
       {BAND_KM.map((km, i) => (
         <span key={km} className="lk-band" style={{ "--lk-band": 1 - i / BAND_KM.length } as React.CSSProperties}>
           <span className="lk-band-dist">{i === 0 ? `within ${locationKmLabel(km)}` : locationKmLabel(km)}</span>
@@ -141,12 +141,16 @@ export function LocationBands() {
 type Coords = { lat: number; lng: number };
 
 /**
- * The map, with nothing riding on it. Drop a place, then guess at it, and the
- * caption says how far off you were and what that would have paid. Two clicks
- * is the whole round, which is the fastest way to learn that the scoring is
- * far kinder than it sounds.
+ * The map, with nothing riding on it. Drop a place, then guess at it, and it
+ * says how far off you were and what that would have paid. Two clicks is the
+ * whole round, which is the fastest way to learn that the scoring is far
+ * kinder than it sounds.
+ *
+ * All of it is said on the map rather than under it. A caption below a map is
+ * a caption you read after you have stopped looking at the thing it is about,
+ * and the numbers here only mean anything next to the two pins they came from.
  */
-export function LocationExplorer({ height = 380 }: { height?: number }) {
+export function LocationExplorer({ height = "clamp(360px, 56vh, 620px)" }: { height?: number | string }) {
   const [place, setPlace] = useState<Coords | null>(null);
   const [guess, setGuess] = useState<Coords | null>(null);
 
@@ -158,43 +162,47 @@ export function LocationExplorer({ height = 380 }: { height?: number }) {
   if (guess) markers.push({ ...guess, color: "#06d6a0", label: "Your guess", size: 3, ring: true, pulse: true });
 
   return (
-    <div className="lk-stage">
-      <div className="lk-map">
-        <WorldMap
-          height={height}
-          interactive
-          markers={markers}
-          onClick={(coords) => (place ? setGuess(coords) : setPlace(coords))}
-        />
-      </div>
+    <div className="lk-map">
+      <WorldMap
+        height={height}
+        interactive
+        markers={markers}
+        onClick={(coords) => (place ? setGuess(coords) : setPlace(coords))}
+        overlay={
+          <>
+            {km !== null && (
+              <p className="lk-over-top lk-readout">
+                <strong>{locationKmLabel(km)}</strong> out, worth{" "}
+                <strong>{points!.toLocaleString()}</strong> point{points === 1 ? "" : "s"}
+              </p>
+            )}
 
-      {/* Everything else goes underneath. A map wants to be the first thing you
-          look at, not the thing you get to after a heading and a paragraph,
-          and the words read better as a caption anyway. */}
-      <div className="lk-stage-foot">
-        {km !== null && (
-          <p className="lk-readout">
-            <strong>{locationKmLabel(km)}</strong> out, which is{" "}
-            <strong>{points!.toLocaleString()}</strong> point{points === 1 ? "" : "s"}
-          </p>
-        )}
+            <div className="lk-over-foot">
+              {place && <LocationBands />}
 
-        {place && <LocationBands />}
+              <p className="lk-hint">
+                {!place
+                  ? "This is the map you will be playing on. Click anywhere to pretend it is the leader's place."
+                  : !guess
+                    ? "Now click somewhere else, the way you would if that was all you had to go on."
+                    : "That is the whole round. Nothing has to be exact: the scoring falls away slowly, so a country off still pays."}
+              </p>
 
-        <p className="lk-stage-hint">
-          {!place
-            ? "This is the map you will be playing on. Click anywhere to pretend it is the leader's place."
-            : !guess
-              ? "Now click somewhere else, the way you would if that was all you had to go on."
-              : "That is the whole round. Nothing has to be exact: the scoring falls away slowly, so a country off still pays."}
-        </p>
-
-        {place && (
-          <GameButton size="sm" variant="ghost" icon={<FiRotateCcw />} onClick={() => { setPlace(null); setGuess(null); }}>
-            Clear the map
-          </GameButton>
-        )}
-      </div>
+              {place && (
+                <GameButton
+                  className="locsig-map-ui lk-over-btn"
+                  size="sm"
+                  variant="secondary"
+                  icon={<FiRotateCcw />}
+                  onClick={() => { setPlace(null); setGuess(null); }}
+                >
+                  Clear the map
+                </GameButton>
+              )}
+            </div>
+          </>
+        }
+      />
     </div>
   );
 }
