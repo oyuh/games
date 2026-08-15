@@ -1,46 +1,105 @@
-import { useRef, useState, FormEvent } from "react";
-import { FiEdit3, FiGrid, FiRefreshCw, FiSend, FiUser } from "react-icons/fi";
+import { useRef, useState } from "react";
+import { FiAward, FiEdit3, FiGrid, FiUser } from "react-icons/fi";
 import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
-import { ColorGrid, generateGridColor } from "../shade/ColorGrid";
+import { GameShellHeader } from "../shared/GameShellHeader";
 import { GameIcon } from "../shared/GameIcon";
+import { ShadeLobby, shadePhases } from "../shade/ShadeLobby";
+import { ShadeClue } from "../shade/ShadeClue";
+import { ShadeGuess } from "../shade/ShadeGuess";
+import { ShadeResult } from "../shade/ShadeResult";
+import { ShadeGameOver } from "../shade/ShadeGameOver";
 import "../../styles/game-shared.css";
-import "../../styles/shade-signal.css";
+
+/**
+ * How to play Shade Signal, drawn with the game's own components.
+ *
+ * This used to be a hand copy of the real screens, which is exactly why it
+ * went stale the moment those screens were rebuilt: it was still teaching a
+ * page with a badge row, an emoji leader mark and a scoring legend the game no
+ * longer draws. Every panel below is the component the game actually renders,
+ * handed made up data and no callbacks, so the tutorial cannot show you
+ * something the game does not do.
+ */
 
 /* ── Fake data ──────────────────────────────────────────── */
 
-const P = {
-  you: "demo-you",
-  alice: "demo-alice",
-  bob: "demo-bob",
-  diana: "demo-diana",
-};
+const P = { you: "demo-you", alice: "demo-alice", bob: "demo-bob", diana: "demo-diana" };
+const NAMES: Record<string, string> = { [P.you]: "You", [P.alice]: "Alice", [P.bob]: "Bob", [P.diana]: "Diana" };
 
-const NAMES: Record<string, string> = {
-  [P.you]: "You",
-  [P.alice]: "Alice",
-  [P.bob]: "Bob",
-  [P.diana]: "Diana",
-};
+const NOOP = () => {};
 
-const GRID = { rows: 10, cols: 10, seed: 42 };
+/* The board a real game deals: ten rows by twelve, off a seed. */
+const GRID = { rows: 10, cols: 12, seed: 42 };
 const TARGET = { row: 3, col: 5 };
 
-const GUESS_MARKERS_ROUND1 = [
-  { sessionId: P.bob, name: "Bob", row: 4, col: 6, isOwn: false, tooltip: "Bob\nGuess: Clue 1\nDistance: 1 away" },
-  { sessionId: P.diana, name: "Diana", row: 2, col: 4, isOwn: false, tooltip: "Diana\nGuess: Clue 1\nDistance: 1 away" },
+const SETTINGS = {
+  hardMode: false,
+  clueDurationSec: 45,
+  guessDurationSec: 30,
+  roundsPerPlayer: 1,
+  leaderPick: false,
+};
+
+const PLAYERS = [
+  { sessionId: P.you, name: "You", connected: true },
+  { sessionId: P.alice, name: "Alice", connected: true },
+  { sessionId: P.bob, name: "Bob", connected: true },
+  { sessionId: P.diana, name: "Diana", connected: true },
 ];
 
-const REVEAL_MARKERS = [
-  { sessionId: P.bob, name: "Bob", row: 3, col: 5, isOwn: false, tooltip: "Bob\nGuess: Clue 2\nDistance: Exact!\nPoints: +5" },
-  { sessionId: P.diana, name: "Diana", row: 3, col: 6, isOwn: false, tooltip: "Diana\nGuess: Clue 2\nDistance: 1 away\nPoints: +3" },
-  { sessionId: P.you, name: "You", row: 4, col: 4, isOwn: true, tooltip: "You (you)\nGuess: Clue 2\nDistance: 1 away\nPoints: +3" },
+const LEADER = { sessionId: P.you, name: "You" };
+
+/* Where the room went on one word. Spread out on purpose: this is the picture
+   that makes the second clue worth having. */
+const AFTER_CLUE_1 = [
+  { sessionId: P.alice, name: "Alice", row: 6, col: 2, note: "Guess 1" },
+  { sessionId: P.bob, name: "Bob", row: 1, col: 9, note: "Guess 1" },
+  { sessionId: P.diana, name: "Diana", row: 5, col: 7, note: "Guess 1" },
 ];
 
-const ZONE_LEGEND = [
-  { pts: 5, label: "Exact", cls: "shade-scoring-swatch--5" },
-  { pts: 3, label: "1 away", cls: "shade-scoring-swatch--4" },
-  { pts: 2, label: "2 away", cls: "shade-scoring-swatch--3" },
-  { pts: 1, label: "3 away", cls: "shade-scoring-swatch--2" },
+/* The round the reveal step shows. Bob lands it, Diana and You end up a ring
+   out, so the leader banks the average of 5, 3 and 3, which rounds to 4. */
+const ROUND_1 = {
+  round: 1,
+  leaderId: P.alice,
+  target: TARGET,
+  seed: GRID.seed,
+  clue1: "teal",
+  clue2: "deep ocean",
+  guesses: [
+    { sessionId: P.bob, row: 3, col: 5 },
+    { sessionId: P.diana, row: 3, col: 6 },
+    { sessionId: P.you, row: 4, col: 4 },
+  ],
+  scores: { [P.bob]: 5, [P.diana]: 3, [P.you]: 3 },
+  leaderScore: 4,
+};
+
+/* A second round on its own board, so the history has something to open. You
+   led it: Alice nails it, Bob is a ring out, Diana never finds it, and the
+   average of 5, 3 and 0 rounds to 3. */
+const ROUND_2 = {
+  round: 2,
+  leaderId: P.you,
+  target: { row: 6, col: 9 },
+  seed: 777,
+  clue1: "moss",
+  clue2: "forest floor",
+  guesses: [
+    { sessionId: P.alice, row: 6, col: 9 },
+    { sessionId: P.bob, row: 5, col: 8 },
+    { sessionId: P.diana, row: 1, col: 2 },
+  ],
+  scores: { [P.alice]: 5, [P.bob]: 3, [P.diana]: 0 },
+  leaderScore: 3,
+};
+
+/* You 3+3 = 6, Alice 4+5 = 9, Bob 5+3 = 8, Diana 3+0 = 3. */
+const STANDINGS = [
+  { sessionId: P.you, name: "You", score: 6, you: true },
+  { sessionId: P.alice, name: "Alice", score: 9 },
+  { sessionId: P.bob, name: "Bob", score: 8 },
+  { sessionId: P.diana, name: "Diana", score: 3 },
 ];
 
 /* ── Steps ──────────────────────────────────────────────── */
@@ -48,226 +107,207 @@ const ZONE_LEGEND = [
 const steps: DemoStep[] = [
   {
     label: "Lobby",
-    description: "Players join and explore the color grid. Each game has a unique procedurally-generated grid!",
-    hint: "Try clicking cells to preview scoring zones before the game starts.",
+    description: "Everybody joins, and the board is already there to poke at. Press any cell and it stands in for the leader's color, so you can see how the scoring falls around it before it costs anything.",
+    hint: "Three players to start. Everyone takes a turn leading, so the game gets longer as people arrive.",
   },
   {
-    label: "Pick Color (Leader)",
-    description: "The Leader picks a target color from the grid. Nobody else can see which cell they chose.",
-    hint: "Think about what words could describe this color - you'll give 2 clues total!",
+    label: "The clue",
+    description: "One player is the leader and only they can see the color. They get one word to point everyone at it.",
+    hint: "Hard mode blocks plain color names, so red, teal and rust are all out and the clue has to come at it sideways.",
   },
   {
-    label: "Clue 1 & Guess 1",
-    description: "The Leader gives a one-word clue. Guessers must click the cell they think matches and lock in their guess.",
-    hint: "In Hard Mode, you can't use color names like 'red' or 'blue'!",
+    label: "Guessing",
+    description: "Everyone else presses the cell they think the leader means and locks it in. Close still pays, so a rough guess beats no guess.",
+    hint: "Locked in, the board stops taking presses. Move it puts your pick back in your hand.",
   },
   {
-    label: "Clue 2 & Guess 2",
-    description: "The Leader sees where guessers picked and gives a second, more specific clue. Guessers can change their pick.",
-    hint: "The Leader can see round-1 markers to tailor their second clue!",
+    label: "The second clue",
+    description: "The leader now sees where the room actually went, and gets a second clue of up to two words to pull them in. Everyone gets one more move after it.",
+    hint: "This is the whole reason there is a second clue. A word that scattered everybody tells you a lot.",
   },
   {
-    label: "Reveal",
-    description: "The target is revealed with scoring zones. Players score based on distance (Chebyshev). Leader gets bonus points too!",
-    hint: "Every player takes a turn as Leader before the game ends.",
+    label: "The result",
+    description: "The color, everybody standing where they finished, and what that paid. Then it moves itself on and somebody else leads.",
+    hint: "The rings are the scoring, drawn on the board you were guessing on.",
   },
   {
-    label: "Overview",
-    description: "Guessers score on how many grid steps their pick sits from the target. Diagonals count as one step, so the scoring zones come out as squares around the target.",
-    hint: "The Leader scores the average of their guessers, so a clue everyone reads well pays you too.",
+    label: "The end",
+    description: "Highest total takes it. Every round is kept, so you can open the one you want to argue about and see the board it was played on.",
+    hint: "The leader's score is the only one somebody else earns for you.",
+  },
+  {
+    label: "Scoring",
+    description: "You score on how many grid steps your pick sits from the color. Diagonals count as one step, so the bands come out as squares around it.",
+    hint: "The leader banks the average of every guesser, so a clue the whole room reads well pays you too.",
   },
 ];
 
 /* ── Component ──────────────────────────────────────────── */
 
+const header = (phase: string, round?: number) => (
+  <GameShellHeader
+    game="shade"
+    title="Shade Signal"
+    phases={shadePhases(false)}
+    phase={phase}
+    code="DEMO"
+    isHost
+    {...(round ? { round: { current: round, total: 4 } } : {})}
+  />
+);
+
 export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; initialStep?: number }) {
   const initialStepRef = useRef(initialStep);
   const [step, setStep] = useState(initialStepRef.current);
-  const [clue, setClue] = useState("");
-  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-  const [lobbyPreview, setLobbyPreview] = useState<{ row: number; col: number } | null>(null);
 
-  const targetColor = generateGridColor(TARGET.row, TARGET.col, GRID.rows, GRID.cols, GRID.seed);
-  const noop = (e?: FormEvent) => e?.preventDefault();
+  /* The guessing step is playable, because pressing a cell and watching the
+     swatch fill in teaches it faster than a caption can. */
+  const [picked, setPicked] = useState<{ row: number; col: number } | null>(null);
+  const [locked, setLocked] = useState(false);
 
   const renderStep = () => {
     switch (step) {
-      case 0: // Lobby
+      case 0:
         return (
-          <div className="game-page shade-page" data-game-theme="shade">
-            <DemoPoint label="Explore the grid - click cells to preview scoring zones">
-              <ColorGrid
-                rows={GRID.rows}
-                cols={GRID.cols}
-                seed={GRID.seed}
-                target={lobbyPreview}
-                onSelect={(r, c) => setLobbyPreview({ row: r, col: c })}
-                interactive
-                showTarget={!!lobbyPreview}
-                showZones={!!lobbyPreview}
-                showScoreTooltips={!!lobbyPreview}
+          <div className="game-page" data-game-theme="shade">
+            {header("lobby")}
+            <DemoPoint label="Press a cell to pretend it is the color, and the scoring falls out around it">
+              <ShadeLobby
+                players={PLAYERS}
+                sessionId={P.you}
+                hostId={P.you}
+                sessionById={NAMES}
+                settings={SETTINGS}
+                grid={GRID}
+                isHost
+                inGame
+                onStart={NOOP}
+                onLeave={NOOP}
+                onJoin={NOOP}
               />
             </DemoPoint>
-            {lobbyPreview && <ScoringLegend />}
           </div>
         );
 
-      case 1: // Leader picks
+      case 1:
         return (
-          <div className="game-page shade-page" data-game-theme="shade">
-            <DemoPoint label="As the Leader, pick your target color">
-              <div className="game-section shade-clue-section">
-                <div className="shade-clue-leader-info">
-                  <h3>Pick your target color!</h3>
-                  <p>Tap the color you want to give clues about.</p>
-                </div>
-                <ColorGrid
-                  rows={GRID.rows}
-                  cols={GRID.cols}
-                  seed={GRID.seed}
-                  selected={selectedCell}
-                  onSelect={(r, c) => setSelectedCell({ row: r, col: c })}
-                  interactive
-                />
-                {selectedCell && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", justifyContent: "center", marginTop: "0.5rem" }}>
-                    <div style={{
-                      width: "32px", height: "32px", borderRadius: "6px",
-                      background: generateGridColor(selectedCell.row, selectedCell.col, GRID.rows, GRID.cols, GRID.seed),
-                      border: "2px solid rgba(255,255,255,0.3)"
-                    }} />
-                    <span style={{ fontSize: "0.8rem", color: "var(--secondary)" }}>Selected</span>
-                  </div>
-                )}
-              </div>
+          <div className="game-page" data-game-theme="shade">
+            {header("clue1", 1)}
+            <DemoPoint label="The leader's view. The ring is the color, and nobody else can see it">
+              <ShadeClue
+                round={1}
+                grid={GRID}
+                isLeader
+                leader={LEADER}
+                target={TARGET}
+                value="teal"
+                onChange={NOOP}
+                onSubmit={(event) => event.preventDefault()}
+              />
             </DemoPoint>
           </div>
         );
 
-      case 2: // Clue 1 + Guess 1
+      case 2:
         return (
-          <div className="game-page shade-page" data-game-theme="shade">
-            <DemoPoint label="Leader view - give a one-word clue about your target">
-              <div className="game-section shade-clue-section">
-                <div className="shade-clue-leader-info">
-                  <h3>You are the Leader!</h3>
-                  <p>Give a <strong>one-word</strong> clue to help guessers find your target color.</p>
-                </div>
-                <div className="shade-target-preview">
-                  <div className="shade-target-swatch" style={{ background: targetColor }} />
-                  <span className="shade-target-label">Your target ↑</span>
-                </div>
-                <ColorGrid rows={GRID.rows} cols={GRID.cols} seed={GRID.seed} target={TARGET} showTarget />
-                <form className="shade-clue-form" onSubmit={noop}>
-                  <input
-                    className="input shade-clue-input"
-                    value={clue}
-                    onChange={(e) => setClue(e.target.value)}
-                    placeholder="One word clue…"
-                    maxLength={60}
-                  />
-                  <button className="btn btn-primary" type="submit" disabled={!clue.trim()}>
-                    <FiSend size={14} /> Send
-                  </button>
-                </form>
-              </div>
-            </DemoPoint>
-
-            <hr style={{ border: 0, borderTop: "1px dashed var(--border)", margin: "1rem 0" }} />
-
-            <DemoPoint label="Guesser view - click a cell based on the clue">
-              <div className="game-section shade-guess-section">
-                <div className="shade-clue-display-row">
-                  <div className="shade-clue-display">
-                    <span className="shade-clue-tag">Clue 1</span>
-                    <span className="shade-clue-word">Teal</span>
-                  </div>
-                </div>
-                <p className="shade-guess-prompt">Tap the color you think the leader means!</p>
-                <ColorGrid
-                  rows={GRID.rows}
-                  cols={GRID.cols}
-                  seed={GRID.seed}
-                  selected={selectedCell}
-                  onSelect={(r, c) => setSelectedCell({ row: r, col: c })}
-                  interactive
-                />
-              </div>
+          <div className="game-page" data-game-theme="shade">
+            {header("guess1", 1)}
+            <DemoPoint label="Everybody else. Press a cell, then lock it in">
+              <ShadeGuess
+                round={1}
+                grid={GRID}
+                isGuessing
+                clue1="teal"
+                selected={picked}
+                locked={locked}
+                lockedCount={locked ? 2 : 1}
+                guesserCount={3}
+                onSelect={(cell) => setPicked(cell)}
+                onLock={() => setLocked(true)}
+                onUnlock={() => setLocked(false)}
+              />
             </DemoPoint>
           </div>
         );
 
-      case 3: // Clue 2 + Guess 2 (Leader sees guess1 markers)
+      case 3:
         return (
-          <div className="game-page shade-page" data-game-theme="shade">
-            <DemoPoint label="Leader sees where guessers picked and gives a better clue">
-              <div className="game-section shade-clue-section">
-                <div className="shade-clue-leader-info">
-                  <h3>Give a second clue!</h3>
-                  <p>Give a <strong>second clue</strong> (up to 2 words) to help guessers refine their guess.</p>
-                </div>
-                <ColorGrid
-                  rows={GRID.rows}
-                  cols={GRID.cols}
-                  seed={GRID.seed}
-                  target={TARGET}
-                  showTarget
-                  markers={GUESS_MARKERS_ROUND1}
-                />
-                <p style={{ fontSize: "0.75rem", color: "var(--secondary)", textAlign: "center", marginTop: "0.25rem" }}>
-                  Showing where guessers picked after your first clue
-                </p>
-              </div>
+          <div className="game-page" data-game-theme="shade">
+            {header("clue2", 1)}
+            <DemoPoint label="Back to the leader, who can now see where one word sent everybody">
+              <ShadeClue
+                round={2}
+                grid={GRID}
+                isLeader
+                leader={LEADER}
+                target={TARGET}
+                clue1="teal"
+                guesses={AFTER_CLUE_1}
+                value="deep ocean"
+                onChange={NOOP}
+                onSubmit={(event) => event.preventDefault()}
+              />
             </DemoPoint>
           </div>
         );
 
-      case 4: // Reveal
+      case 4:
         return (
-          <div className="game-page shade-page" data-game-theme="shade">
-            <DemoPoint label="Target revealed with scoring zones and guess markers">
-              <div className="game-section shade-reveal-section">
-                <h3 className="shade-reveal-title">Reveal!</h3>
-                <div className="shade-reveal-target">
-                  <div className="shade-reveal-swatch" style={{ background: targetColor }} />
-                  <div className="shade-reveal-info">
-                    <span>Target Color</span>
-                    <span className="shade-reveal-clues">
-                      <em>"Teal"</em> → <em>"Deep ocean"</em>
-                    </span>
-                  </div>
-                </div>
-                <ColorGrid
-                  rows={GRID.rows}
-                  cols={GRID.cols}
-                  seed={GRID.seed}
-                  target={TARGET}
-                  showTarget
-                  showZones
-                  markers={REVEAL_MARKERS}
-                />
-                <ScoringLegend />
-              </div>
+          <div className="game-page" data-game-theme="shade">
+            {header("reveal", 1)}
+            <DemoPoint label="The color, everybody's guesses, and what each of them paid">
+              <ShadeResult
+                grid={GRID}
+                target={TARGET}
+                clue1={ROUND_1.clue1}
+                clue2={ROUND_1.clue2}
+                leader={{ sessionId: P.alice, name: "Alice", points: ROUND_1.leaderScore }}
+                players={ROUND_1.guesses.map((guess) => ({
+                  sessionId: guess.sessionId,
+                  name: NAMES[guess.sessionId] ?? "Someone",
+                  guess: { row: guess.row, col: guess.col },
+                  points: ROUND_1.scores[guess.sessionId] ?? 0,
+                  ...(guess.sessionId === P.you ? { you: true } : {}),
+                }))}
+              />
             </DemoPoint>
           </div>
         );
 
-      case 5: // Scoring
+      case 5:
+        return (
+          <div className="game-page" data-game-theme="shade">
+            {header("finished")}
+            <DemoPoint label="Who took it, and every round on the way there">
+              <ShadeGameOver
+                players={STANDINGS}
+                rounds={[ROUND_1, ROUND_2]}
+                grid={{ rows: GRID.rows, cols: GRID.cols }}
+                isHost
+                onPlayAgain={NOOP}
+                onEnd={NOOP}
+                onHome={NOOP}
+              />
+            </DemoPoint>
+          </div>
+        );
+
+      case 6:
         return (
           <DemoScoring
-            columns={["Steps from the target", "Points"]}
+            columns={["Steps from the color", "Points"]}
             rows={[
-              { label: "Exact cell", value: "5" },
+              { label: "The cell itself", value: "5" },
               { label: "1 away", value: "3" },
               { label: "2 away", value: "2" },
               { label: "3 away", value: "1" },
               { label: "4 or more away", value: "0" },
             ]}
             rules={[
-              { icon: <FiUser size={13} />, title: "Leader's score", text: "The Leader banks the average of every guesser's score for the round, rounded." },
-              { icon: <FiEdit3 size={13} />, title: "Clue rules", text: "Clue 1 is one word, clue 2 can be two. Hard mode blocks plain colour names." },
-              { icon: <FiGrid size={13} />, title: "The grid", text: "Every game generates its own colour grid from a seed, so no two boards match." },
-              { icon: <FiRefreshCw size={13} />, title: "Rotation", text: "Everyone takes a turn leading, then the highest total score wins." },
+              { icon: <FiUser size={13} />, title: "The leader's score", text: "The leader banks the average of every guesser that round, rounded." },
+              { icon: <FiEdit3 size={13} />, title: "The clues", text: "The first is one word, the second can be two. Hard mode blocks plain color names." },
+              { icon: <FiGrid size={13} />, title: "The board", text: "Every round deals its own colors from a fresh seed, so no two boards match." },
+              { icon: <FiAward size={13} />, title: "Winning", text: "Everyone leads the same number of rounds, and the highest total takes it." },
             ]}
           />
         );
@@ -289,18 +329,5 @@ export function ShadeDemo({ onClose, initialStep = 0 }: { onClose: () => void; i
     >
       {renderStep()}
     </DemoModal>
-  );
-}
-
-function ScoringLegend() {
-  return (
-    <div className="shade-scoring-legend">
-      {ZONE_LEGEND.map((z) => (
-        <span key={z.pts} className="shade-scoring-legend-item">
-          <span className={`shade-scoring-swatch ${z.cls}`} />
-          {z.label} = {z.pts}pt{z.pts > 1 ? "s" : ""}
-        </span>
-      ))}
-    </div>
   );
 }
