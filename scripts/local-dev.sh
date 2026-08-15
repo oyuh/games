@@ -172,6 +172,18 @@ remove_zero_data_volume() {
   docker volume rm "$zero_volume_name" >/dev/null 2>&1 || true
 }
 
+# The replica lives in the volume above, but zero's record of who has synced
+# what lives in postgres, and nothing was ever clearing it. Every reset orphaned
+# another browser's worth of clients, each still holding a mutation the server
+# had already applied, and zero-cache re-pushed the lot on every reconnect. That
+# is where the wall of "already processed. Expected: 2" in the api log comes
+# from. Clearing them alongside the replica is the same fresh start.
+clear_zero_client_records() {
+  docker exec -i "$postgres_container_name" \
+    psql -U postgres -d games -q -c "truncate table zero_0.clients, zero_0.mutations" \
+    >/dev/null 2>&1 || true
+}
+
 container_exists() {
   local container_name="$1"
   docker container inspect "$container_name" >/dev/null 2>&1
@@ -289,6 +301,9 @@ fi
 if [[ "$skip_docker" == false ]]; then
   echo "Resetting zero-cache replica..."
   remove_zero_data_volume
+
+  echo "Clearing stale zero client records..."
+  clear_zero_client_records
 
   echo "Starting zero-cache (fresh replica)..."
   start_zero_container
