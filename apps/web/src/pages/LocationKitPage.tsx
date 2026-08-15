@@ -236,8 +236,8 @@ const CLUES = [
 
 /* Where the room went, for the leader watching it happen. */
 const OTHERS = [
-  { lat: 48.85, lng: 2.35, color: "#7ecbff", label: "Bram", size: 2.5, ring: true },
-  { lat: 41.9, lng: 12.5, color: "#ef476f", label: "Cleo", size: 2.5, ring: true },
+  { lat: 48.85, lng: 2.35, color: "#7ecbff", avatar: "seed-bram", label: "Bram", size: 2.5, ring: true },
+  { lat: 41.9, lng: 12.5, color: "#ef476f", avatar: "seed-cleo", label: "Cleo", size: 2.5, ring: true },
 ];
 
 /**

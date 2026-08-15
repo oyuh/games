@@ -38,6 +38,17 @@
   animation: locsig-marker-drop 0.5s ease-out both;
 }
 
+/* A player's face, filling the pin. Inset so the pin's colour stays as a ring
+   round it, which is what tells two faces apart at a glance when they have
+   landed near each other. */
+.locsig-marker-face {
+  display: block;
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
 /* Whatever the pin is carrying, centred in it. The glyph is dark because the
    pin under it is a bright game colour, and dark on that beats white on it. */
 .locsig-marker-icon {

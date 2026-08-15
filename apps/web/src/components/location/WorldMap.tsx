@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createPortal } from "react-dom";
 import { FiMaximize2, FiMinus, FiPlus, FiX } from "react-icons/fi";
 import { RoundCountdown } from "../shared/RoundCountdown";
+import { PlayerAvatar } from "../shared/PlayerAvatar";
 /* The map's own sheet: its zoom buttons, its markers, its credit. It used to be
    left to whoever rendered a map to remember this, so a page that forgot got a
    map with square pins, invisible zoom buttons and the credit sat in the page
@@ -16,11 +17,15 @@ export interface MapMarker {
   size?: number;
   pulse?: boolean;
   ring?: boolean;
-  /** When true, hide the label unless the marker is hovered */
-  hideLabel?: boolean;
+  /** Keep the name on screen rather than waiting for a hover. For the one pin
+   *  on a map that has to say what it is before you go near it. */
+  alwaysLabel?: boolean;
   /** Sits inside the pin. A pin carrying an icon gets a floor on its size so
    *  the icon has somewhere to be, since a 12 pixel circle cannot hold one. */
   icon?: ReactNode;
+  /** A session id. The pin becomes that player's face, which says whose it is
+   *  without a name sat next to it taking up the map. */
+  avatar?: string;
 }
 
 interface WorldMapProps {
@@ -500,9 +505,10 @@ function MapSurface({
 
         <div className="locsig-map-marker-layer">
           {markerCopies.map(({ key, marker, markerIndex, left, top }) => {
-            /* An icon needs room. Anything carrying one gets at least 26px
-               across, which is the smallest a 13px glyph reads at. */
-            const dotPx = marker.icon
+            /* An icon or a face needs room. Anything carrying one gets at
+               least 26px across, which is the smallest a 13px glyph and the
+               smallest a face read at. */
+            const dotPx = marker.icon || marker.avatar
               ? Math.max(26, (marker.size ?? 3) * 6)
               : (marker.size ?? 3) * 6;
             const isHovered = hovered === markerIndex;
@@ -534,12 +540,21 @@ function MapSurface({
                     onMouseEnter={() => onHoverMarker(markerIndex)}
                     onMouseLeave={() => onHoverMarker(null)}
                   >
-                    {marker.icon && (
+                    {marker.avatar ? (
+                      <span className="locsig-marker-face" aria-hidden="true">
+                        <PlayerAvatar seed={marker.avatar} />
+                      </span>
+                    ) : marker.icon ? (
                       <span className="locsig-marker-icon" aria-hidden="true">{marker.icon}</span>
-                    )}
+                    ) : null}
                   </div>
 
-                  {marker.label && (!marker.hideLabel || isHovered) && (
+                  {/* Names live on hover. Six pins on a world map means six
+                      name tags overlapping each other and the coastline, and
+                      the pin already says whose it is by wearing their face.
+                      `alwaysLabel` is for the odd pin that has to announce
+                      itself, like where the place turned out to be. */}
+                  {marker.label && marker.alwaysLabel && !isHovered && (
                     <span
                       className="locsig-marker-label"
                       style={{

@@ -130,7 +130,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           label: `${isMe ? "You" : name}${isLatest ? "" : ` (G${g.round})`}`,
           size: isLatest ? 3 : 0.8,
           ring: isLatest,
-          hideLabel: !isLatest,
+          alwaysLabel: isLatest,
         });
       }
     }
@@ -227,7 +227,8 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
                   <div className={`m-player-avatar${isCurrentLeader ? " m-player-avatar--leader" : ""}`}>
                     {isCurrentLeader ? "📍" : isLockedIn ? "✅" : (
                       <PlayerAvatar
-                        seed={p.sessionId}
+                        seed={p.sessionId}
+
                       />
                     )}
                   </div>
@@ -285,7 +286,8 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
                 <div key={p.sessionId} className={`m-player-chip${isMe ? " m-player-chip--me" : ""}`}>
                   <div className="m-player-avatar">
                     <PlayerAvatar
-                      seed={p.sessionId}
+                      seed={p.sessionId}
+
                     />
                   </div>
                   <span className="m-player-name">{name}</span>

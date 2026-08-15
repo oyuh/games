@@ -147,7 +147,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
           label: `${isMe ? "You" : name}${isLatest ? "" : ` (G${g.round})`}`,
           size: isLatest ? 3 : 0.8,
           ring: isLatest,
-          hideLabel: !isLatest,
+          alwaysLabel: isLatest,
         });
       }
     }
@@ -445,6 +445,9 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
                   lat: g.lat,
                   lng: g.lng,
                   color: guesserColorMap[g.sessionId] ?? "#7ecbff",
+                  /* Their face on the map, their name on the hover. Six pins
+                     with six name tags is six tags overlapping each other. */
+                  avatar: g.sessionId,
                   label: playerName(g.sessionId),
                   size: 2.5,
                   ring: true,
