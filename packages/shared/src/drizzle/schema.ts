@@ -273,6 +273,12 @@ export const shadeSignalGames = pgTable(
       round: number;
       leaderId: string;
       target: { row: number; col: number };
+      /* The seed the board was dealt from. A new one is rolled every round, so
+         without this a finished round's target is a pair of coordinates onto a
+         board that no longer exists and the end screen cannot draw where
+         anything actually was. Optional because games played before it was
+         recorded do not have one. */
+      seed?: number;
       clue1: string | null;
       clue2: string | null;
       guesses: Array<{ sessionId: string; round: 1 | 2; row: number; col: number }>;

@@ -14,6 +14,7 @@ import { SHADE_BANDS, ShadeGrid, shadeDistLabel } from "../components/shade/Shad
 import { ShadeClue, ShadeClueTag, ShadePick } from "../components/shade/ShadeClue";
 import { ShadeGuess } from "../components/shade/ShadeGuess";
 import { ShadeResult } from "../components/shade/ShadeResult";
+import { ShadeGameOver } from "../components/shade/ShadeGameOver";
 import "../styles/game-shared.css";
 
 /**
@@ -361,6 +362,89 @@ const RESULT = {
   ],
 };
 
+/* Four rounds with different stories in them, each on its own board and its
+   own seed, so the history is worth opening rather than four versions of the
+   same round. Every score is what the reveal mutator would actually have paid
+   for these boards: a reference page whose arithmetic does not hold up is a
+   reference for nothing. */
+const HISTORY = [
+  {
+    round: 1, leaderId: "seed-ada", target: { row: 4, col: 7 }, seed: 4213,
+    clue1: "ocean", clue2: "deep water",
+    guesses: [
+      { sessionId: "seed-bram", row: 4, col: 7 },
+      { sessionId: "seed-cleo", row: 5, col: 8 },
+      { sessionId: "seed-dov", row: 2, col: 5 },
+      { sessionId: "seed-eve", row: 8, col: 1 },
+    ],
+    scores: { "seed-bram": 5, "seed-cleo": 3, "seed-dov": 2, "seed-eve": 0 },
+    leaderScore: 3,
+  },
+  {
+    /* The one that went nowhere. Bram said something nobody could follow and
+       the average paid him for it. */
+    round: 2, leaderId: "seed-bram", target: { row: 1, col: 2 }, seed: 88123,
+    clue1: "rust",
+    guesses: [
+      { sessionId: "seed-ada", row: 6, col: 9 },
+      { sessionId: "seed-cleo", row: 4, col: 4 },
+      { sessionId: "seed-dov", row: 1, col: 5 },
+      { sessionId: "seed-eve", row: 8, col: 10 },
+    ],
+    scores: { "seed-ada": 0, "seed-cleo": 1, "seed-dov": 1, "seed-eve": 0 },
+    leaderScore: 1,
+  },
+  {
+    /* The one that landed. Everybody within a ring of it. */
+    round: 3, leaderId: "seed-cleo", target: { row: 7, col: 3 }, seed: 31007,
+    clue1: "lime", clue2: "sherbet",
+    guesses: [
+      { sessionId: "seed-ada", row: 7, col: 3 },
+      { sessionId: "seed-bram", row: 7, col: 4 },
+      { sessionId: "seed-dov", row: 6, col: 3 },
+      { sessionId: "seed-eve", row: 8, col: 2 },
+    ],
+    scores: { "seed-ada": 5, "seed-bram": 3, "seed-dov": 3, "seed-eve": 3 },
+    leaderScore: 4,
+  },
+  {
+    /* The last one, which is the one that decided it. */
+    round: 4, leaderId: "seed-dov", target: { row: 2, col: 10 }, seed: 55291,
+    clue1: "bruise", clue2: "storm cloud",
+    guesses: [
+      { sessionId: "seed-ada", row: 3, col: 10 },
+      { sessionId: "seed-bram", row: 2, col: 8 },
+      { sessionId: "seed-cleo", row: 2, col: 10 },
+      { sessionId: "seed-eve", row: 5, col: 6 },
+    ],
+    scores: { "seed-ada": 3, "seed-bram": 2, "seed-cleo": 5, "seed-eve": 0 },
+    leaderScore: 3,
+  },
+];
+
+/* The four rounds above, added up. Each round's own scores are what the reveal
+   mutator's ladder pays for those boards, and the leader takes the room's
+   average rounded, so the totals here are the ones a real game would reach.
+
+   Ada 3+0+5+3 = 11, Bram 5+1+3+2 = 11, Cleo 3+1+4+5 = 13, Dov 2+1+3+3 = 9,
+   Eve 0+0+3+0 = 3. */
+const STANDINGS = [
+  { sessionId: "seed-ada", name: "Ada", score: 11 },
+  { sessionId: "seed-bram", name: "Bram", score: 11 },
+  { sessionId: "seed-cleo", name: "Cleo", score: 13 },
+  { sessionId: "seed-dov", name: "Dov", score: 9, you: true },
+  { sessionId: "seed-eve", name: "Eve", score: 3 },
+];
+
+const OVER = {
+  players: STANDINGS,
+  rounds: HISTORY,
+  grid: { rows: GRID.rows, cols: GRID.cols },
+  onPlayAgain: NOOP,
+  onEnd: NOOP,
+  onHome: NOOP,
+};
+
 /* Everything a guess screen needs that is the same in every state of it. */
 const GUESS = {
   round: 1 as const,
@@ -547,6 +631,24 @@ export function ShadeKitPage() {
             { sessionId: "seed-dov", name: "Dov", guess: { row: 8, col: 2 }, points: 0 },
           ]}
         />
+      </Section>
+
+      <Section title="The end" note="who took it, and every round on the way there. each one folds down to its headline and opens onto the board it was actually played on. the last one opens itself, since it is the one that just decided it">
+        <ShadeGameOver {...OVER} isHost />
+      </Section>
+
+      <Section title="The end, from the other side" note="the same game for somebody who is not hosting. one way out and no buttons that would do nothing when pressed">
+        <ShadeGameOver {...OVER} />
+      </Section>
+
+      <Section title="The end, the other three ways" note="a draw, a game the host pulled before a round finished, and one from before the board was recorded with the round. that last one keeps the argument and loses the picture of it">
+        <ShadeGameOver
+          {...OVER}
+          isHost
+          players={STANDINGS.map((p) => (p.sessionId === "seed-ada" ? { ...p, score: 13 } : p))}
+        />
+        <ShadeGameOver {...OVER} isHost rounds={[]} players={STANDINGS.map((p) => ({ ...p, score: 0 }))} />
+        <ShadeGameOver {...OVER} isHost rounds={HISTORY.map(({ seed: _seed, ...round }) => round)} />
       </Section>
 
       <Section title="Picking your own color" note="only when the host turned it on. the same board with a confirm under it, and from the other side the same wait">
