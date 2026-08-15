@@ -78,16 +78,31 @@ export function ShadeBands({ className = "" }: { className?: string }) {
 }
 
 /**
- * The board, and whatever this phase needs saying about it, underneath and
- * centered on it. Every phase of this game is that shape: the grid is the
- * thing you are looking at and the words are the caption, never the other way
- * round. So it is one component rather than each phase laying itself out and
- * getting the spacing slightly different.
+ * The board, and whatever this phase needs saying about it. Every phase of
+ * this game is that shape, so it is one component rather than each phase
+ * laying itself out and getting the spacing slightly different.
+ *
+ * Two ways round. A phase with nothing to do in it puts its words under the
+ * board as a caption. A phase with controls puts them in a rail beside it,
+ * because a board, a clue, a swatch, a hint, two buttons and a tally in one
+ * column is a screen you have to scroll to play, and the board is the thing
+ * you are meant to be looking at while you use them. Under a certain width
+ * there is no room for two of anything, so the rail goes back to being a
+ * caption.
  */
-export function ShadeStage({ children, foot }: { children: ReactNode; foot?: ReactNode }) {
+export function ShadeStage({
+  children,
+  foot,
+  /** Puts the foot beside the board rather than under it. */
+  rail,
+}: {
+  children: ReactNode;
+  foot?: ReactNode;
+  rail?: boolean;
+}) {
   return (
-    <div className="sk-stage">
-      {children}
+    <div className={`sk-stage${rail ? " sk-stage--rail" : ""}`}>
+      <div className="sk-stage-board">{children}</div>
       {foot && <div className="sk-stage-foot">{foot}</div>}
     </div>
   );

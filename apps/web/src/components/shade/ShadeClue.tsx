@@ -168,6 +168,9 @@ export function ShadeClue({
 
   return (
     <ShadeStage
+      /* The leader has a box to type in and rules to read while doing it, so
+         those go beside the board. Everyone else has a sentence. */
+      rail={isLeader}
       foot={
         <>
           {clue1 && <ShadeClueTag round={1} text={clue1} />}
@@ -251,6 +254,7 @@ export function ShadePick({
 }) {
   return (
     <ShadeStage
+      rail={isLeader}
       foot={
         isLeader ? (
           <>
