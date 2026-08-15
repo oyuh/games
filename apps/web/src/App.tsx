@@ -65,6 +65,9 @@ const ShadeKitPage = lazy(() =>
 const ChainKitPage = lazy(() =>
   import("./pages/ChainKitPage").then(({ ChainKitPage }) => ({ default: ChainKitPage }))
 );
+const LocationKitPage = lazy(() =>
+  import("./pages/LocationKitPage").then(({ LocationKitPage }) => ({ default: LocationKitPage }))
+);
 const ShikakuPage = lazy(() => import("./pages/ShikakuPage").then(({ ShikakuPage }) => ({ default: ShikakuPage })));
 const PipsPage = lazy(() => import("./pages/PipsPage").then(({ PipsPage }) => ({ default: PipsPage })));
 
@@ -736,6 +739,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/dev/password" element={<LazyRoute><PasswordKitPage /></LazyRoute>} />
               <Route path="/dev/chain" element={<LazyRoute><ChainKitPage /></LazyRoute>} />
               <Route path="/dev/shade" element={<LazyRoute><ShadeKitPage /></LazyRoute>} />
+              <Route path="/dev/location" element={<LazyRoute><LocationKitPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

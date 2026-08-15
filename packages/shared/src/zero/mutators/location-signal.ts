@@ -7,7 +7,7 @@ function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
 }
 
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
   const dLat = toRadians(lat2 - lat1);
   const dLng = toRadians(lng2 - lng1);
@@ -18,9 +18,9 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * c;
 }
 
-const PERFECT_KM = 120.7; // 75 miles
+export const PERFECT_KM = 120.7; // 75 miles
 
-function scoreForDistance(km: number): number {
+export function scoreForDistance(km: number): number {
   if (km <= PERFECT_KM) return 5000;
   // Generous exponential decay: ~2500 at ~2000km, still scoring at 5000km+
   return Math.max(0, Math.round(5000 * Math.exp(-(km - PERFECT_KM) / 3000)));
