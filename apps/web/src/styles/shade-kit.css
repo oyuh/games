@@ -1,0 +1,173 @@
+/* ── Shade Signal ────────────────────────────────────────────────
+   Same three rules as the rest of the game kit: depth is borders and fills
+   rather than shadows, colour means something, and one accent per surface off
+   --game-accent.
+
+   Shade is the hard case for the second rule, because the surface already has
+   a hundred and twenty colours on it and none of them mean anything, they are
+   the puzzle. So nothing drawn on top gets a hue: every mark is --foreground,
+   and distance is that one mark fading out as it goes. The old sheet answered
+   the same question with a white glow, a yellow glow and four unrelated zone
+   colours, which is five accents on the one surface that can least afford
+   them, and the bands read as decoration rather than as a ladder.
+
+   The old shade-signal.css stays until the old page comes out. Nothing here
+   shares a class name with it. */
+
+.sk-grid,
+.sk-explore {
+  --sk-accent: var(--game-accent, var(--primary));
+  /* Everything drawn over a cell, in one colour. It has to read over any hue
+     at any lightness, which is what the page's own text colour is already
+     picked to do. */
+  --sk-mark: var(--foreground);
+}
+
+/* ── The grid ────────────────────────────────────────────────────
+   Sized off its own column count rather than a viewport clamp, so a 10x12
+   board and a 6x8 one both come out with square cells and neither has to be
+   told what a cell is worth in pixels. */
+.sk-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--sk-cols), minmax(0, 1fr));
+  gap: 2px;
+  width: 100%;
+  max-width: calc(var(--sk-cols) * 2.5rem);
+  margin-inline: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  user-select: none;
+}
+
+.sk-grid--sm {
+  max-width: calc(var(--sk-cols) * 1.5rem);
+}
+
+/* ── Cells ─────────────────────────────────────────────────────── */
+.sk-cell {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  /* The colour is the content, so it comes in as an inline background and
+     nothing here may fill over it. */
+  background: transparent;
+}
+
+.sk-grid--live .sk-cell {
+  cursor: pointer;
+}
+
+/* Sits in the gap rather than eating into the colour, so pointing at a cell
+   never changes the cell you are trying to read. */
+.sk-grid--live .sk-cell:hover,
+.sk-cell:focus-visible {
+  outline: 2px solid var(--sk-mark);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+/* ── The bands ───────────────────────────────────────────────────
+   What a guess is worth, as one mark getting fainter the further out it goes.
+   Read as a set they are a slope, which is the shape of the scoring; read one
+   at a time they still say "closer than the next one out". */
+.sk-cell--band {
+  border: 2px solid color-mix(in srgb, var(--sk-mark) calc(var(--sk-band) * 100%), transparent);
+}
+
+.sk-cell--band-0 { --sk-band: 0.9; }
+.sk-cell--band-1 { --sk-band: 0.55; }
+.sk-cell--band-2 { --sk-band: 0.32; }
+.sk-cell--band-3 { --sk-band: 0.16; }
+
+/* ── The two cells that matter ───────────────────────────────────
+   Both get the same ring, because both mean "this one". Which one it is comes
+   from the dot: the target has one, your pick does not. Ringing them the same
+   way and separating them by content beats inventing a second colour for a
+   board that has no room left for one.
+
+   The inner edge is the page's own background, so the ring holds up even when
+   the cell underneath happens to be the same shade as the mark. */
+.sk-cell.is-picked,
+.sk-cell.is-target {
+  border: 2px solid var(--background);
+  outline: 2px solid var(--sk-mark);
+  outline-offset: 1px;
+  z-index: 3;
+}
+
+.sk-cell.is-target {
+  z-index: 4;
+}
+
+.sk-cell-dot {
+  position: absolute;
+  inset: 28%;
+  border-radius: 50%;
+  border: 2px solid var(--sk-mark);
+  background: var(--background);
+}
+
+/* ── Faces on the board ──────────────────────────────────────────
+   A guess is a person, so it is drawn as one. They stack when two people land
+   on the same cell, and they overflow the cell on purpose: a face shrunk to
+   fit inside a 30 pixel square is a smudge. */
+.sk-cell.is-marked {
+  overflow: visible;
+  z-index: 5;
+}
+
+.sk-cell-marks {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sk-mark {
+  display: block;
+  width: 78%;
+  border-radius: 50%;
+  border: 2px solid var(--background);
+  background: var(--background);
+  overflow: hidden;
+  line-height: 0;
+}
+
+/* Second face onward tucks under the one before it. */
+.sk-mark + .sk-mark {
+  margin-left: -28%;
+}
+
+.sk-mark--you {
+  border-color: var(--sk-mark);
+  z-index: 1;
+}
+
+.sk-mark .player-avatar {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── The lobby's grid ────────────────────────────────────────────
+   The board with nothing at stake on it, so you can find out what the game
+   pays before it costs you anything. */
+.sk-explore {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.sk-explore-hint {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-wrap: balance;
+}

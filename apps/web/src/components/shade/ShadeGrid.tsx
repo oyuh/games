@@ -1,0 +1,186 @@
+import type { CSSProperties } from "react";
+import { PlayerAvatar } from "../shared/PlayerAvatar";
+import { generateGridColor } from "./ColorGrid";
+import "../../styles/shade-kit.css";
+
+/**
+ * The grid, which is very nearly the whole game. Every phase is this same
+ * surface with a bit more shown on it: nothing, then your pick, then the
+ * bands, then everybody's faces where they guessed.
+ *
+ * Shade is the awkward one for the kit's colour rule, because the board is a
+ * hundred and twenty colours and none of them are ours. So nothing drawn on
+ * top of it gets a hue of its own: rings and dots are --foreground, and the
+ * scoring bands are that same mark fading out as the distance grows. One
+ * meaning, one colour, and it reads over any cell it lands on.
+ */
+
+export interface ShadeCell {
+  row: number;
+  col: number;
+}
+
+/**
+ * Chebyshev, which is what the reveal mutator scores with: the ring you are
+ * standing on, not the walk to get there. A grid is read in squares, so a
+ * diagonal step is one step.
+ */
+export function shadeDist(a: ShadeCell, b: ShadeCell): number {
+  return Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col));
+}
+
+/**
+ * What a guess that far out pays. Kept beside the grid so the bands drawn on
+ * it, the pills under it and the tooltips inside it are all reading one
+ * ladder, and so there is one place to change when the server's changes.
+ */
+export const SHADE_BANDS = [
+  { dist: 0, points: 5, label: "spot on" },
+  { dist: 1, points: 3, label: "1 away" },
+  { dist: 2, points: 2, label: "2 away" },
+  { dist: 3, points: 1, label: "3 away" },
+] as const;
+
+export function shadeScore(dist: number): number {
+  return SHADE_BANDS.find((band) => dist <= band.dist)?.points ?? 0;
+}
+
+/** How far out a guess landed, in the words the tooltips use. */
+export function shadeDistLabel(dist: number): string {
+  return dist === 0 ? "Spot on" : `${dist} away`;
+}
+
+export interface ShadeMarker {
+  sessionId: string;
+  name: string;
+  row: number;
+  col: number;
+  /** Rings the face, so yours is findable in a cell holding three of them. */
+  you?: boolean;
+  /** One more line under the name: which clue it was, what it paid. */
+  note?: string;
+}
+
+export interface ShadeGridProps {
+  rows: number;
+  cols: number;
+  seed: number;
+  /** The cell you are holding, before it is anybody else's business. */
+  selected?: ShadeCell | null;
+  /** The leader's, once it is. */
+  target?: ShadeCell | null;
+  /** Rings the cells that are worth something. Needs a target. */
+  zones?: boolean;
+  /** Says what a cell would have paid, on hover. Needs a target. */
+  scores?: boolean;
+  /** Faces on the cells people picked. */
+  markers?: ShadeMarker[];
+  /** Given, the cells become buttons. Without it the grid is read only. */
+  onSelect?: (cell: ShadeCell) => void;
+  /** sm is the one you are only glancing at, beside something else. */
+  size?: "sm" | "md";
+  className?: string;
+}
+
+export function ShadeGrid({
+  rows,
+  cols,
+  seed,
+  selected,
+  target,
+  zones,
+  scores,
+  markers,
+  onSelect,
+  size = "md",
+  className = "",
+}: ShadeGridProps) {
+  /* Two people can land on the same cell, and when they do the interesting
+     thing is that they did, so the faces stack rather than one winning. */
+  const byCell = new Map<string, ShadeMarker[]>();
+  for (const marker of markers ?? []) {
+    const key = `${marker.row}:${marker.col}`;
+    const here = byCell.get(key);
+    if (here) here.push(marker);
+    else byCell.set(key, [marker]);
+  }
+
+  return (
+    <div
+      className={`sk-grid sk-grid--${size}${onSelect ? " sk-grid--live" : ""} ${className}`.trim()}
+      style={{ "--sk-cols": cols } as CSSProperties}
+      role={onSelect ? "group" : undefined}
+      aria-label={onSelect ? "The colour grid. Pick a cell." : "The colour grid"}
+    >
+      {Array.from({ length: rows * cols }, (_, i) => {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const cell = { row, col };
+
+        const dist = target ? shadeDist(cell, target) : null;
+        const band = dist !== null && dist <= 3 ? dist : null;
+        const picked = selected?.row === row && selected?.col === col;
+        const here = byCell.get(`${row}:${col}`);
+
+        /* Faces beat the score hint. If somebody is standing on the cell,
+           what you want off it is who, not what it would have paid. */
+        const tooltip = here
+          ? here.map((m) => (m.note ? `${m.name}\n${m.note}` : m.name)).join("\n\n")
+          : scores && dist !== null
+            ? `${shadeDistLabel(dist)}, ${shadeScore(dist)} pt${shadeScore(dist) === 1 ? "" : "s"}`
+            : undefined;
+
+        const classes = [
+          "sk-cell",
+          band !== null && zones ? `sk-cell--band sk-cell--band-${band}` : "",
+          dist === 0 ? "is-target" : "",
+          picked ? "is-picked" : "",
+          here ? "is-marked" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        const inside = (
+          <>
+            {/* The target is a dot rather than another ring, so a cell that is
+                both the target and somebody's guess can say both at once. */}
+            {dist === 0 && <span className="sk-cell-dot" aria-hidden="true" />}
+
+            {here && (
+              <span className="sk-cell-marks">
+                {here.map((marker) => (
+                  <span key={marker.sessionId} className={`sk-mark${marker.you ? " sk-mark--you" : ""}`}>
+                    <PlayerAvatar seed={marker.sessionId} />
+                  </span>
+                ))}
+              </span>
+            )}
+          </>
+        );
+
+        const shared = {
+          className: classes,
+          style: { background: generateGridColor(row, col, rows, cols, seed) },
+          ...(tooltip ? { "data-tooltip": tooltip, "data-tooltip-pos": "top", "data-tooltip-variant": "game" } : {}),
+        };
+
+        return onSelect ? (
+          <button
+            key={i}
+            type="button"
+            aria-label={`Row ${row + 1}, column ${col + 1}`}
+            aria-pressed={picked}
+            onClick={() => onSelect(cell)}
+            {...shared}
+          >
+            {inside}
+          </button>
+        ) : (
+          <div key={i} {...shared}>
+            {inside}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
