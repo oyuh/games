@@ -1,15 +1,16 @@
 /* ── Location Signal, on the kit ─────────────────────────────────
-   Same three rules the rest of the kit follows: depth is borders and fills,
-   colour means something, and one accent per surface taken from --game-accent.
-
-   Everything here sits on the map rather than under it, so it is all drawn
-   against satellite imagery: bright text, dark glass behind it, and enough
-   contrast to survive both an ocean and a snowfield. */
+   Everything here sits on the map, so it is drawn in the same language the
+   map's own furniture already uses: the zoom buttons' dark glass, their border,
+   their radius, their blur. One look for everything that floats over tiles,
+   rather than a second one invented next to it. */
 
 .lk-map {
   --lk-accent: var(--game-accent, var(--primary));
+  /* Straight off .locsig-zoom-btn, so the panel and the buttons are the same
+     material and nobody has to pick the numbers twice. */
   --lk-glass: rgba(6, 12, 22, 0.82);
-  --lk-glass-edge: rgba(255, 255, 255, 0.16);
+  --lk-edge: rgba(255, 255, 255, 0.22);
+  --lk-lift: 0 10px 24px rgba(0, 0, 0, 0.28);
 
   position: relative;
   border: 1px solid var(--border);
@@ -17,95 +18,112 @@
   overflow: hidden;
 }
 
-/* Rows 1 and 3 of the overlay grid. The middle is left alone so the map has
-   somewhere to be looked at. */
-.lk-over-top {
-  grid-row: 1;
-}
-
-.lk-over-foot {
-  grid-row: 3;
+/* ── The bar along the bottom ────────────────────────────────────
+   One panel, not three stacked ones. It holds whatever the phase has to say
+   and nothing else, so it stays about two lines tall and the map keeps the
+   rest of the frame. */
+.lk-hud {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
-}
-
-/* The one number the whole exercise is for, so it is the one thing here that
-   is allowed to be loud. It sits up top where the eye already is rather than
-   down in the furniture. */
-.lk-readout {
-  margin: 0;
-  padding: 0.4rem 0.85rem;
-  border: 1px solid var(--lk-glass-edge);
-  border-radius: 999px;
+  gap: 0.4rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--lk-edge);
+  border-radius: var(--radius-md);
   background: var(--lk-glass);
+  box-shadow: var(--lk-lift);
   backdrop-filter: blur(10px);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.88rem;
-  line-height: 1.4;
-  text-align: center;
-  white-space: nowrap;
 }
 
-.lk-readout strong {
+/* The number the whole exercise is for. Big, because it is the answer, and on
+   one line with its points so it reads as a single fact. */
+.lk-hud-score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.lk-hud-km {
   color: #fff;
+  font-size: 1.35rem;
   font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 
-/* What the phase is asking you to do. Quieter than the readout: it is the
-   instruction, not the answer. */
-.lk-hint {
-  margin: 0;
-  max-width: 52ch;
-  padding: 0.35rem 0.8rem;
-  border-radius: var(--radius-sm);
-  background: rgba(6, 12, 22, 0.7);
-  backdrop-filter: blur(8px);
-  color: rgba(255, 255, 255, 0.86);
-  font-size: 0.76rem;
-  line-height: 1.45;
-  text-align: center;
-  text-wrap: balance;
+.lk-hud-pts {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  color: var(--lk-accent);
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.lk-hud-pts small {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.75;
 }
 
 /* The layer ignores the pointer so the map keeps its drag, so anything meant
    to be pressed has to ask for it back. */
-.lk-over-btn {
+.lk-hud-btn {
   pointer-events: auto;
+  align-self: center;
+  margin-left: 0.15rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.lk-hud-btn:hover {
+  color: #fff;
+}
+
+.lk-hud-hint {
+  margin: 0;
+  max-width: 46ch;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  text-align: center;
+  text-wrap: balance;
 }
 
 /* ── The ladder ──────────────────────────────────────────────────
    Five distances and what each pays, fading out as the points do, so the row
-   reads as one slope rather than five boxes with different numbers in them. */
+   reads as one slope rather than five boxes with different numbers in them.
+   Inside the panel it has the glass behind it already, so the pills are just
+   edges rather than another layer of background. */
 .lk-bands {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 .lk-band {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.4rem;
-  padding: 0.22rem 0.6rem;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, calc(0.1 + var(--lk-band) * 0.3));
-  background: rgba(6, 12, 22, calc(0.55 + var(--lk-band) * 0.3));
-  backdrop-filter: blur(8px);
-  font-size: 0.68rem;
+  border: 1px solid rgba(255, 255, 255, calc(0.08 + var(--lk-band) * 0.22));
+  font-size: 0.66rem;
   line-height: 1.6;
   white-space: nowrap;
 }
 
 .lk-band-dist {
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .lk-band-pts {
-  color: rgba(255, 255, 255, calc(0.6 + var(--lk-band) * 0.4));
+  color: rgba(255, 255, 255, calc(0.55 + var(--lk-band) * 0.45));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -115,7 +133,6 @@
 .lk-bands--plain .lk-band {
   border-color: color-mix(in srgb, var(--foreground) calc(12% + var(--lk-band) * 25%), transparent);
   background: color-mix(in srgb, var(--foreground) calc(var(--lk-band) * 7%), transparent);
-  backdrop-filter: none;
 }
 
 .lk-bands--plain .lk-band-dist {
@@ -126,14 +143,15 @@
   color: var(--foreground);
 }
 
-/* On a narrow map the ladder is five pills wide and the map is not, so it
-   goes rather than wrapping into three rows and eating the picture. */
+/* On a narrow map the ladder is five pills wide and the map is not, so the
+   panel gives up the far bands rather than wrapping into three rows. */
 @media (max-width: 620px) {
-  .lk-bands {
+  .lk-band:nth-child(n + 4) {
     display: none;
   }
 
-  .lk-hint {
-    font-size: 0.72rem;
+  .lk-hud-km,
+  .lk-hud-pts {
+    font-size: 1.15rem;
   }
 }

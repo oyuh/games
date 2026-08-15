@@ -158,8 +158,8 @@ export function LocationExplorer({ height = "clamp(360px, 56vh, 620px)" }: { hei
   const points = km === null ? null : scoreForDistance(km);
 
   const markers: MapMarker[] = [];
-  if (place) markers.push({ ...place, color: "#ffd166", label: "The place", size: 3.5, ring: true });
-  if (guess) markers.push({ ...guess, color: "#06d6a0", label: "Your guess", size: 3, ring: true, pulse: true });
+  if (place) markers.push({ ...place, color: "#ffd166", label: "The place", icon: <FiMapPin />, ring: true });
+  if (guess) markers.push({ ...guess, color: "#06d6a0", label: "Your guess", icon: <FiCrosshair />, ring: true, pulse: true });
 
   return (
     <div className="lk-map">
@@ -169,38 +169,37 @@ export function LocationExplorer({ height = "clamp(360px, 56vh, 620px)" }: { hei
         markers={markers}
         onClick={(coords) => (place ? setGuess(coords) : setPlace(coords))}
         overlay={
-          <>
+          <div className="lk-hud">
             {km !== null && (
-              <p className="lk-over-top lk-readout">
-                <strong>{locationKmLabel(km)}</strong> out, worth{" "}
-                <strong>{points!.toLocaleString()}</strong> point{points === 1 ? "" : "s"}
-              </p>
-            )}
+              <div className="lk-hud-score">
+                <span className="lk-hud-km">{locationKmLabel(km)}</span>
+                <span className="lk-hud-pts">{points!.toLocaleString()}<small>pts</small></span>
 
-            <div className="lk-over-foot">
-              {place && <LocationBands />}
-
-              <p className="lk-hint">
-                {!place
-                  ? "This is the map you will be playing on. Click anywhere to pretend it is the leader's place."
-                  : !guess
-                    ? "Now click somewhere else, the way you would if that was all you had to go on."
-                    : "That is the whole round. Nothing has to be exact: the scoring falls away slowly, so a country off still pays."}
-              </p>
-
-              {place && (
                 <GameButton
-                  className="locsig-map-ui lk-over-btn"
+                  className="locsig-map-ui lk-hud-btn"
                   size="sm"
-                  variant="secondary"
+                  variant="ghost"
                   icon={<FiRotateCcw />}
+                  aria-label="Clear the map"
                   onClick={() => { setPlace(null); setGuess(null); }}
                 >
-                  Clear the map
+                  Reset
                 </GameButton>
-              )}
-            </div>
-          </>
+              </div>
+            )}
+
+            {/* One line, and only the one that applies. Once there is a score
+                the ladder says more than a sentence would, so it takes over. */}
+            {place && guess ? (
+              <LocationBands />
+            ) : (
+              <p className="lk-hud-hint">
+                {place
+                  ? "Now click somewhere else, the way you would with only a clue to go on."
+                  : "Click anywhere to pretend it is the leader's place."}
+              </p>
+            )}
+          </div>
         }
       />
     </div>

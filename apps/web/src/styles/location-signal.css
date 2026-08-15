@@ -37,6 +37,18 @@
   border-radius: 50%;
   animation: locsig-marker-drop 0.5s ease-out both;
 }
+
+/* Whatever the pin is carrying, centred in it. The glyph is dark because the
+   pin under it is a bright game colour, and dark on that beats white on it. */
+.locsig-marker-icon {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(6, 12, 22, 0.85);
+  font-size: 0.8rem;
+  line-height: 1;
+}
 .locsig-marker-dot--pulse {
   animation: locsig-pulse 1.5s ease-out infinite;
 }
@@ -76,12 +88,17 @@
   -webkit-user-select: none;
 }
 
+/* Native cursors, not the drawn ones. The site's custom cursor is a setting,
+   and when it is on cursor.css sets `cursor: none !important` over everything
+   and CustomCursor draws the pin itself (it already knows about this map). So a
+   url() cursor here could only ever appear when the setting was OFF, which is
+   the one time nobody asked for it. */
 .locsig-map-outer--interactive {
-  cursor: url("/cursor/cursor-map-pin.svg") 16 44, crosshair;
+  cursor: crosshair;
 }
 
 .locsig-map-outer--interactive:active {
-  cursor: url("/cursor/cursor-map-drag.svg") 19 20, grabbing;
+  cursor: grabbing;
 }
 
 .locsig-map-viewport,
@@ -287,11 +304,13 @@ body.locsig-map-expanded .app-footer {
   inset: 0;
   z-index: 16;
   pointer-events: none;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  justify-items: center;
-  /* Clear of the zoom buttons up top and the credit along the bottom. */
-  padding: 0.6rem 3.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  /* Along the bottom. The top of a map is where you look, so nothing the page
+     has to say gets to sit there. Padded clear of the credit in the corner. */
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.6rem 3.5rem 0.8rem;
 }
 
 .locsig-map-overlay > * {

@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { FiMaximize2, FiMinus, FiPlus, FiX } from "react-icons/fi";
 import { RoundCountdown } from "../shared/RoundCountdown";
+/* The map's own sheet: its zoom buttons, its markers, its credit. It used to be
+   left to whoever rendered a map to remember this, so a page that forgot got a
+   map with square pins, invisible zoom buttons and the credit sat in the page
+   flow. The component owns its look, the way the kit's do. */
+import "../../styles/location-signal.css";
 
 export interface MapMarker {
   lat: number;
@@ -13,6 +18,9 @@ export interface MapMarker {
   ring?: boolean;
   /** When true, hide the label unless the marker is hovered */
   hideLabel?: boolean;
+  /** Sits inside the pin. A pin carrying an icon gets a floor on its size so
+   *  the icon has somewhere to be, since a 12 pixel circle cannot hold one. */
+  icon?: ReactNode;
 }
 
 interface WorldMapProps {
@@ -492,7 +500,11 @@ function MapSurface({
 
         <div className="locsig-map-marker-layer">
           {markerCopies.map(({ key, marker, markerIndex, left, top }) => {
-            const dotPx = (marker.size ?? 3) * 6;
+            /* An icon needs room. Anything carrying one gets at least 26px
+               across, which is the smallest a 13px glyph reads at. */
+            const dotPx = marker.icon
+              ? Math.max(26, (marker.size ?? 3) * 6)
+              : (marker.size ?? 3) * 6;
             const isHovered = hovered === markerIndex;
 
             return (
@@ -521,7 +533,11 @@ function MapSurface({
                     }}
                     onMouseEnter={() => onHoverMarker(markerIndex)}
                     onMouseLeave={() => onHoverMarker(null)}
-                  />
+                  >
+                    {marker.icon && (
+                      <span className="locsig-marker-icon" aria-hidden="true">{marker.icon}</span>
+                    )}
+                  </div>
 
                   {marker.label && (!marker.hideLabel || isHovered) && (
                     <span
