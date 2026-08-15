@@ -107,28 +107,28 @@ export function ShadeExplorer({ rows, cols, seed }: { rows: number; cols: number
   const [pretend, setPretend] = useState<ShadeCell | null>(null);
 
   return (
-    <GamePanel
-      title="The grid"
-      action={
-        pretend && (
-          <GameButton size="sm" variant="ghost" icon={<FiRotateCcw />} onClick={() => setPretend(null)}>
-            Clear
-          </GameButton>
-        )
-      }
-    >
-      <div className="sk-explore">
+    <div className="sk-explore">
+      <ShadeGrid rows={rows} cols={cols} seed={seed} target={pretend} zones scores onSelect={setPretend} />
+
+      {/* Everything else goes underneath. A board wants to be the first thing
+          you look at, not the thing you get to after a heading and a
+          paragraph, and the words read better as a caption anyway. */}
+      <div className="sk-explore-foot">
+        {pretend && <ShadeBands />}
+
         <p className="sk-explore-hint">
           {pretend
             ? "That is the colour, and those are the rings you get paid inside. Point at any cell to see what guessing it would have been worth."
             : "This is the board you will be guessing on. Press a cell to pretend it is the leader's colour and see how the scoring falls around it."}
         </p>
 
-        <ShadeGrid rows={rows} cols={cols} seed={seed} target={pretend} zones scores onSelect={setPretend} />
-
-        {pretend && <ShadeBands />}
+        {pretend && (
+          <GameButton size="sm" variant="ghost" icon={<FiRotateCcw />} onClick={() => setPretend(null)}>
+            Clear the colour
+          </GameButton>
+        )}
       </div>
-    </GamePanel>
+    </div>
   );
 }
 

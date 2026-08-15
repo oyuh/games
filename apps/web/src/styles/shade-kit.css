@@ -225,18 +225,29 @@
 
 /* ── The lobby's grid ────────────────────────────────────────────
    The board with nothing at stake on it, so you can find out what the game
-   pays before it costs you anything. */
+   pays before it costs you anything.
+
+   No panel round this either. The board wants to be the first thing you see,
+   and a heading saying "The grid" over a picture of a grid is a label on a
+   thing that is already the label. What is left is the board, and a caption
+   under it. */
 .sk-explore {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.8rem;
 }
 
-/* Centred, because the board under it is, and a line hanging off the left of
-   a centred thing reads as belonging to something else. */
+/* Everything that is not the board, centred on it. */
+.sk-explore-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
 .sk-explore-hint {
-  margin: 0 auto;
-  max-width: 44ch;
+  margin: 0;
+  max-width: 46ch;
   color: var(--secondary);
   font-size: 0.78rem;
   line-height: 1.5;
