@@ -50,18 +50,22 @@
   --avatar-radius: 50%;
   display: block;
   position: absolute;
-  inset: 1.5px;
+  /* The whole circle inside the ring. Any inset here would be a third band
+     between the colour and the face, and the pin is only 34px to begin with. */
+  inset: 0;
   border-radius: 50%;
   overflow: hidden;
   line-height: 0;
 }
 
-/* A pin is a fraction of the size an avatar is drawn for, so the art inside it
-   gets a little more of the tile than the 62% a full size one takes. Below
-   about twenty pixels the shape is unreadable otherwise. */
+/* A full size avatar gives the shape 62% of its tile and lets the tile's own
+   colour do the rest, which works at 40px and up. A pin is smaller than the
+   art was drawn for, so at 62% the shape becomes a dot floating in a pale
+   disc. The face fills the circle instead and the pin's colour is the ring
+   round it rather than a background nobody can see. */
 .locsig-marker-face .player-avatar > * > * {
-  width: 72% !important;
-  height: 72% !important;
+  width: 92% !important;
+  height: 92% !important;
 }
 
 /* Whatever the pin is carrying, centred in it. The glyph is dark because the

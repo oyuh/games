@@ -505,12 +505,14 @@ function MapSurface({
 
         <div className="locsig-map-marker-layer">
           {markerCopies.map(({ key, marker, markerIndex, left, top }) => {
-            /* An icon or a face needs room. Anything carrying one gets at
-               least 26px across, which is the smallest a 13px glyph and the
-               smallest a face read at. */
-            const dotPx = marker.icon || marker.avatar
-              ? Math.max(26, (marker.size ?? 3) * 6)
-              : (marker.size ?? 3) * 6;
+            /* An icon or a face needs room. A glyph reads from about 26px
+               across, a face wants more, since it is a drawing rather than a
+               single stroke and it has to be told apart from four others. */
+            const dotPx = marker.avatar
+              ? Math.max(34, (marker.size ?? 3) * 6)
+              : marker.icon
+                ? Math.max(26, (marker.size ?? 3) * 6)
+                : (marker.size ?? 3) * 6;
             const isHovered = hovered === markerIndex;
 
             return (
@@ -529,7 +531,13 @@ function MapSurface({
                       width: dotPx,
                       height: dotPx,
                       backgroundColor: marker.color,
-                      border: marker.ring ? "2px solid rgba(255,255,255,0.7)" : "1px solid rgba(255,255,255,0.3)",
+                      /* A pin wearing a face is all face, and the colour is
+                         the ring round it. A white ring there would put a
+                         second circle between the two and leave the colour
+                         with nowhere to be. */
+                      border: marker.avatar
+                        ? `3px solid ${marker.color}`
+                        : marker.ring ? "2px solid rgba(255,255,255,0.7)" : "1px solid rgba(255,255,255,0.3)",
                       boxShadow: `0 0 ${isHovered ? 14 : 8}px ${marker.color}${isHovered ? "bb" : "66"}`,
                       transform: isHovered ? "scale(1.3)" : "scale(1)",
                       transition: "transform 0.15s, box-shadow 0.15s",
