@@ -1,5 +1,8 @@
-import { useEffect, useRef, type FormEvent, type ReactNode } from "react";
-import { FiCheck, FiCornerUpLeft, FiCrosshair, FiMapPin, FiSend, FiX } from "react-icons/fi";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  FiCheck, FiChevronDown, FiCornerUpLeft, FiCrosshair, FiHome, FiMapPin,
+  FiRotateCcw, FiSend, FiX,
+} from "react-icons/fi";
 import { haversineKm, scoreForDistance } from "@games/shared";
 import { GameButton } from "../shared/GameKit";
 import { GameTimer } from "../shared/GameShellHeader";
@@ -591,5 +594,207 @@ export function LocationResult({
         {last ? "That was the last round." : "Next round in a moment."}
       </p>
     </LocationStage>
+  );
+}
+
+export interface LocationStanding {
+  sessionId: string;
+  name: string;
+  score: number;
+  you?: boolean;
+}
+
+export interface LocationGameRound {
+  round: number;
+  leaderId: string;
+  leaderName: string;
+  /** Missing on a round the host pulled before it finished. */
+  target?: Coords | null;
+  clues: Array<{ round: number; text: string }>;
+  /** Everyone's guesses that round. The last one each player made is the one
+   *  that counted, same as the mutator scored it. */
+  guesses: Array<{ sessionId: string; name: string; round: number; lat: number; lng: number; you?: boolean }>;
+}
+
+/** The final guess per player, which is the one the server scored. */
+function finalGuesses<T extends { sessionId: string; round: number }>(guesses: T[]) {
+  const held = new Map<string, T>();
+  for (const guess of guesses) {
+    const seen = held.get(guess.sessionId);
+    if (!seen || guess.round > seen.round) held.set(guess.sessionId, guess);
+  }
+  return [...held.values()];
+}
+
+/**
+ * One round of the game, folded down to a headline. Opening it gives you the
+ * map it was played on with the place and everybody's final pin, because the
+ * argument afterwards is always about a specific round and a list of totals
+ * cannot settle one.
+ */
+function LocationPastRound({ round, open, onToggle }: { round: LocationGameRound; open: boolean; onToggle: () => void }) {
+  const finals = finalGuesses(round.guesses);
+  const scored = round.target
+    ? finals
+        .map((guess) => {
+          const km = haversineKm(round.target!.lat, round.target!.lng, guess.lat, guess.lng);
+          return { ...guess, km, points: scoreForDistance(km) };
+        })
+        .sort((a, b) => b.points - a.points)
+    : [];
+
+  const best = scored[0];
+
+  const markers: MapMarker[] = round.target
+    ? [
+        { ...round.target, color: "#ffd166", label: "It was here", icon: <FiMapPin />, ring: true, size: 3.4, alwaysLabel: true },
+        ...scored.map((player) => ({
+          lat: player.lat,
+          lng: player.lng,
+          color: player.points > 0 ? "#06d6a0" : "#7b8794",
+          avatar: player.sessionId,
+          label: `${player.name} - ${locationKmLabel(player.km)}`,
+          size: 2.2,
+          ring: true,
+        })),
+      ]
+    : [];
+
+  return (
+    <li className={`lk-past${open ? " is-open" : ""}`}>
+      <button type="button" className="lk-past-head" onClick={onToggle} aria-expanded={open}>
+        <span className="lk-past-n">{round.round}</span>
+
+        <span className="lk-past-line">
+          <strong>{round.leaderName}</strong> led
+          {round.clues[0] && <span className="lk-past-clue">{round.clues[0].text}</span>}
+        </span>
+
+        <span className="lk-past-best">
+          {best ? `${best.you ? "you" : best.name}, ${locationKmLabel(best.km)}` : "no result"}
+        </span>
+
+        <FiChevronDown className="lk-past-chev" aria-hidden="true" />
+      </button>
+
+      {open && (
+        round.target ? (
+          <div className="lk-past-body">
+            <div className="lk-map">
+              <WorldMap height={260} interactive markers={markers} expandable={false} />
+            </div>
+
+            {round.clues.length > 1 && (
+              <div className="lk-past-clues">
+                {round.clues.map((clue) => <LocationClueTag key={clue.round} round={clue.round} text={clue.text} />)}
+              </div>
+            )}
+
+            <ol className="lk-scores">
+              {scored.map((player, index) => (
+                <LocationScoreRow
+                  key={player.sessionId}
+                  sessionId={player.sessionId}
+                  name={player.name}
+                  km={player.km}
+                  points={player.points}
+                  rank={index + 1}
+                  {...(player.you ? { you: true } : {})}
+                />
+              ))}
+            </ol>
+          </div>
+        ) : (
+          /* A round that never got a place has nothing to show. Saying so beats
+             an empty map that looks like it failed to load. */
+          <div className="lk-past-body">
+            <p className="lk-console-hint">This one was pulled before anywhere was picked.</p>
+          </div>
+        )
+      )}
+    </li>
+  );
+}
+
+export interface LocationGameOverProps {
+  /** Everyone who played, with their totals. Sorted here. */
+  players: LocationStanding[];
+  rounds: LocationGameRound[];
+  isHost?: boolean;
+  onPlayAgain: () => void;
+  onEnd: () => void;
+  onHome: () => void;
+}
+
+/**
+ * The end. Who took it, and every round on the way there.
+ *
+ * The standings are the headline, but the rounds are what people actually want
+ * afterwards, because the argument is always about one of them. Each folds down
+ * to a line and opens onto the map it was played on. The last one opens itself,
+ * since it is the one that just decided the game.
+ */
+export function LocationGameOver({ players, rounds, isHost, onPlayAgain, onEnd, onHome }: LocationGameOverProps) {
+  const table = [...players].sort((a, b) => b.score - a.score);
+  const top = table[0]?.score ?? 0;
+  /* Everyone on the top score, so a draw is a draw rather than whoever the
+     sort happened to put first. */
+  const winners = table.filter((player) => player.score === top && top > 0);
+
+  const [open, setOpen] = useState<number | null>(rounds.length > 0 ? rounds[rounds.length - 1]!.round : null);
+
+  return (
+    <div className="lk-over">
+      <div className="lk-over-head">
+        <p className="lk-over-title">
+          {winners.length === 0
+            ? "Nobody scored"
+            : winners.length === 1
+              ? `${winners[0]!.you ? "You" : winners[0]!.name} took it`
+              : `${winners.map((w) => (w.you ? "you" : w.name)).join(" and ")} tied it`}
+        </p>
+        {top > 0 && <p className="lk-over-sub">{top.toLocaleString()} points</p>}
+      </div>
+
+      <ol className="lk-standings">
+        {table.map((player, index) => (
+          <li key={player.sessionId} className={`lk-standing${player.you ? " is-you" : ""}${player.score === top && top > 0 ? " is-top" : ""}`}>
+            <span className="lk-standing-rank">{index + 1}</span>
+            <span className="lk-standing-face">
+              <PlayerAvatar seed={player.sessionId} />
+            </span>
+            <span className="lk-standing-name">
+              {player.name}
+              {player.you && <span className="lk-score-you">you</span>}
+            </span>
+            <span className="lk-standing-pts">{player.score.toLocaleString()}</span>
+          </li>
+        ))}
+      </ol>
+
+      {rounds.length > 0 && (
+        <ol className="lk-pasts">
+          {rounds.map((round) => (
+            <LocationPastRound
+              key={round.round}
+              round={round}
+              open={open === round.round}
+              onToggle={() => setOpen((current) => (current === round.round ? null : round.round))}
+            />
+          ))}
+        </ol>
+      )}
+
+      <div className="lk-over-actions">
+        {isHost ? (
+          <>
+            <GameButton variant="primary" icon={<FiRotateCcw />} onClick={onPlayAgain}>Run it back</GameButton>
+            <GameButton variant="ghost" icon={<FiX />} onClick={onEnd}>End the game</GameButton>
+          </>
+        ) : (
+          <GameButton variant="secondary" icon={<FiHome />} onClick={onHome}>Back home</GameButton>
+        )}
+      </div>
+    </div>
   );
 }

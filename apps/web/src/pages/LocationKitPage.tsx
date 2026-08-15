@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { FiGlobe, FiLock, FiMapPin, FiPlay } from "react-icons/fi";
-import { LocationClueTag, LocationGuess, LocationPickClue, LocationResult, type Coords } from "../components/location/LocationRound";
+import { LocationClueTag, LocationGameOver, LocationGuess, LocationPickClue, LocationResult, type Coords } from "../components/location/LocationRound";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { GameButton } from "../components/shared/GameKit";
 import {
@@ -317,6 +317,48 @@ const RESULT = {
   ],
 };
 
+const STANDINGS = [
+  { sessionId: "seed-bram", name: "Bram", score: 12_840 },
+  { sessionId: "seed-cleo", name: "Cleo", score: 11_205, you: true },
+  { sessionId: "seed-ada", name: "Ada", score: 9_430 },
+  { sessionId: "seed-dov", name: "Dov", score: 4_118 },
+];
+
+const HISTORY = [
+  {
+    round: 1,
+    leaderId: "seed-ada",
+    leaderName: "Ada",
+    target: { lat: 35.68, lng: 139.69 },
+    clues: CLUES,
+    guesses: [
+      { sessionId: "seed-bram", name: "Bram", round: 2, lat: 35.02, lng: 135.76 },
+      { sessionId: "seed-cleo", name: "Cleo", round: 2, lat: 37.57, lng: 126.98, you: true },
+      { sessionId: "seed-dov", name: "Dov", round: 2, lat: 22.32, lng: 114.17 },
+    ],
+  },
+  {
+    round: 2,
+    leaderId: "seed-bram",
+    leaderName: "Bram",
+    target: { lat: -22.91, lng: -43.17 },
+    clues: [{ round: 1, text: "a mountain that watches the beach" }],
+    guesses: [
+      { sessionId: "seed-ada", name: "Ada", round: 1, lat: -23.55, lng: -46.63 },
+      { sessionId: "seed-cleo", name: "Cleo", round: 1, lat: -34.6, lng: -58.38, you: true },
+      { sessionId: "seed-dov", name: "Dov", round: 1, lat: 40.42, lng: -3.7 },
+    ],
+  },
+];
+
+const OVER = {
+  players: STANDINGS,
+  rounds: HISTORY,
+  onPlayAgain: NOOP,
+  onEnd: NOOP,
+  onHome: NOOP,
+};
+
 export function LocationKitPage() {
   return (
     <main
@@ -382,6 +424,24 @@ export function LocationKitPage() {
             { sessionId: "seed-cleo", name: "Cleo", guess: { lat: 55.8, lng: -4.3 }, you: true },
             { sessionId: "seed-dov", name: "Dov" },
           ]}
+        />
+      </Section>
+
+      <Section title="The end" note="who took it, and every round on the way there. each folds down to who led and what they said, and opens onto the map it was played on, because the argument afterwards is always about one specific round and a column of totals cannot settle one. the last opens itself, since it is the one that just decided it">
+        <LocationGameOver {...OVER} isHost />
+      </Section>
+
+      <Section title="The end, the other three ways" note="somebody who is not hosting gets one way out and no buttons that would do nothing. a draw is everyone on the top score rather than whoever the sort put first. and a game pulled before a round finished keeps the round in the list and says why it has no map">
+        <LocationGameOver {...OVER} />
+        <LocationGameOver
+          {...OVER}
+          isHost
+          players={STANDINGS.map((p) => (p.sessionId === "seed-cleo" ? { ...p, score: 12_840 } : p))}
+        />
+        <LocationGameOver
+          {...OVER}
+          isHost
+          rounds={[HISTORY[0]!, { ...HISTORY[1]!, target: null, guesses: [] }]}
         />
       </Section>
 

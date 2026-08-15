@@ -519,7 +519,15 @@ function MapSurface({
               <div
                 key={key}
                 className="locsig-map-marker"
-                style={{ transform: `translate3d(${left}px, ${top}px, 0)` }}
+                style={{
+                  transform: `translate3d(${left}px, ${top}px, 0)`,
+                  /* The transform above makes each marker its own stacking
+                     context, so the tooltip's z-index only ever sorted it
+                     against its own pin and it went behind every marker drawn
+                     after it. Lifting the whole marker is what actually gets
+                     it out in front. */
+                  ...(isHovered ? { zIndex: 40 } : {}),
+                }}
               >
                 <div style={{ position: "relative", width: 0, height: 0 }}>
                   <div
