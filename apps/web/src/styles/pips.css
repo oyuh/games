@@ -217,6 +217,37 @@
   pointer-events: none;
 }
 
+/* A cell you could drop on. Barely there: it only needs to read as live. */
+.pips-cell--drop::after {
+  border-style: solid;
+  opacity: 1;
+}
+
+/* Where the domino in your hand would actually land, and where it would not.
+   Both classes were being applied already with nothing behind them, which is
+   why placing a piece was guesswork. */
+.pips-cell--target {
+  background: color-mix(in srgb, var(--region-color) 62%, #fff);
+}
+
+.pips-cell--target::after,
+.pips-cell--blocked::after {
+  inset: 0.1rem;
+  border-width: 3px;
+  border-style: solid;
+  opacity: 1;
+}
+
+.pips-cell--target::after {
+  border-color: var(--pips-ink);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pips-ink) 25%, transparent);
+}
+
+.pips-cell--blocked::after {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #dc2626 30%, transparent);
+}
+
 .pips-constraint-anchor {
   position: relative;
   z-index: 60;
@@ -245,6 +276,7 @@
   font-weight: 950;
   line-height: 1;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  transition: width 0.18s ease, height 0.18s ease, right 0.18s ease, bottom 0.18s ease, font-size 0.18s ease;
 }
 
 .pips-constraint--sum {
@@ -252,6 +284,21 @@
   top: auto;
   right: -0.6rem;
   transform: rotate(45deg);
+}
+
+/* A domino landed under the badge. Pull in and shrink so the pips underneath
+   stay readable instead of being sat on. */
+.pips-constraint--compact {
+  width: 1.5rem;
+  height: 1.5rem;
+  right: -0.5rem;
+  font-size: 0.6rem;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+}
+
+.pips-constraint--sum.pips-constraint--compact {
+  right: -0.3rem;
+  bottom: -0.5rem;
 }
 
 .pips-constraint {
@@ -263,9 +310,10 @@
 }
 
 /* -- Domino rail --------------------------------------------- */
-/* The dominoes get a box of their own. Loose on the page they read as part
-   of the board; inside a panel it is obvious they are the pieces you have
-   left to place. Same surface as the header stats. */
+/* The dominoes get a box of their own: loose on the page they read as part of
+   the board. No heading, the tiles say what they are. The edge is a gradient
+   border, lit by the game accent at the corners and fading through the plain
+   border colour in between. */
 .pips-domino-rail {
   width: 100%;
   max-width: min(900px, 100%);
@@ -275,33 +323,17 @@
   align-self: center;
   justify-content: flex-start;
   min-height: 0;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
-  background: var(--background);
-}
-
-.pips-rail-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.34rem 0.7rem 0.3rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.pips-rail-label {
-  color: var(--muted-foreground);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.pips-rail-count {
-  color: var(--foreground);
-  font-size: 0.72rem;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
+  background:
+    linear-gradient(var(--background), var(--background)) padding-box,
+    linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--primary) 70%, transparent),
+      color-mix(in srgb, var(--border) 75%, transparent) 38%,
+      color-mix(in srgb, var(--border) 75%, transparent) 62%,
+      color-mix(in srgb, var(--primary) 55%, transparent)
+    ) border-box;
 }
 
 .pips-tray {

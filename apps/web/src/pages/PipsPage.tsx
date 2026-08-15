@@ -39,6 +39,15 @@ import {
   type PipsRegion,
   type PipsRegionRule,
 } from "../lib/pips-engine";
+import {
+  areAdjacent,
+  createPlacementFromCells,
+  DROP_OFFSETS,
+  getRotationFootprints,
+  nextRotation,
+  placementToRotation,
+  type Rotation,
+} from "../lib/pips-rotation";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { playCorrect, playCountdownTick, playGameOver } from "../lib/sounds";
 import { showToast } from "../lib/toast";
@@ -51,7 +60,6 @@ type PipsRunOutcome = "completed" | "abandoned" | null;
 type ScoreStatusTone = "info" | "success" | "error";
 type PipsLeaderboardView = "all" | "mine";
 type PipsAdvanceStep = "solved" | number;
-type Rotation = 0 | 1 | 2 | 3;
 
 type PipsDragOrigin = { kind: "tray" } | { kind: "board"; placement: PipsPlacement };
 
@@ -122,6 +130,8 @@ interface PipsDragState {
   startX: number;
   startY: number;
   hasMoved: boolean;
+  /** Board cell under the pointer, so the board can show where this lands. */
+  dropCell: PipsCell | null;
 }
 
 const REGION_COLORS = [
@@ -137,19 +147,6 @@ const REGION_COLORS = [
   "#9333ea",
 ];
 
-const DROP_OFFSETS: Record<Rotation, PipsCell[]> = {
-  0: [{ r: 0, c: 1 }, { r: 0, c: -1 }],
-  1: [{ r: 1, c: 0 }, { r: -1, c: 0 }],
-  2: [{ r: 0, c: -1 }, { r: 0, c: 1 }],
-  3: [{ r: -1, c: 0 }, { r: 1, c: 0 }],
-};
-
-const ROTATION_DIRECTIONS: Record<Rotation, PipsCell> = {
-  0: { r: 0, c: 1 },
-  1: { r: 1, c: 0 },
-  2: { r: 0, c: -1 },
-  3: { r: -1, c: 0 },
-};
 
 const BOARD_BUFFER_CELLS = 1;
 const SHOW_PIPS_DEV_TOOLS = import.meta.env.DEV;
@@ -334,6 +331,31 @@ export function PipsPage() {
     setDragState(next);
   };
 
+  /* One notion of "a domino may sit here", shared by placing, rotating and the
+     drop preview. Rotation used to use a looser board-bounds check of its own,
+     which let a turn land a domino on a hole no drop would have allowed. */
+  const canOccupy = (cell: PipsCell, dominoId: string): boolean => {
+    const key = cellKey(cell);
+    if (!activeCells.has(key)) return false;
+    const occupant = placementByCell.get(key);
+    return !occupant || occupant.dominoId === dominoId;
+  };
+
+  /* The exact two cells the dragged domino would take, so the board shows you
+     the landing spot instead of just lighting up every square you could use.
+     Same offset order as placeDominoFromCell, so the preview cannot lie. */
+  const dropPreview = ((): { keys: Set<string>; valid: boolean } | null => {
+    if (!dragState?.hasMoved || !dragState.dropCell) return null;
+    const first = dragState.dropCell;
+    for (const offset of DROP_OFFSETS[dragState.rotation]) {
+      const second = { r: first.r + offset.r, c: first.c + offset.c };
+      if (canOccupy(first, dragState.dominoId) && canOccupy(second, dragState.dominoId)) {
+        return { keys: new Set([cellKey(first), cellKey(second)]), valid: true };
+      }
+    }
+    return { keys: new Set([cellKey(first)]), valid: false };
+  })();
+
   const getDominoRotation = (dominoId: string): Rotation => dominoRotations[dominoId] ?? 0;
 
   const setDominoRotation = (dominoId: string, next: Rotation) => {
@@ -370,6 +392,7 @@ export function PipsPage() {
     x,
     y,
     hasMoved: current.hasMoved || Math.hypot(x - current.startX, y - current.startY) > 4,
+    dropCell: getDropCellFromPoint(x, y),
   });
 
   useEffect(() => {
@@ -717,26 +740,27 @@ export function PipsPage() {
 
   const rotatePlacedDomino = (placement: PipsPlacement) => {
     if (phase !== "playing" || advanceCountdown != null) return;
-    const nextPlacement = getClockwisePlacement(placement);
-    const nextCells = [
-      { r: nextPlacement.r1, c: nextPlacement.c1 },
-      { r: nextPlacement.r2, c: nextPlacement.c2 },
-    ];
-    const blocked = nextCells.some((cell) => {
-      const occupant = placementByCell.get(cellKey(cell));
-      return !isCellInBufferedBoard(cell, puzzle.rows, puzzle.cols) || (occupant && occupant.dominoId !== placement.dominoId);
-    });
-
     setSelectedDominoId(placement.dominoId);
-    if (blocked) {
-      showToast("No room to rotate there", "info");
-      return;
+
+    // Walk the quarter-turns until one fits. A domino boxed in on one axis can
+    // still turn through the half-turn that swaps its halves in place, so this
+    // only gives up when the piece truly cannot move.
+    let rotation = placementToRotation(placement);
+    for (let step = 0; step < 3; step += 1) {
+      rotation = nextRotation(rotation);
+      for (const [first, second] of getRotationFootprints(placement, rotation)) {
+        if (!canOccupy(first, placement.dominoId) || !canOccupy(second, placement.dominoId)) continue;
+        const nextPlacement = createPlacementFromCells(placement.dominoId, first, second, rotation);
+        if (!nextPlacement) continue;
+        setPlacements((current) =>
+          current.map((item) => (item.dominoId === placement.dominoId ? nextPlacement : item)),
+        );
+        setDominoRotation(placement.dominoId, rotation);
+        return;
+      }
     }
 
-    setPlacements((current) =>
-      current.map((item) => (item.dominoId === placement.dominoId ? nextPlacement : item)),
-    );
-    setDominoRotation(placement.dominoId, placementToRotation(nextPlacement));
+    showToast("No room to rotate there", "info");
   };
 
   const returnPlacedDomino = (event: MouseEvent<HTMLButtonElement>, placement: PipsPlacement) => {
@@ -775,6 +799,7 @@ export function PipsPage() {
       startX: event.clientX,
       startY: event.clientY,
       hasMoved: false,
+      dropCell: null,
     });
   };
 
@@ -793,6 +818,7 @@ export function PipsPage() {
       startX: event.clientX,
       startY: event.clientY,
       hasMoved: false,
+      dropCell: null,
     });
   };
 
@@ -1335,12 +1361,15 @@ export function PipsPage() {
                     const region = regionByCell.get(key);
                     const color = region ? REGION_COLORS[region.colorIndex % REGION_COLORS.length] : "#6b7280";
                     const canReceiveDrop = isActive && Boolean(selectedDominoId || draggingDominoId) && !placementByCell.has(key);
+                    const previewing = dropPreview?.keys.has(key)
+                      ? dropPreview.valid ? " pips-cell--target" : " pips-cell--blocked"
+                      : "";
 
                     return (
                       <div
                         key={key}
                         data-pips-cell={isActive ? key : undefined}
-                        className={`pips-cell${isActive ? "" : " pips-cell--void"}${canReceiveDrop ? " pips-cell--drop" : ""}`}
+                        className={`pips-cell${isActive ? "" : " pips-cell--void"}${canReceiveDrop ? " pips-cell--drop" : ""}${previewing}`}
                         style={
                           {
                             gridColumn: cell.c + BOARD_BUFFER_CELLS + 1,
@@ -1374,6 +1403,14 @@ export function PipsPage() {
                     const anchor = regionAnchorById.get(region.id);
                     if (!anchor) return null;
                     const color = REGION_COLORS[region.colorIndex % REGION_COLORS.length];
+                    // The badge hangs off the anchor into its neighbour, so it
+                    // collides with whatever gets placed there. Shrink and tuck
+                    // it in once that cell or its own is taken.
+                    const kind = ruleKind(region.rule);
+                    const overhang = kind === "sum"
+                      ? { r: anchor.r + 1, c: anchor.c }
+                      : { r: anchor.r, c: anchor.c + 1 };
+                    const crowded = placementByCell.has(cellKey(anchor)) || placementByCell.has(cellKey(overhang));
                     return (
                       <span
                         key={region.id}
@@ -1386,7 +1423,7 @@ export function PipsPage() {
                           } as CSSProperties
                         }
                       >
-                        <span className={`pips-constraint pips-constraint--${ruleKind(region.rule)}`}>
+                        <span className={`pips-constraint pips-constraint--${kind}${crowded ? " pips-constraint--compact" : ""}`}>
                           <span>{formatRule(region.rule)}</span>
                         </span>
                       </span>
@@ -1407,12 +1444,6 @@ export function PipsPage() {
           </section>
 
           <aside className="pips-domino-rail" aria-label="Domino collection" data-pips-tray>
-            <div className="pips-rail-head">
-              <span className="pips-rail-label">Dominoes</span>
-              <span className="pips-rail-count">
-                {puzzle.dominoes.length - placedCount} left
-              </span>
-            </div>
             <div className="pips-tray">
               {puzzle.dominoes.map((domino) => {
                 const isTrayDragGhost = dragState?.origin.kind === "tray" && dragState.hasMoved && draggingDominoId === domino.id;
@@ -2207,64 +2238,9 @@ function getBoardDominoStyle(placement: PipsPlacement): CSSProperties {
   };
 }
 
-function isCellInBufferedBoard(cell: PipsCell, rows: number, cols: number): boolean {
-  return (
-    cell.r >= -BOARD_BUFFER_CELLS &&
-    cell.c >= -BOARD_BUFFER_CELLS &&
-    cell.r < rows + BOARD_BUFFER_CELLS &&
-    cell.c < cols + BOARD_BUFFER_CELLS
-  );
-}
 
-function getClockwisePlacement(placement: PipsPlacement): PipsPlacement {
-  const next = nextRotation(placementToRotation(placement));
-  const nextDirection = ROTATION_DIRECTIONS[next];
-  const anchor = { r: placement.r1, c: placement.c1 };
-  const second = {
-    r: anchor.r + nextDirection.r,
-    c: anchor.c + nextDirection.c,
-  };
 
-  return createPlacementFromCells(placement.dominoId, anchor, second, next) ?? placement;
-}
 
-function placementToRotation(placement: PipsPlacement): Rotation {
-  const horizontal = placement.r1 === placement.r2;
-  const visualFirstIsFirstCell = horizontal ? placement.c1 < placement.c2 : placement.r1 < placement.r2;
-  const aAtVisualFirst = visualFirstIsFirstCell ? !placement.flipped : placement.flipped;
-
-  if (horizontal) return aAtVisualFirst ? 0 : 2;
-  return aAtVisualFirst ? 1 : 3;
-}
-
-function createPlacementFromCells(dominoId: string, first: PipsCell, second: PipsCell, rotation: Rotation): PipsPlacement | null {
-  if (!areAdjacent(first, second)) return null;
-  const horizontal = first.r === second.r;
-  if (horizontal !== (rotation === 0 || rotation === 2)) return null;
-
-  const visualFirst =
-    horizontal
-      ? first.c < second.c
-        ? first
-        : second
-      : first.r < second.r
-        ? first
-        : second;
-  const visualSecond = cellKey(visualFirst) === cellKey(first) ? second : first;
-
-  return {
-    dominoId,
-    r1: visualFirst.r,
-    c1: visualFirst.c,
-    r2: visualSecond.r,
-    c2: visualSecond.c,
-    flipped: rotation >= 2,
-  };
-}
-
-function nextRotation(rotation: Rotation): Rotation {
-  return ((rotation + 1) % 4) as Rotation;
-}
 
 function getDropCellFromPoint(clientX: number, clientY: number): PipsCell | null {
   const target = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>("[data-pips-cell]");
@@ -2282,6 +2258,3 @@ function parseCellKey(key: string): PipsCell {
   return { r: r ?? 0, c: c ?? 0 };
 }
 
-function areAdjacent(a: PipsCell, b: PipsCell): boolean {
-  return Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
-}
