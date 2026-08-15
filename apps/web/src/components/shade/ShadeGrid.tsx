@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { PlayerAvatar } from "../shared/PlayerAvatar";
 import { generateGridColor } from "./ColorGrid";
 import "../../styles/shade-kit.css";
@@ -8,11 +8,11 @@ import "../../styles/shade-kit.css";
  * surface with a bit more shown on it: nothing, then your pick, then the
  * bands, then everybody's faces where they guessed.
  *
- * Shade is the awkward one for the kit's colour rule, because the board is a
- * hundred and twenty colours and none of them are ours. So nothing drawn on
+ * Shade is the awkward one for the kit's color rule, because the board is a
+ * hundred and twenty colors and none of them are ours. So nothing drawn on
  * top of it gets a hue of its own: rings and dots are --foreground, and the
  * scoring bands are that same mark fading out as the distance grows. One
- * meaning, one colour, and it reads over any cell it lands on.
+ * meaning, one color, and it reads over any cell it lands on.
  */
 
 export interface ShadeCell {
@@ -58,7 +58,7 @@ const BAND_INK = [0.9, 0.55, 0.32, 0.16];
  * The ladder, as four cells lifted off the board. Each one carries the ring it
  * is describing at the strength the grid draws it, so read left to right the
  * row is the same fade you are looking at up there, and the target keeps its
- * dot so the one that is the colour itself is the one that looks like it.
+ * dot so the one that is the color itself is the one that looks like it.
  */
 export function ShadeBands({ className = "" }: { className?: string }) {
   return (
@@ -73,6 +73,22 @@ export function ShadeBands({ className = "" }: { className?: string }) {
           <span className="sk-band-label">{band.label}</span>
         </span>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The board, and whatever this phase needs saying about it, underneath and
+ * centered on it. Every phase of this game is that shape: the grid is the
+ * thing you are looking at and the words are the caption, never the other way
+ * round. So it is one component rather than each phase laying itself out and
+ * getting the spacing slightly different.
+ */
+export function ShadeStage({ children, foot }: { children: ReactNode; foot?: ReactNode }) {
+  return (
+    <div className="sk-stage">
+      {children}
+      {foot && <div className="sk-stage-foot">{foot}</div>}
     </div>
   );
 }
@@ -137,7 +153,7 @@ export function ShadeGrid({
       className={`sk-grid sk-grid--${size}${onSelect ? " sk-grid--live" : ""} ${className}`.trim()}
       style={{ "--sk-cols": cols } as CSSProperties}
       role={onSelect ? "group" : undefined}
-      aria-label={onSelect ? "The colour grid. Pick a cell." : "The colour grid"}
+      aria-label={onSelect ? "The color grid. Pick a cell." : "The color grid"}
     >
       {Array.from({ length: rows * cols }, (_, i) => {
         const row = Math.floor(i / cols);

@@ -49,7 +49,7 @@ vi.mock("@rocicorp/zero", () => {
   };
 });
 
-const { shadeSignalMutators } = await import("../zero/mutators/shade-signal");
+const { shadeSignalMutators, shadeClueProblem } = await import("../zero/mutators/shade-signal");
 type Handler = (params: { args: any; tx: any; ctx: any }) => Promise<void>;
 const mutators = shadeSignalMutators as unknown as Record<string, Handler>;
 
@@ -229,7 +229,41 @@ describe("Shade Signal: clue submission sanitization", () => {
         tx,
         ctx: serverCtx("leader1"),
       }),
-      "empty"
+      "Write a clue first"
     );
+  });
+});
+
+/**
+ * The clue rule on its own. The composer draws its "why the button is off"
+ * straight off this, so a change here changes both sides at once, which is the
+ * whole reason it is one function.
+ */
+describe("Shade Signal: shadeClueProblem", () => {
+  it("passes a legal clue in each round", () => {
+    expect(shadeClueProblem(1, "ocean")).toBeUndefined();
+    expect(shadeClueProblem(2, "deep water")).toBeUndefined();
+    expect(shadeClueProblem(2, "ocean")).toBeUndefined();
+  });
+
+  it("counts words the way each round does", () => {
+    expect(shadeClueProblem(1, "deep ocean")).toContain("one word");
+    expect(shadeClueProblem(2, "deep cold ocean")).toContain("two words");
+  });
+
+  it("only bans color names when the room asked for it", () => {
+    expect(shadeClueProblem(1, "teal")).toBeUndefined();
+    expect(shadeClueProblem(1, "teal", true)).toContain("color name");
+    expect(shadeClueProblem(1, "TEAL", true)).toContain("color name");
+    expect(shadeClueProblem(2, "deep teal", true)).toContain("color name");
+    expect(shadeClueProblem(1, "ocean", true)).toBeUndefined();
+  });
+
+  it("treats blank and whitespace as nothing written", () => {
+    expect(shadeClueProblem(1, "")).toContain("Write a clue");
+    expect(shadeClueProblem(1, "   ")).toContain("Write a clue");
+    /* Padding and doubled spaces are not extra words. */
+    expect(shadeClueProblem(1, "  ocean  ")).toBeUndefined();
+    expect(shadeClueProblem(2, "deep   water")).toBeUndefined();
   });
 });
