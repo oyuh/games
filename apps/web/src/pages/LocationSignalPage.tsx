@@ -6,7 +6,7 @@ import { useState } from "react";
 import { FiClock, FiSend, FiMapPin } from "react-icons/fi";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { LocationLobby, locationPhases, locationTrackPhase } from "../components/location/LocationLobby";
-import { LocationGuess, LocationPickClue, LocationResult } from "../components/location/LocationRound";
+import { LocationGameOver, LocationGuess, LocationPickClue, LocationResult } from "../components/location/LocationRound";
 import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { callGameSecretInit } from "../lib/game-secrets";
 import { InSessionModal } from "../components/shared/InSessionModal";
@@ -501,50 +501,44 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         )
       )}
 
-      {/* ─── Finished ─── */}
-      {phase === "finished" && (
-        <div className="game-section locsig-finished-section">
-          <h3 className="locsig-finished-title">Game Over!</h3>
-
-          <div className="locsig-final-scores">
-            {sortedPlayers.map((p, i) => {
-              const isMe = p.sessionId === sessionId;
-              const name = playerName(p.sessionId);
-              const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
-              return (
-                <div key={p.sessionId} className={`locsig-final-row${i === 0 ? " locsig-final-row--winner" : ""}`} data-tooltip={`${name} - ${p.totalScore} pts`} data-tooltip-variant="info">
-                  <span className="locsig-final-rank">{medal}</span>
-                  <span className="locsig-final-name">
-                    {name} {isMe && <span className="game-player-you">you</span>}
-                  </span>
-                  <span className="locsig-final-pts">{p.totalScore} pts</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="game-actions">
-            {isHost ? (
-              <>
-                <button className="btn btn-primary game-action-btn"
-                  onClick={() => void zero.mutate(mutators.locationSignal.resetToLobby({ gameId: game.id, hostId: sessionId }))}>
-                  Play Again
-                </button>
-                <button className="btn btn-muted" onClick={() => {
-                  void zero.mutate(mutators.locationSignal.endGame({ gameId: game.id, hostId: sessionId }))
-                    .client.then(() => navigate("/"))
-                    .catch(() => showToast("Couldn't end game", "error"));
-                }}>
-                  End Game
-                </button>
-              </>
-            ) : (
-              <button className="btn btn-muted game-action-btn" onClick={() => navigate("/")}>
-                Back to Home
-              </button>
-            )}
-          </div>
-        </div>
+      {/* ─── The end ─── */}
+      {phase === "finished" && !isSpectator && (
+        <LocationGameOver
+          isHost={isHost}
+          players={game.players.map((player) => ({
+            sessionId: player.sessionId,
+            name: playerName(player.sessionId),
+            score: player.totalScore,
+            ...(player.sessionId === sessionId ? { you: true } : {}),
+          }))}
+          rounds={game.round_history.map((entry) => ({
+            round: entry.round,
+            leaderId: entry.leaderId ?? "",
+            leaderName: playerName(entry.leaderId ?? ""),
+            ...(entry.target ? { target: entry.target } : {}),
+            clues: [entry.clue1, entry.clue2, entry.clue3, entry.clue4]
+              .map((text, index) => ({ round: index + 1, text }))
+              .filter((clue): clue is { round: number; text: string } => !!clue.text),
+            guesses: entry.guesses.map((guess) => ({
+              sessionId: guess.sessionId,
+              name: playerName(guess.sessionId),
+              round: guess.round,
+              lat: guess.lat,
+              lng: guess.lng,
+              ...(guess.sessionId === sessionId ? { you: true } : {}),
+            })),
+          }))}
+          onPlayAgain={() =>
+            void zero.mutate(mutators.locationSignal.resetToLobby({ gameId, hostId: sessionId }))
+              .client.catch(() => showToast("Couldn't run it back", "error"))
+          }
+          onEnd={() => {
+            void zero.mutate(mutators.locationSignal.endGame({ gameId, hostId: sessionId }))
+              .client.then(() => navigate("/"))
+              .catch(() => showToast("Couldn't end game", "error"));
+          }}
+          onHome={() => navigate("/")}
+        />
       )}
 
       {/* ─── Spectator overlay ─── */}
