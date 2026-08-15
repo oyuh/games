@@ -15,6 +15,7 @@
    shares a class name with it. */
 
 .sk-grid,
+.sk-bands,
 .sk-explore {
   --sk-accent: var(--game-accent, var(--primary));
   /* Everything drawn over a cell, in one colour. It has to read over any hue
@@ -26,23 +27,23 @@
 /* ── The grid ────────────────────────────────────────────────────
    Sized off its own column count rather than a viewport clamp, so a 10x12
    board and a 6x8 one both come out with square cells and neither has to be
-   told what a cell is worth in pixels. */
+   told what a cell is worth in pixels.
+
+   No box round it. The board is already a hundred and twenty edges, and a
+   frame drawn around that is a line nobody was short of. It sits on the page
+   the way the chain does, and whatever section it is in is the container. */
 .sk-grid {
   display: grid;
   grid-template-columns: repeat(var(--sk-cols), minmax(0, 1fr));
   gap: 2px;
   width: 100%;
-  max-width: calc(var(--sk-cols) * 2.5rem);
+  max-width: calc(var(--sk-cols) * 3rem);
   margin-inline: auto;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--card);
   user-select: none;
 }
 
 .sk-grid--sm {
-  max-width: calc(var(--sk-cols) * 1.5rem);
+  max-width: calc(var(--sk-cols) * 1.7rem);
 }
 
 /* ── Cells ─────────────────────────────────────────────────────── */
@@ -74,15 +75,14 @@
 /* ── The bands ───────────────────────────────────────────────────
    What a guess is worth, as one mark getting fainter the further out it goes.
    Read as a set they are a slope, which is the shape of the scoring; read one
-   at a time they still say "closer than the next one out". */
+   at a time they still say "closer than the next one out".
+
+   How faint comes in on --sk-band from the component, which is also what the
+   legend's swatches read, so there is one ladder and not two that have to be
+   kept in step by hand. */
 .sk-cell--band {
   border: 2px solid color-mix(in srgb, var(--sk-mark) calc(var(--sk-band) * 100%), transparent);
 }
-
-.sk-cell--band-0 { --sk-band: 0.9; }
-.sk-cell--band-1 { --sk-band: 0.55; }
-.sk-cell--band-2 { --sk-band: 0.32; }
-.sk-cell--band-3 { --sk-band: 0.16; }
 
 /* ── The two cells that matter ───────────────────────────────────
    Both get the same ring, because both mean "this one". Which one it is comes
@@ -155,6 +155,74 @@
   display: block;
 }
 
+/* ── The ladder ──────────────────────────────────────────────────
+   What a guess pays, under the board and centred on it, because the board is
+   centred and a legend that does not line up with the thing it explains is
+   just a row of numbers.
+
+   Each one carries the ring it is describing, drawn at exactly the strength
+   the board draws it, so the four of them side by side are the same fade you
+   are looking at up there. That is the pattern doing the explaining: read
+   left to right, the ring gets fainter and the number gets smaller, and the
+   two of those are the same fact. */
+.sk-bands {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 0.3rem;
+}
+
+.sk-band {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.24rem 0.65rem 0.24rem 0.4rem;
+  border-radius: 999px;
+  /* The pill fades with the band too, so the row is one slope rather than
+     four boxes with different words in them. */
+  border: 1px solid color-mix(in srgb, var(--sk-mark) calc(12% + var(--sk-band) * 25%), transparent);
+  background: color-mix(in srgb, var(--sk-mark) calc(var(--sk-band) * 7%), transparent);
+  font-size: 0.7rem;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* A cell off the board, at this distance from the colour. Same border, same
+   ink, same dot on the one that is the colour itself. */
+.sk-band-swatch {
+  position: relative;
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 auto;
+  border-radius: var(--radius-xs);
+  border: 2px solid color-mix(in srgb, var(--sk-mark) calc(var(--sk-band) * 100%), transparent);
+}
+
+.sk-band-swatch--target {
+  border-color: var(--sk-mark);
+}
+
+.sk-band-swatch--target::after {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  border: 1.5px solid var(--sk-mark);
+}
+
+/* The number is what you came to read. It carries the fade; the words after
+   it stay quiet, or four pills all shout at once and none of them lands. */
+.sk-band-points {
+  font-weight: 800;
+  color: color-mix(in srgb, var(--foreground) calc(35% + var(--sk-band) * 65%), var(--secondary));
+}
+
+.sk-band-label {
+  font-weight: 600;
+  color: var(--secondary);
+}
+
 /* ── The lobby's grid ────────────────────────────────────────────
    The board with nothing at stake on it, so you can find out what the game
    pays before it costs you anything. */
@@ -164,10 +232,14 @@
   gap: 0.7rem;
 }
 
+/* Centred, because the board under it is, and a line hanging off the left of
+   a centred thing reads as belonging to something else. */
 .sk-explore-hint {
-  margin: 0;
+  margin: 0 auto;
+  max-width: 44ch;
   color: var(--secondary);
   font-size: 0.78rem;
   line-height: 1.5;
+  text-align: center;
   text-wrap: balance;
 }
