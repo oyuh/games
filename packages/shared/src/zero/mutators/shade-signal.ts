@@ -573,6 +573,10 @@ export const shadeSignalMutators = {
         round: game.settings.currentRound,
         leaderId: game.leader_id!,
         target: { row: targetRow, col: targetCol },
+        /* The board goes with the round. The next one rolls a new seed, so a
+           target saved on its own is a pair of coordinates onto colors nobody
+           will ever see again. */
+        seed: game.grid_seed,
         clue1: game.clue1,
         clue2: game.clue2,
         guesses: game.guesses,

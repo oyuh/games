@@ -20,6 +20,7 @@
 .sk-composer,
 .sk-pick,
 .sk-tally,
+.sk-over,
 .sk-stage {
   --sk-accent: var(--game-accent, var(--primary));
   /* Everything drawn over a cell, in one color. It has to read over any hue
@@ -579,4 +580,162 @@
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   color: var(--secondary);
+}
+
+/* ── The end ─────────────────────────────────────────────────────
+   Who took it, then the standings, then every round on the way there. */
+.sk-over {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* The one moment in this game that gets to be loud, and it still is not: an
+   accent edge and a fill, same as everything else. The card underneath is
+   already the biggest thing on the screen. */
+.sk-verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.2rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--sk-accent) 28%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--sk-accent) 8%, transparent);
+  text-align: center;
+}
+
+.sk-verdict-kicker {
+  margin: 0;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--sk-accent) 75%, var(--foreground));
+}
+
+.sk-verdict-faces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.sk-verdict-line {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--secondary);
+}
+
+/* ── Every round ─────────────────────────────────────────────────
+   Folded to a headline, opening to the board it was played on. Native
+   details, so the fold costs no state and works from a keyboard. */
+.sk-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.sk-round {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+}
+
+.sk-round-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+/* Safari draws its own triangle unless told twice. */
+.sk-round-head::-webkit-details-marker {
+  display: none;
+}
+
+.sk-round-head:hover .sk-round-n,
+.sk-round[open] .sk-round-n {
+  color: var(--foreground);
+}
+
+.sk-round-chevron {
+  display: inline-flex;
+  line-height: 0;
+  color: var(--secondary);
+  transition: transform 0.15s;
+}
+
+.sk-round[open] .sk-round-chevron {
+  transform: rotate(90deg);
+}
+
+.sk-round-n {
+  flex: 0 0 auto;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--secondary);
+  transition: color 0.15s;
+}
+
+/* Keeps the row's columns lined up between rounds that have a board recorded
+   and rounds that do not. */
+.sk-round-swatch-wrap {
+  flex: 0 0 auto;
+  width: 1.1rem;
+}
+
+.sk-round-swatch {
+  display: block;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid color-mix(in srgb, var(--foreground) 25%, transparent);
+}
+
+.sk-round-who {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+}
+
+/* Drops off first when the row runs out of room. It is the nice-to-have on a
+   line whose job is which round and whose color. */
+.sk-round-best {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--secondary);
+}
+
+.sk-round-best strong {
+  color: var(--muted-foreground);
+  font-weight: 700;
+}
+
+.sk-round-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.25rem 0.75rem 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.sk-round-body .sk-grid {
+  flex: 0 1 auto;
+  margin-inline: 0;
+}
+
+.sk-round-side {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
 }

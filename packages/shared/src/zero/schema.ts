@@ -201,6 +201,10 @@ const shadeSignalGames = table("shade_signal_games").columns({
     round: number;
     leaderId: string;
     target: { row: number; col: number };
+    /* The seed the board was dealt from. Rolled fresh every round, so without
+       it a finished round's target is coordinates onto a board that no longer
+       exists. Optional: games played before it was recorded have none. */
+    seed?: number;
     clue1: string | null;
     clue2: string | null;
     guesses: Array<{ sessionId: string; round: 1 | 2; row: number; col: number }>;
