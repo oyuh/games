@@ -433,9 +433,17 @@
   pointer-events: none;
 }
 
-/* ── Compact playing header: always single row ─────────────── */
+/* ── Compact playing header: title and stats on one row ────── */
 .shikaku-page .game-header .game-header-left {
   flex-wrap: nowrap;
+}
+
+/* Except on a phone, where the stats get their own row. */
+@media (max-width: 768px) {
+  .shikaku-page .game-header .game-header-left {
+    flex-wrap: wrap;
+    row-gap: 0.3rem;
+  }
 }
 .shikaku-page .game-header .game-header-icon {
   width: 32px;
@@ -448,10 +456,9 @@
 .shikaku-page .game-header .game-title {
   font-size: 1.35rem;
 }
-.shikaku-page .game-header .badge {
-  font-size: 0.75rem;
-  padding: 0.15rem 0.55rem;
-  white-space: nowrap;
+.shikaku-page .game-header .game-stat {
+  height: 1.95rem;
+  padding: 0 0.6rem;
 }
 
 /* ══════════════════════════════════════════════════════════════

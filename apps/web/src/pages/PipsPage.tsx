@@ -2,11 +2,11 @@ import { type CSSProperties, type MouseEvent, type PointerEvent, useEffect, useM
 import {
   FiAward,
   FiCheck,
-  FiClock,
   FiFlag,
   FiHash,
   FiHelpCircle,
   FiHome,
+  FiLayers,
   FiRepeat,
   FiTarget,
   FiUploadCloud,
@@ -15,6 +15,7 @@ import {
 import "../styles/game-shared.css";
 import "../styles/pips.css";
 import { PipsDemo } from "../components/demos/PipsDemo";
+import { formatTime, GameStat, GameStatBar, GameTimer } from "../components/shared/GameStatBar";
 import { SoloEndScreen, SPLITS_VIEW, soloStatusTitle } from "../components/shared/SoloEndScreen";
 import { SoloGameMenu, type SoloSetupOption } from "../components/shared/SoloGameMenu";
 import { SoloLeaderboard, type SoloLeaderboardSearch } from "../components/shared/SoloLeaderboard";
@@ -373,7 +374,8 @@ export function PipsPage() {
 
   useEffect(() => {
     if (phase !== "playing") return;
-    const timer = window.setInterval(() => setNow(Date.now()), 120);
+    // Fast enough that the stopwatch's hundredths climb evenly.
+    const timer = window.setInterval(() => setNow(Date.now()), 50);
     return () => window.clearInterval(timer);
   }, [phase]);
 
@@ -1288,25 +1290,32 @@ export function PipsPage() {
               <div className="game-header pips-game-header">
                 <div className="game-header-left">
                   <h1 className="game-title">Pips</h1>
-                  <span className="badge badge-warn" data-tooltip={`Puzzle ${puzzleIndex + 1} of ${run.puzzles.length}`} data-tooltip-variant="info">
-                    {puzzleIndex + 1} / {run.puzzles.length} - {difficultyLabel(puzzle.difficulty)}
-                  </span>
-                  <span className={`badge pips-progress-badge${solved ? " pips-progress-badge--solved" : ""}`} data-tooltip="Puzzle progress" data-tooltip-variant="info">
-                    {progress.label}
-                  </span>
-                  <span className="badge" data-tooltip="Elapsed time" data-tooltip-variant="info" style={{ fontVariantNumeric: "tabular-nums" }}>
-                    <FiClock size={12} /> {formatTime(elapsedMs)}
-                  </span>
-                  <button
-                    className="badge pips-seed-badge"
-                    data-tooltip="Copy seed"
-                    data-tooltip-variant="info"
-                    onClick={() => {
-                      navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied", "info")).catch(() => {});
-                    }}
-                  >
-                    <FiHash size={12} /> {seed}
-                  </button>
+                  <GameStatBar>
+                    <GameStat
+                      icon={<FiLayers size={13} />}
+                      value={runMode === "infinite" ? infiniteSolved : `${puzzleIndex + 1}/${run.puzzles.length}`}
+                      hint={runMode === "infinite" ? "solved" : difficultyLabel(puzzle.difficulty)}
+                      accent={PIPS_DIFFICULTY_ACCENTS[puzzle.difficulty]}
+                      tooltip={runMode === "infinite"
+                        ? `${infiniteSolved} solved on ${difficultyLabel(puzzle.difficulty)}`
+                        : `Puzzle ${puzzleIndex + 1} of ${run.puzzles.length}, ${difficultyLabel(puzzle.difficulty)}`}
+                    />
+                    <GameStat
+                      icon={solved ? <FiCheck size={13} /> : <FiTarget size={13} />}
+                      value={progress.label}
+                      accent={solved ? "#22c55e" : undefined}
+                      tooltip="Puzzle progress"
+                    />
+                    <GameTimer ms={elapsedMs} running={phase === "playing" && advanceCountdown == null && !solved} />
+                    <GameStat
+                      icon={<FiHash size={13} />}
+                      value={seed}
+                      tooltip="Seed, click to copy"
+                      onClick={() => {
+                        navigator.clipboard.writeText(String(seed)).then(() => showToast("Seed copied", "info")).catch(() => {});
+                      }}
+                    />
+                  </GameStatBar>
                 </div>
               </div>
 
@@ -2049,14 +2058,6 @@ function ruleKind(rule: PipsRegionRule): string {
   if (rule.type === "lessThan") return "lt";
   if (rule.type === "equal") return "eq";
   return "diff";
-}
-
-function formatTime(ms: number): string {
-  const safeMs = Math.max(0, ms);
-  const minutes = Math.floor(safeMs / 60_000);
-  const seconds = Math.floor((safeMs % 60_000) / 1000);
-  const tenths = Math.floor((safeMs % 1000) / 100);
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${tenths}`;
 }
 
 function getPuzzleProgress(puzzle: PipsPuzzle, placements: PipsPlacement[], solved: boolean): PipsProgress {
