@@ -85,7 +85,7 @@ function withAlpha(hex: string, alpha: number): string {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
-type GamePhase = "menu" | "generating" | "countdown" | "playing" | "puzzle-complete" | "finished";
+type GamePhase = "menu" | "countdown" | "playing" | "puzzle-complete" | "finished";
 
 type ScoreStatusTone = "info" | "success" | "error";
 
@@ -466,7 +466,7 @@ export function ShikakuPage() {
   const canClear = phase === "playing" && !showPuzzleSolvedAnim && hasClearableRects;
   const canRestart = (phase === "countdown" || phase === "playing" || phase === "finished") && !showPuzzleSolvedAnim;
   const canGiveUp = phase === "playing" && !showPuzzleSolvedAnim;
-  const canLeaderboard = phase !== "generating";
+  const canLeaderboard = true;
   // Skipping only makes sense inside a fixed ladder: infinite has no next
   // puzzle to jump to, and a challenge is a single board.
   const canDevSkip = phase === "playing" && !showPuzzleSolvedAnim && !infiniteMode && !challengeMode
@@ -554,7 +554,7 @@ export function ShikakuPage() {
     pauseStartRef.current = null;
 
     pendingGenRef.current = { diff, newSeed, custom: false };
-    setPhase("generating");
+    setPhase("countdown");
     debugLog("startRun", { diff, seed: newSeed, infiniteMode });
   }, [infiniteMode, debugLog, resetReplayData]);
 
@@ -582,7 +582,7 @@ export function ShikakuPage() {
     pauseStartRef.current = null;
 
     pendingGenRef.current = { diff, newSeed: customSeed, custom: true };
-    setPhase("generating");
+    setPhase("countdown");
     debugLog("startCustomRun", { diff, seed: customSeed, infiniteMode });
   }, [infiniteMode, debugLog, resetReplayData]);
 
@@ -611,7 +611,7 @@ export function ShikakuPage() {
     pauseStartRef.current = null;
 
     pendingGenRef.current = { diff, newSeed: challengeSeed, custom: true, challenge: true };
-    setPhase("generating");
+    setPhase("countdown");
     debugLog("startChallenge", { diff, seed: challengeSeed });
   }, [debugLog, resetReplayData]);
 
@@ -623,46 +623,40 @@ export function ShikakuPage() {
     startChallenge(diff, challengeSeed);
   }, [phase, startChallenge]);
 
-  /* ── Deferred puzzle generation (lets animation paint first) ── */
+  /* ── Deferred puzzle generation (runs under the countdown, so the
+       board wipes itself in behind the numbers as soon as it exists) ── */
   useEffect(() => {
-    if (phase !== "generating") return;
+    if (phase !== "countdown") return;
     const gen = pendingGenRef.current;
     if (!gen) return;
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const raf = requestAnimationFrame(() => {
-      timer = setTimeout(() => {
-        if (infiniteMode) {
-          const rng = mulberry32(gen.newSeed);
-          infiniteRng.current = rng;
-          const { rows, cols } = DIFFICULTY_CONFIG[gen.diff];
-          const firstPuzzle = generatePuzzle(rows, cols, rng);
-          setPuzzles([firstPuzzle]);
-          setInfiniteSolved(0);
-          debugLog("generated infinite first puzzle", { seed: gen.newSeed, diff: gen.diff, custom: gen.custom, autoFilled: getAutoFilledRects(firstPuzzle).length, totalRects: firstPuzzle.solution.length });
-        } else if (gen.challenge) {
-          infiniteRng.current = null;
-          const rng = mulberry32(gen.newSeed);
-          const { rows, cols } = DIFFICULTY_CONFIG[gen.diff];
-          const puzzle = generatePuzzle(rows, cols, rng);
-          setPuzzles([puzzle]);
-          debugLog("generated challenge puzzle", { seed: gen.newSeed, diff: gen.diff });
-        } else {
-          infiniteRng.current = null;
-          const generated = generateRun(gen.newSeed, gen.diff);
-          setPuzzles(generated);
-          debugLog("generated run", { seed: gen.newSeed, diff: gen.diff, puzzles: generated.length, custom: gen.custom });
-        }
-        pendingGenRef.current = null;
-        setPhase("countdown");
-      }, 0);
-    });
-    return () => {
-      cancelAnimationFrame(raf);
-      if (timer) {
-        clearTimeout(timer);
+    // A timer, not requestAnimationFrame: a backgrounded tab stops handing out
+    // frames, and a run that never generates is a run you can never play.
+    const timer = setTimeout(() => {
+      if (infiniteMode) {
+        const rng = mulberry32(gen.newSeed);
+        infiniteRng.current = rng;
+        const { rows, cols } = DIFFICULTY_CONFIG[gen.diff];
+        const firstPuzzle = generatePuzzle(rows, cols, rng);
+        setPuzzles([firstPuzzle]);
+        setInfiniteSolved(0);
+        debugLog("generated infinite first puzzle", { seed: gen.newSeed, diff: gen.diff, custom: gen.custom, autoFilled: getAutoFilledRects(firstPuzzle).length, totalRects: firstPuzzle.solution.length });
+      } else if (gen.challenge) {
+        infiniteRng.current = null;
+        const rng = mulberry32(gen.newSeed);
+        const { rows, cols } = DIFFICULTY_CONFIG[gen.diff];
+        const puzzle = generatePuzzle(rows, cols, rng);
+        setPuzzles([puzzle]);
+        debugLog("generated challenge puzzle", { seed: gen.newSeed, diff: gen.diff });
+      } else {
+        infiniteRng.current = null;
+        const generated = generateRun(gen.newSeed, gen.diff);
+        setPuzzles(generated);
+        debugLog("generated run", { seed: gen.newSeed, diff: gen.diff, puzzles: generated.length, custom: gen.custom });
       }
-    };
+      pendingGenRef.current = null;
+    }, 0);
+    return () => clearTimeout(timer);
   }, [phase, infiniteMode, debugLog]);
 
   /* ── Check if a placed rect is "valid" (exactly 1 number, area matches) ── */
@@ -1314,50 +1308,6 @@ export function ShikakuPage() {
    *  RENDER
    * ═══════════════════════════════════════════════════════════ */
 
-  // Generating
-  if (phase === "generating") {
-    return (
-      <>
-        <div className="game-page shikaku-page" data-game-theme="shikaku">
-          <div className="shikaku-container">
-            <div className="shikaku-generating">
-              <div className="shikaku-generating-spinner" />
-              <p className="shikaku-generating-label">Generating puzzles…</p>
-              <p className="shikaku-generating-sub">
-                {difficulty} - {customMode ? "custom seed" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
-              </p>
-            </div>
-          </div>
-        </div>
-        {leaderboardPanel}
-      </>
-    );
-  }
-
-  // Countdown
-  if (phase === "countdown") {
-    return (
-      <>
-        <div className="game-page shikaku-page" data-game-theme="shikaku">
-          <div className="shikaku-container">
-            <div className="game-start-countdown">
-              <p className="game-start-countdown-kicker">
-                {challengeMode ? "Challenge Puzzle" : customMode ? "Seeded Run" : infiniteMode ? "Infinite Run" : "Regular Run"}
-              </p>
-              <div className="game-start-countdown-number" key={countdownNum}>
-                {countdownNum > 0 ? countdownNum : "GO!"}
-              </div>
-              <p className="game-start-countdown-label">
-                {difficulty} - {challengeMode ? "1 puzzle challenge" : customMode ? "seeded run" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
-              </p>
-            </div>
-          </div>
-        </div>
-        {leaderboardPanel}
-      </>
-    );
-  }
-
   // Menu
   if (phase === "menu") {
     const diffKeys = Object.keys(DIFFICULTY_CONFIG) as Difficulty[];
@@ -1523,7 +1473,7 @@ export function ShikakuPage() {
   // Playing
   return (
     <>
-      <div className="game-page shikaku-page" data-game-theme="shikaku" data-difficulty={difficulty}>
+      <div className="game-page shikaku-page" data-game-theme="shikaku" data-difficulty={difficulty} data-phase={phase}>
         <div className="shikaku-container">
         <div className="game-header">
           <div className="game-header-left">
@@ -1564,6 +1514,20 @@ export function ShikakuPage() {
             )}
           </div>
         </div>
+
+        {phase === "countdown" && (
+          <div className="game-start-countdown" aria-live="polite">
+            <p className="game-start-countdown-kicker">
+              {challengeMode ? "Challenge Puzzle" : customMode ? "Seeded Run" : infiniteMode ? "Infinite Run" : "Regular Run"}
+            </p>
+            <div className="game-start-countdown-number" key={countdownNum}>
+              {countdownNum > 0 ? countdownNum : "GO!"}
+            </div>
+            <p className="game-start-countdown-label">
+              {difficulty} - {challengeMode ? "1 puzzle challenge" : customMode ? "seeded run" : infiniteMode ? "∞ mode" : `${PUZZLES_PER_RUN} puzzles`}
+            </p>
+          </div>
+        )}
 
         {/* Puzzle solved overlay */}
         {showPuzzleSolvedAnim && (
