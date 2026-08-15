@@ -149,6 +149,9 @@
   top: 0.6rem;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
   padding: 0.2rem 0.5rem;
   border: 1px solid var(--lk-edge);
   border-radius: var(--radius-md);
@@ -156,6 +159,74 @@
   box-shadow: var(--lk-lift);
   backdrop-filter: blur(10px);
   pointer-events: auto;
+}
+
+/* The clock on the map is the default because the time matters most next to
+   the thing being timed. Not everyone agrees, so there is a way out, and it
+   stays out of sight until you go near it rather than sitting there offering
+   to leave. */
+.lk-clock-hide {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.lk-clock:hover .lk-clock-hide,
+.lk-clock-hide:focus-visible {
+  opacity: 1;
+}
+
+.lk-clock-hide:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* ── The console's control row ───────────────────────────────────
+   Where you are up to, the ways out, and how many people are still thinking. */
+.lk-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Pushed to the far end, because it is the one thing on the row you read
+   rather than press. */
+.lk-tally {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  color: var(--secondary);
+  font-size: 0.74rem;
+}
+
+.lk-tally-dots {
+  display: inline-flex;
+  gap: 0.18rem;
+}
+
+.lk-tally-dots i {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+.lk-tally-dots i.is-in {
+  background: var(--lk-accent, var(--primary));
+}
+
+.lk-tally-text {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .lk-clues {

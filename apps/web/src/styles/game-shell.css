@@ -478,6 +478,33 @@
   --tt-color: var(--gsh-clock);
 }
 
+/* Out of the way until you go looking for it. Moving the clock is a preference
+   somebody sets once, so it does not need to sit there advertising itself at
+  the person who already has it where they want it. */
+.gsh-timer-move {
+  display: inline-grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-left: 0.3rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--secondary);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.gsh-timer:hover .gsh-timer-move,
+.gsh-timer-move:focus-visible {
+  opacity: 1;
+}
+
+.gsh-timer-move:hover {
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  color: var(--foreground);
+}
+
 /* Big enough to read from across the room, which is the whole point of it. */
 .gsh-timer-value {
   font-size: 1.9rem;
