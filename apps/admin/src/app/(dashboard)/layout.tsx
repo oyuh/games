@@ -7,7 +7,6 @@ import { BroadcastControlsDialog } from "@/components/admin/broadcast-controls-d
 import { Button } from "@/components/ui/button";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { ThemeBootstrapScript } from "@/components/theme-bootstrap-script";
-import { geistMono, geistSans } from "../fonts";
 import "../globals.css";
 import { LogOut } from "lucide-react";
 
@@ -27,11 +26,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable}`}
-    >
+    <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeBootstrapScript />
         <ToastProvider>

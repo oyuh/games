@@ -8,17 +8,19 @@ const THEME_BOOTSTRAP = `
   } catch {}
 
   try {
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    // The site is dark-first, so an admin who has never chosen falls to dark
+    // unless their OS explicitly asks for light.
+    const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
     const theme = stored === "dark" || stored === "light"
       ? stored
-      : prefersDark
-        ? "dark"
-        : "light";
+      : prefersLight
+        ? "light"
+        : "dark";
     document.documentElement.classList.toggle("dark", theme === "dark");
     document.documentElement.style.colorScheme = theme;
   } catch {
-    document.documentElement.classList.remove("dark");
-    document.documentElement.style.colorScheme = "light";
+    document.documentElement.classList.add("dark");
+    document.documentElement.style.colorScheme = "dark";
   }
 })();
 `;
