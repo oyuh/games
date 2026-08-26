@@ -2548,6 +2548,104 @@ app.post("/api/pips/score", async (c) => {
 
 app.get("/health", (c) => c.json({ ok: true }));
 
+// ─── Commit diff stats ─────────────────────────────────────────
+// The deploy env vars carry a commit's name but not its size, and the size is
+// the part anyone reading a footer actually wants: how much moved. GitHub knows,
+// so we ask it once per sha and keep the answer for as long as this process
+// lives, because the shape of a landed commit never changes afterwards.
+//
+// The fetch never happens inside the request. build-info is polled by every open
+// tab every 30s and its round trip is the latency number the footer prints, so
+// hanging it on a third party would be lying about our own speed. Instead a miss
+// kicks the fetch off and answers null; the next poll finds it warm.
+type CommitStats = {
+  additions: number;
+  deletions: number;
+  filesChanged: number;
+};
+
+const COMMIT_STATS_RETRY_MS = 5 * 60_000;
+const commitStatsCache = new Map<string, { stats: CommitStats | null; retryAfter: number }>();
+const commitStatsInFlight = new Set<string>();
+
+function githubRepoSlug() {
+  const owner = process.env.VERCEL_GIT_REPO_OWNER;
+  const slug = process.env.VERCEL_GIT_REPO_SLUG;
+
+  return firstNonEmpty([
+    process.env.GITHUB_REPOSITORY,
+    owner && slug ? `${owner}/${slug}` : undefined,
+    "oyuh/games"
+  ]);
+}
+
+async function loadCommitStats(sha: string): Promise<void> {
+  const repo = githubRepoSlug();
+  const headers: Record<string, string> = {
+    accept: "application/vnd.github+json",
+    "user-agent": "games-api"
+  };
+
+  // Anonymous is 60 requests an hour per IP, which one fetch per deploy fits
+  // inside comfortably. The token is only here for hosts that share an egress
+  // IP with enough neighbours to burn that on their own.
+  const token = firstNonEmpty([process.env.GITHUB_TOKEN, process.env.GH_TOKEN]);
+  if (token) {
+    headers.authorization = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${repo}/commits/${sha}`, {
+      headers,
+      signal: AbortSignal.timeout(6_000)
+    });
+
+    if (!response.ok) {
+      throw new Error(`status ${response.status}`);
+    }
+
+    const payload = (await response.json()) as {
+      stats?: { additions?: number; deletions?: number };
+      files?: unknown[];
+    };
+
+    commitStatsCache.set(sha, {
+      stats: {
+        additions: Math.max(0, Math.round(payload.stats?.additions ?? 0)),
+        deletions: Math.max(0, Math.round(payload.stats?.deletions ?? 0)),
+        filesChanged: Array.isArray(payload.files) ? payload.files.length : 0
+      },
+      retryAfter: Number.POSITIVE_INFINITY
+    });
+  } catch (error) {
+    // A private repo, a rate limit, a slow morning: none of them are worth a
+    // log line every poll, and none of them are permanent. Hold the miss for
+    // five minutes so we neither hammer GitHub nor give up on it.
+    commitStatsCache.set(sha, { stats: null, retryAfter: Date.now() + COMMIT_STATS_RETRY_MS });
+    void error;
+  } finally {
+    commitStatsInFlight.delete(sha);
+  }
+}
+
+function getCommitStats(sha: string): CommitStats | null {
+  if (!sha) {
+    return null;
+  }
+
+  const cached = commitStatsCache.get(sha);
+  if (cached && Date.now() < cached.retryAfter) {
+    return cached.stats;
+  }
+
+  if (!commitStatsInFlight.has(sha)) {
+    commitStatsInFlight.add(sha);
+    void loadCommitStats(sha);
+  }
+
+  return cached?.stats ?? null;
+}
+
 app.get("/debug/build-info", async (c) => {
   const commitSha = firstNonEmpty([
     process.env.VERCEL_GIT_COMMIT_SHA,
@@ -2583,6 +2681,7 @@ app.get("/debug/build-info", async (c) => {
   ]);
 
   const database = await probeDatabaseStatus();
+  const commitStats = getCommitStats(commitSha);
 
   return c.json({
     ok: true,
@@ -2592,6 +2691,7 @@ app.get("/debug/build-info", async (c) => {
     commitRef,
     commitMessage,
     commitTimestamp,
+    commitStats,
     buildTimestamp,
     updatedAt: buildTimestamp || commitTimestamp || apiStartedAt,
     startedAt: apiStartedAt,

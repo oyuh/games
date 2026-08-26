@@ -557,6 +557,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
           commitRef?: string;
           commitMessage?: string;
           commitTimestamp?: string;
+          commitStats?: { additions?: number; deletions?: number; filesChanged?: number } | null;
           buildTimestamp?: string;
           updatedAt?: string;
           startedAt?: string;
@@ -581,6 +582,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
           commitRef: payload.commitRef,
           commitMessage: payload.commitMessage,
           commitTimestamp: payload.commitTimestamp,
+          commitStats: payload.commitStats,
           buildTimestamp: payload.buildTimestamp,
           updatedAt: payload.updatedAt,
           startedAt: payload.startedAt,

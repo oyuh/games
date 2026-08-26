@@ -173,51 +173,60 @@
   color: var(--foreground);
 }
 
-/* ── Expanded details popover ────────────────────────────────── */
+/* ── Expanded details popover ────────────────────────────────
+   A card, built the way every other card on the site is built: the shared
+   surface fill, an edge tinted from what it is reporting, and the card
+   shadow. The footer around it is mono at 0.65rem with wide tracking, which
+   is right for one line of status and wrong for a panel, so the popover puts
+   the site's own type back and hands mono only to the things that are
+   literally code. */
 .footer-popover {
+  --fp-tone: var(--secondary);
   position: absolute;
-  bottom: calc(100% + 0.5rem);
+  bottom: calc(100% + 0.55rem);
   right: 50%;
   transform: translateX(50%);
-  width: 280px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
-  animation: footer-pop 0.15s ease-out;
-  z-index: 100;
+  width: 288px;
   overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--fp-tone) 22%, var(--border));
+  border-radius: var(--radius-xl);
+  background: var(--surface-bg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32), var(--surface-shadow);
+  font-family: "Axiforma", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  letter-spacing: normal;
+  color: var(--foreground);
+  text-align: left;
+  animation: footer-pop 0.16s ease-out;
+  z-index: 100;
 }
+
+/* One tone per state, set once at the top and read by the head, the edge and
+   every pill below it, so a state can never be amber in one place and green
+   in another. */
+.fp--ok { --fp-tone: #4ade80; }
+.fp--partial { --fp-tone: #facc15; }
+.fp--loading { --fp-tone: #facc15; }
+.fp--err { --fp-tone: #f87171; }
 
 @keyframes footer-pop {
   from { opacity: 0; transform: translateX(50%) translateY(4px); }
   to   { opacity: 1; transform: translateX(50%) translateY(0); }
 }
 
-/* ── Popover ─────────────────────────────────────────────────────
-   Built out of the same pieces as the rest of the site rather than its own
-   vocabulary: a toned head, the badge pill every other fact wears, and the
-   solo end screen's stat tiles, label over value with a hairline between. */
 .fp-head {
-  --fp-tone: var(--secondary);
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.6rem 0.8rem;
+  padding: 0.62rem 0.85rem;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--fp-tone) 9%, transparent);
   color: color-mix(in srgb, var(--fp-tone) 70%, var(--foreground));
 }
 
-.fp--ok .fp-head { --fp-tone: #4ade80; }
-.fp--err .fp-head { --fp-tone: #f87171; }
-.fp--loading .fp-head { --fp-tone: #facc15; }
-
 .fp-head-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 /* ── Services ────────────────────────────────────────────────── */
@@ -225,7 +234,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  padding: 0.65rem 0.8rem;
+  padding: 0.7rem 0.85rem;
 }
 
 .fp-service {
@@ -236,35 +245,50 @@
 }
 
 .fp-service-name {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
 }
 
-/* The site's pill: a tinted fill, a matching edge, text in the tone. The old
-   one had a fill and no edge, which is the one badge on the site that did. */
+/* The site's badge, at the size a 288px panel can carry: tinted fill, edge
+   from the same tone, text in it. Same recipe as .badge in components.css. */
 .fp-pill {
   --fp-tone: var(--secondary);
-  padding: 0.08rem 0.5rem;
-  border-radius: 999px;
+  padding: 0.12rem 0.55rem;
+  border-radius: 9999px;
   border: 1px solid color-mix(in srgb, var(--fp-tone) 30%, transparent);
-  background: color-mix(in srgb, var(--fp-tone) 14%, transparent);
+  background: color-mix(in srgb, var(--fp-tone) 18%, transparent);
   color: var(--fp-tone);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .fp-pill--ok { --fp-tone: #4ade80; }
-.fp-pill--err { --fp-tone: #f87171; }
+.fp-pill--partial { --fp-tone: #facc15; }
 .fp-pill--loading { --fp-tone: #facc15; }
+.fp-pill--err { --fp-tone: #f87171; }
 
-/* ── Stat tiles ──────────────────────────────────────────────── */
+/* ── Partial note ────────────────────────────────────────────
+   The one state that owes an explanation, in the panel voice the hosting
+   modal uses rather than as another label. */
+.fp-note {
+  margin: 0;
+  padding: 0 0.85rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+/* ── Stat tiles ──────────────────────────────────────────────
+   The solo end screen's stat row, to its proportions: label over value,
+   hairline between, numbers tabular. */
 .fp-stats {
   display: flex;
   align-items: stretch;
   border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 55%, transparent);
 }
 
 .fp-stat {
@@ -279,7 +303,6 @@
   padding: 0.6rem 0.35rem;
 }
 
-/* Same hairline the solo end screen puts between its stats. */
 .fp-stat + .fp-stat::before {
   content: "";
   position: absolute;
@@ -292,9 +315,9 @@
 }
 
 .fp-stat-label {
-  font-size: 0.56rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   line-height: 1;
   color: var(--muted-foreground);
@@ -302,7 +325,7 @@
 
 .fp-stat-value {
   max-width: 100%;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 800;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
@@ -312,68 +335,141 @@
   white-space: nowrap;
 }
 
-/* ── Commit drawer ───────────────────────────────────────────── */
+/* ── Commit drawer ───────────────────────────────────────────
+   Along the bottom behind a hairline: the hash and subject on one line, and
+   under it what the deploy actually weighed. */
 .fp-commit {
   display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
+  flex-direction: column;
+  gap: 0.3rem;
   min-width: 0;
-  padding: 0.5rem 0.8rem;
+  padding: 0.55rem 0.85rem 0.6rem;
   border-top: 1px solid var(--border);
   background: color-mix(in srgb, var(--foreground) 3%, transparent);
   text-decoration: none;
   color: var(--secondary);
-  transition: color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .fp-commit:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
   color: var(--foreground);
+}
+
+.fp-commit-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
 }
 
 .fp-commit-hash {
   flex: 0 0 auto;
   font-family: "Geist Mono", ui-monospace, "SF Mono", monospace;
-  font-size: 0.64rem;
+  font-size: 0.66rem;
   font-weight: 700;
   color: var(--primary);
 }
 
 .fp-commit-msg {
   min-width: 0;
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* ── Status dot ──────────────────────────────────────────────── */
+/* ── Diff counts ─────────────────────────────────────────────
+   GitHub's own summary, because it is the one everybody already reads: five
+   squares split by share of the diff, then the two numbers, then the file
+   count trailing in the muted tone. */
+.fp-commit-diff {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.fp-diff-bar {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.fp-diff-block {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+}
+
+.fp-diff-block--add { background: #4ade80; }
+.fp-diff-block--del { background: #f87171; }
+
+.fp-diff--add { color: #4ade80; }
+.fp-diff--del { color: #f87171; }
+
+.fp-diff-files {
+  margin-left: auto;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+/* ── Status dot ──────────────────────────────────────────────
+   One shape, one tone token, so every state is the same dot in a different
+   colour rather than four rules that drifted apart. */
 .status-dot {
+  --dot-tone: var(--secondary);
   display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
+  background: var(--dot-tone);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--dot-tone) 40%, transparent);
 }
 
-.status-dot--ok {
-  background: #4ade80;
-  box-shadow: 0 0 4px #4ade8066;
-}
-
-.status-dot--err {
-  background: #f87171;
-  box-shadow: 0 0 4px #f8717166;
-}
+.status-dot--ok { --dot-tone: #4ade80; }
+.status-dot--err { --dot-tone: #f87171; }
 
 .status-dot--loading {
-  background: #facc15;
-  box-shadow: 0 0 4px #facc1566;
+  --dot-tone: #facc15;
   animation: status-pulse 1.2s ease-in-out infinite;
+}
+
+/* Partial is two answers at once — local is up, sync is not — and picking
+   one colour throws half of it away. So the dot alternates between them, on
+   a hard cut rather than a fade, which reads as a flash instead of the
+   loading pulse it would otherwise be mistaken for. */
+.status-dot--partial {
+  --dot-tone: #facc15;
+  animation: status-flash 1.4s steps(1, end) infinite;
 }
 
 @keyframes status-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
+}
+
+@keyframes status-flash {
+  0%, 49.99% {
+    background: #4ade80;
+    box-shadow: 0 0 4px rgba(74, 222, 128, 0.4);
+  }
+  50%, 100% {
+    background: #facc15;
+    box-shadow: 0 0 5px rgba(250, 204, 21, 0.5);
+  }
+}
+
+/* A flashing dot is the worst thing in the footer to leave running for
+   someone who asked for less motion. It settles on amber, which is the half
+   of the answer worth keeping: something is still on its way up. */
+@media (prefers-reduced-motion: reduce) {
+  .status-dot--partial,
+  .status-dot--loading {
+    animation: none;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
