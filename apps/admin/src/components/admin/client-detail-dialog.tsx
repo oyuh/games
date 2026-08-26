@@ -33,20 +33,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import { Textarea } from "@/components/ui/textarea";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error
     ? error.message
     : "Unable to complete that action.";
-}
-
-function Surface({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-border bg-muted/40 p-5">
-      {children}
-    </div>
-  );
 }
 
 export function ClientDetailDialog({
@@ -157,7 +150,7 @@ export function ClientDetailDialog({
 
         {!activeClient ? null : (
           <div className="grid gap-5 xl:grid-cols-[minmax(23rem,0.9fr)_minmax(30rem,1.1fr)] xl:items-start 2xl:grid-cols-[minmax(25rem,0.86fr)_minmax(34rem,1.14fr)]">
-            <Surface>
+            <Surface tone="panel">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xs uppercase tracking-normal text-muted-foreground">
@@ -288,7 +281,7 @@ export function ClientDetailDialog({
             </Surface>
 
             <div className="space-y-4">
-              <Surface>
+              <Surface tone="panel">
                 <div className="text-sm font-semibold text-foreground">
                   Name override
                 </div>
@@ -356,7 +349,7 @@ export function ClientDetailDialog({
                 </div>
               </Surface>
 
-              <Surface>
+              <Surface tone="panel">
                 <div className="text-sm font-semibold text-foreground">
                   Direct moderation
                 </div>
@@ -465,7 +458,7 @@ export function ClientDetailDialog({
                 </div>
               </Surface>
 
-              <Surface>
+              <Surface tone="panel">
                 <div className="text-sm font-semibold text-foreground">
                   Targeted toast
                 </div>

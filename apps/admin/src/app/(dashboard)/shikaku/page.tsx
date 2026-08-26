@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import {
   Table,
   TableBody,
@@ -65,22 +66,6 @@ type ScoreDraft = {
   puzzleCount: string;
   createdAt: string;
 };
-
-function Surface({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      className={`rounded-lg border border-border bg-card p-5 ${className}`}
-    >
-      {children}
-    </section>
-  );
-}
 
 function createDraft(score: ShikakuScoreRecord): ScoreDraft {
   return {
