@@ -4,8 +4,22 @@
     {
       "name": "web",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["--filter", "@games/web", "dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@games/web",
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "--filter",
+        "@games/admin",
+        "dev"
+      ],
+      "port": 3002
     }
   ]
 }

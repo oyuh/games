@@ -11,7 +11,7 @@ type Theme = "light" | "dark";
 
 function getPreferredTheme(): Theme {
   if (typeof window === "undefined") {
-    return "light";
+    return "dark";
   }
 
   let stored: string | null | undefined;
@@ -26,9 +26,10 @@ function getPreferredTheme(): Theme {
     return stored;
   }
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  // Dark-first, same as the site and the bootstrap script.
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
 }
 
 function applyTheme(theme: Theme) {
@@ -43,7 +44,7 @@ export function ThemeToggle({
   className?: string;
   showLabel?: boolean;
 }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
     const preferredTheme = getPreferredTheme();
