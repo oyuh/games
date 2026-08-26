@@ -49,6 +49,10 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
+[data-theme="light"] .footer-popover {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
 [data-theme="light"] .modal-overlay {
   background: rgba(200, 197, 193, 0.4);
 }
