@@ -17,36 +17,47 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+/**
+ * Each item carries the colour it wears elsewhere in the panel, so the sidebar
+ * and a game's badges, cards and dialogs can never drift apart. Sections with no
+ * game of their own borrow the panel accent or a status tone.
+ */
 const NAV_ITEMS = [
   {
     href: "/",
     label: "Dashboard",
     icon: LayoutDashboard,
+    accent: "var(--primary)",
   },
   {
     href: "/clients",
     label: "Clients",
     icon: Users,
+    accent: "var(--game-imposter)",
   },
   {
     href: "/games",
     label: "Games",
     icon: Gamepad2,
+    accent: "var(--game-password)",
   },
   {
     href: "/bans",
     label: "Moderation",
     icon: Shield,
+    accent: "var(--danger)",
   },
   {
     href: "/shikaku",
     label: "Shikaku",
     icon: Trophy,
+    accent: "var(--game-shikaku)",
   },
   {
     href: "/pips",
     label: "Pips",
     icon: Dice5,
+    accent: "var(--game-pips)",
   },
 ] as const;
 
@@ -98,7 +109,7 @@ export function AdminShell({
       <div className="flex min-h-screen">
         <aside
           className={cn(
-            "hidden h-screen shrink-0 overflow-hidden border-r border-border bg-card transition-[width] duration-200 lg:sticky lg:top-0 lg:flex lg:flex-col",
+            "hidden h-screen shrink-0 overflow-hidden border-r border-border bg-[var(--sidebar)] transition-[width] duration-200 lg:sticky lg:top-0 lg:flex lg:flex-col",
             collapsed ? "w-[76px]" : "w-[248px]",
           )}
         >
@@ -109,7 +120,7 @@ export function AdminShell({
             )}
           >
             {!collapsed ? (
-              <div className="text-sm font-semibold uppercase tracking-normal text-foreground">
+              <div className="text-sm font-extrabold uppercase tracking-[0.18em] text-foreground">
                 ADMIN
               </div>
             ) : null}
@@ -139,15 +150,24 @@ export function AdminShell({
                   key={item.href}
                   href={item.href}
                   title={collapsed ? item.label : undefined}
+                  style={{ "--nav-accent": item.accent } as React.CSSProperties}
                   className={cn(
-                    "group flex h-11 items-center rounded-md border text-sm font-medium transition-colors",
+                    "group relative flex h-11 items-center overflow-hidden rounded-md border text-sm font-medium transition-colors",
                     collapsed ? "justify-center px-0" : "gap-3 px-3",
+                    // The rail is the active marker; the wash behind it is what
+                    // makes the colour readable at a glance in a list of six.
+                    "before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-[var(--nav-accent)] before:transition-opacity",
                     active
-                      ? "border-border bg-muted text-foreground"
-                      : "border-transparent text-muted-foreground hover:border-border hover:bg-accent hover:text-foreground",
+                      ? "border-[color-mix(in_srgb,var(--nav-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--nav-accent)_12%,transparent)] text-foreground before:opacity-100"
+                      : "border-transparent text-muted-foreground before:opacity-0 hover:border-[color-mix(in_srgb,var(--nav-accent)_22%,transparent)] hover:bg-[color-mix(in_srgb,var(--nav-accent)_7%,transparent)] hover:text-foreground hover:before:opacity-40",
                   )}
                 >
-                  <Icon className="size-4 shrink-0" />
+                  <Icon
+                    className={cn(
+                      "size-4 shrink-0 transition-colors",
+                      active ? "text-[var(--nav-accent)]" : "group-hover:text-[var(--nav-accent)]",
+                    )}
+                  />
                   {!collapsed ? <span>{item.label}</span> : null}
                 </Link>
               );
@@ -194,14 +214,15 @@ export function AdminShell({
                   <Link
                     key={item.href}
                     href={item.href}
+                    style={{ "--nav-accent": item.accent } as React.CSSProperties}
                     className={cn(
                       "inline-flex h-9 shrink-0 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors",
                       active
-                        ? "border-border bg-muted text-foreground"
+                        ? "border-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--nav-accent)_14%,transparent)] text-foreground"
                         : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground",
                     )}
                   >
-                    <Icon className="size-4" />
+                    <Icon className={cn("size-4", active && "text-[var(--nav-accent)]")} />
                     {item.label}
                   </Link>
                 );

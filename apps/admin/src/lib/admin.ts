@@ -190,6 +190,29 @@ export function formatGameType(type: GameType | string | null | undefined) {
   return GAME_TYPE_LABELS[type as GameType] ?? humanizeKey(type);
 }
 
+/**
+ * The colour each game wears on the site, as a CSS var reference rather than a
+ * hex. The hexes live once in globals.css, so a game recolours in both apps by
+ * editing one file, and light mode can override them without touching this.
+ *
+ * Keys cover the multiplayer game types plus the two solo routes, which are not
+ * in the game_type enum but do have a colour.
+ */
+export const GAME_ACCENT: Record<string, string> = {
+  imposter: "var(--game-imposter)",
+  password: "var(--game-password)",
+  chain_reaction: "var(--game-chain)",
+  shade_signal: "var(--game-shade)",
+  location_signal: "var(--game-location)",
+  shikaku: "var(--game-shikaku)",
+  pips: "var(--game-pips)",
+};
+
+/** Falls back to the panel's own accent for anything unrecognised. */
+export function gameAccent(type: string | null | undefined): string {
+  return (type && GAME_ACCENT[type]) || "var(--primary)";
+}
+
 const ACTIVITY_LABELS: Record<string, string> = {
   home: "Home",
   browsing: "Browsing",
