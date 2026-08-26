@@ -38,6 +38,9 @@ export type ConnectionDebugState = {
   apiCommitRef: string;
   apiCommitMessage: string;
   apiCommitTimestamp: string;
+  apiCommitAdditions: number | null;
+  apiCommitDeletions: number | null;
+  apiCommitFilesChanged: number | null;
   apiBuildTimestamp: string;
   apiUpdatedAt: string;
   apiStartedAt: string;
@@ -75,6 +78,9 @@ const state: ConnectionDebugState = {
   apiCommitRef: "",
   apiCommitMessage: "",
   apiCommitTimestamp: "",
+  apiCommitAdditions: null,
+  apiCommitDeletions: null,
+  apiCommitFilesChanged: null,
   apiBuildTimestamp: "",
   apiUpdatedAt: "",
   apiStartedAt: "",
@@ -195,12 +201,17 @@ export function setDatabaseStatusProbe(next: {
   emit();
 }
 
+function numberOrKeep(value: number | undefined, previous: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? value : previous;
+}
+
 export function setApiBuildInfo(next: {
   platform: string | undefined;
   commitSha: string | undefined;
   commitRef: string | undefined;
   commitMessage: string | undefined;
   commitTimestamp: string | undefined;
+  commitStats: { additions?: number; deletions?: number; filesChanged?: number } | null | undefined;
   buildTimestamp: string | undefined;
   updatedAt: string | undefined;
   startedAt: string | undefined;
@@ -211,6 +222,12 @@ export function setApiBuildInfo(next: {
   state.apiCommitRef = next.commitRef ?? "";
   state.apiCommitMessage = next.commitMessage ?? "";
   state.apiCommitTimestamp = next.commitTimestamp ?? "";
+  // The API answers null until its own GitHub lookup lands, and that arrives a
+  // poll later than the rest of the commit. Keep the last real numbers rather
+  // than blinking them out from under whoever has the popover open.
+  state.apiCommitAdditions = numberOrKeep(next.commitStats?.additions, state.apiCommitAdditions);
+  state.apiCommitDeletions = numberOrKeep(next.commitStats?.deletions, state.apiCommitDeletions);
+  state.apiCommitFilesChanged = numberOrKeep(next.commitStats?.filesChanged, state.apiCommitFilesChanged);
   state.apiBuildTimestamp = next.buildTimestamp ?? "";
   state.apiUpdatedAt = next.updatedAt ?? "";
   state.apiStartedAt = next.startedAt ?? "";
