@@ -16,6 +16,7 @@ import {
   formatActivity,
   formatGameType,
   formatRelativeTime,
+  gameAccent,
   GAME_TYPE_OPTIONS,
   shortId,
 } from "@/lib/admin";
@@ -36,14 +37,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyNote, Panel } from "@/components/ui/stat-tile";
 import { Surface } from "@/components/ui/surface";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Column, DataTable } from "@/components/ui/data-table";
 
 function ClientsPageSkeleton() {
   return (
@@ -181,6 +175,116 @@ export default function ClientsPage() {
     return <ClientsPageSkeleton />;
   }
 
+  const columns: Column<ClientRecord>[] = [
+    {
+      id: "name",
+      header: "Identity",
+      width: 200,
+      sortValue: (client) => client.name ?? "",
+      cell: (client) => (
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              title={client.online ? "Online" : "Idle"}
+              className={`size-1.5 shrink-0 rounded-full ${
+                client.online ? "bg-[var(--ok)]" : "bg-[var(--warn)]"
+              }`}
+              aria-hidden
+            />
+            <span className="truncate font-medium text-foreground">
+              {client.name || "Anonymous"}
+            </span>
+          </div>
+          <div className="mt-0.5 truncate pl-3.5 font-mono text-xs text-muted-foreground">
+            {shortId(client.sessionId, 16)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "region",
+      header: "Location",
+      width: 160,
+      sortValue: (client) => client.region ?? "",
+      cell: (client) => (
+        <div className="min-w-0">
+          <div className="truncate text-foreground">
+            {client.region || "Unknown"}
+          </div>
+          <div className="truncate font-mono text-xs text-muted-foreground">
+            {client.ip || "No IP"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "activity",
+      header: "Doing",
+      width: 170,
+      sortValue: (client) => client.activity ?? "",
+      cell: (client) =>
+        client.gameId && client.gameType ? (
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={(event) => {
+              event.stopPropagation();
+              setSelectedGame({ id: client.gameId!, type: client.gameType! });
+            }}
+          >
+            <span
+              className="size-1.5 rounded-full"
+              style={{ background: gameAccent(client.gameType) }}
+              aria-hidden
+            />
+            {formatGameType(client.gameType)}
+            {!client.online ? " (idle)" : ""}
+          </Button>
+        ) : (
+          <Badge variant={client.online ? "muted" : "warn"}>
+            {client.activity
+              ? `${formatActivity(client.activity)}${client.online ? "" : " (idle)"}`
+              : "Idle"}
+          </Badge>
+        ),
+    },
+    {
+      id: "userAgent",
+      header: "Device",
+      width: 220,
+      sortValue: (client) => client.userAgent ?? "",
+      cell: (client) => (
+        <div className="min-w-0">
+          <div className="truncate font-mono text-xs text-muted-foreground">
+            {shortId(client.fingerprint, 18)}
+          </div>
+          <div
+            className="truncate text-xs text-muted-foreground"
+            title={client.userAgent ?? undefined}
+          >
+            {client.userAgent || "Unknown device"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "lastSeen",
+      header: "Seen",
+      width: 130,
+      sortValue: (client) => client.lastSeen,
+      cell: (client) => (
+        <div className="min-w-0">
+          <div className="truncate text-muted-foreground">
+            {formatRelativeTime(client.lastSeen)}
+          </div>
+          <div className="truncate text-xs text-muted-foreground">
+            joined {formatRelativeTime(client.connectedAt ?? null)}
+          </div>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
       <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -264,120 +368,18 @@ export default function ClientsPage() {
             </div>
           </Surface>
 
-          <Surface pad="none" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">
-                    Identity
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Location
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Game / Activity
-                  </TableHead>
-                  <TableHead className="hidden text-muted-foreground xl:table-cell">
-                    Fingerprint / UA
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">Seen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.length === 0 ? (
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableCell
-                      colSpan={5}
-                      className="h-[40vh] text-center align-middle text-sm text-muted-foreground"
-                    >
-                      <Users className="mx-auto mb-2 size-6 opacity-30" />
-                      No sessions match these filters.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  clients.map((client) => (
-                    <TableRow
-                      key={client.sessionId ?? shortId(client.fingerprint, 12)}
-                      className="cursor-pointer border-border hover:bg-accent"
-                      onClick={() => setSelectedClient(client)}
-                    >
-                      <TableCell className="align-top">
-                        <div className="font-medium text-foreground">
-                          {client.name || "Anonymous"}
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          {shortId(client.sessionId, 16)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top text-sm text-muted-foreground">
-                        <div>{client.region || "Unknown region"}</div>
-                        <div className="mt-1 text-muted-foreground">
-                          {client.ip || "Unknown IP"}
-                        </div>
-                      </TableCell>
-                      <TableCell
-                        className={`align-top ${
-                          client.online ? "" : "bg-amber-400/10"
-                        }`}
-                      >
-                        {client.gameId && client.gameType ? (
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-border bg-card text-foreground hover:bg-accent"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setSelectedGame({
-                                  id: client.gameId!,
-                                  type: client.gameType!,
-                                });
-                              }}
-                            >
-                              <Activity className="size-4" />
-                              {formatGameType(client.gameType)}
-                            </Button>
-                            {!client.online && (
-                              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                                (idle)
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className={
-                              client.online
-                                ? "border-border bg-card text-muted-foreground"
-                                : "border-amber-500/40 bg-amber-400/10 text-amber-700 dark:text-amber-300"
-                            }
-                          >
-                            {client.online
-                              ? formatActivity(client.activity)
-                              : client.activity
-                                ? `${formatActivity(client.activity)} (idle)`
-                                : "Idle"}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden max-w-sm align-top text-sm text-muted-foreground xl:table-cell">
-                        <div>{shortId(client.fingerprint, 18)}</div>
-                        <div className="mt-1 truncate">
-                          {client.userAgent || "Unknown device"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top text-sm text-muted-foreground">
-                        <div>{formatRelativeTime(client.lastSeen)}</div>
-                        <div className="mt-1 text-muted-foreground">
-                          Connected{" "}
-                          {formatRelativeTime(client.connectedAt ?? null)}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+          <Surface pad="sm" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <DataTable
+              className="min-h-0 flex-1"
+              tableKey="clients"
+              columns={columns}
+              rows={clients}
+              rowKey={(client) =>
+                client.sessionId ?? shortId(client.fingerprint, 12)
+              }
+              onRowClick={(client) => setSelectedClient(client)}
+              empty="No sessions match these filters."
+            />
           </Surface>
 
           <Pagination
