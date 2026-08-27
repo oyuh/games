@@ -23,14 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Column, DataTable } from "@/components/ui/data-table";
 
 const BAN_TYPE_OPTIONS = [
   { value: "session", label: "Session ban" },
@@ -312,6 +305,194 @@ export default function BansPage() {
     });
   };
 
+  const rowAction = (
+    label: string,
+    disabled: boolean,
+    onSelect: () => void,
+  ) => (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      aria-label={label}
+      className="text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_14%,transparent)]"
+      disabled={disabled}
+      onClick={onSelect}
+    >
+      <Trash2 />
+    </Button>
+  );
+
+  const banColumns: Column<BanRecord>[] = [
+    {
+      id: "type",
+      header: "Type",
+      width: 100,
+      sortValue: (ban) => ban.type,
+      cell: (ban) => (
+        <Badge
+          variant="accent"
+          accent={BAN_ACCENT[ban.type] ?? "var(--primary)"}
+          className="capitalize"
+        >
+          {ban.type}
+        </Badge>
+      ),
+    },
+    {
+      id: "value",
+      header: "Value",
+      width: 220,
+      sortValue: (ban) => ban.value,
+      cell: (ban) => (
+        <span className="truncate font-mono text-foreground" title={ban.value}>
+          {ban.value}
+        </span>
+      ),
+    },
+    {
+      id: "reason",
+      header: "Reason",
+      sortValue: (ban) => ban.reason,
+      cell: (ban) => (
+        <span className="truncate text-muted-foreground">
+          {ban.reason || "No reason given"}
+        </span>
+      ),
+    },
+    {
+      id: "createdAt",
+      header: "Created",
+      width: 140,
+      sortValue: (ban) => ban.createdAt,
+      cell: (ban) => (
+        <span
+          className="text-muted-foreground"
+          title={formatDateTime(ban.createdAt)}
+        >
+          {formatRelativeTime(ban.createdAt)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      width: 80,
+      align: "right",
+      alwaysVisible: true,
+      cell: (ban) =>
+        rowAction(
+          `Remove ${ban.type} ban`,
+          pendingAction === `remove-ban-${ban.id}`,
+          () => void removeBan(ban.id),
+        ),
+    },
+  ];
+
+  const ruleColumns: Column<RestrictedNameRecord>[] = [
+    {
+      id: "pattern",
+      header: "Pattern",
+      width: 240,
+      sortValue: (entry) => entry.pattern,
+      cell: (entry) => (
+        <span className="truncate font-mono text-foreground">{entry.pattern}</span>
+      ),
+    },
+    {
+      id: "reason",
+      header: "Reason",
+      sortValue: (entry) => entry.reason,
+      cell: (entry) => (
+        <span className="truncate text-muted-foreground">
+          {entry.reason || "No reason given"}
+        </span>
+      ),
+    },
+    {
+      id: "createdAt",
+      header: "Added",
+      width: 140,
+      sortValue: (entry) => entry.createdAt,
+      cell: (entry) => (
+        <span className="text-muted-foreground">
+          {formatRelativeTime(entry.createdAt)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      width: 80,
+      align: "right",
+      alwaysVisible: true,
+      cell: (entry) =>
+        rowAction(
+          "Remove name rule",
+          pendingAction === `remove-rule-${entry.id}`,
+          () => void removeRestrictedName(entry.id),
+        ),
+    },
+  ];
+
+  const overrideColumns: Column<NameOverrideRecord>[] = [
+    {
+      id: "forcedName",
+      header: "Forced name",
+      width: 180,
+      sortValue: (override) => override.forcedName,
+      cell: (override) => (
+        <span className="truncate font-medium text-foreground">
+          {override.forcedName}
+        </span>
+      ),
+    },
+    {
+      id: "sessionId",
+      header: "Session",
+      width: 200,
+      sortValue: (override) => override.sessionId,
+      cell: (override) => (
+        <span className="truncate font-mono text-xs text-muted-foreground">
+          {shortId(override.sessionId, 18)}
+        </span>
+      ),
+    },
+    {
+      id: "reason",
+      header: "Reason",
+      sortValue: (override) => override.reason,
+      cell: (override) => (
+        <span className="truncate text-muted-foreground">
+          {override.reason || "No reason given"}
+        </span>
+      ),
+    },
+    {
+      id: "updatedAt",
+      header: "Updated",
+      width: 140,
+      sortValue: (override) => override.updatedAt,
+      cell: (override) => (
+        <span className="text-muted-foreground">
+          {formatRelativeTime(override.updatedAt)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      width: 80,
+      align: "right",
+      alwaysVisible: true,
+      cell: (override) =>
+        rowAction(
+          "Clear override",
+          pendingAction === `remove-override-${override.sessionId}`,
+          () => void removeOverride(override.sessionId),
+        ),
+    },
+  ];
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       {/* One compact strip instead of five big cards, and Name controls is
@@ -467,78 +648,22 @@ export default function BansPage() {
               ))}
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-24">Type</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead className="w-40">Created</TableHead>
-                  <TableHead className="w-24 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading && bans.length === 0 ? (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={5} className="py-4">
-                      <div className="space-y-2">
-                        {Array.from({ length: 6 }).map((_, index) => (
-                          <Skeleton key={index} className="h-10 bg-muted" />
-                        ))}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : visibleBans.length === 0 ? (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell
-                      colSpan={5}
-                      className="h-[30vh] text-center align-middle text-sm text-muted-foreground"
-                    >
-                      <Shield className="mx-auto mb-2 size-6 opacity-30" />
-                      No bans match this filter.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  visibleBans.map((ban) => (
-                    <TableRow key={ban.id}>
-                      <TableCell>
-                        <Badge
-                          variant="accent"
-                          accent={BAN_ACCENT[ban.type] ?? "var(--primary)"}
-                          className="capitalize"
-                        >
-                          {ban.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-foreground">
-                        {ban.value}
-                      </TableCell>
-                      <TableCell className="max-w-md truncate text-muted-foreground">
-                        {ban.reason || "No reason given"}
-                      </TableCell>
-                      <TableCell
-                        className="text-muted-foreground"
-                        title={formatDateTime(ban.createdAt)}
-                      >
-                        {formatRelativeTime(ban.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Remove ${ban.type} ban`}
-                          className="text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_14%,transparent)]"
-                          disabled={pendingAction === `remove-ban-${ban.id}`}
-                          onClick={() => void removeBan(ban.id)}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            {loading && bans.length === 0 ? (
+              <div className="space-y-2">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <Skeleton key={index} className="h-10 bg-muted" />
+                ))}
+              </div>
+            ) : (
+              <DataTable
+                className="min-h-0 flex-1"
+                tableKey="bans"
+                columns={banColumns}
+                rows={visibleBans}
+                rowKey={(ban) => ban.id}
+                empty="No bans match this filter."
+              />
+            )}
           </Surface>
 
           <Pagination
@@ -596,55 +721,14 @@ export default function BansPage() {
           </Surface>
 
           <Surface pad="sm" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-64">Pattern</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead className="w-40">Added</TableHead>
-                  <TableHead className="w-24 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleRestrictedNames.length === 0 ? (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell
-                      colSpan={4}
-                      className="h-[30vh] text-center align-middle text-sm text-muted-foreground"
-                    >
-                      <Ban className="mx-auto mb-2 size-6 opacity-30" />
-                      No name rules match this search.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  visibleRestrictedNames.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="font-mono text-foreground">
-                        {entry.pattern}
-                      </TableCell>
-                      <TableCell className="max-w-md truncate text-muted-foreground">
-                        {entry.reason || "No reason given"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatRelativeTime(entry.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Remove name rule"
-                          className="text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_14%,transparent)]"
-                          disabled={pendingAction === `remove-rule-${entry.id}`}
-                          onClick={() => void removeRestrictedName(entry.id)}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <DataTable
+              className="min-h-0 flex-1"
+              tableKey="name-rules"
+              columns={ruleColumns}
+              rows={visibleRestrictedNames}
+              rowKey={(entry) => entry.id}
+              empty="No name rules match this search."
+            />
           </Surface>
 
           <Pagination
@@ -666,61 +750,14 @@ export default function BansPage() {
           className="flex min-h-0 flex-1 flex-col gap-3"
         >
           <Surface pad="sm" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-48">Forced name</TableHead>
-                  <TableHead className="w-56">Session</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead className="w-40">Updated</TableHead>
-                  <TableHead className="w-24 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleOverrides.length === 0 ? (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell
-                      colSpan={5}
-                      className="h-[30vh] text-center align-middle text-sm text-muted-foreground"
-                    >
-                      <UserRoundX className="mx-auto mb-2 size-6 opacity-30" />
-                      No overrides yet. Create one from a session in Clients.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  visibleOverrides.map((override) => (
-                    <TableRow key={override.sessionId}>
-                      <TableCell className="font-medium text-foreground">
-                        {override.forcedName}
-                      </TableCell>
-                      <TableCell className="font-mono text-muted-foreground">
-                        {shortId(override.sessionId, 18)}
-                      </TableCell>
-                      <TableCell className="max-w-md truncate text-muted-foreground">
-                        {override.reason || "No reason given"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatRelativeTime(override.updatedAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Clear override"
-                          className="text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_14%,transparent)]"
-                          disabled={
-                            pendingAction === `remove-override-${override.sessionId}`
-                          }
-                          onClick={() => void removeOverride(override.sessionId)}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <DataTable
+              className="min-h-0 flex-1"
+              tableKey="name-overrides"
+              columns={overrideColumns}
+              rows={visibleOverrides}
+              rowKey={(override) => override.sessionId}
+              empty="No overrides yet. Create one from a session in Clients."
+            />
           </Surface>
 
           <Pagination
