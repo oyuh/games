@@ -400,6 +400,42 @@ export const adminBans = pgTable(
   })
 );
 
+/**
+ * A narrow record of sessions that have gone away.
+ *
+ * Sessions are deleted an hour after last_seen, and the roster only ever
+ * queried the last five minutes, so an offline player was invisible within
+ * five minutes and gone within an hour. Banning was never the blocker:
+ * admin_bans already stores free-form values and isBanned already checks
+ * session id, ip and region on every connect. The missing piece was finding
+ * the id, which is what this table is for.
+ *
+ * Deliberately smaller than sessions: no user_agent, no fingerprint. The
+ * cleanup job writes a row here just before it deletes the live one, and trims
+ * anything past the retention window in the same pass.
+ */
+export const sessionArchive = pgTable(
+  "session_archive",
+  {
+    // The session id, so a ban created from an archive row matches directly.
+    id: text("id").primaryKey(),
+    name: text("name"),
+    avatar: text("avatar"),
+    region: text("region"),
+    ip: text("ip"),
+    firstSeen: bigint("first_seen", { mode: "number" }).notNull(),
+    lastSeen: bigint("last_seen", { mode: "number" }).notNull(),
+    // How many times this id has been archived. A fresh id every visit reads
+    // very differently from one that has come back forty times.
+    seenCount: integer("seen_count").notNull().default(1),
+  },
+  (table) => ({
+    lastSeenIdx: index("session_archive_last_seen_idx").on(table.lastSeen),
+    nameIdx: index("session_archive_name_idx").on(table.name),
+    ipIdx: index("session_archive_ip_idx").on(table.ip),
+  })
+);
+
 export const adminRestrictedNames = pgTable(
   "admin_restricted_names",
   {
@@ -498,6 +534,7 @@ export type DrizzleSchema = {
   adminBans: typeof adminBans;
   adminRestrictedNames: typeof adminRestrictedNames;
   adminNameOverrides: typeof adminNameOverrides;
+  sessionArchive: typeof sessionArchive;
   shikakuScores: typeof shikakuScores;
   shikakuBannedSessions: typeof shikakuBannedSessions;
   pipsScores: typeof pipsScores;

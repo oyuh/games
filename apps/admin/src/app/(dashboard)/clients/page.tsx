@@ -3,7 +3,9 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  Ban,
   Globe2,
+  MoreHorizontal,
   RefreshCcw,
   Search,
   Users,
@@ -21,6 +23,7 @@ import {
   shortId,
 } from "@/lib/admin";
 import { useToast } from "@/components/Toast";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pagination } from "@/components/Pagination";
 import { ClientDetailDialog } from "@/components/admin/client-detail-dialog";
 import { GameStateDialog } from "@/components/admin/game-state-dialog";
@@ -38,6 +41,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyNote, Panel } from "@/components/ui/stat-tile";
 import { Surface } from "@/components/ui/surface";
 import { PlayerAvatar } from "@/components/admin/player-avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Column, DataTable } from "@/components/ui/data-table";
 
 function ClientsPageSkeleton() {
@@ -91,6 +101,7 @@ function ClientsPageSkeleton() {
 
 export default function ClientsPage() {
   const { show } = useToast();
+  const confirm = useConfirmDialog();
   const [data, setData] = useState<ClientListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -101,6 +112,8 @@ export default function ClientsPage() {
     "all" | "in-game" | "idle" | "named" | "anonymous"
   >("all");
   const [region, setRegion] = useState("all");
+  const [rosterWindow, setRosterWindow] = useState<"live" | "recent" | "archive">("live");
+  const [banning, setBanning] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(
@@ -128,6 +141,7 @@ export default function ClientsPage() {
           gameType,
           activity,
           region,
+          window: rosterWindow,
         });
         const response = await api(`/clients?${params}`);
         if (!cancelled) {
@@ -164,6 +178,7 @@ export default function ClientsPage() {
     pageSize,
     refreshKey,
     region,
+    rosterWindow,
     show,
   ]);
 
@@ -171,6 +186,50 @@ export default function ClientsPage() {
   const visibleRegions = data?.filters.regions ?? [];
 
   const onlineCount = clients.filter((client) => client.online).length;
+
+  /**
+   * Ban straight from a row. admin_bans already accepted arbitrary values and
+   * isBanned already checked them on every connect, so this needed no new ban
+   * machinery: only a way to find the id of someone who has already left.
+   */
+  const banClient = async (
+    client: ClientRecord,
+    type: "session" | "ip",
+  ) => {
+    const value = type === "session" ? client.sessionId : client.ip;
+    if (!value) return;
+
+    const confirmed = await confirm({
+      title: `Ban this ${type}?`,
+      description:
+        type === "session"
+          ? `${client.name || "Anonymous"} (${shortId(client.sessionId, 16)}) will be blocked on their next connect.`
+          : `${value} will be blocked for every session using it.`,
+      confirmLabel: "Create ban",
+      tone: "destructive",
+    });
+    if (!confirmed) return;
+
+    setBanning(client.sessionId ?? value);
+    try {
+      await api("/bans", {
+        method: "POST",
+        body: {
+          type,
+          value,
+          reason: `Banned from ${rosterWindow} roster`,
+        },
+      });
+      show(`${type === "session" ? "Session" : "IP"} banned.`, "success");
+    } catch (error) {
+      show(
+        error instanceof Error ? error.message : "Unable to create ban.",
+        "error",
+      );
+    } finally {
+      setBanning(null);
+    }
+  };
 
   if (loading && !data) {
     return <ClientsPageSkeleton />;
@@ -268,6 +327,19 @@ export default function ClientsPage() {
       ),
     },
     {
+      id: "seenCount",
+      header: "Visits",
+      width: 80,
+      align: "right",
+      sortValue: (client) => client.seenCount ?? 0,
+      cell: (client) =>
+        client.seenCount ? (
+          <span className="text-muted-foreground">{client.seenCount}</span>
+        ) : (
+          <span className="text-muted-foreground/40">-</span>
+        ),
+    },
+    {
       id: "lastSeen",
       header: "Seen",
       width: 130,
@@ -281,6 +353,50 @@ export default function ClientsPage() {
             joined {formatRelativeTime(client.connectedAt ?? null)}
           </div>
         </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      width: 80,
+      align: "right",
+      alwaysVisible: true,
+      cell: (client) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Session actions"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setSelectedClient(client)}>
+              <Activity />
+              Open session
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={!client.sessionId || banning !== null}
+              onSelect={() => void banClient(client, "session")}
+            >
+              <Ban />
+              Ban session
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={!client.ip || banning !== null}
+              onSelect={() => void banClient(client, "ip")}
+            >
+              <Ban />
+              Ban IP
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
@@ -305,6 +421,7 @@ export default function ClientsPage() {
                 <Select
                   value={gameType}
                   onValueChange={(value) => setGameType(value as any)}
+                  disabled={rosterWindow === "archive"}
                 >
                   <SelectTrigger className="h-10 min-w-[10rem]">
                     <SelectValue />
@@ -321,6 +438,7 @@ export default function ClientsPage() {
                 <Select
                   value={activity}
                   onValueChange={(value) => setActivity(value as any)}
+                  disabled={rosterWindow === "archive"}
                 >
                   <SelectTrigger className="h-10 min-w-[9rem]">
                     <SelectValue />
@@ -350,6 +468,29 @@ export default function ClientsPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {/* Live is the old five minute window. Recent widens it to a
+                    day. Archive reads the table the cleanup job writes to,
+                    which is the only way to find someone already gone. */}
+                <div className="flex overflow-hidden rounded-md border border-border">
+                  {(["live", "recent", "archive"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setRosterWindow(value);
+                        setPage(1);
+                      }}
+                      className={`h-9 px-3 text-xs font-semibold capitalize transition-colors ${
+                        rosterWindow === value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+
                 <Badge
                   variant="outline"
                   className="border-border bg-card text-foreground"
@@ -371,14 +512,18 @@ export default function ClientsPage() {
           <Surface pad="sm" className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <DataTable
               className="min-h-0 flex-1"
-              tableKey="clients"
+              tableKey={`clients-${rosterWindow}`}
               columns={columns}
               rows={clients}
               rowKey={(client) =>
                 client.sessionId ?? shortId(client.fingerprint, 12)
               }
               onRowClick={(client) => setSelectedClient(client)}
-              empty="No sessions match these filters."
+              empty={
+                rosterWindow === "archive"
+                  ? "No archived sessions match. The archive fills as sessions expire."
+                  : "No sessions match these filters."
+              }
             />
           </Surface>
 
