@@ -6,8 +6,6 @@ import {
   Globe2,
   RefreshCcw,
   Search,
-  Shield,
-  SlidersHorizontal,
   Users,
 } from "lucide-react";
 
@@ -36,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyNote, Panel } from "@/components/ui/stat-tile";
 import { Surface } from "@/components/ui/surface";
 import {
   Table,
@@ -176,16 +175,7 @@ export default function ClientsPage() {
   const clients = data?.clients ?? [];
   const visibleRegions = data?.filters.regions ?? [];
 
-  const filterTags = useMemo(() => {
-    return [
-      gameType === "all" ? "All games" : formatGameType(gameType),
-      activity === "all" ? "All states" : activity.replace("-", " "),
-      region === "all" ? "All regions" : region,
-      deferredSearch.trim()
-        ? `Query: ${deferredSearch.trim()}`
-        : `Page size: ${pageSize}`,
-    ];
-  }, [activity, deferredSearch, gameType, pageSize, region]);
+  const onlineCount = clients.filter((client) => client.online).length;
 
   if (loading && !data) {
     return <ClientsPageSkeleton />;
@@ -275,20 +265,6 @@ export default function ClientsPage() {
           </Surface>
 
           <Surface pad="none" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                  Live Roster
-                </div>
-                <div className="mt-2 text-lg font-semibold tracking-normal text-foreground">
-                  Session list
-                </div>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Click any session row to open its control panel.
-              </div>
-            </div>
-
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
@@ -312,9 +288,10 @@ export default function ClientsPage() {
                   <TableRow className="border-border hover:bg-transparent">
                     <TableCell
                       colSpan={5}
-                      className="px-4 py-16 text-center text-sm text-muted-foreground"
+                      className="h-[40vh] text-center align-middle text-sm text-muted-foreground"
                     >
-                      No active clients match the current filters.
+                      <Users className="mx-auto mb-2 size-6 opacity-30" />
+                      No sessions match these filters.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -416,99 +393,82 @@ export default function ClientsPage() {
           />
         </div>
 
-        <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-0.5">
-          <Surface pad="sm" tone="panel">
-            <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              Roster Snapshot
-            </div>
-            <div className="mt-4 space-y-3">
+        {/* The rail used to hold three full-size cards for single digits, a
+            Filter Context panel that repeated the dropdowns sitting inches
+            above it, and a regions panel that was usually just a placeholder
+            sentence. This is the same information as compact rows, plus the
+            regions as actual one-click filters. */}
+        <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+          <Surface pad="none" className="shrink-0">
+            <dl className="divide-y divide-border">
               {[
-                {
-                  label: "Visible sessions",
-                  value: (data?.total ?? 0).toLocaleString(),
-                  icon: Users,
-                },
-                {
-                  label: "Loaded this page",
-                  value: clients.length.toLocaleString(),
-                  icon: Activity,
-                },
-                {
-                  label: "Search mode",
-                  value: activity.replace("-", " "),
-                  icon: Shield,
-                },
-              ].map(({ label, value, icon: Icon }) => (
+                { label: "Matching filters", value: (data?.total ?? 0).toLocaleString() },
+                { label: "On this page", value: clients.length.toLocaleString() },
+                { label: "Online now", value: onlineCount.toLocaleString() },
+                { label: "Idle", value: (clients.length - onlineCount).toLocaleString() },
+              ].map((row) => (
                 <div
-                  key={label}
-                  className="rounded-lg border border-border bg-card p-4"
+                  key={row.label}
+                  className="flex items-baseline justify-between gap-3 px-3.5 py-2"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
-                      <Icon className="size-4" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
-                        {label}
-                      </div>
-                      <div className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
-                        {value}
-                      </div>
-                    </div>
-                  </div>
+                  <dt className="truncate text-[0.7rem] text-muted-foreground">
+                    {row.label}
+                  </dt>
+                  <dd className="text-base font-extrabold tabular-nums text-foreground">
+                    {row.value}
+                  </dd>
                 </div>
               ))}
-            </div>
+            </dl>
           </Surface>
 
-          <Surface className="bg-muted/40">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              <SlidersHorizontal className="size-4" />
-              Filter Context
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {filterTags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="border-border bg-card text-foreground"
+          <Panel
+            title="Regions"
+            accent="var(--game-chain)"
+            className="min-h-0 flex-1"
+            meta={
+              region !== "all" ? (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => setRegion("all")}
                 >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </Surface>
-
-          <Surface className="bg-muted/40">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              <Globe2 className="size-4" />
-              Available Regions
-            </div>
-            <div className="mt-4 space-y-2">
-              {visibleRegions.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-                  Region filters will appear as live traffic comes in.
-                </div>
-              ) : (
-                visibleRegions.slice(0, 10).map((value) => (
-                  <div
-                    key={value}
-                    className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm"
-                  >
-                    <span className="text-foreground">{value}</span>
-                    {region === value ? (
-                      <Badge
-                        variant="outline"
-                        className="border-border bg-muted text-foreground"
+                  Clear
+                </Button>
+              ) : null
+            }
+          >
+            {visibleRegions.length === 0 ? (
+              <EmptyNote>Regions appear as traffic comes in.</EmptyNote>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {visibleRegions.map((value) => {
+                  const active = region === value;
+                  return (
+                    <li key={value}>
+                      <button
+                        type="button"
+                        onClick={() => setRegion(active ? "all" : value)}
+                        className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors ${
+                          active
+                            ? "border-primary/40 bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-foreground"
+                            : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                        }`}
                       >
-                        Active
-                      </Badge>
-                    ) : null}
-                  </div>
-                ))
-              )}
-            </div>
-          </Surface>
+                        <Globe2 className="size-3 shrink-0" />
+                        <span className="min-w-0 flex-1 truncate">{value}</span>
+                        {active ? (
+                          <span className="shrink-0 text-[0.6rem] font-bold tracking-wider text-primary uppercase">
+                            On
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
         </div>
       </div>
 
