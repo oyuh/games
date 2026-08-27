@@ -18,6 +18,9 @@ import {
   shikakuScores,
 } from "@games/shared/db";
 import { drizzleClient } from "./db-provider";
+import { pipsEngine, shikakuEngine } from "@games/shared";
+import { renderPipsSvg } from "./pips-image";
+import { renderPuzzleSvg as renderShikakuSvg } from "./shikaku-image";
 import {
   broadcastToAll,
   broadcastToSession,
@@ -1704,6 +1707,113 @@ adminRoutes.delete("/pips/scores", async (c) => {
 });
 
 // ─── Load persisted custom status from DB on startup ────────
+// ─── Solo puzzle rendering ──────────────────────────────────
+//
+// Both routes rebuild the board from the seed stored on the score row, never
+// from a query parameter. That means the endpoint can only ever render a
+// puzzle some real score points at, and an admin cannot fish for arbitrary
+// boards through it. Only `index` and `view` are caller-supplied, and both are
+// clamped to known values.
+//
+// These live under adminRoutes, so adminAuth and rateLimit("admin") already
+// apply. Pips solutions are deliberately not exposed publicly the way
+// /api/shikaku/puzzle.svg?solution=1 is.
+
+const PUZZLE_VIEWS = ["board", "solution", "replay"] as const;
+type PuzzleView = (typeof PUZZLE_VIEWS)[number];
+
+function parsePuzzleView(value: string | undefined): PuzzleView {
+  return PUZZLE_VIEWS.includes(value as PuzzleView) ? (value as PuzzleView) : "board";
+}
+
+function svgResponse(c: any, svg: string, filename: string) {
+  return c.body(svg, 200, {
+    "Content-Type": "image/svg+xml; charset=utf-8",
+    // Rendered from a stored row, so it is stable, but an admin editing a
+    // score should see the new board rather than a cached one.
+    "Cache-Control": "no-store",
+    "Content-Disposition": `inline; filename="${filename}"`,
+    "X-Content-Type-Options": "nosniff",
+  });
+}
+
+adminRoutes.get("/pips/scores/:id/puzzle.svg", async (c) => {
+  const { id } = c.req.param();
+  const [score] = await drizzleClient
+    .select()
+    .from(pipsScores)
+    .where(eq(pipsScores.id, id))
+    .limit(1);
+
+  if (!score) {
+    return c.json({ error: "Score not found" }, 404);
+  }
+
+  const run = pipsEngine.generateRun(score.seed);
+  const index = Math.min(
+    Math.max(0, parseInt(c.req.query("index") ?? "0", 10) || 0),
+    run.puzzles.length - 1
+  );
+  const puzzle = run.puzzles[index]!;
+  const view = parsePuzzleView(c.req.query("view"));
+  const theme = c.req.query("theme") === "light" ? "light" : "dark";
+
+  // replayData is whatever was stored, possibly years ago and possibly from an
+  // older shape, so it is read defensively rather than trusted.
+  let replay: pipsEngine.PipsPlacement[] | undefined;
+  if (view === "replay") {
+    const data = score.replayData as { placements?: Record<string, unknown> } | null;
+    const forDifficulty = data?.placements?.[puzzle.difficulty];
+    replay = Array.isArray(forDifficulty)
+      ? (forDifficulty as pipsEngine.PipsPlacement[])
+      : [];
+  }
+
+  const svg = renderPipsSvg(puzzle, score.seed, {
+    theme,
+    view,
+    ...(replay ? { replay } : {}),
+  });
+  return svgResponse(c, svg, `pips-${score.seed}-${puzzle.difficulty}-${view}.svg`);
+});
+
+adminRoutes.get("/shikaku/scores/:id/puzzle.svg", async (c) => {
+  const { id } = c.req.param();
+  const [score] = await drizzleClient
+    .select()
+    .from(shikakuScores)
+    .where(eq(shikakuScores.id, id))
+    .limit(1);
+
+  if (!score) {
+    return c.json({ error: "Score not found" }, 404);
+  }
+
+  const difficulty = score.difficulty as shikakuEngine.Difficulty;
+  const puzzles = shikakuEngine.generateRun(score.seed, difficulty);
+  const index = Math.min(
+    Math.max(0, parseInt(c.req.query("index") ?? "0", 10) || 0),
+    puzzles.length - 1
+  );
+  const puzzle = puzzles[index]!;
+  const view = parsePuzzleView(c.req.query("view"));
+  const theme = c.req.query("theme") === "light" ? "light" : "dark";
+
+  let replay: shikakuEngine.Rect[] | undefined;
+  if (view === "replay") {
+    const data = score.replayData as { solutions?: unknown[] } | null;
+    const forPuzzle = data?.solutions?.[index];
+    replay = Array.isArray(forPuzzle) ? (forPuzzle as shikakuEngine.Rect[]) : [];
+  }
+
+  const svg = renderShikakuSvg(puzzle, difficulty, score.seed, {
+    theme,
+    showSolution: view === "solution",
+    ...(replay ? { replay } : {}),
+  });
+  return svgResponse(c, svg, `shikaku-${score.seed}-${index}-${view}.svg`);
+});
+
 export async function loadPersistedStatus() {
   try {
     const [row] = await drizzleClient

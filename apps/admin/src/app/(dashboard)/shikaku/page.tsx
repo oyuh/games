@@ -6,6 +6,7 @@ import {
   PlusCircle,
   Search,
   TimerReset,
+  LayoutGrid,
   MoreHorizontal,
   Trophy,
   Trash2,
@@ -25,6 +26,7 @@ import { Pagination } from "@/components/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PuzzleViewDialog } from "@/components/admin/puzzle-view-dialog";
 import { ScoreCreateDialog } from "@/components/admin/score-create-dialog";
 import {
   Dialog,
@@ -120,6 +122,7 @@ export default function ShikakuPage() {
   const [draft, setDraft] = useState<ScoreDraft | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [boardScore, setBoardScore] = useState<ShikakuScoreRecord | null>(null);
 
   useEffect(() => {
     setPage(1);
@@ -497,6 +500,10 @@ export default function ShikakuPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setBoardScore(score)}>
+              <LayoutGrid />
+              View board
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => openEditor(score)}>
               <Edit3 />
               Edit entry
@@ -652,6 +659,18 @@ export default function ShikakuPage() {
           />
         </div>
       </Surface>
+
+      <PuzzleViewDialog
+        game="shikaku"
+        scoreId={boardScore?.id ?? null}
+        seed={boardScore?.seed ?? null}
+        puzzleCount={5}
+        accent="var(--game-shikaku)"
+        open={Boolean(boardScore)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setBoardScore(null);
+        }}
+      />
 
       <ScoreCreateDialog
         game="shikaku"
