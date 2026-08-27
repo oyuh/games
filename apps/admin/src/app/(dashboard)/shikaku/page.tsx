@@ -6,6 +6,7 @@ import {
   PlusCircle,
   Search,
   TimerReset,
+  MoreHorizontal,
   Trophy,
   Trash2,
 } from "lucide-react";
@@ -43,14 +44,15 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
+import { CopyChip } from "@/components/ui/copy-chip";
+import { Column, DataTable } from "@/components/ui/data-table";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const DIFFICULTIES = ["all", "easy", "medium", "hard", "expert"] as const;
 
@@ -88,18 +90,17 @@ function createDraft(score: ShikakuScoreRecord): ScoreDraft {
   };
 }
 
-function difficultyTone(difficulty: DifficultyValue) {
-  if (difficulty === "easy") {
-    return "border-border bg-muted text-foreground";
-  }
-  if (difficulty === "medium") {
-    return "border-border bg-muted text-foreground";
-  }
-  if (difficulty === "hard") {
-    return "border-rose-300/20 bg-rose-300/10 text-rose-50";
-  }
-  return "border-violet-300/20 bg-violet-300/10 text-violet-50";
-}
+/**
+ * The colours the site itself draws each difficulty in, from DIFF_ACCENT in
+ * apps/api/src/shikaku-image.ts. The old version painted easy and medium
+ * identically and invented a rose and a violet that appear nowhere else.
+ */
+const DIFFICULTY_ACCENT: Record<DifficultyValue, string> = {
+  easy: "#34d399",
+  medium: "#60a5fa",
+  hard: "#f59e0b",
+  expert: "#f87171",
+};
 
 export default function ShikakuPage() {
   const { show } = useToast();
@@ -209,6 +210,15 @@ export default function ShikakuPage() {
       puzzleAverage,
     };
   }, [visibleScores]);
+
+  const copyText = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      show(`${label} copied.`, "success");
+    } catch {
+      show(`Unable to copy ${label.toLowerCase()}.`, "error");
+    }
+  };
 
   const openEditor = (score: ShikakuScoreRecord) => {
     setSelectedScore(score);
@@ -367,6 +377,145 @@ export default function ShikakuPage() {
     }
   };
 
+  // Built fresh each render on purpose. Memoising would mean turning every
+  // handler above into a useCallback just to keep the deps honest.
+  const columns: Column<ShikakuScoreRecord>[] = [
+    {
+      id: "rank",
+      header: "Rank",
+      width: 76,
+      align: "right",
+      cell: (score) => (
+        <span className="text-muted-foreground">
+          {(page - 1) * pageSize + visibleScores.indexOf(score) + 1}
+        </span>
+      ),
+    },
+    {
+      id: "name",
+      header: "Player",
+      width: 190,
+      sortValue: (score) => score.name,
+      cell: (score) => (
+        <div className="min-w-0">
+          <div className="truncate font-medium text-foreground">{score.name}</div>
+          <div className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+            {shortId(score.id, 14)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "difficulty",
+      header: "Difficulty",
+      width: 120,
+      sortValue: (score) => score.difficulty,
+      cell: (score) => (
+        <Badge
+          variant="accent"
+          accent={DIFFICULTY_ACCENT[score.difficulty] ?? "var(--primary)"}
+          className="capitalize"
+        >
+          {score.difficulty}
+        </Badge>
+      ),
+    },
+    {
+      id: "score",
+      header: "Score",
+      width: 100,
+      align: "right",
+      sortValue: (score) => score.score,
+      cell: (score) => (
+        <span className="font-semibold text-foreground">
+          {score.score.toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      id: "timeMs",
+      header: "Time",
+      width: 110,
+      align: "right",
+      sortValue: (score) => score.timeMs,
+      cell: (score) => formatDurationMs(score.timeMs),
+    },
+    {
+      id: "puzzleCount",
+      header: "Puzzles",
+      width: 90,
+      align: "right",
+      sortValue: (score) => score.puzzleCount,
+      cell: (score) => score.puzzleCount,
+    },
+    {
+      id: "seed",
+      header: "Seed",
+      width: 130,
+      sortValue: (score) => score.seed,
+      cell: (score) => (
+        <CopyChip
+          label={String(score.seed)}
+          onCopy={() => void copyText(String(score.seed), "Seed")}
+        />
+      ),
+    },
+    {
+      id: "sessionId",
+      header: "Session",
+      width: 170,
+      sortValue: (score) => score.sessionId,
+      cell: (score) => (
+        <CopyChip
+          label={shortId(score.sessionId, 14)}
+          onCopy={() => void copyText(score.sessionId, "Session id")}
+        />
+      ),
+    },
+    {
+      id: "createdAt",
+      header: "Submitted",
+      width: 170,
+      sortValue: (score) => score.createdAt,
+      cell: (score) => (
+        <span className="text-muted-foreground">
+          {formatDateTime(score.createdAt)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      width: 80,
+      align: "right",
+      alwaysVisible: true,
+      cell: (score) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label="Row actions">
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => openEditor(score)}>
+              <Edit3 />
+              Edit entry
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={pendingAction === `delete-${score.id}`}
+              onSelect={() => void deleteScore(score)}
+            >
+              <Trash2 />
+              Delete entry
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
+
   return (
     <>
       <Surface>
@@ -470,116 +619,23 @@ export default function ShikakuPage() {
       </Surface>
 
       <Surface className="mt-4">
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Rank</TableHead>
-                <TableHead className="text-muted-foreground">Player</TableHead>
-                <TableHead className="text-muted-foreground">
-                  Difficulty
-                </TableHead>
-                <TableHead className="text-muted-foreground">Score</TableHead>
-                <TableHead className="text-muted-foreground">Time</TableHead>
-                <TableHead className="text-muted-foreground">Puzzles</TableHead>
-                <TableHead className="text-muted-foreground">Seed</TableHead>
-                <TableHead className="text-muted-foreground">Session</TableHead>
-                <TableHead className="text-muted-foreground">
-                  Submitted
-                </TableHead>
-                <TableHead className="text-muted-foreground">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading && scores.length === 0 ? (
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableCell colSpan={10} className="px-4 py-5">
-                    <div className="space-y-2">
-                      {Array.from({ length: 6 }).map((_, index) => (
-                        <Skeleton key={index} className="h-12 bg-muted" />
-                      ))}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : visibleScores.length === 0 ? (
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableCell
-                    colSpan={10}
-                    className="px-4 py-12 text-center text-sm text-muted-foreground"
-                  >
-                    No Shikaku entries match the current search.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                visibleScores.map((score, index) => (
-                  <TableRow
-                    key={score.id}
-                    className="border-border hover:bg-accent"
-                  >
-                    <TableCell className="text-muted-foreground">
-                      {(page - 1) * pageSize + index + 1}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-foreground">
-                        {score.name}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {shortId(score.id, 14)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={`border ${difficultyTone(score.difficulty)}`}
-                      >
-                        {score.difficulty}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {score.score.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {formatDurationMs(score.timeMs)}
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {score.puzzleCount}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm text-muted-foreground">
-                      {score.seed}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm text-muted-foreground">
-                      {shortId(score.sessionId, 14)}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDateTime(score.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-border bg-card text-foreground hover:bg-accent"
-                          onClick={() => openEditor(score)}
-                        >
-                          <Edit3 className="size-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="border border-border bg-muted text-foreground hover:bg-accent"
-                          disabled={pendingAction === `delete-${score.id}`}
-                          onClick={() => void deleteScore(score)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        {loading && scores.length === 0 ? (
+          <div className="space-y-2">
+            {/* Match the skeleton count to the page size so the layout does not
+                jump when the real rows land. */}
+            {Array.from({ length: Math.min(pageSize, 12) }).map((_, index) => (
+              <Skeleton key={index} className="h-12 bg-muted" />
+            ))}
+          </div>
+        ) : (
+          <DataTable
+            tableKey="shikaku-scores"
+            columns={columns}
+            rows={visibleScores}
+            rowKey={(score) => score.id}
+            empty="No Shikaku entries match the current search."
+          />
+        )}
 
         <div className="mt-4">
           <Pagination

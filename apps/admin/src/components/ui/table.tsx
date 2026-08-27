@@ -4,7 +4,11 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  density = "normal",
+  ...props
+}: React.ComponentProps<"table"> & { density?: "compact" | "normal" }) {
   return (
     <div
       data-slot="table-container"
@@ -12,6 +16,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
+        data-density={density}
         className={cn("w-full caption-bottom text-sm", className)}
         {...props}
       />
@@ -44,7 +49,8 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-colors hover:bg-accent has-aria-expanded:bg-accent data-[state=selected]:bg-muted",
+        "border-b transition-colors has-aria-expanded:bg-accent data-[state=selected]:bg-muted",
+        "hover:bg-[color-mix(in_srgb,var(--primary)_6%,transparent)]",
         className,
       )}
       {...props}
@@ -52,12 +58,19 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
+/**
+ * Sticky by default. On a table long enough to scroll, losing the header is the
+ * fastest way to stop knowing what you are looking at, and it costs one line.
+ */
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
       data-slot="table-head"
       className={cn(
-        "h-12 px-3 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
+        "sticky top-0 z-10 bg-[color-mix(in_srgb,var(--foreground)_5%,var(--card))] px-3 text-left align-middle whitespace-nowrap",
+        "text-[0.65rem] font-extrabold tracking-[0.1em] text-muted-foreground uppercase",
+        "group-data-[density=compact]/table:h-9 h-11",
+        "[&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}
@@ -65,12 +78,18 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   );
 }
 
+/**
+ * Numerals are tabular so columns of times, scores and seeds line up and stop
+ * jittering as the table refreshes.
+ */
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
       className={cn(
-        "p-3 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        "px-3 align-middle whitespace-nowrap tabular-nums",
+        "py-2.5 in-data-[density=compact]:py-1.5",
+        "[&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}
