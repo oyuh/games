@@ -222,7 +222,10 @@ export function DataTable<Row>({
         </DropdownMenu>
       </div>
 
-      <div className="relative w-full overflow-x-auto rounded-lg border border-border">
+      {/* The scroll region. min-h-0 lets it shrink inside a flex parent rather
+          than growing the page, which is what keeps the document scrollbar
+          from ever appearing. The sticky header stays put inside it. */}
+      <div className="relative min-h-0 w-full flex-1 overflow-auto rounded-lg border border-border">
         <table
           data-slot="data-table"
           data-density={table.density}

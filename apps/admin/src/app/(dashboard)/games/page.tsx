@@ -46,8 +46,8 @@ import {
 
 function GamesPageSkeleton() {
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="space-y-4">
+    <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex min-h-0 flex-col gap-3">
         <Surface>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-[minmax(0,1fr)_160px_160px_160px] xl:flex-1">
@@ -279,9 +279,9 @@ export default function GamesPage() {
 
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-4">
-          <Surface>
+      <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-h-0 flex-col gap-3">
+          <Surface pad="sm" className="shrink-0">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-[minmax(0,1fr)_160px_160px_160px] xl:flex-1">
                 <div className="relative sm:col-span-4 xl:col-span-1">
@@ -370,7 +370,7 @@ export default function GamesPage() {
             </div>
           </Surface>
 
-          <Surface className="overflow-hidden">
+          <Surface pad="none" className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
@@ -489,8 +489,8 @@ export default function GamesPage() {
           </Surface>
         </div>
 
-        <div className="space-y-4">
-          <Surface className="bg-muted/40">
+        <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-0.5">
+          <Surface pad="sm" tone="panel">
             <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
               Room Snapshot
             </div>

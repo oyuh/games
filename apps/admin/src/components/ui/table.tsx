@@ -10,9 +10,12 @@ function Table({
   ...props
 }: React.ComponentProps<"table"> & { density?: "compact" | "normal" }) {
   return (
+    // The scroll region is the container, not the table. flex-1 and min-h-0
+    // only bite when the parent is a flex column and are inert otherwise, so
+    // one container works both inside a viewport-fitting page and on its own.
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className="relative min-h-0 w-full flex-1 overflow-auto"
     >
       <table
         data-slot="table"

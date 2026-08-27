@@ -122,11 +122,14 @@ export function AdminShell({
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="flex min-h-screen">
+    // h-dvh, not min-h-screen: the shell is exactly the viewport, so the
+    // document never grows a scrollbar of its own. Everything inside that can
+    // overflow owns its own scroll region instead.
+    <div className="h-dvh overflow-hidden bg-background text-foreground">
+      <div className="flex h-full">
         <aside
           className={cn(
-            "hidden h-screen shrink-0 overflow-hidden border-r border-border bg-[var(--sidebar)] transition-[width] duration-200 lg:sticky lg:top-0 lg:flex lg:flex-col",
+            "hidden h-full shrink-0 overflow-hidden border-r border-border bg-[var(--sidebar)] transition-[width] duration-200 lg:flex lg:flex-col",
             collapsed ? "w-[76px]" : "w-[248px]",
           )}
         >
@@ -253,28 +256,31 @@ export function AdminShell({
             ) : null}
           </nav>
 
+          {/* One visual language for all three: same height, same ghost
+              treatment, same icon column. They were a filled primary button
+              stacked on two outlines, which read as three unrelated controls. */}
           <div
             className={cn(
-              "shrink-0 space-y-2 border-t border-border p-3",
-              "[&_form]:contents [&_[data-slot=button]]:w-full",
+              "shrink-0 border-t border-border p-2",
+              "[&_form]:contents",
+              "[&_[data-slot=button]]:h-9 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:border-transparent",
+              "[&_[data-slot=button]]:bg-transparent [&_[data-slot=button]]:font-medium",
+              "[&_[data-slot=button]]:text-muted-foreground",
+              "hover:[&_[data-slot=button]]:bg-accent hover:[&_[data-slot=button]]:text-foreground",
+              "[&_[data-slot=button]_svg]:text-muted-foreground",
               collapsed
-                ? "[&_[data-slot=button]]:size-10 [&_[data-slot=button]]:min-w-0 [&_[data-slot=button]]:justify-start [&_[data-slot=button]]:overflow-hidden [&_[data-slot=button]]:px-3"
-                : "[&_[data-slot=button]]:justify-start",
+                ? "[&_[data-slot=button]]:justify-center [&_[data-slot=button]]:px-0"
+                : "[&_[data-slot=button]]:justify-start [&_[data-slot=button]]:gap-3 [&_[data-slot=button]]:px-3",
+              "flex flex-col gap-0.5",
             )}
           >
             {actions}
-            <ThemeToggle
-              className={cn(
-                "w-full",
-                collapsed ? "size-10 overflow-hidden px-3" : "justify-start",
-              )}
-              showLabel={!collapsed}
-            />
+            <ThemeToggle showLabel={!collapsed} />
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 border-b border-border bg-background lg:hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="z-30 shrink-0 border-b border-border bg-background lg:hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3">
               <div className="text-sm font-semibold uppercase tracking-normal text-foreground">
                 ADMIN
@@ -309,7 +315,10 @@ export function AdminShell({
             </nav>
           </header>
 
-          <main className="flex-1 px-5 py-6 sm:px-8 sm:py-8 xl:px-10">
+          {/* min-h-0 is what lets a flex child actually shrink instead of
+              growing its parent. Without it every overflow rule below is
+              ignored and the page grows again. */}
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-5 xl:px-8">
             {children}
           </main>
         </div>
