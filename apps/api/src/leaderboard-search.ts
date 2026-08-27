@@ -3,6 +3,8 @@
  * the database. Kept out of index.ts so it can be tested on its own.
  */
 
+import { escapeLike } from "./sql-like";
+
 export interface LeaderboardSearch {
   /** Ready to drop into `name ILIKE $1 ESCAPE '\'`, wildcards and all. */
   namePattern: string;
