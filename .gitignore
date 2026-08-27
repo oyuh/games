@@ -44,3 +44,6 @@ Thumbs.db
 # Misc
 *.log
 *.tsbuildinfo
+
+# Local stack state (logs, supervisor pid)
+.local-dev
