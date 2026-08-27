@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type GameTarget = {
@@ -167,25 +168,6 @@ function JsonNode({
         )}
       </div>
     </details>
-  );
-}
-
-function Surface({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-lg border border-border bg-muted/40 p-5",
-        className,
-      )}
-    >
-      {children}
-    </div>
   );
 }
 
@@ -514,7 +496,7 @@ export function GameStateDialog({
               </div>
 
               <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-                <Surface>
+                <Surface tone="panel">
                   <div className="text-sm font-semibold text-foreground">
                     Operational highlights
                   </div>
@@ -562,7 +544,7 @@ export function GameStateDialog({
                   </div>
                 </Surface>
 
-                <Surface>
+                <Surface tone="panel">
                   <div className="text-sm font-semibold text-foreground">
                     Live attachments
                   </div>
@@ -605,7 +587,7 @@ export function GameStateDialog({
 
               <div className="grid gap-4 xl:grid-cols-2">
                 {gameSections.map(([label, value]) => (
-                  <Surface key={label}>
+                  <Surface tone="panel" key={label}>
                     <div className="text-sm font-semibold text-foreground">
                       {label}
                     </div>
@@ -639,7 +621,7 @@ export function GameStateDialog({
 
             <TabsContent value="people" className="space-y-4">
               <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-                <Surface>
+                <Surface tone="panel">
                   <div className="text-sm font-semibold text-foreground">
                     Players and teams
                   </div>
@@ -775,7 +757,7 @@ export function GameStateDialog({
                   </div>
                 </Surface>
 
-                <Surface>
+                <Surface tone="panel">
                   <div className="text-sm font-semibold text-foreground">
                     Spectators
                   </div>
@@ -823,7 +805,7 @@ export function GameStateDialog({
             </TabsContent>
 
             <TabsContent value="chat">
-              <Surface>
+              <Surface tone="panel">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm font-semibold text-foreground">
                     Game chat messages
@@ -887,7 +869,7 @@ export function GameStateDialog({
             </TabsContent>
 
             <TabsContent value="raw">
-              <Surface>
+              <Surface tone="panel">
                 <div className="text-sm font-semibold text-foreground">
                   Structured raw state
                 </div>

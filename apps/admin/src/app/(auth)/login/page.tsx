@@ -6,7 +6,7 @@ const hasDevSecret = !!process.env.ADMIN_DEV_SECRET;
 
 export default function LoginPage() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
+    <div className="relative flex h-dvh items-center justify-center overflow-hidden bg-background p-4 text-foreground">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>

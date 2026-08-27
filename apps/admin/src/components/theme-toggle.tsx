@@ -3,7 +3,7 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { SidebarAction } from "@/components/admin/sidebar-action";
 
 const STORAGE_KEY = "games-admin-theme";
 
@@ -11,7 +11,7 @@ type Theme = "light" | "dark";
 
 function getPreferredTheme(): Theme {
   if (typeof window === "undefined") {
-    return "light";
+    return "dark";
   }
 
   let stored: string | null | undefined;
@@ -26,9 +26,10 @@ function getPreferredTheme(): Theme {
     return stored;
   }
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  // Dark-first, same as the site and the bootstrap script.
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
 }
 
 function applyTheme(theme: Theme) {
@@ -38,12 +39,17 @@ function applyTheme(theme: Theme) {
 
 export function ThemeToggle({
   className,
-  showLabel = false,
+  /**
+   * The sidebar footer wants a row matching its neighbours; the mobile header
+   * wants a plain icon button. Same behaviour, two shapes, rather than one
+   * shape bent into the other by the parent.
+   */
+  asSidebarAction = false,
 }: {
   className?: string;
-  showLabel?: boolean;
+  asSidebarAction?: boolean;
 }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
     const preferredTheme = getPreferredTheme();
@@ -54,6 +60,28 @@ export function ThemeToggle({
   const nextTheme = theme === "dark" ? "light" : "dark";
   const Icon = theme === "dark" ? Sun : Moon;
 
+  const toggle = () => {
+    setTheme(nextTheme);
+    try {
+      window.localStorage?.setItem(STORAGE_KEY, nextTheme);
+    } catch {
+      // Storage can be blocked in embedded browsers.
+    }
+    applyTheme(nextTheme);
+  };
+
+  if (asSidebarAction) {
+    return (
+      <SidebarAction
+        icon={Icon}
+        label={theme === "dark" ? "Light mode" : "Dark mode"}
+        aria-pressed={theme === "dark"}
+        onClick={toggle}
+        {...(className ? { className } : {})}
+      />
+    );
+  }
+
   return (
     <Button
       type="button"
@@ -62,21 +90,10 @@ export function ThemeToggle({
       aria-label={`Switch to ${nextTheme} mode`}
       aria-pressed={theme === "dark"}
       title={`Switch to ${nextTheme} mode`}
-      className={cn(showLabel && "h-9 w-auto gap-2 px-3", className)}
-      onClick={() => {
-        setTheme(nextTheme);
-        try {
-          window.localStorage?.setItem(STORAGE_KEY, nextTheme);
-        } catch {
-          // Storage can be blocked in embedded browsers.
-        }
-        applyTheme(nextTheme);
-      }}
+      className={className}
+      onClick={toggle}
     >
       <Icon className="size-4" />
-      {showLabel ? (
-        <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
-      ) : null}
     </Button>
   );
 }

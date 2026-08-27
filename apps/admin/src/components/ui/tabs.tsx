@@ -81,7 +81,15 @@ function TabsContent({
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      className={cn(
+        "flex-1 text-sm outline-none",
+        // Callers pass display utilities like `flex` to make a panel fill the
+        // page. A plain `display:flex` class outranks the UA [hidden] rule, so
+        // an inactive panel that stays mounted would render on top of the
+        // active one. This selector is class+attribute, so it outranks both.
+        "data-[state=inactive]:hidden",
+        className,
+      )}
       {...props}
     />
   );

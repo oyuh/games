@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { asc, eq, ne, and, gt, desc, sql, count, isNotNull } from "drizzle-orm";
+import { asc, eq, ne, and, gt, desc, sql, count, isNotNull, isNull, or, ilike, lt } from "drizzle-orm";
 import {
   sessions,
   imposterGames,
@@ -12,11 +12,16 @@ import {
   adminBans,
   adminRestrictedNames,
   adminNameOverrides,
+  sessionArchive,
   statusTable,
   pipsScores,
   shikakuScores,
 } from "@games/shared/db";
 import { drizzleClient } from "./db-provider";
+import { pipsEngine, shikakuEngine } from "@games/shared";
+import { likeTerm } from "./sql-like";
+import { renderPipsSvg } from "./pips-image";
+import { renderPuzzleSvg as renderShikakuSvg } from "./shikaku-image";
 import {
   broadcastToAll,
   broadcastToSession,
@@ -163,6 +168,10 @@ function mapSessionToClient(session: SessionRow) {
     userAgent: session.userAgent ?? null,
     region: session.region ?? null,
     fingerprint: session.fingerprint ?? null,
+    // Base64 of the player's "shape.color" pick. Opaque here on purpose: the
+    // admin parses it with the same bounds-checked helper the site uses, and
+    // anything unparseable falls back to the look derived from the session id.
+    avatar: session.avatar ?? null,
     connectedAt: session.createdAt,
     lastSeen: session.lastSeen,
     gameId: session.gameId,
@@ -172,27 +181,6 @@ function mapSessionToClient(session: SessionRow) {
     // still recent, the admin UI renders it as "<last activity> (idle)".
     online: isSessionOnline(session.id),
   };
-}
-
-function matchesClientSearch(session: SessionRow, query: string) {
-  const normalizedQuery = normalizeAdminText(query);
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  const searchableValues = [
-    session.id,
-    session.name,
-    session.ip,
-    session.userAgent,
-    session.region,
-    session.fingerprint,
-    session.gameId,
-    session.gameType,
-    session.activity,
-  ];
-
-  return searchableValues.some((value) => normalizeAdminText(value).includes(normalizedQuery));
 }
 
 async function selectActiveGames() {
@@ -367,64 +355,223 @@ function flattenActiveGames(games: Awaited<ReturnType<typeof selectActiveGames>>
 }
 
 // ─── Connected clients (from sessions table) ───────────────
+/**
+ * Build the WHERE for the client roster.
+ *
+ * This used to SELECT every recent session into memory, filter in JavaScript
+ * and slice the page out of the result. That was survivable against a
+ * five-minute window and is not against anything longer, so the filters and
+ * the pagination both live in SQL now.
+ *
+ * Every search term goes through drizzle's parameter binding; nothing is
+ * interpolated into the statement.
+ */
+function buildClientWhere(options: {
+  cutoff: number;
+  query: string;
+  gameType: string;
+  activity: string;
+  region: string;
+}) {
+  const conditions = [gt(sessions.lastSeen, options.cutoff)];
+
+  if (options.query) {
+    // Case-insensitive via ilike; wildcards escaped by likeTerm.
+    const term = likeTerm(options.query);
+    const match = or(
+      ilike(sessions.id, term),
+      ilike(sessions.name, term),
+      ilike(sessions.ip, term),
+      ilike(sessions.userAgent, term),
+      ilike(sessions.region, term),
+      ilike(sessions.fingerprint, term),
+      ilike(sessions.gameId, term),
+      ilike(sessions.activity, term),
+      ilike(sql`${sessions.gameType}::text`, term),
+    );
+    if (match) conditions.push(match);
+  }
+
+  if (options.gameType !== "all") {
+    conditions.push(sql`${sessions.gameType}::text = ${options.gameType}`);
+  }
+
+  if (options.activity === "in-game") {
+    conditions.push(isNotNull(sessions.gameId));
+  } else if (options.activity === "idle") {
+    conditions.push(isNull(sessions.gameId));
+  } else if (options.activity === "named") {
+    conditions.push(isNotNull(sessions.name));
+  } else if (options.activity === "anonymous") {
+    conditions.push(isNull(sessions.name));
+  }
+
+  if (options.region !== "all") {
+    if (options.region === "unknown") {
+      conditions.push(
+        or(isNull(sessions.region), eq(sessions.region, ""))!
+      );
+    } else {
+      conditions.push(sql`lower(trim(${sessions.region})) = ${options.region}`);
+    }
+  }
+
+  return and(...conditions);
+}
+
+/** How far back each roster view looks. */
+const CLIENT_WINDOWS = {
+  live: 5 * 60 * 1000,
+  recent: 24 * 60 * 60 * 1000,
+} as const;
+
+type ClientWindow = keyof typeof CLIENT_WINDOWS | "archive";
+
+function parseWindow(value: string | undefined): ClientWindow {
+  return value === "recent" || value === "archive" ? value : "live";
+}
+
+/**
+ * Archived sessions, for finding and banning someone who has already gone.
+ *
+ * The archive is a strict subset of the live table, so its rows are mapped
+ * into the same shape the roster already renders. They are never online, and
+ * the fields the archive deliberately does not keep come back null rather than
+ * being invented.
+ */
+function mapArchiveToClient(row: typeof sessionArchive.$inferSelect) {
+  return {
+    sessionId: row.id,
+    name: row.name,
+    ip: row.ip ?? null,
+    userAgent: null,
+    region: row.region ?? null,
+    fingerprint: null,
+    avatar: row.avatar ?? null,
+    connectedAt: row.firstSeen,
+    lastSeen: row.lastSeen,
+    gameId: null,
+    gameType: null,
+    activity: null,
+    online: false,
+    archived: true,
+    seenCount: row.seenCount,
+  };
+}
+
+function buildArchiveWhere(query: string, region: string) {
+  const conditions = [];
+
+  if (query) {
+    const term = likeTerm(query);
+    const match = or(
+      ilike(sessionArchive.id, term),
+      ilike(sessionArchive.name, term),
+      ilike(sessionArchive.ip, term),
+      ilike(sessionArchive.region, term),
+    );
+    if (match) conditions.push(match);
+  }
+
+  if (region !== "all") {
+    if (region === "unknown") {
+      conditions.push(or(isNull(sessionArchive.region), eq(sessionArchive.region, ""))!);
+    } else {
+      conditions.push(sql`lower(trim(${sessionArchive.region})) = ${region}`);
+    }
+  }
+
+  return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
 adminRoutes.get("/clients", async (c) => {
   const { page, pageSize, offset } = parsePagination(c);
-  const recentCutoff = Date.now() - 5 * 60 * 1000; // active in last 5 min
+  const window = parseWindow(c.req.query("window"));
 
-  const query = c.req.query("q") ?? "";
+  const query = normalizeAdminText(c.req.query("q") ?? "");
   const gameType = c.req.query("gameType") ?? "all";
   const activity = c.req.query("activity") ?? "all";
   const region = normalizeAdminText(c.req.query("region") ?? "all");
 
-  const allSessions = await drizzleClient
-    .select()
-    .from(sessions)
-    .where(gt(sessions.lastSeen, recentCutoff))
-    .orderBy(desc(sessions.lastSeen));
+  if (window === "archive") {
+    const where = buildArchiveWhere(query, region);
 
-  const filtered = allSessions.filter((session) => {
-    if (!matchesClientSearch(session, query)) {
-      return false;
-    }
-    if (gameType !== "all" && session.gameType !== gameType) {
-      return false;
-    }
-    if (activity === "in-game" && !session.gameId) {
-      return false;
-    }
-    if (activity === "idle" && session.gameId) {
-      return false;
-    }
-    if (activity === "named" && !session.name) {
-      return false;
-    }
-    if (activity === "anonymous" && !!session.name) {
-      return false;
-    }
+    const [rows, totalRows, regionRows] = await Promise.all([
+      drizzleClient
+        .select()
+        .from(sessionArchive)
+        .where(where)
+        .orderBy(desc(sessionArchive.lastSeen))
+        .limit(pageSize)
+        .offset(offset),
+      drizzleClient.select({ total: count() }).from(sessionArchive).where(where),
+      drizzleClient
+        .selectDistinct({
+          region: sql<string>`coalesce(nullif(lower(trim(${sessionArchive.region})), ''), 'unknown')`,
+        })
+        .from(sessionArchive),
+    ]);
 
-    const sessionRegion = normalizeAdminText(session.region) || "unknown";
-    if (region !== "all" && sessionRegion !== region) {
-      return false;
-    }
+    const totalCount = Number(totalRows[0]?.total ?? 0);
 
-    return true;
+    return c.json({
+      ok: true,
+      window,
+      clients: rows.map(mapArchiveToClient),
+      total: totalCount,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
+      filters: {
+        regions: regionRows.map((row) => row.region).filter(Boolean).sort(),
+      },
+    });
+  }
+
+  const cutoff = Date.now() - CLIENT_WINDOWS[window];
+
+  const where = buildClientWhere({
+    cutoff,
+    query,
+    gameType,
+    activity,
+    region,
   });
 
-  const totalCount = filtered.length;
-  const clients = filtered.slice(offset, offset + pageSize).map(mapSessionToClient);
-  const regions = Array.from(
-    new Set(allSessions.map((session) => normalizeAdminText(session.region) || "unknown"))
-  ).sort();
+  const [rows, totalRows, regionRows] = await Promise.all([
+    drizzleClient
+      .select()
+      .from(sessions)
+      .where(where)
+      .orderBy(desc(sessions.lastSeen))
+      .limit(pageSize)
+      .offset(offset),
+    drizzleClient
+      .select({ total: count() })
+      .from(sessions)
+      .where(where),
+    // The region filter list describes the whole window, not the current
+    // filter, otherwise picking a region would hide every other option.
+    drizzleClient
+      .selectDistinct({
+        region: sql<string>`coalesce(nullif(lower(trim(${sessions.region})), ''), 'unknown')`,
+      })
+      .from(sessions)
+      .where(gt(sessions.lastSeen, cutoff)),
+  ]);
+
+  const totalCount = Number(totalRows[0]?.total ?? 0);
 
   return c.json({
     ok: true,
-    clients,
+    window,
+    clients: rows.map(mapSessionToClient),
     total: totalCount,
     page,
     pageSize,
     totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
     filters: {
-      regions,
+      regions: regionRows.map((row) => row.region).filter(Boolean).sort(),
     },
   });
 });
@@ -1546,6 +1693,113 @@ adminRoutes.delete("/pips/scores", async (c) => {
 });
 
 // ─── Load persisted custom status from DB on startup ────────
+// ─── Solo puzzle rendering ──────────────────────────────────
+//
+// Both routes rebuild the board from the seed stored on the score row, never
+// from a query parameter. That means the endpoint can only ever render a
+// puzzle some real score points at, and an admin cannot fish for arbitrary
+// boards through it. Only `index` and `view` are caller-supplied, and both are
+// clamped to known values.
+//
+// These live under adminRoutes, so adminAuth and rateLimit("admin") already
+// apply. Pips solutions are deliberately not exposed publicly the way
+// /api/shikaku/puzzle.svg?solution=1 is.
+
+const PUZZLE_VIEWS = ["board", "solution", "replay"] as const;
+type PuzzleView = (typeof PUZZLE_VIEWS)[number];
+
+function parsePuzzleView(value: string | undefined): PuzzleView {
+  return PUZZLE_VIEWS.includes(value as PuzzleView) ? (value as PuzzleView) : "board";
+}
+
+function svgResponse(c: any, svg: string, filename: string) {
+  return c.body(svg, 200, {
+    "Content-Type": "image/svg+xml; charset=utf-8",
+    // Rendered from a stored row, so it is stable, but an admin editing a
+    // score should see the new board rather than a cached one.
+    "Cache-Control": "no-store",
+    "Content-Disposition": `inline; filename="${filename}"`,
+    "X-Content-Type-Options": "nosniff",
+  });
+}
+
+adminRoutes.get("/pips/scores/:id/puzzle.svg", async (c) => {
+  const { id } = c.req.param();
+  const [score] = await drizzleClient
+    .select()
+    .from(pipsScores)
+    .where(eq(pipsScores.id, id))
+    .limit(1);
+
+  if (!score) {
+    return c.json({ error: "Score not found" }, 404);
+  }
+
+  const run = pipsEngine.generateRun(score.seed);
+  const index = Math.min(
+    Math.max(0, parseInt(c.req.query("index") ?? "0", 10) || 0),
+    run.puzzles.length - 1
+  );
+  const puzzle = run.puzzles[index]!;
+  const view = parsePuzzleView(c.req.query("view"));
+  const theme = c.req.query("theme") === "light" ? "light" : "dark";
+
+  // replayData is whatever was stored, possibly years ago and possibly from an
+  // older shape, so it is read defensively rather than trusted.
+  let replay: pipsEngine.PipsPlacement[] | undefined;
+  if (view === "replay") {
+    const data = score.replayData as { placements?: Record<string, unknown> } | null;
+    const forDifficulty = data?.placements?.[puzzle.difficulty];
+    replay = Array.isArray(forDifficulty)
+      ? (forDifficulty as pipsEngine.PipsPlacement[])
+      : [];
+  }
+
+  const svg = renderPipsSvg(puzzle, score.seed, {
+    theme,
+    view,
+    ...(replay ? { replay } : {}),
+  });
+  return svgResponse(c, svg, `pips-${score.seed}-${puzzle.difficulty}-${view}.svg`);
+});
+
+adminRoutes.get("/shikaku/scores/:id/puzzle.svg", async (c) => {
+  const { id } = c.req.param();
+  const [score] = await drizzleClient
+    .select()
+    .from(shikakuScores)
+    .where(eq(shikakuScores.id, id))
+    .limit(1);
+
+  if (!score) {
+    return c.json({ error: "Score not found" }, 404);
+  }
+
+  const difficulty = score.difficulty as shikakuEngine.Difficulty;
+  const puzzles = shikakuEngine.generateRun(score.seed, difficulty);
+  const index = Math.min(
+    Math.max(0, parseInt(c.req.query("index") ?? "0", 10) || 0),
+    puzzles.length - 1
+  );
+  const puzzle = puzzles[index]!;
+  const view = parsePuzzleView(c.req.query("view"));
+  const theme = c.req.query("theme") === "light" ? "light" : "dark";
+
+  let replay: shikakuEngine.Rect[] | undefined;
+  if (view === "replay") {
+    const data = score.replayData as { solutions?: unknown[] } | null;
+    const forPuzzle = data?.solutions?.[index];
+    replay = Array.isArray(forPuzzle) ? (forPuzzle as shikakuEngine.Rect[]) : [];
+  }
+
+  const svg = renderShikakuSvg(puzzle, difficulty, score.seed, {
+    theme,
+    showSolution: view === "solution",
+    ...(replay ? { replay } : {}),
+  });
+  return svgResponse(c, svg, `shikaku-${score.seed}-${index}-${view}.svg`);
+});
+
 export async function loadPersistedStatus() {
   try {
     const [row] = await drizzleClient

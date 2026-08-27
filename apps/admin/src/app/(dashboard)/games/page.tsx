@@ -3,19 +3,19 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  BarChart3,
-  Layers3,
+  MoreHorizontal,
   RefreshCcw,
   Search,
   ShieldAlert,
   Trash2,
-  Users,
 } from "lucide-react";
 
 import { api } from "@/lib/client-api";
 import {
   formatGameType,
   formatRelativeTime,
+  gameAccent,
+  shortId,
   GAME_TYPE_OPTIONS,
   GameSummary,
   GameType,
@@ -26,36 +26,29 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
-function Surface({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      className={`rounded-lg border border-border bg-card p-5 ${className}`}
-    >
-      {children}
-    </section>
-  );
-}
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
+import { Column, DataTable } from "@/components/ui/data-table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Panel } from "@/components/ui/stat-tile";
 
 function GamesPageSkeleton() {
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="space-y-4">
+    <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex min-h-0 flex-col gap-3">
         <Surface>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-[minmax(0,1fr)_160px_160px_160px] xl:flex-1">
@@ -285,11 +278,144 @@ export default function GamesPage() {
     return <GamesPageSkeleton />;
   }
 
+  const columns: Column<GameSummary>[] = [
+    {
+      id: "code",
+      header: "Room",
+      width: 190,
+      sortValue: (game) => game.code,
+      cell: (game) => (
+        <div className="min-w-0">
+          <div className="truncate font-mono font-semibold text-foreground">
+            {game.code}
+          </div>
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <span
+              className="size-1.5 shrink-0 rounded-full"
+              style={{ background: gameAccent(game.type) }}
+              aria-hidden
+            />
+            <span className="truncate text-xs text-muted-foreground">
+              {formatGameType(game.type)}
+            </span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "playerCount",
+      header: "Players",
+      width: 90,
+      align: "right",
+      sortValue: (game) => game.playerCount,
+      cell: (game) => game.playerCount,
+    },
+    {
+      id: "spectatorCount",
+      header: "Watching",
+      width: 100,
+      align: "right",
+      sortValue: (game) => game.spectatorCount,
+      cell: (game) => game.spectatorCount,
+    },
+    {
+      id: "roundCount",
+      header: "Rounds",
+      width: 90,
+      align: "right",
+      sortValue: (game) => game.roundCount,
+      cell: (game) => game.roundCount,
+    },
+    {
+      id: "phase",
+      header: "Phase",
+      width: 120,
+      sortValue: (game) => game.phase,
+      cell: (game) => (
+        <Badge
+          variant={game.phase === "ended" ? "muted" : "accent"}
+          accent={gameAccent(game.type)}
+        >
+          {game.phase}
+        </Badge>
+      ),
+    },
+    {
+      id: "hostId",
+      header: "Host",
+      width: 150,
+      sortValue: (game) => game.hostId,
+      cell: (game) => (
+        <span className="truncate font-mono text-xs text-muted-foreground">
+          {shortId(game.hostId, 14)}
+        </span>
+      ),
+    },
+    {
+      id: "updatedAt",
+      header: "Updated",
+      width: 130,
+      sortValue: (game) => game.updatedAt,
+      cell: (game) => (
+        <span className="text-muted-foreground">
+          {formatRelativeTime(game.updatedAt)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      width: 80,
+      align: "right",
+      alwaysVisible: true,
+      cell: (game) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Room actions"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={() => setSelectedGame({ id: game.id, type: game.type })}
+            >
+              <Activity />
+              Inspect room
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {game.phase === "ended" ? (
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => void deleteGame(game)}
+              >
+                <Trash2 />
+                Delete room
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => void endGame(game)}
+              >
+                <ShieldAlert />
+                End room
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
+
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-4">
-          <Surface>
+      <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-h-0 flex-col gap-3">
+          <Surface pad="sm" className="shrink-0">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-[minmax(0,1fr)_160px_160px_160px] xl:flex-1">
                 <div className="relative sm:col-span-4 xl:col-span-1">
@@ -302,44 +428,53 @@ export default function GamesPage() {
                   />
                 </div>
 
-                <select
+                <Select
                   value={gameType}
-                  onChange={(event) =>
-                    setGameType(event.target.value as GameType | "all")
+                  onValueChange={(value) =>
+                    setGameType(value as GameType | "all")
                   }
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
                 >
-                  {GAME_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 min-w-[10rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GAME_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                <select
+                <Select
                   value={status}
-                  onChange={(event) =>
-                    setStatus(event.target.value as "all" | "active" | "ended")
+                  onValueChange={(value) =>
+                    setStatus(value as "all" | "active" | "ended")
                   }
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
                 >
-                  <option value="all">All statuses</option>
-                  <option value="active">Active only</option>
-                  <option value="ended">Ended only</option>
-                </select>
+                  <SelectTrigger className="h-10 min-w-[9.5rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="active">Active only</SelectItem>
+                    <SelectItem value="ended">Ended only</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
-                  value={phase}
-                  onChange={(event) => setPhase(event.target.value)}
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
-                >
-                  <option value="all">All phases</option>
-                  {phaseOptions.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                <Select value={phase} onValueChange={setPhase}>
+                  <SelectTrigger className="h-10 min-w-[9rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All phases</SelectItem>
+                    {phaseOptions.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -369,233 +504,115 @@ export default function GamesPage() {
             </div>
           </Surface>
 
-          <Surface className="overflow-hidden">
-            <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                  Room List
-                </div>
-                <div className="mt-2 text-lg font-semibold tracking-normal text-foreground">
-                  Game sessions
-                </div>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Ended rooms remain visible here until they are deleted.
-              </div>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">Game</TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Players
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Spectators
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">Phase</TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Updated
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredGames.length === 0 ? (
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableCell
-                      colSpan={6}
-                      className="px-4 py-16 text-center text-sm text-muted-foreground"
-                    >
-                      No games match the current search.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredGames.map((game) => (
-                    <TableRow
-                      key={game.id}
-                      className="border-border hover:bg-accent"
-                    >
-                      <TableCell>
-                        <div className="font-medium text-foreground">
-                          {game.code}
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          {formatGameType(game.type)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-foreground">
-                        {game.playerCount}
-                      </TableCell>
-                      <TableCell className="text-foreground">
-                        {game.spectatorCount}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className="border-border bg-card text-foreground"
-                        >
-                          {game.phase}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatRelativeTime(game.updatedAt)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-border bg-card text-foreground hover:bg-accent"
-                            onClick={() =>
-                              setSelectedGame({ id: game.id, type: game.type })
-                            }
-                          >
-                            <Activity className="size-4" />
-                            View
-                          </Button>
-                          {game.phase === "ended" ? (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="border border-border bg-muted text-foreground hover:bg-accent"
-                              onClick={() => void deleteGame(game)}
-                            >
-                              <Trash2 className="size-4" />
-                              Delete
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="border border-border bg-muted text-foreground hover:bg-accent"
-                              onClick={() => void endGame(game)}
-                            >
-                              <ShieldAlert className="size-4" />
-                              End
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+          <Surface pad="sm" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <DataTable
+              className="min-h-0 flex-1"
+              tableKey="games"
+              columns={columns}
+              rows={filteredGames}
+              rowKey={(game) => game.id}
+              onRowClick={(game) =>
+                setSelectedGame({ id: game.id, type: game.type })
+              }
+              empty="No rooms match this search."
+            />
           </Surface>
         </div>
 
-        <div className="space-y-4">
-          <Surface className="bg-muted/40">
-            <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              Room Snapshot
-            </div>
-            <div className="mt-4 space-y-3">
+        {/* The rail held six full-size cards for single digits, then two
+            panels that mostly rendered placeholder sentences. Same numbers,
+            read in a quarter of the space, and the type list doubles as a
+            filter. */}
+        <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+          <Surface pad="none" className="shrink-0">
+            <dl className="divide-y divide-border">
               {[
-                {
-                  label: "Visible rooms",
-                  value: filteredGames.length.toLocaleString(),
-                  icon: Layers3,
-                },
-                {
-                  label: "Active rooms",
-                  value: visibleActive.toLocaleString(),
-                  icon: Users,
-                },
-                {
-                  label: "Ended cleanup",
-                  value: visibleEnded.toLocaleString(),
-                  icon: Trash2,
-                },
-                {
-                  label: "Visible players",
-                  value: visiblePlayers.toLocaleString(),
-                  icon: Activity,
-                },
-                {
-                  label: "Visible spectators",
-                  value: visibleSpectators.toLocaleString(),
-                  icon: Users,
-                },
-                {
-                  label: "Active phases",
-                  value: phaseCounts.length.toLocaleString(),
-                  icon: BarChart3,
-                },
-              ].map(({ label, value, icon: Icon }) => (
+                { label: "Visible rooms", value: filteredGames.length },
+                { label: "Active", value: visibleActive },
+                { label: "Ended", value: visibleEnded },
+                { label: "Players", value: visiblePlayers },
+                { label: "Spectators", value: visibleSpectators },
+              ].map((row) => (
                 <div
-                  key={label}
-                  className="rounded-lg border border-border bg-card p-4"
+                  key={row.label}
+                  className="flex items-baseline justify-between gap-3 px-3.5 py-2"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
-                      <Icon className="size-4" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
-                        {label}
-                      </div>
-                      <div className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
-                        {value}
-                      </div>
-                    </div>
-                  </div>
+                  <dt className="truncate text-[0.7rem] text-muted-foreground">
+                    {row.label}
+                  </dt>
+                  <dd className="text-base font-extrabold tabular-nums text-foreground">
+                    {row.value.toLocaleString()}
+                  </dd>
                 </div>
               ))}
-            </div>
+            </dl>
           </Surface>
 
-          <Surface className="bg-muted/40">
-            <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              Type Distribution
-            </div>
-            <div className="mt-4 space-y-3">
+          <Panel
+            title="By type"
+            accent="var(--game-password)"
+            className="min-h-0 flex-1"
+            meta={
+              gameType !== "all" ? (
+                <Button variant="ghost" size="xs" onClick={() => setGameType("all")}>
+                  Clear
+                </Button>
+              ) : null
+            }
+          >
+            <ul className="flex flex-col gap-1">
               {GAME_TYPE_FILTER_OPTIONS.map((option) => {
                 const total = response?.totals?.[option.value] ?? 0;
-
+                const active = gameType === option.value;
                 return (
-                  <div key={option.value}>
-                    <div className="mb-1.5 flex items-center justify-between gap-3 text-sm text-muted-foreground">
-                      <span>{option.label}</span>
-                      <span className="text-muted-foreground">{total}</span>
-                    </div>
-                    <div className="h-2 rounded-lg bg-muted">
-                      <div
-                        className="h-2 rounded-lg bg-foreground"
-                        style={{ width: `${(total / maxTypeTotal) * 100}%` }}
+                  <li key={option.value}>
+                    <button
+                      type="button"
+                      onClick={() => setGameType(active ? "all" : option.value)}
+                      className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors ${
+                        active
+                          ? "border-primary/40 bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-foreground"
+                          : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                      }`}
+                    >
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ background: gameAccent(option.value) }}
+                        aria-hidden
                       />
-                    </div>
-                  </div>
+                      <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                        {total}
+                      </span>
+                    </button>
+                  </li>
                 );
               })}
-            </div>
-          </Surface>
+            </ul>
 
-          <Surface className="bg-muted/40">
-            <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              Phase Mix
-            </div>
-            <div className="mt-4 space-y-2">
-              {phaseCounts.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-                  Phase distribution appears once live rooms load.
+            {phaseCounts.length > 0 ? (
+              <>
+                <div className="mt-3 border-t border-border pt-3 text-[0.6rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+                  Phases
                 </div>
-              ) : (
-                phaseCounts.map(([phaseName, total]) => (
-                  <div
-                    key={phaseName}
-                    className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm"
-                  >
-                    <span className="text-foreground">{phaseName}</span>
-                    <span className="text-muted-foreground">{total}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </Surface>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {phaseCounts.map(([phaseName, total]) => (
+                    <li
+                      key={phaseName}
+                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-1 text-xs"
+                    >
+                      <span className="truncate text-muted-foreground">
+                        {phaseName}
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                        {total}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </Panel>
         </div>
       </div>
 

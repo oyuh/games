@@ -1,6 +1,6 @@
 import { fallbackPlayerName, mutators, queries, schema } from "@games/shared";
 import { decryptSecret, encryptSecret, generateGameKey, isEncrypted } from "@games/shared";
-import { adminNameOverrides, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared/db";
+import { adminNameOverrides, sessionArchive, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared/db";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -2767,6 +2767,10 @@ app.post("/api/zero/mutate", async (c) => {
 // ─── Stale game cleanup ────────────────────────────────────
 const STALE_MS = 20 * 60 * 1000;   // 20 min idle → end game
 const DELETE_MS = 60 * 60 * 1000;  // 1 hr → delete game row
+// The archive keeps an ip, so it gets a hard cap rather than living forever.
+// ponytail: raw ip with a 30 day cap. If retention ever needs to go longer,
+// store an HMAC of it instead and hash the incoming ip in isBanned to match.
+const SESSION_ARCHIVE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 async function runCleanup() {
   const now = Date.now();
@@ -2895,11 +2899,67 @@ async function runCleanup() {
     deletedChatMessages = deletedChats.length;
   }
 
-  // ── 6) Delete stale sessions (1hr+) ────────────────────────
+  // ── 6) Archive, then delete, stale sessions (1hr+) ─────────
+  // Archive first: a row deleted without being archived is a player who can
+  // never be found again, which is exactly the gap this closes. The delete
+  // filters on the same cutoff, so anything that arrives between the two
+  // statements is simply archived on the next pass instead.
+  const staleSessions = await drizzleClient
+    .select({
+      id: sessions.id,
+      name: sessions.name,
+      avatar: sessions.avatar,
+      region: sessions.region,
+      ip: sessions.ip,
+      createdAt: sessions.createdAt,
+      lastSeen: sessions.lastSeen,
+    })
+    .from(sessions)
+    .where(lt(sessions.lastSeen, deleteCutoff));
+
+  let archivedSessions = 0;
+  if (staleSessions.length > 0) {
+    await drizzleClient
+      .insert(sessionArchive)
+      .values(
+        staleSessions.map((session) => ({
+          id: session.id,
+          name: session.name,
+          avatar: session.avatar,
+          region: session.region,
+          ip: session.ip,
+          firstSeen: session.createdAt,
+          lastSeen: session.lastSeen,
+          seenCount: 1,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: sessionArchive.id,
+        set: {
+          // Keep the earliest first_seen and the latest last_seen, and count
+          // the visit. A returning id is more interesting than a new one.
+          name: sql`excluded.name`,
+          avatar: sql`excluded.avatar`,
+          region: sql`excluded.region`,
+          ip: sql`excluded.ip`,
+          firstSeen: sql`least(${sessionArchive.firstSeen}, excluded.first_seen)`,
+          lastSeen: sql`greatest(${sessionArchive.lastSeen}, excluded.last_seen)`,
+          seenCount: sql`${sessionArchive.seenCount} + 1`,
+        },
+      });
+    archivedSessions = staleSessions.length;
+  }
+
   const deletedSessions = await drizzleClient
     .delete(sessions)
     .where(lt(sessions.lastSeen, deleteCutoff))
     .returning({ id: sessions.id });
+
+  // Retention cap. The archive holds an ip, so it must not grow forever.
+  const trimmedArchive = await drizzleClient
+    .delete(sessionArchive)
+    .where(lt(sessionArchive.lastSeen, now - SESSION_ARCHIVE_RETENTION_MS))
+    .returning({ id: sessionArchive.id });
 
   // ── 7) Shikaku: enforce max 20 scores per session per difficulty ─
   // Each player can keep up to 20 scores for each difficulty (easy/medium/hard/expert)
@@ -2997,6 +3057,10 @@ async function runCleanup() {
       sessions: deletedSessions.length,
       encryptionKeys: deletedEncryptionKeys,
       chatMessages: deletedChatMessages,
+    },
+    archive: {
+      sessionsArchived: archivedSessions,
+      sessionsTrimmed: trimmedArchive.length,
     },
     shikaku: {
       scoresTrimmed: shikakuScoresTrimmed,
