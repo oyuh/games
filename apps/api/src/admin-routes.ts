@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { asc, eq, ne, and, gt, desc, sql, count, isNotNull } from "drizzle-orm";
+import { asc, eq, ne, and, gt, desc, sql, count, isNotNull, isNull, or, ilike, lt } from "drizzle-orm";
 import {
   sessions,
   imposterGames,
@@ -178,27 +178,6 @@ function mapSessionToClient(session: SessionRow) {
   };
 }
 
-function matchesClientSearch(session: SessionRow, query: string) {
-  const normalizedQuery = normalizeAdminText(query);
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  const searchableValues = [
-    session.id,
-    session.name,
-    session.ip,
-    session.userAgent,
-    session.region,
-    session.fingerprint,
-    session.gameId,
-    session.gameType,
-    session.activity,
-  ];
-
-  return searchableValues.some((value) => normalizeAdminText(value).includes(normalizedQuery));
-}
-
 async function selectActiveGames() {
   const [imposter, password, chain, shade, location] = await Promise.all([
     drizzleClient
@@ -371,54 +350,130 @@ function flattenActiveGames(games: Awaited<ReturnType<typeof selectActiveGames>>
 }
 
 // ─── Connected clients (from sessions table) ───────────────
+/**
+ * Wrap a user's search term for ILIKE.
+ *
+ * LIKE treats % and _ as wildcards, so an unescaped search for "100%" would
+ * match every row rather than the rows containing "100%". Backslash is LIKE's
+ * default escape character in Postgres, and it has to be escaped first or it
+ * would escape the escapes we add.
+ *
+ * The result is still passed as a bound parameter; this only decides what the
+ * pattern means, never how the statement is built.
+ */
+export function likeTerm(query: string): string {
+  return `%${query.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+}
+
+/**
+ * Build the WHERE for the client roster.
+ *
+ * This used to SELECT every recent session into memory, filter in JavaScript
+ * and slice the page out of the result. That was survivable against a
+ * five-minute window and is not against anything longer, so the filters and
+ * the pagination both live in SQL now.
+ *
+ * Every search term goes through drizzle's parameter binding; nothing is
+ * interpolated into the statement.
+ */
+function buildClientWhere(options: {
+  cutoff: number;
+  query: string;
+  gameType: string;
+  activity: string;
+  region: string;
+}) {
+  const conditions = [gt(sessions.lastSeen, options.cutoff)];
+
+  if (options.query) {
+    // Case-insensitive via ilike; wildcards escaped by likeTerm.
+    const term = likeTerm(options.query);
+    const match = or(
+      ilike(sessions.id, term),
+      ilike(sessions.name, term),
+      ilike(sessions.ip, term),
+      ilike(sessions.userAgent, term),
+      ilike(sessions.region, term),
+      ilike(sessions.fingerprint, term),
+      ilike(sessions.gameId, term),
+      ilike(sessions.activity, term),
+      ilike(sql`${sessions.gameType}::text`, term),
+    );
+    if (match) conditions.push(match);
+  }
+
+  if (options.gameType !== "all") {
+    conditions.push(sql`${sessions.gameType}::text = ${options.gameType}`);
+  }
+
+  if (options.activity === "in-game") {
+    conditions.push(isNotNull(sessions.gameId));
+  } else if (options.activity === "idle") {
+    conditions.push(isNull(sessions.gameId));
+  } else if (options.activity === "named") {
+    conditions.push(isNotNull(sessions.name));
+  } else if (options.activity === "anonymous") {
+    conditions.push(isNull(sessions.name));
+  }
+
+  if (options.region !== "all") {
+    if (options.region === "unknown") {
+      conditions.push(
+        or(isNull(sessions.region), eq(sessions.region, ""))!
+      );
+    } else {
+      conditions.push(sql`lower(trim(${sessions.region})) = ${options.region}`);
+    }
+  }
+
+  return and(...conditions);
+}
+
 adminRoutes.get("/clients", async (c) => {
   const { page, pageSize, offset } = parsePagination(c);
   const recentCutoff = Date.now() - 5 * 60 * 1000; // active in last 5 min
 
-  const query = c.req.query("q") ?? "";
+  const query = normalizeAdminText(c.req.query("q") ?? "");
   const gameType = c.req.query("gameType") ?? "all";
   const activity = c.req.query("activity") ?? "all";
   const region = normalizeAdminText(c.req.query("region") ?? "all");
 
-  const allSessions = await drizzleClient
-    .select()
-    .from(sessions)
-    .where(gt(sessions.lastSeen, recentCutoff))
-    .orderBy(desc(sessions.lastSeen));
-
-  const filtered = allSessions.filter((session) => {
-    if (!matchesClientSearch(session, query)) {
-      return false;
-    }
-    if (gameType !== "all" && session.gameType !== gameType) {
-      return false;
-    }
-    if (activity === "in-game" && !session.gameId) {
-      return false;
-    }
-    if (activity === "idle" && session.gameId) {
-      return false;
-    }
-    if (activity === "named" && !session.name) {
-      return false;
-    }
-    if (activity === "anonymous" && !!session.name) {
-      return false;
-    }
-
-    const sessionRegion = normalizeAdminText(session.region) || "unknown";
-    if (region !== "all" && sessionRegion !== region) {
-      return false;
-    }
-
-    return true;
+  const where = buildClientWhere({
+    cutoff: recentCutoff,
+    query,
+    gameType,
+    activity,
+    region,
   });
 
-  const totalCount = filtered.length;
-  const clients = filtered.slice(offset, offset + pageSize).map(mapSessionToClient);
-  const regions = Array.from(
-    new Set(allSessions.map((session) => normalizeAdminText(session.region) || "unknown"))
-  ).sort();
+  const [rows, totalRows, regionRows] = await Promise.all([
+    drizzleClient
+      .select()
+      .from(sessions)
+      .where(where)
+      .orderBy(desc(sessions.lastSeen))
+      .limit(pageSize)
+      .offset(offset),
+    drizzleClient
+      .select({ total: count() })
+      .from(sessions)
+      .where(where),
+    // The region filter list describes the whole window, not the current
+    // filter, otherwise picking a region would hide every other option.
+    drizzleClient
+      .selectDistinct({
+        region: sql<string>`coalesce(nullif(lower(trim(${sessions.region})), ''), 'unknown')`,
+      })
+      .from(sessions)
+      .where(gt(sessions.lastSeen, recentCutoff)),
+  ]);
+
+  const totalCount = Number(totalRows[0]?.total ?? 0);
+  const clients = rows.map(mapSessionToClient);
+  const regions = regionRows
+    .map((row) => row.region)
+    .filter(Boolean)
+    .sort();
 
   return c.json({
     ok: true,
