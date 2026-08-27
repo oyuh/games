@@ -24,6 +24,8 @@ import {
 import { useToast } from "@/components/Toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
@@ -516,15 +518,21 @@ export default function DashboardPage() {
                   />
                 </label>
 
-                <label className="flex items-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground">
-                  <input
-                    type="checkbox"
+                <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground">
+                  <Checkbox
+                    id="status-flash"
                     checked={flashEnabled}
-                    onChange={(event) => setFlashEnabled(event.target.checked)}
-                    className="size-4 rounded border-border bg-transparent"
+                    onCheckedChange={(checked) =>
+                      setFlashEnabled(checked === true)
+                    }
                   />
-                  Flash
-                </label>
+                  <Label
+                    htmlFor="status-flash"
+                    className="cursor-pointer text-sm font-medium normal-case tracking-normal text-foreground"
+                  >
+                    Flash
+                  </Label>
+                </div>
               </div>
             </div>
 

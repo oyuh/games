@@ -33,6 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import {
@@ -616,12 +617,9 @@ export default function PipsAdminPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-3">
                 <div>
-                  <label
-                    htmlFor="pips-session-id"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="pips-session-id" className="mb-2">
                     Session id
-                  </label>
+                  </Label>
                   <Input
                     id="pips-session-id"
                     value={draft.sessionId}
@@ -636,12 +634,9 @@ export default function PipsAdminPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="pips-player-name"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="pips-player-name" className="mb-2">
                     Player name
-                  </label>
+                  </Label>
                   <Input
                     id="pips-player-name"
                     value={draft.name}
@@ -656,12 +651,9 @@ export default function PipsAdminPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="pips-seed"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="pips-seed" className="mb-2">
                     Seed
-                  </label>
+                  </Label>
                   <Input
                     id="pips-seed"
                     type="number"
@@ -678,12 +670,9 @@ export default function PipsAdminPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="pips-created-at"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="pips-created-at" className="mb-2">
                     Submitted at
-                  </label>
+                  </Label>
                   <Input
                     id="pips-created-at"
                     type="datetime-local"
@@ -709,12 +698,9 @@ export default function PipsAdminPage() {
                   ["pips-puzzle-count", "Puzzle count", "puzzleCount"],
                 ].map(([id, label, key]) => (
                   <div key={id}>
-                    <label
-                      htmlFor={id}
-                      className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                    >
-                      {label}
-                    </label>
+                    <Label htmlFor={id} className="mb-2">
+                    {label}
+                  </Label>
                     <Input
                       id={id}
                       type="number"

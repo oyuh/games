@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /**
@@ -145,11 +147,9 @@ export function AdminShell({
               const Icon = item.icon;
               const active = isActivePath(pathname, item.href);
 
-              return (
+              const link = (
                 <Link
-                  key={item.href}
                   href={item.href}
-                  title={collapsed ? item.label : undefined}
                   style={{ "--nav-accent": item.accent } as React.CSSProperties}
                   className={cn(
                     "group relative flex h-11 items-center overflow-hidden rounded-md border text-sm font-medium transition-colors",
@@ -170,6 +170,17 @@ export function AdminShell({
                   />
                   {!collapsed ? <span>{item.label}</span> : null}
                 </Link>
+              );
+
+              // Collapsed, the icon is the only label there is, so it needs a
+              // tooltip rather than the browser's own title= popup.
+              return collapsed ? (
+                <Tooltip key={item.href}>
+                  <TooltipTrigger asChild>{link}</TooltipTrigger>
+                  <TooltipContent side="right">{item.label}</TooltipContent>
+                </Tooltip>
+              ) : (
+                <React.Fragment key={item.href}>{link}</React.Fragment>
               );
             })}
           </nav>

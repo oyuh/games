@@ -33,6 +33,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import {
@@ -618,12 +626,9 @@ export default function ShikakuPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-3">
                 <div>
-                  <label
-                    htmlFor="score-session-id"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="score-session-id" className="mb-2">
                     Session id
-                  </label>
+                  </Label>
                   <Input
                     id="score-session-id"
                     value={draft.sessionId}
@@ -638,12 +643,9 @@ export default function ShikakuPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="score-player-name"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="score-player-name" className="mb-2">
                     Player name
-                  </label>
+                  </Label>
                   <Input
                     id="score-player-name"
                     value={draft.name}
@@ -658,41 +660,35 @@ export default function ShikakuPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="score-difficulty"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="score-difficulty" className="mb-2">
                     Difficulty
-                  </label>
-                  <select
-                    id="score-difficulty"
+                  </Label>
+                  <Select
                     value={draft.difficulty}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       setDraft((current) =>
                         current
-                          ? {
-                              ...current,
-                              difficulty: event.target.value as DifficultyValue,
-                            }
+                          ? { ...current, difficulty: value as DifficultyValue }
                           : current,
                       )
                     }
-                    className="h-10 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
                   >
-                    {EDITABLE_DIFFICULTIES.map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="score-difficulty" className="h-10 w-full capitalize">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EDITABLE_DIFFICULTIES.map((value) => (
+                        <SelectItem key={value} value={value} className="capitalize">
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <label
-                    htmlFor="score-created-at"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="score-created-at" className="mb-2">
                     Submitted at
-                  </label>
+                  </Label>
                   <Input
                     id="score-created-at"
                     type="datetime-local"
@@ -711,12 +707,9 @@ export default function ShikakuPage() {
 
               <div className="space-y-3">
                 <div>
-                  <label
-                    htmlFor="score-seed"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="score-seed" className="mb-2">
                     Seed
-                  </label>
+                  </Label>
                   <Input
                     id="score-seed"
                     type="number"
@@ -733,12 +726,9 @@ export default function ShikakuPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="score-score"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="score-score" className="mb-2">
                     Score
-                  </label>
+                  </Label>
                   <Input
                     id="score-score"
                     type="number"
@@ -755,12 +745,9 @@ export default function ShikakuPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="score-time-ms"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="score-time-ms" className="mb-2">
                     Time in ms
-                  </label>
+                  </Label>
                   <Input
                     id="score-time-ms"
                     type="number"
@@ -777,12 +764,9 @@ export default function ShikakuPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="score-puzzle-count"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="score-puzzle-count" className="mb-2">
                     Puzzle count
-                  </label>
+                  </Label>
                   <Input
                     id="score-puzzle-count"
                     type="number"

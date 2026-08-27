@@ -26,6 +26,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import {
@@ -287,44 +294,53 @@ export default function GamesPage() {
                   />
                 </div>
 
-                <select
+                <Select
                   value={gameType}
-                  onChange={(event) =>
-                    setGameType(event.target.value as GameType | "all")
+                  onValueChange={(value) =>
+                    setGameType(value as GameType | "all")
                   }
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
                 >
-                  {GAME_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 min-w-[10rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GAME_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                <select
+                <Select
                   value={status}
-                  onChange={(event) =>
-                    setStatus(event.target.value as "all" | "active" | "ended")
+                  onValueChange={(value) =>
+                    setStatus(value as "all" | "active" | "ended")
                   }
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
                 >
-                  <option value="all">All statuses</option>
-                  <option value="active">Active only</option>
-                  <option value="ended">Ended only</option>
-                </select>
+                  <SelectTrigger className="h-10 min-w-[9.5rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="active">Active only</SelectItem>
+                    <SelectItem value="ended">Ended only</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
-                  value={phase}
-                  onChange={(event) => setPhase(event.target.value)}
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
-                >
-                  <option value="all">All phases</option>
-                  {phaseOptions.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                <Select value={phase} onValueChange={setPhase}>
+                  <SelectTrigger className="h-10 min-w-[9rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All phases</SelectItem>
+                    {phaseOptions.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
