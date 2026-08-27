@@ -15,6 +15,7 @@ import { api } from "@/lib/client-api";
 import { useToast } from "@/components/Toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SidebarAction } from "@/components/admin/sidebar-action";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
@@ -122,10 +123,7 @@ export function BroadcastControlsDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="justify-start">
-          <Megaphone className="size-4" />
-          Broadcast
-        </Button>
+        <SidebarAction icon={Megaphone} label="Broadcast" />
       </DialogTrigger>
 
       <DialogContent className="[--dialog-content-width:74rem] 2xl:[--dialog-content-width:78rem] border-border bg-card text-foreground shadow-none">
