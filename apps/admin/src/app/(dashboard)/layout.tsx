@@ -4,12 +4,11 @@ import { redirect } from "next/navigation";
 import { ToastProvider } from "@/components/Toast";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { BroadcastControlsDialog } from "@/components/admin/broadcast-controls-dialog";
-import { SidebarAction } from "@/components/admin/sidebar-action";
+import { SignOutButton } from "@/components/admin/sign-out-button";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeBootstrapScript } from "@/components/theme-bootstrap-script";
 import "../globals.css";
-import { LogOut } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Games Admin",
@@ -46,12 +45,7 @@ export default async function RootLayout({
                         await signOut();
                       }}
                     >
-                      <SidebarAction
-                        type="submit"
-                        icon={LogOut}
-                        label="Sign out"
-                        accent="var(--danger)"
-                      />
+                      <SignOutButton />
                     </form>
                   </>
                 }
