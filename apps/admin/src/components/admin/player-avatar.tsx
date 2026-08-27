@@ -15,12 +15,18 @@ import { cn } from "@/lib/utils";
 /**
  * The same face the player sees on the site.
  *
+ * The geometry comes from the `.player-avatar` rules in globals.css, ported
+ * from the web app. avvvatars draws a fixed-size tile in colours of its own
+ * choosing, so those rules resize every level and repaint it from the two
+ * custom properties set here. Scaling the tile with a transform instead looks
+ * fine at 100px and pushes the art out of the box at 26, which is how this was
+ * broken the first time.
+ *
  * An avatar is two integers stored as base64 "shape.color" in sessions.avatar.
  * The column is written by the client, so it is untrusted: parseAvatar bounds
- * checks both indices against the array lengths and returns null on anything
- * else, and a null falls back to the look derived from the session id. The
- * decoded string is only ever turned into two numbers, never into markup, a
- * style value or a URL.
+ * checks both indices and returns null on anything else, and a null falls back
+ * to the look derived from the session id. The decoded string only ever
+ * becomes two numbers, never markup, a style value or a URL.
  */
 export function PlayerAvatar({
   sessionId,
@@ -45,7 +51,7 @@ export function PlayerAvatar({
   return (
     <span
       className={cn(
-        "inline-grid shrink-0 place-items-center overflow-hidden",
+        "player-avatar",
         ring && "ring-2 ring-offset-1 ring-offset-[var(--card)]",
         ring === "online" && "ring-[var(--ok)]",
         ring === "idle" && "ring-[var(--warn)]",
@@ -55,27 +61,14 @@ export function PlayerAvatar({
         {
           width: size,
           height: size,
-          // Avatars are squircles on the site, not circles. Same knob here so
-          // the two can never disagree.
-          borderRadius: "var(--avatar-radius)",
-          background: bg,
-          color: fg,
+          "--av-bg": bg,
+          "--av-fg": fg,
         } as CSSProperties
       }
     >
-      {/* Drawn at 100 so avvvatars' internal maths stays on round numbers,
-          then scaled into the slot. Its shapes use currentColor, which the
-          style above sets from the palette pair. */}
-      <span
-        className="pointer-events-none"
-        style={{
-          transform: `scale(${size / 100})`,
-          transformOrigin: "center",
-          lineHeight: 0,
-        }}
-      >
-        <Avvvatars value={shapeSeed(look.shape)} style="shape" size={100} />
-      </span>
+      {/* Rendered at 100 so avvvatars' internal maths stays on round numbers.
+          The CSS sizes it down to the slot; nothing here scales it. */}
+      <Avvvatars value={shapeSeed(look.shape)} style="shape" size={100} />
     </span>
   );
 }

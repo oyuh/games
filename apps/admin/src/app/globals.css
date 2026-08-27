@@ -361,6 +361,54 @@ option {
   background: color-mix(in srgb, var(--primary) 55%, transparent);
 }
 
+/* ── Player avatar ───────────────────────────────────────────────
+   A faithful copy of apps/web/src/styles/player-avatar.css. Keep the two in
+   step: they style the same third-party DOM, and the admin got this wrong once
+   already by inventing its own approach instead of porting this one.
+
+   avvvatars renders a fixed-size wrapper div holding a span holding an svg,
+   picks its own background colour, and passes the svg a width but no height.
+   Left alone at a small size the wrapper overflows its slot and the art lands
+   outside the visible box, down and to the right. Sizing every level
+   explicitly is what pins it to the centre.
+
+   The !important is load-bearing: goober writes those as real class rules,
+   not defaults. */
+
+.player-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  aspect-ratio: 1;
+  line-height: 0;
+  border-radius: var(--avatar-radius);
+  overflow: clip;
+}
+
+/* avvvatars' outer tile: its size and its background colour both go. */
+.player-avatar > * {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: var(--avatar-radius) !important;
+  background-color: var(--av-bg, #e0e6eb) !important;
+}
+
+/* The shape's own span, sized against the tile rather than shrink-to-fit. */
+.player-avatar > * > * {
+  width: 62% !important;
+  height: 62% !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  color: var(--av-fg, #2d3a46) !important;
+}
+
+/* Shapes are drawn in currentColor, so the colour above is the whole override. */
+.player-avatar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
