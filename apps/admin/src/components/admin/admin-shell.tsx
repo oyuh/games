@@ -19,6 +19,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { SidebarCollapsedProvider } from "@/components/admin/sidebar-action";
 import { useNavOrder } from "@/hooks/use-nav-order";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +79,7 @@ function isActivePath(pathname: string, href: string) {
 
 export function AdminShell({
   children,
+  sessionLabel,
   actions,
 }: {
   children: React.ReactNode;
@@ -121,11 +123,12 @@ export function AdminShell({
     });
   };
 
+  // h-dvh, not min-h-screen: the shell is exactly the viewport, so the document
+  // never grows a scrollbar of its own. Everything inside that can overflow owns
+  // its own scroll region instead.
   return (
-    // h-dvh, not min-h-screen: the shell is exactly the viewport, so the
-    // document never grows a scrollbar of its own. Everything inside that can
-    // overflow owns its own scroll region instead.
-    <div className="h-dvh overflow-hidden bg-background text-foreground">
+    <SidebarCollapsedProvider collapsed={collapsed}>
+      <div className="h-dvh overflow-hidden bg-background text-foreground">
       <div className="flex h-full">
         <aside
           className={cn(
@@ -256,26 +259,50 @@ export function AdminShell({
             ) : null}
           </nav>
 
-          {/* One visual language for all three: same height, same ghost
-              treatment, same icon column. They were a filled primary button
-              stacked on two outlines, which read as three unrelated controls. */}
-          <div
-            className={cn(
-              "shrink-0 border-t border-border p-2",
-              "[&_form]:contents",
-              "[&_[data-slot=button]]:h-9 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:border-transparent",
-              "[&_[data-slot=button]]:bg-transparent [&_[data-slot=button]]:font-medium",
-              "[&_[data-slot=button]]:text-muted-foreground",
-              "hover:[&_[data-slot=button]]:bg-accent hover:[&_[data-slot=button]]:text-foreground",
-              "[&_[data-slot=button]_svg]:text-muted-foreground",
-              collapsed
-                ? "[&_[data-slot=button]]:justify-center [&_[data-slot=button]]:px-0"
-                : "[&_[data-slot=button]]:justify-start [&_[data-slot=button]]:gap-3 [&_[data-slot=button]]:px-3",
-              "flex flex-col gap-0.5",
+          {/* Who is signed in, then the actions. sessionLabel was passed in
+              and typed from the start but never rendered, which is part of why
+              this corner read as a leftover stack of buttons rather than a
+              section: it had no subject. */}
+          <div className="shrink-0 border-t border-border p-2">
+            {!collapsed ? (
+              <div className="mb-1.5 flex items-center gap-2.5 rounded-md px-2 py-1.5">
+                <span className="grid size-7 shrink-0 place-items-center rounded-md border border-border bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-[0.6rem] font-extrabold text-primary uppercase">
+                  {sessionLabel.slice(0, 2)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-semibold text-foreground">
+                    {sessionLabel}
+                  </span>
+                  <span className="block text-[0.62rem] tracking-wide text-muted-foreground uppercase">
+                    Signed in
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="mx-auto mb-1.5 grid size-7 cursor-default place-items-center rounded-md border border-border bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-[0.6rem] font-extrabold text-primary uppercase">
+                    {sessionLabel.slice(0, 2)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  Signed in as {sessionLabel}
+                </TooltipContent>
+              </Tooltip>
             )}
-          >
-            {actions}
-            <ThemeToggle showLabel={!collapsed} />
+
+            <div
+              className={cn(
+                "flex flex-col gap-0.5",
+                // The sign-out form must not become a flex item of its own, or
+                // its button stops lining up with its neighbours.
+                "[&_form]:contents",
+                collapsed && "items-center",
+              )}
+            >
+              {actions}
+              <ThemeToggle asSidebarAction />
+            </div>
           </div>
         </aside>
 
@@ -323,6 +350,7 @@ export function AdminShell({
           </main>
         </div>
       </div>
-    </div>
+      </div>
+    </SidebarCollapsedProvider>
   );
 }

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ToastProvider } from "@/components/Toast";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { BroadcastControlsDialog } from "@/components/admin/broadcast-controls-dialog";
-import { Button } from "@/components/ui/button";
+import { SidebarAction } from "@/components/admin/sidebar-action";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeBootstrapScript } from "@/components/theme-bootstrap-script";
@@ -46,14 +46,12 @@ export default async function RootLayout({
                         await signOut();
                       }}
                     >
-                      <Button
+                      <SidebarAction
                         type="submit"
-                        variant="outline"
-                        className="min-w-[112px] justify-center"
-                      >
-                        <LogOut className="size-4" />
-                        Sign out
-                      </Button>
+                        icon={LogOut}
+                        label="Sign out"
+                        accent="var(--danger)"
+                      />
                     </form>
                   </>
                 }
