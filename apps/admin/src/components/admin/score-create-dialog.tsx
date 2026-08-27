@@ -20,6 +20,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/Toast";
 
 type GameKind = "shikaku" | "pips";
@@ -403,19 +411,24 @@ export function ScoreCreateDialog({
                 {loadingClients ? "Loading" : "Refresh"}
               </Button>
             </div>
-            <select
-              value={selectedSessionId}
-              onChange={(event) => applySession(event.target.value)}
-              className="h-10 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
+            {/* Radix rejects an empty item value, so the "pick one" state is
+                the trigger's placeholder rather than a blank option. */}
+            <Select
+              value={selectedSessionId || undefined}
+              onValueChange={applySession}
             >
-              <option value="">Choose active session</option>
-              {usableClients.map((client) => (
-                <option key={client.sessionId} value={client.sessionId}>
-                  {displayClientName(client)} - {shortId(client.sessionId, 14)}{" "}
-                  - {formatGameType(client.gameType)}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="h-10 w-full">
+                <SelectValue placeholder="Choose active session" />
+              </SelectTrigger>
+              <SelectContent>
+                {usableClients.map((client) => (
+                  <SelectItem key={client.sessionId} value={client.sessionId}>
+                    {displayClientName(client)} - {shortId(client.sessionId, 14)}{" "}
+                    - {formatGameType(client.gameType)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </section>
 
           {game === "shikaku" ? (
@@ -462,28 +475,33 @@ export function ScoreCreateDialog({
                   }
                 />
                 <div>
-                  <label
-                    htmlFor="new-shikaku-difficulty"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="new-shikaku-difficulty" className="mb-2">
                     Difficulty
-                  </label>
-                  <select
-                    id="new-shikaku-difficulty"
+                  </Label>
+                  <Select
                     value={shikakuDraft.difficulty}
-                    onChange={(event) =>
-                      updateShikakuDifficulty(
-                        event.target.value as DifficultyValue,
-                      )
+                    onValueChange={(value) =>
+                      updateShikakuDifficulty(value as DifficultyValue)
                     }
-                    className="h-10 w-full rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
                   >
-                    {DIFFICULTIES.map((difficulty) => (
-                      <option key={difficulty} value={difficulty}>
-                        {difficulty}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      id="new-shikaku-difficulty"
+                      className="h-10 w-full capitalize"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIFFICULTIES.map((difficulty) => (
+                        <SelectItem
+                          key={difficulty}
+                          value={difficulty}
+                          className="capitalize"
+                        >
+                          {difficulty}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <CreateField
                   label="Time in ms"
@@ -668,12 +686,9 @@ function CreateField({
   const id = `create-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
     <div>
-      <label
-        htmlFor={id}
-        className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-      >
-        {label}
-      </label>
+      <Label htmlFor={id} className="mb-2">
+                    {label}
+                  </Label>
       <Input
         id={id}
         type={type}

@@ -28,6 +28,13 @@ import { GameStateDialog } from "@/components/admin/game-state-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import {
@@ -201,42 +208,51 @@ export default function ClientsPage() {
                   />
                 </div>
 
-                <select
+                <Select
                   value={gameType}
-                  onChange={(event) => setGameType(event.target.value as any)}
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
+                  onValueChange={(value) => setGameType(value as any)}
                 >
-                  {GAME_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 min-w-[10rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GAME_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                <select
+                <Select
                   value={activity}
-                  onChange={(event) => setActivity(event.target.value as any)}
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
+                  onValueChange={(value) => setActivity(value as any)}
                 >
-                  <option value="all">All states</option>
-                  <option value="in-game">In game</option>
-                  <option value="idle">Idle</option>
-                  <option value="named">Named</option>
-                  <option value="anonymous">Anonymous</option>
-                </select>
+                  <SelectTrigger className="h-10 min-w-[9rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All states</SelectItem>
+                    <SelectItem value="in-game">In game</SelectItem>
+                    <SelectItem value="idle">Idle</SelectItem>
+                    <SelectItem value="named">Named</SelectItem>
+                    <SelectItem value="anonymous">Anonymous</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
-                  value={region}
-                  onChange={(event) => setRegion(event.target.value)}
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
-                >
-                  <option value="all">All regions</option>
-                  {visibleRegions.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                <Select value={region} onValueChange={setRegion}>
+                  <SelectTrigger className="h-10 min-w-[9rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All regions</SelectItem>
+                    {visibleRegions.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">

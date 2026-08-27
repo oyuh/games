@@ -6,6 +6,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { BroadcastControlsDialog } from "@/components/admin/broadcast-controls-dialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeBootstrapScript } from "@/components/theme-bootstrap-script";
 import "../globals.css";
 import { LogOut } from "lucide-react";
@@ -31,31 +32,35 @@ export default async function RootLayout({
         <ThemeBootstrapScript />
         <ToastProvider>
           <ConfirmDialogProvider>
-            <AdminShell
-              sessionLabel={session.user.name ?? session.user.email ?? "Admin"}
-              actions={
-                <>
-                  <BroadcastControlsDialog />
-                  <form
-                    action={async () => {
-                      "use server";
-                      await signOut();
-                    }}
-                  >
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      className="min-w-[112px] justify-center"
+            <TooltipProvider>
+              <AdminShell
+                sessionLabel={
+                  session.user.name ?? session.user.email ?? "Admin"
+                }
+                actions={
+                  <>
+                    <BroadcastControlsDialog />
+                    <form
+                      action={async () => {
+                        "use server";
+                        await signOut();
+                      }}
                     >
-                      <LogOut className="size-4" />
-                      Sign out
-                    </Button>
-                  </form>
-                </>
-              }
-            >
-              {children}
-            </AdminShell>
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        className="min-w-[112px] justify-center"
+                      >
+                        <LogOut className="size-4" />
+                        Sign out
+                      </Button>
+                    </form>
+                  </>
+                }
+              >
+                {children}
+              </AdminShell>
+            </TooltipProvider>
           </ConfirmDialogProvider>
         </ToastProvider>
       </body>
