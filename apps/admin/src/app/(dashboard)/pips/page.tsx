@@ -8,6 +8,7 @@ import {
   Search,
   TimerReset,
   Trash2,
+  LayoutGrid,
   MoreHorizontal,
   Trophy,
 } from "lucide-react";
@@ -24,6 +25,7 @@ import { useToast } from "@/components/Toast";
 import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PuzzleViewDialog } from "@/components/admin/puzzle-view-dialog";
 import { ScoreCreateDialog } from "@/components/admin/score-create-dialog";
 import {
   Dialog,
@@ -99,6 +101,7 @@ export default function PipsAdminPage() {
   const [draft, setDraft] = useState<ScoreDraft | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [boardScore, setBoardScore] = useState<PipsScoreRecord | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -477,6 +480,10 @@ export default function PipsAdminPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setBoardScore(score)}>
+              <LayoutGrid />
+              View board
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => openEditor(score)}>
               <Edit3 />
               Edit run
@@ -618,6 +625,19 @@ export default function PipsAdminPage() {
           />
         </div>
       </Surface>
+
+      <PuzzleViewDialog
+        game="pips"
+        scoreId={boardScore?.id ?? null}
+        seed={boardScore?.seed ?? null}
+        puzzleCount={3}
+        accent="var(--game-pips)"
+        labels={["Easy", "Medium", "Hard"]}
+        open={Boolean(boardScore)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setBoardScore(null);
+        }}
+      />
 
       <ScoreCreateDialog
         game="pips"

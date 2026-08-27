@@ -9,7 +9,7 @@
 
 import { Context, Hono } from "hono";
 
-import { DIFFICULTY_CONFIG, generatePuzzle, mulberry32, type Difficulty, type ShikakuPuzzle } from "@games/shared/games/shikaku-engine";
+import { DIFFICULTY_CONFIG, generatePuzzle, mulberry32, type Difficulty, type Rect, type ShikakuPuzzle } from "@games/shared/games/shikaku-engine";
 
 /* ── SVG rendering ─────────────────────────────────────────── */
 
@@ -36,12 +36,18 @@ type PaddingMode = "normal" | "tight" | "none";
 interface RenderOptions {
   theme?: "dark" | "light";
   showSolution?: boolean;
+  /**
+   * The rectangles a player actually submitted. Drawn instead of the canonical
+   * solution, with anything that is not also a canonical rectangle outlined,
+   * so a flagged run becomes a picture rather than a validation code.
+   */
+  replay?: Rect[];
   transparentBg?: boolean;
   paddingMode?: PaddingMode;
 }
 
-function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: number, opts: RenderOptions = {}): string {
-  const { theme = "dark", showSolution = false, transparentBg = false, paddingMode = "normal" } = opts;
+export function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: number, opts: RenderOptions = {}): string {
+  const { theme = "dark", showSolution = false, transparentBg = false, paddingMode = "normal", replay } = opts;
   const { rows, cols, numbers, solution } = puzzle;
 
   const cellSize = rows <= 9 ? 48 : rows <= 15 ? 32 : 24;
@@ -77,7 +83,27 @@ function renderPuzzleSvg(puzzle: ShikakuPuzzle, difficulty: Difficulty, seed: nu
   }
 
   // Cell backgrounds
-  if (showSolution) {
+  if (replay) {
+    // A rectangle is "canonical" if the solution contains one at the same
+    // position and size. Anything else is what the player did differently.
+    const canonical = new Set(solution.map((rect) => `${rect.r},${rect.c},${rect.w},${rect.h}`));
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        svg += `<rect x="${gridX + c * cellSize}" y="${gridY + r * cellSize}" width="${cellSize}" height="${cellSize}" fill="${cellBg}"/>`;
+      }
+    }
+    for (let i = 0; i < replay.length; i++) {
+      const rect = replay[i]!;
+      const matches = canonical.has(`${rect.r},${rect.c},${rect.w},${rect.h}`);
+      const color = matches ? RECT_COLORS[i % RECT_COLORS.length]! : "#f87171";
+      const x = gridX + rect.c * cellSize + 1;
+      const y = gridY + rect.r * cellSize + 1;
+      const w = rect.w * cellSize - 2;
+      const h = rect.h * cellSize - 2;
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${color}" opacity="${matches ? 0.25 : 0.18}"/>`;
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="none" stroke="${color}" stroke-width="${matches ? 2 : 3}" opacity="${matches ? 0.6 : 1}"/>`;
+    }
+  } else if (showSolution) {
     for (let i = 0; i < solution.length; i++) {
       const rect = solution[i]!;
       const color = RECT_COLORS[i % RECT_COLORS.length]!;
