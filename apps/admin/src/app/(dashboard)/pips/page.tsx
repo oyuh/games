@@ -497,8 +497,8 @@ export default function PipsAdminPage() {
   ];
 
   return (
-    <>
-      <Surface>
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <Surface pad="sm" className="shrink-0">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {[
             {
@@ -550,7 +550,7 @@ export default function PipsAdminPage() {
         </div>
       </Surface>
 
-      <Surface className="mt-4">
+      <Surface pad="sm" className="shrink-0">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative w-full max-w-2xl">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -584,7 +584,7 @@ export default function PipsAdminPage() {
         </div>
       </Surface>
 
-      <Surface className="mt-4">
+      <Surface pad="sm" className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {loading && scores.length === 0 ? (
           <div className="space-y-2">
             {/* Match the skeleton count to the page size so the layout does not
@@ -595,6 +595,7 @@ export default function PipsAdminPage() {
           </div>
         ) : (
           <DataTable
+            className="min-h-0 flex-1"
             tableKey="pips-scores"
             columns={columns}
             rows={visibleScores}
@@ -603,7 +604,7 @@ export default function PipsAdminPage() {
           />
         )}
 
-        <div className="mt-4">
+        <div className="mt-3 shrink-0">
           <Pagination
             page={page}
             totalPages={totalPages}
@@ -787,6 +788,6 @@ export default function PipsAdminPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

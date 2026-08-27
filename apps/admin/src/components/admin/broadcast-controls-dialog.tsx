@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/client-api";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,11 +122,7 @@ export function BroadcastControlsDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          className={cn(
-            "border-border bg-primary text-primary-foreground hover:bg-primary/90",
-          )}
-        >
+        <Button variant="outline" className="justify-start">
           <Megaphone className="size-4" />
           Broadcast
         </Button>

@@ -314,8 +314,8 @@ export default function BansPage() {
   };
 
   return (
-    <>
-      <Surface>
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <Surface pad="sm" className="shrink-0">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           {[
             {
@@ -363,8 +363,8 @@ export default function BansPage() {
         </div>
       </Surface>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <Surface>
+      <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[1.2fr_0.8fr]">
+        <Surface pad="sm" className="flex min-h-0 flex-col overflow-hidden">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
               <div className="relative">
@@ -497,7 +497,8 @@ export default function BansPage() {
           </div>
         </Surface>
 
-        <Surface>
+        <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-0.5">
+        <Surface pad="sm">
           <div className="text-sm font-semibold text-foreground">
             Add restriction
           </div>
@@ -760,7 +761,8 @@ export default function BansPage() {
             />
           </div>
         </Surface>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
