@@ -37,6 +37,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyNote, Panel } from "@/components/ui/stat-tile";
 import { Surface } from "@/components/ui/surface";
+import { PlayerAvatar } from "@/components/admin/player-avatar";
 import { Column, DataTable } from "@/components/ui/data-table";
 
 function ClientsPageSkeleton() {
@@ -182,21 +183,20 @@ export default function ClientsPage() {
       width: 200,
       sortValue: (client) => client.name ?? "",
       cell: (client) => (
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span
-              title={client.online ? "Online" : "Idle"}
-              className={`size-1.5 shrink-0 rounded-full ${
-                client.online ? "bg-[var(--ok)]" : "bg-[var(--warn)]"
-              }`}
-              aria-hidden
-            />
-            <span className="truncate font-medium text-foreground">
+        <div className="flex min-w-0 items-center gap-2">
+          <PlayerAvatar
+            sessionId={client.sessionId}
+            avatar={client.avatar}
+            size={26}
+            ring={client.online ? "online" : "idle"}
+          />
+          <div className="min-w-0">
+            <div className="truncate font-medium text-foreground">
               {client.name || "Anonymous"}
-            </span>
-          </div>
-          <div className="mt-0.5 truncate pl-3.5 font-mono text-xs text-muted-foreground">
-            {shortId(client.sessionId, 16)}
+            </div>
+            <div className="truncate font-mono text-xs text-muted-foreground">
+              {shortId(client.sessionId, 16)}
+            </div>
           </div>
         </div>
       ),

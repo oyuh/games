@@ -163,6 +163,10 @@ function mapSessionToClient(session: SessionRow) {
     userAgent: session.userAgent ?? null,
     region: session.region ?? null,
     fingerprint: session.fingerprint ?? null,
+    // Base64 of the player's "shape.color" pick. Opaque here on purpose: the
+    // admin parses it with the same bounds-checked helper the site uses, and
+    // anything unparseable falls back to the look derived from the session id.
+    avatar: session.avatar ?? null,
     connectedAt: session.createdAt,
     lastSeen: session.lastSeen,
     gameId: session.gameId,

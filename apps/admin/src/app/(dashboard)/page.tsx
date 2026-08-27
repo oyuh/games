@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyNote, Panel, StatTile } from "@/components/ui/stat-tile";
 import { Surface } from "@/components/ui/surface";
 import { ClientDetailDialog } from "@/components/admin/client-detail-dialog";
+import { PlayerAvatar } from "@/components/admin/player-avatar";
 import { GameStateDialog } from "@/components/admin/game-state-dialog";
 
 function syncStatusDraft(status: FooterStatus) {
@@ -289,11 +290,11 @@ export default function DashboardPage() {
                     className="w-full rounded-md border border-border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/40 hover:bg-accent"
                   >
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`size-1.5 shrink-0 rounded-full ${
-                          client.online ? "bg-[var(--ok)]" : "bg-[var(--warn)]"
-                        }`}
-                        aria-hidden
+                      <PlayerAvatar
+                        sessionId={client.sessionId}
+                        avatar={client.avatar}
+                        size={22}
+                        ring={client.online ? "online" : "idle"}
                       />
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                         {client.name || "Anonymous"}
@@ -302,7 +303,7 @@ export default function DashboardPage() {
                         {formatRelativeTime(client.lastSeen)}
                       </span>
                     </div>
-                    <div className="mt-1 flex items-center gap-2 text-[0.68rem] text-muted-foreground">
+                    <div className="mt-1 flex items-center gap-2 pl-7 text-[0.68rem] text-muted-foreground">
                       <span className="truncate font-mono">
                         {shortId(client.sessionId, 14)}
                       </span>
