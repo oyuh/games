@@ -18,18 +18,23 @@ Install dependencies from the repo root:
 bun install
 ```
 
-Start the local stack:
+Start the local stack (same command on macOS, Linux and Windows):
 
 ```bash
-# Windows
 bun run local:up
-
-# macOS
-bun run local:up:mac
-
-# Linux
-bun run local:up:linux
 ```
+
+It starts your container engine if it is not running, brings up Postgres and
+zero-cache, pushes the schema, and runs the three dev servers. While it is up:
+
+```bash
+bun run local status            # what is running
+bun run local restart admin     # restart one service
+bun run local logs api -f       # follow one log
+bun run local:down              # stop everything
+```
+
+`bun run local doctor` checks your machine if any of that fails.
 
 Useful local URLs:
 
