@@ -7,9 +7,11 @@ import { usePathname } from "next/navigation";
 import {
   Dice5,
   Gamepad2,
+  GripVertical,
   LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
+  RotateCcw,
   Shield,
   Trophy,
   Users,
@@ -17,6 +19,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useNavOrder } from "@/hooks/use-nav-order";
 import { cn } from "@/lib/utils";
 
 /**
@@ -83,6 +86,18 @@ export function AdminShell({
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [dragging, setDragging] = useState<string | null>(null);
+
+  // NAV_ITEMS is the source of truth for what exists; the stored order only
+  // decides arrangement, so an unknown href here simply drops out.
+  type NavItem = (typeof NAV_ITEMS)[number];
+  const nav = useNavOrder(NAV_ITEMS.map((item) => item.href));
+  const byHref = new Map<string, NavItem>(
+    NAV_ITEMS.map((item) => [item.href, item]),
+  );
+  const orderedNav = nav.order
+    .map((href) => byHref.get(href))
+    .filter((item): item is NavItem => !!item);
 
   useEffect(() => {
     try {
@@ -142,14 +157,47 @@ export function AdminShell({
             </Button>
           </div>
 
-          <nav className="flex-1 space-y-1.5 p-3">
-            {NAV_ITEMS.map((item) => {
+          <nav
+            aria-label="Sections"
+            className="flex-1 space-y-1.5 overflow-y-auto p-3"
+          >
+            {orderedNav.map((item) => {
               const Icon = item.icon;
               const active = isActivePath(pathname, item.href);
 
               const link = (
                 <Link
                   href={item.href}
+                  draggable
+                  onDragStart={(event) => {
+                    setDragging(item.href);
+                    event.dataTransfer.effectAllowed = "move";
+                    // Firefox will not start a drag without payload set.
+                    event.dataTransfer.setData("text/plain", item.href);
+                  }}
+                  onDragOver={(event) => {
+                    if (dragging && dragging !== item.href) event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    if (dragging && dragging !== item.href) {
+                      nav.move(dragging, item.href);
+                    }
+                    setDragging(null);
+                  }}
+                  onDragEnd={() => setDragging(null)}
+                  // HTML5 drag and drop has no keyboard path at all, so without
+                  // this the whole feature is mouse-only.
+                  onKeyDown={(event) => {
+                    if (!event.altKey) return;
+                    if (event.key === "ArrowUp") {
+                      event.preventDefault();
+                      nav.nudge(item.href, -1);
+                    } else if (event.key === "ArrowDown") {
+                      event.preventDefault();
+                      nav.nudge(item.href, 1);
+                    }
+                  }}
                   style={{ "--nav-accent": item.accent } as React.CSSProperties}
                   className={cn(
                     "group relative flex h-11 items-center overflow-hidden rounded-md border text-sm font-medium transition-colors",
@@ -160,6 +208,10 @@ export function AdminShell({
                     active
                       ? "border-[color-mix(in_srgb,var(--nav-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--nav-accent)_12%,transparent)] text-foreground before:opacity-100"
                       : "border-transparent text-muted-foreground before:opacity-0 hover:border-[color-mix(in_srgb,var(--nav-accent)_22%,transparent)] hover:bg-[color-mix(in_srgb,var(--nav-accent)_7%,transparent)] hover:text-foreground hover:before:opacity-40",
+                    dragging === item.href && "opacity-40",
+                    dragging &&
+                      dragging !== item.href &&
+                      "border-dashed border-[color-mix(in_srgb,var(--nav-accent)_40%,transparent)]",
                   )}
                 >
                   <Icon
@@ -168,7 +220,12 @@ export function AdminShell({
                       active ? "text-[var(--nav-accent)]" : "group-hover:text-[var(--nav-accent)]",
                     )}
                   />
-                  {!collapsed ? <span>{item.label}</span> : null}
+                  {!collapsed ? (
+                    <>
+                      <span>{item.label}</span>
+                      <GripVertical className="ml-auto size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-40" />
+                    </>
+                  ) : null}
                 </Link>
               );
 
@@ -183,6 +240,17 @@ export function AdminShell({
                 <React.Fragment key={item.href}>{link}</React.Fragment>
               );
             })}
+
+            {!collapsed && nav.customised ? (
+              <button
+                type="button"
+                onClick={nav.reset}
+                className="mt-1 flex h-8 w-full items-center gap-2 rounded-md px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none"
+              >
+                <RotateCcw className="size-3.5" />
+                Reset order
+              </button>
+            ) : null}
           </nav>
 
           <div
@@ -217,7 +285,7 @@ export function AdminShell({
               </div>
             </div>
             <nav className="flex gap-2 overflow-x-auto border-t border-border px-4 py-2">
-              {NAV_ITEMS.map((item) => {
+              {orderedNav.map((item) => {
                 const Icon = item.icon;
                 const active = isActivePath(pathname, item.href);
 
