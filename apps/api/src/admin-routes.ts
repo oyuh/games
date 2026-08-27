@@ -12,6 +12,7 @@ import {
   adminBans,
   adminRestrictedNames,
   adminNameOverrides,
+  sessionArchive,
   statusTable,
   pipsScores,
   shikakuScores,
@@ -429,17 +430,119 @@ function buildClientWhere(options: {
   return and(...conditions);
 }
 
+/** How far back each roster view looks. */
+const CLIENT_WINDOWS = {
+  live: 5 * 60 * 1000,
+  recent: 24 * 60 * 60 * 1000,
+} as const;
+
+type ClientWindow = keyof typeof CLIENT_WINDOWS | "archive";
+
+function parseWindow(value: string | undefined): ClientWindow {
+  return value === "recent" || value === "archive" ? value : "live";
+}
+
+/**
+ * Archived sessions, for finding and banning someone who has already gone.
+ *
+ * The archive is a strict subset of the live table, so its rows are mapped
+ * into the same shape the roster already renders. They are never online, and
+ * the fields the archive deliberately does not keep come back null rather than
+ * being invented.
+ */
+function mapArchiveToClient(row: typeof sessionArchive.$inferSelect) {
+  return {
+    sessionId: row.id,
+    name: row.name,
+    ip: row.ip ?? null,
+    userAgent: null,
+    region: row.region ?? null,
+    fingerprint: null,
+    avatar: row.avatar ?? null,
+    connectedAt: row.firstSeen,
+    lastSeen: row.lastSeen,
+    gameId: null,
+    gameType: null,
+    activity: null,
+    online: false,
+    archived: true,
+    seenCount: row.seenCount,
+  };
+}
+
+function buildArchiveWhere(query: string, region: string) {
+  const conditions = [];
+
+  if (query) {
+    const term = likeTerm(query);
+    const match = or(
+      ilike(sessionArchive.id, term),
+      ilike(sessionArchive.name, term),
+      ilike(sessionArchive.ip, term),
+      ilike(sessionArchive.region, term),
+    );
+    if (match) conditions.push(match);
+  }
+
+  if (region !== "all") {
+    if (region === "unknown") {
+      conditions.push(or(isNull(sessionArchive.region), eq(sessionArchive.region, ""))!);
+    } else {
+      conditions.push(sql`lower(trim(${sessionArchive.region})) = ${region}`);
+    }
+  }
+
+  return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
 adminRoutes.get("/clients", async (c) => {
   const { page, pageSize, offset } = parsePagination(c);
-  const recentCutoff = Date.now() - 5 * 60 * 1000; // active in last 5 min
+  const window = parseWindow(c.req.query("window"));
 
   const query = normalizeAdminText(c.req.query("q") ?? "");
   const gameType = c.req.query("gameType") ?? "all";
   const activity = c.req.query("activity") ?? "all";
   const region = normalizeAdminText(c.req.query("region") ?? "all");
 
+  if (window === "archive") {
+    const where = buildArchiveWhere(query, region);
+
+    const [rows, totalRows, regionRows] = await Promise.all([
+      drizzleClient
+        .select()
+        .from(sessionArchive)
+        .where(where)
+        .orderBy(desc(sessionArchive.lastSeen))
+        .limit(pageSize)
+        .offset(offset),
+      drizzleClient.select({ total: count() }).from(sessionArchive).where(where),
+      drizzleClient
+        .selectDistinct({
+          region: sql<string>`coalesce(nullif(lower(trim(${sessionArchive.region})), ''), 'unknown')`,
+        })
+        .from(sessionArchive),
+    ]);
+
+    const totalCount = Number(totalRows[0]?.total ?? 0);
+
+    return c.json({
+      ok: true,
+      window,
+      clients: rows.map(mapArchiveToClient),
+      total: totalCount,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
+      filters: {
+        regions: regionRows.map((row) => row.region).filter(Boolean).sort(),
+      },
+    });
+  }
+
+  const cutoff = Date.now() - CLIENT_WINDOWS[window];
+
   const where = buildClientWhere({
-    cutoff: recentCutoff,
+    cutoff,
     query,
     gameType,
     activity,
@@ -465,25 +568,21 @@ adminRoutes.get("/clients", async (c) => {
         region: sql<string>`coalesce(nullif(lower(trim(${sessions.region})), ''), 'unknown')`,
       })
       .from(sessions)
-      .where(gt(sessions.lastSeen, recentCutoff)),
+      .where(gt(sessions.lastSeen, cutoff)),
   ]);
 
   const totalCount = Number(totalRows[0]?.total ?? 0);
-  const clients = rows.map(mapSessionToClient);
-  const regions = regionRows
-    .map((row) => row.region)
-    .filter(Boolean)
-    .sort();
 
   return c.json({
     ok: true,
-    clients,
+    window,
+    clients: rows.map(mapSessionToClient),
     total: totalCount,
     page,
     pageSize,
     totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
     filters: {
-      regions,
+      regions: regionRows.map((row) => row.region).filter(Boolean).sort(),
     },
   });
 });

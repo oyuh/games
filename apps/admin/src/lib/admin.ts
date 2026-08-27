@@ -27,6 +27,10 @@ export type ClientRecord = {
   online: boolean;
   /** Base64 "shape.color". Untrusted: always read it through parseAvatar. */
   avatar: string | null;
+  /** Only on archived rows: the live table has no equivalent. */
+  archived?: boolean;
+  /** Times this id has been archived. Absent for live rows. */
+  seenCount?: number;
 };
 
 export type GameSummary = {
