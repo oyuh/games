@@ -24,118 +24,12 @@ import { useToast } from "@/components/Toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyNote, Panel, StatTile } from "@/components/ui/stat-tile";
 import { Surface } from "@/components/ui/surface";
-import { Textarea } from "@/components/ui/textarea";
 import { ClientDetailDialog } from "@/components/admin/client-detail-dialog";
 import { GameStateDialog } from "@/components/admin/game-state-dialog";
-
-/**
- * One number, its label, and a short factual sub-line. The sub-line used to be
- * a full sentence ("0 clients are seated in rooms, with 0 active players
- * generating the current session load"), which is slower to read than the two
- * numbers it contained.
- */
-function StatTile({
-  label,
-  value,
-  parts,
-  icon: Icon,
-  accent = "var(--primary)",
-}: {
-  label: string;
-  value: string;
-  parts: Array<{ label: string; value: string | number }>;
-  icon: React.ComponentType<{ className?: string }>;
-  accent?: string;
-}) {
-  return (
-    <Surface
-      tone="accent"
-      accent={accent}
-      pad="none"
-      className="flex min-w-0 items-center gap-3 px-3.5 py-3"
-    >
-      <div
-        className="flex size-9 shrink-0 items-center justify-center rounded-md border"
-        style={{
-          borderColor: `color-mix(in srgb, ${accent} 30%, transparent)`,
-          background: `color-mix(in srgb, ${accent} 12%, transparent)`,
-          color: accent,
-        }}
-      >
-        <Icon className="size-4" />
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-[0.62rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
-          {label}
-        </div>
-        <div className="mt-0.5 flex items-baseline gap-2">
-          <span className="text-2xl leading-none font-extrabold tabular-nums text-foreground">
-            {value}
-          </span>
-          <span className="flex min-w-0 gap-2 truncate text-xs text-muted-foreground">
-            {parts.map((part) => (
-              <span key={part.label} className="whitespace-nowrap">
-                <b className="font-semibold tabular-nums text-foreground/80">
-                  {part.value}
-                </b>{" "}
-                {part.label}
-              </span>
-            ))}
-          </span>
-        </div>
-      </div>
-    </Surface>
-  );
-}
-
-/**
- * A dashboard column: a fixed header and a body that scrolls on its own.
- *
- * min-h-0 on the Surface is what lets it shrink inside the grid instead of
- * growing the page; without it every overflow rule below is ignored.
- */
-function Panel({
-  title,
-  meta,
-  accent = "var(--primary)",
-  children,
-  className,
-}: {
-  title: string;
-  meta?: React.ReactNode;
-  accent?: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <Surface
-      pad="none"
-      accent={accent}
-      className={`flex min-h-0 flex-col overflow-hidden ${className ?? ""}`}
-    >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
-        <h2 className="truncate text-[0.68rem] font-extrabold tracking-[0.12em] text-foreground uppercase">
-          {title}
-        </h2>
-        {meta}
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">{children}</div>
-    </Surface>
-  );
-}
-
-function EmptyNote({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-md border border-dashed border-border px-3 py-8 text-center text-xs text-muted-foreground">
-      {children}
-    </div>
-  );
-}
 
 function syncStatusDraft(status: FooterStatus) {
   return {
@@ -247,6 +141,18 @@ export default function DashboardPage() {
   const maxRoomMix = useMemo(() => {
     return Math.max(1, ...roomMix.map((entry) => entry.total));
   }, [roomMix]);
+
+  const maxRegion = useMemo(() => {
+    return Math.max(1, ...(data?.summary.clients.topRegions ?? []).map((r) => r.total));
+  }, [data]);
+
+  const clientsByGame = useMemo(() => {
+    if (!data) return [] as Array<{ type: string; total: number }>;
+    return Object.entries(data.summary.clients.byGameType)
+      .map(([type, total]) => ({ type, total }))
+      .filter((entry) => entry.total > 0)
+      .sort((left, right) => right.total - left.total);
+  }, [data]);
 
   const namedRatio = data
     ? Math.round(
@@ -563,110 +469,143 @@ export default function DashboardPage() {
           </ul>
         </Panel>
 
-        <Panel
-          title="Footer message"
-          accent="var(--game-location)"
-          meta={
-            currentStatus ? (
-              <Badge variant="success">Live</Badge>
+        {/* Column 4 stacks two things: the data that had nowhere to live
+            (topRegions and byGameType were both being fetched and never
+            shown), and the footer form, which is a control rather than a
+            readout and so gets the smaller half. */}
+        <div className="flex min-h-0 flex-col gap-3">
+          <Panel
+            title="Where they are"
+            accent="var(--game-chain)"
+            className="min-h-0 flex-1"
+            meta={
+              <Badge variant="muted" className="tabular-nums">
+                {data.summary.clients.topRegions.length} regions
+              </Badge>
+            }
+          >
+            {data.summary.clients.topRegions.length === 0 ? (
+              <EmptyNote>No regional traffic yet.</EmptyNote>
             ) : (
-              <Badge variant="muted">Default</Badge>
-            )
-          }
-        >
-          <div className="rounded-md border border-border bg-card px-2.5 py-2 text-xs">
-            {currentStatus ? (
-              <>
-                <div
-                  className="font-medium text-foreground"
-                  style={currentStatus.color ? { color: currentStatus.color } : undefined}
-                >
-                  {currentStatus.text}
-                </div>
-                {currentStatus.link ? (
-                  <a
-                    href={currentStatus.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1 flex items-center gap-1 truncate text-muted-foreground underline underline-offset-2"
-                  >
-                    <Link2 className="size-3 shrink-0" />
-                    <span className="truncate">{currentStatus.link}</span>
-                  </a>
-                ) : null}
-                {currentStatus.flash ? (
-                  <Badge variant="warn" className="mt-1.5 h-4 text-[0.55rem]">
-                    Flashing
-                  </Badge>
-                ) : null}
-              </>
-            ) : (
-              <span className="text-muted-foreground">
-                Nothing shown in the site footer.
-              </span>
+              <div className="flex flex-col gap-1">
+                {data.summary.clients.topRegions.slice(0, 8).map((entry) => (
+                  <div key={entry.region} className="flex items-center gap-2">
+                    <Globe2 className="size-3 shrink-0 text-muted-foreground" />
+                    <span className="w-20 shrink-0 truncate text-[0.7rem] text-muted-foreground">
+                      {entry.region || "Unknown"}
+                    </span>
+                    <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                      <span
+                        className="block h-full rounded-full bg-[var(--game-chain)]"
+                        style={{ width: `${(entry.total / maxRegion) * 100}%` }}
+                      />
+                    </span>
+                    <span className="w-6 shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">
+                      {entry.total}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
-          </div>
 
-          <Textarea
-            value={statusInput}
-            onChange={(event) => setStatusInput(event.target.value)}
-            placeholder="Short footer message"
-            maxLength={200}
-            className="mt-2 min-h-16 resize-none text-sm"
-          />
-
-          <Input
-            value={linkInput}
-            onChange={(event) => setLinkInput(event.target.value)}
-            placeholder="Optional https:// link"
-            maxLength={500}
-            className="mt-2 h-8 text-sm"
-          />
-
-          <div className="mt-2 flex items-center gap-2">
-            <label className="flex h-8 flex-1 items-center gap-2 rounded-md border border-border bg-card px-2 text-xs text-muted-foreground">
-              Accent
-              <input
-                type="color"
-                value={colorInput || "#7ecbff"}
-                onChange={(event) => setColorInput(event.target.value)}
-                className="ml-auto size-5 cursor-pointer rounded border border-border bg-transparent p-0"
-              />
-            </label>
-            <div className="flex h-8 flex-1 items-center gap-2 rounded-md border border-border bg-card px-2">
-              <Checkbox
-                id="status-flash"
-                checked={flashEnabled}
-                onCheckedChange={(checked) => setFlashEnabled(checked === true)}
-              />
-              <Label
-                htmlFor="status-flash"
-                className="cursor-pointer text-xs font-medium tracking-normal text-muted-foreground normal-case"
-              >
-                Flash
-              </Label>
+            <div className="mt-3 border-t border-border pt-3 text-[0.6rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+              Players by game
             </div>
-          </div>
+            <div className="mt-1.5 flex flex-col gap-1">
+              {clientsByGame.length === 0 ? (
+                <EmptyNote>Nobody in a game.</EmptyNote>
+              ) : (
+                clientsByGame.map((entry) => (
+                  <div key={entry.type} className="flex items-center gap-2">
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ background: gameAccent(entry.type) }}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1 truncate text-[0.7rem] text-muted-foreground">
+                      {formatGameType(entry.type)}
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground">
+                      {entry.total}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </Panel>
 
-          <div className="mt-2 flex gap-2">
-            <Button
-              size="sm"
-              className="flex-1"
-              disabled={pendingStatusAction !== null}
-              onClick={() => void updateStatus()}
-            >
-              Save
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pendingStatusAction !== null || !currentStatus}
-              onClick={() => void clearStatus()}
-            >
-              Clear
-            </Button>
-          </div>
-        </Panel>
+          <Surface pad="none" accent="var(--game-location)" className="shrink-0">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2">
+              <h2 className="text-[0.68rem] font-extrabold tracking-[0.12em] text-foreground uppercase">
+                Footer message
+              </h2>
+              {currentStatus ? (
+                <Badge variant="success">Live</Badge>
+              ) : (
+                <Badge variant="muted">Default</Badge>
+              )}
+            </div>
+
+            <div className="p-2.5">
+              <Input
+                value={statusInput}
+                onChange={(event) => setStatusInput(event.target.value)}
+                placeholder={
+                  currentStatus?.text || "Message shown in the site footer"
+                }
+                maxLength={200}
+                className="h-8 text-sm"
+              />
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <Input
+                  value={linkInput}
+                  onChange={(event) => setLinkInput(event.target.value)}
+                  placeholder="https:// link"
+                  maxLength={500}
+                  className="h-8 min-w-0 flex-1 text-sm"
+                />
+                <input
+                  type="color"
+                  aria-label="Accent colour"
+                  title="Accent colour"
+                  value={colorInput || "#7ecbff"}
+                  onChange={(event) => setColorInput(event.target.value)}
+                  className="size-8 shrink-0 cursor-pointer rounded-md border border-border bg-card p-0.5"
+                />
+                <label
+                  title="Flash the message"
+                  className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-card px-2"
+                >
+                  <Checkbox
+                    id="status-flash"
+                    checked={flashEnabled}
+                    onCheckedChange={(checked) => setFlashEnabled(checked === true)}
+                  />
+                  <span className="text-xs text-muted-foreground">Flash</span>
+                </label>
+              </div>
+              <div className="mt-1.5 flex gap-1.5">
+                <Button
+                  size="sm"
+                  className="h-8 flex-1"
+                  disabled={pendingStatusAction !== null}
+                  onClick={() => void updateStatus()}
+                >
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  disabled={pendingStatusAction !== null || !currentStatus}
+                  onClick={() => void clearStatus()}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+          </Surface>
+        </div>
       </div>
 
       <ClientDetailDialog
