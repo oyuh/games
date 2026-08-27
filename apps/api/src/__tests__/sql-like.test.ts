@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { likeTerm } from "../admin-routes";
+import { escapeLike, likeTerm } from "../sql-like";
+
+describe("escapeLike", () => {
+  it("leaves an ordinary term alone", () => {
+    expect(escapeLike("bot")).toBe("bot");
+  });
+
+  it("escapes exactly the three LIKE metacharacters", () => {
+    // The leaderboard search and the admin roster now share this, so a term
+    // that is safe on one board cannot widen the query on the other.
+    expect(escapeLike("100%")).toBe("100\\%");
+    expect(escapeLike("a_b")).toBe("a\\_b");
+    expect(escapeLike("a\\b")).toBe("a\\\\b");
+    expect(escapeLike("plain")).toBe("plain");
+  });
+});
 
 describe("likeTerm", () => {
   it("wraps an ordinary term in wildcards", () => {

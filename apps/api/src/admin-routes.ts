@@ -19,6 +19,7 @@ import {
 } from "@games/shared/db";
 import { drizzleClient } from "./db-provider";
 import { pipsEngine, shikakuEngine } from "@games/shared";
+import { likeTerm } from "./sql-like";
 import { renderPipsSvg } from "./pips-image";
 import { renderPuzzleSvg as renderShikakuSvg } from "./shikaku-image";
 import {
@@ -354,21 +355,6 @@ function flattenActiveGames(games: Awaited<ReturnType<typeof selectActiveGames>>
 }
 
 // ─── Connected clients (from sessions table) ───────────────
-/**
- * Wrap a user's search term for ILIKE.
- *
- * LIKE treats % and _ as wildcards, so an unescaped search for "100%" would
- * match every row rather than the rows containing "100%". Backslash is LIKE's
- * default escape character in Postgres, and it has to be escaped first or it
- * would escape the escapes we add.
- *
- * The result is still passed as a bound parameter; this only decides what the
- * pattern means, never how the statement is built.
- */
-export function likeTerm(query: string): string {
-  return `%${query.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
-}
-
 /**
  * Build the WHERE for the client roster.
  *
