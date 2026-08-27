@@ -29,9 +29,10 @@ Live links:
   - [Local Development](#local-development)
     - [Prerequisites](#prerequisites)
     - [Quick Start](#quick-start)
+    - [Controlling The Running Stack](#controlling-the-running-stack)
+    - [Useful Flags](#useful-flags)
     - [Manual Local Start](#manual-local-start)
     - [Stop Local Services](#stop-local-services)
-    - [Platform-Specific Helpers](#platform-specific-helpers)
   - [Environment Variables](#environment-variables)
     - [Root `.env`](#root-env)
     - [Web App Variables](#web-app-variables)
@@ -239,8 +240,12 @@ packages/shared/src/zero/mutators/
 ### Prerequisites
 
 - Bun 1.3.x or newer
-- Docker Desktop, OrbStack, Colima, or another Docker daemon
+- Node 20 or newer (the local stack script and the API dev runner use it)
+- A container engine: Docker Desktop, OrbStack, Colima, Rancher Desktop or Podman
 - Git
+
+You do not need to start the container engine yourself. If it is installed but
+not running, `bun run local:up` starts it and waits for it.
 
 ### Quick Start
 
@@ -256,7 +261,54 @@ Then open:
 - Admin app: `http://localhost:3002`
 - Zero cache: `http://localhost:4848`
 
-`bun run local:up` starts local Postgres, pushes the Drizzle schema, resets the Zero replica, starts the Zero cache, and launches the workspace dev servers.
+`bun run local:up` runs one cross-platform script (`scripts/local.mjs`) on
+macOS, Linux and Windows. It:
+
+1. Creates `.env` from `.env.example` if it is missing.
+2. Checks that the installed `@rocicorp/zero` matches the zero-cache image, and
+   runs `bun install` if it does not.
+3. Starts the container engine if it is installed but not running.
+4. Starts Postgres and waits until it actually accepts queries.
+5. Pushes the Drizzle schema.
+6. Rebuilds the Zero replica and starts zero-cache.
+7. Starts the `api`, `web` and `admin` dev servers under a small supervisor, so
+   each one can be inspected and restarted on its own.
+
+### Controlling The Running Stack
+
+The stack answers on a local control socket, so these work from any other
+terminal while it is running:
+
+```bash
+bun run local status              # every service, its status, pid, port and uptime
+bun run local logs api            # last 200 lines from one service
+bun run local logs web -f         # follow one service
+bun run local restart admin       # restart just the admin server
+bun run local restart api web     # restart several
+bun run local restart zero        # rebuild the Zero replica and restart zero-cache
+bun run local stop api            # stop one service
+bun run local start api           # start it again
+bun run local doctor              # check the machine for anything that will break the stack
+```
+
+Service names are `postgres`, `zero-cache`, `api`, `web` and `admin`, plus the
+groups `apps`, `infra` and `all`. Common aliases work too (`db`, `zero`, `ui`,
+`backend`).
+
+### Useful Flags
+
+```bash
+bun run local up --host           # expose the web dev server on the local network
+bun run local up --detach         # run in the background and return to the prompt
+bun run local up --only api,web   # only run some dev servers
+bun run local up --skip-dev       # containers and schema only
+bun run local up --skip-db-push   # leave the schema alone
+bun run local up --auto-restart   # bring a dev server back up if it crashes
+bun run local down --wipe-db      # also delete the Postgres volume
+```
+
+`bun run local:up` and `bun run local up` are the same thing; the `local:*`
+scripts are shorthand for the most common commands.
 
 ### Manual Local Start
 
@@ -269,37 +321,17 @@ bun run db:push
 bun run dev
 ```
 
+Note that `docker compose` publishes the same ports as the script's containers,
+so use one or the other, not both.
+
 ### Stop Local Services
 
 ```bash
-# Windows
 bun run local:down
-
-# macOS
-bun run local:down:mac
-
-# Linux
-bun run local:down:linux
 ```
 
-### Platform-Specific Helpers
-
-```bash
-# Windows
-bun run local:up
-bun run local:reset
-
-# macOS
-bun run local:up:mac
-bun run local:reset:mac
-
-# Linux
-bun run local:up:linux
-bun run local:up:linux:host
-bun run local:reset:linux
-```
-
-The Linux/macOS script uses standalone Docker containers and volumes. The Windows script uses `docker compose`.
+That stops the dev servers, clears the dev ports, removes the containers and
+drops the Zero replica. Postgres data is kept unless you pass `--wipe-db`.
 
 ## Environment Variables
 
@@ -394,10 +426,13 @@ Run these from the repo root.
 | Command | Purpose |
 |---------|---------|
 | `bun run dev` | Start all workspace dev servers through Turbo |
-| `bun run local:up` | Start local DB/Zero, push schema, run dev servers on Windows |
-| `bun run local:up:mac` | Start local DB/Zero, push schema, run dev servers on macOS |
-| `bun run local:up:linux` | Start local DB/Zero, push schema, run dev servers on Linux |
-| `bun run local:down` | Stop local dev ports and Docker services on Windows |
+| `bun run local:up` | Start local DB/Zero, push schema, run the dev servers (any OS) |
+| `bun run local:down` | Stop the dev servers and the local Docker services |
+| `bun run local:reset` | Tear the stack down and bring it back up |
+| `bun run local:status` | Show every service, its status, pid, port and uptime |
+| `bun run local restart <service>` | Restart one service, e.g. `admin` |
+| `bun run local logs <service> -f` | Follow one service's log |
+| `bun run local:doctor` | Check the machine for anything that will break the stack |
 | `bun run build` | Build all workspaces |
 | `bun run typecheck` | Typecheck all workspaces |
 | `bun run test` | Run Vitest suites |
