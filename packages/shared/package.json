@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./db": "./src/drizzle/schema.ts",
     "./games/shikaku-engine": "./src/games/shikaku-engine.ts",
-    "./games/pips-engine": "./src/games/pips-engine.ts"
+    "./games/pips-engine": "./src/games/pips-engine.ts",
+    "./avatar": "./src/avatar.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

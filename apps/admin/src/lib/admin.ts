@@ -25,6 +25,8 @@ export type ClientRecord = {
   gameType: GameType | null;
   activity: string | null;
   online: boolean;
+  /** Base64 "shape.color". Untrusted: always read it through parseAvatar. */
+  avatar: string | null;
 };
 
 export type GameSummary = {
