@@ -12,10 +12,10 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/client-api";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/components/Toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SidebarAction } from "@/components/admin/sidebar-action";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
@@ -123,14 +123,7 @@ export function BroadcastControlsDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          className={cn(
-            "border-border bg-primary text-primary-foreground hover:bg-primary/90",
-          )}
-        >
-          <Megaphone className="size-4" />
-          Broadcast
-        </Button>
+        <SidebarAction icon={Megaphone} label="Broadcast" />
       </DialogTrigger>
 
       <DialogContent className="[--dialog-content-width:74rem] 2xl:[--dialog-content-width:78rem] border-border bg-card text-foreground shadow-none">

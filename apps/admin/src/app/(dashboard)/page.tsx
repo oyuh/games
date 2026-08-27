@@ -3,13 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  Ban,
   Gamepad2,
   Globe2,
   Link2,
   Shield,
   Users,
-  Waves,
 } from "lucide-react";
 import { api } from "@/lib/client-api";
 import {
@@ -18,64 +16,21 @@ import {
   FooterStatus,
   formatGameType,
   formatRelativeTime,
+  gameAccent,
   GameType,
   shortId,
 } from "@/lib/admin";
 import { useToast } from "@/components/Toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
+import { EmptyNote, Panel, StatTile } from "@/components/ui/stat-tile";
+import { Surface } from "@/components/ui/surface";
 import { ClientDetailDialog } from "@/components/admin/client-detail-dialog";
+import { PlayerAvatar } from "@/components/admin/player-avatar";
 import { GameStateDialog } from "@/components/admin/game-state-dialog";
-
-function Surface({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      className={`rounded-lg border border-border bg-card p-5 ${className}`}
-    >
-      {children}
-    </section>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <Surface className="bg-muted/40 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-            {label}
-          </div>
-          <div className="mt-3 text-3xl font-semibold tracking-normal text-foreground">
-            {value}
-          </div>
-        </div>
-        <div className="flex size-11 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
-          <Icon className="size-5" />
-        </div>
-      </div>
-      <div className="mt-3 text-sm leading-6 text-muted-foreground">{hint}</div>
-    </Surface>
-  );
-}
 
 function syncStatusDraft(status: FooterStatus) {
   return {
@@ -89,39 +44,18 @@ function syncStatusDraft(status: FooterStatus) {
 
 function DashboardSkeleton() {
   return (
-    <>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="grid shrink-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Surface key={index} className="bg-muted/40 p-4">
-            <Skeleton className="h-4 w-28 bg-muted" />
-            <Skeleton className="mt-4 h-10 w-24 bg-muted" />
-            <Skeleton className="mt-4 h-4 w-full bg-muted" />
-            <Skeleton className="mt-2 h-4 w-3/4 bg-muted" />
-          </Surface>
+          <Skeleton key={index} className="h-[4.25rem] bg-muted" />
         ))}
       </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-        <Surface className="overflow-hidden">
-          <Skeleton className="h-5 w-40 bg-muted" />
-          <Skeleton className="mt-3 h-8 w-72 bg-muted" />
-          <Skeleton className="mt-3 h-4 w-full bg-muted" />
-          <Skeleton className="mt-2 h-4 w-3/4 bg-muted" />
-          <div className="mt-5 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
-            <Skeleton className="h-85 bg-muted" />
-            <div className="grid gap-4">
-              <Skeleton className="h-40 bg-muted" />
-              <Skeleton className="h-40 bg-muted" />
-            </div>
-          </div>
-        </Surface>
-
-        <div className="grid gap-4">
-          <Skeleton className="h-55 bg-muted" />
-          <Skeleton className="h-55 bg-muted" />
-        </div>
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2 2xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="min-h-0 bg-muted" />
+        ))}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -209,6 +143,18 @@ export default function DashboardPage() {
     return Math.max(1, ...roomMix.map((entry) => entry.total));
   }, [roomMix]);
 
+  const maxRegion = useMemo(() => {
+    return Math.max(1, ...(data?.summary.clients.topRegions ?? []).map((r) => r.total));
+  }, [data]);
+
+  const clientsByGame = useMemo(() => {
+    if (!data) return [] as Array<{ type: string; total: number }>;
+    return Object.entries(data.summary.clients.byGameType)
+      .map(([type, total]) => ({ type, total }))
+      .filter((entry) => entry.total > 0)
+      .sort((left, right) => right.total - left.total);
+  }, [data]);
+
   const namedRatio = data
     ? Math.round(
         (data.summary.clients.named / Math.max(1, data.summary.clients.total)) *
@@ -267,550 +213,400 @@ export default function DashboardPage() {
 
   if (!data) {
     return (
-      <Surface className="border-dashed bg-transparent px-5 py-16 text-center text-sm text-muted-foreground">
+      <Surface tone="dashed" className="m-auto max-w-sm text-center text-sm text-muted-foreground">
         Dashboard data is unavailable right now.
       </Surface>
     );
   }
 
   return (
-    <>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Connected Clients"
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      {/* Region 1: the four headline numbers. Fixed height, never scrolls. */}
+      <div className="grid shrink-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label="Connected"
           value={data.summary.clients.total.toLocaleString()}
-          hint={`${data.summary.clients.inGame.toLocaleString()} currently attached to a live room`}
+          accent="var(--game-imposter)"
           icon={Users}
+          parts={[
+            { label: "in room", value: data.summary.clients.inGame },
+            { label: "named", value: data.summary.clients.named },
+          ]}
         />
-        <StatCard
-          label="Active Rooms"
+        <StatTile
+          label="Active rooms"
           value={data.summary.games.total.toLocaleString()}
-          hint={`${data.summary.games.activePlayers.toLocaleString()} players and ${data.summary.games.activeSpectators.toLocaleString()} spectators live`}
+          accent="var(--game-password)"
           icon={Gamepad2}
+          parts={[
+            { label: "players", value: data.summary.games.activePlayers },
+            { label: "watching", value: data.summary.games.activeSpectators },
+          ]}
         />
-        <StatCard
-          label="Named Sessions"
+        <StatTile
+          label="Named share"
           value={`${namedRatio}%`}
-          hint={`${data.summary.clients.named.toLocaleString()} named and ${data.summary.clients.anonymous.toLocaleString()} anonymous`}
+          accent="var(--game-chain)"
           icon={Activity}
+          parts={[{ label: "anonymous", value: data.summary.clients.anonymous }]}
         />
-        <StatCard
-          label="Moderation Load"
+        <StatTile
+          label="Bans"
           value={data.summary.moderation.totalBans.toLocaleString()}
-          hint={`${data.summary.moderation.restrictedNames.toLocaleString()} name rules and ${data.summary.moderation.nameOverrides.toLocaleString()} overrides active`}
+          accent="var(--danger)"
           icon={Shield}
+          parts={[
+            { label: "name rules", value: data.summary.moderation.restrictedNames },
+            { label: "overrides", value: data.summary.moderation.nameOverrides },
+          ]}
         />
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-        <Surface className="overflow-hidden">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                Activity Snapshot
-              </div>
-              <h2 className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
-                Live traffic and room distribution
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                The overview below keeps the busiest metrics above the fold: who
-                is connected, where they are, and which game types are carrying
-                traffic.
-              </p>
-            </div>
-            <Badge
-              variant="outline"
-              className="w-fit border-border bg-card text-foreground"
-            >
-              Auto-refresh 8s
+      {/* Region 2: four columns that fill the rest of the viewport. Each one
+          scrolls inside itself, so the page never grows. */}
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2 2xl:grid-cols-4">
+        <Panel
+          title="Live sessions"
+          accent="var(--game-imposter)"
+          meta={
+            <Badge variant="muted" className="tabular-nums">
+              {data.recentClients.length}
             </Badge>
+          }
+        >
+          {data.recentClients.length === 0 ? (
+            <EmptyNote>Nobody connected.</EmptyNote>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {data.recentClients.map((client) => (
+                <li
+                  key={
+                    client.sessionId ?? client.fingerprint ?? String(client.lastSeen)
+                  }
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedClient(client)}
+                    className="w-full rounded-md border border-border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/40 hover:bg-accent"
+                  >
+                    <div className="flex items-center gap-2">
+                      <PlayerAvatar
+                        sessionId={client.sessionId}
+                        avatar={client.avatar}
+                        size={22}
+                        ring={client.online ? "online" : "idle"}
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                        {client.name || "Anonymous"}
+                      </span>
+                      <span className="shrink-0 text-[0.68rem] text-muted-foreground tabular-nums">
+                        {formatRelativeTime(client.lastSeen)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 pl-7 text-[0.68rem] text-muted-foreground">
+                      <span className="truncate font-mono">
+                        {shortId(client.sessionId, 14)}
+                      </span>
+                      {client.region ? (
+                        <span className="ml-auto flex shrink-0 items-center gap-1">
+                          <Globe2 className="size-3" />
+                          {client.region}
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel
+          title="Rooms"
+          accent="var(--game-password)"
+          meta={
+            <Badge variant="muted" className="tabular-nums">
+              {data.summary.games.total} live
+            </Badge>
+          }
+        >
+          <div className="flex flex-col gap-1">
+            {roomMix.map((entry) => (
+              <div key={entry.type} className="flex items-center gap-2">
+                <span className="w-24 shrink-0 truncate text-[0.7rem] text-muted-foreground">
+                  {formatGameType(entry.type)}
+                </span>
+                <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                  <span
+                    className="block h-full rounded-full bg-[var(--game-password)] transition-[width]"
+                    style={{ width: `${(entry.total / maxRoomMix) * 100}%` }}
+                  />
+                </span>
+                <span className="w-6 shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">
+                  {entry.total}
+                </span>
+              </div>
+            ))}
           </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
-            <div className="rounded-lg border border-border bg-muted/40 p-5">
-              <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                Population
-              </div>
-              <div className="mt-3 text-5xl font-semibold tracking-normal text-foreground">
-                {data.summary.clients.total.toLocaleString()}
-              </div>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                {data.summary.clients.inGame.toLocaleString()} clients are
-                seated in rooms, with{" "}
-                {data.summary.games.activePlayers.toLocaleString()} active
-                players generating the current session load.
-              </p>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {[
-                  { label: "Players", value: data.summary.games.activePlayers },
-                  {
-                    label: "Spectators",
-                    value: data.summary.games.activeSpectators,
-                  },
-                  { label: "Named", value: data.summary.clients.named },
-                  { label: "Anonymous", value: data.summary.clients.anonymous },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-lg border border-border bg-card px-4 py-3"
+          {data.recentGames.length > 0 ? (
+            <ul className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
+              {data.recentGames.map((game) => (
+                <li key={game.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGame({ id: game.id, type: game.type })}
+                    className="w-full rounded-md border border-border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/40 hover:bg-accent"
                   >
-                    <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
-                      {item.label}
+                    <div className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold text-foreground">
+                        {game.code}
+                      </span>
+                      <Badge
+                        variant="accent"
+                        accent={gameAccent(game.type)}
+                        className="h-5 shrink-0 text-[0.6rem]"
+                      >
+                        {game.phase}
+                      </Badge>
                     </div>
-                    <div className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
-                      {item.value.toLocaleString()}
+                    <div className="mt-1 flex items-center gap-2 text-[0.68rem] text-muted-foreground tabular-nums">
+                      <span>{game.playerCount}p</span>
+                      <span>{game.spectatorCount} watching</span>
+                      <span>{game.roundCount} rounds</span>
+                      <span className="ml-auto">
+                        {formatRelativeTime(game.updatedAt)}
+                      </span>
                     </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="mt-3 border-t border-border pt-3">
+              <EmptyNote>No active rooms.</EmptyNote>
+            </div>
+          )}
+        </Panel>
+
+        <Panel
+          title="Moderation"
+          accent="var(--danger)"
+          meta={
+            <Badge variant={data.summary.moderation.totalBans > 0 ? "danger" : "muted"}>
+              {data.summary.moderation.totalBans} active
+            </Badge>
+          }
+        >
+          <div className="grid grid-cols-3 gap-1.5">
+            {[
+              { label: "Session", value: data.summary.moderation.sessionBans },
+              { label: "IP", value: data.summary.moderation.ipBans },
+              { label: "Region", value: data.summary.moderation.regionBans },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-md border border-border bg-card px-2 py-1.5 text-center"
+              >
+                <div className="text-[0.58rem] font-bold tracking-wider text-muted-foreground uppercase">
+                  {item.label}
+                </div>
+                <div className="text-lg leading-tight font-extrabold tabular-nums text-foreground">
+                  {item.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 text-[0.6rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+            Recent bans
+          </div>
+          <ul className="mt-1.5 flex flex-col gap-1.5">
+            {data.recentBans.length === 0 ? (
+              <EmptyNote>No active bans.</EmptyNote>
+            ) : (
+              data.recentBans.map((ban) => (
+                <li
+                  key={ban.id}
+                  className="rounded-md border border-border bg-card px-2.5 py-1.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge variant="danger" className="h-4 shrink-0 text-[0.55rem]">
+                      {ban.type}
+                    </Badge>
+                    <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
+                      {ban.value}
+                    </span>
+                    <span className="shrink-0 text-[0.65rem] text-muted-foreground">
+                      {formatRelativeTime(ban.createdAt)}
+                    </span>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+
+          <div className="mt-3 text-[0.6rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+            Restricted names
+          </div>
+          <ul className="mt-1.5 flex flex-col gap-1.5">
+            {data.nameRules.length === 0 ? (
+              <EmptyNote>No name rules.</EmptyNote>
+            ) : (
+              data.nameRules.map((rule) => (
+                <li
+                  key={rule.id}
+                  className="rounded-md border border-border bg-card px-2.5 py-1.5"
+                >
+                  <div className="truncate font-mono text-xs font-semibold text-foreground">
+                    {rule.pattern}
+                  </div>
+                  <div className="truncate text-[0.65rem] text-muted-foreground">
+                    {rule.reason || "No reason given"}
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+        </Panel>
+
+        {/* Column 4 stacks two things: the data that had nowhere to live
+            (topRegions and byGameType were both being fetched and never
+            shown), and the footer form, which is a control rather than a
+            readout and so gets the smaller half. */}
+        <div className="flex min-h-0 flex-col gap-3">
+          <Panel
+            title="Where they are"
+            accent="var(--game-chain)"
+            className="min-h-0 flex-1"
+            meta={
+              <Badge variant="muted" className="tabular-nums">
+                {data.summary.clients.topRegions.length} regions
+              </Badge>
+            }
+          >
+            {data.summary.clients.topRegions.length === 0 ? (
+              <EmptyNote>No regional traffic yet.</EmptyNote>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {data.summary.clients.topRegions.slice(0, 8).map((entry) => (
+                  <div key={entry.region} className="flex items-center gap-2">
+                    <Globe2 className="size-3 shrink-0 text-muted-foreground" />
+                    <span className="w-20 shrink-0 truncate text-[0.7rem] text-muted-foreground">
+                      {entry.region || "Unknown"}
+                    </span>
+                    <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                      <span
+                        className="block h-full rounded-full bg-[var(--game-chain)]"
+                        style={{ width: `${(entry.total / maxRegion) * 100}%` }}
+                      />
+                    </span>
+                    <span className="w-6 shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">
+                      {entry.total}
+                    </span>
                   </div>
                 ))}
               </div>
+            )}
+
+            <div className="mt-3 border-t border-border pt-3 text-[0.6rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+              Players by game
             </div>
-
-            <div className="grid gap-4">
-              <div className="rounded-lg border border-border bg-muted/40 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                      Room Mix
-                    </div>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      Current room volume by game type
-                    </div>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="border-border bg-card text-foreground"
-                  >
-                    {data.summary.games.total} live
-                  </Badge>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {roomMix.map((entry) => (
-                    <div key={entry.type}>
-                      <div className="mb-1.5 flex items-center justify-between gap-3 text-sm text-muted-foreground">
-                        <span>{formatGameType(entry.type)}</span>
-                        <span className="text-muted-foreground">
-                          {entry.total}
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-lg bg-muted">
-                        <div
-                          className="h-2 rounded-lg bg-foreground"
-                          style={{
-                            width: `${(entry.total / maxRoomMix) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-muted/40 p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                  Regional Spread
-                </div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {data.summary.clients.topRegions.slice(0, 6).map((entry) => (
-                    <div
-                      key={entry.region}
-                      className="rounded-lg border border-border bg-card px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 text-sm text-foreground">
-                          <Globe2 className="size-4 text-muted-foreground" />
-                          {entry.region}
-                        </div>
-                        <div className="text-sm font-medium text-foreground">
-                          {entry.total}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Surface>
-
-        <div className="grid gap-4">
-          <Surface className="bg-muted/40">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                  Site Message
-                </div>
-                <h2 className="mt-2 text-xl font-semibold tracking-normal text-foreground">
-                  Footer status control
-                </h2>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
-                <Waves className="size-4.5" />
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-              {currentStatus ? (
-                <>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="border border-[#36559a] bg-muted text-foreground">
-                      Live
-                    </Badge>
-                    {currentStatus.flash ? (
-                      <Badge
-                        variant="outline"
-                        className="border-border bg-card text-foreground"
-                      >
-                        Flashing
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <div
-                    className="mt-3 font-medium text-foreground"
-                    style={
-                      currentStatus.color
-                        ? { color: currentStatus.color }
-                        : undefined
-                    }
-                  >
-                    {currentStatus.text}
-                  </div>
-                  {currentStatus.link ? (
-                    <a
-                      href={currentStatus.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2 inline-flex items-center gap-2 text-muted-foreground underline underline-offset-4"
-                    >
-                      <Link2 className="size-4" />
-                      {currentStatus.link}
-                    </a>
-                  ) : null}
-                </>
+            <div className="mt-1.5 flex flex-col gap-1">
+              {clientsByGame.length === 0 ? (
+                <EmptyNote>Nobody in a game.</EmptyNote>
               ) : (
-                <>
-                  <Badge
-                    variant="outline"
-                    className="border-border bg-card text-foreground"
-                  >
-                    Default
-                  </Badge>
-                  <div className="mt-3 text-muted-foreground">
-                    No custom footer status is active.
+                clientsByGame.map((entry) => (
+                  <div key={entry.type} className="flex items-center gap-2">
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ background: gameAccent(entry.type) }}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1 truncate text-[0.7rem] text-muted-foreground">
+                      {formatGameType(entry.type)}
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground">
+                      {entry.total}
+                    </span>
                   </div>
-                </>
+                ))
+              )}
+            </div>
+          </Panel>
+
+          <Surface pad="none" accent="var(--game-location)" className="shrink-0">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2">
+              <h2 className="text-[0.68rem] font-extrabold tracking-[0.12em] text-foreground uppercase">
+                Footer message
+              </h2>
+              {currentStatus ? (
+                <Badge variant="success">Live</Badge>
+              ) : (
+                <Badge variant="muted">Default</Badge>
               )}
             </div>
 
-            <Textarea
-              value={statusInput}
-              onChange={(event) => setStatusInput(event.target.value)}
-              placeholder="Short footer status message"
-              maxLength={200}
-              className="mt-4 min-h-24 border-border bg-card text-foreground"
-            />
-
-            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <div className="p-2.5">
               <Input
-                value={linkInput}
-                onChange={(event) => setLinkInput(event.target.value)}
-                placeholder="Optional https:// link"
-                maxLength={500}
-                className="border-border bg-card text-foreground"
+                value={statusInput}
+                onChange={(event) => setStatusInput(event.target.value)}
+                placeholder={
+                  currentStatus?.text || "Message shown in the site footer"
+                }
+                maxLength={200}
+                className="h-8 text-sm"
               />
-
-              <div className="flex gap-3">
-                <label className="flex items-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground">
-                  <span>Accent</span>
-                  <input
-                    type="color"
-                    value={colorInput || "#4f7cff"}
-                    onChange={(event) => setColorInput(event.target.value)}
-                    className="size-8 rounded-lg border border-border bg-transparent p-0"
-                  />
-                </label>
-
-                <label className="flex items-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={flashEnabled}
-                    onChange={(event) => setFlashEnabled(event.target.checked)}
-                    className="size-4 rounded border-border bg-transparent"
-                  />
-                  Flash
-                </label>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button
-                disabled={pendingStatusAction !== null}
-                onClick={() => void updateStatus()}
-              >
-                Save status
-              </Button>
-              <Button
-                variant="outline"
-                className="border-border bg-card text-foreground hover:bg-accent"
-                disabled={pendingStatusAction !== null}
-                onClick={() => void clearStatus()}
-              >
-                Clear
-              </Button>
-            </div>
-          </Surface>
-
-          <Surface className="bg-muted/40">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                  Moderation Health
-                </div>
-                <h2 className="mt-2 text-xl font-semibold tracking-normal text-foreground">
-                  Current enforcement pressure
-                </h2>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
-                <Ban className="size-4.5" />
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {[
-                {
-                  label: "Session",
-                  value: data.summary.moderation.sessionBans,
-                },
-                { label: "IP", value: data.summary.moderation.ipBans },
-                { label: "Region", value: data.summary.moderation.regionBans },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-lg border border-border bg-card px-4 py-3"
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <Input
+                  value={linkInput}
+                  onChange={(event) => setLinkInput(event.target.value)}
+                  placeholder="https:// link"
+                  maxLength={500}
+                  className="h-8 min-w-0 flex-1 text-sm"
+                />
+                <input
+                  type="color"
+                  aria-label="Accent colour"
+                  title="Accent colour"
+                  value={colorInput || "#7ecbff"}
+                  onChange={(event) => setColorInput(event.target.value)}
+                  className="size-8 shrink-0 cursor-pointer rounded-md border border-border bg-card p-0.5"
+                />
+                <label
+                  title="Flash the message"
+                  className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-card px-2"
                 >
-                  <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
-                    {item.label}
-                  </div>
-                  <div className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
-                    {item.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                  Recent Bans
-                </div>
-                <div className="mt-3 space-y-2.5">
-                  {data.recentBans.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-                      No active bans.
-                    </div>
-                  ) : (
-                    data.recentBans.slice(0, 3).map((ban) => (
-                      <div
-                        key={ban.id}
-                        className="rounded-lg border border-border bg-card px-4 py-3"
-                      >
-                        <div className="flex items-center justify-between gap-3 text-sm">
-                          <div className="font-medium text-foreground">
-                            {ban.type.toUpperCase()}
-                          </div>
-                          <div className="text-muted-foreground">
-                            {formatRelativeTime(ban.createdAt)}
-                          </div>
-                        </div>
-                        <div className="mt-1 truncate text-sm text-muted-foreground">
-                          {ban.value}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                  <Checkbox
+                    id="status-flash"
+                    checked={flashEnabled}
+                    onCheckedChange={(checked) => setFlashEnabled(checked === true)}
+                  />
+                  <span className="text-xs text-muted-foreground">Flash</span>
+                </label>
               </div>
-
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                  Restricted Names
-                </div>
-                <div className="mt-3 space-y-2.5">
-                  {data.nameRules.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-                      No restricted names configured.
-                    </div>
-                  ) : (
-                    data.nameRules.slice(0, 3).map((rule) => (
-                      <div
-                        key={rule.id}
-                        className="rounded-lg border border-border bg-card px-4 py-3"
-                      >
-                        <div className="font-medium text-foreground">
-                          {rule.pattern}
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          {rule.reason || "No reason provided"}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+              <div className="mt-1.5 flex gap-1.5">
+                <Button
+                  size="sm"
+                  className="h-8 flex-1"
+                  disabled={pendingStatusAction !== null}
+                  onClick={() => void updateStatus()}
+                >
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  disabled={pendingStatusAction !== null || !currentStatus}
+                  onClick={() => void clearStatus()}
+                >
+                  Clear
+                </Button>
               </div>
             </div>
           </Surface>
         </div>
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-[0.96fr_1.04fr]">
-        <Surface>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                Recent Clients
-              </div>
-              <h2 className="mt-2 text-xl font-semibold tracking-normal text-foreground">
-                Newest visible sessions
-              </h2>
-            </div>
-            <Badge
-              variant="outline"
-              className="border-border bg-card text-foreground"
-            >
-              {data.summary.clients.inGame} in-game
-            </Badge>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {data.recentClients.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
-                No recent clients are visible right now.
-              </div>
-            ) : (
-              data.recentClients.map((client) => (
-                <div
-                  key={
-                    client.sessionId ??
-                    client.fingerprint ??
-                    String(client.lastSeen)
-                  }
-                  className="rounded-lg border border-border bg-muted/40 p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <button
-                      type="button"
-                      className="min-w-0 text-left"
-                      onClick={() => setSelectedClient(client)}
-                    >
-                      <div className="font-medium text-foreground">
-                        {client.name || "Anonymous"}
-                      </div>
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        {shortId(client.sessionId, 16)}
-                      </div>
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        Seen {formatRelativeTime(client.lastSeen)}
-                      </div>
-                    </button>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      {client.region ? (
-                        <Badge
-                          variant="outline"
-                          className="border-border bg-card text-foreground"
-                        >
-                          <Globe2 className="size-3.5" />
-                          {client.region}
-                        </Badge>
-                      ) : null}
-                      {client.gameId && client.gameType ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-border bg-card text-foreground hover:bg-accent"
-                          onClick={() =>
-                            setSelectedGame({
-                              id: client.gameId!,
-                              type: client.gameType!,
-                            })
-                          }
-                        >
-                          <Activity className="size-4" />
-                          {formatGameType(client.gameType)}
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Surface>
-
-        <Surface>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                Hot Rooms
-              </div>
-              <h2 className="mt-2 text-xl font-semibold tracking-normal text-foreground">
-                Most recently touched games
-              </h2>
-            </div>
-            <Badge
-              variant="outline"
-              className="border-border bg-card text-foreground"
-            >
-              {data.summary.games.activePlayers} players
-            </Badge>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {data.recentGames.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
-                No active games right now.
-              </div>
-            ) : (
-              data.recentGames.map((game) => (
-                <button
-                  key={game.id}
-                  type="button"
-                  onClick={() =>
-                    setSelectedGame({ id: game.id, type: game.type })
-                  }
-                  className="flex w-full items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 p-4 text-left transition-colors hover:border-foreground/20 hover:bg-accent"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="font-medium text-foreground">
-                        {game.code}
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="border-border bg-card text-foreground"
-                      >
-                        {formatGameType(game.type)}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      <span>{game.playerCount} players</span>
-                      <span>{game.spectatorCount} spectators</span>
-                      <span>{game.roundCount} tracked rounds</span>
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 text-right text-sm text-muted-foreground">
-                    <div className="text-foreground">{game.phase}</div>
-                    <div className="mt-1">
-                      {formatRelativeTime(game.updatedAt)}
-                    </div>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </Surface>
       </div>
 
       <ClientDetailDialog
@@ -834,6 +630,6 @@ export default function DashboardPage() {
         }}
         onChanged={() => setRefreshKey((value) => value + 1)}
       />
-    </>
+    </div>
   );
 }

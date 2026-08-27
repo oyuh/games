@@ -33,20 +33,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PlayerAvatar } from "@/components/admin/player-avatar";
+import { Surface } from "@/components/ui/surface";
 import { Textarea } from "@/components/ui/textarea";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error
     ? error.message
     : "Unable to complete that action.";
-}
-
-function Surface({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-border bg-muted/40 p-5">
-      {children}
-    </div>
-  );
 }
 
 export function ClientDetailDialog({
@@ -157,15 +151,23 @@ export function ClientDetailDialog({
 
         {!activeClient ? null : (
           <div className="grid gap-5 xl:grid-cols-[minmax(23rem,0.9fr)_minmax(30rem,1.1fr)] xl:items-start 2xl:grid-cols-[minmax(25rem,0.86fr)_minmax(34rem,1.14fr)]">
-            <Surface>
+            <Surface tone="panel">
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="flex min-w-0 items-center gap-3">
+                  <PlayerAvatar
+                    sessionId={activeClient.sessionId}
+                    avatar={activeClient.avatar}
+                    size={52}
+                    ring={activeClient.online ? "online" : "idle"}
+                  />
+                  <div className="min-w-0">
                   <div className="text-xs uppercase tracking-normal text-muted-foreground">
                     Session
                   </div>
                   <div className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
                     {activeClient.name || "Anonymous"}
                   </div>
+                </div>
                 </div>
                 <Badge className="border border-border bg-muted text-foreground">
                   {formatRelativeTime(activeClient.lastSeen)}
@@ -288,7 +290,7 @@ export function ClientDetailDialog({
             </Surface>
 
             <div className="space-y-4">
-              <Surface>
+              <Surface tone="panel">
                 <div className="text-sm font-semibold text-foreground">
                   Name override
                 </div>
@@ -356,7 +358,7 @@ export function ClientDetailDialog({
                 </div>
               </Surface>
 
-              <Surface>
+              <Surface tone="panel">
                 <div className="text-sm font-semibold text-foreground">
                   Direct moderation
                 </div>
@@ -465,7 +467,7 @@ export function ClientDetailDialog({
                 </div>
               </Surface>
 
-              <Surface>
+              <Surface tone="panel">
                 <div className="text-sm font-semibold text-foreground">
                   Targeted toast
                 </div>

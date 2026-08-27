@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Copy,
   Dice5,
   Edit3,
   PlusCircle,
   Search,
   TimerReset,
   Trash2,
+  LayoutGrid,
+  MoreHorizontal,
   Trophy,
 } from "lucide-react";
 import { api } from "@/lib/client-api";
@@ -24,6 +25,7 @@ import { useToast } from "@/components/Toast";
 import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PuzzleViewDialog } from "@/components/admin/puzzle-view-dialog";
 import { ScoreCreateDialog } from "@/components/admin/score-create-dialog";
 import {
   Dialog,
@@ -33,15 +35,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
+import { CopyChip } from "@/components/ui/copy-chip";
+import { Column, DataTable } from "@/components/ui/data-table";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ScoreDraft = {
   sessionId: string;
@@ -54,22 +59,6 @@ type ScoreDraft = {
   puzzleCount: string;
   createdAt: string;
 };
-
-function Surface({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      className={`rounded-lg border border-border bg-card p-5 ${className}`}
-    >
-      {children}
-    </section>
-  );
-}
 
 function createDraft(score: PipsScoreRecord): ScoreDraft {
   return {
@@ -112,6 +101,7 @@ export default function PipsAdminPage() {
   const [draft, setDraft] = useState<ScoreDraft | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [boardScore, setBoardScore] = useState<PipsScoreRecord | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -375,9 +365,147 @@ export default function PipsAdminPage() {
     }
   };
 
+  // Built fresh each render on purpose. Ten object literals cost nothing, and
+  // memoising them would mean turning every handler above into a useCallback
+  // just to keep the dependency list honest, which is more machinery than the
+  // saving is worth.
+  const columns: Column<PipsScoreRecord>[] = [
+    {
+      id: "rank",
+      header: "Rank",
+      width: 76,
+      align: "right",
+      cell: (score) => (
+        <span className="text-muted-foreground">
+          {(page - 1) * pageSize + visibleScores.indexOf(score) + 1}
+        </span>
+      ),
+    },
+    {
+      id: "name",
+      header: "Player",
+      width: 190,
+      sortValue: (score) => score.name,
+      cell: (score) => (
+        <div className="min-w-0">
+          <div className="truncate font-medium text-foreground">{score.name}</div>
+          <div className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+            {shortId(score.id, 14)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "totalMs",
+      header: "Total",
+      width: 110,
+      align: "right",
+      sortValue: (score) => score.totalMs,
+      cell: (score) => (
+        <span className="font-semibold text-foreground">
+          {formatPreciseTime(score.totalMs)}
+        </span>
+      ),
+    },
+    {
+      id: "easyMs",
+      header: "Easy",
+      width: 100,
+      align: "right",
+      sortValue: (score) => score.easyMs,
+      cell: (score) => formatPreciseTime(score.easyMs),
+    },
+    {
+      id: "mediumMs",
+      header: "Medium",
+      width: 100,
+      align: "right",
+      sortValue: (score) => score.mediumMs,
+      cell: (score) => formatPreciseTime(score.mediumMs),
+    },
+    {
+      id: "hardMs",
+      header: "Hard",
+      width: 100,
+      align: "right",
+      sortValue: (score) => score.hardMs,
+      cell: (score) => formatPreciseTime(score.hardMs),
+    },
+    {
+      id: "seed",
+      header: "Seed",
+      width: 130,
+      sortValue: (score) => score.seed,
+      cell: (score) => (
+        <CopyChip
+          label={String(score.seed)}
+          onCopy={() => void copyText(String(score.seed), "Seed")}
+        />
+      ),
+    },
+    {
+      id: "sessionId",
+      header: "Session",
+      width: 170,
+      sortValue: (score) => score.sessionId,
+      cell: (score) => (
+        <CopyChip
+          label={shortId(score.sessionId, 14)}
+          onCopy={() => void copyText(score.sessionId, "Session id")}
+        />
+      ),
+    },
+    {
+      id: "createdAt",
+      header: "Submitted",
+      width: 170,
+      sortValue: (score) => score.createdAt,
+      cell: (score) => (
+        <span className="text-muted-foreground">
+          {formatDateTime(score.createdAt)}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      width: 80,
+      align: "right",
+      alwaysVisible: true,
+      cell: (score) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label="Row actions">
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setBoardScore(score)}>
+              <LayoutGrid />
+              View board
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => openEditor(score)}>
+              <Edit3 />
+              Edit run
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={pendingAction === `delete-${score.id}`}
+              onSelect={() => void deleteScore(score)}
+            >
+              <Trash2 />
+              Delete run
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
+
   return (
-    <>
-      <Surface>
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <Surface pad="sm" className="shrink-0">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {[
             {
@@ -429,7 +557,7 @@ export default function PipsAdminPage() {
         </div>
       </Surface>
 
-      <Surface className="mt-4">
+      <Surface pad="sm" className="shrink-0">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative w-full max-w-2xl">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -463,131 +591,27 @@ export default function PipsAdminPage() {
         </div>
       </Surface>
 
-      <Surface className="mt-4">
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Rank</TableHead>
-                <TableHead className="text-muted-foreground">Player</TableHead>
-                <TableHead className="text-muted-foreground">Total</TableHead>
-                <TableHead className="text-muted-foreground">Easy</TableHead>
-                <TableHead className="text-muted-foreground">Medium</TableHead>
-                <TableHead className="text-muted-foreground">Hard</TableHead>
-                <TableHead className="text-muted-foreground">Seed</TableHead>
-                <TableHead className="text-muted-foreground">Session</TableHead>
-                <TableHead className="text-muted-foreground">
-                  Submitted
-                </TableHead>
-                <TableHead className="text-muted-foreground">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading && scores.length === 0 ? (
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableCell colSpan={10} className="px-4 py-5">
-                    <div className="space-y-2">
-                      {Array.from({ length: 6 }).map((_, index) => (
-                        <Skeleton key={index} className="h-12 bg-muted" />
-                      ))}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : visibleScores.length === 0 ? (
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableCell
-                    colSpan={10}
-                    className="px-4 py-12 text-center text-sm text-muted-foreground"
-                  >
-                    No Pips runs match the current search.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                visibleScores.map((score, index) => (
-                  <TableRow
-                    key={score.id}
-                    className="border-border hover:bg-accent"
-                  >
-                    <TableCell className="text-muted-foreground">
-                      {(page - 1) * pageSize + index + 1}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-foreground">
-                        {score.name}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {shortId(score.id, 14)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-semibold text-foreground">
-                      {formatPreciseTime(score.totalMs)}
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {formatPreciseTime(score.easyMs)}
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {formatPreciseTime(score.mediumMs)}
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {formatPreciseTime(score.hardMs)}
-                    </TableCell>
-                    <TableCell>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-sm text-muted-foreground transition-colors hover:bg-accent"
-                        type="button"
-                        onClick={() =>
-                          void copyText(String(score.seed), "Seed")
-                        }
-                      >
-                        <Copy className="size-3" />
-                        {score.seed}
-                      </button>
-                    </TableCell>
-                    <TableCell>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-sm text-muted-foreground transition-colors hover:bg-accent"
-                        type="button"
-                        onClick={() =>
-                          void copyText(score.sessionId, "Session id")
-                        }
-                      >
-                        <Copy className="size-3" />
-                        {shortId(score.sessionId, 14)}
-                      </button>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDateTime(score.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-border bg-card text-foreground hover:bg-accent"
-                          onClick={() => openEditor(score)}
-                        >
-                          <Edit3 className="size-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="border border-border bg-muted text-foreground hover:bg-accent"
-                          disabled={pendingAction === `delete-${score.id}`}
-                          onClick={() => void deleteScore(score)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      <Surface pad="sm" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {loading && scores.length === 0 ? (
+          <div className="space-y-2">
+            {/* Match the skeleton count to the page size so the layout does not
+                jump when the real rows land. */}
+            {Array.from({ length: Math.min(pageSize, 12) }).map((_, index) => (
+              <Skeleton key={index} className="h-12 bg-muted" />
+            ))}
+          </div>
+        ) : (
+          <DataTable
+            className="min-h-0 flex-1"
+            tableKey="pips-scores"
+            columns={columns}
+            rows={visibleScores}
+            rowKey={(score) => score.id}
+            empty="No Pips runs match the current search."
+          />
+        )}
 
-        <div className="mt-4">
+        <div className="mt-3 shrink-0">
           <Pagination
             page={page}
             totalPages={totalPages}
@@ -601,6 +625,19 @@ export default function PipsAdminPage() {
           />
         </div>
       </Surface>
+
+      <PuzzleViewDialog
+        game="pips"
+        scoreId={boardScore?.id ?? null}
+        seed={boardScore?.seed ?? null}
+        puzzleCount={3}
+        accent="var(--game-pips)"
+        labels={["Easy", "Medium", "Hard"]}
+        open={Boolean(boardScore)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setBoardScore(null);
+        }}
+      />
 
       <ScoreCreateDialog
         game="pips"
@@ -631,12 +668,9 @@ export default function PipsAdminPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-3">
                 <div>
-                  <label
-                    htmlFor="pips-session-id"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="pips-session-id" className="mb-2">
                     Session id
-                  </label>
+                  </Label>
                   <Input
                     id="pips-session-id"
                     value={draft.sessionId}
@@ -651,12 +685,9 @@ export default function PipsAdminPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="pips-player-name"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="pips-player-name" className="mb-2">
                     Player name
-                  </label>
+                  </Label>
                   <Input
                     id="pips-player-name"
                     value={draft.name}
@@ -671,12 +702,9 @@ export default function PipsAdminPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="pips-seed"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="pips-seed" className="mb-2">
                     Seed
-                  </label>
+                  </Label>
                   <Input
                     id="pips-seed"
                     type="number"
@@ -693,12 +721,9 @@ export default function PipsAdminPage() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="pips-created-at"
-                    className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                  >
+                  <Label htmlFor="pips-created-at" className="mb-2">
                     Submitted at
-                  </label>
+                  </Label>
                   <Input
                     id="pips-created-at"
                     type="datetime-local"
@@ -724,12 +749,9 @@ export default function PipsAdminPage() {
                   ["pips-puzzle-count", "Puzzle count", "puzzleCount"],
                 ].map(([id, label, key]) => (
                   <div key={id}>
-                    <label
-                      htmlFor={id}
-                      className="mb-2 block text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-                    >
-                      {label}
-                    </label>
+                    <Label htmlFor={id} className="mb-2">
+                    {label}
+                  </Label>
                     <Input
                       id={id}
                       type="number"
@@ -786,6 +808,6 @@ export default function PipsAdminPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

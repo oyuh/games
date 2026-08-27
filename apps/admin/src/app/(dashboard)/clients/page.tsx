@@ -3,11 +3,11 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  Ban,
   Globe2,
+  MoreHorizontal,
   RefreshCcw,
   Search,
-  Shield,
-  SlidersHorizontal,
   Users,
 } from "lucide-react";
 
@@ -18,46 +18,42 @@ import {
   formatActivity,
   formatGameType,
   formatRelativeTime,
+  gameAccent,
   GAME_TYPE_OPTIONS,
   shortId,
 } from "@/lib/admin";
 import { useToast } from "@/components/Toast";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pagination } from "@/components/Pagination";
 import { ClientDetailDialog } from "@/components/admin/client-detail-dialog";
 import { GameStateDialog } from "@/components/admin/game-state-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
-function Surface({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      className={`rounded-lg border border-border bg-card p-5 ${className}`}
-    >
-      {children}
-    </section>
-  );
-}
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyNote, Panel } from "@/components/ui/stat-tile";
+import { Surface } from "@/components/ui/surface";
+import { PlayerAvatar } from "@/components/admin/player-avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Column, DataTable } from "@/components/ui/data-table";
 
 function ClientsPageSkeleton() {
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="space-y-4">
+    <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex min-h-0 flex-col gap-3">
         <Surface>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_180px_180px_180px] xl:flex-1">
@@ -105,6 +101,7 @@ function ClientsPageSkeleton() {
 
 export default function ClientsPage() {
   const { show } = useToast();
+  const confirm = useConfirmDialog();
   const [data, setData] = useState<ClientListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -115,6 +112,8 @@ export default function ClientsPage() {
     "all" | "in-game" | "idle" | "named" | "anonymous"
   >("all");
   const [region, setRegion] = useState("all");
+  const [rosterWindow, setRosterWindow] = useState<"live" | "recent" | "archive">("live");
+  const [banning, setBanning] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(
@@ -142,6 +141,7 @@ export default function ClientsPage() {
           gameType,
           activity,
           region,
+          window: rosterWindow,
         });
         const response = await api(`/clients?${params}`);
         if (!cancelled) {
@@ -178,32 +178,234 @@ export default function ClientsPage() {
     pageSize,
     refreshKey,
     region,
+    rosterWindow,
     show,
   ]);
 
   const clients = data?.clients ?? [];
   const visibleRegions = data?.filters.regions ?? [];
 
-  const filterTags = useMemo(() => {
-    return [
-      gameType === "all" ? "All games" : formatGameType(gameType),
-      activity === "all" ? "All states" : activity.replace("-", " "),
-      region === "all" ? "All regions" : region,
-      deferredSearch.trim()
-        ? `Query: ${deferredSearch.trim()}`
-        : `Page size: ${pageSize}`,
-    ];
-  }, [activity, deferredSearch, gameType, pageSize, region]);
+  const onlineCount = clients.filter((client) => client.online).length;
+
+  /**
+   * Ban straight from a row. admin_bans already accepted arbitrary values and
+   * isBanned already checked them on every connect, so this needed no new ban
+   * machinery: only a way to find the id of someone who has already left.
+   */
+  const banClient = async (
+    client: ClientRecord,
+    type: "session" | "ip",
+  ) => {
+    const value = type === "session" ? client.sessionId : client.ip;
+    if (!value) return;
+
+    const confirmed = await confirm({
+      title: `Ban this ${type}?`,
+      description:
+        type === "session"
+          ? `${client.name || "Anonymous"} (${shortId(client.sessionId, 16)}) will be blocked on their next connect.`
+          : `${value} will be blocked for every session using it.`,
+      confirmLabel: "Create ban",
+      tone: "destructive",
+    });
+    if (!confirmed) return;
+
+    setBanning(client.sessionId ?? value);
+    try {
+      await api("/bans", {
+        method: "POST",
+        body: {
+          type,
+          value,
+          reason: `Banned from ${rosterWindow} roster`,
+        },
+      });
+      show(`${type === "session" ? "Session" : "IP"} banned.`, "success");
+    } catch (error) {
+      show(
+        error instanceof Error ? error.message : "Unable to create ban.",
+        "error",
+      );
+    } finally {
+      setBanning(null);
+    }
+  };
 
   if (loading && !data) {
     return <ClientsPageSkeleton />;
   }
 
+  const columns: Column<ClientRecord>[] = [
+    {
+      id: "name",
+      header: "Identity",
+      width: 200,
+      sortValue: (client) => client.name ?? "",
+      cell: (client) => (
+        <div className="flex min-w-0 items-center gap-2">
+          <PlayerAvatar
+            sessionId={client.sessionId}
+            avatar={client.avatar}
+            size={26}
+            ring={client.online ? "online" : "idle"}
+          />
+          <div className="min-w-0">
+            <div className="truncate font-medium text-foreground">
+              {client.name || "Anonymous"}
+            </div>
+            <div className="truncate font-mono text-xs text-muted-foreground">
+              {shortId(client.sessionId, 16)}
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "region",
+      header: "Location",
+      width: 160,
+      sortValue: (client) => client.region ?? "",
+      cell: (client) => (
+        <div className="min-w-0">
+          <div className="truncate text-foreground">
+            {client.region || "Unknown"}
+          </div>
+          <div className="truncate font-mono text-xs text-muted-foreground">
+            {client.ip || "No IP"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "activity",
+      header: "Doing",
+      width: 170,
+      sortValue: (client) => client.activity ?? "",
+      cell: (client) =>
+        client.gameId && client.gameType ? (
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={(event) => {
+              event.stopPropagation();
+              setSelectedGame({ id: client.gameId!, type: client.gameType! });
+            }}
+          >
+            <span
+              className="size-1.5 rounded-full"
+              style={{ background: gameAccent(client.gameType) }}
+              aria-hidden
+            />
+            {formatGameType(client.gameType)}
+            {!client.online ? " (idle)" : ""}
+          </Button>
+        ) : (
+          <Badge variant={client.online ? "muted" : "warn"}>
+            {client.activity
+              ? `${formatActivity(client.activity)}${client.online ? "" : " (idle)"}`
+              : "Idle"}
+          </Badge>
+        ),
+    },
+    {
+      id: "userAgent",
+      header: "Device",
+      width: 220,
+      sortValue: (client) => client.userAgent ?? "",
+      cell: (client) => (
+        <div className="min-w-0">
+          <div className="truncate font-mono text-xs text-muted-foreground">
+            {shortId(client.fingerprint, 18)}
+          </div>
+          <div
+            className="truncate text-xs text-muted-foreground"
+            title={client.userAgent ?? undefined}
+          >
+            {client.userAgent || "Unknown device"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "seenCount",
+      header: "Visits",
+      width: 80,
+      align: "right",
+      sortValue: (client) => client.seenCount ?? 0,
+      cell: (client) =>
+        client.seenCount ? (
+          <span className="text-muted-foreground">{client.seenCount}</span>
+        ) : (
+          <span className="text-muted-foreground/40">-</span>
+        ),
+    },
+    {
+      id: "lastSeen",
+      header: "Seen",
+      width: 130,
+      sortValue: (client) => client.lastSeen,
+      cell: (client) => (
+        <div className="min-w-0">
+          <div className="truncate text-muted-foreground">
+            {formatRelativeTime(client.lastSeen)}
+          </div>
+          <div className="truncate text-xs text-muted-foreground">
+            joined {formatRelativeTime(client.connectedAt ?? null)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      width: 80,
+      align: "right",
+      alwaysVisible: true,
+      cell: (client) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Session actions"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setSelectedClient(client)}>
+              <Activity />
+              Open session
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={!client.sessionId || banning !== null}
+              onSelect={() => void banClient(client, "session")}
+            >
+              <Ban />
+              Ban session
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={!client.ip || banning !== null}
+              onSelect={() => void banClient(client, "ip")}
+            >
+              <Ban />
+              Ban IP
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
+
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-4">
-          <Surface>
+      <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-h-0 flex-col gap-3">
+          <Surface pad="sm" className="shrink-0">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_180px_180px_180px] xl:flex-1">
                 <div className="relative">
@@ -216,45 +418,79 @@ export default function ClientsPage() {
                   />
                 </div>
 
-                <select
+                <Select
                   value={gameType}
-                  onChange={(event) => setGameType(event.target.value as any)}
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
+                  onValueChange={(value) => setGameType(value as any)}
+                  disabled={rosterWindow === "archive"}
                 >
-                  {GAME_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 min-w-[10rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GAME_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                <select
+                <Select
                   value={activity}
-                  onChange={(event) => setActivity(event.target.value as any)}
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
+                  onValueChange={(value) => setActivity(value as any)}
+                  disabled={rosterWindow === "archive"}
                 >
-                  <option value="all">All states</option>
-                  <option value="in-game">In game</option>
-                  <option value="idle">Idle</option>
-                  <option value="named">Named</option>
-                  <option value="anonymous">Anonymous</option>
-                </select>
+                  <SelectTrigger className="h-10 min-w-[9rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All states</SelectItem>
+                    <SelectItem value="in-game">In game</SelectItem>
+                    <SelectItem value="idle">Idle</SelectItem>
+                    <SelectItem value="named">Named</SelectItem>
+                    <SelectItem value="anonymous">Anonymous</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
-                  value={region}
-                  onChange={(event) => setRegion(event.target.value)}
-                  className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground outline-none"
-                >
-                  <option value="all">All regions</option>
-                  {visibleRegions.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                <Select value={region} onValueChange={setRegion}>
+                  <SelectTrigger className="h-10 min-w-[9rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All regions</SelectItem>
+                    {visibleRegions.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {/* Live is the old five minute window. Recent widens it to a
+                    day. Archive reads the table the cleanup job writes to,
+                    which is the only way to find someone already gone. */}
+                <div className="flex overflow-hidden rounded-md border border-border">
+                  {(["live", "recent", "archive"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setRosterWindow(value);
+                        setPage(1);
+                      }}
+                      className={`h-9 px-3 text-xs font-semibold capitalize transition-colors ${
+                        rosterWindow === value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+
                 <Badge
                   variant="outline"
                   className="border-border bg-card text-foreground"
@@ -273,133 +509,22 @@ export default function ClientsPage() {
             </div>
           </Surface>
 
-          <Surface className="overflow-hidden">
-            <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-                  Live Roster
-                </div>
-                <div className="mt-2 text-lg font-semibold tracking-normal text-foreground">
-                  Session list
-                </div>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Click any session row to open its control panel.
-              </div>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">
-                    Identity
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Location
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">
-                    Game / Activity
-                  </TableHead>
-                  <TableHead className="hidden text-muted-foreground xl:table-cell">
-                    Fingerprint / UA
-                  </TableHead>
-                  <TableHead className="text-muted-foreground">Seen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.length === 0 ? (
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableCell
-                      colSpan={5}
-                      className="px-4 py-16 text-center text-sm text-muted-foreground"
-                    >
-                      No active clients match the current filters.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  clients.map((client) => (
-                    <TableRow
-                      key={client.sessionId ?? shortId(client.fingerprint, 12)}
-                      className="cursor-pointer border-border hover:bg-accent"
-                      onClick={() => setSelectedClient(client)}
-                    >
-                      <TableCell className="align-top">
-                        <div className="font-medium text-foreground">
-                          {client.name || "Anonymous"}
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          {shortId(client.sessionId, 16)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top text-sm text-muted-foreground">
-                        <div>{client.region || "Unknown region"}</div>
-                        <div className="mt-1 text-muted-foreground">
-                          {client.ip || "Unknown IP"}
-                        </div>
-                      </TableCell>
-                      <TableCell
-                        className={`align-top ${
-                          client.online ? "" : "bg-amber-400/10"
-                        }`}
-                      >
-                        {client.gameId && client.gameType ? (
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-border bg-card text-foreground hover:bg-accent"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setSelectedGame({
-                                  id: client.gameId!,
-                                  type: client.gameType!,
-                                });
-                              }}
-                            >
-                              <Activity className="size-4" />
-                              {formatGameType(client.gameType)}
-                            </Button>
-                            {!client.online && (
-                              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                                (idle)
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className={
-                              client.online
-                                ? "border-border bg-card text-muted-foreground"
-                                : "border-amber-500/40 bg-amber-400/10 text-amber-700 dark:text-amber-300"
-                            }
-                          >
-                            {client.online
-                              ? formatActivity(client.activity)
-                              : client.activity
-                                ? `${formatActivity(client.activity)} (idle)`
-                                : "Idle"}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden max-w-sm align-top text-sm text-muted-foreground xl:table-cell">
-                        <div>{shortId(client.fingerprint, 18)}</div>
-                        <div className="mt-1 truncate">
-                          {client.userAgent || "Unknown device"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top text-sm text-muted-foreground">
-                        <div>{formatRelativeTime(client.lastSeen)}</div>
-                        <div className="mt-1 text-muted-foreground">
-                          Connected{" "}
-                          {formatRelativeTime(client.connectedAt ?? null)}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+          <Surface pad="sm" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <DataTable
+              className="min-h-0 flex-1"
+              tableKey={`clients-${rosterWindow}`}
+              columns={columns}
+              rows={clients}
+              rowKey={(client) =>
+                client.sessionId ?? shortId(client.fingerprint, 12)
+              }
+              onRowClick={(client) => setSelectedClient(client)}
+              empty={
+                rosterWindow === "archive"
+                  ? "No archived sessions match. The archive fills as sessions expire."
+                  : "No sessions match these filters."
+              }
+            />
           </Surface>
 
           <Pagination
@@ -415,99 +540,82 @@ export default function ClientsPage() {
           />
         </div>
 
-        <div className="space-y-4">
-          <Surface className="bg-muted/40">
-            <div className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              Roster Snapshot
-            </div>
-            <div className="mt-4 space-y-3">
+        {/* The rail used to hold three full-size cards for single digits, a
+            Filter Context panel that repeated the dropdowns sitting inches
+            above it, and a regions panel that was usually just a placeholder
+            sentence. This is the same information as compact rows, plus the
+            regions as actual one-click filters. */}
+        <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+          <Surface pad="none" className="shrink-0">
+            <dl className="divide-y divide-border">
               {[
-                {
-                  label: "Visible sessions",
-                  value: (data?.total ?? 0).toLocaleString(),
-                  icon: Users,
-                },
-                {
-                  label: "Loaded this page",
-                  value: clients.length.toLocaleString(),
-                  icon: Activity,
-                },
-                {
-                  label: "Search mode",
-                  value: activity.replace("-", " "),
-                  icon: Shield,
-                },
-              ].map(({ label, value, icon: Icon }) => (
+                { label: "Matching filters", value: (data?.total ?? 0).toLocaleString() },
+                { label: "On this page", value: clients.length.toLocaleString() },
+                { label: "Online now", value: onlineCount.toLocaleString() },
+                { label: "Idle", value: (clients.length - onlineCount).toLocaleString() },
+              ].map((row) => (
                 <div
-                  key={label}
-                  className="rounded-lg border border-border bg-card p-4"
+                  key={row.label}
+                  className="flex items-baseline justify-between gap-3 px-3.5 py-2"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-foreground">
-                      <Icon className="size-4" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
-                        {label}
-                      </div>
-                      <div className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
-                        {value}
-                      </div>
-                    </div>
-                  </div>
+                  <dt className="truncate text-[0.7rem] text-muted-foreground">
+                    {row.label}
+                  </dt>
+                  <dd className="text-base font-extrabold tabular-nums text-foreground">
+                    {row.value}
+                  </dd>
                 </div>
               ))}
-            </div>
+            </dl>
           </Surface>
 
-          <Surface className="bg-muted/40">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              <SlidersHorizontal className="size-4" />
-              Filter Context
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {filterTags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="border-border bg-card text-foreground"
+          <Panel
+            title="Regions"
+            accent="var(--game-chain)"
+            className="min-h-0 flex-1"
+            meta={
+              region !== "all" ? (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => setRegion("all")}
                 >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </Surface>
-
-          <Surface className="bg-muted/40">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              <Globe2 className="size-4" />
-              Available Regions
-            </div>
-            <div className="mt-4 space-y-2">
-              {visibleRegions.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-                  Region filters will appear as live traffic comes in.
-                </div>
-              ) : (
-                visibleRegions.slice(0, 10).map((value) => (
-                  <div
-                    key={value}
-                    className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm"
-                  >
-                    <span className="text-foreground">{value}</span>
-                    {region === value ? (
-                      <Badge
-                        variant="outline"
-                        className="border-border bg-muted text-foreground"
+                  Clear
+                </Button>
+              ) : null
+            }
+          >
+            {visibleRegions.length === 0 ? (
+              <EmptyNote>Regions appear as traffic comes in.</EmptyNote>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {visibleRegions.map((value) => {
+                  const active = region === value;
+                  return (
+                    <li key={value}>
+                      <button
+                        type="button"
+                        onClick={() => setRegion(active ? "all" : value)}
+                        className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors ${
+                          active
+                            ? "border-primary/40 bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-foreground"
+                            : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                        }`}
                       >
-                        Active
-                      </Badge>
-                    ) : null}
-                  </div>
-                ))
-              )}
-            </div>
-          </Surface>
+                        <Globe2 className="size-3 shrink-0" />
+                        <span className="min-w-0 flex-1 truncate">{value}</span>
+                        {active ? (
+                          <span className="shrink-0 text-[0.6rem] font-bold tracking-wider text-primary uppercase">
+                            On
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
         </div>
       </div>
 

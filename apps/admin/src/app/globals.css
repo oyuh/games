@@ -2,86 +2,218 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* ── Axiforma ────────────────────────────────────────────────
+   Same faces and the same metric overrides as the main site, so the
+   admin and the site render type identically. Files live in
+   apps/admin/public/font/ and are copied from apps/web/public/font/. */
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Axiforma';
+  src: url('/font/Axiforma-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
-  --primary: #0a0a0a;
+  /* Light theme. Values track apps/web/src/styles/themes.css so the admin and
+     the site are the same product. shadcn's extra slots (popover, sidebar,
+     chart) are derived from those rather than invented. */
+  --background: #e8e6e3;
+  --foreground: #1a1a1a;
+  --card: #f0eeeb;
+  --card-foreground: #1a1a1a;
+  --popover: #f0eeeb;
+  --popover-foreground: #1a1a1a;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #0a0a0a;
-  --muted: #f4f4f5;
-  --muted-foreground: #52525b;
-  --accent: #e4e4e7;
-  --accent-foreground: #0a0a0a;
-  --destructive: #0a0a0a;
+  --secondary: #d9d7d4;
+  --secondary-foreground: #1a1a1a;
+  --muted: #d9d7d4;
+  --muted-foreground: #64748b;
+  --accent: #cbc8c4;
+  --accent-foreground: #1a1a1a;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e4e4e7;
-  --input: #ffffff;
-  --ring: #0a0a0a;
-  --chart-1: #0a0a0a;
-  --chart-2: #3f3f46;
-  --chart-3: #71717a;
-  --chart-4: #a1a1aa;
-  --chart-5: #d4d4d8;
-  --radius: 4px;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0a0a0a;
-  --sidebar-primary: #0a0a0a;
+  --border: #c8c5c1;
+  --input: #f0eeeb;
+  --ring: #2563eb;
+
+  /* Card surfaces, same four pieces the site builds its cards from: an accent
+     wash, a faint two-axis grid, a base fill, and a shadow. */
+  --surface-top: #f4f2ef;
+  --surface-bottom: #e9e7e3;
+  --surface-bg: linear-gradient(160deg, var(--surface-top) 0%, var(--surface-bottom) 100%);
+  --surface-grid: rgba(0, 0, 0, 0.035);
+  --surface-grid-soft: rgba(0, 0, 0, 0.025);
+  --surface-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --surface-shadow-hover: 0 3px 10px rgba(0, 0, 0, 0.12);
+
+  /* Semantic status colours. The old palette had --destructive set to plain
+     black, so nothing dangerous ever looked dangerous. */
+  --ok: #15803d;
+  --warn: #a16207;
+  --danger: #b91c1c;
+
+  --chart-1: #2563eb;
+  --chart-2: #7c3aed;
+  --chart-3: #059669;
+  --chart-4: #d97706;
+  --chart-5: #db2777;
+
+  --sidebar: #f0eeeb;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4f4f5;
-  --sidebar-accent-foreground: #0a0a0a;
-  --sidebar-border: #e4e4e7;
-  --sidebar-ring: #0a0a0a;
+  --sidebar-accent: #d9d7d4;
+  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-border: #c8c5c1;
+  --sidebar-ring: #2563eb;
+
+  /* Avatars are squircles, not circles. One knob for every avatar and every
+     slot cut to hold one, matching the site. */
+  --avatar-radius: 30%;
+
+  /* Corner radius. One knob for the whole panel, same as the site's. */
+  --radius-scale: 0.5;
+  --radius: 0.5rem;
+
   --admin-font-sans:
-    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --admin-font-heading:
-    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+    "Axiforma", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --admin-font-heading: var(--admin-font-sans);
   --admin-font-mono:
-    var(--font-geist-mono), "Cascadia Code", "SFMono-Regular", Menlo, Monaco,
+    ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Monaco,
     Consolas, monospace;
 }
 
+/* ── Game accents ────────────────────────────────────────────
+   The seven hexes the site paints each game with. Set --card-accent on any
+   element to tint a surface, or read them directly for badges and nav. */
+:root {
+  --game-imposter: #7eb8ff;
+  --game-password: #a78bfa;
+  --game-chain: #34d399;
+  --game-shade: #f472b6;
+  --game-location: #f59e0b;
+  --game-shikaku: #34d399;
+  --game-pips: #fb923c;
+}
+
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ffffff;
-  --card: #0a0a0a;
-  --card-foreground: #ffffff;
-  --popover: #0a0a0a;
-  --popover-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #0a0a0a;
-  --secondary: #171717;
-  --secondary-foreground: #ffffff;
-  --muted: #171717;
-  --muted-foreground: #a3a3a3;
-  --accent: #262626;
-  --accent-foreground: #ffffff;
-  --destructive: #ffffff;
-  --destructive-foreground: #0a0a0a;
-  --border: #2a2a2a;
-  --input: #0a0a0a;
-  --ring: #ffffff;
-  --chart-1: #ffffff;
-  --chart-2: #d4d4d8;
-  --chart-3: #a1a1aa;
-  --chart-4: #71717a;
-  --chart-5: #3f3f46;
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #ffffff;
-  --sidebar-primary-foreground: #0a0a0a;
-  --sidebar-accent: #171717;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2a2a2a;
-  --sidebar-ring: #ffffff;
+  /* Dark theme, the site's default look. */
+  --background: #181a1b;
+  --foreground: #f5f5f5;
+  --card: #232323;
+  --card-foreground: #f5f5f5;
+  --popover: #232323;
+  --popover-foreground: #f5f5f5;
+  --primary: #7ecbff;
+  --primary-foreground: #181a1b;
+  --secondary: #2d2d2d;
+  --secondary-foreground: #f5f5f5;
+  --muted: #2d2d2d;
+  --muted-foreground: #bdbdbd;
+  --accent: #444444;
+  --accent-foreground: #f5f5f5;
+  --destructive: #b00020;
+  --destructive-foreground: #ffffff;
+  --border: #333333;
+  --input: #232323;
+  --ring: #7ecbff;
+
+  --surface-top: #232323;
+  --surface-bottom: #1a1a1a;
+  --surface-bg: linear-gradient(160deg, var(--surface-top) 0%, var(--surface-bottom) 100%);
+  --surface-grid: rgba(255, 255, 255, 0.028);
+  --surface-grid-soft: rgba(255, 255, 255, 0.02);
+  --surface-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  --surface-shadow-hover: 0 3px 10px rgba(0, 0, 0, 0.24);
+
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #f87171;
+
+  --chart-1: #7ecbff;
+  --chart-2: #a78bfa;
+  --chart-3: #34d399;
+  --chart-4: #fb923c;
+  --chart-5: #f472b6;
+
+  --sidebar: #1d1f20;
+  --sidebar-foreground: #f5f5f5;
+  --sidebar-primary: #7ecbff;
+  --sidebar-primary-foreground: #181a1b;
+  --sidebar-accent: #2d2d2d;
+  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-border: #333333;
+  --sidebar-ring: #7ecbff;
+
   color-scheme: dark;
 }
+
 
 @theme inline {
   --font-sans: var(--admin-font-sans);
@@ -119,13 +251,24 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
-  --radius-xl: 5px;
-  --radius-2xl: 5px;
-  --radius-3xl: 5px;
-  --radius-4xl: 5px;
+
+  /* Semantic status colours, so `text-ok` / `border-danger` work as utilities
+     alongside the shadcn slots. */
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+
+  /* The site's radius scale, driven off one knob. Matches the @theme static
+     block in apps/web/src/styles/base.css so a rounded-lg here and a
+     rounded-lg there are the same corner. */
+  --radius-xs: calc(0.25rem * var(--radius-scale));
+  --radius-sm: calc(0.375rem * var(--radius-scale));
+  --radius-md: calc(0.5rem * var(--radius-scale));
+  --radius-lg: calc(0.75rem * var(--radius-scale));
+  --radius-xl: calc(1rem * var(--radius-scale));
+  --radius-2xl: calc(1.25rem * var(--radius-scale));
+  --radius-3xl: calc(1.5rem * var(--radius-scale));
+  --radius-4xl: calc(2rem * var(--radius-scale));
 }
 
 html {
@@ -173,18 +316,31 @@ details summary::-webkit-details-marker {
 }
 
 ::selection {
-  background: var(--muted);
+  background: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+/* The popup a <select> opens is drawn by the browser, so its own colours are
+   the only way in. Same trick the site uses in base.css. */
+option {
+  background: var(--card);
   color: var(--foreground);
 }
 
+/* Scrollbars stay out of the way until you are actually in the thing you want
+   to scroll, then pick up the accent. Matches the site. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--muted-foreground) transparent;
+  scrollbar-color: transparent transparent;
+}
+*:hover,
+*:active,
+*:focus-within {
+  scrollbar-color: color-mix(in srgb, var(--primary) 30%, transparent) transparent;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -192,12 +348,17 @@ details summary::-webkit-details-marker {
 }
 
 ::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background: var(--muted-foreground);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  transition: background 0.3s;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--foreground);
+*:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary) 55%, transparent);
 }
 
 @layer base {
