@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { asc, eq, ne, and, gt, desc, sql, count, isNotNull, isNull, or, ilike, lt } from "drizzle-orm";
 import {
+  cleanupRuns,
   sessions,
   imposterGames,
   passwordGames,
@@ -104,6 +105,20 @@ function parsePagination(c: any, defaultPageSize = 50, maxPageSize = 200) {
   const offset = (page - 1) * pageSize;
   return { page, pageSize, offset };
 }
+
+adminRoutes.get("/cleanups", async (c) => {
+  const { page, pageSize, offset } = parsePagination(c, 25, 100);
+  const [runs, [totals]] = await Promise.all([
+    drizzleClient.select().from(cleanupRuns).orderBy(desc(cleanupRuns.startedAt), desc(cleanupRuns.id)).limit(pageSize).offset(offset),
+    drizzleClient.select({
+      total: count(),
+      completed: sql<number>`count(*) filter (where status = 'completed')::int`,
+      failed: sql<number>`count(*) filter (where status = 'failed')::int`,
+      running: sql<number>`count(*) filter (where status = 'running')::int`,
+    }).from(cleanupRuns),
+  ]);
+  return c.json({ runs, ...totals, page, pageSize });
+});
 
 type SessionRow = typeof sessions.$inferSelect;
 type AdminGameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";

@@ -540,3 +540,13 @@ export type DrizzleSchema = {
   pipsScores: typeof pipsScores;
   pipsBannedSessions: typeof pipsBannedSessions;
 };
+
+// Cleanup history contains aggregate counts only and survives process restarts.
+export const cleanupRuns = pgTable("cleanup_runs", {
+  id: text("id").primaryKey(),
+  trigger: text("trigger").notNull(),
+  status: text("status").notNull(),
+  startedAt: bigint("started_at", { mode: "number" }).notNull(),
+  finishedAt: bigint("finished_at", { mode: "number" }),
+  report: jsonb("report"),
+}, (table) => ({ startedIdx: index("cleanup_runs_started_idx").on(table.startedAt) }));
