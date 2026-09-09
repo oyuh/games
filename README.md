@@ -528,7 +528,6 @@ The multiplayer game tables deliberately keep most of their live state in JSON c
 | `POST /api/game-secret/pre-reveal` | Prepare hidden data before reveal |
 | `POST /api/game-secret/key` | Resolve game secret key for authorized reveal paths |
 | `GET/POST /api/cleanup` | Run authenticated stale-game/session cleanup |
-| `GET/POST /api/activity` | Run authenticated activity report |
 
 ### Zero Endpoints
 
