@@ -7,7 +7,7 @@ import { adminNameOverrides, chatMessages, chainReactionGames, gameEncryptionKey
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
-import { lt, and, asc, count, desc, eq, gt, inArray, ne, or, sql, type SQL } from "drizzle-orm";
+import { lt, and, asc, count, desc, eq, gt, inArray, or, sql, type SQL } from "drizzle-orm";
 import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import {
@@ -186,7 +186,6 @@ app.use("/api/admin-status", rateLimit("publicRead", "admin_status"));
 // Internal / secret-authed routes get light limits (present but generous).
 app.use("/api/admin/*", rateLimit("admin"));
 app.use("/api/cleanup", rateLimit("cron", "cleanup"));
-app.use("/api/activity", rateLimit("cron", "activity"));
 
 // Debug build-info runs a DB probe, so keep it modest (on top of the global cap).
 app.use("/debug/build-info", rateLimit("debug"));
@@ -2736,95 +2735,6 @@ app.post("/api/zero/mutate", async (c) => {
   }
 });
 
-// ─── Activity report (general stats snapshot) ──────────────
-async function runActivityReport() {
-  const now = Date.now();
-  const fiveMinAgo = now - 5 * 60 * 1000;
-  const oneHourAgo = now - 60 * 60 * 1000;
-
-  // Active sessions (seen in last 5 min)
-  const [activeSessions = { total: 0 }] = await drizzleClient
-    .select({ total: count() })
-    .from(sessions)
-    .where(gt(sessions.lastSeen, fiveMinAgo));
-
-  // Total sessions
-  const [totalSessions = { total: 0 }] = await drizzleClient
-    .select({ total: count() })
-    .from(sessions);
-
-  // Active games by type (not ended)
-  const [activeImposter = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames).where(ne(imposterGames.phase, "ended"));
-  const [activePassword = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames).where(ne(passwordGames.phase, "ended"));
-  const [activeChain = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chainReactionGames).where(ne(chainReactionGames.phase, "ended"));
-  const [activeShade = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shadeSignalGames).where(ne(shadeSignalGames.phase, "ended"));
-  const [activeLocation = { total: 0 }] = await drizzleClient.select({ total: count() }).from(locationSignalGames).where(ne(locationSignalGames.phase, "ended"));
-
-  // Total games (all states)
-  const [totalImposter = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames);
-  const [totalPassword = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames);
-  const [totalChain = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chainReactionGames);
-  const [totalShade = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shadeSignalGames);
-  const [totalLocation = { total: 0 }] = await drizzleClient.select({ total: count() }).from(locationSignalGames);
-
-  // Shikaku stats
-  const [shikakuTotal = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shikakuScores);
-  const [shikakuRecent = { total: 0 }] = await drizzleClient
-    .select({ total: count() })
-    .from(shikakuScores)
-    .where(gt(shikakuScores.createdAt, oneHourAgo));
-  const [bannedSessions = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shikakuBannedSessions);
-
-  // Unique shikaku players (distinct session_id)
-  const [shikakuPlayers = { total: 0 }] = await drizzleClient
-    .select({ total: sql<number>`COUNT(DISTINCT ${shikakuScores.sessionId})` })
-    .from(shikakuScores);
-
-  // Encryption keys & chat messages
-  const [encKeys = { total: 0 }] = await drizzleClient.select({ total: count() }).from(gameEncryptionKeys);
-  const [chatMsgs = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chatMessages);
-
-  // Admin bans
-  const adminBansResult = await drizzleClient.execute(sql`SELECT COUNT(*) as total FROM admin_bans`);
-  const adminBanCount = Number(Array.isArray(adminBansResult) ? (adminBansResult[0] as any)?.total ?? 0 : (adminBansResult.rows?.[0] as any)?.total ?? 0);
-
-  const totalActiveGames = activeImposter.total + activePassword.total + activeChain.total + activeShade.total + activeLocation.total;
-  const totalGames = totalImposter.total + totalPassword.total + totalChain.total + totalShade.total + totalLocation.total;
-
-  const lines = [
-    ``,
-    `╔══════════════════════════════════════════════════════╗`,
-    `║         📊 ACTIVITY REPORT                           ║`,
-    `║         ${new Date(now).toISOString().padEnd(43)}║`,
-    `╠══════════════════════════════════════════════════════╣`,
-    `║  SESSIONS:                                           ║`,
-    `║    Active (5min):   ${String(activeSessions.total).padStart(5)}                        ║`,
-    `║    Total:           ${String(totalSessions.total).padStart(5)}                        ║`,
-    `╠══════════════════════════════════════════════════════╣`,
-    `║  ACTIVE GAMES:       ${String(totalActiveGames).padStart(4)}  (${String(totalGames).padStart(4)} total)            ║`,
-    `║    Imposter:        ${String(activeImposter.total).padStart(4)} / ${String(totalImposter.total).padStart(4)}                      ║`,
-    `║    Password:        ${String(activePassword.total).padStart(4)} / ${String(totalPassword.total).padStart(4)}                      ║`,
-    `║    Chain Reaction:  ${String(activeChain.total).padStart(4)} / ${String(totalChain.total).padStart(4)}                      ║`,
-    `║    Shade Signal:    ${String(activeShade.total).padStart(4)} / ${String(totalShade.total).padStart(4)}                      ║`,
-    `║    Location Signal: ${String(activeLocation.total).padStart(4)} / ${String(totalLocation.total).padStart(4)}                      ║`,
-    `╠══════════════════════════════════════════════════════╣`,
-    `║  SHIKAKU:                                            ║`,
-    `║    Total scores:    ${String(shikakuTotal.total).padStart(5)}                        ║`,
-    `║    Unique players:  ${String(shikakuPlayers.total).padStart(5)}                        ║`,
-    `║    Scores (1hr):    ${String(shikakuRecent.total).padStart(5)}                        ║`,
-    `║    Banned sessions: ${String(bannedSessions.total).padStart(5)}                        ║`,
-    `╠══════════════════════════════════════════════════════╣`,
-    `║  OTHER:                                              ║`,
-    `║    Encryption keys: ${String(encKeys.total).padStart(5)}                        ║`,
-    `║    Chat messages:   ${String(chatMsgs.total).padStart(5)}                        ║`,
-    `║    Admin bans:      ${String(adminBanCount).padStart(5)}                        ║`,
-    `╚══════════════════════════════════════════════════════╝`,
-    ``,
-  ];
-
-  return lines.join("\n");
-}
-
 // Accept both GET and POST so any cron service works
 app.on(["GET", "POST"], "/api/cleanup", async (c) => {
   const authHeader = c.req.header("Authorization");
@@ -2836,19 +2746,6 @@ app.on(["GET", "POST"], "/api/cleanup", async (c) => {
   const summary = await recordedCleanup("endpoint");
   if (!summary) return c.json({ error: "Cleanup is already running" }, 409);
   return c.json({ ok: true, ...summary });
-});
-
-// Activity report endpoint (same auth as cleanup)
-app.on(["GET", "POST"], "/api/activity", async (c) => {
-  const authHeader = c.req.header("Authorization");
-  const expectedToken = process.env.CLEANUP_SECRET ?? "cleanup-local";
-  if (authHeader !== `Bearer ${expectedToken}`) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const report = await runActivityReport();
-  console.log(report);
-  return c.json({ ok: true, report });
 });
 
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
@@ -2902,18 +2799,5 @@ async function scheduledCleanup() {
   }
 }
 
-// ─── Activity report: run every 30 minutes ─────────────────
-async function scheduledActivityReport() {
-  try {
-    const report = await runActivityReport();
-    console.log(report);
-  } catch (err) {
-    console.error("[activity] error:", err);
-  }
-}
-
 setTimeout(scheduledCleanup, 10_000);
 setInterval(scheduledCleanup, 15 * 60 * 1000);
-
-setTimeout(scheduledActivityReport, 20_000);
-setInterval(scheduledActivityReport, 30 * 60 * 1000);
