@@ -124,7 +124,7 @@ export const RATE_LIMITS = {
   // Admin dashboard is secret-authed and polls several endpoints, so generous.
   admin: { windowMs: 60_000, maxRequests: 120 },
 
-  // Cron-triggered + secret-authed (cleanup / activity report).
+  // Cron-triggered + secret-authed cleanup.
   cron: { windowMs: 60_000, maxRequests: 10 },
 
   // Debug build-info runs a DB probe, so keep it modest.
