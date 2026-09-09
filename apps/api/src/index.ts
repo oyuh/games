@@ -1,6 +1,8 @@
+import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, SHIKAKU_VALID_DIFFS, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
+import { recordedCleanup } from "./cleanup";
 import { fallbackPlayerName, mutators, queries, schema } from "@games/shared";
 import { decryptSecret, encryptSecret, generateGameKey, isEncrypted } from "@games/shared";
-import { adminNameOverrides, sessionArchive, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared/db";
+import { adminNameOverrides, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared/db";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -10,7 +12,6 @@ import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import {
   PUZZLES_PER_RUN as ENGINE_SHIKAKU_PUZZLES,
-  calculateScore as calculateShikakuScore,
   validateRankedShikakuRun,
 } from "@games/shared/games/shikaku-engine";
 import {
@@ -1213,34 +1214,13 @@ async function selectScoreWindow(ranked: SQL, sessionId: string | null) {
 
 // Server-side score calculation uses the shared engine formula exactly.
 const SHIKAKU_PUZZLES = ENGINE_SHIKAKU_PUZZLES;
-const SHIKAKU_MIN_TIME_MS: Record<string, number> = {
-  easy: 10_000,   // 2 s per puzzle
-  medium: 20_000, // 4 s per puzzle
-  hard: 30_000,   // 6 s per puzzle
-  expert: 40_000, // 8 s per puzzle
-};
+
 const SHIKAKU_AUTO_BAN_MIN_TIME_MS: Record<string, number> = {
   easy: 5_000,
   medium: 10_000,
   hard: 15_000,
   expert: 20_000,
 };
-
-function shikakuMaxScore(timeMs: number, difficulty: string): number {
-  return isShikakuDifficulty(difficulty) ? calculateShikakuScore(timeMs, difficulty) : 0;
-}
-
-// ── Max play time per difficulty ────────────────────────────
-// Base: 1 hour, +30 min per difficulty tier
-const SHIKAKU_MAX_TIME_MS: Record<string, number> = {
-  easy:   3_600_000,                // 1 hr
-  medium: 3_600_000 + 1_800_000,    // 1.5 hr
-  hard:   3_600_000 + 3_600_000,    // 2 hr
-  expert: 3_600_000 + 5_400_000,    // 2.5 hr
-};
-
-const SHIKAKU_MAX_SCORES_PER_SESSION = 20;
-const SHIKAKU_VALID_DIFFS = ["easy", "medium", "hard", "expert"] as const;
 
 type ShikakuDifficulty = (typeof SHIKAKU_VALID_DIFFS)[number];
 
@@ -1319,10 +1299,6 @@ type ShikakuScoreAssessment =
       lowestScoreId: string | null;
       replayData: unknown;
     };
-
-function isShikakuDifficulty(value: unknown): value is ShikakuDifficulty {
-  return typeof value === "string" && SHIKAKU_VALID_DIFFS.includes(value as ShikakuDifficulty);
-}
 
 async function buildShikakuScoreCandidate(
   c: { req: { header: (name: string) => string | undefined }; header: (name: string, value: string) => void },
@@ -1924,12 +1900,8 @@ app.post("/api/shikaku/score", async (c) => {
 // ─── Pips solo game endpoints ────────────────────────────────
 
 const PIPS_PUZZLES = ENGINE_PIPS_PUZZLES;
-const PIPS_MIN_TOTAL_TIME_MS = 12_000;
-const PIPS_MIN_SPLIT_TIME_MS = 1_500;
+
 const PIPS_AUTO_BAN_MIN_TIME_MS = 4_000;
-const PIPS_MAX_TOTAL_TIME_MS = 7_200_000;
-const PIPS_MAX_SCORES_PER_SESSION = 20;
-const PIPS_SPLIT_SUM_TOLERANCE_MS = 250;
 
 type PipsScoreRequestBody = {
   sessionId?: string;
@@ -2764,373 +2736,6 @@ app.post("/api/zero/mutate", async (c) => {
   }
 });
 
-// ─── Stale game cleanup ────────────────────────────────────
-const STALE_MS = 20 * 60 * 1000;   // 20 min idle → end game
-const DELETE_MS = 60 * 60 * 1000;  // 1 hr → delete game row
-// The archive keeps an ip, so it gets a hard cap rather than living forever.
-// ponytail: raw ip with a 30 day cap. If retention ever needs to go longer,
-// store an HMAC of it instead and hash the incoming ip in isBanned to match.
-const SESSION_ARCHIVE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-
-async function runCleanup() {
-  const now = Date.now();
-  const staleCutoff = now - STALE_MS;
-  const deleteCutoff = now - DELETE_MS;
-
-  // ── 1) End stale games (idle > 20min) ──────────────────────
-  const endedImposter = await drizzleClient
-    .update(imposterGames)
-    .set({ phase: "ended", updatedAt: now })
-    .where(and(lt(imposterGames.updatedAt, staleCutoff), ne(imposterGames.phase, "ended")))
-    .returning({ id: imposterGames.id });
-
-  const endedPassword = await drizzleClient
-    .update(passwordGames)
-    .set({ phase: "ended", updatedAt: now })
-    .where(and(lt(passwordGames.updatedAt, staleCutoff), ne(passwordGames.phase, "ended")))
-    .returning({ id: passwordGames.id });
-
-  const endedChain = await drizzleClient
-    .update(chainReactionGames)
-    .set({ phase: "ended", updatedAt: now })
-    .where(and(lt(chainReactionGames.updatedAt, staleCutoff), ne(chainReactionGames.phase, "ended")))
-    .returning({ id: chainReactionGames.id });
-
-  const endedShade = await drizzleClient
-    .update(shadeSignalGames)
-    .set({ phase: "ended", updatedAt: now })
-    .where(and(lt(shadeSignalGames.updatedAt, staleCutoff), ne(shadeSignalGames.phase, "ended")))
-    .returning({ id: shadeSignalGames.id });
-
-  const endedLocation = await drizzleClient
-    .update(locationSignalGames)
-    .set({ phase: "ended", updatedAt: now })
-    .where(and(lt(locationSignalGames.updatedAt, staleCutoff), ne(locationSignalGames.phase, "ended")))
-    .returning({ id: locationSignalGames.id });
-
-  // ── 2) Detach sessions from ended games ────────────────────
-  const endedGameIds = new Set([
-    ...endedImposter.map((g) => g.id),
-    ...endedPassword.map((g) => g.id),
-    ...endedChain.map((g) => g.id),
-    ...endedShade.map((g) => g.id),
-    ...endedLocation.map((g) => g.id)
-  ]);
-  if (endedGameIds.size > 0) {
-    const allSessions = await drizzleClient
-      .select({ id: sessions.id, gameId: sessions.gameId })
-      .from(sessions)
-      .where(lt(sessions.lastSeen, staleCutoff));
-    for (const s of allSessions) {
-      if (s.gameId && endedGameIds.has(s.gameId)) {
-        await drizzleClient
-          .update(sessions)
-          .set({ gameType: null, gameId: null, lastSeen: now })
-          .where(eq(sessions.id, s.id));
-      }
-    }
-  }
-
-  // ── 3) Hard-delete old ended games (1hr+) ──────────────────
-  const deletedImposter = await drizzleClient
-    .delete(imposterGames)
-    .where(and(eq(imposterGames.phase, "ended"), lt(imposterGames.updatedAt, deleteCutoff)))
-    .returning({ id: imposterGames.id });
-
-  const deletedPassword = await drizzleClient
-    .delete(passwordGames)
-    .where(and(eq(passwordGames.phase, "ended"), lt(passwordGames.updatedAt, deleteCutoff)))
-    .returning({ id: passwordGames.id });
-
-  const deletedChain = await drizzleClient
-    .delete(chainReactionGames)
-    .where(and(eq(chainReactionGames.phase, "ended"), lt(chainReactionGames.updatedAt, deleteCutoff)))
-    .returning({ id: chainReactionGames.id });
-
-  const deletedShade = await drizzleClient
-    .delete(shadeSignalGames)
-    .where(and(eq(shadeSignalGames.phase, "ended"), lt(shadeSignalGames.updatedAt, deleteCutoff)))
-    .returning({ id: shadeSignalGames.id });
-
-  const deletedLocation = await drizzleClient
-    .delete(locationSignalGames)
-    .where(and(eq(locationSignalGames.phase, "ended"), lt(locationSignalGames.updatedAt, deleteCutoff)))
-    .returning({ id: locationSignalGames.id });
-
-  const allDeletedGameIds = [
-    ...deletedImposter.map((g) => g.id),
-    ...deletedPassword.map((g) => g.id),
-    ...deletedChain.map((g) => g.id),
-    ...deletedShade.map((g) => g.id),
-    ...deletedLocation.map((g) => g.id),
-  ];
-
-  // ── 4) Clean up encryption keys for deleted games ──────────
-  let deletedEncryptionKeys = 0;
-  if (allDeletedGameIds.length > 0) {
-    const deletedKeys = await drizzleClient
-      .delete(gameEncryptionKeys)
-      .where(inArray(gameEncryptionKeys.gameId, allDeletedGameIds))
-      .returning({ id: gameEncryptionKeys.id });
-    deletedEncryptionKeys = deletedKeys.length;
-  }
-  // Also clean any orphaned keys whose game no longer exists
-  const orphanedKeys = await drizzleClient.execute(sql`
-    DELETE FROM game_encryption_keys
-    WHERE game_id NOT IN (
-      SELECT id FROM imposter_games
-      UNION SELECT id FROM password_games
-      UNION SELECT id FROM chain_reaction_games
-      UNION SELECT id FROM shade_signal_games
-      UNION SELECT id FROM location_signal_games
-    )
-    RETURNING id
-  `);
-  const orphanedKeysDeleted = Array.isArray(orphanedKeys) ? orphanedKeys.length : (orphanedKeys.rowCount ?? 0);
-  deletedEncryptionKeys += Number(orphanedKeysDeleted);
-
-  // ── 5) Clean up chat messages for deleted games ────────────
-  let deletedChatMessages = 0;
-  if (allDeletedGameIds.length > 0) {
-    const deletedChats = await drizzleClient
-      .delete(chatMessages)
-      .where(inArray(chatMessages.gameId, allDeletedGameIds))
-      .returning({ id: chatMessages.id });
-    deletedChatMessages = deletedChats.length;
-  }
-
-  // ── 6) Archive, then delete, stale sessions (1hr+) ─────────
-  // Archive first: a row deleted without being archived is a player who can
-  // never be found again, which is exactly the gap this closes. The delete
-  // filters on the same cutoff, so anything that arrives between the two
-  // statements is simply archived on the next pass instead.
-  const staleSessions = await drizzleClient
-    .select({
-      id: sessions.id,
-      name: sessions.name,
-      avatar: sessions.avatar,
-      region: sessions.region,
-      ip: sessions.ip,
-      createdAt: sessions.createdAt,
-      lastSeen: sessions.lastSeen,
-    })
-    .from(sessions)
-    .where(lt(sessions.lastSeen, deleteCutoff));
-
-  let archivedSessions = 0;
-  if (staleSessions.length > 0) {
-    await drizzleClient
-      .insert(sessionArchive)
-      .values(
-        staleSessions.map((session) => ({
-          id: session.id,
-          name: session.name,
-          avatar: session.avatar,
-          region: session.region,
-          ip: session.ip,
-          firstSeen: session.createdAt,
-          lastSeen: session.lastSeen,
-          seenCount: 1,
-        }))
-      )
-      .onConflictDoUpdate({
-        target: sessionArchive.id,
-        set: {
-          // Keep the earliest first_seen and the latest last_seen, and count
-          // the visit. A returning id is more interesting than a new one.
-          name: sql`excluded.name`,
-          avatar: sql`excluded.avatar`,
-          region: sql`excluded.region`,
-          ip: sql`excluded.ip`,
-          firstSeen: sql`least(${sessionArchive.firstSeen}, excluded.first_seen)`,
-          lastSeen: sql`greatest(${sessionArchive.lastSeen}, excluded.last_seen)`,
-          seenCount: sql`${sessionArchive.seenCount} + 1`,
-        },
-      });
-    archivedSessions = staleSessions.length;
-  }
-
-  const deletedSessions = await drizzleClient
-    .delete(sessions)
-    .where(lt(sessions.lastSeen, deleteCutoff))
-    .returning({ id: sessions.id });
-
-  // Retention cap. The archive holds an ip, so it must not grow forever.
-  const trimmedArchive = await drizzleClient
-    .delete(sessionArchive)
-    .where(lt(sessionArchive.lastSeen, now - SESSION_ARCHIVE_RETENTION_MS))
-    .returning({ id: sessionArchive.id });
-
-  // ── 7) Shikaku: enforce max 20 scores per session per difficulty ─
-  // Each player can keep up to 20 scores for each difficulty (easy/medium/hard/expert)
-  let shikakuScoresTrimmed = 0;
-  const overLimitGroups = await drizzleClient.execute(sql`
-    SELECT session_id, difficulty, COUNT(*) as cnt
-    FROM shikaku_scores
-    GROUP BY session_id, difficulty
-    HAVING COUNT(*) > ${SHIKAKU_MAX_SCORES_PER_SESSION}
-  `);
-  const groupsToTrim = Array.isArray(overLimitGroups) ? overLimitGroups : (overLimitGroups.rows ?? []);
-  for (const row of groupsToTrim) {
-    const { session_id: sid, difficulty: diff } = row as { session_id: string; difficulty: string };
-    // Keep the top 20 highest scores for this session+difficulty, delete the rest
-    const allScores = await drizzleClient
-      .select({ id: shikakuScores.id })
-      .from(shikakuScores)
-      .where(and(eq(shikakuScores.sessionId, sid), eq(shikakuScores.difficulty, diff)))
-      .orderBy(desc(shikakuScores.score))
-      .limit(10000);
-    const idsToDelete = allScores.slice(SHIKAKU_MAX_SCORES_PER_SESSION).map((s) => s.id);
-    if (idsToDelete.length > 0) {
-      await drizzleClient
-        .delete(shikakuScores)
-        .where(inArray(shikakuScores.id, idsToDelete));
-      shikakuScoresTrimmed += idsToDelete.length;
-    }
-  }
-
-  // ── 8) Shikaku: detect and remove suspicious scores ───────
-  // Flag scores that exceed the max possible for their time/difficulty
-  let shikakuSuspiciousRemoved = 0;
-  const allShikakuScoresRaw = await drizzleClient
-    .select({
-      id: shikakuScores.id,
-      sessionId: shikakuScores.sessionId,
-      score: shikakuScores.score,
-      timeMs: shikakuScores.timeMs,
-      difficulty: shikakuScores.difficulty,
-      name: shikakuScores.name,
-    })
-    .from(shikakuScores);
-
-  const suspiciousIds: string[] = [];
-  const suspiciousSessions = new Set<string>();
-  for (const s of allShikakuScoresRaw) {
-    const maxAllowed = shikakuMaxScore(s.timeMs, s.difficulty);
-    const minTime = SHIKAKU_MIN_TIME_MS[s.difficulty] ?? 10_000;
-    const maxTime = SHIKAKU_MAX_TIME_MS[s.difficulty] ?? 3_600_000;
-    // Score exceeds theoretical max (with 5% tolerance for rounding)
-    const isInflated = s.score > maxAllowed * 1.05;
-    // Impossibly fast
-    const isTooFast = s.timeMs < minTime;
-    // Unreasonably slow (beyond max allowed time)
-    const isTooSlow = s.timeMs > maxTime;
-    // Negative/zero score or time
-    const isInvalid = s.score <= 0 || s.timeMs <= 0;
-
-    if (isInflated || isTooFast || isTooSlow || isInvalid) {
-      suspiciousIds.push(s.id);
-      suspiciousSessions.add(s.sessionId);
-    }
-  }
-  if (suspiciousIds.length > 0) {
-    await drizzleClient
-      .delete(shikakuScores)
-      .where(inArray(shikakuScores.id, suspiciousIds));
-    shikakuSuspiciousRemoved = suspiciousIds.length;
-  }
-
-  // ── 9) Counts for diagnostics ─────────────────────────────
-  const [imposterCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames);
-  const [passwordCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(passwordGames);
-  const [chainCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(chainReactionGames);
-  const [shadeCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shadeSignalGames);
-  const [locationCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(locationSignalGames);
-  const [sessionCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(sessions);
-  const [shikakuCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(shikakuScores);
-  const [encKeyCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(gameEncryptionKeys);
-
-  return {
-    ended: {
-      imposter: endedImposter.length,
-      password: endedPassword.length,
-      chainReaction: endedChain.length,
-      shadeSignal: endedShade.length,
-      locationSignal: endedLocation.length,
-    },
-    deleted: {
-      imposter: deletedImposter.length,
-      password: deletedPassword.length,
-      chainReaction: deletedChain.length,
-      shadeSignal: deletedShade.length,
-      locationSignal: deletedLocation.length,
-      sessions: deletedSessions.length,
-      encryptionKeys: deletedEncryptionKeys,
-      chatMessages: deletedChatMessages,
-    },
-    archive: {
-      sessionsArchived: archivedSessions,
-      sessionsTrimmed: trimmedArchive.length,
-    },
-    shikaku: {
-      scoresTrimmed: shikakuScoresTrimmed,
-      suspiciousRemoved: shikakuSuspiciousRemoved,
-      suspiciousSessions: suspiciousSessions.size,
-    },
-    cutoffs: {
-      stale: new Date(staleCutoff).toISOString(),
-      delete: new Date(deleteCutoff).toISOString(),
-    },
-    totals: {
-      imposterGames: imposterCount.total,
-      passwordGames: passwordCount.total,
-      chainReactionGames: chainCount.total,
-      shadeSignalGames: shadeCount.total,
-      locationSignalGames: locationCount.total,
-      sessions: sessionCount.total,
-      shikakuScores: shikakuCount.total,
-      encryptionKeys: encKeyCount.total,
-    },
-  };
-}
-
-function formatCleanupLog(summary: Awaited<ReturnType<typeof runCleanup>>, trigger: string) {
-  const { ended, deleted, shikaku, cutoffs, totals } = summary;
-  const endedTotal = ended.imposter + ended.password + ended.chainReaction + ended.shadeSignal + ended.locationSignal;
-  const deletedGames = deleted.imposter + deleted.password + deleted.chainReaction + deleted.shadeSignal + deleted.locationSignal;
-
-  const lines = [
-    ``,
-    `╔══════════════════════════════════════════════════════╗`,
-    `║         🧹 CLEANUP REPORT (${trigger.padEnd(12)})           ║`,
-    `╠══════════════════════════════════════════════════════╣`,
-    `║  Stale cutoff:  ${cutoffs.stale.padEnd(35)}║`,
-    `║  Delete cutoff: ${cutoffs.delete.padEnd(35)}║`,
-    `╠══════════════════════════════════════════════════════╣`,
-    `║  GAMES ENDED (idle > 20min):  ${String(endedTotal).padStart(4)}                 ║`,
-  ];
-  if (endedTotal > 0) {
-    if (ended.imposter) lines.push(`║    Imposter:        ${String(ended.imposter).padStart(4)}                         ║`);
-    if (ended.password) lines.push(`║    Password:        ${String(ended.password).padStart(4)}                         ║`);
-    if (ended.chainReaction) lines.push(`║    Chain Reaction:  ${String(ended.chainReaction).padStart(4)}                         ║`);
-    if (ended.shadeSignal) lines.push(`║    Shade Signal:    ${String(ended.shadeSignal).padStart(4)}                         ║`);
-    if (ended.locationSignal) lines.push(`║    Location Signal: ${String(ended.locationSignal).padStart(4)}                         ║`);
-  }
-  lines.push(
-    `╠══════════════════════════════════════════════════════╣`,
-    `║  DELETED (ended > 1hr):                              ║`,
-    `║    Games:           ${String(deletedGames).padStart(4)}                         ║`,
-    `║    Sessions:        ${String(deleted.sessions).padStart(4)}                         ║`,
-    `║    Encryption keys: ${String(deleted.encryptionKeys).padStart(4)}                         ║`,
-    `║    Chat messages:   ${String(deleted.chatMessages).padStart(4)}                         ║`,
-    `╠══════════════════════════════════════════════════════╣`,
-    `║  SHIKAKU AUDIT:                                      ║`,
-    `║    Scores trimmed (>20/session): ${String(shikaku.scoresTrimmed).padStart(4)}               ║`,
-    `║    Suspicious removed:           ${String(shikaku.suspiciousRemoved).padStart(4)}               ║`,
-    `║    Flagged sessions:             ${String(shikaku.suspiciousSessions).padStart(4)}               ║`,
-    `╠══════════════════════════════════════════════════════╣`,
-    `║  CURRENT TOTALS:                                     ║`,
-    `║    Imposter:        ${String(totals.imposterGames).padStart(4)}     Sessions:    ${String(totals.sessions).padStart(5)}   ║`,
-    `║    Password:        ${String(totals.passwordGames).padStart(4)}     Shikaku:     ${String(totals.shikakuScores).padStart(5)}   ║`,
-    `║    Chain Reaction:  ${String(totals.chainReactionGames).padStart(4)}     Enc. Keys:   ${String(totals.encryptionKeys).padStart(5)}   ║`,
-    `║    Shade Signal:    ${String(totals.shadeSignalGames).padStart(4)}                          ║`,
-    `║    Location Signal: ${String(totals.locationSignalGames).padStart(4)}                          ║`,
-    `╚══════════════════════════════════════════════════════╝`,
-    ``,
-  );
-  return lines.join("\n");
-}
-
 // ─── Activity report (general stats snapshot) ──────────────
 async function runActivityReport() {
   const now = Date.now();
@@ -3228,8 +2833,8 @@ app.on(["GET", "POST"], "/api/cleanup", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const summary = await runCleanup();
-  console.log(formatCleanupLog(summary, "endpoint"));
+  const summary = await recordedCleanup("endpoint");
+  if (!summary) return c.json({ error: "Cleanup is already running" }, 409);
   return c.json({ ok: true, ...summary });
 });
 
@@ -3291,8 +2896,7 @@ console.log("Realtime WebSocket transport configured");
 // ─── Auto-cleanup: run every 15 minutes ────────────────────
 async function scheduledCleanup() {
   try {
-    const summary = await runCleanup();
-    console.log(formatCleanupLog(summary, "scheduled"));
+    await recordedCleanup("scheduled");
   } catch (err) {
     console.error("[cleanup] error:", err);
   }

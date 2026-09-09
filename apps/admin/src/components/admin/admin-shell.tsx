@@ -65,6 +65,7 @@ const NAV_ITEMS = [
     icon: Dice5,
     accent: "var(--game-pips)",
   },
+  { href: "/cleanups", label: "Cleanups", icon: RotateCcw, accent: "var(--primary)" },
 ] as const;
 
 const SIDEBAR_COLLAPSED_KEY = "games-admin-sidebar-collapsed";
