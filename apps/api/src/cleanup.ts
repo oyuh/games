@@ -1,9 +1,9 @@
-import { cleanupRuns, sessionArchive, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsScores, sessions, shadeSignalGames, shikakuScores } from "@games/shared/db";
+import { cleanupRunDays, cleanupRuns, sessionArchive, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsScores, sessions, shadeSignalGames, shikakuScores } from "@games/shared/db";
 import { lt, and, count, eq, inArray, ne, sql } from "drizzle-orm";
 import { PUZZLES_PER_RUN as ENGINE_SHIKAKU_PUZZLES, validateRankedShikakuRun } from "@games/shared/games/shikaku-engine";
 import { PIPS_PUZZLES_PER_RUN as ENGINE_PIPS_PUZZLES, validateRankedPipsRun } from "@games/shared/games/pips-engine";
 import { drizzleClient } from "./db-provider";
-import { cleanupReportLines, formatCleanupReport } from "./cleanup-report";
+import { cleanupReportLines, compactSummary, foldCleanupRuns, formatCleanupReport, legacyReportStats, type CleanupReportLine } from "./cleanup-report";
 import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
 
 // ─── Stale game cleanup ────────────────────────────────────
@@ -13,8 +13,12 @@ const DELETE_MS = 60 * 60 * 1000;  // 1 hr → delete game row
 // ponytail: raw ip with a 30 day cap. If retention ever needs to go longer,
 // store an HMAC of it instead and hash the incoming ip in isBanned to match.
 const SESSION_ARCHIVE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+// Individual cleanup runs stay browsable for a week, then fold into daily rows.
+const CLEANUP_RUN_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
-export async function runCleanup(drizzleClient: Parameters<Parameters<typeof import("./db-provider").drizzleClient.transaction>[0]>[0]) {
+type CleanupTx = Parameters<Parameters<typeof import("./db-provider").drizzleClient.transaction>[0]>[0];
+
+export async function runCleanup(drizzleClient: CleanupTx) {
   const now = Date.now();
   const staleCutoff = now - STALE_MS;
   const deleteCutoff = now - DELETE_MS;
@@ -325,6 +329,29 @@ export async function runCleanup(drizzleClient: Parameters<Parameters<typeof imp
   };
 }
 
+// Rewrites runs still saved as prose lines into the compact counter format.
+export async function compactLegacyRuns(tx: CleanupTx) {
+  const legacy = await tx.select({ id: cleanupRuns.id, report: cleanupRuns.report }).from(cleanupRuns)
+    .where(sql`jsonb_typeof(${cleanupRuns.report}) = 'array'`);
+  for (const run of legacy) {
+    await tx.update(cleanupRuns).set({ report: legacyReportStats(run.report as CleanupReportLine[]) }).where(eq(cleanupRuns.id, run.id));
+  }
+  return legacy.length;
+}
+
+export async function archiveCleanupRuns(tx: CleanupTx, now = Date.now()) {
+  const old = await tx.select().from(cleanupRuns).where(lt(cleanupRuns.startedAt, now - CLEANUP_RUN_RETENTION_MS));
+  if (!old.length) return 0;
+  const touched = [...new Set(old.map((run) => new Date(run.startedAt).toISOString().slice(0, 10)))];
+  const existing = await tx.select().from(cleanupRunDays).where(inArray(cleanupRunDays.day, touched));
+  for (const day of foldCleanupRuns(old, existing)) {
+    const { day: _, ...values } = day;
+    await tx.insert(cleanupRunDays).values(day).onConflictDoUpdate({ target: cleanupRunDays.day, set: values });
+  }
+  await tx.delete(cleanupRuns).where(inArray(cleanupRuns.id, old.map((run) => run.id)));
+  return old.length;
+}
+
 export async function recordedCleanup(trigger: string, database = drizzleClient) {
   const id = crypto.randomUUID();
   const startedAt = Date.now();
@@ -337,18 +364,16 @@ export async function recordedCleanup(trigger: string, database = drizzleClient)
       recorded = true;
       const summary = await runCleanup(tx);
       const finishedAt = Date.now();
-      const report = cleanupReportLines(summary);
-      await tx.update(cleanupRuns).set({ status: "completed", finishedAt, report }).where(eq(cleanupRuns.id, id));
+      await tx.update(cleanupRuns).set({ status: "completed", finishedAt, report: compactSummary(summary) }).where(eq(cleanupRuns.id, id));
+      await compactLegacyRuns(tx);
+      await archiveCleanupRuns(tx, finishedAt);
       return summary;
     });
     if (summary) console.log(formatCleanupReport(cleanupReportLines(summary), trigger, Date.now() - startedAt, Boolean((process.stdout.isTTY || process.env.FORCE_COLOR) && !process.env.NO_COLOR)));
     return summary;
   } catch (error) {
     if (recorded) {
-      await database.update(cleanupRuns).set({
-        status: "failed", finishedAt: Date.now(),
-        report: [{ label: "Cleanup failed", value: "Changes rolled back. See server logs for the error.", tone: "error" }],
-      }).where(eq(cleanupRuns.id, id));
+      await database.update(cleanupRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(cleanupRuns.id, id));
     }
     throw error;
   }
