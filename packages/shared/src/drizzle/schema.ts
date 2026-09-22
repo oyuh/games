@@ -542,6 +542,8 @@ export type DrizzleSchema = {
 };
 
 // Cleanup history contains aggregate counts only and survives process restarts.
+// report holds flat counters with zeros dropped, e.g. { "ended.imposter": 2 }.
+// Rows written before that change hold an array of prose lines instead.
 export const cleanupRuns = pgTable("cleanup_runs", {
   id: text("id").primaryKey(),
   trigger: text("trigger").notNull(),
@@ -550,3 +552,15 @@ export const cleanupRuns = pgTable("cleanup_runs", {
   finishedAt: bigint("finished_at", { mode: "number" }),
   report: jsonb("report"),
 }, (table) => ({ startedIdx: index("cleanup_runs_started_idx").on(table.startedAt) }));
+
+// Runs older than a week fold into one row per UTC day so history stays small.
+export const cleanupRunDays = pgTable("cleanup_run_days", {
+  day: text("day").primaryKey(), // YYYY-MM-DD
+  runs: integer("runs").notNull(),
+  completed: integer("completed").notNull(),
+  failed: integer("failed").notNull(),
+  unfinished: integer("unfinished").notNull(),
+  durationMs: bigint("duration_ms", { mode: "number" }).notNull(),
+  // Summed counters from the day's runs, same keys as cleanup_runs.report.
+  stats: jsonb("stats").$type<Record<string, number>>().notNull(),
+});

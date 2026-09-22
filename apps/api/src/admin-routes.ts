@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { asc, eq, ne, and, gt, desc, sql, count, isNotNull, isNull, or, ilike, lt } from "drizzle-orm";
 import {
+  cleanupRunDays,
   cleanupRuns,
   sessions,
   imposterGames,
@@ -22,6 +23,7 @@ import { drizzleClient } from "./db-provider";
 import { pipsEngine, shikakuEngine } from "@games/shared";
 import { likeTerm } from "./sql-like";
 import { renderPipsSvg } from "./pips-image";
+import { CLEANUP_POLICY, cleanupDayLines, storedReportLines } from "./cleanup-report";
 import { renderPuzzleSvg as renderShikakuSvg } from "./shikaku-image";
 import {
   broadcastToAll,
@@ -108,7 +110,7 @@ function parsePagination(c: any, defaultPageSize = 50, maxPageSize = 200) {
 
 adminRoutes.get("/cleanups", async (c) => {
   const { page, pageSize, offset } = parsePagination(c, 25, 100);
-  const [runs, [totals]] = await Promise.all([
+  const [runs, [live], [archived], days] = await Promise.all([
     drizzleClient.select().from(cleanupRuns).orderBy(desc(cleanupRuns.startedAt), desc(cleanupRuns.id)).limit(pageSize).offset(offset),
     drizzleClient.select({
       total: count(),
@@ -116,8 +118,27 @@ adminRoutes.get("/cleanups", async (c) => {
       failed: sql<number>`count(*) filter (where status = 'failed')::int`,
       running: sql<number>`count(*) filter (where status = 'running')::int`,
     }).from(cleanupRuns),
+    drizzleClient.select({
+      total: sql<number>`coalesce(sum(runs), 0)::int`,
+      completed: sql<number>`coalesce(sum(completed), 0)::int`,
+      failed: sql<number>`coalesce(sum(failed), 0)::int`,
+      running: sql<number>`coalesce(sum(unfinished), 0)::int`,
+    }).from(cleanupRunDays),
+    drizzleClient.select().from(cleanupRunDays).orderBy(desc(cleanupRunDays.day)).limit(90),
   ]);
-  return c.json({ runs, ...totals, page, pageSize });
+  return c.json({
+    runs: runs.map((run) => ({ ...run, report: storedReportLines(run.report) })),
+    // Paging covers the last week of runs; lifetime counts include archived days.
+    pageTotal: live?.total ?? 0,
+    total: (live?.total ?? 0) + (archived?.total ?? 0),
+    completed: (live?.completed ?? 0) + (archived?.completed ?? 0),
+    failed: (live?.failed ?? 0) + (archived?.failed ?? 0),
+    running: (live?.running ?? 0) + (archived?.running ?? 0),
+    days: days.map(({ stats, ...day }) => ({ ...day, report: cleanupDayLines(stats) })),
+    policy: CLEANUP_POLICY,
+    page,
+    pageSize,
+  });
 });
 
 type SessionRow = typeof sessions.$inferSelect;
