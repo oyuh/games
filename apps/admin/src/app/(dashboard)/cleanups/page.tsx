@@ -10,9 +10,11 @@ type Run = {
   status: string;
   startedAt: number;
   finishedAt: number | null;
-  report: { label: string; value: string; tone: string }[] | null;
+  report: Line[] | null;
 };
-type History = { runs: Run[]; total: number; completed: number; failed: number; running: number; pageSize: number };
+type Line = { label: string; value: string; tone: string };
+type Day = { day: string; runs: number; completed: number; failed: number; unfinished: number; durationMs: number; report: Line[] };
+type History = { runs: Run[]; days: Day[]; policy: string; pageTotal: number; total: number; completed: number; failed: number; running: number; pageSize: number };
 const tones: Record<string, string> = {
   info: "text-blue-700 dark:text-blue-300",
   success: "text-green-800 dark:text-green-300",
@@ -43,7 +45,7 @@ export default function CleanupsPage() {
     const timer = setInterval(load, 15_000);
     return () => { canceled = true; clearInterval(timer); };
   }, [page, refresh]);
-  const pages = Math.max(1, Math.ceil((data?.total ?? 0) / (data?.pageSize ?? 25)));
+  const pages = Math.max(1, Math.ceil((data?.pageTotal ?? 0) / (data?.pageSize ?? 25)));
   const finished = (data?.completed ?? 0) + (data?.failed ?? 0);
   return (
     <div className="h-full overflow-y-auto space-y-6 p-1">
@@ -60,7 +62,8 @@ export default function CleanupsPage() {
           <div key={label}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="mt-1 text-xl font-semibold tabular-nums">{value}</dd></div>
         ))}
       </dl>}
-      <p className="text-sm text-muted-foreground">History starts when cleanup tracking is deployed. Older console output is unavailable here. Completion rate uses finished runs only.</p>
+      <p className="text-sm text-muted-foreground">Individual runs are kept for 7 days, then folded into one summary per day below. Completion rate uses finished runs only.</p>
+      {data?.policy && <p className="text-sm"><span className="font-semibold">Policy:</span> {data.policy}</p>}
       {loading ? <p role="status" className="min-h-24">Loading cleanup history...</p> : data?.runs.length === 0 ? <p>No cleanup runs recorded yet.</p> : <div className="space-y-5">
         {data?.runs.map((run) => <details key={run.id} className="bg-muted/30 p-3" open={data.runs[0]?.id === run.id}>
           <summary className="min-h-11 cursor-pointer rounded-sm py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
@@ -71,6 +74,7 @@ export default function CleanupsPage() {
           <dl className="mt-3 space-y-4 font-mono text-sm">
             {run.report?.map((line) => <div key={line.label}><dt className={`font-semibold ${tones[line.tone] ?? tones.info}`}>{line.label}</dt><dd className="mt-1 break-words leading-relaxed">{line.value}</dd></div>)}
           </dl>
+          {run.status === "failed" && <p className={`mt-3 text-sm ${tones.error}`}>Changes rolled back. See server logs for the error.</p>}
           {!run.finishedAt && <p className="mt-3 text-sm text-muted-foreground">This run has not reported completion. It may still be running or the server may have stopped.</p>}
         </details>)}
       </div>}
@@ -79,6 +83,23 @@ export default function CleanupsPage() {
         <span className="text-sm">Page {page} of {pages}</span>
         <Button className="min-h-11 min-w-11" disabled={loading || page >= pages} onClick={() => setPage(page + 1)}>Next</Button>
       </nav>
+      {data && data.days.length > 0 && <section aria-labelledby="archived-days" className="space-y-5">
+        <h2 id="archived-days" className="text-lg font-semibold">Archived days</h2>
+        {data.days.map((day) => {
+          const finishedRuns = day.completed + day.failed;
+          return <details key={day.day} className="bg-muted/30 p-3">
+            <summary className="min-h-11 cursor-pointer rounded-sm py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              <time dateTime={day.day}>{day.day}</time>
+              <span className="ml-3 text-sm text-muted-foreground">
+                {day.runs} {day.runs === 1 ? "run" : "runs"}, {day.failed} failed{day.unfinished ? `, ${day.unfinished} unfinished` : ""}{finishedRuns ? `, ${(day.durationMs / finishedRuns / 1000).toFixed(2)}s average` : ""}
+              </span>
+            </summary>
+            <dl className="mt-3 space-y-4 font-mono text-sm">
+              {day.report.map((line) => <div key={line.label}><dt className={`font-semibold ${tones[line.tone] ?? tones.info}`}>{line.label}</dt><dd className="mt-1 break-words leading-relaxed">{line.value}</dd></div>)}
+            </dl>
+          </details>;
+        })}
+      </section>}
     </div>
   );
 }
