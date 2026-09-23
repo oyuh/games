@@ -1,7 +1,7 @@
 # Games
 
 [![CI](https://github.com/oyuh/games/actions/workflows/ci.yml/badge.svg)](https://github.com/oyuh/games/actions/workflows/ci.yml)
-![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)
 [![License](https://img.shields.io/badge/license-source--available-blue)](LICENSE)
 
 Games is a TypeScript monorepo for browser party games and logic puzzles. There's a React + Vite app players actually use, a Bun/Hono API behind it, a Next.js admin dashboard for moderation, a shared package holding the Drizzle/Zero contracts, and a local Postgres + Zero stack so you can run the whole thing on your machine.

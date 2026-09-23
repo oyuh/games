@@ -34,7 +34,7 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.11",
     "pg": "^8.23.0",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   }
 }
