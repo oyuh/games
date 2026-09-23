@@ -8,8 +8,8 @@ import path from "path";
 export default defineConfig({
   resolve: {
     alias: {
-      "@games/shared": path.resolve(__dirname, "src/index.ts"),
-      "@games/shared/*": path.resolve(__dirname, "src/*"),
+      "@games/shared": path.resolve(import.meta.dirname, "src/index.ts"),
+      "@games/shared/*": path.resolve(import.meta.dirname, "src/*"),
     },
   },
   test: {
