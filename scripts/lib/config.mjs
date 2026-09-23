@@ -15,7 +15,7 @@ export const STATE_DIR = resolve(ROOT_DIR, ".local-dev");
 export const LOG_DIR = resolve(STATE_DIR, "logs");
 export const STATE_FILE = resolve(STATE_DIR, "supervisor.json");
 
-export const ZERO_IMAGE_VERSION = "1.8.0";
+export const ZERO_IMAGE_VERSION = "1.9.0";
 export const ZERO_IMAGE = `rocicorp/zero:${ZERO_IMAGE_VERSION}`;
 export const POSTGRES_IMAGE = "postgres:16-alpine";
 
