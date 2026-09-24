@@ -11,6 +11,7 @@ import {
   makeSession,
   makeShadeSignalGame,
   expectThrows,
+  openForTest,
 } from "./test-helpers";
 
 import { shadeSignalMutators, shadeClueProblem } from "../zero/mutators/shade-signal";
@@ -229,5 +230,30 @@ describe("Shade Signal: shadeClueProblem", () => {
     /* Padding and doubled spaces are not extra words. */
     expect(shadeClueProblem(1, "  ocean  ")).toBeUndefined();
     expect(shadeClueProblem(2, "deep   water")).toBeUndefined();
+  });
+});
+
+// ───────────────────────────────────────────────────────────
+describe("Shade Signal: the target stays sealed until the reveal", () => {
+  it("syncs only ciphertext during the round and scores against the real target", async () => {
+    const tx = new MockTx("server");
+    const players = ["host1", "p1", "p2"].map((sessionId) => ({ sessionId, name: sessionId, connected: true, totalScore: 0 }));
+    tx.seed("shade_signal_games", [makeShadeSignalGame({ id: "game1", host_id: "host1", players })]);
+
+    await mutators.start({ args: { gameId: "game1", hostId: "host1" }, tx, ctx: serverCtx("host1") });
+    const game = tx.getById("shade_signal_games", "game1") as any;
+    expect(game.target_row).toBeNull();
+    expect(game.target_col).toBeNull();
+    expect(game.encrypted_target).toMatch(/^enc:/);
+    const target = JSON.parse(await openForTest("shade_signal", "game1", game.encrypted_target));
+
+    const guesser = players.find((p) => p.sessionId !== game.leader_id)!.sessionId;
+    Object.assign(game, { phase: "reveal", guesses: [{ sessionId: guesser, round: 2, row: target.row, col: target.col }] });
+    await mutators.reveal({ args: { gameId: "game1" }, tx, ctx: serverCtx("host1") });
+
+    const revealed = tx.getById("shade_signal_games", "game1") as any;
+    expect(revealed.encrypted_target).toBeNull();
+    expect({ row: revealed.target_row, col: revealed.target_col }).toEqual(target);
+    expect(revealed.round_history[0].scores[guesser]).toBe(5);
   });
 });

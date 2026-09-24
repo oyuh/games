@@ -153,7 +153,7 @@ const chainReactionGames = table("chain_reaction_games").columns({
   host_id: string(),
   phase: enumeration<"lobby" | "submitting" | "playing" | "finished" | "ended">(),
   players: json<Array<{ sessionId: string; name: string | null; connected: boolean }>>(),
-  chain: json<Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>>(),
+  chain: json<Record<string, Array<{ word: string; secret?: string | null; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>>(),
   submitted_chains: json<Record<string, string[]>>(),
   current_turn: string().optional(),
   scores: json<Record<string, number>>(),

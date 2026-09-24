@@ -4,7 +4,7 @@ import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { generateGridColor } from "../components/shade/ColorGrid";
-import { callGameSecretPreReveal } from "../lib/game-secrets";
+import { useGameSecret } from "../lib/game-secrets";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useGameSounds, playSoundSubmit } from "./useGameSounds";
@@ -172,8 +172,7 @@ export function useShadeSignalGame(sessionId: string) {
     const latest = game.round_history[game.round_history.length - 1];
     if (latest && latest.round === game.settings.currentRound) return; // already revealed this round
     const timer = setTimeout(() => {
-      void callGameSecretPreReveal("shade_signal", gameId, sessionId)
-        .then(() => zero.mutate(mutators.shadeSignal.reveal({ gameId })));
+      void zero.mutate(mutators.shadeSignal.reveal({ gameId }));
     }, 600);
     return () => clearTimeout(timer);
   }, [game?.phase, game?.round_history.length, gameId, sessionId, zero]);
@@ -191,9 +190,31 @@ export function useShadeSignalGame(sessionId: string) {
     return () => window.clearTimeout(timer);
   }, [phase, isLeader, isSpectator]);
 
+  /* The server seals the target until the reveal, and only the leader is
+     handed the key. Everyone else reads it off the row once it goes public. */
+  const { decryptValue } = useGameSecret({
+    gameType: "shade_signal",
+    gameId,
+    sessionId,
+    enabled: Boolean(isLeader && game?.encrypted_target),
+    resetOn: game?.settings.currentRound ?? 0,
+  });
+  const [sealedTarget, setSealedTarget] = useState<{ row: number; col: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!isLeader || !game?.encrypted_target) {
+      setSealedTarget(null);
+      return;
+    }
+    void decryptValue(game.encrypted_target).then((plain) => {
+      if (!cancelled) setSealedTarget(plain ? JSON.parse(plain) as { row: number; col: number } : null);
+    });
+    return () => { cancelled = true; };
+  }, [isLeader, game?.encrypted_target, decryptValue]);
+
   const target = game?.target_row != null && game?.target_col != null && game.target_row >= 0 && game.target_col >= 0
     ? { row: game.target_row, col: game.target_col }
-    : null;
+    : sealedTarget;
 
   const targetColor = target && game
     ? generateGridColor(target.row, target.col, game.grid_rows, game.grid_cols, game.grid_seed)

@@ -64,12 +64,8 @@ test("the leader clues a color and guesses are scored by distance", async ({ bro
 });
 
 test("guessers' sync sockets never carry the target", async ({ browser }) => {
-  // Known leak: with the grid picking the color, target_row and target_col
-  // stay in plaintext on the synced row for the whole round, so every
-  // guesser's client has the answer. Drop test.fail once the target is
-  // encrypted before it is written.
-  test.fail();
-
+  // The target is sealed on the server until the reveal, even when the grid
+  // picks it, so no guesser's client ever holds the answer.
   const { players } = await openRoom(browser, "Shade Signal", ROUTE, NAMES);
   const frames = await Promise.all(players.map(recordSyncFrames));
   const li = await startAndFindLeader(players);

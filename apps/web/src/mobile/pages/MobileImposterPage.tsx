@@ -1,4 +1,4 @@
-import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, imposterCategoryLabels, isEncrypted, mutators, queries } from "@games/shared";
+import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, imposterCategoryLabels, mutators, queries } from "@games/shared";
 import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,7 +15,7 @@ import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/S
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { RoundCountdown } from "../../components/shared/RoundCountdown";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
-import { callGameSecretInit, useGameSecret } from "../../lib/game-secrets";
+import { useGameSecret } from "../../lib/game-secrets";
 import { useGameSounds, playSoundSubmit } from "../../hooks/useGameSounds";
 import { playVote } from "../../lib/sounds";
 

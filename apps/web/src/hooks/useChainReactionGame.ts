@@ -1,4 +1,4 @@
-import { mutators, queries } from "@games/shared";
+import { isEncrypted, mutators, queries } from "@games/shared";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
@@ -10,7 +10,8 @@ import { nextUnsolvedIndex } from "../components/chain/chain-guess";
 import { useChainReactionLiveTyping } from "./useChainReactionLiveTyping";
 import { useGameSounds, playSoundSubmit, playSoundCorrect, playSoundWrong } from "./useGameSounds";
 
-/** Declared in both page files before this; they import it from here now. */
+/** Declared in both page files before this; they import it from here now.
+ *  A hidden slot's word is a mask: the hinted letters, then underscores. */
 export type ChainSlot = { word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 export type ChainViewTarget = "self" | "opponent";
 
@@ -22,7 +23,7 @@ export type ChainViewTarget = "self" | "opponent";
  * Desktop and mobile each had their own copy. Each view keeps its markup, plus
  * desktop's slot flash animation and mobile's countdown.
  *
- * @param onGuessResult fires after a guess is scored locally, so a view can
+ * @param onGuessResult fires once the server has scored a guess, so a view can
  *   run its own feedback animation. Desktop uses it for the slot flash.
  */
 export function useChainReactionGame(
@@ -49,6 +50,7 @@ export function useChainReactionGame(
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const inlineInputRef = useRef<HTMLInputElement>(null);
+  const guessInFlightRef = useRef(false);
   const submissionFirstInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
@@ -186,6 +188,12 @@ export function useChainReactionGame(
   }, [game, navigate]);
 
   const myChain: ChainSlot[] = game?.chain[sessionId] ?? [];
+  /* The server seals submitted words, since they are the other player's
+     answers. This tab still has its own in local state; after a reload there
+     is nothing to show but dots. */
+  const mySubmittedWords = (game?.submitted_chains[sessionId] ?? []).map((word, i) =>
+    isEncrypted(word) ? (submissionWords[i] || "••••") : word
+  );
   const opponentId = opponent?.sessionId;
   const oppChain: ChainSlot[] = opponentId ? (game?.chain[opponentId] ?? []) : [];
   const isViewingMine = viewingTarget === "self" || !opponentId;
@@ -269,9 +277,10 @@ export function useChainReactionGame(
     myChain, oppChain, isViewingMine, viewingId, viewingChain, myDone,
     oppDone: oppChain.length > 0 && oppChain.every((s) => s.revealed),
     viewingLiveDraft: !isViewingMine && opponentId ? liveBySession[opponentId] ?? null : null,
-    submittedChainEntries: (game?.submitted_chains[sessionId] ?? []).map((word, index) => ({
+    submittedChainEntries: mySubmittedWords.map((word, index) => ({
       id: `submitted-chain-word-${index}`, word, index,
     })),
+    mySubmittedWords,
     myScore: game?.scores[sessionId] ?? 0,
     opponentScore: opponentId ? (game?.scores[opponentId] ?? 0) : 0,
     myName: playerName(sessionId),
@@ -295,28 +304,36 @@ export function useChainReactionGame(
     },
 
     handleInlineGuess: async () => {
-      if (editingIndex === null || !guess.trim()) return;
+      if (editingIndex === null || !guess.trim() || guessInFlightRef.current) return;
       const idx = editingIndex;
       const currentGuess = guess.trim();
-      const slot = myChain[idx];
 
-      const isCorrect = Boolean(slot && currentGuess.toLowerCase().trim() === slot.word.toLowerCase().trim());
+      /* The client only holds a mask of the word, so the server is the one who
+         knows. Its answer lands in the local store before .server resolves. */
+      let slot: ChainSlot | undefined;
+      guessInFlightRef.current = true;
+      try {
+        await zero.mutate(mutators.chainReaction.guess({ gameId, sessionId, wordIndex: idx, guess: currentGuess })).server;
+        const [fresh] = await zero.run(queries.chainReaction.byId({ id: gameId }));
+        slot = fresh?.chain[sessionId]?.[idx];
+      } catch {
+        // Mutation error - the guess just doesn't land
+        return;
+      } finally {
+        guessInFlightRef.current = false;
+      }
+
+      const isCorrect = Boolean(slot?.revealed);
       if (isCorrect) playSoundCorrect(); else playSoundWrong();
       onGuessResult?.(idx, isCorrect);
 
-      // Right: straight on to the next word. Wrong: stay put - the mutator reveals
-      // another letter, and the prefix sync effect puts it in front of the caret.
+      // Right: straight on to the next word. Wrong: stay put with the new letter
+      // (if any) locked in front of the caret.
       if (isCorrect) {
         clearDraft();
         moveSelection(idx, 1, idx);
       } else {
         setGuess(slot ? slot.word.slice(0, slot.lettersShown).toUpperCase() : "");
-      }
-
-      try {
-        await optimistic(zero.mutate(mutators.chainReaction.guess({ gameId, sessionId, wordIndex: idx, guess: currentGuess })));
-      } catch {
-        // Mutation error - the guess just doesn't land
       }
     },
 

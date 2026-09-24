@@ -1,10 +1,10 @@
-import { isEncrypted, mutators, queries } from "@games/shared";
+import { mutators, queries } from "@games/shared";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { publishRealtimeEvent, subscribeToRealtimeEvent } from "../lib/realtime";
-import { callGameSecretInit, useGameSecret } from "../lib/game-secrets";
+import { useGameSecret } from "../lib/game-secrets";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { playVote } from "../lib/sounds";
@@ -144,13 +144,6 @@ export function useImposterGame(sessionId: string) {
     });
     return () => { cancelled = true; };
   }, [game?.round_history, decryptValue]);
-
-  // Host encrypts the word in place once the round is live.
-  useEffect(() => {
-    if (!game || !isHost || game.phase !== "playing" || !game.secret_word) return;
-    if (isEncrypted(game.secret_word)) return;
-    void callGameSecretInit("imposter", gameId, sessionId);
-  }, [game, game?.phase, game?.secret_word, isHost, gameId, sessionId]);
 
   useEffect(() => {
     if (!game) return;

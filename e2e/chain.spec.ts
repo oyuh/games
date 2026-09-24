@@ -63,11 +63,8 @@ test("a duel where one player cracks their chain and the other gives up", async 
 });
 
 test("a player's sync socket never carries their own unsolved words", async ({ browser }) => {
-  // Known leak: the dealt chains sit in plaintext on the synced game row, so
-  // each player's client receives the answers it is supposed to be guessing.
-  // Drop test.fail once hidden words stay on the server until solved.
-  test.fail();
-
+  // Hidden words sync as a mask plus a copy only the server can decrypt,
+  // and guesses are checked there.
   const { players } = await openRoom(browser, "Chain Reaction", ROUTE, NAMES, ["1 round"]);
   const frames = await recordSyncFrames(players[1]!);
   await players[0]!.getByRole("button", { name: "Start the duel" }).click();

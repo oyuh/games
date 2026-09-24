@@ -1,6 +1,7 @@
 import { customAlphabet } from "nanoid";
 export { fallbackPlayerName, randomPlayerName, resolvePlayerName } from "../../player-names";
 import { chainWordBank, passwordWordBank } from "./word-banks";
+import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
 
 export const now = () => Date.now();
 export const code = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
@@ -102,6 +103,29 @@ export function isServerTx(tx: unknown) {
 export function getGameSecretResolver(ctx: unknown): GameSecretResolver | null {
   const safeCtx = asServerContext(ctx);
   return safeCtx.resolveGameSecretKey ?? null;
+}
+
+type SecretGameType = Parameters<GameSecretResolver>[0];
+
+/**
+ * Encrypts a round secret before it goes on a synced row, so zero-cache never
+ * ships it in the clear. Only the server holds keys. A server without a key
+ * store (unit tests) writes plaintext, like password always has. The client's
+ * optimistic run gets null: it has no key, and a local guess at a random
+ * secret would only flash the wrong one.
+ */
+export async function sealSecret(tx: unknown, ctx: unknown, gameType: SecretGameType, gameId: string, plaintext: string): Promise<string | null> {
+  const resolver = getGameSecretResolver(ctx);
+  if (resolver) return encryptSecret(plaintext, await resolver(gameType, gameId));
+  return isServerTx(tx) ? plaintext : null;
+}
+
+/** Undoes sealSecret on the server. Null on the client, which has no key. */
+export async function openSecret(ctx: unknown, gameType: SecretGameType, gameId: string, value: string): Promise<string | null> {
+  if (!isEncrypted(value)) return value;
+  const resolver = getGameSecretResolver(ctx);
+  if (!resolver) return null;
+  return decryptSecret(value, await resolver(gameType, gameId));
 }
 
 export function pickRandom<T>(values: T[]): T {
