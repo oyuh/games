@@ -1,5 +1,5 @@
 import { adminRestrictedNames } from "@games/shared/db";
-import { drizzleClient } from "./db-provider";
+import { drizzleClient, type Db } from "./db-provider";
 import { sanitizeSessionName } from "./session-identity";
 
 const RESTRICTED_NAME_CACHE_TTL_MS = 10_000;
@@ -22,13 +22,14 @@ export function primeRestrictedNamePatternCache(patterns: string[]) {
   cachedRestrictedPatternsAt = Date.now();
 }
 
-export async function loadRestrictedNamePatterns(options?: { force?: boolean }) {
+/** Pass `db` from inside a transaction so the lookup reuses its connection. */
+export async function loadRestrictedNamePatterns(options?: { force?: boolean; db?: Db | undefined }) {
   const force = options?.force ?? false;
   if (!force && cachedRestrictedPatternsAt > 0 && Date.now() - cachedRestrictedPatternsAt < RESTRICTED_NAME_CACHE_TTL_MS) {
     return cachedRestrictedPatterns;
   }
 
-  const restricted = await drizzleClient
+  const restricted = await (options?.db ?? drizzleClient)
     .select({ pattern: adminRestrictedNames.pattern })
     .from(adminRestrictedNames);
   const patterns = restricted.map((entry) => entry.pattern);
@@ -61,13 +62,13 @@ export function isRestrictedName(name: string | null | undefined, patterns: stri
   return patterns.some((pattern) => matchesRestrictedNamePattern(normalizedName, pattern));
 }
 
-export async function findRestrictedNameMatch(name: string | null | undefined) {
+export async function findRestrictedNameMatch(name: string | null | undefined, db?: Db) {
   const normalizedName = sanitizeSessionName(name);
   if (!normalizedName) {
     return null;
   }
 
-  const patterns = await loadRestrictedNamePatterns();
+  const patterns = await loadRestrictedNamePatterns({ db });
   return patterns.find((pattern) => matchesRestrictedNamePattern(normalizedName, pattern)) ?? null;
 }
 
