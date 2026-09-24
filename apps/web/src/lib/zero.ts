@@ -70,7 +70,7 @@ export function useZero() {
   return useMemo(
     () =>
       new Proxy(z, {
-        get(target, prop, receiver) {
+        get(target, prop) {
           if (prop === "mutate") {
             return (...args: unknown[]) => {
               if (!checkRateLimit()) return BLOCKED;
@@ -90,7 +90,10 @@ export function useZero() {
               return mutationResult;
             };
           }
-          return Reflect.get(target, prop, receiver);
+          // Zero keeps its state in #private fields, so methods and getters
+          // have to run against the real instance, not this proxy.
+          const value = Reflect.get(target, prop, target);
+          return typeof value === "function" ? value.bind(target) : value;
         },
       }),
     [z],

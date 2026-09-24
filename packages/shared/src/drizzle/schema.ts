@@ -213,7 +213,7 @@ export const chainReactionGames = pgTable(
     hostId: text("host_id").notNull(),
     phase: chainReactionPhaseEnum("phase").notNull().default("lobby"),
     players: jsonb("players").$type<Array<{ sessionId: string; name: string | null; connected: boolean }>>().notNull().default([]),
-    chain: jsonb("chain").$type<Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>>().notNull().default({}),
+    chain: jsonb("chain").$type<Record<string, Array<{ word: string; secret?: string | null; revealed: boolean; lettersShown: number; solvedBy?: string | null }>>>().notNull().default({}),
     submittedChains: jsonb("submitted_chains").$type<Record<string, string[]>>().notNull().default({}),
     currentTurn: text("current_turn"),
     scores: jsonb("scores").$type<Record<string, number>>().notNull().default({}),

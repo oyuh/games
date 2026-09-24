@@ -15,7 +15,7 @@ import { zql } from "../schema";
 import { now, randomPlayerName, pickRandom, pickChain, isClueTooSimilar } from "./helpers";
 import { imposterMutators } from "./imposter";
 import { passwordMutators, resolveActiveRoundWord } from "./password";
-import { chainReactionMutators } from "./chain-reaction";
+import { chainReactionMutators, chainSlotWord } from "./chain-reaction";
 import { shadeSignalMutators } from "./shade-signal";
 import { locationSignalMutators } from "./location-signal";
 
@@ -432,9 +432,11 @@ export const devMutators = {
           const slots = game.chain[p.sessionId] ?? [];
           const index = slots.findIndex((s) => !s.revealed);
           if (index === -1) continue;
+          const word = await chainSlotWord(ctx, gameId, slots[index]!);
+          if (!word) continue;
           await attempt(() =>
             chainReactionMutators.guess.fn({
-              args: { gameId, sessionId: p.sessionId, wordIndex: index, guess: slots[index]!.word },
+              args: { gameId, sessionId: p.sessionId, wordIndex: index, guess: word },
               tx: t,
               ctx: bot
             })

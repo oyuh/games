@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { code, now, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
+import { code, now, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE } from "./helpers";
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -24,6 +24,15 @@ export function scoreForDistance(km: number): number {
   if (km <= PERFECT_KM) return 5000;
   // Generous exponential decay: ~2500 at ~2000km, still scoring at 5000km+
   return Math.max(0, Math.round(5000 * Math.exp(-(km - PERFECT_KM) / 3000)));
+}
+
+/** The round's place, or null when it is still sealed to this caller (the client). */
+async function openTarget(ctx: unknown, game: { id: string; target_lat: number | null; target_lng: number | null; encrypted_target?: string | null }) {
+  if (game.encrypted_target) {
+    const plain = await openSecret(ctx, "location_signal", game.id, game.encrypted_target);
+    return plain ? (JSON.parse(plain) as { lat: number; lng: number }) : null;
+  }
+  return game.target_lat != null && game.target_lng != null ? { lat: game.target_lat, lng: game.target_lng } : null;
 }
 
 export const locationSignalMutators = {
@@ -192,6 +201,7 @@ export const locationSignalMutators = {
         current_leader_index: 0,
         target_lat: null,
         target_lng: null,
+        encrypted_target: null,
         clue1: null,
         clue2: null,
         clue3: null,
@@ -216,8 +226,11 @@ export const locationSignalMutators = {
       await tx.mutate.location_signal_games.update({
         id: game.id,
         phase: "clue1",
-        target_lat: args.lat,
-        target_lng: args.lng,
+        // Sealed so guessers' clients never see the place. The leader's own
+        // optimistic copy can keep it; it never leaves their device.
+        ...(isServerTx(tx)
+          ? { target_lat: null, target_lng: null, encrypted_target: await sealSecret(tx, ctx, "location_signal", game.id, JSON.stringify({ lat: args.lat, lng: args.lng })) }
+          : { target_lat: args.lat, target_lng: args.lng }),
         settings: { ...game.settings, phaseEndsAt: ts + game.settings.clueDurationSec * 1000 },
         updated_at: ts,
       });
@@ -263,8 +276,10 @@ export const locationSignalMutators = {
       // Duel perfect-score shortcut: if there's exactly 1 guesser and they nailed it, skip to reveal
       const guessersCount = game.players.filter((p) => p.sessionId !== game.leader_id).length;
       const isDuel = guessersCount === 1;
-      if (isDuel && game.target_lat != null && game.target_lng != null) {
-        const km = haversineKm(game.target_lat, game.target_lng, args.lat, args.lng);
+      // The guesser's client can't open the target, so only the server takes this shortcut.
+      const target = isDuel ? await openTarget(ctx, game) : null;
+      if (target) {
+        const km = haversineKm(target.lat, target.lng, args.lat, args.lng);
         if (km <= PERFECT_KM) {
           const scores = game.players.reduce<Record<string, number>>((acc, p) => {
             acc[p.sessionId] = p.totalScore;
@@ -282,7 +297,7 @@ export const locationSignalMutators = {
             {
               round: game.settings.currentRound,
               leaderId: game.leader_id,
-              target: { lat: game.target_lat, lng: game.target_lng },
+              target,
               clue1: game.clue1, clue2: game.clue2, clue3: game.clue3, clue4: game.clue4,
               guesses,
               scores,
@@ -293,6 +308,9 @@ export const locationSignalMutators = {
             id: game.id,
             guesses,
             phase: "reveal",
+            target_lat: target.lat,
+            target_lng: target.lng,
+            encrypted_target: null,
             players,
             round_history: nextHistory,
             settings: { ...game.settings, phaseEndsAt: null },
@@ -330,7 +348,10 @@ export const locationSignalMutators = {
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.host_id !== args.hostId) throw new Error("Only host can advance");
-      if (game.target_lat === null || game.target_lng === null || !game.leader_id) throw new Error("Round target is missing");
+      const target = await openTarget(ctx, game);
+      // Still sealed means this is the client's optimistic run; the server scores it.
+      if (!target && game.encrypted_target) return;
+      if (!target || !game.leader_id) throw new Error("Round target is missing");
 
       const cluePairs = game.settings.cluePairs ?? 2;
 
@@ -371,7 +392,7 @@ export const locationSignalMutators = {
         if (player.sessionId === game.leader_id) continue;
         const guess = bestGuesses.get(player.sessionId);
         if (!guess) continue;
-        const km = haversineKm(game.target_lat, game.target_lng, guess.lat, guess.lng);
+        const km = haversineKm(target.lat, target.lng, guess.lat, guess.lng);
         scores[player.sessionId] = (scores[player.sessionId] ?? 0) + scoreForDistance(km);
       }
 
@@ -385,7 +406,7 @@ export const locationSignalMutators = {
         {
           round: game.settings.currentRound,
           leaderId: game.leader_id,
-          target: { lat: game.target_lat, lng: game.target_lng },
+          target,
           clue1: game.clue1,
           clue2: game.clue2,
           clue3: game.clue3,
@@ -398,6 +419,9 @@ export const locationSignalMutators = {
       await tx.mutate.location_signal_games.update({
         id: game.id,
         phase: "reveal",
+        target_lat: target.lat,
+        target_lng: target.lng,
+        encrypted_target: null,
         players,
         round_history: nextHistory,
         settings: { ...game.settings, phaseEndsAt: null },
@@ -437,6 +461,7 @@ export const locationSignalMutators = {
         leader_id: nextLeaderId,
         target_lat: null,
         target_lng: null,
+        encrypted_target: null,
         clue1: null,
         clue2: null,
         clue3: null,
@@ -454,7 +479,7 @@ export const locationSignalMutators = {
 
   advanceTimer: defineMutator(
     z.object({ gameId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
       if (!game) return;
       const phaseEnd = game.settings.phaseEndsAt;
@@ -486,7 +511,10 @@ export const locationSignalMutators = {
           });
         } else {
           // Last guess round: score and go to reveal
-          if (game.target_lat == null || game.target_lng == null || !game.leader_id) {
+          const target = await openTarget(ctx, game);
+          // Still sealed means this is the client's optimistic run; the server scores it.
+          if (!target && game.encrypted_target) return;
+          if (!target || !game.leader_id) {
             // Missing target, so skip to reveal anyway
             await tx.mutate.location_signal_games.update({
               id: game.id,
@@ -514,7 +542,7 @@ export const locationSignalMutators = {
             if (player.sessionId === game.leader_id) continue;
             const guess = bestGuesses.get(player.sessionId);
             if (!guess) continue;
-            const km = haversineKm(game.target_lat, game.target_lng, guess.lat, guess.lng);
+            const km = haversineKm(target.lat, target.lng, guess.lat, guess.lng);
             scores[player.sessionId] = (scores[player.sessionId] ?? 0) + scoreForDistance(km);
           }
 
@@ -528,7 +556,7 @@ export const locationSignalMutators = {
             {
               round: game.settings.currentRound,
               leaderId: game.leader_id,
-              target: { lat: game.target_lat, lng: game.target_lng },
+              target,
               clue1: game.clue1,
               clue2: game.clue2,
               clue3: game.clue3,
@@ -541,6 +569,9 @@ export const locationSignalMutators = {
           await tx.mutate.location_signal_games.update({
             id: game.id,
             phase: "reveal",
+            target_lat: target.lat,
+            target_lng: target.lng,
+            encrypted_target: null,
             players,
             round_history: nextHistory,
             settings: { ...game.settings, phaseEndsAt: now() + 10000 },
@@ -572,6 +603,7 @@ export const locationSignalMutators = {
           leader_id: nextLeaderId,
           target_lat: null,
           target_lng: null,
+          encrypted_target: null,
           clue1: null,
           clue2: null,
           clue3: null,
@@ -747,6 +779,7 @@ export const locationSignalMutators = {
         current_leader_index: 0,
         target_lat: null,
         target_lng: null,
+        encrypted_target: null,
         clue1: null,
         clue2: null,
         clue3: null,

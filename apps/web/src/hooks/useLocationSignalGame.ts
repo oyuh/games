@@ -4,7 +4,6 @@ import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { fitRepeatingMapBounds } from "../components/location/WorldMap";
-import { callGameSecretInit, callGameSecretPreReveal } from "../lib/game-secrets";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useGameSounds, playSoundSubmit } from "./useGameSounds";
@@ -277,19 +276,11 @@ export function useLocationSignalGame(
   useEffect(() => {
     if (!game) return;
     if (!isHost) return;
-    const localCluePairs = (game.settings as { cluePairs?: number }).cluePairs ?? 2;
     const phaseEnd = game.settings.phaseEndsAt;
     if (!phaseEnd) return;
     const activePhases: string[] = ["clue1", "guess1", "clue2", "guess2", "clue3", "guess3", "clue4", "guess4", "reveal"];
     if (!activePhases.includes(game.phase)) return;
-    const advance = () => {
-      if (game.phase.startsWith("guess") && Number(game.phase.replace("guess", "")) === localCluePairs) {
-        void callGameSecretPreReveal("location_signal", gameId, sessionId)
-          .then(() => zero.mutate(mutators.locationSignal.advanceTimer({ gameId })));
-      } else {
-        void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
-      }
-    };
+    const advance = () => void zero.mutate(mutators.locationSignal.advanceTimer({ gameId }));
     const remaining = phaseEnd - Date.now();
     if (remaining <= 0) {
       advance();
@@ -403,8 +394,7 @@ export function useLocationSignalGame(
     lockTarget: () => {
       if (!draftMarker || !game) return;
       setLeaderTarget({ lat: draftMarker.lat, lng: draftMarker.lng });
-      void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng }))
-        .server.then(() => callGameSecretInit("location_signal", game.id, sessionId));
+      void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng }));
     },
 
     joinGame,

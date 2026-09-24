@@ -524,8 +524,6 @@ The multiplayer game tables deliberately keep most of their live state in JSON c
 | `GET /api/shikaku/puzzle.svg` | Dynamic Shikaku puzzle SVG |
 | `GET /api/maps/config` | Location Signal map tile configuration |
 | `GET /api/maps/geocode` | Location Signal geocoding proxy |
-| `POST /api/game-secret/init` | Initialize server-held game secret material |
-| `POST /api/game-secret/pre-reveal` | Prepare hidden data before reveal |
 | `POST /api/game-secret/key` | Resolve game secret key for authorized reveal paths |
 | `GET/POST /api/cleanup` | Run authenticated stale-game/session cleanup |
 

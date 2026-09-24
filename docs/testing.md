@@ -57,17 +57,13 @@ The `E2E` job in `.github/workflows/ci.yml` runs next to the quality gate. It in
 
 ## Known bugs, pinned by tests
 
-Five tests are marked `test.fail()`. Each one fails today because of a real bug. When the bug is fixed, Playwright reports an unexpected pass, which fails the run until you delete the `test.fail()` line. After that it's a normal guard.
+One test is marked `test.fail()`. It fails today because of a real bug. When the bug is fixed, Playwright reports an unexpected pass, which fails the run until you delete the `test.fail()` line. After that it's a normal guard.
 
 | Test | Bug |
 | --- | --- |
-| Imposter: sync socket never carries the word | `imposter.start` writes `secret_word` in plaintext and the host's browser encrypts it afterwards through `/api/game-secret/init`. zero-cache pushes the plain word to every client first. |
-| Shade Signal: sockets never carry the target | With the grid picking the color, `target_row` and `target_col` stay plaintext for the whole round. Every guesser's client has the answer. |
-| Location Signal: sockets never carry the place | Sending the first clue writes `target_lat` and `target_lng` in plaintext before `/init` encrypts them. |
-| Chain Reaction: socket never carries unsolved words | The dealt chains sit plaintext on the synced row, so each player's client has its own answers. |
 | Boot: name saved while sync is down survives a reload | The name waits in Zero's queue while zero-cache is unreachable. On reload, `/api/session/sync` still has the old name, answers `resetRequired`, and the client reverts to it. |
 
-Password is the model for the leaks: it encrypts inside the server mutator with `ctx.resolveGameSecretKey` before the row is written, and `password.spec.ts` checks nothing plain reaches a guesser.
+Every game's secret is encrypted inside the server mutator with `ctx.resolveGameSecretKey` before the row is written (`sealSecret` in `packages/shared/src/zero/mutators/helpers.ts`). One sync-socket test per game checks nothing plain reaches the player who shouldn't have it. Chain Reaction goes further: an unsolved word syncs as a mask, and no client is ever handed its key, so guesses are checked on the server.
 
 ## Later
 

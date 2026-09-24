@@ -34,7 +34,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     zero, navigate, gameId, game, isHost, inGame, isSpectator, opponentId,
     sessionById,
     editingIndex, setEditingIndex, guess, setGuess,
-    submissionWords, setSubmissionWords, hasSubmitted, submissionFirstInputRef,
+    submissionWords, setSubmissionWords, hasSubmitted, mySubmittedWords, submissionFirstInputRef,
     viewingTarget, setViewingTarget,
     activeGameType,
     showInSessionModal, setShowInSessionModal,
@@ -135,9 +135,9 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
       {!isSpectator && game.phase === "submitting" && (
         inGame ? (
           <ChainWrite
-            /* Locked in, the boxes show what you actually handed over rather
-               than whatever is still sitting in local state. */
-            words={hasSubmitted ? game.submitted_chains[sessionId] ?? submissionWords : submissionWords}
+            /* Locked in, the boxes show what you handed over. The row only has
+               it sealed, so mySubmittedWords fills in from local state. */
+            words={hasSubmitted ? mySubmittedWords : submissionWords}
             firstInputRef={submissionFirstInputRef}
             {...(game.settings.category ? { category: game.settings.category } : {})}
             {...(hasSubmitted ? { locked: true, waitingOn: oppName } : {})}
