@@ -77,10 +77,12 @@ test("a first visit boots without React render warnings", async ({ page }) => {
 
 test("a game made before the backend wakes is still there once it does", async ({ browser, page }) => {
   // Everything done while the API and sync server are asleep waits in Zero's
-  // queue. When they come up the client swaps to a verified one, and none of
-  // that work may be lost. (The server side of this, keeping a brand-new id
-  // instead of an older session on the same device, only runs in production
-  // mode and is covered in session-identity.test.ts.)
+  // queue. When they come up the client gets its verified token, and none of
+  // that work may be lost. The room code shown while asleep has to be the one
+  // the server stores, since that is when a host shares it. (The server side
+  // of this, keeping a brand-new id instead of an older session on the same
+  // device, only runs in production mode and is covered in
+  // session-identity.test.ts.)
   let awake = false;
   await page.routeWebSocket(SYNC, (ws) => {
     if (awake) ws.connectToServer();
@@ -97,11 +99,11 @@ test("a game made before the backend wakes is still there once it does", async (
   await expect(page).toHaveURL(/\/imposter\/[\w-]+$/);
   const roomUrl = page.url();
   await expect(page.getByRole("main").getByText("Lobby")).toBeVisible();
+  await page.getByRole("button", { name: "Show the room code" }).click();
+  const code = (await page.getByRole("button", { name: /^Room code/ }).textContent())!.trim();
 
   awake = true;
   await expect.poll(() => stored(page, "games:session-proof"), { timeout: 30_000 }).toBeTruthy();
-  await page.getByRole("button", { name: "Show the room code" }).click();
-  const code = (await page.getByRole("button", { name: /^Room code/ }).textContent())!.trim();
 
   // Still in the room, and the room is real: someone else can join it.
   const friend = await newPlayer(browser, "FriendE2E");

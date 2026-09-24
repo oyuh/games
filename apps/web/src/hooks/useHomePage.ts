@@ -1,4 +1,4 @@
-import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, mutators, queries } from "@games/shared";
+import { DEFAULT_IMPOSTER_CLUE_VISIBILITY, mutators, newRoomCode, queries } from "@games/shared";
 import { nanoid } from "nanoid";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -158,14 +158,15 @@ export function useHomePage(sessionId: string) {
   /** Shared shape of the five create handlers. */
   const createGame = async (
     action: string,
-    mutate: (id: string) => ReturnType<typeof zero.mutate>,
+    mutate: (id: string, code: string) => ReturnType<typeof zero.mutate>,
     route: (id: string) => string,
   ) => {
     setPendingAction(action);
     const id = nanoid();
+    const code = newRoomCode();
     try {
       await ensureName();
-      const result = await optimistic(mutate(id));
+      const result = await optimistic(mutate(id, code));
       if (result.type === "error") {
         showToast(result.error.message, "error");
         return;
@@ -300,27 +301,27 @@ export function useHomePage(sessionId: string) {
 
     createImposter: () => createGame(
       "create-imposter",
-      (id) => zero.mutate(mutators.imposter.create({ id, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters, clueVisibility: imposterClueVisibility })),
+      (id, code) => zero.mutate(mutators.imposter.create({ id, code, hostId: sessionId, category: imposterCategory, rounds: imposterRounds, imposters: imposterImposters, clueVisibility: imposterClueVisibility })),
       (id) => `/imposter/${id}`,
     ),
     createPassword: () => createGame(
       "create-password",
-      (id) => zero.mutate(mutators.password.create({ id, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })),
+      (id, code) => zero.mutate(mutators.password.create({ id, code, hostId: sessionId, teamCount: passwordTeams, targetScore: passwordTargetScore, category: passwordCategory })),
       (id) => `/password/${id}/begin`,
     ),
     createChainReaction: () => createGame(
       "create-chain",
-      (id) => zero.mutate(mutators.chainReaction.create({ id, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })),
+      (id, code) => zero.mutate(mutators.chainReaction.create({ id, code, hostId: sessionId, chainLength, rounds: chainRounds, chainMode, category: chainCategory })),
       (id) => `/chain/${id}`,
     ),
     createShadeSignal: () => createGame(
       "create-shade",
-      (id) => zero.mutate(mutators.shadeSignal.create({ id, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })),
+      (id, code) => zero.mutate(mutators.shadeSignal.create({ id, code, hostId: sessionId, roundsPerPlayer: shadeRoundsPerPlayer, hardMode: shadeHardMode, leaderPick: shadeLeaderPick })),
       (id) => `/shade/${id}`,
     ),
     createLocationSignal: () => createGame(
       "create-location",
-      (id) => zero.mutate(mutators.locationSignal.create({ id, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })),
+      (id, code) => zero.mutate(mutators.locationSignal.create({ id, code, hostId: sessionId, roundsPerPlayer: locRoundsPerPlayer, cluePairs: locCluePairs })),
       (id) => `/location/${id}`,
     ),
 

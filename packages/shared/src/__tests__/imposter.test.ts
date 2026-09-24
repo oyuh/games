@@ -54,6 +54,12 @@ describe("Imposter: lobby phase", () => {
     expect(game.settings.clueVisibility).toBe(0.25);
   });
 
+  it("keeps the room code the client picked", async () => {
+    // The host may already have shared it before the server saw the create.
+    await mutators.create({ args: { id: "game1", code: "ABC123", hostId: "host1" }, tx, ctx: serverCtx("host1") });
+    expect((tx.getById("imposter_games", "game1") as any).code).toBe("ABC123");
+  });
+
   it("player can join the lobby", async () => {
     tx.seed("imposter_games", [makeImposterGame({ id: "game1", host_id: "host1" })]);
     await mutators.join({ args: { gameId: "game1", sessionId: "player1" }, tx, ctx: serverCtx("player1") });
