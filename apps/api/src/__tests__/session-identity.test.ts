@@ -154,6 +154,56 @@ describe("session identity helpers", () => {
     });
   });
 
+  it("takes the newer name from a verified owner", () => {
+    const decision = chooseCanonicalSession({
+      cookieSessionId: "real-session",
+      claimedSessionId: "real-session",
+      claimedName: "NewName",
+      fingerprint: "fp-1",
+      cookieSession: { id: "real-session", name: "OldName", fingerprint: "fp-1", lastSeen: 10 },
+      claimedSession: { id: "real-session", name: "OldName", fingerprint: "fp-1", lastSeen: 10 },
+      fingerprintSession: null,
+      allowCreate: true,
+      newSessionId: "new-session",
+    });
+
+    expect(decision).toMatchObject({ source: "cookie", canonicalName: "NewName", shouldResetName: false });
+  });
+
+  it("keeps the stored name when the session was only matched by fingerprint", () => {
+    const decision = chooseCanonicalSession({
+      cookieSessionId: null,
+      claimedSessionId: "fake-session",
+      claimedName: "Impostor",
+      fingerprint: "fp-1",
+      cookieSession: null,
+      // Someone else's id from another device, so the fingerprint decides.
+      claimedSession: { id: "fake-session", name: "Victim", fingerprint: "fp-2", lastSeen: 10 },
+      fingerprintSession: { id: "real-session", name: "PlayerOne", fingerprint: "fp-1", lastSeen: 20 },
+      allowCreate: true,
+      newSessionId: "new-session",
+    });
+
+    expect(decision).toMatchObject({ source: "fingerprint", canonicalName: "PlayerOne", shouldResetName: true });
+  });
+
+  it("lets an admin forced name beat the owner's claimed name", () => {
+    const decision = chooseCanonicalSession({
+      cookieSessionId: "real-session",
+      claimedSessionId: "real-session",
+      claimedName: "NewName",
+      fingerprint: "fp-1",
+      cookieSession: { id: "real-session", name: "OldName", fingerprint: "fp-1", lastSeen: 10 },
+      claimedSession: null,
+      fingerprintSession: null,
+      forcedName: "Forced",
+      allowCreate: true,
+      newSessionId: "new-session",
+    });
+
+    expect(decision).toMatchObject({ canonicalName: "Forced", shouldResetName: true });
+  });
+
   it("does not force a name reset when the caller omitted claimedName", () => {
     const decision = chooseCanonicalSession({
       cookieSessionId: null,
