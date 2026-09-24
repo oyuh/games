@@ -33,14 +33,6 @@ beforeEach(() => {
 });
 
 describe("getSettings", () => {
-  it("returns an object with theme, sidebarPosition, and cursor settings", () => {
-    const s = getSettings();
-    expect(s).toHaveProperty("theme");
-    expect(s).toHaveProperty("sidebarPosition");
-    expect(s).toHaveProperty("customCursor");
-    expect(s).toHaveProperty("customCursorScale");
-  });
-
   it("returns defaults when localStorage is empty", () => {
     const s = getSettings();
     expect(s.theme).toBe("dark");

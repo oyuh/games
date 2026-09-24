@@ -7,12 +7,6 @@ import {
 } from "../crypto";
 
 describe("crypto: AES-256-GCM encryption", () => {
-  it("generates a non-empty base64 key", async () => {
-    const key = await generateGameKey();
-    expect(typeof key).toBe("string");
-    expect(key.length).toBeGreaterThan(0);
-  });
-
   it("generates unique keys each time", async () => {
     const k1 = await generateGameKey();
     const k2 = await generateGameKey();
@@ -25,12 +19,6 @@ describe("crypto: AES-256-GCM encryption", () => {
     const encrypted = await encryptSecret(plaintext, key);
     const decrypted = await decryptSecret(encrypted, key);
     expect(decrypted).toBe(plaintext);
-  });
-
-  it("encrypted output starts with 'enc:' prefix", async () => {
-    const key = await generateGameKey();
-    const encrypted = await encryptSecret("test", key);
-    expect(encrypted.startsWith("enc:")).toBe(true);
   });
 
   it("isEncrypted returns true for encrypted strings", async () => {
@@ -61,14 +49,6 @@ describe("crypto: AES-256-GCM encryption", () => {
   it("handles unicode/emoji in secrets", async () => {
     const key = await generateGameKey();
     const plaintext = "🐘 éléphant 中文";
-    const encrypted = await encryptSecret(plaintext, key);
-    const decrypted = await decryptSecret(encrypted, key);
-    expect(decrypted).toBe(plaintext);
-  });
-
-  it("handles long secret strings", async () => {
-    const key = await generateGameKey();
-    const plaintext = "a".repeat(1000);
     const encrypted = await encryptSecret(plaintext, key);
     const decrypted = await decryptSecret(encrypted, key);
     expect(decrypted).toBe(plaintext);

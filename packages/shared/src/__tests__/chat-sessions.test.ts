@@ -4,7 +4,7 @@
  * Tests message sending/clearing, session management,
  * identity enforcement, and input sanitization.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   MockTx,
   serverCtx,
@@ -12,45 +12,9 @@ import {
   expectThrows,
 } from "./test-helpers";
 
-// ─── Mock @rocicorp/zero ────────────────────────────────────
-vi.mock("@rocicorp/zero", () => {
-  function mockQueryBuilder(table: string) {
-    const q: any = {
-      _table: table, _filters: [] as any[], _single: false,
-      where(field: string, value: unknown) {
-        const next = mockQueryBuilder(table);
-        next._filters = [...q._filters, { field, value }];
-        next._single = q._single;
-        return next;
-      },
-      one() {
-        const next = mockQueryBuilder(table);
-        next._filters = [...q._filters];
-        next._single = true;
-        return next;
-      },
-    };
-    return q;
-  }
-  const zqlProxy = new Proxy({}, { get: (_t, name: string) => mockQueryBuilder(name) });
-  return {
-    defineMutator: (_s: any, handler: any) => handler,
-    defineMutators: (m: any) => m,
-    createBuilder: () => zqlProxy,
-    createSchema: () => ({}),
-    relationships: () => ({}),
-    table: () => ({ columns: () => ({ primaryKey: () => ({}) }) }),
-    string: () => ({ optional: () => ({}) }),
-    number: () => ({ optional: () => ({}) }),
-    boolean: () => ({ optional: () => ({}) }),
-    json: () => ({ optional: () => ({}) }),
-    enumeration: () => ({ optional: () => ({}) }),
-  };
-});
-
-const { chatMutators } = await import("../zero/mutators/chat");
-const { sessionMutators } = await import("../zero/mutators/sessions");
-const { fallbackPlayerName } = await import("../player-names");
+import { chatMutators } from "../zero/mutators/chat";
+import { sessionMutators } from "../zero/mutators/sessions";
+import { fallbackPlayerName } from "../player-names";
 type Handler = (params: { args: any; tx: any; ctx: any }) => Promise<void>;
 const chat = chatMutators as unknown as Record<string, Handler>;
 const sessions = sessionMutators as unknown as Record<string, Handler>;

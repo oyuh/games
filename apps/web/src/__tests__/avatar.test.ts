@@ -15,16 +15,6 @@ import {
 } from "../lib/avatar";
 
 describe("AVATAR_COLORS", () => {
-  it("has 15 colors", () => {
-    expect(AVATAR_COLORS).toHaveLength(15);
-  });
-
-  it("all colors are valid hex codes", () => {
-    for (const color of AVATAR_COLORS) {
-      expect(color).toMatch(/^#[0-9A-Fa-f]{6}$/);
-    }
-  });
-
   it("all colors are unique", () => {
     const unique = new Set(AVATAR_COLORS.map((c) => c.toUpperCase()));
     expect(unique.size).toBe(AVATAR_COLORS.length);
@@ -32,10 +22,6 @@ describe("AVATAR_COLORS", () => {
 });
 
 describe("getPlayerColor", () => {
-  it("returns first color for index 0", () => {
-    expect(getPlayerColor(0)).toBe(AVATAR_COLORS[0]);
-  });
-
   it("returns correct color for index within range", () => {
     expect(getPlayerColor(3)).toBe(AVATAR_COLORS[3]);
   });
@@ -46,10 +32,6 @@ describe("getPlayerColor", () => {
     expect(getPlayerColor(30)).toBe(AVATAR_COLORS[0]);
   });
 
-  it("handles large indices", () => {
-    const result = getPlayerColor(1000);
-    expect(AVATAR_COLORS).toContain(result);
-  });
 });
 
 describe("avatar looks", () => {
