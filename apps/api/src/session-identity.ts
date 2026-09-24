@@ -201,6 +201,14 @@ export function chooseCanonicalSession(input: SessionResolutionInput): SessionRe
     sessionId = input.claimedSession.id;
     existingName = input.claimedSession.name;
     source = "claimed";
+  } else if (claimedSessionId && !input.claimedSession && input.allowCreate) {
+    // An id the server has never seen was made up by the client, which may
+    // already have created games, joined rooms and picked a name under it
+    // while the backend was asleep. Keep it. Swapping in an older session that
+    // shares this IP and browser orphans all of that work.
+    sessionId = claimedSessionId;
+    existingName = null;
+    source = "created";
   } else if (input.fingerprintSession) {
     sessionId = input.fingerprintSession.id;
     existingName = input.fingerprintSession.name;
