@@ -676,8 +676,24 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
         });
         resetZeroClient();
       }
+      // A first visit connects before it has a proof, then gets one in place.
+      // Anything pushed on the unauthenticated socket can come back rejected
+      // after that, and Zero parks in needs-auth until connect() is called
+      // again, which nothing else does. Hand it the proof it already has, once
+      // per proof, so a proof the server really refuses can't loop.
+      const proof = appliedZeroRef.current.zero === zero ? appliedZeroRef.current.session.proof : null;
+      if (next.name === "needs-auth" && proof && retriedProof !== proof) {
+        retriedProof = proof;
+        addConnectionDebugEvent({
+          level: "warn",
+          source: "zero",
+          message: `Zero needs auth (${next.reason.type}); retrying with the current proof`
+        });
+        void zero.connection.connect({ auth: proof });
+      }
     };
 
+    let retriedProof: string | null = null;
     mapAndTrack(zero.connection.state.current);
 
     const unsubscribeConnection = zero.connection.state.subscribe(mapAndTrack);
