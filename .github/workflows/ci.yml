@@ -92,6 +92,18 @@ jobs:
       - name: E2E tests
         run: bun run test:e2e
 
+      # The stack's Postgres is still up. The cleanup and pool tests truncate
+      # and lock tables, so they get their own database.
+      - name: Database tests
+        working-directory: apps/api
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/games_test
+        run: |
+          docker exec games-local-postgres psql -U postgres -c "CREATE DATABASE games_test"
+          (cd ../../packages/shared && DATABASE_URL=$TEST_DATABASE_URL bunx drizzle-kit push --force)
+          CLEANUP_TEST_DATABASE_URL=$TEST_DATABASE_URL POOL_TEST_DATABASE_URL=$TEST_DATABASE_URL \
+            bunx vitest run src/__tests__/cleanup.test.ts src/__tests__/pool-deadlock.test.ts
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
