@@ -95,6 +95,45 @@ describe("session identity helpers", () => {
     });
   });
 
+  it("keeps a brand-new claimed id over an older session on the same device", () => {
+    // The client made this id up and used it offline before the API woke.
+    const decision = chooseCanonicalSession({
+      cookieSessionId: null,
+      claimedSessionId: "offline-session",
+      claimedName: "PlayerOne",
+      fingerprint: "fp-1",
+      cookieSession: null,
+      claimedSession: null,
+      fingerprintSession: { id: "older-session", name: "Someone", fingerprint: "fp-1", lastSeen: 20 },
+      allowCreate: true,
+      newSessionId: "new-session",
+    });
+
+    expect(decision).toMatchObject({
+      sessionId: "offline-session",
+      source: "created",
+      shouldCreate: true,
+      shouldResetSession: false,
+      shouldResetName: false,
+    });
+  });
+
+  it("still falls back to the device's session when it may not create one", () => {
+    const decision = chooseCanonicalSession({
+      cookieSessionId: null,
+      claimedSessionId: "unknown-session",
+      claimedName: "PlayerOne",
+      fingerprint: "fp-1",
+      cookieSession: null,
+      claimedSession: null,
+      fingerprintSession: { id: "older-session", name: "Someone", fingerprint: "fp-1", lastSeen: 20 },
+      allowCreate: false,
+      newSessionId: "new-session",
+    });
+
+    expect(decision).toMatchObject({ sessionId: "older-session", source: "fingerprint" });
+  });
+
   it("creates a new random id instead of trusting an occupied foreign id", () => {
     const decision = chooseCanonicalSession({
       cookieSessionId: null,
