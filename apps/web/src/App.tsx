@@ -410,7 +410,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
   }, []);
 
   const [zero, setZero] = useState(() => createZero(session.id, session.proof, resetZeroClient));
-  const appliedZeroRef = useRef({ session, generation: clientGeneration });
+  const appliedZeroRef = useRef({ session, generation: clientGeneration, zero });
 
   // Global admin broadcast listener (toasts, refresh, custom status, kick)
   useAdminBroadcast();
@@ -433,12 +433,13 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
     ) {
       return;
     }
-    appliedZeroRef.current = { session, generation: clientGeneration };
     const next = createZero(session.id, session.proof, resetZeroClient);
-    setZero((previous) => {
-      void previous.close();
-      return next;
-    });
+    appliedZeroRef.current = { session, generation: clientGeneration, zero: next };
+    setZero(next);
+    // Closed here, not in a setZero updater: updaters run during render, and
+    // closing fires the old client's connection listeners, which update other
+    // components' state mid-render.
+    void applied.zero.close();
   }, [clientGeneration, resetZeroClient, session]);
 
   useEffect(() => {
