@@ -24,13 +24,9 @@ test("a returning visitor keeps their session and name", async ({ page }) => {
 });
 
 test("a name saved while sync is still down survives a reload", async ({ page }) => {
-  // Known bug: the new name waits in Zero's queue while zero-cache is
-  // unreachable (a cold start). On reload, /api/session/sync sends the new
-  // name, the server still has the old one, answers resetRequired, and the
-  // client overwrites its name with the stale one. Drop test.fail once the
-  // boot sync accepts a newer name from the verified owner.
-  test.fail();
-
+  // The new name waits in Zero's queue while zero-cache is unreachable (a
+  // cold start). On reload, /api/session/sync has to take it from the verified
+  // owner instead of answering with the stale name the server still has.
   let syncUp = false;
   await page.routeWebSocket(SYNC, (ws) => {
     if (syncUp) ws.connectToServer();
