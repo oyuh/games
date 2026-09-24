@@ -104,12 +104,21 @@ jobs:
           CLEANUP_TEST_DATABASE_URL=$TEST_DATABASE_URL POOL_TEST_DATABASE_URL=$TEST_DATABASE_URL \
             bunx vitest run src/__tests__/cleanup.test.ts src/__tests__/pool-deadlock.test.ts
 
+      # Traces are kept for any failed attempt, so a test that only passed on
+      # retry still leaves one behind. Upload them whenever they exist.
+      - name: Upload Playwright traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: e2e/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: |
-            e2e/playwright-report
-            e2e/test-results
+          path: e2e/playwright-report
           retention-days: 7
