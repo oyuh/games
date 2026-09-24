@@ -14,5 +14,6 @@ export default defineConfig({
     environment: "node",
     globals: true,
     testTimeout: 10_000,
+    setupFiles: ["src/__tests__/zero-mock.ts"],
   },
 });

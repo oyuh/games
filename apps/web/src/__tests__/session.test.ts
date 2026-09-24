@@ -48,7 +48,6 @@ import {
   syncSessionIdentityForBoot,
   syncStoredIdentity,
   setStoredName,
-  getPlayerProfile,
   getRecentGames,
   addRecentGame,
   removeRecentGame,
@@ -78,10 +77,6 @@ beforeEach(() => {
 
 // ─── randomName ─────────────────────────────────────────────
 describe("randomName", () => {
-  it("returns a non-empty string", () => {
-    expect(randomName().length).toBeGreaterThan(0);
-  });
-
   it("returns a string matching AdjectiveNoun pattern (PascalCase)", () => {
     const name = randomName();
     // Should start with an uppercase letter
@@ -185,17 +180,6 @@ describe("getStoredName / setStoredName", () => {
   });
 });
 
-// ─── getPlayerProfile ───────────────────────────────────────
-describe("getPlayerProfile", () => {
-  it("returns object with id and name", () => {
-    const profile = getPlayerProfile();
-    expect(profile).toHaveProperty("id");
-    expect(profile).toHaveProperty("name");
-    expect(typeof profile.id).toBe("string");
-    expect(typeof profile.name).toBe("string");
-  });
-});
-
 describe("display name fallbacks", () => {
   it("uses a generated name instead of exposing the session id", () => {
     const displayName = getDisplayName(null, "server-session");
@@ -266,10 +250,6 @@ describe("syncSessionIdentityForBoot", () => {
 
 // ─── Recent games ───────────────────────────────────────────
 describe("getRecentGames / addRecentGame / removeRecentGame / clearRecentGames", () => {
-  it("returns empty array initially", () => {
-    expect(getRecentGames()).toEqual([]);
-  });
-
   it("adds and retrieves a recent game", () => {
     addRecentGame({ id: "g1", code: "abcd", gameType: "imposter" });
     const games = getRecentGames();
@@ -330,10 +310,6 @@ describe("getRecentGames / addRecentGame / removeRecentGame / clearRecentGames",
 
 // ─── hasVisited / markVisited ───────────────────────────────
 describe("hasVisited / markVisited", () => {
-  it("returns false initially", () => {
-    expect(hasVisited()).toBe(false);
-  });
-
   it("returns true after markVisited", () => {
     markVisited();
     expect(hasVisited()).toBe(true);

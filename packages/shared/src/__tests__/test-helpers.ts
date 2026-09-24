@@ -121,54 +121,11 @@ export interface MockQuery {
   one: () => MockQuery;
 }
 
-function createMockQuery(table: string): MockQuery {
-  const q: MockQuery = {
-    _table: table,
-    _filters: [],
-    _single: false,
-    where(field: string, value: unknown) {
-      q._filters.push({ field, value });
-      return q;
-    },
-    one() {
-      q._single = true;
-      return q;
-    },
-  };
-  return q;
-}
-
-/**
- * A mock `zql` proxy: intercepts `zql.sessions`, `zql.imposter_games`, etc.
- * and returns chainable query builders the MockTx can resolve.
- */
-export const mockZql = new Proxy(
-  {},
-  {
-    get: (_target, tableName: string) => createMockQuery(tableName),
-  }
-);
-
 // ─── Server context helpers ───────────────────────────────
 
 /** Creates a server context where the caller IS the given userId */
 export function serverCtx(userId: string) {
   return { userId };
-}
-
-/** Creates an anonymous/missing context (no enforcement) */
-export function anonCtx() {
-  return {};
-}
-
-/** Creates a client-side tx (no enforcement happens on client) */
-export function clientTx() {
-  return new MockTx("client");
-}
-
-/** Creates a server-side tx (assertCaller/assertHost will enforce) */
-export function serverTx() {
-  return new MockTx("server");
 }
 
 // ─── Game state factory functions ─────────────────────────

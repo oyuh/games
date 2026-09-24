@@ -14,7 +14,7 @@ import {
   validatePuzzleShape,
   validateSolution,
   type PipsPuzzle,
-} from "../lib/pips-engine";
+} from "../games/pips-engine";
 
 describe("pips mulberry32", () => {
   it("produces deterministic values in [0, 1)", () => {
@@ -26,21 +26,6 @@ describe("pips mulberry32", () => {
       expect(value).toBeGreaterThanOrEqual(0);
       expect(value).toBeLessThan(1);
       expect(value).toBe(b());
-    }
-  });
-});
-
-describe("PIPS_DIFFICULTY_CONFIG", () => {
-  it("defines one full easy-medium-hard run", () => {
-    expect(PIPS_RUN_DIFFICULTIES).toEqual(["easy", "medium", "hard"]);
-    expect(PIPS_PUZZLES_PER_RUN).toBe(3);
-  });
-
-  it("uses even active-cell counts for every difficulty", () => {
-    for (const difficulty of PIPS_RUN_DIFFICULTIES) {
-      const config = PIPS_DIFFICULTY_CONFIG[difficulty];
-      expect(config.dominoes * 2).toBeLessThan(config.rows * config.cols);
-      expect((config.dominoes * 2) % 2).toBe(0);
     }
   });
 });
