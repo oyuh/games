@@ -418,12 +418,11 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
   // Global button hover/press sound effects
   useButtonSounds();
 
-  // Recreate the Zero client in place when a background identity check yields a
-  // new session or auth proof, or when the sync server told us our client state
-  // is gone. Zero re-uses its IndexedDB store keyed by userID, so the swap is
-  // seamless: a first-timer boots anonymous and silently upgrades to an
-  // authenticated client the moment the backend hands out a proof, with no page
-  // reload and no data flash.
+  // Keep Zero in step with the verified identity, with no page reload. A new
+  // proof for the same session goes to the live client, so a first-timer who
+  // booted anonymous upgrades in place and keeps everything they queued while
+  // the backend slept. A different session, or the sync server saying our
+  // client state is gone, gets a fresh client.
   useEffect(() => {
     const applied = appliedZeroRef.current;
     if (
@@ -431,6 +430,15 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
       applied.session.proof === session.proof &&
       applied.generation === clientGeneration
     ) {
+      return;
+    }
+    // Same player, new proof: the usual first-visit upgrade from anonymous to
+    // verified. Hand the token to the live client. Replacing the client here
+    // closed it with work still queued from before the backend woke, and
+    // that work was lost.
+    if (applied.session.id === session.id && applied.generation === clientGeneration && session.proof) {
+      appliedZeroRef.current = { ...applied, session };
+      void applied.zero.connection.connect({ auth: session.proof });
       return;
     }
     const next = createZero(session.id, session.proof, resetZeroClient);
