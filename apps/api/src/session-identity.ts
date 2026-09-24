@@ -229,7 +229,12 @@ export function chooseCanonicalSession(input: SessionResolutionInput): SessionRe
     return null;
   }
 
-  const canonicalName = forcedName ?? existingName ?? claimedName ?? null;
+  // A verified owner (signed cookie, or claimed id backed by a matching
+  // fingerprint) may bring a newer name than the row, e.g. a rename still
+  // queued in Zero when the page reloaded. A fingerprint-only match could be
+  // someone else on the same network, so it keeps the stored name.
+  const ownerVerified = source === "cookie" || source === "claimed";
+  const canonicalName = forcedName ?? (ownerVerified ? claimedName ?? existingName : existingName ?? claimedName) ?? null;
 
   return {
     sessionId,

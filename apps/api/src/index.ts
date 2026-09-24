@@ -371,8 +371,18 @@ async function resolveSessionIdentity(
     .where(eq(adminNameOverrides.sessionId, decision.sessionId))
     .limit(1);
 
+  const existingName = cookieSession?.id === decision.sessionId
+    ? cookieSession.name
+    : claimedSession?.id === decision.sessionId
+      ? claimedSession.name
+      : fingerprintSession?.id === decision.sessionId
+        ? fingerprintSession.name
+        : null;
   const forcedName = sanitizeSessionName(override?.forcedName ?? null);
-  const canonicalName = forcedName ?? await allowUnrestrictedSessionName(decision.canonicalName) ?? fallbackPlayerName(decision.sessionId);
+  const canonicalName = forcedName
+    ?? await allowUnrestrictedSessionName(decision.canonicalName)
+    ?? await allowUnrestrictedSessionName(existingName)
+    ?? fallbackPlayerName(decision.sessionId);
   const now = Date.now();
 
   if (decision.shouldCreate) {
@@ -400,13 +410,6 @@ async function resolveSessionIdentity(
         },
       });
   } else {
-    const existingName = cookieSession?.id === decision.sessionId
-      ? cookieSession.name
-      : claimedSession?.id === decision.sessionId
-        ? claimedSession.name
-        : fingerprintSession?.id === decision.sessionId
-          ? fingerprintSession.name
-          : null;
     const normalizedExistingName = sanitizeSessionName(existingName);
 
     await drizzleClient
@@ -436,7 +439,11 @@ async function resolveSessionIdentity(
   return {
     sessionId: decision.sessionId,
     name: canonicalName,
-    resetRequired: decision.shouldResetSession || decision.shouldResetName,
+    // An admin override or a restricted name can replace the claimed name
+    // after the decision, and the client has to hear about that too.
+    resetRequired: decision.shouldResetSession
+      || decision.shouldResetName
+      || (claimedName !== undefined && canonicalName !== decision.canonicalName),
     created: decision.shouldCreate,
     source: decision.source,
   };
