@@ -276,6 +276,7 @@ export const chainReactionMutators = {
       }
 
       // Premade mode: pick two different chains, one for each player to solve
+      if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
       const p1 = game.players[0]!.sessionId;
       const p2 = game.players[1]!.sessionId;
 
@@ -508,6 +509,7 @@ export const chainReactionMutators = {
               updated_at: now()
             });
           } else {
+            if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
             const p1 = game.players[0]!.sessionId;
             const p2 = game.players[1]!.sessionId;
             const newChain = {
@@ -623,6 +625,7 @@ export const chainReactionMutators = {
               updated_at: now()
             });
           } else {
+            if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
             const p1 = game.players[0]!.sessionId;
             const p2 = game.players[1]!.sessionId;
             const newChain = {

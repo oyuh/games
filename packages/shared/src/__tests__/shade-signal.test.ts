@@ -257,3 +257,16 @@ describe("Shade Signal: the target stays sealed until the reveal", () => {
     expect(revealed.round_history[0].scores[guesser]).toBe(5);
   });
 });
+
+describe("Shade Signal: the server picks the leader", () => {
+  it("leaves the leader and target alone on the host's optimistic run", async () => {
+    // A client roll would show its own leader and color until the server's arrived.
+    const client = new MockTx("client");
+    const players = ["host1", "p1", "p2"].map((sessionId) => ({ sessionId, name: sessionId, connected: true, totalScore: 0 }));
+    client.seed("shade_signal_games", [makeShadeSignalGame({ id: "game1", host_id: "host1", players })]);
+    await mutators.start({ args: { gameId: "game1", hostId: "host1" }, tx: client, ctx: serverCtx("host1") });
+    const game = client.getById("shade_signal_games", "game1") as any;
+    expect(game.phase).toBe("lobby");
+    expect(game.leader_id).toBeUndefined();
+  });
+});
