@@ -192,6 +192,7 @@ export const locationSignalMutators = {
       if (game.host_id !== args.hostId) throw new Error("Only host can start");
       if (game.players.length < 2) throw new Error("Need at least 2 players");
 
+      if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
       const leaderOrder = shuffle(game.players).map((p) => p.sessionId);
       await tx.mutate.location_signal_games.update({
         id: game.id,
