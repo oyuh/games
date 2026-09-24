@@ -48,8 +48,10 @@ import {
   shouldUseSecureCookie,
   ZERO_SESSION_PROOF_HEADER,
   type SessionIdentityCandidate,
+  verifyClaimedSessionId,
 } from "./session-identity";
 import { getClientInfo } from "./client-info";
+import { authorizeMutation } from "./mutator-auth";
 import { shikakuImageRoutes } from "./shikaku-image";
 import { embedRoutes } from "./embed-routes";
 
@@ -579,24 +581,7 @@ function getVerifiedClaimedSessionId(
   c: { req: { header: (name: string) => string | undefined } },
   claimedSessionId: unknown
 ) {
-  const headerUserId = getCallerUserId(c);
-  const proofUserId = getCallerProofUserId(c);
-  const normalizedClaimedId = normalizeSessionId(claimedSessionId);
-
-  // In dev mode, trust claimed session IDs without proof verification
-  if (DEV_MODE) {
-    return proofUserId ?? normalizedClaimedId;
-  }
-
-  if (headerUserId !== "anon" && (!proofUserId || headerUserId !== proofUserId)) {
-    return null;
-  }
-
-  if (proofUserId && normalizedClaimedId && proofUserId !== normalizedClaimedId) {
-    return null;
-  }
-
-  return proofUserId ?? normalizedClaimedId;
+  return verifyClaimedSessionId(getCallerUserId(c), getCallerProofUserId(c), claimedSessionId, !DEV_MODE);
 }
 
 const MAX_ID_LEN = 64;
@@ -605,133 +590,6 @@ function validId(v: unknown): string {
   if (typeof v !== "string") return "";
   const trimmed = v.trim();
   return trimmed.length > 0 && trimmed.length <= MAX_ID_LEN ? trimmed : "";
-}
-
-function assertCallerValue(userId: string, claimed: unknown, field: string) {
-  if (userId === "anon") {
-    return;
-  }
-  if (typeof claimed !== "string" || claimed.trim().length === 0) {
-    throw new Error(`Missing ${field}`);
-  }
-  if (claimed !== userId) {
-    throw new Error("Not allowed");
-  }
-}
-
-/**
- * Mutators that only exist to seed or drive games while developing. They
- * impersonate players by design, so they are never allowed to run in prod.
- */
-function isDevOnlyMutator(name: string) {
-  return name.startsWith("demo.") || name.startsWith("dev.");
-}
-
-function requiresMutatorSessionProof(name: string, args: unknown) {
-  if (isDevOnlyMutator(name) && process.env.NODE_ENV !== "production") {
-    return false;
-  }
-  if (args == null || typeof args !== "object") {
-    return false;
-  }
-
-  const payload = args as Record<string, unknown>;
-  const [namespace] = name.split(".");
-  return namespace === "sessions"
-    || "sessionId" in payload
-    || "hostId" in payload
-    || "senderId" in payload
-    || "voterId" in payload;
-}
-
-function applyCanonicalMutatorCaller<T>(userId: string, name: string, args: T): T {
-  if (userId === "anon" || args == null || typeof args !== "object") {
-    return args;
-  }
-
-  const payload = { ...(args as Record<string, unknown>) };
-  const [namespace] = name.split(".");
-
-  if (namespace === "sessions") {
-    payload.id = userId;
-    return payload as T;
-  }
-
-  if ("sessionId" in payload) {
-    payload.sessionId = userId;
-  }
-  if ("hostId" in payload) {
-    payload.hostId = userId;
-  }
-  if ("senderId" in payload) {
-    payload.senderId = userId;
-  }
-  if ("voterId" in payload) {
-    payload.voterId = userId;
-  }
-
-  return payload as T;
-}
-
-function resolveZeroMutatorCaller(userId: string, name: string, args: unknown, proofUserId: string | null) {
-  if (!requiresMutatorSessionProof(name, args)) {
-    return proofUserId ?? userId;
-  }
-  if (!proofUserId) {
-    // In dev mode, trust the claimed user ID instead of requiring proof
-    if (DEV_MODE) {
-      return userId !== "anon" ? userId : "dev-" + crypto.randomUUID().slice(0, 8);
-    }
-    throw new Error(
-      process.env.NODE_ENV === "production"
-        ? "Invalid session proof"
-        : "Invalid session proof: zero-cache must forward x-zero-session-proof via ZERO_MUTATE_ALLOWED_CLIENT_HEADERS"
-    );
-  }
-  return proofUserId;
-}
-
-function enforceMutatorCaller(userId: string, name: string, args: unknown) {
-  if (args == null || typeof args !== "object") {
-    return;
-  }
-
-  const payload = args as Record<string, unknown>;
-  const [namespace] = name.split(".");
-
-  // Anon users (no x-zero-user-id header) are only allowed to target
-  // session-creation mutators; they must not impersonate existing sessions
-  // in identity-sensitive fields.  We skip enforcement only for sessions.create
-  // since it establishes a new identity.
-  if (userId === "anon") {
-    if (namespace === "sessions" && name === "sessions.create") {
-      return; // allow anon to create a new session
-    }
-    if (namespace === "sessions" && name === "sessions.setName") {
-      return; // allow anon to set their own name (client-side session)
-    }
-    // For all other mutations, anon callers still go through the identity checks
-    // below. They'll fail if the payload includes an identity field, which
-    // is the correct behaviour (prevents spoofing).
-  }
-
-  if (namespace === "sessions") {
-    assertCallerValue(userId, payload.id, "id");
-    return;
-  }
-
-  if ("sessionId" in payload) {
-    assertCallerValue(userId, payload.sessionId, "sessionId");
-  }
-  if ("hostId" in payload) {
-    assertCallerValue(userId, payload.hostId, "hostId");
-  }
-  if ("senderId" in payload) {
-    assertCallerValue(userId, payload.senderId, "senderId");
-  }
-  if ("voterId" in payload) {
-    assertCallerValue(userId, payload.voterId, "voterId");
-  }
 }
 
 async function assertAllowedSessionNameMutation(name: string, args: unknown) {
@@ -2699,13 +2557,13 @@ app.post("/api/zero/mutate", async (c) => {
       handler: (transact) =>
         transact((tx, name, args) => {
           return Promise.resolve().then(async () => {
-            const resolvedCallerUserId = resolveZeroMutatorCaller(rawCallerUserId, name, args, proofUserId);
-            const normalizedArgs = applyCanonicalMutatorCaller(resolvedCallerUserId, name, args);
-            enforceMutatorCaller(resolvedCallerUserId, name, normalizedArgs);
+            const { userId: resolvedCallerUserId, args: normalizedArgs } = authorizeMutation(
+              name,
+              args,
+              { headerUserId: rawCallerUserId, proofUserId },
+              !DEV_MODE,
+            );
             await assertAllowedSessionNameMutation(name, normalizedArgs);
-            if (isDevOnlyMutator(name) && process.env.NODE_ENV === "production") {
-              throw new Error("Dev mutators are disabled in production");
-            }
             const mutator = mustGetMutator(mutators, name);
             return mutator.fn({
               args: normalizedArgs,

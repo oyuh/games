@@ -232,3 +232,31 @@ export function chooseCanonicalSession(input: SessionResolutionInput): SessionRe
     source,
   };
 }
+
+/**
+ * The session a request may act as, or null when the header, the signed
+ * proof, and the claimed id disagree. Dev trusts the claimed id without a
+ * proof so local tools can drive any session.
+ */
+export function verifyClaimedSessionId(
+  headerUserId: string,
+  proofUserId: string | null,
+  claimedSessionId: unknown,
+  production: boolean,
+) {
+  const normalizedClaimedId = normalizeSessionId(claimedSessionId);
+
+  if (!production) {
+    return proofUserId ?? normalizedClaimedId;
+  }
+
+  if (headerUserId !== "anon" && (!proofUserId || headerUserId !== proofUserId)) {
+    return null;
+  }
+
+  if (proofUserId && normalizedClaimedId && proofUserId !== normalizedClaimedId) {
+    return null;
+  }
+
+  return proofUserId ?? normalizedClaimedId;
+}

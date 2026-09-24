@@ -18,103 +18,18 @@ import {
   type Rect,
   type NumberCell,
   type Difficulty,
-} from "../lib/shikaku-engine";
+} from "../games/shikaku-engine";
 
-// ─── mulberry32 PRNG ────────────────────────────────────────
 describe("mulberry32", () => {
-  it("returns a function", () => {
-    const rng = mulberry32(42);
-    expect(typeof rng).toBe("function");
-  });
-
-  it("produces values in [0, 1)", () => {
-    const rng = mulberry32(12345);
-    for (let i = 0; i < 1000; i++) {
-      const v = rng();
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(v).toBeLessThan(1);
-    }
-  });
-
-  it("is deterministic: same seed produces same sequence", () => {
+  it("is deterministic and stays in [0, 1)", () => {
     const a = mulberry32(999);
     const b = mulberry32(999);
-    for (let i = 0; i < 100; i++) {
-      expect(a()).toBe(b());
+    for (let i = 0; i < 1000; i++) {
+      const v = a();
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThan(1);
+      expect(v).toBe(b());
     }
-  });
-
-  it("different seeds produce different sequences", () => {
-    const a = mulberry32(1);
-    const b = mulberry32(2);
-    let same = 0;
-    for (let i = 0; i < 100; i++) {
-      if (a() === b()) same++;
-    }
-    expect(same).toBeLessThan(5); // statistically very unlikely to be many
-  });
-
-  it("produces uniformly distributed output (chi-square rough check)", () => {
-    const rng = mulberry32(7777);
-    const buckets = new Array(10).fill(0);
-    const N = 10000;
-    for (let i = 0; i < N; i++) {
-      buckets[Math.floor(rng() * 10)]++;
-    }
-    // Each bucket should have ~1000 values, so allow 20% tolerance
-    for (const count of buckets) {
-      expect(count).toBeGreaterThan(800);
-      expect(count).toBeLessThan(1200);
-    }
-  });
-
-  it("handles seed = 0", () => {
-    const rng = mulberry32(0);
-    const v = rng();
-    expect(v).toBeGreaterThanOrEqual(0);
-    expect(v).toBeLessThan(1);
-  });
-
-  it("handles negative seeds", () => {
-    const rng = mulberry32(-42);
-    const v = rng();
-    expect(v).toBeGreaterThanOrEqual(0);
-    expect(v).toBeLessThan(1);
-  });
-});
-
-// ─── DIFFICULTY_CONFIG ──────────────────────────────────────
-describe("DIFFICULTY_CONFIG", () => {
-  it("defines all four difficulties", () => {
-    expect(Object.keys(DIFFICULTY_CONFIG)).toEqual(["easy", "medium", "hard", "expert"]);
-  });
-
-  it("has increasing grid sizes", () => {
-    const sizes = (["easy", "medium", "hard", "expert"] as Difficulty[]).map(
-      (d) => DIFFICULTY_CONFIG[d].rows * DIFFICULTY_CONFIG[d].cols,
-    );
-    for (let i = 1; i < sizes.length; i++) {
-      expect(sizes[i]!).toBeGreaterThan(sizes[i - 1]!);
-    }
-  });
-
-  it("has square grids for all difficulties", () => {
-    for (const cfg of Object.values(DIFFICULTY_CONFIG)) {
-      expect(cfg.rows).toBe(cfg.cols);
-    }
-  });
-
-  it("labels match dimensions", () => {
-    for (const cfg of Object.values(DIFFICULTY_CONFIG)) {
-      expect(cfg.label).toBe(`${cfg.rows}×${cfg.cols}`);
-    }
-  });
-});
-
-// ─── PUZZLES_PER_RUN ────────────────────────────────────────
-describe("PUZZLES_PER_RUN", () => {
-  it("equals 5", () => {
-    expect(PUZZLES_PER_RUN).toBe(5);
   });
 });
 

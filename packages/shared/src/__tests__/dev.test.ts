@@ -8,50 +8,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { MockTx, serverCtx, makeSession, makeImposterGame } from "./test-helpers";
 
-// ─── Mock @rocicorp/zero ────────────────────────────────────
-// Unlike the other suites, defineMutator here returns a handler that is both
-// callable (how existing tests invoke mutators) and carries `.fn` (how the dev
-// mutators call into real game mutators at runtime).
-vi.mock("@rocicorp/zero", () => {
-  function mockQueryBuilder(table: string) {
-    const q: any = {
-      _table: table,
-      _filters: [] as Array<{ field: string; value: unknown }>,
-      _single: false,
-      where(field: string, value: unknown) {
-        const next = mockQueryBuilder(table);
-        next._filters = [...q._filters, { field, value }];
-        next._single = q._single;
-        return next;
-      },
-      one() {
-        const next = mockQueryBuilder(table);
-        next._filters = [...q._filters];
-        next._single = true;
-        return next;
-      },
-    };
-    return q;
-  }
-  const zqlProxy = new Proxy({}, { get: (_t, name: string) => mockQueryBuilder(name) });
-
-  return {
-    defineMutator: (_schema: any, handler: any) => Object.assign(handler, { fn: handler }),
-    defineMutators: (m: any) => m,
-    createBuilder: () => zqlProxy,
-    createSchema: () => ({}),
-    relationships: () => ({}),
-    table: () => ({ columns: () => ({ primaryKey: () => ({}) }) }),
-    string: () => ({ optional: () => ({}) }),
-    number: () => ({ optional: () => ({}) }),
-    boolean: () => ({ optional: () => ({}) }),
-    json: () => ({ optional: () => ({}) }),
-    enumeration: () => ({ optional: () => ({}) }),
-  };
-});
-
-const { devMutators, isDevBot } = await import("../zero/mutators/dev");
-const { imposterMutators } = await import("../zero/mutators/imposter");
+import { devMutators, isDevBot } from "../zero/mutators/dev";
+import { imposterMutators } from "../zero/mutators/imposter";
 
 const GAME_ID = "game-1";
 const HOST_ID = "host-1";
