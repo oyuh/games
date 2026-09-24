@@ -20,7 +20,6 @@ import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
 import { getDisplayName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { callGameSecretInit } from "../lib/game-secrets";
 
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 import { useShadeSignalGame } from "../hooks/useShadeSignalGame";
@@ -170,7 +169,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
             if (!picking) return;
             setSending(true);
             void zero.mutate(mutators.shadeSignal.setTarget({ gameId, sessionId, row: picking.row, col: picking.col }))
-              .server.then(() => callGameSecretInit("shade_signal", gameId, sessionId))
+              .server
               .catch((error) => showToast(error instanceof Error ? error.message : "Couldn't set that", "error"))
               .finally(() => { setSending(false); setPicking(null); });
           }}

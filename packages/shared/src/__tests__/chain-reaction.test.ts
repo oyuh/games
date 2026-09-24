@@ -10,6 +10,7 @@ import {
   makeSession,
   makeChainReactionGame,
   expectThrows,
+  openForTest,
 } from "./test-helpers";
 
 import { chainReactionMutators } from "../zero/mutators/chain-reaction";
@@ -206,5 +207,59 @@ describe("Chain Reaction: announcement sanitization", () => {
       () => mutators.announce({ args: { gameId: "game2", hostId: "p1", text: "hacked" }, tx, ctx: serverCtx("p1") }),
       "Only host can announce"
     );
+  });
+});
+
+// ───────────────────────────────────────────────────────────
+describe("Chain Reaction: hidden words stay on the server", () => {
+  let tx: MockTx;
+  const players = [
+    { sessionId: "host1", name: "Host", connected: true },
+    { sessionId: "p1", name: "Alice", connected: true },
+  ];
+  const game = () => tx.getById("chain_reaction_games", "game1") as any;
+
+  beforeEach(() => {
+    tx = new MockTx("server");
+    tx.seed("sessions", [makeSession({ id: "host1", name: "Host" }), makeSession({ id: "p1", name: "Alice" })]);
+    tx.seed("chain_reaction_games", [makeChainReactionGame({ id: "game1", host_id: "host1", players })]);
+  });
+
+  it("syncs a mask, hints letters, and checks guesses against the sealed word", async () => {
+    await mutators.start({ args: { gameId: "game1", hostId: "host1" }, tx, ctx: serverCtx("host1") });
+    const slot = game().chain.p1[1];
+    expect(slot.word).toMatch(/^_+$/);
+    expect(slot.secret).toMatch(/^enc:/);
+    const word = await openForTest("chain_reaction", "game1", slot.secret);
+    expect(slot.word).toHaveLength(word.length);
+
+    await mutators.guess({ args: { gameId: "game1", sessionId: "p1", wordIndex: 1, guess: "QQQQ" }, tx, ctx: serverCtx("p1") });
+    expect(game().chain.p1[1]).toMatchObject({ revealed: false, lettersShown: 1, word: word[0] + "_".repeat(word.length - 1) });
+
+    await mutators.guess({ args: { gameId: "game1", sessionId: "p1", wordIndex: 1, guess: word }, tx, ctx: serverCtx("p1") });
+    expect(game().chain.p1[1]).toMatchObject({ revealed: true, word, secret: null, solvedBy: "p1" });
+  });
+
+  it("can't judge a guess on the client, which has no key", async () => {
+    await mutators.start({ args: { gameId: "game1", hostId: "host1" }, tx, ctx: serverCtx("host1") });
+    const client = new MockTx("client");
+    client.seed("chain_reaction_games", [game()]);
+    await mutators.guess({ args: { gameId: "game1", sessionId: "p1", wordIndex: 1, guess: "ANYTHING" }, tx: client, ctx: {} });
+    expect(client._mutations).toEqual([]);
+  });
+
+  it("seals custom chains and deals each player the other's words", async () => {
+    tx.seed("chain_reaction_games", [makeChainReactionGame({
+      id: "game1", host_id: "host1", players, phase: "submitting",
+      settings: { chainLength: 4, rounds: 1, currentRound: 1, turnTimeSec: null, phaseEndsAt: null, chainMode: "custom" },
+    })]);
+    await mutators.submitChain({ args: { gameId: "game1", sessionId: "host1", words: ["sun", "flower", "pot", "hole"] }, tx, ctx: serverCtx("host1") });
+    expect(game().submitted_chains.host1.every((w: string) => w.startsWith("enc:"))).toBe(true);
+
+    await mutators.submitChain({ args: { gameId: "game1", sessionId: "p1", words: ["ice", "cream", "cone", "head"] }, tx, ctx: serverCtx("p1") });
+    expect(game().phase).toBe("playing");
+    const mine = game().chain.p1;
+    expect(mine.map((s: any) => s.word)).toEqual(["SUN", "______", "___", "HOLE"]);
+    expect(await openForTest("chain_reaction", "game1", mine[1].secret)).toBe("FLOWER");
   });
 });

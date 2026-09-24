@@ -1,7 +1,28 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
+import { now, code, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE } from "./helpers";
+
+/**
+ * A new round's target, sealed so guessers' clients never see it. Only the
+ * leader is handed the key before the reveal.
+ */
+async function sealTarget(tx: unknown, ctx: unknown, gameId: string, row: number, col: number) {
+  return {
+    target_row: null,
+    target_col: null,
+    encrypted_target: await sealSecret(tx, ctx, "shade_signal", gameId, JSON.stringify({ row, col })),
+  };
+}
+
+/** The round's target, or null when it is still sealed to this caller (the client). */
+async function openTarget(ctx: unknown, game: { id: string; target_row: number | null; target_col: number | null; encrypted_target?: string | null }) {
+  if (game.encrypted_target) {
+    const plain = await openSecret(ctx, "shade_signal", game.id, game.encrypted_target);
+    return plain ? (JSON.parse(plain) as { row: number; col: number }) : null;
+  }
+  return game.target_row != null && game.target_col != null ? { row: game.target_row, col: game.target_col } : null;
+}
 
 /**
  * The colors the hard mode rule bans. Naming one is the whole game handed
@@ -289,8 +310,9 @@ export const shadeSignalMutators = {
       const rows = game.grid_rows;
       const cols = game.grid_cols;
       const leaderPick = game.settings.leaderPick ?? false;
-      const targetRow = leaderPick ? null : Math.floor(Math.random() * rows);
-      const targetCol = leaderPick ? null : Math.floor(Math.random() * cols);
+      const target = leaderPick
+        ? { target_row: null, target_col: null, encrypted_target: null }
+        : await sealTarget(tx, ctx, game.id, Math.floor(Math.random() * rows), Math.floor(Math.random() * cols));
 
       await tx.mutate.shade_signal_games.update({
         id: game.id,
@@ -299,8 +321,7 @@ export const shadeSignalMutators = {
         leader_order: leaderOrder,
         current_leader_index: 0,
         grid_seed: Math.floor(Math.random() * 100000),
-        target_row: targetRow,
-        target_col: targetCol,
+        ...target,
         clue1: null,
         clue2: null,
         guesses: [],
@@ -331,8 +352,10 @@ export const shadeSignalMutators = {
       await tx.mutate.shade_signal_games.update({
         id: game.id,
         phase: "clue1",
-        target_row: args.row,
-        target_col: args.col,
+        // The leader's own pick can sit in the clear on their own device.
+        ...(isServerTx(tx)
+          ? await sealTarget(tx, ctx, game.id, args.row, args.col)
+          : { target_row: args.row, target_col: args.col }),
         settings: {
           ...game.settings,
           phaseEndsAt: now() + game.settings.clueDurationSec * 1000
@@ -439,7 +462,7 @@ export const shadeSignalMutators = {
 
   advanceTimer: defineMutator(
     z.object({ gameId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) return;
       const phaseEnd = game.settings.phaseEndsAt;
@@ -504,8 +527,9 @@ export const shadeSignalMutators = {
           leader_id: nextLeaderId,
           current_leader_index: nextLeaderIndex,
           grid_seed: Math.floor(Math.random() * 100000),
-          target_row: leaderPick ? null : Math.floor(Math.random() * rows),
-          target_col: leaderPick ? null : Math.floor(Math.random() * cols),
+          ...(leaderPick
+            ? { target_row: null, target_col: null, encrypted_target: null }
+            : await sealTarget(tx, ctx, game.id, Math.floor(Math.random() * rows), Math.floor(Math.random() * cols))),
           clue1: null,
           clue2: null,
           guesses: [],
@@ -522,13 +546,16 @@ export const shadeSignalMutators = {
 
   reveal: defineMutator(
     z.object({ gameId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
       if (!game) throw new Error("Game not found");
       if (game.phase !== "reveal") throw new Error("Not in reveal phase");
 
-      const targetRow = game.target_row ?? 0;
-      const targetCol = game.target_col ?? 0;
+      const target = await openTarget(ctx, game);
+      // Still sealed means this is the client's optimistic run; the server scores it.
+      if (!target && game.encrypted_target) return;
+      const targetRow = target?.row ?? 0;
+      const targetCol = target?.col ?? 0;
 
       // Score each guesser's best guess (use final guess if exists, else guess1)
       const guesserIds = game.players
@@ -587,6 +614,10 @@ export const shadeSignalMutators = {
 
       await tx.mutate.shade_signal_games.update({
         id: game.id,
+        // The round is over, so the target goes public for everyone's reveal screen.
+        target_row: targetRow,
+        target_col: targetCol,
+        encrypted_target: null,
         players,
         round_history: [...game.round_history, roundEntry],
         settings: { ...game.settings, phaseEndsAt: now() + 8000 },
@@ -631,8 +662,9 @@ export const shadeSignalMutators = {
         leader_id: nextLeaderId,
         current_leader_index: nextLeaderIndex,
         grid_seed: Math.floor(Math.random() * 100000),
-        target_row: leaderPick ? null : Math.floor(Math.random() * rows),
-        target_col: leaderPick ? null : Math.floor(Math.random() * cols),
+        ...(leaderPick
+          ? { target_row: null, target_col: null, encrypted_target: null }
+          : await sealTarget(tx, ctx, game.id, Math.floor(Math.random() * rows), Math.floor(Math.random() * cols))),
         clue1: null,
         clue2: null,
         guesses: [],
@@ -664,6 +696,7 @@ export const shadeSignalMutators = {
         current_leader_index: 0,
         target_row: null,
         target_col: null,
+        encrypted_target: null,
         clue1: null,
         clue2: null,
         guesses: [],

@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { DEFAULT_IMPOSTER_CLUE_VISIBILITY } from "../../types/game";
-import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
+import { now, code, pickRandom, sealSecret, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
 import { imposterWordBank } from "./word-banks";
 
 export const imposterMutators = {
@@ -223,7 +223,7 @@ export const imposterMutators = {
       await tx.mutate.imposter_games.update({
         id: game.id,
         phase: "playing",
-        secret_word: pickRandom(bank),
+        secret_word: await sealSecret(tx, ctx, "imposter", game.id, pickRandom(bank)),
         players: withRoles.map((p) => ({ ...p, eliminated: false })),
         clues: [],
         votes: [],
@@ -297,7 +297,7 @@ export const imposterMutators = {
 
   advanceTimer: defineMutator(
     z.object({ gameId: z.string() }),
-    async ({ args, tx }) => {
+    async ({ args, tx, ctx }) => {
       const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
       if (!game) return;
 
@@ -400,7 +400,7 @@ export const imposterMutators = {
         await tx.mutate.imposter_games.update({
           id: game.id,
           phase: "playing",
-          secret_word: pickRandom(bank),
+          secret_word: await sealSecret(tx, ctx, "imposter", game.id, pickRandom(bank)),
           clues: [],
           votes: [],
           players: updatedPlayers,
@@ -487,7 +487,7 @@ export const imposterMutators = {
       await tx.mutate.imposter_games.update({
         id: game.id,
         phase: "playing",
-        secret_word: pickRandom(bank),
+        secret_word: await sealSecret(tx, ctx, "imposter", game.id, pickRandom(bank)),
         clues: [],
         votes: [],
         players: updatedPlayers,

@@ -313,7 +313,9 @@ export function ChainBoard({
       <ol className="cr-links">
         {links.map((link, index) => (
           <ChainLinkRow
-            key={`${index}-${link.word}`}
+            /* Hidden words sync as masks that change with every hint, so the
+               row is keyed to the chain (its given first word), not the word. */
+            key={`${links[0]!.word}-${index}`}
             link={link}
             index={index}
             length={links.length}

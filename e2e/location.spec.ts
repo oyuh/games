@@ -48,13 +48,8 @@ test("the leader drops a pin and guesses are paid by distance", async ({ browser
 });
 
 test("guessers' sync sockets never carry the leader's place", async ({ browser }) => {
-  // Known leak: sending the first clue writes target_lat and target_lng in
-  // plaintext, and the leader's browser encrypts them afterwards through
-  // /api/game-secret/init. zero-cache pushes the real coordinates to every
-  // guesser first. Drop test.fail once the place is encrypted before it is
-  // written.
-  test.fail();
-
+  // The place is encrypted on the server before it is written, so
+  // zero-cache never pushes the real coordinates to a guesser.
   const { players } = await openRoom(browser, "Location Signal", ROUTE, NAMES, ["1 clue and guess pair"]);
   const frames = await Promise.all(players.map(recordSyncFrames));
   const li = await startAndFindLeader(players);
@@ -68,7 +63,7 @@ test("guessers' sync sockets never carry the leader's place", async ({ browser }
   for (const [i, pageFrames] of frames.entries()) {
     if (i === li) continue;
     expect(pageFrames.length).toBeGreaterThan(0);
-    // After encryption the row holds 0,0; anything else is the real place.
-    expect(pageFrames.filter((f) => /"target_lat":-?(?!0[,}])\d/.test(f))).toEqual([]);
+    // A sealed row holds null; any number is the real place.
+    expect(pageFrames.filter((f) => /"target_lat":-?\d/.test(f))).toEqual([]);
   }
 });

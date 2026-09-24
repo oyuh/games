@@ -6,6 +6,8 @@
  * on the resulting game state.
  */
 
+import { decryptSecret, generateGameKey } from "../crypto";
+
 type Row = Record<string, unknown>;
 type TableStore = Map<string, Row>;
 
@@ -123,9 +125,22 @@ export interface MockQuery {
 
 // ─── Server context helpers ───────────────────────────────
 
-/** Creates a server context where the caller IS the given userId */
+/** One key per game, like the API's game_encryption_keys table. */
+const gameKeys = new Map<string, Promise<string>>();
+async function resolveGameSecretKey(gameType: string, gameId: string) {
+  const id = `${gameType}:${gameId}`;
+  if (!gameKeys.has(id)) gameKeys.set(id, generateGameKey());
+  return gameKeys.get(id)!;
+}
+
+/** Creates a server context where the caller IS the given userId, with the API's key store */
 export function serverCtx(userId: string) {
-  return { userId };
+  return { userId, resolveGameSecretKey };
+}
+
+/** Decrypts a sealed value the way a client holding the game's key would. */
+export async function openForTest(gameType: string, gameId: string, value: string) {
+  return decryptSecret(value, await resolveGameSecretKey(gameType, gameId));
 }
 
 // ─── Game state factory functions ─────────────────────────
