@@ -13,9 +13,8 @@ async function clickMap(page: Page, x: number, y: number) {
 
 async function startAndFindLeader(players: Page[]) {
   await players[0]!.getByRole("button", { name: "Start the round" }).click();
-  await expect(players[0]!.getByText("The place")).toBeVisible();
-  // Everyone but the leader is told the leader is out finding somewhere.
-  return whichPage(players, async (p) => !(await p.getByText("is finding somewhere").isVisible()));
+  // Only the leader gets the clue box, disabled until the pin is down.
+  return whichPage(players, (p) => p.getByRole("textbox", { name: "Clue 1" }).isVisible());
 }
 
 test("the leader drops a pin and guesses are paid by distance", async ({ browser }) => {
