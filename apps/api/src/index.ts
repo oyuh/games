@@ -1,7 +1,7 @@
 import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, SHIKAKU_VALID_DIFFS, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
 import { recordedCleanup } from "./cleanup";
 import { fallbackPlayerName, mutators, queries, schema } from "@games/shared";
-import { decryptSecret, encryptSecret, generateGameKey, isEncrypted } from "@games/shared";
+import { decryptSecret, encryptSecret, isEncrypted } from "@games/shared";
 import { adminNameOverrides, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared/db";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
@@ -18,7 +18,7 @@ import {
   PIPS_PUZZLES_PER_RUN as ENGINE_PIPS_PUZZLES,
   validateRankedPipsRun,
 } from "@games/shared/games/pips-engine";
-import { dbProvider } from "./db-provider";
+import { dbProvider, type Db } from "./db-provider";
 import { drizzleClient } from "./db-provider";
 import {
   attachRealtimeServer,
@@ -52,6 +52,7 @@ import {
 } from "./session-identity";
 import { getClientInfo } from "./client-info";
 import { authorizeMutation } from "./mutator-auth";
+import { getOrCreateGameKey, type GameType } from "./game-keys";
 import { shikakuImageRoutes } from "./shikaku-image";
 import { embedRoutes } from "./embed-routes";
 
@@ -592,7 +593,7 @@ function validId(v: unknown): string {
   return trimmed.length > 0 && trimmed.length <= MAX_ID_LEN ? trimmed : "";
 }
 
-async function assertAllowedSessionNameMutation(name: string, args: unknown) {
+async function assertAllowedSessionNameMutation(name: string, args: unknown, db: Db) {
   if (name !== "sessions.setName" && name !== "sessions.upsert") {
     return;
   }
@@ -605,13 +606,11 @@ async function assertAllowedSessionNameMutation(name: string, args: unknown) {
     return;
   }
 
-  const restrictedMatch = await findRestrictedNameMatch(payload.name);
+  const restrictedMatch = await findRestrictedNameMatch(payload.name, db);
   if (restrictedMatch) {
     throw new Error("That name is restricted by admin");
   }
 }
-
-type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 
 function normalizeGameType(value: unknown): GameType | null {
   if (
@@ -701,42 +700,6 @@ async function canAccessGameSecret(gameType: GameType, gameId: string, sessionId
   const isPlayer = game.players.some((p) => p.sessionId === sessionId);
   if (!isPlayer) return { allowed: false, reason: "Forbidden", status: 403 as const };
   return { allowed: true, myRole: "player" as const };
-}
-
-async function getOrCreateGameKey(gameType: GameType, gameId: string) {
-  const [existing] = await drizzleClient
-    .select({ key: gameEncryptionKeys.encryptionKey })
-    .from(gameEncryptionKeys)
-    .where(and(eq(gameEncryptionKeys.gameType, gameType), eq(gameEncryptionKeys.gameId, gameId)))
-    .limit(1);
-
-  let key = existing?.key;
-  if (!key) {
-    key = await generateGameKey();
-    await drizzleClient
-      .insert(gameEncryptionKeys)
-      .values({
-        id: crypto.randomUUID(),
-        gameType,
-        gameId,
-        encryptionKey: key,
-        createdAt: Date.now(),
-      })
-      .onConflictDoNothing({ target: [gameEncryptionKeys.gameType, gameEncryptionKeys.gameId] });
-
-    const [inserted] = await drizzleClient
-      .select({ key: gameEncryptionKeys.encryptionKey })
-      .from(gameEncryptionKeys)
-      .where(and(eq(gameEncryptionKeys.gameType, gameType), eq(gameEncryptionKeys.gameId, gameId)))
-      .limit(1);
-    key = inserted?.key;
-  }
-
-  if (!key) {
-    throw new Error("Key unavailable");
-  }
-
-  return key;
 }
 
 app.post("/api/game-secret/init", async (c) => {
@@ -2563,14 +2526,18 @@ app.post("/api/zero/mutate", async (c) => {
               { headerUserId: rawCallerUserId, proofUserId },
               !DEV_MODE,
             );
-            await assertAllowedSessionNameMutation(name, normalizedArgs);
+            // Everything below runs inside this mutation's transaction, so any
+            // database work has to go through it. A second pool connection here
+            // deadlocks the pool once every connection is held by a mutation.
+            const db = tx.dbTransaction.wrappedTransaction;
+            await assertAllowedSessionNameMutation(name, normalizedArgs, db);
             const mutator = mustGetMutator(mutators, name);
             return mutator.fn({
               args: normalizedArgs,
               tx,
               ctx: {
                 userId: resolvedCallerUserId,
-                resolveGameSecretKey: (gameType: GameType, gameId: string) => getOrCreateGameKey(gameType, gameId),
+                resolveGameSecretKey: (gameType: GameType, gameId: string) => getOrCreateGameKey(gameType, gameId, db),
               }
             });
           });

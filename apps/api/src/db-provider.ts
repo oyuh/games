@@ -62,6 +62,11 @@ const pool = new Pool({
   ssl: resolveSslConfig(url.hostname, sslMode),
   max: 3,
   idleTimeoutMillis: 30_000,
+  // Guards against a wedged pool. A request that can't get a connection
+  // fails instead of queueing forever, and Postgres ends a transaction that
+  // sits idle, so a stuck one hands its connection back.
+  connectionTimeoutMillis: 15_000,
+  idle_in_transaction_session_timeout: 60_000,
 });
 
 export const drizzleClient = drizzle(pool, {
@@ -77,6 +82,13 @@ export const drizzleClient = drizzle(pool, {
     shikakuScores
   }
 });
+
+/**
+ * The pool, or a transaction that already holds one of its connections. Code
+ * that can run inside a transaction takes one of these, so it uses the
+ * transaction's connection instead of waiting on the pool for a second.
+ */
+export type Db = typeof drizzleClient | Parameters<Parameters<typeof drizzleClient.transaction>[0]>[0];
 
 export const dbProvider = zeroDrizzle(zeroSchema, drizzleClient);
 

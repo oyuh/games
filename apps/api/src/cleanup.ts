@@ -355,13 +355,14 @@ export async function archiveCleanupRuns(tx: CleanupTx, now = Date.now()) {
 export async function recordedCleanup(trigger: string, database = drizzleClient) {
   const id = crypto.randomUUID();
   const startedAt = Date.now();
-  let recorded = false;
+  // Committed on its own so a run the server dies in still shows as unfinished,
+  // and written before the transaction opens: inserting it from inside would
+  // hold one pool connection while waiting on another.
+  await database.insert(cleanupRuns).values({ id, trigger, startedAt, status: "running" });
   try {
     const summary = await database.transaction(async (tx) => {
       const lock = await tx.execute(sql`SELECT pg_try_advisory_xact_lock(714209) AS acquired`);
       if (!lock.rows[0]?.acquired) return null;
-      await database.insert(cleanupRuns).values({ id, trigger, startedAt, status: "running" });
-      recorded = true;
       const summary = await runCleanup(tx);
       const finishedAt = Date.now();
       await tx.update(cleanupRuns).set({ status: "completed", finishedAt, report: compactSummary(summary) }).where(eq(cleanupRuns.id, id));
@@ -369,12 +370,15 @@ export async function recordedCleanup(trigger: string, database = drizzleClient)
       await archiveCleanupRuns(tx, finishedAt);
       return summary;
     });
-    if (summary) console.log(formatCleanupReport(cleanupReportLines(summary), trigger, Date.now() - startedAt, Boolean((process.stdout.isTTY || process.env.FORCE_COLOR) && !process.env.NO_COLOR)));
+    if (!summary) {
+      // Another run held the lock, so this one never happened.
+      await database.delete(cleanupRuns).where(eq(cleanupRuns.id, id));
+      return null;
+    }
+    console.log(formatCleanupReport(cleanupReportLines(summary), trigger, Date.now() - startedAt, Boolean((process.stdout.isTTY || process.env.FORCE_COLOR) && !process.env.NO_COLOR)));
     return summary;
   } catch (error) {
-    if (recorded) {
-      await database.update(cleanupRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(cleanupRuns.id, id));
-    }
+    await database.update(cleanupRuns).set({ status: "failed", finishedAt: Date.now() }).where(eq(cleanupRuns.id, id));
     throw error;
   }
 }
