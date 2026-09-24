@@ -47,3 +47,7 @@ Thumbs.db
 
 # Local stack state (logs, supervisor pid)
 .local-dev
+
+# Playwright
+e2e/test-results
+e2e/playwright-report
