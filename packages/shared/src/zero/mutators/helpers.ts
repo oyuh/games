@@ -96,6 +96,13 @@ export function assertHost(tx: unknown, ctx: unknown, claimedHostId: string, act
   }
 }
 
+/**
+ * True on the server's authoritative run of a mutator. Anything random that
+ * players can see (roles, leaders, words, targets, grids) is rolled only
+ * there: the client's optimistic run returns before rolling, because its own
+ * pick would show until the server's replaced it, a flash of the wrong
+ * imposter or leader. The client waits on the server for these instead.
+ */
 export function isServerTx(tx: unknown) {
   return asTxLike(tx).location === "server";
 }
