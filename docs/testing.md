@@ -55,13 +55,11 @@ Set `PW_CHANNEL=chrome` or `PW_CHANNEL=msedge` to use an installed browser inste
 
 The `E2E` job in `.github/workflows/ci.yml` runs next to the quality gate. It installs Chromium (cached by `bun.lock`), then runs `bun run test:e2e`, which brings the stack up with `.env` copied from `.env.example`. On failure it uploads the HTML report and traces as the `playwright-report` artifact. A full cold run takes about 6 minutes.
 
-## Known bugs, pinned by tests
+## Pinned bugs
 
-One test is marked `test.fail()`. It fails today because of a real bug. When the bug is fixed, Playwright reports an unexpected pass, which fails the run until you delete the `test.fail()` line. After that it's a normal guard.
+No test is marked `test.fail()` right now. When a real bug is found, pin it with one: the test fails today, Playwright reports an unexpected pass once the bug is fixed, and deleting the `test.fail()` line turns it into a normal guard.
 
-| Test | Bug |
-| --- | --- |
-| Boot: name saved while sync is down survives a reload | The name waits in Zero's queue while zero-cache is unreachable. On reload, `/api/session/sync` still has the old name, answers `resetRequired`, and the client reverts to it. |
+## Game secrets
 
 Every game's secret is encrypted inside the server mutator with `ctx.resolveGameSecretKey` before the row is written (`sealSecret` in `packages/shared/src/zero/mutators/helpers.ts`). One sync-socket test per game checks nothing plain reaches the player who shouldn't have it. Chain Reaction goes further: an unsolved word syncs as a mask, and no client is ever handed its key, so guesses are checked on the server.
 
