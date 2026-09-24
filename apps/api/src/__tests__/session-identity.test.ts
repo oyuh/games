@@ -9,6 +9,7 @@ import {
   readSignedSessionProof,
   sanitizeSessionName,
   SESSION_COOKIE_NAME,
+  verifyClaimedSessionId,
 } from "../session-identity";
 
 describe("session identity helpers", () => {
@@ -133,5 +134,33 @@ describe("session identity helpers", () => {
       shouldResetName: false,
       source: "claimed",
     });
+  });
+});
+
+describe("verifyClaimedSessionId in production", () => {
+  it("accepts a claim that matches the signed proof", () => {
+    expect(verifyClaimedSessionId("me", "me", "me", true)).toBe("me");
+  });
+
+  it("rejects a header with no proof behind it", () => {
+    expect(verifyClaimedSessionId("victim", null, "victim", true)).toBeNull();
+  });
+
+  it("rejects a header that disagrees with the proof", () => {
+    expect(verifyClaimedSessionId("victim", "me", "me", true)).toBeNull();
+  });
+
+  it("rejects a claimed session that is not the proven one", () => {
+    expect(verifyClaimedSessionId("me", "me", "victim", true)).toBeNull();
+  });
+
+  it("falls back to the proof when nothing is claimed", () => {
+    expect(verifyClaimedSessionId("anon", "me", undefined, true)).toBe("me");
+  });
+});
+
+describe("verifyClaimedSessionId in dev", () => {
+  it("trusts the claimed id without a proof", () => {
+    expect(verifyClaimedSessionId("anon", null, "anyone", false)).toBe("anyone");
   });
 });

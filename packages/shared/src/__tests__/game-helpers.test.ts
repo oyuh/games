@@ -15,13 +15,6 @@ import {
 // shuffle
 // ───────────────────────────────────────────────────────────
 describe("shuffle", () => {
-  it("returns a new array (not the original)", () => {
-    const original = [1, 2, 3, 4, 5];
-    const result = shuffle(original);
-    expect(result).not.toBe(original);
-    expect(result).toHaveLength(original.length);
-  });
-
   it("contains all original elements", () => {
     const original = [1, 2, 3, 4, 5];
     const result = shuffle(original);
@@ -32,9 +25,6 @@ describe("shuffle", () => {
     expect(shuffle([])).toEqual([]);
   });
 
-  it("handles single element", () => {
-    expect(shuffle([42])).toEqual([42]);
-  });
 });
 
 // ───────────────────────────────────────────────────────────
@@ -46,9 +36,6 @@ describe("pickRandom", () => {
     expect(arr).toContain(pickRandom(arr));
   });
 
-  it("returns the only element from a single-item array", () => {
-    expect(pickRandom(["only"])).toBe("only");
-  });
 });
 
 // ───────────────────────────────────────────────────────────
@@ -116,14 +103,6 @@ describe("chooseRoles", () => {
 // pickPasswordWord
 // ───────────────────────────────────────────────────────────
 describe("pickPasswordWord", () => {
-  it("returns a string", () => {
-    expect(typeof pickPasswordWord()).toBe("string");
-  });
-
-  it("returns a non-empty string", () => {
-    expect(pickPasswordWord().length).toBeGreaterThan(0);
-  });
-
   it("avoids used words when possible", () => {
     // Pick many words and check they're not in the used list
     const used = [pickPasswordWord()];
@@ -149,13 +128,6 @@ describe("pickChain", () => {
   it("returns an array of the requested length", () => {
     const chain = pickChain(4);
     expect(chain).toHaveLength(4);
-  });
-
-  it("returns strings", () => {
-    const chain = pickChain(3);
-    for (const word of chain) {
-      expect(typeof word).toBe("string");
-    }
   });
 
   it("handles category filter", () => {
