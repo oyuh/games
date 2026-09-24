@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
+import { now, code, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
 
 /**
  * The colors the hard mode rule bans. Naming one is the whole game handed
@@ -46,6 +46,7 @@ export const shadeSignalMutators = {
   create: defineMutator(
     z.object({
       id: z.string(),
+      code: z.string().regex(ROOM_CODE).optional(),
       hostId: z.string(),
       hardMode: z.boolean().optional(),
       leaderPick: z.boolean().optional(),
@@ -59,7 +60,7 @@ export const shadeSignalMutators = {
       const hostName = resolvePlayerName(session?.name, args.hostId);
       await tx.mutate.shade_signal_games.insert({
         id: args.id,
-        code: code(),
+        code: args.code ?? code(),
         host_id: args.hostId,
         phase: "lobby",
         players: [{ sessionId: args.hostId, name: hostName, connected: true, totalScore: 0 }],

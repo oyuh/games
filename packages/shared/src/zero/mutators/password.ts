@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
-import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, isOneWord, pickPasswordWord, buildTeamRound, buildAllTeamRounds, scorePasswordGuessCount, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
+import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, isOneWord, pickPasswordWord, buildTeamRound, buildAllTeamRounds, scorePasswordGuessCount, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
 
 async function maybeEncryptPasswordWord(ctx: unknown, gameId: string, word: string | null) {
   if (!word) {
@@ -111,6 +111,7 @@ export const passwordMutators = {
   create: defineMutator(
     z.object({
       id: z.string(),
+      code: z.string().regex(ROOM_CODE).optional(),
       hostId: z.string(),
       teamCount: z.number().min(2).max(6).optional(),
       targetScore: z.number().min(1).max(50).optional(),
@@ -128,7 +129,7 @@ export const passwordMutators = {
       for (const t of teams) scoreInit[t.name] = 0;
       await tx.mutate.password_games.insert({
         id: args.id,
-        code: code(),
+        code: args.code ?? code(),
         host_id: args.hostId,
         phase: "lobby",
         teams,

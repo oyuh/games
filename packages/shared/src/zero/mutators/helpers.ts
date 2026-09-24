@@ -4,6 +4,12 @@ import { chainWordBank, passwordWordBank } from "./word-banks";
 
 export const now = () => Date.now();
 export const code = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
+/**
+ * Room codes are picked by the client and passed to create, so the code a
+ * host sees and shares before the sync server wakes is the one the server
+ * stores. Rolled inside the mutator, the client and server each got their own.
+ */
+export const ROOM_CODE = /^[A-Z0-9]{6}$/;
 export const PRESENCE_TIMEOUT_MS = 30_000;
 
 // ─── Input sanitization ─────────────────────────────────────

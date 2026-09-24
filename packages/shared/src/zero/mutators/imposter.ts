@@ -2,13 +2,14 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { DEFAULT_IMPOSTER_CLUE_VISIBILITY } from "../../types/game";
-import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
+import { now, code, pickRandom, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
 import { imposterWordBank } from "./word-banks";
 
 export const imposterMutators = {
   create: defineMutator(
     z.object({
       id: z.string(),
+      code: z.string().regex(ROOM_CODE).optional(),
       hostId: z.string(),
       category: z.string().optional(),
       rounds: z.number().min(1).max(10).optional(),
@@ -21,7 +22,7 @@ export const imposterMutators = {
       const hostName = resolvePlayerName(session?.name, args.hostId);
       await tx.mutate.imposter_games.insert({
         id: args.id,
-        code: code(),
+        code: args.code ?? code(),
         host_id: args.hostId,
         phase: "lobby",
         category: args.category ?? "animals",
