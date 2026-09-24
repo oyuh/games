@@ -1,7 +1,7 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { code, now, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
+import { code, now, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -30,6 +30,7 @@ export const locationSignalMutators = {
   create: defineMutator(
     z.object({
       id: z.string(),
+      code: z.string().regex(ROOM_CODE).optional(),
       hostId: z.string(),
       roundsPerPlayer: z.number().min(1).max(3).optional(),
       cluePairs: z.number().min(1).max(4).optional(),
@@ -40,7 +41,7 @@ export const locationSignalMutators = {
       const hostName = resolvePlayerName(session?.name, args.hostId);
       await tx.mutate.location_signal_games.insert({
         id: args.id,
-        code: code(),
+        code: args.code ?? code(),
         host_id: args.hostId,
         phase: "lobby",
         players: [{ sessionId: args.hostId, name: hostName, connected: true, totalScore: 0 }],

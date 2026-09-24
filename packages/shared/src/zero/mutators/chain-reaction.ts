@@ -1,12 +1,13 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName } from "./helpers";
+import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
 
 export const chainReactionMutators = {
   create: defineMutator(
     z.object({
       id: z.string(),
+      code: z.string().regex(ROOM_CODE).optional(),
       hostId: z.string(),
       chainLength: z.number().min(5).max(10).optional(),
       rounds: z.number().min(1).max(10).optional(),
@@ -20,7 +21,7 @@ export const chainReactionMutators = {
       const hostName = resolvePlayerName(session?.name, args.hostId);
       await tx.mutate.chain_reaction_games.insert({
         id: args.id,
-        code: code(),
+        code: args.code ?? code(),
         host_id: args.hostId,
         phase: "lobby",
         players: [{ sessionId: args.hostId, name: hostName, connected: true }],
