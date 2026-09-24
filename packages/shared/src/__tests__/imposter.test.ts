@@ -171,6 +171,17 @@ describe("Imposter: identity enforcement", () => {
     const game = tx.getById("imposter_games", "game1") as any;
     expect(game.phase).toBe("playing");
   });
+
+  it("leaves roles to the server on the host's optimistic run", async () => {
+    // A client roll would flash its own imposter until the server's arrived.
+    const client = new MockTx("client");
+    const players = ["host1", "player1", "attacker"].map((sessionId) => ({ sessionId, name: sessionId, connected: true }));
+    client.seed("imposter_games", [makeImposterGame({ id: "game1", host_id: "host1", players })]);
+    await mutators.start({ args: { gameId: "game1", hostId: "host1" }, tx: client, ctx: serverCtx("host1") });
+    const game = client.getById("imposter_games", "game1") as any;
+    expect(game.phase).toBe("lobby");
+    expect(game.players.every((p: any) => p.role === undefined)).toBe(true);
+  });
 });
 
 // ───────────────────────────────────────────────────────────

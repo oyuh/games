@@ -294,15 +294,14 @@ export const passwordMutators = {
         throw new Error(`${underStaffed.name} needs at least 2 players`);
       }
 
+      if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
       const activeRoundsBase = buildAllTeamRounds(game.teams, 1, undefined, game.settings.category);
-      const activeRounds = isServerTx(tx)
-        ? await Promise.all(
-            activeRoundsBase.map(async (round) => {
-              const encrypted = await maybeEncryptPasswordWord(ctx, game.id, round.word);
-              return { ...round, ...encrypted };
-            })
-          )
-        : activeRoundsBase;
+      const activeRounds = await Promise.all(
+        activeRoundsBase.map(async (round) => {
+          const encrypted = await maybeEncryptPasswordWord(ctx, game.id, round.word);
+          return { ...round, ...encrypted };
+        })
+      );
       const roundEndsAt = now() + game.settings.roundDurationSec * 1000;
 
       const skipsRemaining: Record<string, number> = {};
@@ -464,6 +463,7 @@ export const passwordMutators = {
         ...usedWords,
         ...activeRoundWords.filter((value): value is string => Boolean(value))
       ];
+      if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
       const newWord = pickPasswordWord(allUsedWords, game.settings.category);
       const freshRoundBase = team && team.members.length >= 2
         ? buildTeamRound(team, round.teamIndex, nextRoundNum, newWord)
@@ -471,9 +471,7 @@ export const passwordMutators = {
       const freshRound = freshRoundBase
         ? {
             ...freshRoundBase,
-            ...(isServerTx(tx)
-              ? await maybeEncryptPasswordWord(ctx, args.gameId, freshRoundBase.word)
-              : { encryptedWord: null as string | null })
+            ...(await maybeEncryptPasswordWord(ctx, args.gameId, freshRoundBase.word))
           }
         : null;
 
@@ -522,6 +520,7 @@ export const passwordMutators = {
         ...usedWords,
         ...activeRoundWords.filter((value): value is string => Boolean(value))
       ];
+      if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
       const newWord = pickPasswordWord(allUsedWords, game.settings.category);
       const replacementBase = team
         ? buildTeamRound(team, teamIdx, game.current_round, newWord)
@@ -529,9 +528,7 @@ export const passwordMutators = {
       const encryptedReplacement = replacementBase
         ? {
             ...replacementBase,
-            ...(isServerTx(tx)
-              ? await maybeEncryptPasswordWord(ctx, args.gameId, replacementBase.word)
-              : { encryptedWord: null as string | null })
+            ...(await maybeEncryptPasswordWord(ctx, args.gameId, replacementBase.word))
           }
         : null;
 

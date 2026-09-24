@@ -2,7 +2,7 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { DEFAULT_IMPOSTER_CLUE_VISIBILITY } from "../../types/game";
-import { now, code, pickRandom, sealSecret, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
+import { now, code, pickRandom, sealSecret, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE, isServerTx } from "./helpers";
 import { imposterWordBank } from "./word-banks";
 
 export const imposterMutators = {
@@ -217,6 +217,7 @@ export const imposterMutators = {
       const players = game.players;
       if (players.length < 3) throw new Error("Need at least 3 players");
       const bank = imposterWordBank[game.category ?? "animals"] ?? imposterWordBank.animals ?? ["Planet"];
+      if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
       const withRoles = chooseRoles(players, game.settings.imposters);
       const phaseEndsAt = now() + game.settings.roundDurationSec * 1000;
 

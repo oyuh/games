@@ -304,6 +304,7 @@ export const shadeSignalMutators = {
       if (game.host_id !== args.hostId) throw new Error("Only host can start");
       if (game.players.length < 3) throw new Error("Need at least 3 players");
 
+      if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
       const shuffled = shuffle(game.players);
       const leaderOrder = shuffled.map((p) => p.sessionId);
       const leaderId = leaderOrder[0]!;
@@ -515,6 +516,7 @@ export const shadeSignalMutators = {
           return;
         }
 
+        if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
         const nextLeaderIndex = (game.current_leader_index + 1) % game.leader_order.length;
         const nextLeaderId = game.leader_order[nextLeaderIndex]!;
         const rows = game.grid_rows;
@@ -650,6 +652,7 @@ export const shadeSignalMutators = {
       }
 
       // Rotate leader
+      if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
       const nextLeaderIndex = (game.current_leader_index + 1) % game.leader_order.length;
       const nextLeaderId = game.leader_order[nextLeaderIndex]!;
       const rows = game.grid_rows;
