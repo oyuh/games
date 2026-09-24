@@ -10,6 +10,7 @@ import {
   makeSession,
   makeLocationSignalGame,
   expectThrows,
+  openForTest,
 } from "./test-helpers";
 
 import { locationSignalMutators, haversineKm, scoreForDistance } from "../zero/mutators/location-signal";
@@ -258,7 +259,10 @@ describe("Location Signal: a whole game", () => {
       tx, ctx: serverCtx(leader),
     });
     expect(game().phase).toBe("clue1");
-    expect(game().target_lat).toBeCloseTo(35.68);
+    // Sealed on the synced row, so guessers' clients never see the place.
+    expect(game().target_lat).toBeNull();
+    expect(game().encrypted_target).toMatch(/^enc:/);
+    expect(JSON.parse(await openForTest("location_signal", gameId, game().encrypted_target))).toEqual({ lat: 35.68, lng: 139.69 });
 
     await mutators.submitClue({
       args: { gameId, sessionId: leader, round: 1, text: "where the trains are on time" },
@@ -310,6 +314,8 @@ describe("Location Signal: a whole game", () => {
 
     // What the reveal screen reads. It works the points back out of the
     // distance rather than being handed them, so the two have to agree.
+    expect(game().encrypted_target).toBeNull();
+    expect(game().target_lat).toBeCloseTo(35.68);
     const history = game().round_history;
     expect(history).toHaveLength(1);
     expect(history[0].target).toEqual({ lat: 35.68, lng: 139.69 });

@@ -1,7 +1,33 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
+import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE } from "./helpers";
+
+type ChainSlot = { word: string; secret?: string | null; revealed: boolean; lettersShown: number; solvedBy?: string | null };
+
+/** What the synced row shows of a hidden word: the hinted letters, then blanks. */
+export function maskWord(word: string, lettersShown: number) {
+  return word.slice(0, lettersShown) + "_".repeat(Math.max(0, word.length - lettersShown));
+}
+
+/**
+ * Deals a chain. The two ends are given. Every word between them syncs as a
+ * mask plus a sealed copy that only the server can open, so a player's client
+ * never holds its own answers. Guesses are checked on the server.
+ */
+async function dealChain(tx: unknown, ctx: unknown, gameId: string, words: string[]): Promise<ChainSlot[]> {
+  return Promise.all(words.map(async (word, i) => {
+    if (i === 0 || i === words.length - 1) return { word, revealed: true, lettersShown: 0, solvedBy: null };
+    const secret = await sealSecret(tx, ctx, "chain_reaction", gameId, word);
+    return { word: maskWord(word, 0), secret, revealed: false, lettersShown: 0, solvedBy: null };
+  }));
+}
+
+/** A slot's real word. Null for a hidden one on the client, which can't open it. */
+export async function chainSlotWord(ctx: unknown, gameId: string, slot: ChainSlot) {
+  if (slot.revealed) return slot.word;
+  return slot.secret ? openSecret(ctx, "chain_reaction", gameId, slot.secret) : null;
+}
 
 export const chainReactionMutators = {
   create: defineMutator(
@@ -252,16 +278,10 @@ export const chainReactionMutators = {
       // Premade mode: pick two different chains, one for each player to solve
       const p1 = game.players[0]!.sessionId;
       const p2 = game.players[1]!.sessionId;
-      const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
-        word,
-        revealed: i === 0 || i === arr.length - 1,
-        lettersShown: 0,
-        solvedBy: null as string | null
-      }));
 
-      const chain: Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy: string | null }>> = {
-        [p1]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category)),
-        [p2]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category))
+      const chain = {
+        [p1]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category)),
+        [p2]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category))
       };
 
       const scores: Record<string, number> = {};
@@ -293,10 +313,17 @@ export const chainReactionMutators = {
       if (!game.players.some((p) => p.sessionId === args.sessionId)) throw new Error("Not in this game");
       if (args.words.length !== game.settings.chainLength) throw new Error(`Chain must be exactly ${game.settings.chainLength} words`);
 
-      const submitted = { ...game.submitted_chains, [args.sessionId]: args.words.map((w) => w.trim().toUpperCase()) };
+      /* Sealed, because these are the words the other player has to guess. The
+         client's optimistic copy keeps its own words in the clear on its own
+         device, and it can't open the other chain, so only the server deals. */
+      const words = await Promise.all(args.words.map(async (w) => {
+        const word = w.trim().toUpperCase();
+        return (await sealSecret(tx, ctx, "chain_reaction", game.id, word)) ?? word;
+      }));
+      const submitted = { ...game.submitted_chains, [args.sessionId]: words };
       const allSubmitted = game.players.every((p) => submitted[p.sessionId]?.length === game.settings.chainLength);
 
-      if (!allSubmitted) {
+      if (!allSubmitted || !isServerTx(tx)) {
         // Just save this player's chain and wait
         const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
         const name = resolvePlayerName(session?.name, args.sessionId);
@@ -312,16 +339,12 @@ export const chainReactionMutators = {
       // Both submitted, so each player guesses the OTHER player's chain
       const p1 = game.players[0]!.sessionId;
       const p2 = game.players[1]!.sessionId;
-      const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
-        word,
-        revealed: i === 0 || i === arr.length - 1,
-        lettersShown: 0,
-        solvedBy: null as string | null
-      }));
 
-      const chain: Record<string, Array<{ word: string; revealed: boolean; lettersShown: number; solvedBy: string | null }>> = {
-        [p1]: makeChainSlots(submitted[p2]!), // P1 guesses P2's words
-        [p2]: makeChainSlots(submitted[p1]!)  // P2 guesses P1's words
+      const openChain = (sealed: string[]) =>
+        Promise.all(sealed.map(async (w) => (await openSecret(ctx, "chain_reaction", game.id, w))!));
+      const chain = {
+        [p1]: await dealChain(tx, ctx, game.id, await openChain(submitted[p2]!)), // P1 guesses P2's words
+        [p2]: await dealChain(tx, ctx, game.id, await openChain(submitted[p1]!))  // P2 guesses P1's words
       };
 
       const phaseEndsAt = game.settings.turnTimeSec
@@ -358,8 +381,11 @@ export const chainReactionMutators = {
       const maxReveal = slot.word.length - 1;
       if (slot.lettersShown >= maxReveal) throw new Error("All revealable letters already shown");
 
+      // The client can't open the word, so its optimistic copy grows a blank the server fills in.
+      const word = await chainSlotWord(ctx, game.id, slot);
+      const lettersShown = slot.lettersShown + 1;
       const updatedPlayerChain = playerChain.map((s, i) =>
-        i === args.wordIndex ? { ...s, lettersShown: s.lettersShown + 1 } : s
+        i === args.wordIndex ? { ...s, lettersShown, word: word ? maskWord(word, lettersShown) : s.word } : s
       );
 
       await tx.mutate.chain_reaction_games.update({
@@ -383,18 +409,21 @@ export const chainReactionMutators = {
       const slot = playerChain[args.wordIndex];
       if (!slot || slot.revealed) throw new Error("Invalid word slot");
 
-      const correct = normalized(args.guess) === normalized(slot.word);
+      const word = await chainSlotWord(ctx, game.id, slot);
+      // Only the server can tell whether the guess is right.
+      if (word === null) return;
+      const correct = normalized(args.guess) === normalized(word);
       let updatedPlayerChain = [...playerChain];
       let scores = { ...game.scores };
       let announcement: { text: string; ts: number } | null = null;
 
       if (!correct) {
         // Wrong guess: auto-reveal one letter (unless it would reveal the whole word)
-        const newLettersShown = slot.lettersShown < slot.word.length - 1
+        const newLettersShown = slot.lettersShown < word.length - 1
           ? slot.lettersShown + 1
           : slot.lettersShown;
         updatedPlayerChain = updatedPlayerChain.map((s, i) =>
-          i === args.wordIndex ? { ...s, lettersShown: newLettersShown } : s
+          i === args.wordIndex ? { ...s, lettersShown: newLettersShown, word: maskWord(word, newLettersShown) } : s
         );
 
         await tx.mutate.chain_reaction_games.update({
@@ -410,7 +439,7 @@ export const chainReactionMutators = {
       const playerName = resolvePlayerName(session?.name, args.sessionId);
 
       updatedPlayerChain = updatedPlayerChain.map((s, i) =>
-        i === args.wordIndex ? { ...s, revealed: true, solvedBy: args.sessionId } : s
+        i === args.wordIndex ? { ...s, word, secret: null, revealed: true, solvedBy: args.sessionId } : s
       );
       const points = scoreForLetters(slot.lettersShown);
       const hiddenWords = updatedPlayerChain.filter((s) => !s.revealed);
@@ -419,7 +448,7 @@ export const chainReactionMutators = {
       scores[args.sessionId] = (scores[args.sessionId] ?? 0) + totalPoints;
 
       announcement = {
-        text: `${playerName} guessed "${slot.word}" for ${totalPoints} point${totalPoints !== 1 ? "s" : ""}!`,
+        text: `${playerName} guessed "${word}" for ${totalPoints} point${totalPoints !== 1 ? "s" : ""}!`,
         ts: now()
       };
 
@@ -481,15 +510,9 @@ export const chainReactionMutators = {
           } else {
             const p1 = game.players[0]!.sessionId;
             const p2 = game.players[1]!.sessionId;
-            const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
-              word,
-              revealed: i === 0 || i === arr.length - 1,
-              lettersShown: 0,
-              solvedBy: null as string | null
-            }));
             const newChain = {
-              [p1]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category)),
-              [p2]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category))
+              [p1]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category)),
+              [p2]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category))
             };
             const phaseEndsAt = game.settings.turnTimeSec
               ? now() + game.settings.turnTimeSec * 1000
@@ -534,9 +557,13 @@ export const chainReactionMutators = {
       const slot = playerChain[args.wordIndex];
       if (!slot || slot.revealed) throw new Error("Invalid word slot");
 
+      const word = await chainSlotWord(ctx, game.id, slot);
+      // Only the server can say what the word was.
+      if (word === null) return;
+
       // Reveal the word with 0 points (solvedBy null = given up)
       const updatedPlayerChain = playerChain.map((s, i) =>
-        i === args.wordIndex ? { ...s, revealed: true, lettersShown: s.word.length, solvedBy: null } : s
+        i === args.wordIndex ? { ...s, word, secret: null, revealed: true, lettersShown: word.length, solvedBy: null } : s
       );
 
       const session = await tx.run(zql.sessions.where("id", args.sessionId).one());
@@ -598,15 +625,9 @@ export const chainReactionMutators = {
           } else {
             const p1 = game.players[0]!.sessionId;
             const p2 = game.players[1]!.sessionId;
-            const makeChainSlots = (words: string[]) => words.map((word, i, arr) => ({
-              word,
-              revealed: i === 0 || i === arr.length - 1,
-              lettersShown: 0,
-              solvedBy: null as string | null
-            }));
             const newChain = {
-              [p1]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category)),
-              [p2]: makeChainSlots(pickChain(game.settings.chainLength, game.settings.category))
+              [p1]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category)),
+              [p2]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category))
             };
             const phaseEndsAt = game.settings.turnTimeSec
               ? now() + game.settings.turnTimeSec * 1000
@@ -631,7 +652,7 @@ export const chainReactionMutators = {
         id: game.id,
         chain: updatedChains,
         scores,
-        announcement: { text: `${playerName} gave up on "${slot.word}"`, ts: now() },
+        announcement: { text: `${playerName} gave up on "${word}"`, ts: now() },
         updated_at: now()
       });
     }

@@ -14,7 +14,6 @@ import { MobileSpectatorBadge, MobileHostBadge } from "../../components/shared/S
 import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
-import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
 
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { useShadeSignalGame, chebyshevDist, type ShadePhase } from "../../hooks/useShadeSignalGame";

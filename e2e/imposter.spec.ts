@@ -86,12 +86,8 @@ test("a kicked player is removed and cannot get back in", async ({ browser }) =>
 });
 
 test("the imposter's sync socket never carries the word in plaintext", async ({ browser }) => {
-  // Known leak: the server start mutator writes secret_word in plaintext and
-  // the host's browser encrypts it afterwards via /api/game-secret/init, so
-  // zero-cache pushes the plain word to every client first. Anyone with
-  // devtools open reads it. Drop test.fail once start encrypts server side.
-  test.fail();
-
+  // The start mutator encrypts the word on the server before writing it.
+  // A plaintext write here is readable by anyone with devtools open.
   const { players } = await openRoom(browser, "Imposter", ROUTE, NAMES);
   const frames = await Promise.all(players.map(recordSyncFrames));
 

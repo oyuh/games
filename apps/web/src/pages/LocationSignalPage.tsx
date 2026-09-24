@@ -9,7 +9,6 @@ import { LocationLobby, locationPhases, locationTrackPhase } from "../components
 import { LocationClue, LocationGameOver, LocationGuess, LocationPickClue, LocationResult } from "../components/location/LocationRound";
 import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { GameRoster } from "../components/shared/GameRoster";
-import { callGameSecretInit } from "../lib/game-secrets";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
 import { SpectatorOverlay } from "../components/shared/SpectatorOverlay";
@@ -64,9 +63,9 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     );
   }
 
-  /* The place, once it is allowed out. Encrypted until the host's pre-reveal
-     call has run, so an empty one means the scores are still being worked out
-     rather than that there was never a target. */
+  /* The place, once it is allowed out. The server keeps it encrypted until it
+     scores the round, so an empty one means the scores are still being worked
+     out rather than that there was never a target. */
   const revealTarget = !game.encrypted_target && game.target_lat != null && game.target_lng != null
     ? { lat: game.target_lat, lng: game.target_lng }
     : null;
@@ -198,8 +197,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
             const placed = phase === "clue1"
               ? Promise.resolve()
               : zero.mutate(mutators.locationSignal.setTarget({ gameId, sessionId, lat: pickedTarget.lat, lng: pickedTarget.lng }))
-                  .server.then(() => { setLeaderTarget(pickedTarget); })
-                  .then(() => callGameSecretInit("location_signal", gameId, sessionId));
+                  .server.then(() => { setLeaderTarget(pickedTarget); });
 
             void placed
               .then(() => optimistic(zero.mutate(mutators.locationSignal.submitClue({ gameId, sessionId, round: 1, text: clue }))))

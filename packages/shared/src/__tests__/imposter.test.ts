@@ -11,9 +11,11 @@ import {
   makeSession,
   makeImposterGame,
   expectThrows,
+  openForTest,
 } from "./test-helpers";
 
 import { imposterMutators } from "../zero/mutators/imposter";
+import { imposterWordBank } from "../zero/mutators/word-banks";
 
 // Type the mutators as handler functions
 type Handler = (params: { args: any; tx: any; ctx: any }) => Promise<void>;
@@ -216,8 +218,17 @@ describe("Imposter: game start & playing phase", () => {
     await mutators.start({ args: { gameId: "game1", hostId: "host1" }, tx, ctx: serverCtx("host1") });
     const game = tx.getById("imposter_games", "game1") as any;
     expect(game.phase).toBe("playing");
-    expect(game.secret_word).toBeTruthy();
     expect(game.settings.phaseEndsAt).toBeGreaterThan(0);
+    // Encrypted before it is written, so zero-cache never syncs the plain word.
+    expect(game.secret_word).toMatch(/^enc:/);
+    expect(Object.values(imposterWordBank).flat()).toContain(await openForTest("imposter", "game1", game.secret_word));
+  });
+
+  it("leaves the word out of the client's optimistic copy", async () => {
+    const client = new MockTx("client");
+    client.seed("imposter_games", [tx.getById("imposter_games", "game1")!]);
+    await mutators.start({ args: { gameId: "game1", hostId: "host1" }, tx: client, ctx: {} });
+    expect((client.getById("imposter_games", "game1") as any).secret_word).toBeNull();
   });
 
   it("assigns roles on start (at least 1 imposter)", async () => {

@@ -13,7 +13,6 @@ import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../../lib/session";
 import { showToast } from "../../lib/toast";
-import { callGameSecretInit, callGameSecretPreReveal } from "../../lib/game-secrets";
 
 import { WorldMap, MapMarker, fitRepeatingMapBounds } from "../../components/location/WorldMap";
 import { useLocationSignalGame, type LocPhase } from "../../hooks/useLocationSignalGame";
