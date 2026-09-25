@@ -42,7 +42,7 @@ Community files: [Code of Conduct](CODE_OF_CONDUCT.md), [Contributing](CONTRIBUT
 | Shikaku | Timed rectangle logic puzzle | Solo | `/shikaku` | [game-shikaku.md](docs/game-shikaku.md) |
 | Pips | Timed domino logic run | Solo | `/pips` | [game-pips.md](docs/game-pips.md) |
 
-Each game doc covers rules, flow, scoring, and implementation notes. The test setup lives in [docs/testing.md](docs/testing.md).
+Each game doc covers rules, flow, scoring, and implementation notes.
 
 The five multiplayer games share the same plumbing: room creation, join codes, a public lobby browser, spectators, host controls, chat, presence, admin kicks, and state synced through Rocicorp Zero.
 
@@ -58,7 +58,7 @@ Shikaku and Pips skip the Zero cache. Their puzzle engines run in the browser, a
 |   +-- admin/          # Next.js 16 admin dashboard
 +-- packages/
 |   +-- shared/         # Drizzle/Zero contracts, metadata, solo puzzle engines
-+-- docs/              # Game docs and the testing plan
++-- docs/              # Game docs
 +-- e2e/               # Playwright suite that runs against the local stack
 +-- scripts/           # Local stack and production DB helper scripts
 +-- docker-compose.yml # Postgres + Zero cache, for the manual start path
