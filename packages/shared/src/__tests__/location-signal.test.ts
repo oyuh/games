@@ -41,7 +41,7 @@ describe("Location Signal: lobby phase", () => {
     tx.seed("location_signal_games", [makeLocationSignalGame({ id: "game1", host_id: "host1" })]);
     await mutators.join({ args: { gameId: "game1", sessionId: "p1" }, tx, ctx: serverCtx("p1") });
     const game = tx.getById("location_signal_games", "game1") as any;
-    expect(game.players.length).toBeGreaterThan(1);
+    expect(game.players.map((p: any) => p.sessionId)).toEqual(["host1", "p1"]);
   });
 
   it("kicked player cannot rejoin", async () => {

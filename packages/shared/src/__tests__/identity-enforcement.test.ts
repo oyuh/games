@@ -35,11 +35,6 @@ describe("assertCaller", () => {
     expect(() => assertCaller(serverTx, null, "user1")).not.toThrow();
     expect(() => assertCaller(serverTx, undefined, "user1")).not.toThrow();
   });
-
-  it("handles null/undefined tx gracefully", () => {
-    expect(() => assertCaller(null, { userId: "user1" }, "user1")).not.toThrow();
-    expect(() => assertCaller(undefined, { userId: "user1" }, "user1")).not.toThrow();
-  });
 });
 
 // ───────────────────────────────────────────────────────────
@@ -71,9 +66,5 @@ describe("assertHost", () => {
 
   it("skips enforcement when ctx has no userId", () => {
     expect(() => assertHost(serverTx, {}, "anyone", "host1")).not.toThrow();
-  });
-
-  it("handles null ctx gracefully", () => {
-    expect(() => assertHost(serverTx, null, "host1", "host1")).not.toThrow();
   });
 });

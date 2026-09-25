@@ -14,12 +14,7 @@
  * without DATABASE_URL, so its test could not run in CI.
  */
 
-/** Escape LIKE metacharacters, leaving the value otherwise untouched. */
-export function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, "\\$&");
-}
-
-/** Escape, then wrap for a contains-match. */
+/** Escape LIKE metacharacters, then wrap for a contains-match. */
 export function likeTerm(value: string): string {
-  return `%${escapeLike(value)}%`;
+  return `%${value.replace(/[\\%_]/g, "\\$&")}%`;
 }

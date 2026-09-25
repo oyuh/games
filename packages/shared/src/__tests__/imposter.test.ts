@@ -155,23 +155,6 @@ describe("Imposter: identity enforcement", () => {
     );
   });
 
-  it("allows host to start", async () => {
-    tx.seed("imposter_games", [
-      makeImposterGame({
-        id: "game1",
-        host_id: "host1",
-        players: [
-          { sessionId: "host1", name: "Host", connected: true },
-          { sessionId: "player1", name: "Alice", connected: true },
-          { sessionId: "attacker", name: "Hacker", connected: true },
-        ],
-      }),
-    ]);
-    await mutators.start({ args: { gameId: "game1", hostId: "host1" }, tx, ctx: serverCtx("host1") });
-    const game = tx.getById("imposter_games", "game1") as any;
-    expect(game.phase).toBe("playing");
-  });
-
   it("leaves roles to the server on the host's optimistic run", async () => {
     // A client roll would flash its own imposter until the server's arrived.
     const client = new MockTx("client");

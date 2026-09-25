@@ -3,7 +3,7 @@
  * the database. Kept out of index.ts so it can be tested on its own.
  */
 
-import { escapeLike } from "./sql-like";
+import { likeTerm } from "./sql-like";
 
 export interface LeaderboardSearch {
   /** Ready to drop into `name ILIKE $1 ESCAPE '\'`, wildcards and all. */
@@ -23,13 +23,12 @@ export function parseLeaderboardSearch(raw: string | undefined | null): Leaderbo
   const q = (raw ?? "").trim().slice(0, MAX_QUERY_LEN);
   if (q.length === 0) return null;
 
-  const escaped = q.replace(/[\\%_]/g, "\\$&");
   // Seeds are plain integers. A digits-only query still searches names too,
   // because "7" is a perfectly good thing to call yourself.
   const seed = /^\d{1,15}$/.test(q) ? Number(q) : null;
 
   return {
-    namePattern: `%${escaped}%`,
+    namePattern: likeTerm(q),
     seed: seed != null && Number.isSafeInteger(seed) ? seed : null,
   };
 }

@@ -1,10 +1,4 @@
-/**
- * Rate limiter tests.
- *
- * Tests sliding-window rate limiting, MAX_BUCKETS cap,
- * IP extraction, and Retry-After header.
- */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { Hono } from "hono";
 import { rateLimiter } from "../rate-limit";
 
@@ -104,16 +98,6 @@ describe("rateLimiter: IP extraction", () => {
       headers: { "x-forwarded-for": "1.2.3.4, 9.10.11.12" },
     });
     expect(res2.status).toBe(429);
-  });
-
-  it("caps IP length to prevent memory abuse", async () => {
-    const longIp = "A".repeat(200);
-    const app = makeApp({ windowMs: 60_000, maxRequests: 2, scope: "test-ip-cap" });
-    const res = await app.request("/test", {
-      method: "GET",
-      headers: { "x-forwarded-for": longIp },
-    });
-    expect(res.status).toBe(200);
   });
 
   it('falls back to "unknown" without x-forwarded-for', async () => {

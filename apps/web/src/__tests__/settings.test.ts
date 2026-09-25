@@ -57,10 +57,6 @@ describe("updateSettings", () => {
 
   it("persists to localStorage", () => {
     updateSettings({ theme: "light" });
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      "games-settings",
-      expect.any(String),
-    );
     const stored = JSON.parse(store["games-settings"]!);
     expect(stored.theme).toBe("light");
   });

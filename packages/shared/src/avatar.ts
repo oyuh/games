@@ -13,39 +13,6 @@
 
 export const SHAPE_SEEDS: readonly string[] = ["16","2j","u","1o","f","23","47","1q","2u","1p","3t","m","c","3","1n","e","1w","2k","9","10","15","1d","11","13","o","h","26","1c","x","4","3r","i","2","4c","2t","2h","g","14","5","1x","30","p","r","1u","32","t","2m","8","1g","12","n","22","7","k","1","0","4m","d","l"];
 
-// Marker color palette. Used for the dots on the Shade grid and the pins on
-// the Location map, where players need telling apart at a glance. Nothing to
-// do with the avatar art, which brings its own colors.
-export const AVATAR_COLORS = [
-  "#FF6B6B",  // Bright Red
-  "#4ECDC4",  // Turquoise
-  "#45B7D1",  // Sky Blue
-  "#FFA07A",  // Light Salmon
-  "#98D8C8",  // Mint
-  "#F7DC6F",  // Golden Yellow
-  "#BB8FCE",  // Lavender
-  "#85C1E2",  // Powder Blue
-  "#F8B88B",  // Peach
-  "#52C4A6",  // Emerald
-  "#FF85A1",  // Hot Pink
-  "#A6CC9D",  // Sage Green
-  "#FFB84D",  // Tangerine
-  "#6C5CE7",  // Deep Purple
-  "#00B894"   // Organic Green
-];
-
-function colorAt(index: number): string {
-  return AVATAR_COLORS[index % AVATAR_COLORS.length] ?? AVATAR_COLORS[0] ?? "#4ECDC4";
-}
-
-/**
- * Get marker color for a player based on their index in the players array
- * Cycles through the color palette to ensure distinct colors within a game
- */
-export function getPlayerColor(playerIndex: number): string {
-  return colorAt(playerIndex);
-}
-
 /* ── Chosen avatar ──────────────────────────────────────────────
    An avatar is a shape and a color, picked independently. avvvatars hashes
    both out of one string and exposes no way to set either, so we drive it

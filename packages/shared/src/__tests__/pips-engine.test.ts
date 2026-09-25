@@ -122,33 +122,34 @@ describe("generateRun", () => {
   });
 });
 
-describe("validateSolution", () => {
-  const tinyPuzzle: PipsPuzzle = {
-    difficulty: "easy",
-    rows: 2,
-    cols: 2,
-    cells: [
-      { r: 0, c: 0 },
-      { r: 0, c: 1 },
-      { r: 1, c: 0 },
-      { r: 1, c: 1 },
-    ],
-    dominoes: [
-      { id: "0-1", a: 0, b: 1 },
-      { id: "2-3", a: 2, b: 3 },
-    ],
-    regions: [
-      { id: "r0", cells: [{ r: 0, c: 0 }], rule: { type: "sum", target: 0 }, colorIndex: 0 },
-      { id: "r1", cells: [{ r: 0, c: 1 }], rule: { type: "sum", target: 1 }, colorIndex: 1 },
-      { id: "r2", cells: [{ r: 1, c: 0 }], rule: { type: "sum", target: 2 }, colorIndex: 2 },
-      { id: "r3", cells: [{ r: 1, c: 1 }], rule: { type: "sum", target: 3 }, colorIndex: 3 },
-    ],
-    solution: [
-      { dominoId: "0-1", r1: 0, c1: 0, r2: 0, c2: 1, flipped: false },
-      { dominoId: "2-3", r1: 1, c1: 0, r2: 1, c2: 1, flipped: false },
-    ],
-  };
+// Four single-cell regions whose sums pin both dominoes to one placement.
+const tinyPuzzle: PipsPuzzle = {
+  difficulty: "easy",
+  rows: 2,
+  cols: 2,
+  cells: [
+    { r: 0, c: 0 },
+    { r: 0, c: 1 },
+    { r: 1, c: 0 },
+    { r: 1, c: 1 },
+  ],
+  dominoes: [
+    { id: "0-1", a: 0, b: 1 },
+    { id: "2-3", a: 2, b: 3 },
+  ],
+  regions: [
+    { id: "r0", cells: [{ r: 0, c: 0 }], rule: { type: "sum", target: 0 }, colorIndex: 0 },
+    { id: "r1", cells: [{ r: 0, c: 1 }], rule: { type: "sum", target: 1 }, colorIndex: 1 },
+    { id: "r2", cells: [{ r: 1, c: 0 }], rule: { type: "sum", target: 2 }, colorIndex: 2 },
+    { id: "r3", cells: [{ r: 1, c: 1 }], rule: { type: "sum", target: 3 }, colorIndex: 3 },
+  ],
+  solution: [
+    { dominoId: "0-1", r1: 0, c1: 0, r2: 0, c2: 1, flipped: false },
+    { dominoId: "2-3", r1: 1, c1: 0, r2: 1, c2: 1, flipped: false },
+  ],
+};
 
+describe("validateSolution", () => {
   it("accepts a correct hand-built puzzle", () => {
     expect(validatePuzzleShape(tinyPuzzle)).toBe(true);
     expect(validateSolution(tinyPuzzle, tinyPuzzle.solution)).toBe(true);
@@ -178,30 +179,7 @@ describe("validateSolution", () => {
 
 describe("countPipsSolutions", () => {
   it("counts one solution for a constrained tiny puzzle", () => {
-    const puzzle: PipsPuzzle = {
-      difficulty: "easy",
-      rows: 2,
-      cols: 2,
-      cells: [
-        { r: 0, c: 0 },
-        { r: 0, c: 1 },
-        { r: 1, c: 0 },
-        { r: 1, c: 1 },
-      ],
-      dominoes: [
-        { id: "0-1", a: 0, b: 1 },
-        { id: "2-3", a: 2, b: 3 },
-      ],
-      regions: [
-        { id: "r0", cells: [{ r: 0, c: 0 }], rule: { type: "sum", target: 0 }, colorIndex: 0 },
-        { id: "r1", cells: [{ r: 0, c: 1 }], rule: { type: "sum", target: 1 }, colorIndex: 1 },
-        { id: "r2", cells: [{ r: 1, c: 0 }], rule: { type: "sum", target: 2 }, colorIndex: 2 },
-        { id: "r3", cells: [{ r: 1, c: 1 }], rule: { type: "sum", target: 3 }, colorIndex: 3 },
-      ],
-      solution: [],
-    };
-
-    expect(countPipsSolutions(puzzle, 2, 10_000)).toBe(1);
+    expect(countPipsSolutions({ ...tinyPuzzle, solution: [] }, 2, 10_000)).toBe(1);
   });
 
   it("returns zero for an impossible tiny puzzle", () => {
