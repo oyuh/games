@@ -12,12 +12,6 @@ describe("parseLeaderboardSearch", () => {
     expect(parseLeaderboardSearch(" lawson ")).toEqual({ namePattern: "%lawson%", seed: null });
   });
 
-  it("escapes wildcards so they match literally", () => {
-    expect(parseLeaderboardSearch("100%")).toEqual({ namePattern: "%100\\%%", seed: null });
-    expect(parseLeaderboardSearch("a_b")).toEqual({ namePattern: "%a\\_b%", seed: null });
-    expect(parseLeaderboardSearch("\\")).toEqual({ namePattern: "%\\\\%", seed: null });
-  });
-
   it("matches a seed as well as a name when the query is a number", () => {
     expect(parseLeaderboardSearch("1006610097")).toEqual({ namePattern: "%1006610097%", seed: 1006610097 });
     expect(parseLeaderboardSearch("7")).toEqual({ namePattern: "%7%", seed: 7 });

@@ -33,10 +33,6 @@ afterEach(() => {
 });
 
 describe("checkRateLimit", () => {
-  it("allows the first call", () => {
-    expect(checkRateLimit()).toBe(true);
-  });
-
   it("allows up to 30 calls within 10s window", () => {
     for (let i = 0; i < 30; i++) {
       expect(checkRateLimit()).toBe(true);

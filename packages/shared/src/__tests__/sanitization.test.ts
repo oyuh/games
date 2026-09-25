@@ -7,143 +7,50 @@ import {
   isClueTooSimilar,
 } from "../zero/mutators/helpers";
 
-// ───────────────────────────────────────────────────────────
-// sanitizeText
-// ───────────────────────────────────────────────────────────
 describe("sanitizeText", () => {
-  it("passes through normal text", () => {
-    expect(sanitizeText("Hello world")).toBe("Hello world");
-  });
-
-  it("trims whitespace", () => {
-    expect(sanitizeText("  hello  ")).toBe("hello");
-  });
-
-  it("strips basic HTML tags", () => {
-    expect(sanitizeText("<b>bold</b>")).toBe("bold");
-    expect(sanitizeText("<i>italic</i>")).toBe("italic");
-  });
-
-  it("strips <script> tags", () => {
-    expect(sanitizeText('<script>alert("xss")</script>')).toBe('alert("xss")');
-  });
-
-  it("strips nested/complex HTML", () => {
-    expect(sanitizeText('<div class="evil"><img src=x onerror=alert(1)>text</div>')).toBe("text");
-  });
-
-  it("strips event handler attributes in tags", () => {
-    const input = '<a onmouseover="steal()">click me</a>';
-    expect(sanitizeText(input)).toBe("click me");
-  });
-
-  it("removes control characters", () => {
-    expect(sanitizeText("hello\x00world")).toBe("helloworld");
-    expect(sanitizeText("abc\x07def")).toBe("abcdef");
-    expect(sanitizeText("\x01\x02\x03ok")).toBe("ok");
-  });
-
-  it("preserves tabs and newlines (normal whitespace)", () => {
-    expect(sanitizeText("hello\nworld")).toBe("hello\nworld");
-    expect(sanitizeText("hello\tworld")).toBe("hello\tworld");
-  });
-
-  it("handles empty string", () => {
-    expect(sanitizeText("")).toBe("");
-  });
-
-  it("handles string with only tags", () => {
-    expect(sanitizeText("<script></script>")).toBe("");
-  });
-
-  it("handles string with only whitespace", () => {
-    expect(sanitizeText("   ")).toBe("");
-  });
-
-  it("strips SVG-based XSS", () => {
-    expect(sanitizeText('<svg onload="alert(1)"/>')).toBe("");
-  });
-
-  it("strips iframe injection", () => {
-    expect(sanitizeText('<iframe src="evil.com"></iframe>')).toBe("");
-  });
-
-  it("strips <img> with onerror", () => {
-    expect(sanitizeText('<img src=x onerror=alert(1)>')).toBe("");
-  });
-
-  it("handles multiple injections in one string", () => {
-    expect(sanitizeText('Hi <script>bad</script> there <b>bold</b> <img src=x>'))
-      .toBe("Hi bad there bold");
-  });
-
-  it("preserves unicode/emoji in normal text", () => {
-    expect(sanitizeText("Hello 🌍 world")).toBe("Hello 🌍 world");
-  });
-
-  it("preserves accented characters", () => {
-    expect(sanitizeText("café résumé")).toBe("café résumé");
-  });
-
-  it("handles SQL-like payloads (not stripped, just sanitized of HTML)", () => {
-    // SQL injection is handled at the DB layer (parameterized queries)
-    // sanitizeText only handles HTML/control chars
-    expect(sanitizeText("'; DROP TABLE users; --")).toBe("'; DROP TABLE users; --");
+  it.each([
+    ["passes normal text through", "Hello world", "Hello world"],
+    ["trims whitespace", "  hello  ", "hello"],
+    ["strips tags but keeps their text", '<script>alert("xss")</script>', 'alert("xss")'],
+    ["strips tags with attributes", '<div class="evil"><img src=x onerror=alert(1)>text</div>', "text"],
+    ["strips self-closing tags", '<svg onload="alert(1)"/>', ""],
+    ["strips paired tags with no text", '<iframe src="evil.com"></iframe>', ""],
+    ["strips several injections in one string", "Hi <script>bad</script> there <b>bold</b> <img src=x>", "Hi bad there bold"],
+    ["removes control characters", "\x01\x02\x03ok", "ok"],
+    ["removes a NUL mid-string", "hello\x00world", "helloworld"],
+    ["keeps newlines", "hello\nworld", "hello\nworld"],
+    ["keeps tabs", "hello\ttab", "hello\ttab"],
+    ["keeps emoji and accents", "café 🌍 résumé", "café 🌍 résumé"],
+    // SQL injection is the DB layer's job (bound parameters), not this one's.
+    ["leaves SQL-looking text alone", "'; DROP TABLE users; --", "'; DROP TABLE users; --"],
+    ["returns empty for whitespace only", "   ", ""],
+  ])("%s", (_name, input, expected) => {
+    expect(sanitizeText(input)).toBe(expected);
   });
 });
 
-// ───────────────────────────────────────────────────────────
-// sanitizeId
-// ───────────────────────────────────────────────────────────
 describe("sanitizeId", () => {
-  it("passes through a normal ID", () => {
-    expect(sanitizeId("abc123")).toBe("abc123");
+  it("trims and passes through a normal ID", () => {
+    expect(sanitizeId("  abc123  ")).toBe("abc123");
   });
 
-  it("trims whitespace from IDs", () => {
-    expect(sanitizeId("  abc  ")).toBe("abc");
-  });
-
-  it("throws on empty string", () => {
+  it("throws on empty or whitespace-only IDs", () => {
     expect(() => sanitizeId("")).toThrow("Invalid ID");
-  });
-
-  it("throws on whitespace-only string", () => {
     expect(() => sanitizeId("   ")).toThrow("Invalid ID");
   });
 
-  it("throws on oversized IDs (>64 chars)", () => {
-    const longId = "a".repeat(65);
-    expect(() => sanitizeId(longId)).toThrow("Invalid ID");
-  });
-
-  it("accepts exactly 64 char IDs", () => {
-    const id64 = "a".repeat(64);
-    expect(sanitizeId(id64)).toBe(id64);
-  });
-
-  it("rejects extremely long payloads", () => {
-    const megaId = "x".repeat(10_000);
-    expect(() => sanitizeId(megaId)).toThrow("Invalid ID");
+  it("accepts 64 characters and rejects 65", () => {
+    expect(sanitizeId("a".repeat(64))).toBe("a".repeat(64));
+    expect(() => sanitizeId("a".repeat(65))).toThrow("Invalid ID");
   });
 });
 
-// ───────────────────────────────────────────────────────────
-// normalized
-// ───────────────────────────────────────────────────────────
 describe("normalized", () => {
   it("lowercases and trims", () => {
     expect(normalized("  HELLO  ")).toBe("hello");
   });
-
-  it("handles already normalized input", () => {
-    expect(normalized("hello")).toBe("hello");
-  });
 });
 
-// ───────────────────────────────────────────────────────────
-// isOneWord
-// ───────────────────────────────────────────────────────────
 describe("isOneWord", () => {
   it("returns true for a single word", () => {
     expect(isOneWord("hello")).toBe(true);
@@ -162,9 +69,6 @@ describe("isOneWord", () => {
   });
 });
 
-// ───────────────────────────────────────────────────────────
-// isClueTooSimilar
-// ───────────────────────────────────────────────────────────
 describe("isClueTooSimilar", () => {
   it("returns true for exact match (case-insensitive)", () => {
     expect(isClueTooSimilar("Cat", "cat")).toBe(true);

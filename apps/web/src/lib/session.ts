@@ -57,12 +57,6 @@ function ensureSessionProofCache() {
   return cachedSessionProof;
 }
 
-export function resetStoredIdentityForTests() {
-  cachedSessionId = null;
-  cachedSessionProof = undefined;
-  cachedName = undefined;
-}
-
 export function randomName(): string {
   return randomPlayerName();
 }

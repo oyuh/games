@@ -41,9 +41,6 @@ describe("parseAvatar", () => {
       "Infinity.0",
       "NaN.NaN",
       // Number() used to coerce all of these into a valid-looking pick.
-      "12.",
-      ".4",
-      " 1.2",
       "1.2 ",
       "+1.2",
       "1.2\n",

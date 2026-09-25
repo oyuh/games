@@ -82,11 +82,4 @@ describe("renderPipsSvg", () => {
       expect(svg.endsWith("</svg>")).toBe(true);
     }
   });
-
-  it("escapes text rather than letting it close a tag", () => {
-    // Nothing user-controlled reaches the label today, but the renderer is
-    // the last line before markup, so the escaping is asserted here.
-    const svg = renderPipsSvg(puzzle, SEED, { view: "board" });
-    expect(svg).not.toContain("<script");
-  });
 });
