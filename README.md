@@ -4,9 +4,9 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)
 [![License](https://img.shields.io/badge/license-source--available-blue)](LICENSE)
 
-Games is a TypeScript monorepo for browser party games and logic puzzles. There's a React + Vite app players actually use, a Bun/Hono API behind it, a Next.js admin dashboard for moderation, a shared package holding the Drizzle/Zero contracts, and a local Postgres + Zero stack so you can run the whole thing on your machine.
+Games is a TypeScript monorepo for browser party games and logic puzzles. Players use a React + Vite app. Behind it sits a Bun/Hono API, a Next.js admin dashboard for moderation, a shared package with the Drizzle/Zero contracts, and a local Postgres + Zero stack so you can run all of it on your machine.
 
-This project is a full refactor of an earlier version: [oyuh/games-arch](https://github.com/oyuh/games-arch).
+This is a full rewrite of [oyuh/games-arch](https://github.com/oyuh/games-arch).
 
 Live links:
 
@@ -15,94 +15,40 @@ Live links:
 
 ## Contents
 
-- [Games](#games)
-  - [Contents](#contents)
-  - [Games Included](#games-included)
-  - [Game Docs](#game-docs)
-  - [Repository Layout](#repository-layout)
-  - [Architecture](#architecture)
-    - [Player App: `apps/web`](#player-app-appsweb)
-    - [Shared Solo Puzzle Engines](#shared-solo-puzzle-engines)
-    - [API App: `apps/api`](#api-app-appsapi)
-    - [Admin App: `apps/admin`](#admin-app-appsadmin)
-    - [Shared Package: `packages/shared`](#shared-package-packagesshared)
-  - [Local Development](#local-development)
-    - [Prerequisites](#prerequisites)
-    - [Quick Start](#quick-start)
-    - [Controlling The Running Stack](#controlling-the-running-stack)
-    - [Useful Flags](#useful-flags)
-    - [Manual Local Start](#manual-local-start)
-    - [Stop Local Services](#stop-local-services)
-  - [Environment Variables](#environment-variables)
-    - [Root `.env`](#root-env)
-    - [Web App Variables](#web-app-variables)
-    - [Admin App Variables](#admin-app-variables)
-    - [Zero Service Variables](#zero-service-variables)
-  - [Common Commands](#common-commands)
-  - [CI and Deployment Gates](#ci-and-deployment-gates)
-  - [Data Model](#data-model)
-  - [API Surface](#api-surface)
-    - [Public and Runtime Endpoints](#public-and-runtime-endpoints)
-    - [Zero Endpoints](#zero-endpoints)
-    - [Solo Game Score Endpoints](#solo-game-score-endpoints)
-    - [Admin API](#admin-api)
-  - [Admin Dashboard](#admin-dashboard)
-  - [Mobile UI](#mobile-ui)
-  - [Deployment](#deployment)
-    - [Vercel Web App](#vercel-web-app)
-    - [Railway API](#railway-api)
-    - [Railway Zero Cache](#railway-zero-cache)
-    - [Database Requirements](#database-requirements)
-  - [Operational Notes](#operational-notes)
-    - [Session Identity](#session-identity)
-    - [Presence](#presence)
-    - [Admin Broadcasts](#admin-broadcasts)
-    - [Cleanup](#cleanup)
-    - [Footer Database Status](#footer-database-status)
-    - [Smoke Test Checklist](#smoke-test-checklist)
-  - [Known Constraints](#known-constraints)
+- [Games](#games-1)
+- [Repository layout](#repository-layout)
+- [Architecture](#architecture)
+- [Local development](#local-development)
+- [Environment variables](#environment-variables)
+- [Commands](#commands)
+- [CI and deployment gates](#ci-and-deployment-gates)
+- [Data model](#data-model)
+- [API](#api)
+- [Deployment](#deployment)
+- [Operations](#operations)
+- [Known constraints](#known-constraints)
 
-Community files:
+Community files: [Code of Conduct](CODE_OF_CONDUCT.md), [Contributing](CONTRIBUTING.md), [License](LICENSE), [Security](SECURITY.md).
 
-- [Code of Conduct](CODE_OF_CONDUCT.md)
-- [Contributing](CONTRIBUTING.md)
-- [License](LICENSE)
-- [Security](SECURITY.md)
+## Games
 
-## Games Included
+| Game | Mode | Players | Route | Doc |
+|------|------|---------|-------|-----|
+| Imposter | Social deduction | 3-12 | `/imposter/:id` | [game-imposter.md](docs/game-imposter.md) |
+| Password | Team word guessing | 4+ | `/password/:id/begin`, `/password/:id`, `/password/:id/results` | [game-password.md](docs/game-password.md) |
+| Chain Reaction | Word-chain duel | 2 | `/chain/:id` | [game-chain-reaction.md](docs/game-chain-reaction.md) |
+| Shade Signal | Color clue guessing | 3-8 | `/shade/:id` | [game-shade-signal.md](docs/game-shade-signal.md) |
+| Location Signal | Map clue guessing | 3-8 | `/location/:id` | [game-location-signal.md](docs/game-location-signal.md) |
+| Shikaku | Timed rectangle logic puzzle | Solo | `/shikaku` | [game-shikaku.md](docs/game-shikaku.md) |
+| Pips | Timed domino logic run | Solo | `/pips` | [game-pips.md](docs/game-pips.md) |
 
-Seven games are playable right now.
+Each game doc covers rules, flow, scoring, and implementation notes. The test setup lives in [docs/testing.md](docs/testing.md).
 
-| Game | Mode | Players | Route | State model |
-|------|------|---------|-------|-------------|
-| Imposter | Social deduction | 3-12 | `/imposter/:id` | Multiplayer, Zero-synced |
-| Password | Team word guessing | 4+ | `/password/:id/begin`, `/password/:id`, `/password/:id/results` | Multiplayer, Zero-synced |
-| Chain Reaction | Competitive word-chain duel | 2 | `/chain/:id` | Multiplayer, Zero-synced |
-| Shade Signal | Color clue guessing | 3-8 | `/shade/:id` | Multiplayer, Zero-synced |
-| Location Signal | Map clue guessing | 3-8 | `/location/:id` | Multiplayer, Zero-synced |
-| Shikaku | Timed rectangle logic puzzle | Solo | `/shikaku` | Shared seeded engine + REST leaderboard |
-| Pips | Timed domino logic run | Solo | `/pips` | Shared seeded engine + REST leaderboard |
+The five multiplayer games share the same plumbing: room creation, join codes, a public lobby browser, spectators, host controls, chat, presence, admin kicks, and state synced through Rocicorp Zero.
 
-The multiplayer games all share the same plumbing: room creation, join codes, a public lobby browser, spectators, host controls, chat, session presence, admin kicks, and state that syncs through Rocicorp Zero.
+Shikaku and Pips skip the Zero cache. Their puzzle engines run in the browser, and they call REST endpoints only for eligibility checks, leaderboard reads, and score submission. A ranked submission carries replay data. The API runs the same shared engine, regenerates the puzzle from the public seed, and checks the replay before it writes a leaderboard row.
 
-The solo games don't need the Zero cache at all. Shikaku and Pips run their puzzle engines right in the browser and only hit REST endpoints for eligibility checks, leaderboard reads, and score submission. Ranked submissions come with replay data, and the API runs the same shared engines to regenerate the puzzle from the public seed and check that the submitted solve is real before it writes a leaderboard row.
-
-## Game Docs
-
-Each game has its own doc with rules, flow, scoring, and implementation notes.
-
-| Game | What it covers | Doc |
-|------|----------------|-----|
-| Imposter | Clue phase, voting, categories, round history | [docs/game-imposter.md](docs/game-imposter.md) |
-| Password | Teams, clue givers, guessers, target score | [docs/game-password.md](docs/game-password.md) |
-| Chain Reaction | Word chains, turns, scoring, chain generation | [docs/game-chain-reaction.md](docs/game-chain-reaction.md) |
-| Shade Signal | Color grid, leader rotation, clues, proximity scoring | [docs/game-shade-signal.md](docs/game-shade-signal.md) |
-| Location Signal | Map picking, clues, distance scoring, leader rounds | [docs/game-location-signal.md](docs/game-location-signal.md) |
-| Shikaku | Puzzle generation, run modes, scoring, leaderboard validation | [docs/game-shikaku.md](docs/game-shikaku.md) |
-| Pips | Domino placement, seeded runs, split timing, leaderboard design | [docs/game-pips.md](docs/game-pips.md) |
-
-
-## Repository Layout
+## Repository layout
 
 ```text
 .
@@ -111,143 +57,97 @@ Each game has its own doc with rules, flow, scoring, and implementation notes.
 |   +-- api/            # Bun/Hono API, Zero handlers, REST endpoints
 |   +-- admin/          # Next.js 16 admin dashboard
 +-- packages/
-|   +-- shared/         # Drizzle/Zero contracts, metadata, shared solo puzzle engines
-+-- docs/              # Game docs and maintenance notes
+|   +-- shared/         # Drizzle/Zero contracts, metadata, solo puzzle engines
++-- docs/              # Game docs and the testing plan
++-- e2e/               # Playwright suite that runs against the local stack
 +-- scripts/           # Local stack and production DB helper scripts
-+-- docker-compose.yml # Local Postgres + Zero cache stack for the Windows script path
++-- docker-compose.yml # Postgres + Zero cache, for the manual start path
 +-- Dockerfile         # API container image
 +-- railway.toml       # API Railway deployment config
-+-- vercel.json        # Web Vercel deployment config with SPA + bot preview rewrites
++-- vercel.json        # Web Vercel config with SPA + bot preview rewrites
 +-- turbo.json         # Workspace task orchestration
 +-- package.json       # Bun workspace scripts
 ```
 
 ## Architecture
 
-### Player App: `apps/web`
+### Player app: `apps/web`
 
-The web app is a React 19 single-page app built by Vite. It owns everything players see.
+A React 19 single-page app built by Vite. It handles:
 
-What it handles:
+- Routes for the home page, multiplayer rooms, Shikaku, Pips, a `/status` connection page, and `/dev/*` sandbox pages.
+- A module-scoped Zero client for multiplayer sync.
+- Browser-local identity, recent games, display name, and first-visit state.
+- HTTP session sync against the API, with presence sent over the realtime WebSocket.
+- WebSocket subscriptions for admin broadcasts, targeted user events, and live Password typing.
+- Lazy-loaded game pages and vendor chunks to keep the first load small.
+- Wake/idle messages for when the Zero cache is cold or paused.
+- Separate mobile pages for the multiplayer games (see [Mobile UI](#mobile-ui)).
 
-- Browser routes for the home page, multiplayer rooms, Shikaku, Pips, and a score admin helper route.
-- A module-scoped Zero client for realtime multiplayer sync.
-- Local browser identity, recent games, display name, and first-visit state.
-- HTTP session sync against the API, with presence flowing over the realtime WebSocket.
-- Bun WebSocket subscriptions for global admin broadcasts, targeted user events, and live Password typing.
-- Lazy-loaded game pages and vendor chunks to keep the initial load small.
-- Wake/idle messaging for when the multiplayer Zero cache is cold or paused.
-- Mobile-specific pages and bottom sheets for the multiplayer games.
+Key files: `apps/web/src/App.tsx`, `apps/web/src/pages/`, `apps/web/src/mobile/`, `apps/web/src/lib/zero.ts`, `apps/web/src/lib/session.ts`.
 
-Key files:
+### Solo puzzle engines
 
-- `apps/web/src/App.tsx`
-- `apps/web/src/pages/`
-- `apps/web/src/mobile/`
-- `apps/web/src/lib/zero.ts`
-- `apps/web/src/lib/session.ts`
-- `packages/shared/src/games/shikaku-engine.ts`
-- `packages/shared/src/games/pips-engine.ts`
+Shikaku and Pips engines live in `packages/shared/src/games/`, so the browser and the API apply the same ranked rules. The web app imports them through thin wrappers in `apps/web/src/lib/*-engine.ts`. The API imports them directly for leaderboard validation.
 
-### Shared Solo Puzzle Engines
+- `shikaku-engine.ts` does seeded generation, rectangle validation, scoring, auto-filled `1x1` detection, and replay verification.
+- `pips-engine.ts` does seeded generation, board and region validation, domino placement checks, solver utilities, run time scoring, and replay verification.
 
-Shikaku and Pips use shared TypeScript engine modules so the browser and the API agree on the exact same ranked rules, even though the API isn't needed for local play. The web app imports the engines through thin wrappers in `apps/web/src/lib/*-engine.ts`; the API imports the shared modules directly for leaderboard validation.
+Shikaku sends the solved rectangles for all five puzzles. Pips sends the domino placements for Easy, Medium, and Hard. The API regenerates the run from the seed, validates the replay, checks the score and time, then runs duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
 
-- `packages/shared/src/games/shikaku-engine.ts` owns seeded Shikaku generation, rectangle validation, scoring, auto-filled `1x1` detection, and ranked replay verification.
-- `packages/shared/src/games/pips-engine.ts` owns seeded Pips generation, board/region validation, domino placement validation, solver utilities, run time scoring, and ranked replay verification.
-- Ranked score requests include replay payloads: Shikaku sends the solved rectangles for each of the five puzzles, and Pips sends the solved domino placements for Easy, Medium, and Hard.
-- On the server, the API regenerates the canonical run from the submitted seed, validates the replay against those generated puzzles, recalculates or checks the score/time invariants, then applies duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
+### API: `apps/api`
 
-### API App: `apps/api`
+A Bun-powered Hono service. It handles:
 
-The API is a Bun-powered Hono service. It handles REST endpoints, Zero query/mutation forwarding, admin operations, signed session identity, score validation, and cleanup work.
-
-What it handles:
-
-- `POST /api/zero/query` and `POST /api/zero/mutate`
+- `POST /api/zero/query` and `POST /api/zero/mutate`.
 - Signed session cookies and signed Zero session proofs.
-- Session sync, plus WebSocket-driven presence tracking.
-- Bun WebSocket upgrade auth and admin event triggers.
-- Server-held secret keys for hidden game data.
+- Session sync and WebSocket presence tracking.
+- WebSocket upgrade auth and admin event triggers.
+- Server-held keys for hidden game data.
 - Shikaku and Pips leaderboards, eligibility, and score validation.
 - Location Signal map tile config and a geocode proxy.
-- The admin dashboard API under `/api/admin/*`.
-- Scheduled and manual cleanup of stale games and sessions.
-- `/health` and `/debug/build-info` diagnostics.
+- The admin API under `/api/admin/*`.
+- Scheduled and manual cleanup of stale games and sessions, with a run history.
+- `/health` and `/debug/build-info`.
 
-Key files:
+Key files: `apps/api/src/index.ts`, `admin-routes.ts`, `broadcast-server.ts`, `mutator-auth.ts`, `session-identity.ts`, `db-provider.ts`.
 
-- `apps/api/src/index.ts`
-- `apps/api/src/admin-routes.ts`
-- `apps/api/src/broadcast-server.ts`
-- `apps/api/src/session-identity.ts`
-- `apps/api/src/db-provider.ts`
+### Admin app: `apps/admin`
 
-### Admin App: `apps/admin`
+A Next.js 16 app behind NextAuth, on port `3002` locally. It proxies admin requests to the API with `ADMIN_SECRET` as a bearer token.
 
-The admin dashboard is a Next.js 16 app behind NextAuth. It proxies admin requests to the API using `ADMIN_SECRET`.
+| Route | Purpose |
+|-------|---------|
+| `/login` | GitHub or local dev login |
+| `/` | Dashboard summary and broadcast controls |
+| `/clients` | Connected sessions and client actions |
+| `/games` | Active room inspection and moderation |
+| `/bans` | Session/IP/region bans, restricted names, name overrides |
+| `/shikaku` | Shikaku leaderboard management |
+| `/pips` | Pips leaderboard management |
+| `/cleanups` | Cleanup run history |
 
-What it handles:
+`/names` redirects to `/bans` and `/broadcast` redirects to `/`.
 
-- Dashboard summary and recent activity.
-- Browsing connected clients and sessions.
-- Inspecting, ending, and kicking players from active games.
-- Session, IP, and region bans.
-- Restricted name patterns and forced name overrides.
-- Global broadcasts, refresh commands, update warnings, and custom status banners.
-- Shikaku score management.
-- Pips score management.
+From the dashboard you can inspect live sessions and games, end one game or all of them, kick players, ban by session, IP, or region, send global or targeted toasts, force-refresh clients, publish a site-wide status, schedule update warnings, override names, maintain restricted name patterns, and edit or bulk-clear Shikaku and Pips scores.
 
-Key files:
+Key files: `apps/admin/src/auth.ts`, `apps/admin/src/lib/api.ts`, `apps/admin/src/app/(dashboard)/`, `apps/admin/src/components/admin/`.
 
-- `apps/admin/src/auth.ts`
-- `apps/admin/src/lib/api.ts`
-- `apps/admin/src/app/(dashboard)/`
-- `apps/admin/src/components/admin/`
+### Shared package: `packages/shared`
 
-### Shared Package: `packages/shared`
+The contract layer between the web app and the API: the Drizzle Postgres schema, the Zero schema, shared queries, Zero mutators, game types and metadata, and the Drizzle Kit config.
 
-The shared package is the contract layer between the web app and the API.
+Mutators live in `packages/shared/src/zero/mutators/`, one file per game plus `sessions.ts`, `chat.ts`, `helpers.ts`, and `word-banks.ts`. `demo.ts` and `dev.ts` hold test and bot mutators, and the API rejects any `demo.*` or `dev.*` call in production.
 
-It contains:
+### Mobile UI
 
-- The Drizzle Postgres schema.
-- The Zero schema.
-- Shared query definitions.
-- Zero mutators, split by game domain.
-- Shared game types and game metadata.
-- The Drizzle Kit config.
+The mobile pages live in `apps/web/src/mobile`. Desktop page components call `useIsMobile()` and switch at the `768px` breakpoint. Mobile pages get their own shell, bottom navigation, sheets, and `m-` prefixed CSS classes, so desktop and mobile changes don't collide.
 
-Mutators live under `packages/shared/src/zero/mutators/`:
+Mobile pages exist for Home, Imposter, Password (begin, game, results), Chain Reaction, Shade Signal, and Location Signal. Shikaku is desktop-only on purpose. Pips has one responsive page instead of a separate mobile one.
 
-```text
-packages/shared/src/zero/mutators/
-+-- index.ts
-+-- helpers.ts
-+-- word-banks.ts
-+-- sessions.ts
-+-- chat.ts
-+-- imposter.ts
-+-- password.ts
-+-- chain-reaction.ts
-+-- shade-signal.ts
-+-- location-signal.ts
-+-- demo.ts
-```
+## Local development
 
-## Local Development
-
-### Prerequisites
-
-- Bun 1.3.x or newer
-- Node 20 or newer (the local stack script and the API dev runner use it)
-- A container engine: Docker Desktop, OrbStack, Colima, Rancher Desktop or Podman
-- Git
-
-You do not need to start the container engine yourself. If it is installed but
-not running, `bun run local:up` starts it and waits for it.
-
-### Quick Start
+You need Bun 1.3.x or newer, Node 20 or newer (the stack script and the API dev runner use it), Git, and a container engine: Docker Desktop, OrbStack, Colima, Rancher Desktop, or Podman. If the engine is installed but not running, `bun run local:up` starts it for you.
 
 ```bash
 bun install
@@ -261,41 +161,38 @@ Then open:
 - Admin app: `http://localhost:3002`
 - Zero cache: `http://localhost:4848`
 
-`bun run local:up` runs one cross-platform script (`scripts/local.mjs`) on
-macOS, Linux and Windows. It:
+`bun run local:up` runs `scripts/local.mjs`, the same script on macOS, Linux, and Windows. It:
 
-1. Creates `.env` from `.env.example` if it is missing.
-2. Checks that the installed `@rocicorp/zero` matches the zero-cache image, and
-   runs `bun install` if it does not.
-3. Starts the container engine if it is installed but not running.
-4. Starts Postgres and waits until it actually accepts queries.
+1. Creates `.env` from `.env.example` if it's missing.
+2. Checks that the installed `@rocicorp/zero` matches the zero-cache image, and runs `bun install` if it doesn't.
+3. Starts the container engine if needed.
+4. Starts Postgres and waits until it accepts queries.
 5. Pushes the Drizzle schema.
 6. Rebuilds the Zero replica and starts zero-cache.
-7. Starts the `api`, `web` and `admin` dev servers under a small supervisor, so
-   each one can be inspected and restarted on its own.
+7. Starts the `api`, `web`, and `admin` dev servers under a small supervisor, so you can inspect and restart each one on its own.
 
-### Controlling The Running Stack
+### Controlling the stack
 
-The stack answers on a local control socket, so these work from any other
-terminal while it is running:
+The stack listens on a local control socket, so these work from any other terminal:
 
 ```bash
 bun run local status              # every service, its status, pid, port and uptime
 bun run local logs api            # last 200 lines from one service
 bun run local logs web -f         # follow one service
-bun run local restart admin       # restart just the admin server
+bun run local restart admin       # restart one server
 bun run local restart api web     # restart several
 bun run local restart zero        # rebuild the Zero replica and restart zero-cache
 bun run local stop api            # stop one service
 bun run local start api           # start it again
 bun run local doctor              # check the machine for anything that will break the stack
+bun run local:down                # stop everything
 ```
 
-Service names are `postgres`, `zero-cache`, `api`, `web` and `admin`, plus the
-groups `apps`, `infra` and `all`. Common aliases work too (`db`, `zero`, `ui`,
-`backend`).
+Service names are `postgres`, `zero-cache`, `api`, `web`, and `admin`, plus the groups `apps`, `infra`, and `all`. Aliases like `db`, `zero`, `ui`, and `backend` work too.
 
-### Useful Flags
+`local:down` stops the dev servers, frees the dev ports, removes the containers, and drops the Zero replica. Postgres data stays unless you pass `--wipe-db`.
+
+Flags:
 
 ```bash
 bun run local up --host           # expose the web dev server on the local network
@@ -307,12 +204,11 @@ bun run local up --auto-restart   # bring a dev server back up if it crashes
 bun run local down --wipe-db      # also delete the Postgres volume
 ```
 
-`bun run local:up` and `bun run local up` are the same thing; the `local:*`
-scripts are shorthand for the most common commands.
+`bun run local:up` and `bun run local up` are the same command. The `local:*` scripts are shorthand for the common ones.
 
-### Manual Local Start
+### Manual start
 
-If you'd rather run each piece yourself:
+To run each piece yourself:
 
 ```bash
 bun install
@@ -321,23 +217,13 @@ bun run db:push
 bun run dev
 ```
 
-Note that `docker compose` publishes the same ports as the script's containers,
-so use one or the other, not both.
+`docker compose` publishes the same ports as the script's containers, so pick one path.
 
-### Stop Local Services
-
-```bash
-bun run local:down
-```
-
-That stops the dev servers, clears the dev ports, removes the containers and
-drops the Zero replica. Postgres data is kept unless you pass `--wipe-db`.
-
-## Environment Variables
+## Environment variables
 
 ### Root `.env`
 
-The API and shared database tooling load the repo root `.env`. For local development, this is the practical minimum:
+The API and the database tooling load the root `.env`. The local minimum:
 
 ```bash
 NODE_ENV=development
@@ -351,17 +237,18 @@ SESSION_COOKIE_SECRET=games-dev-session-secret
 CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
-Optional map variables:
+Optional:
 
 ```bash
 MAP_TILE_URL_TEMPLATE=https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
 MAP_TILE_ATTRIBUTION=(c) OpenStreetMap contributors
 MAP_GEOCODE_URL=https://nominatim.openstreetmap.org/search
+WEB_ORIGIN=https://games.lawsonhart.me   # used in social preview links
 ```
 
-### Web App Variables
+### Web app
 
-The web app falls back to local endpoints when these are omitted:
+The web app falls back to local endpoints when these are unset:
 
 ```bash
 VITE_ZERO_CACHE_URL=http://localhost:4848
@@ -370,11 +257,9 @@ VITE_WS_URL=ws://localhost:3001/ws
 VITE_STYLE_ONLY=false
 ```
 
-You can skip `VITE_WS_URL` if it's just the API URL plus `/ws`; the client derives it from `VITE_API_URL`.
+The client derives `VITE_WS_URL` from `VITE_API_URL` plus `/ws`, so you only set it when the socket lives somewhere else.
 
-### Admin App Variables
-
-The admin app talks to the API through a proxy route and sends `ADMIN_SECRET` as a bearer token.
+### Admin app
 
 ```bash
 GAMES_API_URL=http://localhost:3001
@@ -384,23 +269,12 @@ AUTH_SECRET=<long_random_secret>
 GITHUB_CLIENT_ID=<github_oauth_client_id>
 GITHUB_CLIENT_SECRET=<github_oauth_client_secret>
 ADMIN_GITHUB_IDS=<comma_separated_allowed_github_logins>
+ADMIN_DEV_SECRET=<local_admin_password>   # optional, enables a local credentials login
 ```
 
-For local development, you can enable a credentials login:
+The API needs the same `ADMIN_SECRET`.
 
-```bash
-ADMIN_DEV_SECRET=<local_admin_password>
-```
-
-The API must also have:
-
-```bash
-ADMIN_SECRET=<same_secret_used_by_admin_app>
-```
-
-### Zero Service Variables
-
-For a deployed Zero cache service:
+### Zero cache
 
 ```bash
 NODE_ENV=production
@@ -408,41 +282,35 @@ ZERO_UPSTREAM_DB=<postgres_url>
 ZERO_QUERY_URL=https://<api-domain>/api/zero/query
 ZERO_MUTATE_URL=https://<api-domain>/api/zero/mutate
 ZERO_ADMIN_PASSWORD=<strong_secret>
+ZERO_CVR_DB=<postgres_url>      # optional
+ZERO_CHANGE_DB=<postgres_url>   # optional
 ```
 
-Optional:
+Keep the deployed Zero cache on the same version as `@rocicorp/zero` in the workspace. A mismatch passes health checks and breaks browser sync, which is a miserable thing to debug.
 
-```bash
-ZERO_CVR_DB=<postgres_url>
-ZERO_CHANGE_DB=<postgres_url>
-```
-
-Keep the deployed Zero cache version in lockstep with `@rocicorp/zero` in the workspace. A version mismatch can pass health checks while quietly breaking browser sync connections, which is a miserable thing to debug.
-
-## Common Commands
+## Commands
 
 Run these from the repo root.
 
 | Command | Purpose |
 |---------|---------|
 | `bun run dev` | Start all workspace dev servers through Turbo |
-| `bun run local:up` | Start local DB/Zero, push schema, run the dev servers (any OS) |
-| `bun run local:down` | Stop the dev servers and the local Docker services |
+| `bun run local:up` | Start local DB/Zero, push schema, run the dev servers |
+| `bun run local:down` | Stop the dev servers and the containers |
 | `bun run local:reset` | Tear the stack down and bring it back up |
 | `bun run local:status` | Show every service, its status, pid, port and uptime |
-| `bun run local restart <service>` | Restart one service, e.g. `admin` |
-| `bun run local logs <service> -f` | Follow one service's log |
 | `bun run local:doctor` | Check the machine for anything that will break the stack |
 | `bun run build` | Build all workspaces |
 | `bun run typecheck` | Typecheck all workspaces |
-| `bun run test` | Run Vitest suites |
-| `bun run test:ci` | Run CI-style Vitest suites |
-| `bun run lint` | Placeholder lint scripts |
+| `bun run test` | Run the Vitest suites |
+| `bun run test:ci` | Run the Vitest suites the way CI does |
+| `bun run test:e2e` | Run the Playwright suite against the local stack |
+| `bun run lint` | Placeholder, no linter is configured yet |
 | `bun run db:push` | Push the Drizzle schema to the configured database |
 | `bun run db:studio` | Open Drizzle Studio |
-| `bun run db:push:prod` | Push schema to `PROD_DB_URL` after confirmation |
+| `bun run db:push:prod` | Push the schema to `PROD_DB_URL` after a confirmation |
 
-Package-scoped examples:
+Per-package:
 
 ```bash
 bun --filter @games/web build
@@ -452,11 +320,11 @@ bun --filter @games/admin typecheck
 bun --filter @games/shared db:push
 ```
 
-React Doctor commands are documented in [docs/react-doctor-guide.md](docs/react-doctor-guide.md).
+React Doctor commands are in [docs/react-doctor-guide.md](docs/react-doctor-guide.md).
 
-## CI and Deployment Gates
+## CI and deployment gates
 
-GitHub Actions runs the `CI` workflow on pull requests, pushes to `main` or `master`, and merge queue checks. The required job is named `Quality Gate` and runs:
+The `CI` workflow runs on pull requests, pushes to `main` or `master`, and merge queue checks. It has two jobs. `Quality Gate` runs:
 
 ```bash
 bun run lint
@@ -465,33 +333,34 @@ bun run test:ci
 bun run build
 ```
 
-The `Deploy Hooks` workflow listens for successful `CI` runs on `main` or `master`, and only calls deploy hooks after CI passes. Add these repository secrets if you want GitHub Actions to trigger deployments:
+`E2E` runs `bun run test:e2e` against a fresh local stack and uploads the Playwright report when it fails.
+
+The `Deploy Hooks` workflow fires after a successful `CI` run on `main` or `master` and calls the deploy hooks. To use it, add these repository secrets:
 
 ```bash
 VERCEL_DEPLOY_HOOK_URL=<vercel_deploy_hook_url>
 RAILWAY_DEPLOY_HOOK_URL=<optional_custom_or_platform_deploy_trigger_url>
 ```
 
-To keep failing commits out of production, protect the production branch in GitHub and require `Quality Gate` before merging. Also configure the hosts themselves:
+To keep failing commits out of production, protect the production branch and require `Quality Gate` before merging. Then set up the hosts:
 
-- Vercel: use Deployment Checks on the production project and select the GitHub Actions `Quality Gate` check, or disable automatic Git production deploys and rely on the post-CI deploy hook.
-- Railway: enable Wait for CI on each GitHub-connected service, or disable automatic deploys and trigger Railway from a post-CI workflow.
+- Vercel: turn on Deployment Checks with the `Quality Gate` check, or leave Git production deploys off and use the post-CI hook.
+- Railway: turn on Wait for CI for each GitHub-connected service, or turn off automatic deploys and trigger Railway from the post-CI workflow.
 
-Keep the CI job name stable. GitHub, Vercel, and Railway all match on check names to decide what gates a merge or deployment, so renaming the job silently un-gates everything.
+Don't rename the CI job. GitHub, Vercel, and Railway match on the check name, and a rename un-gates every merge and deploy without any warning.
 
-## Data Model
+## Data model
 
-The primary schema lives in `packages/shared/src/drizzle/schema.ts`.
-
-The important tables:
+The schema lives in `packages/shared/src/drizzle/schema.ts`.
 
 | Table | Purpose |
 |-------|---------|
-| `sessions` | Browser-backed player identity, current game attachment, IP/region/fingerprint, last seen |
+| `sessions` | Browser-backed player identity, current game, IP/region/fingerprint, last seen |
+| `session_archive` | Slim copy of sessions that cleanup deleted, so admins can still find and ban an old id |
 | `status` | Footer/database health sentinel |
 | `imposter_games` | Imposter room state, players, clues, votes, history, settings |
-| `password_games` | Password teams, rounds, active rounds, scores, settings |
-| `chain_reaction_games` | Word-chain state, submitted chains, turn, scores, round history |
+| `password_games` | Password teams, rounds, scores, settings |
+| `chain_reaction_games` | Word-chain state, chains, turn, scores, round history |
 | `shade_signal_games` | Color-grid target, leader rotation, clues, guesses, scores |
 | `location_signal_games` | Map target, leader rotation, clues, guesses, distance scoring |
 | `chat_messages` | Per-game chat history |
@@ -503,137 +372,64 @@ The important tables:
 | `admin_bans` | Session, IP, and region bans |
 | `admin_restricted_names` | Restricted display-name patterns |
 | `admin_name_overrides` | Forced display names by session |
+| `cleanup_runs` | Recent cleanup runs with aggregate counts |
+| `cleanup_run_days` | Cleanup runs older than a week, folded into one row per UTC day |
 
-The multiplayer game tables deliberately keep most of their live state in JSON columns. Room snapshots stay simple, and game transitions live right next to the mutator logic instead of being scattered across a dozen relational tables.
+The multiplayer tables keep most live state in JSON columns on purpose. Room snapshots stay simple, and the game transitions sit next to the mutator logic instead of spreading across a dozen relational tables.
 
-## API Surface
+## API
 
-### Public and Runtime Endpoints
+### Public and runtime
 
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /health` | Railway/API healthcheck |
 | `GET /debug/build-info` | API build, uptime, platform, and database sentinel status |
-| `POST /api/session/sync` | Resolve or create signed browser session identity |
-| `GET /ws` | Upgrade to the authenticated Bun WebSocket transport (also carries presence) |
-| `GET /api/admin-status` | Current site-wide admin status payload |
+| `POST /api/session/sync` | Resolve or create the signed browser session |
+| `GET /ws` | Upgrade to the authenticated WebSocket (also carries presence) |
+| `GET /api/admin-status` | Current site-wide admin status |
 | `GET /api/public/names/restricted` | Public restricted-name pattern list |
-| `GET /api/embed/html` | Rich social/bot preview HTML |
+| `GET /api/embed/html` | Social/bot preview HTML |
 | `GET /api/shikaku/puzzle` | Shikaku puzzle viewer page |
-| `GET /api/shikaku/puzzle.svg` | Dynamic Shikaku puzzle SVG |
-| `GET /api/maps/config` | Location Signal map tile configuration |
+| `GET /api/shikaku/puzzle.svg` | Random Shikaku puzzle SVG |
+| `GET /api/maps/config` | Location Signal map tile config |
 | `GET /api/maps/geocode` | Location Signal geocoding proxy |
-| `POST /api/game-secret/key` | Resolve game secret key for authorized reveal paths |
-| `GET/POST /api/cleanup` | Run authenticated stale-game/session cleanup |
+| `POST /api/game-secret/key` | Game secret key for authorized reveal paths |
+| `GET/POST /api/cleanup` | Run cleanup, needs `CLEANUP_SECRET` as a bearer token |
+| `POST /api/zero/query` | Resolve Zero query requests |
+| `POST /api/zero/mutate` | Resolve Zero mutation requests |
 
-### Zero Endpoints
-
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /api/zero/query` | Resolve shared Zero query requests |
-| `POST /api/zero/mutate` | Resolve shared Zero mutation requests |
-
-### Solo Game Score Endpoints
+### Solo scores
 
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /api/shikaku/leaderboard` | Read the Shikaku leaderboard |
-| `POST /api/shikaku/score/eligibility` | Check Shikaku score eligibility and canonical replay validity |
-| `POST /api/shikaku/score` | Submit a Shikaku score with the solved-rectangle replay |
+| `POST /api/shikaku/score/eligibility` | Check eligibility and replay validity |
+| `POST /api/shikaku/score` | Submit a score with the solved-rectangle replay |
 | `GET /api/pips/leaderboard` | Read the Pips leaderboard |
-| `POST /api/pips/score/eligibility` | Check Pips run eligibility and canonical replay validity |
-| `POST /api/pips/score` | Submit a Pips run with the solved-domino replay |
+| `POST /api/pips/score/eligibility` | Check eligibility and replay validity |
+| `POST /api/pips/score` | Submit a run with the solved-domino replay |
 
-### Admin API
+### Admin
 
-Admin routes are mounted under `/api/admin/*` and require `Authorization: Bearer <ADMIN_SECRET>`.
-
-The major groups:
-
-- `/clients`
-- `/games`
-- `/bans`
-- `/broadcast/*`
-- `/status`
-- `/names/*`
-- `/shikaku/scores`
-- `/pips/scores`
-
-## Admin Dashboard
-
-The admin app lives in `apps/admin` and runs locally on port `3002`.
-
-Pages:
-
-| Route | Purpose |
-|-------|---------|
-| `/login` | GitHub or local dev login |
-| `/` | Dashboard summary |
-| `/clients` | Connected sessions and client actions |
-| `/games` | Active room inspection and moderation |
-| `/bans` | Session/IP/region bans, restricted names, name overrides |
-| `/names` | Redirects to `/bans` |
-| `/shikaku` | Shikaku leaderboard management |
-| `/pips` | Pips leaderboard management |
-
-What you can do from it:
-
-- Use the broadcast controls from the dashboard shell.
-- View live sessions, names, fingerprints, regions, and game attachments.
-- Inspect active games by type and phase.
-- End one game, or all of them.
-- Kick a player from a game.
-- Ban by session ID, IP address, or region.
-- Send global or targeted toast messages.
-- Force refresh all clients.
-- Publish a custom site-wide status.
-- Schedule update warnings.
-- Override player names and maintain restricted name patterns.
-- Create, edit, delete, and bulk-clear Shikaku and Pips score records.
-
-## Mobile UI
-
-The web app has a separate mobile surface under `apps/web/src/mobile`.
-
-Mobile routing is chosen by the desktop page components through `useIsMobile()` at the `768px` breakpoint. Mobile pages get their own app shell, bottom navigation, sheets, and `m-` prefixed CSS classes, so desktop and mobile changes stay out of each other's way.
-
-Current mobile-specific pages:
-
-- Home
-- Imposter
-- Password begin/game/results
-- Chain Reaction
-- Shade Signal
-- Location Signal
-
-Solo games render their own pages. Shikaku is desktop-only on purpose; Pips has its own responsive puzzle interface instead of a separate `MobilePipsPage`.
+Admin routes sit under `/api/admin/*` and need `Authorization: Bearer <ADMIN_SECRET>`. The groups are `/dashboard/summary`, `/clients`, `/games`, `/bans`, `/broadcast/*`, `/status`, `/names/*`, `/shikaku/scores`, `/pips/scores`, and `/cleanups`.
 
 ## Deployment
 
-Production is split across separate services:
+Production runs on separate services:
 
 - Vercel: `apps/web`
-- Railway: `apps/api`
+- Railway: `apps/api`, which also serves the WebSockets
 - Railway: Zero cache
 - Railway Postgres or Neon: database
-- Bun WebSockets: admin broadcasts, targeted events, and live Password typing
 
-`vercel.json` disables automatic Git deploys from `main` and `master`. The default production web path is the post-CI deploy hook, not a raw push that hasn't passed `Quality Gate`. If you'd rather use Vercel's built-in Deployment Checks flow, remove or adjust the `git.deploymentEnabled` block and configure `Quality Gate` as the required deployment check in Vercel.
+### Vercel web app
 
-### Vercel Web App
+`vercel.json` installs with `bun install --frozen-lockfile`, builds with `bun run --filter @games/web build`, and serves `apps/web/dist`. It rewrites bot and social-preview user agents to the API embed endpoint and everything else to `/index.html`.
 
-`vercel.json` currently uses Bun:
+It also turns off Git deploys from `main` and `master`, so production goes out through the post-CI deploy hook. Store the Vercel hook as `VERCEL_DEPLOY_HOOK_URL`. If you'd rather use Vercel's Deployment Checks, remove the `git.deploymentEnabled` block and make `Quality Gate` the required check.
 
-- install: `bun install --frozen-lockfile`
-- build: `bun run --filter @games/web build`
-- output: `apps/web/dist`
-
-It also includes:
-
-- An SPA rewrite to `/index.html`.
-- A bot/social-preview rewrite to the API embed endpoint.
-
-Required Vercel variables:
+Vercel variables:
 
 ```bash
 VITE_ZERO_CACHE_URL=https://<zero-domain>
@@ -641,17 +437,11 @@ VITE_API_URL=https://<api-domain>
 VITE_WS_URL=wss://<api-domain>/ws
 ```
 
-If you turn Vercel Git auto-deploys back on, set up Vercel Deployment Checks so production isn't promoted until `Quality Gate` passes. The current repo config disables `main` and `master` Git autodeploys, so the safer default is to store a Vercel deploy hook as `VERCEL_DEPLOY_HOOK_URL` and let GitHub Actions call it after CI passes.
-
 ### Railway API
 
-`railway.toml` builds from `Dockerfile` and starts:
+`railway.toml` builds from the `Dockerfile` and runs `bun apps/api/src/index.ts`.
 
-```bash
-bun apps/api/src/index.ts
-```
-
-Required API variables:
+API variables:
 
 ```bash
 NODE_ENV=production
@@ -662,61 +452,33 @@ ADMIN_SECRET=<strong_admin_secret>
 CORS_ALLOWED_ORIGINS=https://<web-domain>
 ```
 
-If Railway GitHub autodeploys are on, enable Wait for CI in the Railway service settings so Railway holds deploys until GitHub Actions finishes. If you're using a manual/API trigger instead, disable automatic deploys and trigger Railway from the post-CI workflow after `Quality Gate` passes.
+If Railway autodeploys from GitHub, turn on Wait for CI in the service settings. After a deploy, check `https://<api-domain>/health` and `https://<api-domain>/debug/build-info`.
 
-Worth checking after a deploy:
+### Railway Zero cache
 
-```bash
-GET https://<api-domain>/health
-GET https://<api-domain>/debug/build-info
-```
+Deploy the Zero cache as its own service from the Docker Hub image `rocicorp/zero:1.9.0`, which matches the workspace's `@rocicorp/zero`. Leave the start command empty, since the image's entrypoint starts zero-cache. A `bunx` or `npx` start command fails because the image only ships Node.
 
-### Railway Zero Cache
+To upgrade, change the image tag in the service's source settings to the new workspace version and redeploy. It uses the variables from [Zero cache](#zero-cache).
 
-Deploy the Zero cache as its own service using the official Docker image. Keep the image tag on the same `@rocicorp/zero` version the workspace uses (`1.8.0`).
+Don't set `ZERO_PORT` to the literal `"$PORT"`. Railway doesn't shell-expand that field, so Zero tries to listen on a port named `$PORT`.
 
-Service configuration:
+### Database
 
-- **Source**: Docker image `rocicorp/zero:1.8.0` (Docker Hub)
-- **Start command**: leave it empty. The image's entrypoint starts zero-cache on its own. Don't set a `bunx`/`npx` start command; the image only contains Node, so `bunx` doesn't exist inside the container.
+Zero needs a direct Postgres connection with logical replication. Locally, `docker-compose.yml` runs Postgres 16 with `wal_level=logical`. In production, point `ZERO_UPSTREAM_DB` at a direct Postgres URL. Logical replication doesn't work through a transaction pooler.
 
-To upgrade Zero in production, change the image tag in the Railway service's source settings to match the workspace version, then redeploy.
+## Operations
 
-Required Zero variables:
+### Session identity
 
-```bash
-NODE_ENV=production
-ZERO_UPSTREAM_DB=<postgres_url>
-ZERO_QUERY_URL=https://<api-domain>/api/zero/query
-ZERO_MUTATE_URL=https://<api-domain>/api/zero/mutate
-ZERO_ADMIN_PASSWORD=<strong_secret>
-```
-
-Don't set `ZERO_PORT` to the literal string `"$PORT"` on Railway. Railway doesn't shell-expand environment variable values in that field, so Zero would try to listen on a port named `$PORT`.
-
-### Database Requirements
-
-Zero needs a direct Postgres connection with logical replication support. For local development, `docker-compose.yml` starts Postgres 16 with:
-
-```bash
-postgres -c wal_level=logical
-```
-
-For production, point `ZERO_UPSTREAM_DB` at a direct Postgres URL. Don't put a transaction pooler in front of the Zero upstream connection; logical replication doesn't work through one.
-
-## Operational Notes
-
-### Session Identity
-
-Public gameplay uses browser-local identity, not user accounts. The API signs a long-lived `games_session` cookie and issues a signed Zero session proof. Mutations are checked server-side so one browser session can't submit actions on behalf of another player.
+Players get a browser-local identity, not an account. The API signs a long-lived `games_session` cookie and issues a signed Zero session proof. The server checks every mutation, so one browser session can't act as another player.
 
 ### Presence
 
-Presence rides on the realtime WebSocket. The open `/ws` connection itself is the "online" signal: the client reports its current activity (route) when it changes, the API keeps an in-memory presence registry per session, and a server-side flush periodically bumps `last_seen` for sessions that are still connected. There's no HTTP presence polling.
+The open `/ws` connection is the online signal. The client reports its current route when it changes, the API keeps an in-memory registry per session, and a server-side flush bumps `last_seen` every 60 seconds for connected sessions. No HTTP polling.
 
-### Admin Broadcasts
+### Admin broadcasts
 
-Admin broadcasts use the API's Bun WebSocket service:
+The API's WebSocket service has three topic types:
 
 - `broadcast` for global messages.
 - `user:{sessionId}` for targeted kicks, name changes, and direct toasts.
@@ -724,25 +486,11 @@ Admin broadcasts use the API's Bun WebSocket service:
 
 ### Cleanup
 
-The API can clean up stale games and sessions two ways:
+The API runs cleanup on a schedule, and you can trigger it with `GET` or `POST /api/cleanup` and `CLEANUP_SECRET` as a bearer token. It ends abandoned games, detaches stale sessions, removes old ended rows, and records each run in `cleanup_runs`. The admin `/cleanups` page shows that history.
 
-- Scheduled cleanup inside the API process.
-- A manual `GET` or `POST /api/cleanup` with bearer auth from `CLEANUP_SECRET`.
+### Footer database status
 
-Cleanup marks abandoned games as ended, detaches stale sessions, and removes old ended rows.
-
-### Footer Database Status
-
-`/debug/build-info` reads the `status` table and reports whether the configured sentinel row exists and matches.
-
-Default values:
-
-```bash
-DB_STATUS_KEY=footer
-DB_STATUS_EXPECTED_VALUE=ok
-```
-
-Seed or repair the row with:
+`/debug/build-info` reads the `status` table and reports whether the sentinel row exists and matches. The defaults are `DB_STATUS_KEY=footer` and `DB_STATUS_EXPECTED_VALUE=ok`. Seed or repair the row with:
 
 ```sql
 INSERT INTO status (key, value, updated_at)
@@ -753,24 +501,21 @@ DO UPDATE SET
   updated_at = EXCLUDED.updated_at;
 ```
 
-### Smoke Test Checklist
-
-After a deploy:
+### Smoke test after a deploy
 
 1. Open the web app.
 2. Create one room for each multiplayer game.
 3. Join a room from a second tab or device.
-4. Confirm chat, presence, phase transitions, and host controls all work.
-5. Play one Shikaku run and verify the leaderboard submission.
-6. Play one Pips run and verify the leaderboard submission.
-7. Open the admin dashboard and check clients, games, broadcasts, bans, Shikaku scores, and Pips scores.
-8. Check `/health`, `/debug/build-info`, and the Zero cache public URL.
+4. Check chat, presence, phase changes, and host controls.
+5. Play one Shikaku run and one Pips run, and confirm both land on the leaderboard.
+6. Open the admin dashboard and check clients, games, broadcasts, bans, scores, and cleanups.
+7. Hit `/health`, `/debug/build-info`, and the Zero cache public URL.
 
-## Known Constraints
+## Known constraints
 
-- Public gameplay is browser-local identity only; there's no player account system.
-- The lint scripts are placeholders.
-- Multiplayer game state is mostly JSON-column snapshots, by design.
-- The API runs TypeScript directly through Bun in production instead of a compiled `dist` entry.
-- The Zero cache and workspace `@rocicorp/zero` versions have to stay aligned.
-- Shikaku and Pips are not Zero-synced multiplayer games; they only use REST for the leaderboard flows.
+- No player accounts. Identity is browser-local.
+- No linter yet. The lint scripts are placeholders.
+- Multiplayer state is mostly JSON-column snapshots, by design.
+- The API runs TypeScript through Bun in production, with no compiled `dist` entry.
+- The Zero cache image and the workspace `@rocicorp/zero` version have to match.
+- Shikaku and Pips aren't Zero-synced. They use REST for the leaderboard only.
