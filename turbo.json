@@ -26,10 +26,6 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
-    "test:local": {
-      "cache": false,
-      "outputs": []
-    },
     "test:watch": {
       "cache": false,
       "persistent": true

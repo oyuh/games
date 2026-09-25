@@ -235,8 +235,3 @@ export async function getClientInfo(headers: HeaderReader): Promise<ClientInfo> 
     region: await resolveRegionForIp(baseInfo.ip, baseInfo.region),
   };
 }
-
-export function resetClientInfoCachesForTests() {
-  regionCache.clear();
-  inflightLookups.clear();
-}
