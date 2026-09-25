@@ -1,18 +1,18 @@
-# Code of Conduct
+# Code of conduct
 
-## Our Standard
+## Our standard
 
-This project should be a useful, welcoming place to build party games, puzzle systems, infrastructure, and docs together. Be kind, assume good intent, and keep feedback specific to the work.
+This project is a place to build party games, puzzles, infrastructure, and docs together. Be kind, assume good intent, and keep feedback about the work.
 
-Behavior that's welcome here:
+Welcome here:
 
 - Clear, respectful language.
-- Constructive feedback with enough context that someone can actually act on it.
+- Feedback with enough context that someone can act on it.
 - Respect for different experience levels and communication styles.
-- Accepting maintainer decisions once a thread has been resolved.
-- Keeping issues and pull requests focused on the project.
+- Accepting maintainer decisions once a thread is resolved.
+- Keeping issues and pull requests about the project.
 
-Behavior that isn't:
+Not welcome:
 
 - Harassment, threats, personal attacks, or discriminatory language.
 - Sexualized comments or imagery.
@@ -22,10 +22,10 @@ Behavior that isn't:
 
 ## Enforcement
 
-Maintainers may edit, hide, lock, or remove comments, issues, pull requests, or other contributions that violate this code. Maintainers may also temporarily or permanently limit participation for behavior that harms contributors or the project.
+Maintainers may edit, hide, lock, or remove comments, issues, pull requests, or other contributions that break this code. Maintainers may also limit participation, for a while or for good, when someone's behavior harms contributors or the project.
 
-If you see a problem, report it privately to a maintainer when possible. If the issue is a security vulnerability, follow [SECURITY.md](SECURITY.md) instead of posting details publicly.
+If you see a problem, report it privately to a maintainer when you can. For a security vulnerability, follow [SECURITY.md](SECURITY.md) instead of posting details in public.
 
 ## Scope
 
-This code applies in this repository, in linked community spaces, and in any project-related interaction where someone is representing the project.
+This code applies in this repository, in linked community spaces, and anywhere someone represents the project.

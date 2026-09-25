@@ -1,16 +1,16 @@
 # Contributing
 
-Thanks for wanting to pitch in. This repo is intentionally open to useful fixes, new games, docs, and self-hosting improvements, as long as contributions respect the license and the people working here.
+Thanks for wanting to pitch in. Fixes, new games, docs, and self-hosting improvements are all welcome, as long as they respect the license and the people working here.
 
-## Ground Rules
+## Ground rules
 
 - Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
-- For security issues, follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
-- Keep pull requests focused. Small, reviewable changes get merged; sprawling ones sit.
-- Don't submit code you don't have the right to license to this project.
+- Report security issues through [SECURITY.md](SECURITY.md), not a public issue.
+- Keep pull requests focused. Small, reviewable changes get merged. Sprawling ones sit.
+- Only submit code you have the right to license to this project.
 - By contributing, you agree your contribution can be used under this repo's license.
 
-## Local Setup
+## Local setup
 
 Install dependencies from the repo root:
 
@@ -18,14 +18,13 @@ Install dependencies from the repo root:
 bun install
 ```
 
-Start the local stack (same command on macOS, Linux and Windows):
+Start the local stack (same command on macOS, Linux, and Windows):
 
 ```bash
 bun run local:up
 ```
 
-It starts your container engine if it is not running, brings up Postgres and
-zero-cache, pushes the schema, and runs the three dev servers. While it is up:
+It starts your container engine if it isn't running, brings up Postgres and zero-cache, pushes the schema, and runs the three dev servers. While it's up:
 
 ```bash
 bun run local status            # what is running
@@ -34,18 +33,18 @@ bun run local logs api -f       # follow one log
 bun run local:down              # stop everything
 ```
 
-`bun run local doctor` checks your machine if any of that fails.
+If any of that fails, `bun run local doctor` checks your machine.
 
-Useful local URLs:
+Local URLs:
 
 - Web app: `http://localhost:5173`
 - API: `http://localhost:3001`
 - Admin app: `http://localhost:3002`
 - Zero cache: `http://localhost:4848`
 
-## Before Opening A Pull Request
+## Before opening a pull request
 
-Run the same checks CI runs, so you're not surprised by a red X:
+Run the checks CI runs, so a red X doesn't surprise you:
 
 ```bash
 bun run lint
@@ -54,19 +53,21 @@ bun run test:ci
 bun run build
 ```
 
-If you touch game state, database schema, Zero mutators, admin tools, or deployment config, say in the PR how you tested it.
+CI also runs the Playwright suite. If you touched gameplay, run it locally with `bun run test:e2e`.
 
-## Pull Request Checklist
+If you touch game state, the database schema, Zero mutators, admin tools, or deployment config, say in the PR how you tested it.
+
+## Pull request checklist
 
 - Explain what changed and why.
-- Link related issues when there are any.
-- Include screenshots or recordings for UI changes.
-- Update the docs when behavior, setup, security posture, or deployment steps change.
-- Call out migrations, new environment variables, or anything operationally risky.
+- Link related issues.
+- Add screenshots or recordings for UI changes.
+- Update the docs when behavior, setup, security, or deployment steps change.
+- Call out schema changes, new environment variables, or anything risky to deploy.
 
-## New Game Checklist
+## New game checklist
 
-New multiplayer games usually mean touching all of these:
+A new multiplayer game usually touches all of these:
 
 - `packages/shared/src/drizzle/schema.ts`
 - `packages/shared/src/zero/schema.ts`
@@ -76,6 +77,7 @@ New multiplayer games usually mean touching all of these:
 - `apps/web/src/App.tsx`
 - `apps/web/src/pages/`
 - `apps/web/src/mobile/pages/`
+- `e2e/`
 - `docs/`
 
-Solo games should come with deterministic engine tests, plus server-side score validation if scores or leaderboards are involved.
+Solo games need deterministic engine tests, plus server-side score validation if they have a leaderboard.
