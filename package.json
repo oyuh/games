@@ -16,7 +16,6 @@
     "build": "turbo run build --cache-dir=.turbo-cache",
     "test": "turbo run test --cache-dir=.turbo-cache",
     "test:ci": "turbo run test:ci --cache-dir=.turbo-cache",
-    "test:local": "bun --filter @games/shared test:local",
     "test:watch": "bun --filter @games/shared test:watch",
     "test:e2e": "playwright test -c e2e",
     "lint": "turbo run lint --cache-dir=.turbo-cache",

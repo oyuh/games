@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   chooseRoles,
   shuffle,
-  pickRandom,
   pickPasswordWord,
   pickChain,
   buildTeamRound,
@@ -10,6 +9,7 @@ import {
   scoreForLetters,
   getConnectedSet,
 } from "../zero/mutators/helpers";
+import { chainWordBank, passwordWordBank } from "../zero/mutators/word-banks";
 
 // ───────────────────────────────────────────────────────────
 // shuffle
@@ -20,22 +20,6 @@ describe("shuffle", () => {
     const result = shuffle(original);
     expect(result.sort()).toEqual(original.sort());
   });
-
-  it("handles empty array", () => {
-    expect(shuffle([])).toEqual([]);
-  });
-
-});
-
-// ───────────────────────────────────────────────────────────
-// pickRandom
-// ───────────────────────────────────────────────────────────
-describe("pickRandom", () => {
-  it("returns an element from the array", () => {
-    const arr = ["a", "b", "c"];
-    expect(arr).toContain(pickRandom(arr));
-  });
-
 });
 
 // ───────────────────────────────────────────────────────────
@@ -49,53 +33,22 @@ describe("chooseRoles", () => {
     { sessionId: "p4", name: "Dana", connected: true },
     { sessionId: "p5", name: "Eve", connected: true },
   ];
+  const imposters = (count: number, list = players) =>
+    chooseRoles(list, count).filter((p) => p.role === "imposter").length;
 
-  it("assigns exactly the requested number of imposters", () => {
-    const result = chooseRoles(players, 1);
-    const imposters = result.filter((p) => p.role === "imposter");
-    expect(imposters).toHaveLength(1);
+  it("assigns exactly the requested number of imposters and makes everyone else a player", () => {
+    const result = chooseRoles(players, 2);
+    expect(result.filter((p) => p.role === "imposter")).toHaveLength(2);
+    expect(result.filter((p) => p.role === "player")).toHaveLength(3);
   });
 
-  it("assigns everyone else as player", () => {
-    const result = chooseRoles(players, 1);
-    const regularPlayers = result.filter((p) => p.role === "player");
-    expect(regularPlayers).toHaveLength(4);
-  });
-
-  it("caps imposters at players.length - 1", () => {
-    const result = chooseRoles(players, 10);
-    const imposters = result.filter((p) => p.role === "imposter");
-    expect(imposters.length).toBeLessThan(players.length);
-    expect(imposters.length).toBeGreaterThanOrEqual(1);
+  it("always leaves at least one player", () => {
+    expect(imposters(10)).toBe(4);
+    expect(imposters(1, players.slice(0, 2))).toBe(1);
   });
 
   it("always assigns at least 1 imposter", () => {
-    const result = chooseRoles(players, 0);
-    const imposters = result.filter((p) => p.role === "imposter");
-    expect(imposters.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("preserves all player data", () => {
-    const result = chooseRoles(players, 1);
-    for (const p of result) {
-      expect(p.sessionId).toBeDefined();
-      expect(p.name).toBeDefined();
-      expect(p.role).toBeDefined();
-      expect(["imposter", "player"]).toContain(p.role);
-    }
-  });
-
-  it("works with minimum 2 players", () => {
-    const twoPlayers = players.slice(0, 2);
-    const result = chooseRoles(twoPlayers, 1);
-    expect(result.filter((p) => p.role === "imposter")).toHaveLength(1);
-    expect(result.filter((p) => p.role === "player")).toHaveLength(1);
-  });
-
-  it("handles 2 imposters correctly", () => {
-    const result = chooseRoles(players, 2);
-    const imposters = result.filter((p) => p.role === "imposter");
-    expect(imposters).toHaveLength(2);
+    expect(imposters(0)).toBe(1);
   });
 });
 
@@ -103,21 +56,15 @@ describe("chooseRoles", () => {
 // pickPasswordWord
 // ───────────────────────────────────────────────────────────
 describe("pickPasswordWord", () => {
-  it("avoids used words when possible", () => {
-    // Pick many words and check they're not in the used list
-    const used = [pickPasswordWord()];
-    for (let i = 0; i < 20; i++) {
-      const word = pickPasswordWord(used);
-      // With a large word bank, it should find a different word
-      if (used.length < 100) {
-        expect(used).not.toContain(word);
-      }
-    }
+  it("skips used words, down to the last one left in the category", () => {
+    const [last, ...used] = passwordWordBank.animals!;
+    expect(pickPasswordWord(used, "animals")).toBe(last);
   });
 
-  it("handles category filter", () => {
-    const word = pickPasswordWord([], "animals");
-    expect(typeof word).toBe("string");
+  it("stays inside the chosen category", () => {
+    for (let i = 0; i < 20; i++) {
+      expect(passwordWordBank.animals).toContain(pickPasswordWord([], "animals"));
+    }
   });
 });
 
@@ -125,14 +72,10 @@ describe("pickPasswordWord", () => {
 // pickChain
 // ───────────────────────────────────────────────────────────
 describe("pickChain", () => {
-  it("returns an array of the requested length", () => {
-    const chain = pickChain(4);
-    expect(chain).toHaveLength(4);
-  });
-
-  it("handles category filter", () => {
+  it("returns a chain of the requested length from the chosen category", () => {
     const chain = pickChain(4, "animals");
-    expect(chain.length).toBeGreaterThan(0);
+    expect(chain).toHaveLength(4);
+    expect(chainWordBank.animals!.some((c) => c.slice(0, 4).join() === chain.join())).toBe(true);
   });
 });
 

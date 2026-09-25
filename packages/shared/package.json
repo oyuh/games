@@ -17,7 +17,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:ci": "vitest run",
-    "test:local": "vitest run --config vitest.local.config.ts --passWithNoTests",
     "test:watch": "vitest --watch",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"

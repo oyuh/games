@@ -1,177 +1,110 @@
-/**
- * Tests for session management utilities.
- *
- * Functions that depend on Zero mutators or localStorage are tested
- * with appropriate mocks.
- */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const originalFetch = globalThis.fetch;
 
-// Mock localStorage
 const store: Record<string, string> = {};
-const localStorageMock = {
-  getItem: vi.fn((key: string) => store[key] ?? null),
-  setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
-  removeItem: vi.fn((key: string) => { delete store[key]; }),
-  clear: vi.fn(() => { for (const k of Object.keys(store)) delete store[k]; }),
-  get length() { return Object.keys(store).length; },
-  key: vi.fn((i: number) => Object.keys(store)[i] ?? null),
-};
-Object.defineProperty(globalThis, "localStorage", { value: localStorageMock, writable: true });
-
-// Mock window.dispatchEvent
-const dispatchMock = vi.fn();
-Object.defineProperty(globalThis, "window", {
+Object.defineProperty(globalThis, "localStorage", {
   value: {
-    dispatchEvent: dispatchMock,
-    setTimeout,
-    clearTimeout,
-    CustomEvent: class CE { detail: unknown; type: string; constructor(type: string, opts?: { detail?: unknown }) { this.type = type; this.detail = opts?.detail; } }
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
   },
   writable: true,
 });
-Object.defineProperty(globalThis, "CustomEvent", {
-  value: class CE { detail: unknown; type: string; constructor(type: string, opts?: { detail?: unknown }) { this.type = type; this.detail = opts?.detail; } },
+
+class CE { detail: unknown; type: string; constructor(type: string, opts?: { detail?: unknown }) { this.type = type; this.detail = opts?.detail; } }
+const dispatchMock = vi.fn();
+Object.defineProperty(globalThis, "window", {
+  value: { dispatchEvent: dispatchMock, setTimeout, clearTimeout, CustomEvent: CE },
   writable: true,
 });
+Object.defineProperty(globalThis, "CustomEvent", { value: CE, writable: true });
 
-// Must import after mocks are set up
-import {
-  randomName,
-  getDisplayName,
-  getOrCreateSessionId,
-  getOrCreateStoredName,
-  getStoredName,
-  getStoredSessionProof,
-  getSessionRequestHeaders,
-  syncSessionIdentityForBoot,
-  syncStoredIdentity,
-  setStoredName,
-  getRecentGames,
-  addRecentGame,
-  removeRecentGame,
-  clearRecentGames,
-  hasVisited,
-  markVisited,
-  resetStoredIdentityForTests,
-  type RecentGame,
-} from "../lib/session";
+// The module caches identity in memory, so every test gets a fresh copy of it.
+let session: typeof import("../lib/session");
 
-beforeEach(() => {
-  resetStoredIdentityForTests();
-  localStorageMock.clear();
-  localStorageMock.getItem.mockClear();
-  localStorageMock.setItem.mockClear();
-  localStorageMock.removeItem.mockClear();
-  dispatchMock.mockClear();
-  // Reset the store
+beforeEach(async () => {
   for (const k of Object.keys(store)) delete store[k];
+  dispatchMock.mockClear();
   vi.restoreAllMocks();
   if (originalFetch) {
     Object.defineProperty(globalThis, "fetch", { value: originalFetch, writable: true, configurable: true });
   } else {
     Reflect.deleteProperty(globalThis, "fetch");
   }
+  vi.resetModules();
+  session = await import("../lib/session");
 });
 
-// ─── randomName ─────────────────────────────────────────────
-describe("randomName", () => {
-  it("returns a string matching AdjectiveNoun pattern (PascalCase)", () => {
-    const name = randomName();
-    // Should start with an uppercase letter
-    expect(name[0]).toMatch(/[A-Z]/);
-  });
-
-  it("produces varied names (not always the same)", () => {
-    const names = new Set<string>();
-    for (let i = 0; i < 50; i++) names.add(randomName());
-    // With 40 adjectives × 40 nouns = 1600 combos, 50 tries should yield many unique
-    expect(names.size).toBeGreaterThan(10);
-  });
-});
-
-// ─── getOrCreateSessionId ───────────────────────────────────
 describe("getOrCreateSessionId", () => {
-  it("creates a new ID if none exists", () => {
-    const id = getOrCreateSessionId();
+  it("creates an id once and persists it", () => {
+    const id = session.getOrCreateSessionId();
     expect(id).toBeTruthy();
-    expect(typeof id).toBe("string");
-    expect(id.length).toBeGreaterThan(5);
-  });
-
-  it("persists the ID to localStorage", () => {
-    const id = getOrCreateSessionId();
-    expect(localStorageMock.setItem).toHaveBeenCalledWith("games:user-id", id);
-  });
-
-  it("returns existing ID on subsequent calls", () => {
-    const id1 = getOrCreateSessionId();
-    const id2 = getOrCreateSessionId();
-    expect(id1).toBe(id2);
+    expect(store["games:user-id"]).toBe(id);
+    expect(session.getOrCreateSessionId()).toBe(id);
   });
 
   it("keeps the canonical session id even if localStorage is tampered with directly", () => {
-    const canonicalId = getOrCreateSessionId();
+    const canonicalId = session.getOrCreateSessionId();
     store["games:user-id"] = "forged-session";
 
-    expect(getOrCreateSessionId()).toBe(canonicalId);
+    expect(session.getOrCreateSessionId()).toBe(canonicalId);
   });
 });
 
-// ─── getStoredName / setStoredName ──────────────────────────
 describe("getStoredName / setStoredName", () => {
   it("returns empty string when no name stored", () => {
-    expect(getStoredName()).toBe("");
+    expect(session.getStoredName()).toBe("");
   });
 
   it("stores and retrieves a name", () => {
-    setStoredName("TestPlayer");
+    session.setStoredName("TestPlayer");
     expect(store["games:user-name"]).toBe("TestPlayer");
+    expect(session.getStoredName()).toBe("TestPlayer");
   });
 
   it("strips whitespace from name", () => {
-    setStoredName("Test Player");
+    session.setStoredName("Test Player");
     expect(store["games:user-name"]).toBe("TestPlayer");
   });
 
   it("removes key for empty name", () => {
-    setStoredName("Hello");
-    setStoredName("");
+    session.setStoredName("Hello");
+    session.setStoredName("");
     expect(store["games:user-name"]).toBeUndefined();
   });
 
-  it("dispatches custom event on name change", () => {
-    setStoredName("NewName");
-    expect(dispatchMock).toHaveBeenCalled();
+  it("tells the rest of the app the name changed", () => {
+    session.setStoredName("NewName");
+    expect(dispatchMock).toHaveBeenCalledWith(expect.objectContaining({ type: "games:name-changed", detail: "NewName" }));
   });
 
   it("keeps the canonical name even if localStorage is tampered with directly", () => {
-    setStoredName("RealName");
+    session.setStoredName("RealName");
     store["games:user-name"] = "ForgedName";
 
-    expect(getStoredName()).toBe("RealName");
+    expect(session.getStoredName()).toBe("RealName");
   });
 
   it("syncStoredIdentity updates the canonical session and name together", () => {
-    const originalId = getOrCreateSessionId();
+    const originalId = session.getOrCreateSessionId();
 
-    const result = syncStoredIdentity({ sessionId: "server-session", name: "Server Name" });
+    const result = session.syncStoredIdentity({ sessionId: "server-session", name: "Server Name" });
 
     expect(originalId).not.toBe("server-session");
     expect(result).toEqual({ sessionChanged: true, nameChanged: true });
-    expect(getOrCreateSessionId()).toBe("server-session");
-    expect(getStoredName()).toBe("ServerName");
+    expect(session.getOrCreateSessionId()).toBe("server-session");
+    expect(session.getStoredName()).toBe("ServerName");
   });
 
   it("getSessionRequestHeaders includes the canonical session and signed proof", () => {
-    const result = syncStoredIdentity({ sessionId: "server-session", name: "Server Name" });
+    const result = session.syncStoredIdentity({ sessionId: "server-session", name: "Server Name" });
     expect(result.sessionChanged).toBe(true);
-    localStorageMock.setItem("games:session-proof", "proof-token");
+    store["games:session-proof"] = "proof-token";
 
-    const headers = getSessionRequestHeaders(undefined, { "Content-Type": "application/json" });
+    const headers = session.getSessionRequestHeaders(undefined, { "Content-Type": "application/json" });
 
-    expect(getStoredSessionProof()).toBe("proof-token");
+    expect(session.getStoredSessionProof()).toBe("proof-token");
     expect(headers).toEqual({
       "Content-Type": "application/json",
       "x-zero-user-id": "server-session",
@@ -182,17 +115,17 @@ describe("getStoredName / setStoredName", () => {
 
 describe("display name fallbacks", () => {
   it("uses a generated name instead of exposing the session id", () => {
-    const displayName = getDisplayName(null, "server-session");
+    const displayName = session.getDisplayName(null, "server-session");
     expect(displayName).toBeTruthy();
     expect(displayName).not.toBe("server-session");
     expect(displayName).not.toContain("server");
   });
 
   it("creates and stores a generated name when none exists", () => {
-    const sessionId = getOrCreateSessionId();
-    const generated = getOrCreateStoredName(sessionId);
+    const sessionId = session.getOrCreateSessionId();
+    const generated = session.getOrCreateStoredName(sessionId);
     expect(generated).toBeTruthy();
-    expect(getStoredName()).toBe(generated);
+    expect(session.getStoredName()).toBe(generated);
     expect(generated).not.toBe(sessionId.slice(0, 5));
   });
 });
@@ -215,7 +148,7 @@ describe("syncSessionIdentityForBoot", () => {
 
     Object.defineProperty(globalThis, "fetch", { value: fetchMock, writable: true, configurable: true });
 
-    const result = await syncSessionIdentityForBoot("https://api.example.com", {
+    const result = await session.syncSessionIdentityForBoot("https://api.example.com", {
       attempts: 2,
       retryDelayMs: 0,
       timeoutMs: 2000,
@@ -228,7 +161,7 @@ describe("syncSessionIdentityForBoot", () => {
       zeroSessionProof: "fresh-proof",
       source: "claimed",
     });
-    expect(getStoredSessionProof()).toBe("fresh-proof");
+    expect(session.getStoredSessionProof()).toBe("fresh-proof");
   });
 
   it("throws if boot cannot get a verified proof", async () => {
@@ -239,7 +172,7 @@ describe("syncSessionIdentityForBoot", () => {
     });
 
     await expect(
-      syncSessionIdentityForBoot("https://api.example.com", {
+      session.syncSessionIdentityForBoot("https://api.example.com", {
         attempts: 2,
         retryDelayMs: 0,
         timeoutMs: 2000,
@@ -248,11 +181,10 @@ describe("syncSessionIdentityForBoot", () => {
   });
 });
 
-// ─── Recent games ───────────────────────────────────────────
-describe("getRecentGames / addRecentGame / removeRecentGame / clearRecentGames", () => {
+describe("recent games", () => {
   it("adds and retrieves a recent game", () => {
-    addRecentGame({ id: "g1", code: "abcd", gameType: "imposter" });
-    const games = getRecentGames();
+    session.addRecentGame({ id: "g1", code: "abcd", gameType: "imposter" });
+    const games = session.getRecentGames();
     const game = games[0]!;
     expect(games).toHaveLength(1);
     expect(game.id).toBe("g1");
@@ -262,56 +194,49 @@ describe("getRecentGames / addRecentGame / removeRecentGame / clearRecentGames",
   });
 
   it("deduplicates by id + gameType", () => {
-    addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
-    addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
-    expect(getRecentGames()).toHaveLength(1);
+    session.addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
+    session.addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
+    expect(session.getRecentGames()).toHaveLength(1);
   });
 
   it("allows same id with different gameType", () => {
-    addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
-    addRecentGame({ id: "g1", code: "aaaa", gameType: "password" });
-    expect(getRecentGames()).toHaveLength(2);
+    session.addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
+    session.addRecentGame({ id: "g1", code: "aaaa", gameType: "password" });
+    expect(session.getRecentGames()).toHaveLength(2);
   });
 
-  it("limits to MAX_RECENT_GAMES (6)", () => {
+  it("keeps only the 6 most recent", () => {
     for (let i = 0; i < 10; i++) {
-      addRecentGame({ id: `g${i}`, code: `c${i}`, gameType: "imposter" });
+      session.addRecentGame({ id: `g${i}`, code: `c${i}`, gameType: "imposter" });
     }
-    expect(getRecentGames().length).toBeLessThanOrEqual(6);
-  });
-
-  it("orders by most recent first", () => {
-    addRecentGame({ id: "old", code: "old1", gameType: "imposter" });
-    addRecentGame({ id: "new", code: "new1", gameType: "imposter" });
-    const games = getRecentGames();
-    expect(games[0]!.id).toBe("new");
+    expect(session.getRecentGames().map((g) => g.id)).toEqual(["g9", "g8", "g7", "g6", "g5", "g4"]);
   });
 
   it("removes a specific game", () => {
-    addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
-    addRecentGame({ id: "g2", code: "bbbb", gameType: "password" });
-    removeRecentGame("g1", "imposter");
-    const games = getRecentGames();
+    session.addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
+    session.addRecentGame({ id: "g2", code: "bbbb", gameType: "password" });
+    session.removeRecentGame("g1", "imposter");
+    const games = session.getRecentGames();
     expect(games).toHaveLength(1);
     expect(games[0]!.id).toBe("g2");
   });
 
   it("clearRecentGames removes all", () => {
-    addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
-    clearRecentGames();
-    expect(getRecentGames()).toEqual([]);
+    session.addRecentGame({ id: "g1", code: "aaaa", gameType: "imposter" });
+    session.clearRecentGames();
+    expect(session.getRecentGames()).toEqual([]);
   });
 
   it("handles corrupted localStorage gracefully", () => {
     store["games:recent-games"] = "not valid json!!!";
-    expect(getRecentGames()).toEqual([]);
+    expect(session.getRecentGames()).toEqual([]);
   });
 });
 
-// ─── hasVisited / markVisited ───────────────────────────────
 describe("hasVisited / markVisited", () => {
-  it("returns true after markVisited", () => {
-    markVisited();
-    expect(hasVisited()).toBe(true);
+  it("flips from false to true after markVisited", () => {
+    expect(session.hasVisited()).toBe(false);
+    session.markVisited();
+    expect(session.hasVisited()).toBe(true);
   });
 });

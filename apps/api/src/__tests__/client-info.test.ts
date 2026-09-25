@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  extractClientInfo,
-  getClientInfo,
-  resetClientInfoCachesForTests,
-} from "../client-info";
+// The geo cache is module state, so every test gets a fresh copy of the module.
+let extractClientInfo: typeof import("../client-info").extractClientInfo;
+let getClientInfo: typeof import("../client-info").getClientInfo;
 
 function makeHeaders(values: Record<string, string | undefined>) {
   const normalized = new Map(
@@ -19,12 +17,12 @@ function makeHeaders(values: Record<string, string | undefined>) {
 }
 
 describe("client-info", () => {
-  beforeEach(() => {
-    resetClientInfoCachesForTests();
+  beforeEach(async () => {
+    vi.resetModules();
+    ({ extractClientInfo, getClientInfo } = await import("../client-info"));
   });
 
   afterEach(() => {
-    resetClientInfoCachesForTests();
     vi.restoreAllMocks();
   });
 

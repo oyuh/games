@@ -60,6 +60,8 @@ describe.skipIf(!url)("cleanup against PostgreSQL", () => {
     }
     await db.execute(sql`INSERT INTO imposter_games (id, code, host_id, phase, created_at, updated_at) VALUES ('old', 'old', 'host', 'ended', ${now - 7200000}, ${now - 7200000}), ('fresh', 'fresh', 'host', 'lobby', ${now}, ${now})`);
     await db.execute(sql`INSERT INTO sessions (id, game_id, game_type, created_at, last_seen) VALUES ('stale', 'imposter_games', 'imposter', ${now - 7200000}, ${now - 7200000}), ('online', 'missing', 'imposter', ${now}, ${now})`);
+    // 'stale' was archived before: it keeps the earliest first_seen, takes the newer last_seen, and counts the visit.
+    await db.execute(sql`INSERT INTO session_archive (id, name, first_seen, last_seen, seen_count) VALUES ('stale', 'old', ${now - 9000000}, ${now - 8000000}, 3)`);
     await db.execute(sql`INSERT INTO chat_messages (id, game_id, game_type, sender_id, sender_name, text, created_at) VALUES ('orphan', 'missing', 'imposter', 'online', 'Player', 'hello', ${now})`);
     await db.execute(sql`INSERT INTO game_encryption_keys (id, game_id, game_type, encryption_key, created_at) VALUES ('orphan', 'missing', 'imposter', 'key', ${now})`);
     await db.execute(sql`INSERT INTO pips_scores (id, session_id, name, seed, total_ms, easy_ms, medium_ms, hard_ms, created_at) SELECT 'pips-' || n, 'player', 'Player', n, 30000 + n * 3, 10000 + n, 10000 + n, 10000 + n, ${now} FROM generate_series(1, 22) n`);
@@ -76,7 +78,7 @@ describe.skipIf(!url)("cleanup against PostgreSQL", () => {
     expect(result?.shikaku.suspiciousRemoved).toBe(1);
     expect(result?.detachedSessions).toBe(2);
     expect((await db.execute(sql`SELECT last_seen, game_id FROM sessions WHERE id = 'online'`)).rows[0]).toEqual({ last_seen: String(now), game_id: null });
-    expect((await db.execute(sql`SELECT id FROM session_archive WHERE id = 'stale'`)).rows).toHaveLength(1);
+    expect((await db.execute(sql`SELECT first_seen, last_seen, seen_count FROM session_archive WHERE id = 'stale'`)).rows).toEqual([{ first_seen: String(now - 9000000), last_seen: String(now - 7200000), seen_count: 4 }]);
     expect((await db.execute(sql`SELECT phase FROM imposter_games WHERE id = 'fresh'`)).rows[0]?.phase).toBe("lobby");
     expect((await db.execute(sql`SELECT id, report FROM cleanup_runs ORDER BY started_at`)).rows).toEqual([
       { id: "legacy", report: { "ended.imposter": 1, "deleted.imposter": 2, "totals.imposterGames": 3 } },

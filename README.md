@@ -437,7 +437,6 @@ Run these from the repo root.
 | `bun run typecheck` | Typecheck all workspaces |
 | `bun run test` | Run Vitest suites |
 | `bun run test:ci` | Run CI-style Vitest suites |
-| `bun run test:local` | Run shared local integration tests |
 | `bun run lint` | Placeholder lint scripts |
 | `bun run db:push` | Push the Drizzle schema to the configured database |
 | `bun run db:studio` | Open Drizzle Studio |
