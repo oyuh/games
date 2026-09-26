@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useConnectionDebug } from "../lib/connection-debug";
+import { FiArrowRight } from "react-icons/fi";
+import { Link } from "react-router-dom";
+import { formatUptime, overallTone, relativeTime, useConnectionDebug, type ServiceTone } from "../lib/connection-debug";
 import "../styles/footer.css";
 import { getCustomStatus, subscribeCustomStatus } from "../hooks/useAdminBroadcast";
 import { getOrCreateSessionId, getOrCreateStoredName } from "../lib/session";
@@ -8,17 +10,15 @@ import { showToast } from "../lib/toast";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
 
-type StatusTone = "loading" | "ok" | "partial" | "err";
-
 /** The one word on the footer line, and the sentence it opens into. */
-const TONE_LABELS: Record<StatusTone, { short: string; long: string }> = {
+const TONE_LABELS: Record<ServiceTone, { short: string; long: string }> = {
   loading: { short: "Checking…", long: "Checking Services" },
   ok: { short: "Operational", long: "All Systems Operational" },
   partial: { short: "Partial", long: "Partially Operational" },
   err: { short: "Issues", long: "Issues Detected" }
 };
 
-function StatusDot({ tone }: { tone: StatusTone }) {
+function StatusDot({ tone }: { tone: ServiceTone }) {
   return <span className={`status-dot status-dot--${tone}`} />;
 }
 
@@ -70,24 +70,12 @@ export function Footer() {
     return () => document.removeEventListener("mousedown", handler);
   }, [expanded]);
 
-  const dbState = debug.dbState;
   const apiOk = debug.apiMetaState === "ok";
-  const dbOk = dbState === "ok";
+  const dbOk = debug.dbState === "ok";
   const syncOk = debug.zeroState === "connected";
   const backendOk = apiOk && dbOk;
-  const isLoading = dbState === "loading" || dbState === "idle";
-
-  // Zero runs local-first: every mutation lands in the local store first and is
-  // pushed when the socket comes back, so a sleeping sync server is not an
-  // outage — the games still play, they just aren't shared yet. That deserves
-  // its own word rather than being rounded up to green or down to red.
-  const tone: StatusTone = isLoading
-    ? "loading"
-    : !backendOk
-      ? "err"
-      : syncOk
-        ? "ok"
-        : "partial";
+  const tone = overallTone(debug);
+  const isLoading = tone === "loading";
 
   const uptimeText = debug.apiUptimeMs != null
     ? formatUptime(debug.apiUptimeMs + tick * 30_000)
@@ -252,6 +240,11 @@ export function Footer() {
                   )}
                 </a>
               )}
+
+              <Link className="fp-more" to="/status" onClick={() => setExpanded(false)}>
+                Full status page
+                <FiArrowRight size={12} aria-hidden="true" />
+              </Link>
             </div>
           )}
         </div>
@@ -276,29 +269,4 @@ export function Footer() {
       </div>
     </footer>
   );
-}
-
-function formatUptime(ms: number) {
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const remainMinutes = minutes % 60;
-  if (hours < 24) return `${hours}h ${remainMinutes}m`;
-  const days = Math.floor(hours / 24);
-  const remainHours = hours % 24;
-  return `${days}d ${remainHours}h`;
-}
-
-function relativeTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }

@@ -490,7 +490,7 @@ The API runs cleanup on a schedule, and you can trigger it with `GET` or `POST /
 
 ### Footer database status
 
-`/debug/build-info` reads the `status` table and reports whether the sentinel row exists and matches. The defaults are `DB_STATUS_KEY=footer` and `DB_STATUS_EXPECTED_VALUE=ok`. Seed or repair the row with:
+`/debug/build-info` reads the `status` table. If the query answers, the database is up. The sentinel row is optional: when it exists and its value isn't `DB_STATUS_EXPECTED_VALUE`, the footer shows the database as degraded, which you can use as a manual warning. The defaults are `DB_STATUS_KEY=footer` and `DB_STATUS_EXPECTED_VALUE=ok`. Reset the row with:
 
 ```sql
 INSERT INTO status (key, value, updated_at)
