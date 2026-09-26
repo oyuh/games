@@ -459,7 +459,8 @@ function MobileLayoutInner() {
       <nav className="m-bottomnav" aria-label="Mobile navigation">
         <Link
           to="/"
-          className={`m-nav-item${isHome ? " m-nav-item--active" : ""}`}
+          className={`m-nav-item${isHome && sheet === null ? " m-nav-item--active" : ""}`}
+          aria-current={isHome ? "page" : undefined}
           onClick={(event) => {
             if (isHome) event.preventDefault();
           }}
