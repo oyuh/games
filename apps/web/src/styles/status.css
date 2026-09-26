@@ -1,0 +1,356 @@
+/* ── Status page ────────────────────────────────────────────────
+   Built on the solo menu (.solo-menu, .solo-drawer, .solo-menu-links), so it reads
+   like Pips and Shikaku: bordered blocks on the page background, no shadows,
+   no tinted panels. Color only ever marks a state. */
+
+.status-page {
+  width: min(64rem, 100%);
+  padding: 2.5rem 0 1.5rem;
+}
+
+/* One tone token per state. Text mixes it toward the foreground so the same
+   green stays readable on both the dark and the light theme. */
+.status-tone--ok { --tone: #4ade80; }
+.status-tone--partial { --tone: #facc15; }
+.status-tone--loading { --tone: #facc15; }
+.status-tone--err { --tone: #f87171; }
+.status-tone--idle { --tone: var(--muted-foreground); }
+
+.status-dot {
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--tone);
+}
+
+.status-tone--loading .status-dot {
+  animation: status-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  50% { opacity: 0.35; }
+}
+
+.status-verdict {
+  max-width: 32rem;
+  margin: 0 auto;
+  color: color-mix(in srgb, var(--tone) 55%, var(--foreground));
+  font-size: 0.95rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* ── The service list, with the probe drawer hanging off it ── */
+.status-block {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hairlines between the cells come from the 1px gap showing the border
+   color through, so the grid can reflow from three columns to one without
+   any per-cell border rules. */
+.status-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius) var(--solo-radius) 0 0;
+  background: var(--border);
+}
+
+.status-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.9rem 1rem 1rem;
+  background: var(--background);
+}
+
+.status-row-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.status-row-icon {
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: 1rem;
+}
+
+.status-row-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.status-row-detail {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.status-row-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: color-mix(in srgb, var(--tone) 60%, var(--foreground));
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-drawer {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1.1rem;
+  padding: var(--solo-pad) var(--solo-pad) var(--solo-pad) 1rem;
+}
+
+.status-drawer-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+  color: var(--muted-foreground);
+  font-size: 0.74rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The page's one primary action, sized to sit inside the drawer. */
+.status-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  border: 0;
+  border-radius: calc(var(--solo-radius) - var(--solo-pad));
+  background: var(--primary);
+  color: var(--primary-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  transition: filter 0.16s;
+}
+
+.status-check:hover {
+  filter: brightness(1.08);
+}
+
+.status-check:disabled {
+  cursor: progress;
+  filter: none;
+  opacity: 0.8;
+}
+
+.status-check:focus-visible,
+.status-copy:focus-visible,
+.status-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.status-spin {
+  animation: status-spin 0.8s linear infinite;
+}
+
+@keyframes status-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Details and the event log ──────────────────────────────── */
+.status-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.status-section-title {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Facts sit side by side and wrap as the page narrows. The row count can
+   leave a hole at the end, so the hairlines are shadows drawn into the gap
+   (the outer ones get clipped) instead of the border color showing through. */
+.status-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius);
+  background: var(--background);
+}
+
+.status-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.7rem 1rem;
+  box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border);
+}
+
+.status-facts dt {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.status-facts dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--foreground);
+  font-size: 0.8rem;
+}
+
+.status-facts code,
+.status-events {
+  font-family: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
+}
+
+.status-facts code {
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
+}
+
+.status-copy,
+.status-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+.status-copy:hover,
+.status-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.status-link code {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.status-commit-msg {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-empty {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.status-events {
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--solo-radius);
+  background: var(--background);
+  font-size: 0.72rem;
+}
+
+.status-event {
+  display: grid;
+  grid-template-columns: 6.2rem 7.5rem minmax(0, 1fr);
+  gap: 0.6rem;
+  padding: 0.3rem 1rem;
+  color: var(--foreground);
+}
+
+.status-event time,
+.status-event-details {
+  color: var(--muted-foreground);
+}
+
+.status-event-source {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-event-msg {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-event--warn .status-event-source { color: color-mix(in srgb, #facc15 60%, var(--foreground)); }
+.status-event--error .status-event-source { color: color-mix(in srgb, #f87171 60%, var(--foreground)); }
+
+@media (max-width: 960px) {
+  .status-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+@media (max-width: 600px) {
+  .status-page {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  .status-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .status-row {
+    padding: 0.75rem 0.85rem;
+  }
+
+  .status-check {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .status-event {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 0.35rem 0.85rem;
+  }
+
+  .status-event time {
+    grid-row: span 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-spin,
+  .status-tone--loading .status-dot {
+    animation: none;
+  }
+}
