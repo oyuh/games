@@ -11,9 +11,19 @@ export interface SelectOption {
 const GAP = 6;
 
 /**
- * Anchor a floating list to its trigger. The list is portalled to the body so
- * cards, which clip their own overflow, cannot cut it off, which means it has
- * to be positioned by hand and kept in place while the page scrolls.
+ * Where the list mounts: the body, so cards that clip their overflow can't cut
+ * it off. The exception is a vaul drawer (the mobile sheets), which is modal
+ * and turns the body inert, so a list portalled there shows up but never takes
+ * a tap. Inside one, the list mounts in the drawer instead.
+ */
+function popupHost(trigger: HTMLElement | null) {
+  return trigger?.closest<HTMLElement>("[data-vaul-drawer]") ?? null;
+}
+
+/**
+ * Anchor a floating list to its trigger. It is positioned by hand and kept in
+ * place while the page scrolls, against the viewport on the body or against
+ * the drawer when it mounts inside one.
  */
 function useAnchoredPopup(
   open: boolean,
@@ -21,7 +31,7 @@ function useAnchoredPopup(
   popupRef: RefObject<HTMLDivElement | null>,
   optionCount: number,
 ) {
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number; inHost: boolean } | null>(null);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -34,10 +44,12 @@ function useAnchoredPopup(
       const below = window.innerHeight - rect.bottom - GAP;
       // Flip above only when there is genuinely more room up there.
       const flip = below < height && rect.top - GAP > below;
+      const host = popupHost(trigger)?.getBoundingClientRect();
       setPos({
-        left: rect.left,
+        left: rect.left - (host?.left ?? 0),
         width: rect.width,
-        top: flip ? Math.max(GAP, rect.top - GAP - height) : rect.bottom + GAP,
+        top: (flip ? Math.max(GAP, rect.top - GAP - height) : rect.bottom + GAP) - (host?.top ?? 0),
+        inHost: Boolean(host),
       });
     };
     place();
@@ -50,7 +62,7 @@ function useAnchoredPopup(
   }, [open, optionCount, triggerRef, popupRef]);
 
   return pos
-    ? { top: pos.top, left: pos.left, minWidth: pos.width }
+    ? { top: pos.top, left: pos.left, minWidth: pos.width, ...(pos.inHost ? { position: "absolute" as const } : {}) }
     // First pass, before the layout effect has measured: off-screen so the
     // measurement is real but nothing flashes in the wrong place.
     : { top: -9999, left: 0, visibility: "hidden" as const };
@@ -211,7 +223,7 @@ export function Select({
             </div>
           ))}
         </div>,
-        document.body,
+        popupHost(triggerRef.current) ?? document.body,
       )}
     </div>
   );
@@ -352,7 +364,7 @@ export function MultiSelect({
             );
           })}
         </div>,
-        document.body,
+        popupHost(triggerRef.current) ?? document.body,
       )}
     </div>
   );

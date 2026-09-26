@@ -115,8 +115,6 @@
   --surface-top: #232323;
   --surface-bottom: #1a1a1a;
   --surface-bg: linear-gradient(160deg, var(--surface-top) 0%, var(--surface-bottom) 100%);
-  --surface-grid: rgba(255, 255, 255, 0.028);
-  --surface-grid-soft: rgba(255, 255, 255, 0.02);
   --surface-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   --surface-shadow-hover: 0 3px 10px rgba(0, 0, 0, 0.24);
 }
