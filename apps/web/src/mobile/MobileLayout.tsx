@@ -225,7 +225,7 @@ function MobileLayoutInner() {
       return (
         <BottomSheet title="Shikaku" onClose={() => setSheet(null)}>
           <div className="m-sheet-stack">
-            <p className="m-sheet-meta">{summary.join(" · ")}</p>
+            <p className="m-sheet-meta meta-parts">{summary.map((part, i) => <span key={i}>{part}</span>)}</p>
             <ActionList
               actions={[
                 { icon: <FiCornerUpLeft size={18} />, label: "Undo", detail: "Last rectangle", disabled: !shikakuState.canUndo, onClick: () => { emitSolo("shikaku-undo"); setSheet(null); } },
@@ -274,7 +274,7 @@ function MobileLayoutInner() {
     return (
       <BottomSheet title="Pips" onClose={() => setSheet(null)}>
         <div className="m-sheet-stack">
-          <p className="m-sheet-meta">{summary.join(" · ")}</p>
+          <p className="m-sheet-meta meta-parts">{summary.map((part, i) => <span key={i}>{part}</span>)}</p>
           <ActionList
             actions={[
               { icon: <FiCornerUpLeft size={18} />, label: "Undo", detail: "Last domino", disabled: pipsState.phase !== "playing" || !pipsState.canUndo, onClick: () => { emitSolo("pips-undo"); setSheet(null); } },
