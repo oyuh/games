@@ -1,4 +1,4 @@
-import { expect, type Browser, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 
 const SYNC_SOCKET = /:4848\//;
 
@@ -32,22 +32,25 @@ export async function waitForSync(page: Page, syncing: Map<object, string>) {
   await expect.poll(() => [...syncing.values()].includes(sessionId), { timeout: 40_000 }).toBe(true);
 }
 
-/** A fresh player: own browser context, so own session, cookie and storage. */
+/** A fresh player: own browser context, so own session, cookie and storage.
+ *  Each helper here is a named step, so the CI log says how far a test got. */
 export async function newPlayer(browser: Browser, name: string) {
-  const page = await (await browser.newContext()).newPage();
-  const connected = watchSync(page);
-  // The Vite dev server now and then refuses a module request under load and
-  // the page never boots. One reload covers that; boot.spec.ts checks booting
-  // itself without the second chance.
-  await expect(async () => {
-    await page.goto("/");
-    await waitForSync(page, connected);
-  }).toPass({ timeout: 120_000 });
-  await page.getByRole("textbox", { name: "Enter name…" }).fill(name);
-  // The dev-only tools panel sits over the bottom-left game card.
-  const devTools = page.getByRole("button", { name: "Collapse dev tools" });
-  if (await devTools.isVisible()) await devTools.click();
-  return page;
+  return test.step(`join as ${name}`, async () => {
+    const page = await (await browser.newContext()).newPage();
+    const connected = watchSync(page);
+    // The Vite dev server now and then refuses a module request under load and
+    // the page never boots. One reload covers that; boot.spec.ts checks booting
+    // itself without the second chance.
+    await expect(async () => {
+      await page.goto("/");
+      await waitForSync(page, connected);
+    }).toPass({ timeout: 120_000 });
+    await page.getByRole("textbox", { name: "Enter name…" }).fill(name);
+    // The dev-only tools panel sits over the bottom-left game card.
+    const devTools = page.getByRole("button", { name: "Collapse dev tools" });
+    if (await devTools.isVisible()) await devTools.click();
+    return page;
+  });
 }
 
 /** The "Create Game" button inside one game's card on the home page. */
@@ -60,14 +63,16 @@ export function createButton(page: Page, game: string) {
 
 /** Creates a room from the home page, picking the given setup radios, and returns its code. */
 export async function createRoom(host: Page, game: string, route: RegExp, options: string[] = []) {
-  await createButton(host, game).click();
-  for (const option of options) await host.getByRole("radio", { name: option }).click();
-  await host.getByRole("button", { name: "Create It!" }).click();
-  await expect(host).toHaveURL(route);
-  await host.getByRole("button", { name: "Show the room code" }).click();
-  const code = (await host.getByRole("button", { name: /^Room code/ }).textContent())?.trim() ?? "";
-  expect(code).toMatch(/^[A-Z0-9]{6}$/);
-  return code;
+  return test.step(`create a ${game} room`, async () => {
+    await createButton(host, game).click();
+    for (const option of options) await host.getByRole("radio", { name: option }).click();
+    await host.getByRole("button", { name: "Create It!" }).click();
+    await expect(host).toHaveURL(route);
+    await host.getByRole("button", { name: "Show the room code" }).click();
+    const code = (await host.getByRole("button", { name: /^Room code/ }).textContent())?.trim() ?? "";
+    expect(code).toMatch(/^[A-Z0-9]{6}$/);
+    return code;
+  });
 }
 
 /**
@@ -76,29 +81,33 @@ export async function createRoom(host: Page, game: string, route: RegExp, option
  * way a person would.
  */
 export async function joinByCode(page: Page, code: string, route: RegExp) {
-  const box = page.getByRole("textbox", { name: "ABCXYZ" });
-  await expect(async () => {
-    await box.fill("");
-    await box.fill(code);
-    await box.press("Enter");
-    await expect(page).toHaveURL(route, { timeout: 3_000 });
-  }).toPass({ timeout: 30_000 });
+  return test.step(`join room ${code}`, async () => {
+    const box = page.getByRole("textbox", { name: "ABCXYZ" });
+    await expect(async () => {
+      await box.fill("");
+      await box.fill(code);
+      await box.press("Enter");
+      await expect(page).toHaveURL(route, { timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+  });
 }
 
 /** A host plus everyone else joined by code, in the order of `names`. */
 export async function openRoom(browser: Browser, game: string, route: RegExp, names: string[], options: string[] = []) {
-  const host = await newPlayer(browser, names[0]!);
-  const code = await createRoom(host, game, route, options);
-  const players = [host];
-  for (const name of names.slice(1)) {
-    const page = await newPlayer(browser, name);
-    await joinByCode(page, code, route);
-    players.push(page);
-  }
-  for (const page of players) {
-    for (const name of names) await expect(page.getByRole("main").getByText(name, { exact: true }).first()).toBeVisible();
-  }
-  return { players, code };
+  return test.step(`open a ${game} room for ${names.length}`, async () => {
+    const host = await newPlayer(browser, names[0]!);
+    const code = await createRoom(host, game, route, options);
+    const players = [host];
+    for (const name of names.slice(1)) {
+      const page = await newPlayer(browser, name);
+      await joinByCode(page, code, route);
+      players.push(page);
+    }
+    for (const page of players) {
+      for (const name of names) await expect(page.getByRole("main").getByText(name, { exact: true }).first()).toBeVisible();
+    }
+    return { players, code };
+  });
 }
 
 /** Index of the one page `test` holds for, once the room settles into it. */
