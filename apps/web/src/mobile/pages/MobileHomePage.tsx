@@ -68,10 +68,10 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <ActiveGameModal sessionId={sessionId} suppress={pendingAction !== null} />
 
       <header className="m-head">
-        <h1 className="m-head-title">Games</h1>
-        <p className="m-head-sub">
-          {savedName ? <>Playing as <strong>{savedName}</strong></> : "Pick a name, then start or join a game."}
-        </p>
+        <GameIcon game="home" size={44} className="m-head-logo" />
+        <h1 className="m-head-title">
+          Games<span className="m-head-dot">.</span>
+        </h1>
       </header>
 
       <section className="m-section">

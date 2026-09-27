@@ -217,25 +217,28 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
   padding: 1.5rem 1rem 1rem;
 }
 
+.m-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.m-head-logo {
+  flex-shrink: 0;
+  border-radius: 22%;
+}
+
 .m-head-title {
   margin: 0;
   color: var(--foreground);
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.15;
+  font-size: 2.25rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
-.m-head-sub {
-  margin: 0.3rem 0 0;
-  color: var(--muted-foreground);
-  font-size: 0.92rem;
-  line-height: 1.4;
-}
-
-.m-head-sub strong {
+.m-head-dot {
   color: var(--primary);
-  font-weight: 700;
 }
 
 /* ── Sections ──────────────────────────────────────────────────── */
