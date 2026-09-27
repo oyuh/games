@@ -45,7 +45,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "location_signal", gameId, hostId: game.host_id,
+      ? { type: "location_signal", gameId, hostId: game.host_id, isPublic: game.is_public,
           players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId) })),
           spectators: game.spectators ?? [] }
       : null

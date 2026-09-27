@@ -1,7 +1,7 @@
 import { GAME_META, getGameSlugFromPath, type GameSlug } from "@games/shared";
 import { FiArrowRight, FiGithub, FiInfo } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { getCustomStatus, subscribeCustomStatus } from "../../hooks/useAdminBroadcast";
 import { ModalSection, ModalShell } from "./ModalShell";
@@ -95,28 +95,36 @@ function useCustomStatus() {
 }
 
 export function InfoModal({ onClose }: { onClose: () => void }) {
+  return (
+    <ModalShell icon={<FiInfo size={18} />} kicker="About" title={siteInfo.title} onClose={onClose} footer={<InfoFooter />}>
+      <InfoContent />
+    </ModalShell>
+  );
+}
+
+export function InfoFooter() {
+  return (
+    <div className="info-footer">
+      <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" className="info-footer-link">
+        <FiGithub size={13} /> Source
+      </a>
+      <span className="info-footer-by">
+        Built by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson</a>
+      </span>
+    </div>
+  );
+}
+
+/** What the info modal says, framed by the desktop modal or the mobile sheet.
+ *  `pageAction` sits under the current page's tips, e.g. the mobile How to Play. */
+export function InfoContent({ pageAction }: { pageAction?: ReactNode }) {
   const location = useLocation();
   const page = getPageInfo(location.pathname);
   const sessionId = getOrCreateSessionId();
   const customStatus = useCustomStatus();
 
   return (
-    <ModalShell
-      icon={<FiInfo size={18} />}
-      kicker="About"
-      title={siteInfo.title}
-      onClose={onClose}
-      footer={(
-        <div className="info-footer">
-          <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" className="info-footer-link">
-            <FiGithub size={13} /> Source
-          </a>
-          <span className="info-footer-by">
-            Built by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson</a>
-          </span>
-        </div>
-      )}
-    >
+    <>
       <p className="info-site-desc">{siteInfo.description}</p>
 
       {customStatus?.text && (
@@ -138,6 +146,7 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
             ))}
           </ul>
         )}
+        {pageAction}
       </ModalSection>
 
       <ModalSection label="Feedback" hint="Found a bug or have an idea? Send it over on GitHub.">
@@ -153,6 +162,6 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
       <ModalSection label="Session" hint="Include this when reporting lobby or sync issues.">
         <ClipboardText text={sessionId} label="Copy session id" />
       </ModalSection>
-    </ModalShell>
+    </>
   );
 }

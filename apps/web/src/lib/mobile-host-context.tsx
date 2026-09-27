@@ -1,5 +1,5 @@
 import { createContext, use, useState, useEffect, type ReactNode } from "react";
-import type { MobileHostGameContext } from "../mobile/components/MobileHostControlsSheet";
+import type { GameContext as MobileHostGameContext } from "../components/shared/HostControlsModal";
 
 interface MobileHostContextValue {
   hostGame: MobileHostGameContext | null;
@@ -20,8 +20,12 @@ export function MobileHostProvider({ children }: { children: ReactNode }) {
 /** Call from game pages to register/clear host context. Automatically cleans up on unmount. */
 export function useMobileHostRegister(game: MobileHostGameContext | null) {
   const { setHostGame } = useMobileHost();
+  // Pages build a fresh object every render, so key on its contents. Keying on
+  // the game id alone left the kick list frozen at whoever was there when the
+  // host arrived.
+  const key = game ? JSON.stringify(game) : "";
   useEffect(() => {
     setHostGame(game);
     return () => setHostGame(null);
-  }, [game?.type, game?.gameId, game?.hostId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 }

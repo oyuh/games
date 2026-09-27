@@ -15,15 +15,22 @@ export type GameContext =
   | { type: "chain_reaction"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
   | { type: "location_signal"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
 
-export function HostControlsModal({
-  game,
-  sessionId,
-  onClose,
-}: {
+type HostControlsProps = {
   game: GameContext;
   sessionId: string;
   onClose: () => void;
-}) {
+};
+
+export function HostControlsModal(props: HostControlsProps) {
+  return (
+    <ModalShell icon={<FiSliders size={18} />} kicker="Host only" title="Host Controls" size="lg" onClose={props.onClose}>
+      <HostControls {...props} />
+    </ModalShell>
+  );
+}
+
+/** The controls themselves, framed by the desktop modal or the mobile sheet. */
+export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
   const zero = useZero();
   const navigate = useNavigate();
   const [announcement, setAnnouncement] = useState("");
@@ -139,13 +146,7 @@ export function HostControlsModal({
   };
 
   return (
-    <ModalShell
-      icon={<FiSliders size={18} />}
-      kicker="Host only"
-      title="Host Controls"
-      size="lg"
-      onClose={onClose}
-    >
+    <>
       <ModalSection label="Announcement" hint="Sends a toast to everyone in the game.">
         <div className="host-announce">
           <input
@@ -234,6 +235,6 @@ export function HostControlsModal({
           </div>
         )}
       </ModalSection>
-    </ModalShell>
+    </>
   );
 }

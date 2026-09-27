@@ -890,18 +890,17 @@
 /* ─── Info Modal ────────────────────────────────────────── */
 
 /* ─── Info Modal ────────────────────────────────────────── */
-/* Everything the desktop modal restyled is scoped to .mshell, because the
-   mobile info sheet still uses the unscoped .info-* rules with its own
-   markup. Touching those here would restyle the sheet by accident. */
+/* The desktop modal and the mobile info sheet render the same InfoContent,
+   so these rules cover both frames. */
 
-.mshell .info-site-desc {
+:is(.mshell, .m-sheet) .info-site-desc {
   margin: 0 0 0.9rem;
   color: var(--muted-foreground);
   font-size: 0.85rem;
   line-height: 1.55;
 }
 
-.mshell .info-status {
+:is(.mshell, .m-sheet) .info-status {
   margin-bottom: 0.9rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
@@ -914,13 +913,13 @@
   text-align: center;
 }
 
-.mshell .info-status a {
+:is(.mshell, .m-sheet) .info-status a {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.mshell .info-tips {
+:is(.mshell, .m-sheet) .info-tips {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -929,7 +928,7 @@
   list-style: none;
 }
 
-.mshell .info-tip {
+:is(.mshell, .m-sheet) .info-tip {
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
@@ -940,23 +939,23 @@
   line-height: 1.45;
 }
 
-.mshell .info-tip::before {
+:is(.mshell, .m-sheet) .info-tip::before {
   content: none;
 }
 
-.mshell .info-tip svg {
+:is(.mshell, .m-sheet) .info-tip svg {
   flex-shrink: 0;
   margin-top: 0.2rem;
   color: var(--modal-accent);
 }
 
-.mshell .info-links {
+:is(.mshell, .m-sheet) .info-links {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
 }
 
-.mshell .info-link {
+:is(.mshell, .m-sheet) .info-link {
   display: inline-flex;
   align-items: center;
   height: 2.1rem;
@@ -971,57 +970,12 @@
   transition: border-color 0.16s, color 0.16s;
 }
 
-.mshell .info-link:hover {
+:is(.mshell, .m-sheet) .info-link:hover {
   border-color: color-mix(in srgb, var(--modal-accent) 50%, transparent);
   color: var(--modal-accent);
 }
 
-.mshell .info-session {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: var(--solo-pad);
-  padding-left: 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: var(--solo-radius);
-  background: var(--background);
-}
-
-.mshell .info-session-id {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted-foreground);
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.74rem;
-}
-
-.mshell .info-session-copy {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  flex-shrink: 0;
-  height: 2rem;
-  padding: 0 0.6rem;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.74rem;
-  font-weight: 700;
-  transition: background 0.14s, color 0.14s;
-}
-
-.mshell .info-session-copy:hover {
-  background: var(--accent);
-  color: var(--foreground);
-}
-
-.mshell .info-footer {
+:is(.mshell, .m-sheet) .info-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1031,7 +985,7 @@
   font-size: 0.76rem;
 }
 
-.mshell .info-footer-link {
+:is(.mshell, .m-sheet) .info-footer-link {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -1041,312 +995,15 @@
   transition: color 0.16s;
 }
 
-.mshell .info-footer-link:hover,
-.mshell .info-footer-by a:hover {
+:is(.mshell, .m-sheet) .info-footer-link:hover,
+:is(.mshell, .m-sheet) .info-footer-by a:hover {
   color: var(--modal-accent);
 }
 
-.mshell .info-footer-by a {
+:is(.mshell, .m-sheet) .info-footer-by a {
   color: var(--foreground);
   font-weight: 600;
   text-decoration: none;
-}
-
-/* ─── Info sheet (mobile) keeps the rules below ─────────── */
-
-.info-site-desc {
-  font-size: 0.92rem;
-  color: var(--muted-foreground);
-  line-height: 1.55;
-  margin: 0;
-}
-
-.info-custom-banner {
-  text-align: center;
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--primary);
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
-  color: var(--foreground);
-  margin-bottom: 1rem;
-}
-
-.info-custom-banner a {
-  color: inherit;
-  text-decoration: underline;
-}
-
-/* Current page section */
-.info-current-page {
-  padding: 0.95rem 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: transparent;
-  margin-bottom: 0;
-}
-
-.info-current-page-header {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
-  margin-bottom: 0.45rem;
-}
-
-.info-current-page-kicker {
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--secondary);
-}
-
-.info-current-page-header h3 {
-  font-size: 0.98rem;
-  font-weight: 650;
-  color: var(--foreground);
-  margin: 0;
-}
-
-.info-current-page-desc {
-  font-size: 0.82rem;
-  color: var(--secondary);
-  line-height: 1.5;
-  margin: 0 0 0.5rem;
-}
-
-/* Section titles */
-.info-section-title {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--secondary);
-  margin: 0 0 0.65rem;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-/* Feedback links */
-.info-feedback {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.info-feedback-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.info-feedback-label {
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--secondary);
-}
-
-.info-feedback-copy p {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.4;
-  color: var(--muted-foreground);
-}
-
-.info-feedback-links {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.info-feedback-link {
-  color: var(--foreground);
-  text-decoration: none;
-  font-size: 0.75rem;
-  font-weight: 650;
-  padding: 0.36rem 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--muted) 34%, transparent);
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.info-feedback-link:hover {
-  border-color: color-mix(in srgb, var(--foreground) 20%, var(--border));
-  background: color-mix(in srgb, var(--muted) 50%, transparent);
-}
-
-/* Footer */
-.info-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding-top: 0.25rem;
-  font-size: 0.72rem;
-  color: var(--secondary);
-}
-
-.info-footer-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  color: var(--secondary);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.15s;
-}
-
-.info-footer-link:hover {
-  color: var(--foreground);
-}
-
-.info-footer-sep {
-  color: var(--border);
-}
-
-.info-footer-author {
-  color: inherit;
-  text-decoration: underline;
-  font-weight: 600;
-}
-
-.info-footer-author:hover {
-  color: var(--foreground);
-}
-
-.info-divider {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 1.1rem 0;
-}
-
-.info-tips {
-  list-style: none;
-  display: grid;
-  gap: 0.35rem;
-  margin-top: 0.65rem;
-  padding: 0;
-}
-
-.info-tip {
-  position: relative;
-  padding-left: 0.85rem;
-  font-size: 0.82rem;
-  color: var(--muted-foreground);
-  line-height: 1.45;
-}
-
-.info-tip::before {
-  content: "";
-  position: absolute;
-  top: 0.62em;
-  left: 0.1rem;
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--secondary);
-}
-
-/* ─── Info Session ID ───────────────────────────────────── */
-
-.info-session-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--muted) 26%, transparent);
-}
-
-.info-session-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.info-session-label {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--secondary);
-  font-weight: 700;
-}
-
-.info-session-helper {
-  margin: 0;
-  font-size: 0.7rem;
-  color: var(--secondary);
-  line-height: 1.35;
-}
-
-.info-session-id {
-  display: block;
-  min-width: 0;
-  padding: 0.55rem 0.65rem;
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
-  background: color-mix(in srgb, black 10%, transparent);
-  font-family: "Geist Mono", monospace;
-  font-size: 0.72rem;
-  line-height: 1.45;
-  color: var(--foreground);
-  user-select: all;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  white-space: normal;
-}
-
-.info-session-copy {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.28rem 0.5rem;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--secondary);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  font-size: 0.7rem;
-  font-weight: 650;
-  line-height: 1;
-  flex-shrink: 0;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-
-.info-session-copy:hover {
-  color: var(--foreground);
-  border-color: color-mix(in srgb, var(--foreground) 20%, var(--border));
-  background: color-mix(in srgb, var(--muted) 35%, transparent);
-}
-
-@media (max-width: 560px) {
-  .info-feedback,
-  .info-session-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .info-feedback-links {
-    justify-content: flex-start;
-  }
-
-  .info-footer {
-    flex-wrap: wrap;
-  }
 }
 
 .welcome-icon {

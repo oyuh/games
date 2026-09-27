@@ -106,8 +106,7 @@
      slot cut to hold one, so the two can never disagree. */
   --avatar-radius: 30%;
 
-  /* Card surfaces. The site's card look is built from these four pieces:
-     an accent wash, a faint two-axis grid, a base fill, and a shadow.
+  /* Card surfaces. The site's card look is a base fill and a shadow.
      components.css assembles them; themes.css swaps them for light mode.
      Every card on the site, desktop and mobile, reads from here. */
   /* Kept as two stops so an accented card can tint the top one and land on

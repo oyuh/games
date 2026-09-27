@@ -53,7 +53,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "imposter", gameId, hostId: game.host_id, players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId) })), spectators: game.spectators ?? [] }
+      ? { type: "imposter", gameId, hostId: game.host_id, isPublic: game.is_public, players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId) })), spectators: game.spectators ?? [] }
       : null
   );
 

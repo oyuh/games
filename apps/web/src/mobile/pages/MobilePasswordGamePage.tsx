@@ -44,7 +44,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
 
   useMobileHostRegister(
     isHost && game
-      ? { type: "password", gameId, hostId: game.host_id, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: getPasswordPlayerName(names, id) }))), spectators: game.spectators ?? [] }
+      ? { type: "password", gameId, hostId: game.host_id, isPublic: game.is_public, players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: getPasswordPlayerName(names, id) }))), spectators: game.spectators ?? [] }
       : null
   );
 
