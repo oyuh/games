@@ -1,6 +1,29 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { FiDatabase, FiExternalLink, FiHome, FiRadio, FiRefreshCw, FiServer, FiShield, FiWifi, FiZap } from "react-icons/fi";
+import {
+  FiActivity,
+  FiAlertTriangle,
+  FiClock,
+  FiCode,
+  FiCopy,
+  FiDatabase,
+  FiExternalLink,
+  FiGitCommit,
+  FiGithub,
+  FiHome,
+  FiInfo,
+  FiPackage,
+  FiPower,
+  FiRadio,
+  FiRefreshCw,
+  FiServer,
+  FiShield,
+  FiUser,
+  FiWifi,
+  FiXCircle,
+  FiZap
+} from "react-icons/fi";
 import { Link } from "react-router-dom";
+import { GameIcon } from "../components/shared/GameIcon";
 import {
   formatUptime,
   overallTone,
@@ -17,6 +40,12 @@ import "../styles/game-shared.css";
 import "../styles/status.css";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
+
+const EVENT_ICONS = {
+  info: <FiInfo />,
+  warn: <FiAlertTriangle />,
+  error: <FiXCircle />
+};
 
 type RowTone = ServiceTone | "idle";
 
@@ -180,7 +209,7 @@ export function StatusPage() {
                 <span className="status-row-icon" aria-hidden="true">{row.icon}</span>
                 <span className="status-row-name">{row.name}</span>
                 <span className="status-row-state">
-                  <span className="status-dot" aria-hidden="true" />
+                  <span className="status-row-dot" aria-hidden="true" />
                   {row.label}
                 </span>
               </span>
@@ -190,9 +219,22 @@ export function StatusPage() {
         </ul>
         <div className="solo-drawer status-drawer">
           <span className="status-drawer-facts">
-            <span>{checkedAgo == null ? "Not checked yet" : `Checked ${checkedAgo}s ago`}</span>
-            {debug.apiLatencyMs != null && debug.apiMetaState === "ok" && <span>{debug.apiLatencyMs}ms round trip</span>}
-            {uptimeMs != null && debug.apiMetaState === "ok" && <span>Up {formatUptime(uptimeMs)}</span>}
+            <span className="status-fact" data-tooltip="Last checked" data-tooltip-variant="info">
+              <FiClock aria-hidden="true" />
+              {checkedAgo == null ? "Not checked yet" : `${checkedAgo}s ago`}
+            </span>
+            {debug.apiLatencyMs != null && debug.apiMetaState === "ok" && (
+              <span className="status-fact" data-tooltip="Round trip to the API" data-tooltip-variant="info">
+                <FiActivity aria-hidden="true" />
+                {debug.apiLatencyMs}ms
+              </span>
+            )}
+            {uptimeMs != null && debug.apiMetaState === "ok" && (
+              <span className="status-fact" data-tooltip="API uptime since the last restart" data-tooltip-variant="info">
+                <FiPower aria-hidden="true" />
+                {formatUptime(uptimeMs)}
+              </span>
+            )}
           </span>
           <button className="status-check" type="button" onClick={() => void checkNow()} disabled={checking}>
             <FiRefreshCw className={checking ? "status-spin" : undefined} size={15} aria-hidden="true" />
@@ -206,24 +248,31 @@ export function StatusPage() {
           <h2 className="status-section-title" id="status-details-title">Details</h2>
           <dl className="status-facts">
             <div>
-              <dt>API</dt>
+              <dt><FiServer aria-hidden="true" /> API</dt>
               <dd><code>{debug.apiBaseURL}</code></dd>
             </div>
             <div>
-              <dt>Sync server</dt>
+              <dt><FiZap aria-hidden="true" /> Sync server</dt>
               <dd><code>{debug.zeroCacheURL}</code></dd>
             </div>
             <div>
-              <dt>Session</dt>
+              <dt><FiUser aria-hidden="true" /> Session</dt>
               <dd>
-                <button className="status-copy" type="button" onClick={copySessionId} title="Copy session id">
+                <button
+                  className="status-copy"
+                  type="button"
+                  onClick={copySessionId}
+                  data-tooltip="Copy session id"
+                  data-tooltip-variant="info"
+                >
                   <code>{debug.sessionId}</code>
+                  <FiCopy className="status-copy-icon" aria-hidden="true" />
                 </button>
               </dd>
             </div>
             {commitShort && (
               <div>
-                <dt>Deploy</dt>
+                <dt><FiGitCommit aria-hidden="true" /> Deploy</dt>
                 <dd>
                   <a className="status-link" href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`} target="_blank" rel="noreferrer">
                     <code>{commitShort}</code>
@@ -234,7 +283,7 @@ export function StatusPage() {
             )}
             {(debug.apiBuildTimestamp || debug.apiCommitRef) && (
               <div>
-                <dt>Built</dt>
+                <dt><FiPackage aria-hidden="true" /> Built</dt>
                 <dd>
                   {[debug.apiBuildTimestamp && relativeTime(debug.apiBuildTimestamp), debug.apiCommitRef]
                     .filter(Boolean)
@@ -253,6 +302,9 @@ export function StatusPage() {
             <ol className="status-events">
               {events.map((event) => (
                 <li className={`status-event status-event--${event.level}`} key={event.id}>
+                  <span className="status-event-level" data-tooltip={event.level} data-tooltip-variant="info">
+                    {EVENT_ICONS[event.level]}
+                  </span>
                   <time dateTime={event.at}>
                     {new Date(event.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}
                   </time>
@@ -270,11 +322,14 @@ export function StatusPage() {
 
       <nav className="solo-menu-links" aria-label="Elsewhere">
         <Link className="solo-menu-link" to="/"><FiHome size={14} aria-hidden="true" /> Home</Link>
-        <Link className="solo-menu-link" to="/pips">Pips</Link>
-        <Link className="solo-menu-link" to="/shikaku">Shikaku</Link>
+        <Link className="solo-menu-link" to="/pips"><GameIcon game="pips" size={14} /> Pips</Link>
+        <Link className="solo-menu-link" to="/shikaku"><GameIcon game="shikaku" size={14} /> Shikaku</Link>
+        <a className="solo-menu-link" href={GITHUB_REPO} target="_blank" rel="noreferrer">
+          <FiGithub size={14} aria-hidden="true" /> Source
+        </a>
         {debug.apiInfoURL && (
           <a className="solo-menu-link" href={debug.apiInfoURL} target="_blank" rel="noreferrer">
-            Raw API response <FiExternalLink size={13} aria-hidden="true" />
+            <FiCode size={14} aria-hidden="true" /> Raw API <FiExternalLink size={12} aria-hidden="true" />
           </a>
         )}
       </nav>

@@ -1,16 +1,18 @@
 import { GAME_META, multiplayerTypeToGameSlug, type GameSlug } from "@games/shared";
 import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { FiChevronRight, FiGithub, FiLogIn, FiX } from "react-icons/fi";
+import { FiChevronRight, FiEdit2, FiGithub, FiLogIn, FiX } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList } from "../../components/shared/PublicGamesBrowser";
 import { GameIcon } from "../../components/shared/GameIcon";
+import { PlayerAvatar } from "../../components/shared/PlayerAvatar";
 import { GameSetup, type HomeState } from "../../components/home/GameSetup";
-import { clearRecentGames, removeRecentGame, type RecentGame } from "../../lib/session";
+import { clearRecentGames, getDisplayName, removeRecentGame, type RecentGame } from "../../lib/session";
 import { HOME_ROUTE_GAMES, type HomeRouteGame } from "../../lib/home-route-highlight";
 import { useHomePage } from "../../hooks/useHomePage";
 import { BottomSheet } from "../components/BottomSheet";
+import { AvatarPickerSheet } from "../components/AvatarPickerSheet";
 
 const NEW_GAME_ISSUE_URL = "https://github.com/oyuh/games/issues/new?template=new-game.md&title=%5BNew%20Game%5D%20";
 
@@ -48,6 +50,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   const [sheetGame, setSheetGame] = useState<HomeRouteGame | null>(home.activeRouteHighlight);
   const [browsing, setBrowsing] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   /* The drawer is modal, so a confirm raised from it would sit behind it,
      untappable. Joining from inside another game closes the drawer first. */
@@ -74,6 +77,10 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <section className="m-section">
         <h2 className="m-label">Your name</h2>
         <form className="m-field-row" onSubmit={home.saveName}>
+          <button className="m-avatar-btn" type="button" aria-label="Change your avatar" onClick={() => setAvatarOpen(true)}>
+            <PlayerAvatar seed={sessionId} />
+            <span className="m-avatar-edit" aria-hidden="true"><FiEdit2 size={11} /></span>
+          </button>
           <input
             className="m-input"
             ref={nameInputRef}
@@ -266,6 +273,14 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             home.setPendingAction(null);
           }}
           onConfirm={home.confirmLeaveAndJoin}
+        />
+      )}
+
+      {avatarOpen && (
+        <AvatarPickerSheet
+          sessionId={sessionId}
+          name={savedName || getDisplayName(null, sessionId)}
+          onClose={() => setAvatarOpen(false)}
         />
       )}
     </div>

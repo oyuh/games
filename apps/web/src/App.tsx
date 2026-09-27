@@ -3,8 +3,9 @@ import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { FiExternalLink, FiInfo, FiX } from "react-icons/fi";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { FiActivity, FiInfo, FiX } from "react-icons/fi";
+import { SiBuymeacoffee, SiKofi } from "react-icons/si";
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import {
   addConnectionDebugEvent,
@@ -107,6 +108,7 @@ const apiInfoURL = `${apiBaseURL}/debug/build-info`;
 const SYNC_WAKE_NOTICE_DELAY_MS = 2_500;
 const SYNC_WAKE_NOTICE_COOLDOWN_MS = 120_000;
 const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/lawsonhart";
+const KOFI_URL = "https://ko-fi.com/lawsonhart";
 const ZERO_CLIENT_RESET_COOLDOWN_MS = 5_000;
 let lastSyncWakeNoticeShownAt = 0;
 
@@ -177,7 +179,7 @@ function HostingInfoModal({ onClose }: { onClose: () => void }) {
         <div className="modal-header">
           <div className="sync-hosting-title">
             <FiInfo size={18} />
-            <span className="modal-title">Why the server sleeps</span>
+            <span className="modal-title">Why multiplayer takes a moment</span>
           </div>
           <button className="modal-close" type="button" onClick={onClose} aria-label="Close hosting info">
             <FiX size={18} />
@@ -185,27 +187,28 @@ function HostingInfoModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="modal-body sync-hosting-modal-body">
           <p className="sync-hosting-copy">
-            Multiplayer runs on a separate sync service. When traffic is quiet, I let it sleep so hosting stays cheap
-            and the project does not burn money just sitting there idle.
+            Multiplayer runs on its own sync server. To keep hosting cheap, it goes to sleep when nobody is playing.
           </p>
           <p className="sync-hosting-copy">
-            That means the first multiplayer visit can take a little while to wake up. Solo games like Shikaku and
-            Pips do not depend on that server, so they still work normally.
+            If you're the first one in after a quiet stretch, you wait while it wakes up. That usually takes under a
+            minute. Solo games like Pips and Shikaku don't need it, so they work right away.
           </p>
           <div className="sync-hosting-note">
-            Supporting the project helps cover hosting and makes it easier to keep the multiplayer stack online longer.
+            Chipping in pays the hosting bill, and more of that means the server can stay awake longer.
           </div>
           <div className="sync-hosting-actions">
-            <a className="btn btn-primary" href={BUY_ME_A_COFFEE_URL} target="_blank" rel="noreferrer">
+            <a className="btn btn-muted" href={BUY_ME_A_COFFEE_URL} target="_blank" rel="noreferrer">
+              <SiBuymeacoffee size={16} aria-hidden="true" />
               Buy Me a Coffee
-              <FiExternalLink size={16} />
             </a>
-            <a className="btn btn-muted" href="/status">
-              Service status
+            <a className="btn btn-muted" href={KOFI_URL} target="_blank" rel="noreferrer">
+              <SiKofi size={16} aria-hidden="true" />
+              Ko-fi
             </a>
-            <button className="btn btn-muted" type="button" onClick={onClose}>
-              Close
-            </button>
+            <Link className="btn btn-primary sync-hosting-status" to="/status" onClick={onClose}>
+              <FiActivity size={16} aria-hidden="true" />
+              Check service status
+            </Link>
           </div>
         </div>
       </div>

@@ -11,6 +11,8 @@ import {
   getRecentGames, hasVisited, leaveCurrentGame, markVisited, SessionGameType, setStoredName,
 } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { encodeAvatar, useStoredAvatar } from "../lib/avatar";
+import { useAvatarSync } from "./useAvatars";
 
 type JoinTarget = { gameType: SessionGameType; gameId: string; code: string; route: string };
 
@@ -26,6 +28,9 @@ type JoinTarget = { gameType: SessionGameType; gameId: string; code: string; rou
  */
 export function useHomePage(sessionId: string) {
   const zero = useZero();
+  // Home is the only place an avatar can be changed, on either layout, so
+  // this is the one place that has to push it up to the session row.
+  useAvatarSync(zero, sessionId, encodeAvatar(useStoredAvatar()));
   const navigate = useNavigate();
   const location = useLocation();
   const routeHighlight = useMemo(() => getHomeRouteGame(location.search), [location.search]);

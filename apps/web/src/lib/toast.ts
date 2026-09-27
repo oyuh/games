@@ -5,6 +5,8 @@ export interface Toast {
   message: string;
   level: "error" | "success" | "info";
   createdAt: number;
+  /** Set while the exit animation plays, right before the toast is dropped. */
+  leaving?: boolean;
 }
 
 let nextId = 0;
@@ -12,6 +14,8 @@ let toasts: Toast[] = [];
 const listeners = new Set<() => void>();
 const TOAST_DURATION = 4500;
 const DEDUPE_WINDOW_MS = 1500;
+// Matches the toast-out animation in toast.css.
+const EXIT_MS = 200;
 const dedupeRegistry = new Map<string, number>();
 
 function emit() {
@@ -19,8 +23,14 @@ function emit() {
 }
 
 function remove(id: number) {
-  toasts = toasts.filter((t) => t.id !== id);
+  const toast = toasts.find((t) => t.id === id);
+  if (!toast || toast.leaving) return;
+  toasts = toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t));
   emit();
+  setTimeout(() => {
+    toasts = toasts.filter((t) => t.id !== id);
+    emit();
+  }, EXIT_MS);
 }
 
 export function showToast(message: string, level: Toast["level"] = "error") {
