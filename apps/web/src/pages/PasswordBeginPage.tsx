@@ -8,7 +8,6 @@ import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { PASSWORD_PHASES, PasswordLobby } from "../components/password/PasswordLobby";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
-import { ensureName, leaveCurrentGame } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
@@ -23,11 +22,11 @@ import { usePasswordBegin } from "../hooks/usePasswordBegin";
  */
 function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
   const {
-    zero, navigate, gameId, game, names, isHost,
-    inGame, isSpectator, activeGameType, activeGameId, inAnotherGame,
+    zero, gameId, game, names, isHost,
+    inGame, isSpectator, activeGameType,
     startingGame, startGame,
     showInSessionModal, setShowInSessionModal,
-    joiningFromOtherGame, setJoiningFromOtherGame,
+    joiningFromOtherGame, handleJoinClick, confirmLeaveAndJoin,
   } = usePasswordBegin(sessionId);
   const [showDemo, setShowDemo] = useState(false);
 
@@ -40,48 +39,6 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
       </div>
     );
   }
-
-  const joinGame = async () => {
-    await ensureName(zero, sessionId);
-    if (isSpectator) {
-      void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }))
-        .client.then(() => zero.mutate(mutators.password.join({ gameId, sessionId })))
-        .catch(() => showToast("Couldn't join game", "error"));
-      return;
-    }
-    void zero.mutate(mutators.password.join({ gameId, sessionId }))
-      .client.catch(() => showToast("Couldn't join game", "error"));
-  };
-
-  const handleJoinClick = () => {
-    if (inAnotherGame && activeGameType && activeGameId) {
-      setJoiningFromOtherGame(true);
-      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
-        .catch(() => showToast("Couldn't leave current game", "error"))
-        .finally(() => {
-          setJoiningFromOtherGame(false);
-          void joinGame();
-        });
-      return;
-    }
-    void joinGame();
-  };
-
-  const confirmLeaveAndJoin = () => {
-    if (!activeGameType || !activeGameId) {
-      setShowInSessionModal(false);
-      void joinGame();
-      return;
-    }
-    setJoiningFromOtherGame(true);
-    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
-      .then(() => {
-        setShowInSessionModal(false);
-        void joinGame();
-      })
-      .catch(() => showToast("Couldn't leave current game", "error"))
-      .finally(() => setJoiningFromOtherGame(false));
-  };
 
   const bank = game.settings.category
     ? passwordCategoryLabels[game.settings.category] ?? game.settings.category

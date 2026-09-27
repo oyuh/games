@@ -4,7 +4,6 @@ import "./styles/cursor.css";
 import "./styles/themes.css";
 import "./styles/responsive.css";
 import "./mobile/mobile.css";
-import "./mobile/ui.css";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

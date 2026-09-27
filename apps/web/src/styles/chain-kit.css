@@ -8,13 +8,8 @@
    chain: a column of links with one line running down behind them, which is
    the only shape on the site that is nobody else's.
 
-   Where it parts company with the old chain-reaction.css: that file drew state
-   with glows and coloured shadows, and drew a separate connector between every
-   pair of words. Here state is a border and a fill like everything else in the
-   kit, and the chain is one line, because it is one chain.
-
-   The old chain-reaction.css stays until the old page comes out. Nothing here
-   shares a class name with it. */
+   State is a border and a fill like everything else in the kit, never a glow,
+   and the chain is one line, because it is one chain. */
 
 .cr-links,
 .cr-link,

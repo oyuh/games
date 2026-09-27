@@ -75,24 +75,17 @@
 }
 
 /* ── Card surface ────────────────────────────────────────────
-   The site's card look, defined once. Every card class on both
-   desktop and mobile is listed here so the two can't drift apart;
-   each one still owns its own radius, padding and layout in its
-   own file. Tint a card by setting --card-accent on it, and swap
+   The site's card look, defined once. Every card class is listed
+   here so they can't drift apart; each one still owns its own
+   radius, padding and layout in its own file. Tint a card by setting --card-accent on it, and swap
    its base fill with --surface-bg. Light mode is handled by the
    tokens in themes.css, so nothing here needs a theme override. */
 .card,
 .home-card,
-.solo-card,
-.m-card {
+.solo-card {
   border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 18%, transparent);
   background: var(--surface-bg);
   box-shadow: var(--surface-shadow);
-}
-
-/* Phones get the fill and the border, not the drop shadow. */
-.m-card {
-  box-shadow: none;
 }
 
 .card {

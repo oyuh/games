@@ -173,6 +173,7 @@ function ChainLinkRow({
       word={link.word}
       lettersShown={link.lettersShown}
       value={guess}
+      autoFocus
       {...(onChange ? { onChange } : {})}
       {...(onGuess ? { onSubmit: onGuess } : {})}
       {...(onNavigate ? { onNavigate } : {})}
