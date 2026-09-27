@@ -283,12 +283,11 @@ function themeForPathname(pathname: string): GameSlug | "" {
 }
 
 function themeForHomeCard(el: Element | null): GameSlug | "" {
-  if (el?.closest(".home-card--imposter, .m-game-card--imposter")) return "imposter";
-  if (el?.closest(".home-card--password, .m-game-card--password")) return "password";
-  if (el?.closest(".home-card--chain, .m-game-card--chain")) return "chain";
-  if (el?.closest(".home-card--shade, .m-game-card--shade")) return "shade";
-  if (el?.closest(".home-card--location, .m-game-card--location")) return "location";
-  if (el?.closest(".m-solo-card--pips")) return "pips";
+  if (el?.closest(".home-card--imposter")) return "imposter";
+  if (el?.closest(".home-card--password")) return "password";
+  if (el?.closest(".home-card--chain")) return "chain";
+  if (el?.closest(".home-card--shade")) return "shade";
+  if (el?.closest(".home-card--location")) return "location";
   return "";
 }
 

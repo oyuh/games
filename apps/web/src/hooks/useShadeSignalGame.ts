@@ -41,10 +41,8 @@ export function useShadeSignalGame(sessionId: string) {
   const [clue, setClue] = useState("");
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [guessLocked, setGuessLocked] = useState(false);
-  const [lobbyPreviewTarget, setLobbyPreviewTarget] = useState<{ row: number; col: number } | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
-  const clueInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
 
   const isHost = game?.host_id === sessionId;
@@ -99,13 +97,6 @@ export function useShadeSignalGame(sessionId: string) {
       return acc;
     }, {});
   }, [sessions]);
-
-  const playerIndexMap = useMemo(() => {
-    return game?.players.reduce<Record<string, number>>((acc, player, playerIndex) => {
-      acc[player.sessionId] = playerIndex;
-      return acc;
-    }, {}) ?? {};
-  }, [game?.players]);
 
   useEffect(() => {
     if (!game) return;
@@ -179,17 +170,6 @@ export function useShadeSignalGame(sessionId: string) {
 
   const phase = (game?.phase ?? "lobby") as ShadePhase;
 
-  useEffect(() => {
-    if ((phase !== "clue1" && phase !== "clue2") || !isLeader || isSpectator) return;
-    const input = clueInputRef.current;
-    if (!input) return;
-    const timer = window.setTimeout(() => {
-      input.focus();
-      input.select();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [phase, isLeader, isSpectator]);
-
   /* The server seals the target until the reveal, and only the leader is
      handed the key. Everyone else reads it off the row once it goes public. */
   const { decryptValue } = useGameSecret({
@@ -215,26 +195,6 @@ export function useShadeSignalGame(sessionId: string) {
   const target = game?.target_row != null && game?.target_col != null && game.target_row >= 0 && game.target_col >= 0
     ? { row: game.target_row, col: game.target_col }
     : sealedTarget;
-
-  const targetColor = target && game
-    ? generateGridColor(target.row, target.col, game.grid_rows, game.grid_cols, game.grid_seed)
-    : null;
-
-  /** Marker facts without the wording; each view builds its own tooltip. */
-  const guessMarkerData = useMemo(() => {
-    if (!game || (phase !== "reveal" && phase !== "finished")) return [];
-    const latest = game.round_history[game.round_history.length - 1];
-    return game.guesses.map((g) => ({
-      sessionId: g.sessionId,
-      name: sessionById[g.sessionId] ?? getDisplayName(null, g.sessionId),
-      row: g.row,
-      col: g.col,
-      isOwn: g.sessionId === sessionId,
-      dist: target ? chebyshevDist({ row: g.row, col: g.col }, target) : null,
-      pts: latest?.scores[g.sessionId] ?? null,
-      roundLabel: g.round === 1 ? "Clue 1" : "Clue 2",
-    }));
-  }, [game, phase, sessionById, sessionId, target]);
 
   const myCurrentGuess = useMemo(() => {
     if (!game || (phase !== "guess1" && phase !== "guess2")) return null;
@@ -278,17 +238,11 @@ export function useShadeSignalGame(sessionId: string) {
   };
 
   return {
-    zero, navigate, gameId, game, me, isHost, isLeader, inGame, isSpectator,
-    sessionById, playerIndexMap, phase, target, targetColor,
-    clue, setClue, selectedCell, setSelectedCell,
-    guessLocked, setGuessLocked, lobbyPreviewTarget, setLobbyPreviewTarget,
-    clueInputRef,
-    activeGameType, activeGameId, inAnotherGame,
-    showInSessionModal, setShowInSessionModal,
-    joiningFromOtherGame, setJoiningFromOtherGame,
-    guessMarkerData, myCurrentGuess, lockedInIds,
+    zero, navigate, gameId, game, isHost, isLeader, inGame, isSpectator, sessionById, phase,
+    target, clue, setClue, selectedCell, setSelectedCell, guessLocked, setGuessLocked,
+    activeGameType, showInSessionModal, setShowInSessionModal, joiningFromOtherGame,
+    myCurrentGuess,
     currentRoundGuesses: lockedInIds.size,
-    isGameActive: phase !== "lobby" && phase !== "ended" && phase !== "finished" && phase !== "picking",
     leaderName: game?.leader_id ? (sessionById[game.leader_id] ?? "???") : "",
     totalRounds: game ? game.leader_order.length * game.settings.roundsPerPlayer : 0,
     guessersCount: game ? game.players.filter((p) => p.sessionId !== game.leader_id).length : 0,
@@ -326,8 +280,6 @@ export function useShadeSignalGame(sessionId: string) {
         showToast(err instanceof Error ? err.message : "Failed to submit guess", "error");
       }
     },
-
-    joinGame,
 
     handleJoinClick: () => {
       if (inAnotherGame && activeGameType && activeGameId) {

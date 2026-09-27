@@ -106,21 +106,11 @@ export function usePasswordResults(sessionId: string) {
     };
   }, [game?.rounds, decryptValue]);
 
-  const sortedScores = Object.entries(game?.scores ?? {}).sort((a, b) => b[1] - a[1]);
-  const topScore = sortedScores[0]?.[1] ?? 0;
-  const winners = sortedScores.filter(([, score]) => score === topScore);
 
   return {
-    zero,
-    gameId,
-    game,
-    names,
-    navigate,
+    zero, gameId, game, names, navigate,
     isHost: game?.host_id === sessionId,
-    sortedScores,
-    topScore,
-    winners,
-    isTie: winners.length > 1 && topScore > 0,
+
     roundsForView: (game?.rounds ?? []).map((round, index) => ({
       ...round,
       word: decryptedRoundWords[index] ?? (isEncrypted(round.word) ? "••••" : round.word),

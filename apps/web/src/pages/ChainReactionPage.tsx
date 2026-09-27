@@ -1,9 +1,6 @@
 import { mutators, chainCategoryLabels } from "@games/shared";
 import { optimistic } from "../lib/zero";
 import "../styles/game-shared.css";
-/* The old sheet. Nothing on this page reaches for it any more, but the mobile
-   page below still draws its own markup and has not moved onto the kit yet. */
-import "../styles/chain-reaction.css";
 import { useState } from "react";
 import { FiBookOpen, FiClock, FiEye } from "react-icons/fi";
 import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";

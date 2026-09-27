@@ -274,22 +274,17 @@ export function usePasswordGame(sessionId: string) {
   };
 
   return {
-    zero, gameId, game, navigate, isHost, names,
-    myTeamIndex, myActiveRound, activeRoundId, isSpectator,
-    liveEntries,
-    clue, guess,
+    zero, gameId, game, navigate, isHost, names, myTeamIndex, myActiveRound, isSpectator,
+    liveEntries, clue, guess,
     handleClueChange: (value: string) => { setClue(value); publishDraft("clue", value); },
     handleGuessChange: (value: string) => { setGuess(value); publishDraft("guess", value); },
     submitClue, submitGuess, skipWord,
+
     /** Kick the fallback-key fetch again when the word fails to load. */
     retryWordLoad: () => setFallbackRetryNonce((n) => n + 1),
-    decryptedActiveWord,
     myTeam,
-    myTeamMembers: myTeam?.members ?? [],
     myTeamSkips: myTeam && game ? (game.settings.skipsRemaining?.[myTeam.name] ?? 0) : 0,
-    gameProgress: game
-      ? Math.min(1, Math.max(0, ...Object.values(game.scores)) / Math.max(1, game.settings.targetScore))
-      : 0,
+
     activeRoundView: myActiveRound
       ? {
           ...myActiveRound,
@@ -302,6 +297,7 @@ export function usePasswordGame(sessionId: string) {
             (myActiveRound.word && !isEncrypted(myActiveRound.word) ? myActiveRound.word : null),
         }
       : undefined,
+
     roundsForView: (game?.rounds ?? []).map((round, index) => ({
       ...round,
       roundId: round.roundId ?? `legacy-${round.round}-${round.teamIndex}`,

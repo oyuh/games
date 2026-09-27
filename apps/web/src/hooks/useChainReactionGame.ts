@@ -46,10 +46,8 @@ export function useChainReactionGame(
   const [submissionWords, setSubmissionWords] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [viewingTarget, setViewingTarget] = useState<ChainViewTarget>("self");
-  const [giveUpConfirm, setGiveUpConfirm] = useState<number | null>(null);
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
-  const inlineInputRef = useRef<HTMLInputElement>(null);
   const guessInFlightRef = useRef(false);
   const submissionFirstInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
@@ -145,7 +143,6 @@ export function useChainReactionGame(
     setGuess("");
     setHasSubmitted(false);
     setViewingTarget("self");
-    setGiveUpConfirm(null);
     clearDraft();
   }, [clearDraft, game?.settings.currentRound, sessionId]);
 
@@ -197,8 +194,6 @@ export function useChainReactionGame(
   const opponentId = opponent?.sessionId;
   const oppChain: ChainSlot[] = opponentId ? (game?.chain[opponentId] ?? []) : [];
   const isViewingMine = viewingTarget === "self" || !opponentId;
-  const viewingId = isViewingMine ? sessionId : (opponentId ?? sessionId);
-  const viewingChain = isViewingMine ? myChain : oppChain;
   const myDone = myChain.length > 0 && myChain.every((s) => s.revealed);
 
   const editingSlot = editingIndex !== null ? myChain[editingIndex] : undefined;
@@ -210,18 +205,6 @@ export function useChainReactionGame(
   useEffect(() => {
     if (editingIndex === null) return;
     setGuess((cur) => (cur.toUpperCase().startsWith(lockedPrefix) ? cur : lockedPrefix));
-  }, [editingIndex, lockedPrefix]);
-
-  // Focus the inline input, caret after the locked prefix (don't select it; selecting
-  // would let the first keystroke try to overwrite the locked letters). Re-runs when a
-  // letter is revealed so the caret follows it.
-  useEffect(() => {
-    if (editingIndex === null) return;
-    const input = inlineInputRef.current;
-    if (!input) return;
-    input.focus();
-    const end = input.value.length;
-    input.setSelectionRange(end, end);
   }, [editingIndex, lockedPrefix]);
 
   /** Select a word for guessing, prefilled with whatever letters are revealed. */
@@ -245,7 +228,6 @@ export function useChainReactionGame(
   };
 
   const giveUp = async (i: number) => {
-    setGiveUpConfirm(null);
     clearDraft();
     // Same hop as a correct guess, minus the points - flagged wrong so a view
     // that draws its own feedback shows it as a loss rather than a win.
@@ -264,22 +246,13 @@ export function useChainReactionGame(
   };
 
   return {
-    zero, navigate, gameId, game, me, isHost, inGame, isSpectator, opponent, opponentId,
-    sessionById, playerName, liveBySession,
-    editingIndex, setEditingIndex, guess, setGuess,
-    submissionWords, setSubmissionWords, hasSubmitted,
-    viewingTarget, setViewingTarget, giveUpConfirm, setGiveUpConfirm,
-    inlineInputRef, submissionFirstInputRef,
-    activeGameType, activeGameId, inAnotherGame,
-    showInSessionModal, setShowInSessionModal,
-    joiningFromOtherGame, setJoiningFromOtherGame,
-
-    myChain, oppChain, isViewingMine, viewingId, viewingChain, myDone,
+    zero, navigate, gameId, game, isHost, inGame, isSpectator, opponent, opponentId,
+    sessionById, editingIndex, setEditingIndex, guess, setGuess, submissionWords,
+    setSubmissionWords, hasSubmitted, viewingTarget, setViewingTarget, submissionFirstInputRef,
+    activeGameType, showInSessionModal, setShowInSessionModal, joiningFromOtherGame, myChain,
+    oppChain, myDone,
     oppDone: oppChain.length > 0 && oppChain.every((s) => s.revealed),
     viewingLiveDraft: !isViewingMine && opponentId ? liveBySession[opponentId] ?? null : null,
-    submittedChainEntries: mySubmittedWords.map((word, index) => ({
-      id: `submitted-chain-word-${index}`, word, index,
-    })),
     mySubmittedWords,
     myScore: game?.scores[sessionId] ?? 0,
     opponentScore: opponentId ? (game?.scores[opponentId] ?? 0) : 0,
@@ -307,7 +280,6 @@ export function useChainReactionGame(
       if (editingIndex === null || !guess.trim() || guessInFlightRef.current) return;
       const idx = editingIndex;
       const currentGuess = guess.trim();
-
       /* The client only holds a mask of the word, so the server is the one who
          knows. Its answer lands in the local store before .server resolves. */
       let slot: ChainSlot | undefined;
@@ -322,11 +294,9 @@ export function useChainReactionGame(
       } finally {
         guessInFlightRef.current = false;
       }
-
       const isCorrect = Boolean(slot?.revealed);
       if (isCorrect) playSoundCorrect(); else playSoundWrong();
       onGuessResult?.(idx, isCorrect);
-
       // Right: straight on to the next word. Wrong: stay put with the new letter
       // (if any) locked in front of the caret.
       if (isCorrect) {
@@ -354,14 +324,6 @@ export function useChainReactionGame(
      *  would be a second state saying the same thing. */
     giveUp,
 
-    handleGiveUp: async (i: number) => {
-      if (giveUpConfirm !== i) {
-        setGiveUpConfirm(i);
-        return;
-      }
-      await giveUp(i);
-    },
-
     submitChain: async (event: FormEvent) => {
       event.preventDefault();
       if (submissionWords.some((w) => !w.trim())) return;
@@ -375,8 +337,6 @@ export function useChainReactionGame(
         showToast(err instanceof Error ? err.message : "Submit failed", "error");
       }
     },
-
-    joinGame,
 
     handleJoinClick: () => {
       if (inAnotherGame && activeGameType && activeGameId) {

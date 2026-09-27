@@ -363,13 +363,16 @@
   color: var(--muted-foreground);
 }
 
+/* Still face to face on a phone: two portraits fit side by side at 20rem,
+   and stacking them pushed the chain itself below the fold. */
 @media (max-width: 30rem) {
   .gk-versus {
-    flex-direction: column;
+    gap: 0.4rem;
   }
 
+  /* The lg card's own 168px floor is wider than half a phone. */
   .gk-versus > .pc {
-    max-width: none;
+    min-width: 0;
   }
 }
 
