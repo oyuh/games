@@ -140,6 +140,9 @@ function MobileLayoutInner() {
   const [shikakuState, setShikakuState] = useState<ShikakuState>(DEFAULT_SHIKAKU_STATE);
   const [pipsState, setPipsState] = useState<PipsState>(DEFAULT_PIPS_STATE);
   const isHome = location.pathname === "/";
+  /* Home drops you out of whatever you are in the middle of, so it takes a
+     second tap there, like Restart and Give up do. */
+  const [homeArmed, setHomeArmed] = useState(false);
   const isShikaku = /^\/shikaku(\/|$)/.test(location.pathname);
   const isPips = /^\/pips(\/|$)/.test(location.pathname);
   const hasGameActions = isShikaku || isPips;
@@ -149,7 +152,14 @@ function MobileLayoutInner() {
     setSheet(null);
     setShikakuConfirmAction(null);
     setPipsConfirmAction(null);
+    setHomeArmed(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!homeArmed) return;
+    const timeoutId = window.setTimeout(() => setHomeArmed(false), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [homeArmed]);
 
   /* Only the mounted page emits these, and a page is only mounted on its own
      route, so subscribing unconditionally is the same as the old per-route
@@ -200,6 +210,10 @@ function MobileLayoutInner() {
     setPipsConfirmAction(action);
     showToast(action === "restart" ? "Tap restart again to start a fresh seed" : "Tap give up again to abandon this run", "info");
   }, [pipsConfirmAction]);
+
+  const midGame = (chat.inGame && !chat.isSpectator)
+    || (isShikaku && shikakuState.phase === "playing")
+    || (isPips && pipsState.phase === "playing");
 
   const renderGameActionsSheet = () => {
     if (isShikaku) {
@@ -295,14 +309,22 @@ function MobileLayoutInner() {
       <nav className="m-bottomnav" aria-label="Mobile navigation">
         <Link
           to="/"
-          className={`m-nav-item${isHome && sheet === null ? " m-nav-item--active" : ""}`}
+          className={`m-nav-item${isHome && sheet === null ? " m-nav-item--active" : ""}${homeArmed ? " m-nav-item--armed" : ""}`}
           aria-current={isHome ? "page" : undefined}
           onClick={(event) => {
-            if (isHome) event.preventDefault();
+            if (isHome) {
+              event.preventDefault();
+              return;
+            }
+            if (midGame && !homeArmed) {
+              event.preventDefault();
+              setHomeArmed(true);
+              showToast(chat.inGame ? "Tap Home again to leave the game" : "Tap Home again to leave this run", "info");
+            }
           }}
         >
           <FiHome size={20} />
-          <span>Home</span>
+          <span>{homeArmed ? "Leave?" : "Home"}</span>
         </Link>
 
         {chat.inGame && !chat.isSpectator && (

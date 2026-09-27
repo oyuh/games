@@ -115,24 +115,6 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           : {})}
       />
 
-      {/* Who is in and what they are on, out of the kit. The phase below says
-          who is doing what right now, so this is only the running total. */}
-      {isGameActive && phase !== "finished" && (
-        <GameRoster
-          size="sm"
-          label="Players"
-          players={game.players.map((player, index) => ({
-            sessionId: player.sessionId,
-            name: playerName(player.sessionId),
-            index,
-            points: player.totalScore,
-            pointsSuffix: "pts",
-            ...(player.sessionId === game.leader_id ? { caption: "Leading" } : {}),
-            ...(player.sessionId === sessionId ? { you: true } : {}),
-          }))}
-        />
-      )}
-
       {phase === "lobby" && (
         <LocationLobby
           players={game.players}
@@ -345,6 +327,25 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
       )}
 
       {/* ─── Spectator overlay ─── */}
+      {/* The running total. Desktop has it up top; on a phone the map and the
+          clue come first, since they are what you act on, and the scores sit
+          under them. */}
+      {isGameActive && phase !== "finished" && (
+        <GameRoster
+          size="sm"
+          label="Players"
+          players={game.players.map((player, index) => ({
+            sessionId: player.sessionId,
+            name: playerName(player.sessionId),
+            index,
+            points: player.totalScore,
+            pointsSuffix: "pts",
+            ...(player.sessionId === game.leader_id ? { caption: "Leading" } : {}),
+            ...(player.sessionId === sessionId ? { you: true } : {}),
+          }))}
+        />
+      )}
+
       {isSpectator && phase !== "lobby" && (
         <SpectatorOverlay
           playerCount={game.players.length}
