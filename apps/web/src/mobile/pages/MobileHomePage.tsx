@@ -75,7 +75,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       </header>
 
       <section className="m-section">
-        <h2 className="m-label">Your name</h2>
+        <h2 className="m-label">Your profile</h2>
         <form className="m-field-row" onSubmit={home.saveName}>
           <button className="m-avatar-btn" type="button" aria-label="Change your avatar" onClick={() => setAvatarOpen(true)}>
             <PlayerAvatar seed={sessionId} />
