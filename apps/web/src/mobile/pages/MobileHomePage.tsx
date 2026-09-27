@@ -1,7 +1,7 @@
 import { GAME_META, multiplayerTypeToGameSlug, type GameSlug } from "@games/shared";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { FiChevronRight, FiGithub, FiX } from "react-icons/fi";
+import { FiChevronRight, FiGithub, FiLogIn, FiX } from "react-icons/fi";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList } from "../../components/shared/PublicGamesBrowser";
@@ -47,6 +47,13 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
   // sheet straight away instead of making them find the row.
   const [sheetGame, setSheetGame] = useState<HomeRouteGame | null>(home.activeRouteHighlight);
   const [browsing, setBrowsing] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+
+  /* The drawer is modal, so a confirm raised from it would sit behind it,
+     untappable. Joining from inside another game closes the drawer first. */
+  useEffect(() => {
+    if (home.showInSessionModal) setJoinOpen(false);
+  }, [home.showInSessionModal]);
 
   const openSheet = (game: HomeRouteGame) => {
     setBrowsing(false);
@@ -63,32 +70,6 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           {savedName ? <>Playing as <strong>{savedName}</strong></> : "Pick a name, then start or join a game."}
         </p>
       </header>
-
-      <section className="m-section">
-        <h2 className="m-label">Join a game</h2>
-        <form
-          className="m-field-row"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void home.joinAny();
-          }}
-        >
-          <input
-            className="m-input m-code-input"
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
-            placeholder="ABCXYZ"
-            maxLength={6}
-            autoCapitalize="characters"
-            autoComplete="off"
-            enterKeyHint="go"
-            aria-label="Game code"
-          />
-          <button className="m-btn m-btn--primary" type="submit" disabled={pendingAction !== null}>
-            {pendingAction === "join" ? "Joining…" : "Join"}
-          </button>
-        </form>
-      </section>
 
       <section className="m-section">
         <h2 className="m-label">Your name</h2>
@@ -114,39 +95,21 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
         )}
       </section>
 
-      {recentGames.length > 0 && (
-        <section className="m-section">
-          <div className="m-section-head">
-            <h2 className="m-label">Recent</h2>
-            <button
-              className="m-link"
-              type="button"
-              onClick={() => {
-                clearRecentGames();
-                setRecentGames([]);
-              }}
-            >
-              Clear
-            </button>
-          </div>
-          <ul className="m-list">
-            {recentGames.map((game) => (
-              <RecentRow
-                key={`${game.gameType}-${game.id}`}
-                game={game}
-                onRemove={() => {
-                  removeRecentGame(game.id, game.gameType);
-                  setRecentGames((current) => current.filter((g) => !(g.id === game.id && g.gameType === game.gameType)));
-                }}
-              />
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section className="m-section">
         <h2 className="m-label">Multiplayer</h2>
         <ul className="m-list">
+          <li>
+            <button className="m-row" type="button" onClick={() => setJoinOpen(true)}>
+              <span className="m-row-icon"><FiLogIn size={18} /></span>
+              <span className="m-row-text">
+                <span className="m-row-title">Join a game</span>
+                <span className="m-row-meta">
+                  {recentGames.length > 0 ? `Enter a code, or pick one of ${recentGames.length} recent` : "Enter a room code"}
+                </span>
+              </span>
+              <span className="m-row-end"><FiChevronRight size={16} aria-hidden="true" /></span>
+            </button>
+          </li>
           {HOME_ROUTE_GAMES.map((game) => {
             const meta = GAME_META[game];
             const live = publicCount(home, game);
@@ -196,6 +159,65 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
           </li>
         </ul>
       </section>
+
+      {joinOpen && (
+        <BottomSheet title="Join a game" onClose={() => setJoinOpen(false)}>
+          <div className="m-sheet-stack">
+            <form
+              className="m-field-row"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void home.joinAny();
+              }}
+            >
+              <input
+                className="m-input m-code-input"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
+                placeholder="ABCXYZ"
+                maxLength={6}
+                autoCapitalize="characters"
+                autoComplete="off"
+                enterKeyHint="go"
+                aria-label="Game code"
+              />
+              <button className="m-btn m-btn--primary" type="submit" disabled={pendingAction !== null}>
+                {pendingAction === "join" ? "Joining…" : "Join"}
+              </button>
+            </form>
+
+            {recentGames.length > 0 && (
+              <section className="m-section">
+                <div className="m-section-head">
+                  <h2 className="m-label">Recent</h2>
+                  <button
+                    className="m-link"
+                    type="button"
+                    onClick={() => {
+                      clearRecentGames();
+                      setRecentGames([]);
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <ul className="m-list">
+                  {recentGames.map((game) => (
+                    <RecentRow
+                      key={`${game.gameType}-${game.id}`}
+                      game={game}
+                      onRemove={() => {
+                        removeRecentGame(game.id, game.gameType);
+                        setRecentGames((current) => current.filter((g) => !(g.id === game.id && g.gameType === game.gameType)));
+                      }}
+                    />
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        </BottomSheet>
+      )}
 
       {sheetGame && (
         <BottomSheet title={GAME_META[sheetGame].title} onClose={() => setSheetGame(null)}>
