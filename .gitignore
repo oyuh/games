@@ -20,6 +20,7 @@ node_modules
 # Test / coverage
 coverage
 docs/react-doctor-guide.md
+docs/mobile-rework-plan.md
 
 # Zero
 zero-data
