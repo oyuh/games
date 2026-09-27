@@ -235,7 +235,7 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
   aspect-ratio: 264 / 288;
   opacity: 0.06;
   filter: blur(3px);
-  transform: rotate(45deg);
+  transform: rotate(30deg);
   pointer-events: none;
 }
 
