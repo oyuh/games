@@ -16,7 +16,7 @@ export function ToastContainer() {
   return (
     <div className="toast-container">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast toast--${t.level}`}>
+        <div key={t.id} className={`toast toast--${t.level}${t.leaving ? " toast--leaving" : ""}`}>
           <span className="toast-icon">{icons[t.level]}</span>
           <span className="toast-msg">{t.message}</span>
           <button className="toast-dismiss" onClick={() => dismissToast(t.id)}>
