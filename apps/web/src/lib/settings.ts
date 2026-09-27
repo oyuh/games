@@ -3,6 +3,12 @@ import { useSyncExternalStore } from "react";
 export type Theme = "dark" | "light";
 export type SidebarPosition = "left" | "right" | "top";
 export type SidebarOrientation = "vertical" | "horizontal";
+export type ToastPosition = "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-center" | "bottom-right";
+export type MobileToastPosition = "top" | "bottom";
+
+const TOAST_POSITIONS: readonly ToastPosition[] = [
+  "top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right",
+];
 
 /**
  * Free-placement position for the custom sidebar, stored as fractions of the
@@ -36,6 +42,10 @@ export interface Settings {
   customCursorScale: number;
   soundEnabled: boolean;
   soundPreferences: SoundPreferences;
+  /** Where toasts stack on a desktop screen. */
+  toastPosition: ToastPosition;
+  /** Where toasts stack on a phone, which only has room for a top or a bottom edge. */
+  toastPositionMobile: MobileToastPosition;
 }
 
 const STORAGE_KEY = "games-settings";
@@ -65,6 +75,8 @@ const defaults: Settings = {
   customCursorScale: CURSOR_SCALE_DEFAULT,
   soundEnabled: false,
   soundPreferences: { ...defaultSoundPreferences },
+  toastPosition: "bottom-right",
+  toastPositionMobile: "top",
 };
 
 let current: Settings = load();
@@ -109,6 +121,10 @@ function normalizeSettings(input: Partial<Settings>): Settings {
     sidebarCustomPos: normalizeCustomPos(input.sidebarCustomPos),
     customCursorScale: clampCursorScale(input.customCursorScale ?? defaults.customCursorScale),
     soundPreferences: { ...defaultSoundPreferences, ...(input.soundPreferences ?? {}) },
+    toastPosition: TOAST_POSITIONS.includes(input.toastPosition as ToastPosition)
+      ? (input.toastPosition as ToastPosition)
+      : defaults.toastPosition,
+    toastPositionMobile: input.toastPositionMobile === "bottom" ? "bottom" : "top",
   };
 }
 
@@ -130,6 +146,7 @@ export function updateSettings(patch: Partial<Settings>) {
   applyTheme(current.theme);
   applySidebar(current);
   applyCustomCursor(current.customCursor);
+  applyToasts(current);
   emit();
 }
 
@@ -148,10 +165,17 @@ function applyCustomCursor(enabled: boolean) {
   document.documentElement.setAttribute("data-custom-cursor", enabled ? "on" : "off");
 }
 
+/* toast.css places the toast stacks off these, one attribute per screen size. */
+function applyToasts(s: Settings) {
+  document.documentElement.setAttribute("data-toast-pos", s.toastPosition);
+  document.documentElement.setAttribute("data-toast-pos-mobile", s.toastPositionMobile);
+}
+
 // Apply on load
 applyTheme(current.theme);
 applySidebar(current);
 applyCustomCursor(current.customCursor);
+applyToasts(current);
 
 export function useSettings(): Settings {
   return useSyncExternalStore(
