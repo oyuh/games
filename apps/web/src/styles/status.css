@@ -3,8 +3,10 @@
    like Pips and Shikaku: bordered blocks on the page background, no shadows,
    no tinted panels. Color only ever marks a state. */
 
-.status-page {
-  width: min(64rem, 100%);
+/* Doubled class so it beats .solo-menu's 540px no matter which stylesheet
+   the bundler puts last. */
+.solo-menu.status-page {
+  width: min(68rem, 100%);
   padding: 2.5rem 0 1.5rem;
 }
 
@@ -75,8 +77,9 @@
 
 .status-row-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.3rem 0.6rem;
   min-width: 0;
 }
 
@@ -94,8 +97,9 @@
 }
 
 .status-row-name {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  white-space: nowrap;
   color: var(--foreground);
   font-size: 0.9rem;
   font-weight: 700;
@@ -191,6 +195,14 @@
 }
 
 /* ── Details and the event log ──────────────────────────────── */
+/* Side by side on desktop, stacked once the columns get too narrow. */
+.status-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  align-items: start;
+  gap: 1.4rem;
+}
+
 .status-section {
   display: flex;
   flex-direction: column;
@@ -206,13 +218,10 @@
   text-transform: uppercase;
 }
 
-/* Facts sit side by side and wrap as the page narrows. The row count can
-   leave a hole at the end, so the hairlines are shadows drawn into the gap
-   (the outer ones get clipped) instead of the border color showing through. */
+/* One fact per row, label on the left, value on the right. */
 .status-facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 1px;
+  display: flex;
+  flex-direction: column;
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -221,12 +230,16 @@
 }
 
 .status-facts > div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.75rem;
   min-width: 0;
-  padding: 0.7rem 1rem;
-  box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border);
+  padding: 0.6rem 1rem;
+}
+
+.status-facts > div + div {
+  border-top: 1px solid var(--border);
 }
 
 .status-facts dt {
@@ -295,6 +308,8 @@
 }
 
 .status-link code {
+  flex-shrink: 0;
+  overflow-wrap: normal;
   color: var(--primary);
   font-weight: 700;
 }
@@ -320,6 +335,8 @@
   border-radius: var(--solo-radius);
   background: var(--background);
   font-size: 0.72rem;
+  max-height: 22rem;
+  overflow-y: auto;
 }
 
 .status-event {
@@ -370,10 +387,23 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .solo-menu.status-page {
+    padding-inline: 1.25rem;
+  }
+
+  .status-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Stacked, the log only holds ten lines, so let it run full height
+     instead of trapping the scroll. */
+  .status-events {
+    max-height: none;
+  }
 }
 
 @media (max-width: 600px) {
-  .status-page {
+  .solo-menu.status-page {
     padding: 1.25rem 1rem 1.5rem;
   }
 
@@ -390,14 +420,25 @@
     justify-content: center;
   }
 
-  .status-event {
-    grid-template-columns: 0.8rem auto minmax(0, 1fr);
-    padding: 0.35rem 0.85rem;
+  .status-facts > div {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    padding: 0.6rem 0.85rem;
   }
 
-  .status-event-level,
-  .status-event time {
-    grid-row: span 2;
+  /* Level, time and source share the first line, the message gets the full
+     width under them. */
+  .status-event {
+    grid-template-columns: 0.8rem auto minmax(0, 1fr);
+    gap: 0.15rem 0.6rem;
+    padding: 0.4rem 0.85rem;
+  }
+
+  .status-event-msg {
+    grid-column: 1 / -1;
+  }
+
+  .status-event + .status-event {
+    border-top: 1px solid var(--border);
   }
 }
 
