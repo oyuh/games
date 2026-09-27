@@ -19,8 +19,6 @@ import { ActiveGameModal } from "../components/shared/ActiveGameBanner";
 import { PublicGamesList, usePublicGameCount } from "../components/shared/PublicGamesBrowser";
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { PlayerAvatar } from "../components/shared/PlayerAvatar";
-import { encodeAvatar, useStoredAvatar } from "../lib/avatar";
-import { useAvatarSync } from "../hooks/useAvatars";
 import { GameIcon } from "../components/shared/GameIcon";
 import { type HomeRouteGame } from "../lib/home-route-highlight";
 import { useHomePage } from "../hooks/useHomePage";
@@ -342,9 +340,6 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   const [locationBrowsing, setLocationBrowsing] = useState(false);
   const [activeDemo, setActiveDemo] = useState<string | null>(null);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
-  // The home card is the only place an avatar can be changed, so this is the
-  // one place that has to push it up to the session row.
-  useAvatarSync(zero, sessionId, encodeAvatar(useStoredAvatar()));
   const [recentCollapsed, setRecentCollapsed] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);

@@ -18,17 +18,10 @@ import "../../styles/avatar-picker.css";
 /**
  * Pick a shape, pick a color, independently. Both apply as you go rather than
  * behind a save button, so the preview at the top is always the real thing.
- * Reset drops back to the look derived from your session id.
+ * Reset drops back to the look derived from your session id. Shared by the
+ * desktop modal and the mobile drawer (mobile/components/AvatarPickerSheet).
  */
-export function AvatarPickerModal({
-  sessionId,
-  name,
-  onClose,
-}: {
-  sessionId: string;
-  name: string;
-  onClose: () => void;
-}) {
+export function useAvatarPicker(sessionId: string) {
   const stored = getStoredAvatar();
   const [look, setLook] = useState<AvatarLook>(() => avatarLook(sessionId, stored));
   const [custom, setCustom] = useState(Boolean(stored));
@@ -52,39 +45,31 @@ export function AvatarPickerModal({
     });
   };
 
+  return { look, custom, apply, reset, shuffle };
+}
+
+type AvatarPicker = ReturnType<typeof useAvatarPicker>;
+
+export function AvatarPreview({ picker, name }: { picker: AvatarPicker; name: string }) {
   return (
-    <ModalShell
-      icon={<FiSmile size={18} />}
-      kicker="Your look"
-      title="Choose an avatar"
-      onClose={onClose}
-      footer={
-        <>
-          <button className="btn btn-muted" type="button" onClick={reset} disabled={!custom}>
-            <FiRotateCcw size={14} /> Reset
-          </button>
-          <button className="btn btn-ghost" type="button" onClick={shuffle}>
-            <FiShuffle size={14} /> Surprise me
-          </button>
-          <button className="btn btn-primary" type="button" onClick={onClose}>
-            <FiCheck size={14} /> Done
-          </button>
-        </>
-      }
-      aside={
-        <div className="ap-preview">
-          <AvatarArt look={look} className="ap-preview-avatar" />
-          <div className="ap-preview-copy">
-            <span className="ap-preview-name">{name}</span>
-            {/* Honest about where the pick lives: on this device, until the
-                session row learns to carry an avatar. */}
-            <span className="ap-preview-hint">
-              {custom ? "Saved on this device" : "Picked for you from your session id"}
-            </span>
-          </div>
-        </div>
-      }
-    >
+    <div className="ap-preview">
+      <AvatarArt look={picker.look} className="ap-preview-avatar" />
+      <div className="ap-preview-copy">
+        <span className="ap-preview-name">{name}</span>
+        {/* Honest about where the pick lives: on this device, until the
+            session row learns to carry an avatar. */}
+        <span className="ap-preview-hint">
+          {picker.custom ? "Saved on this device" : "Picked for you from your session id"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function AvatarChoices({ picker }: { picker: AvatarPicker }) {
+  const { look, apply } = picker;
+  return (
+    <>
       <ModalSection label="Color" hint="Sets the ground and the shape together.">
         <div className="ap-colors" role="radiogroup" aria-label="Avatar color">
           {Array.from({ length: AVATAR_COLOR_COUNT }, (_, color) => {
@@ -131,6 +116,43 @@ export function AvatarPickerModal({
           })}
         </div>
       </ModalSection>
+    </>
+  );
+}
+
+export function AvatarPickerModal({
+  sessionId,
+  name,
+  onClose,
+}: {
+  sessionId: string;
+  name: string;
+  onClose: () => void;
+}) {
+  const picker = useAvatarPicker(sessionId);
+
+  return (
+    <ModalShell
+      icon={<FiSmile size={18} />}
+      kicker="Your look"
+      title="Choose an avatar"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn btn-muted" type="button" onClick={picker.reset} disabled={!picker.custom}>
+            <FiRotateCcw size={14} /> Reset
+          </button>
+          <button className="btn btn-ghost" type="button" onClick={picker.shuffle}>
+            <FiShuffle size={14} /> Surprise me
+          </button>
+          <button className="btn btn-primary" type="button" onClick={onClose}>
+            <FiCheck size={14} /> Done
+          </button>
+        </>
+      }
+      aside={<AvatarPreview picker={picker} name={name} />}
+    >
+      <AvatarChoices picker={picker} />
     </ModalShell>
   );
 }
