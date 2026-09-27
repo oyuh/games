@@ -87,9 +87,35 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
   color: var(--foreground);
 }
 
+.toast--leaving {
+  animation: toast-out 0.2s ease-in forwards;
+  pointer-events: none;
+}
+
+/* Toasts come in from, and leave toward, the edge they sit on: the side for
+   a corner, top or bottom for a centered stack and on phones. */
+:is(.toast-container, .sync-wake-toast-container) { --toast-from: translateX(40px); }
+html[data-toast-pos$="left"] :is(.toast-container, .sync-wake-toast-container) { --toast-from: translateX(-40px); }
+html[data-toast-pos="top-center"] :is(.toast-container, .sync-wake-toast-container) { --toast-from: translateY(-24px); }
+html[data-toast-pos="bottom-center"] :is(.toast-container, .sync-wake-toast-container) { --toast-from: translateY(24px); }
+
+@media (max-width: 767px) {
+  html[data-toast-pos-mobile="top"] :is(.toast-container, .sync-wake-toast-container) { --toast-from: translateY(-24px); }
+  html[data-toast-pos-mobile="bottom"] :is(.toast-container, .sync-wake-toast-container) { --toast-from: translateY(24px); }
+}
+
 @keyframes toast-in {
-  from { opacity: 0; transform: translateX(40px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: var(--toast-from); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: var(--toast-from); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.toast-container, .sync-wake-toast-container) { --toast-from: none; }
 }
 
 .toast--error {
