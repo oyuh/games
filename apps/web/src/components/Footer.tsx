@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { FiArrowRight } from "react-icons/fi";
+import { FiArrowRight, FiDatabase, FiServer, FiZap } from "react-icons/fi";
+import type { IconType } from "react-icons";
+import { SiBuymeacoffee, SiKofi } from "react-icons/si";
 import { Link } from "react-router-dom";
 import { formatUptime, overallTone, relativeTime, useConnectionDebug, type ServiceTone } from "../lib/connection-debug";
 import "../styles/footer.css";
@@ -9,6 +11,10 @@ import { PlayerHoverCard } from "./shared/PlayerHoverCard";
 import { showToast } from "../lib/toast";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
+const SUPPORT_LINKS = [
+  { label: "Buy me a coffee", href: "https://buymeacoffee.com/lawsonhart", Icon: SiBuymeacoffee },
+  { label: "Support on Ko-fi", href: "https://ko-fi.com/lawsonhart", Icon: SiKofi }
+];
 
 /** The one word on the footer line, and the sentence it opens into. */
 const TONE_LABELS: Record<ServiceTone, { short: string; long: string }> = {
@@ -93,6 +99,27 @@ export function Footer() {
   const hasDiff = additions != null && deletions != null;
   const latency = debug.apiLatencyMs;
 
+  const services: Array<{ name: string; Icon: IconType; tone: ServiceTone; label: string }> = [
+    {
+      name: "API",
+      Icon: FiServer,
+      tone: apiOk ? "ok" : isLoading ? "loading" : "err",
+      label: apiOk ? "Online" : isLoading ? "Checking" : "Offline"
+    },
+    {
+      name: "Database",
+      Icon: FiDatabase,
+      tone: dbOk ? "ok" : isLoading ? "loading" : "err",
+      label: dbOk ? "Connected" : isLoading ? "Checking" : "Disconnected"
+    },
+    {
+      name: "Sync",
+      Icon: FiZap,
+      tone: syncOk ? "ok" : isLoading ? "loading" : backendOk ? "partial" : "err",
+      label: syncOk ? "Connected" : isLoading ? "Checking" : backendOk ? "Local only" : "Offline"
+    }
+  ];
+
   const buttonLabel = TONE_LABELS[tone].short;
   const overallLabel = TONE_LABELS[tone].long;
 
@@ -146,29 +173,19 @@ export function Footer() {
                 <span className="fp-head-label">{overallLabel}</span>
               </div>
 
-              {/* One row per service, state as the same pill every other fact
-                  on the site is drawn as. */}
+              {/* One row per service: what it is, then the state as a dot and a
+                  word in its tone. */}
               <div className="fp-services">
-                {[
-                  {
-                    name: "API",
-                    tone: apiOk ? "ok" : isLoading ? "loading" : "err",
-                    label: apiOk ? "Online" : isLoading ? "Checking" : "Offline"
-                  },
-                  {
-                    name: "Database",
-                    tone: dbOk ? "ok" : isLoading ? "loading" : "err",
-                    label: dbOk ? "Connected" : isLoading ? "Checking" : "Disconnected"
-                  },
-                  {
-                    name: "Sync",
-                    tone: syncOk ? "ok" : isLoading ? "loading" : backendOk ? "partial" : "err",
-                    label: syncOk ? "Connected" : isLoading ? "Checking" : backendOk ? "Local only" : "Offline"
-                  }
-                ].map((service) => (
+                {services.map((service) => (
                   <div className="fp-service" key={service.name}>
-                    <span className="fp-service-name">{service.name}</span>
-                    <span className={`fp-pill fp-pill--${service.tone}`}>{service.label}</span>
+                    <span className="fp-service-name">
+                      <service.Icon size={13} aria-hidden="true" />
+                      {service.name}
+                    </span>
+                    <span className={`fp-state fp-state--${service.tone}`}>
+                      <StatusDot tone={service.tone} />
+                      {service.label}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -241,10 +258,26 @@ export function Footer() {
                 </a>
               )}
 
-              <Link className="fp-more" to="/status" onClick={() => setExpanded(false)}>
-                Full status page
-                <FiArrowRight size={12} aria-hidden="true" />
-              </Link>
+              <div className="fp-foot">
+                <Link className="fp-more" to="/status" onClick={() => setExpanded(false)}>
+                  Full status page
+                  <FiArrowRight size={12} aria-hidden="true" />
+                </Link>
+                {SUPPORT_LINKS.map(({ label, href, Icon }) => (
+                  <a
+                    className="fp-support"
+                    key={href}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    data-tooltip={label}
+                    data-tooltip-variant="info"
+                  >
+                    <Icon size={15} aria-hidden="true" />
+                  </a>
+                ))}
+              </div>
             </div>
           )}
         </div>

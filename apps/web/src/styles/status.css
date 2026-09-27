@@ -16,7 +16,9 @@
 .status-tone--err { --tone: #f87171; }
 .status-tone--idle { --tone: var(--muted-foreground); }
 
-.status-dot {
+/* Its own class, not .status-dot: footer.css owns that one globally and the
+   two were fighting over the background. Solid fill, no glow. */
+.status-row-dot {
   flex-shrink: 0;
   width: 0.5rem;
   height: 0.5rem;
@@ -24,7 +26,7 @@
   background: var(--tone);
 }
 
-.status-tone--loading .status-dot {
+.status-tone--loading .status-row-dot {
   animation: status-pulse 1.1s ease-in-out infinite;
 }
 
@@ -83,6 +85,12 @@
   place-items: center;
   color: var(--muted-foreground);
   font-size: 1rem;
+  transition: color 0.16s;
+}
+
+/* Hovering a service lights its icon in the state's color. */
+.status-row:hover .status-row-icon {
+  color: color-mix(in srgb, var(--tone) 70%, var(--foreground));
 }
 
 .status-row-name {
@@ -120,11 +128,23 @@
 .status-drawer-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 1.1rem;
+  gap: 0.35rem 1.25rem;
   color: var(--muted-foreground);
   font-size: 0.74rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.status-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: default;
+  transition: color 0.16s;
+}
+
+.status-fact:hover {
+  color: var(--foreground);
 }
 
 /* The page's one primary action, sized to sit inside the drawer. */
@@ -210,6 +230,9 @@
 }
 
 .status-facts dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   color: var(--muted-foreground);
   font-size: 0.78rem;
   font-weight: 600;
@@ -255,6 +278,22 @@
   text-underline-offset: 3px;
 }
 
+.status-copy {
+  align-items: center;
+}
+
+.status-copy-icon {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  opacity: 0.45;
+  transition: opacity 0.16s;
+}
+
+.status-copy:hover .status-copy-icon,
+.status-copy:focus-visible .status-copy-icon {
+  opacity: 1;
+}
+
 .status-link code {
   color: var(--primary);
   font-weight: 700;
@@ -285,10 +324,23 @@
 
 .status-event {
   display: grid;
-  grid-template-columns: 6.2rem 7.5rem minmax(0, 1fr);
+  grid-template-columns: 0.8rem 6.2rem 7.5rem minmax(0, 1fr);
+  align-items: center;
   gap: 0.6rem;
   padding: 0.3rem 1rem;
   color: var(--foreground);
+}
+
+.status-event:hover .status-event-msg {
+  overflow: visible;
+  white-space: normal;
+}
+
+.status-event-level {
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
 }
 
 .status-event time,
@@ -310,8 +362,8 @@
   white-space: nowrap;
 }
 
-.status-event--warn .status-event-source { color: color-mix(in srgb, #facc15 60%, var(--foreground)); }
-.status-event--error .status-event-source { color: color-mix(in srgb, #f87171 60%, var(--foreground)); }
+.status-event--warn .status-event-level { color: color-mix(in srgb, #facc15 70%, var(--foreground)); }
+.status-event--error .status-event-level { color: color-mix(in srgb, #f87171 70%, var(--foreground)); }
 
 @media (max-width: 960px) {
   .status-list {
@@ -339,10 +391,11 @@
   }
 
   .status-event {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: 0.8rem auto minmax(0, 1fr);
     padding: 0.35rem 0.85rem;
   }
 
+  .status-event-level,
   .status-event time {
     grid-row: span 2;
   }
@@ -350,7 +403,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .status-spin,
-  .status-tone--loading .status-dot {
+  .status-tone--loading .status-row-dot {
     animation: none;
   }
 }
