@@ -773,18 +773,10 @@ async function probeDatabaseStatus(): Promise<DatabaseProbe> {
 
     const actualValue = rows[0]?.value ?? "";
 
-    if (!actualValue) {
-      return {
-        state: "unknown",
-        reason: `missing status row for key '${DB_STATUS_KEY}'`,
-        key: DB_STATUS_KEY,
-        expectedValue: DB_STATUS_EXPECTED_VALUE,
-        actualValue,
-        checkedAt
-      };
-    }
-
-    if (actualValue !== DB_STATUS_EXPECTED_VALUE) {
+    // The query answering is the health check. A missing sentinel row just
+    // means nobody seeded it, and used to paint every fresh database red. Only
+    // a row someone set to something else counts as a deliberate warning.
+    if (actualValue && actualValue !== DB_STATUS_EXPECTED_VALUE) {
       return {
         state: "unknown",
         reason: `status value mismatch for key '${DB_STATUS_KEY}'`,

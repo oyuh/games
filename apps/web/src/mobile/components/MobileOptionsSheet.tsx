@@ -1,4 +1,4 @@
-import { SoundSection, ThemeSection } from "../../components/shared/OptionsModal";
+import { SoundSection, ThemeSection, ToastSection } from "../../components/shared/OptionsModal";
 import { BottomSheet } from "./BottomSheet";
 
 export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
@@ -6,6 +6,7 @@ export function MobileOptionsSheet({ onClose }: { onClose: () => void }) {
     <BottomSheet title="Options" onClose={onClose}>
       <ThemeSection />
       <SoundSection />
+      <ToastSection phone />
     </BottomSheet>
   );
 }

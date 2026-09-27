@@ -752,6 +752,13 @@
   margin-top: 0.5rem;
 }
 
+/* Two pickers that set one value, like the toast edge and side. */
+.opt-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 /* Drawer holding a control rather than a slider, e.g. the sound picker. */
 .opt-drawer {
   gap: 0.6rem;

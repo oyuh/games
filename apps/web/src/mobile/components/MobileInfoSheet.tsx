@@ -1,4 +1,5 @@
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { FiActivity, FiChevronRight } from "react-icons/fi";
 import { getGameSlugFromPath } from "@games/shared";
 import { useState } from "react";
 import { BottomSheet } from "./BottomSheet";
@@ -38,6 +39,10 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
           </button>
         )}
       />
+      {/* Phones have no footer, so the status page's way in lives here. */}
+      <Link className="m-link m-info-status" to="/status">
+        <FiActivity size={14} aria-hidden="true" /> Service status <FiChevronRight size={14} aria-hidden="true" />
+      </Link>
       <div className="m-sheet-foot">
         <InfoFooter />
       </div>

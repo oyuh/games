@@ -6,13 +6,10 @@ import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, ty
 import { FiExternalLink, FiInfo, FiX } from "react-icons/fi";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
-import { BootStatusPage } from "./components/BootStatusPage";
 import {
   addConnectionDebugEvent,
   initConnectionDebug,
-  setApiBuildInfo,
-  setApiConnectionProbe,
-  setDatabaseStatusProbe,
+  probeApiMetadata,
   setZeroConnectionState,
   startGlobalConnectionDebugCapture,
   useConnectionDebug
@@ -70,6 +67,7 @@ const LocationKitPage = lazy(() =>
 );
 const ShikakuPage = lazy(() => import("./pages/ShikakuPage").then(({ ShikakuPage }) => ({ default: ShikakuPage })));
 const PipsPage = lazy(() => import("./pages/PipsPage").then(({ PipsPage }) => ({ default: PipsPage })));
+const StatusPage = lazy(() => import("./pages/StatusPage").then(({ StatusPage }) => ({ default: StatusPage })));
 
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -134,13 +132,6 @@ function createZero(sessionId: string, sessionProof: string | null, onClientStat
   });
 }
 
-function stringifyError(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
-}
-
 function RouteLoading() {
   return (
     <div className="route-loading" role="status" aria-live="polite">
@@ -154,8 +145,8 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<RouteLoading />}>{children}</Suspense>;
 }
 
-/** Routes that don't use the Zero sync server (solo/offline games + the status page). */
-const SYNC_FREE_ROUTES = ["/shikaku", "/pips", "/admin", "/status"];
+/** Routes that don't use the Zero sync server (solo/offline games). */
+const SYNC_FREE_ROUTES = ["/shikaku", "/pips", "/admin"];
 
 function isSyncFreePath(pathname: string) {
   return SYNC_FREE_ROUTES.some((prefix) => pathname.startsWith(prefix));
@@ -227,7 +218,9 @@ function SyncWakeToast() {
   const location = useLocation();
   const debug = useConnectionDebug();
   const zeroState = debug.zeroState;
-  const needsSync = !isSyncFreePath(location.pathname);
+  // The status page verifies the session like any other page, since it
+  // reports on the result, but it already shows sync state so it gets no toast.
+  const needsSync = !isSyncFreePath(location.pathname) && location.pathname !== "/status";
   const elapsedSeconds = useSyncElapsedSeconds();
   const syncTimedOut = useSyncTimedOut();
   const syncActivity = useSyncSessionActivityState();
@@ -544,114 +537,13 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
       return;
     }
 
-    let cancelled = false;
-
-    const poll = async () => {
-      const started = performance.now();
-      setApiConnectionProbe({ state: "loading" });
-
-      try {
-        const response = await fetch(apiInfoURL, {
-          cache: "no-store"
-        });
-        const latencyMs = Math.round(performance.now() - started);
-
-        if (!response.ok) {
-          throw new Error(`status ${response.status}`);
-        }
-
-        const payload = (await response.json()) as {
-          platform?: string;
-          commitSha?: string;
-          commitRef?: string;
-          commitMessage?: string;
-          commitTimestamp?: string;
-          commitStats?: { additions?: number; deletions?: number; filesChanged?: number } | null;
-          buildTimestamp?: string;
-          updatedAt?: string;
-          startedAt?: string;
-          uptimeMs?: number;
-          database?: {
-            state?: "ok" | "unknown" | "offline";
-            reason?: string;
-            key?: string;
-            expectedValue?: string;
-            actualValue?: string;
-            checkedAt?: string;
-          };
-        };
-
-        if (cancelled) {
-          return;
-        }
-
-        setApiBuildInfo({
-          platform: payload.platform,
-          commitSha: payload.commitSha,
-          commitRef: payload.commitRef,
-          commitMessage: payload.commitMessage,
-          commitTimestamp: payload.commitTimestamp,
-          commitStats: payload.commitStats,
-          buildTimestamp: payload.buildTimestamp,
-          updatedAt: payload.updatedAt,
-          startedAt: payload.startedAt,
-          uptimeMs: payload.uptimeMs
-        });
-
-        setApiConnectionProbe({
-          state: "ok",
-          latencyMs,
-          checkedAt: new Date().toISOString()
-        });
-
-        const nextDatabaseProbe = {
-          state: payload.database?.state ?? "unknown",
-          checkedAt: payload.database?.checkedAt ?? new Date().toISOString(),
-          ...(payload.database?.reason ? { reason: payload.database.reason } : {}),
-          ...(payload.database?.key ? { key: payload.database.key } : {}),
-          ...(payload.database?.expectedValue ? { expectedValue: payload.database.expectedValue } : {}),
-          ...(payload.database?.actualValue ? { actualValue: payload.database.actualValue } : {})
-        };
-
-        setDatabaseStatusProbe(nextDatabaseProbe);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        const latencyMs = Math.round(performance.now() - started);
-        setApiConnectionProbe({
-          state: "error",
-          reason: stringifyError(error),
-          latencyMs,
-          checkedAt: new Date().toISOString()
-        });
-
-        setDatabaseStatusProbe({
-          state: "offline",
-          reason: stringifyError(error),
-          checkedAt: new Date().toISOString()
-        });
-
-        addConnectionDebugEvent({
-          level: "warn",
-          source: "api",
-          message: "metadata probe failed",
-          details: stringifyError(error)
-        });
-      }
-    };
-
-    void poll();
+    void probeApiMetadata();
     const timer = window.setInterval(() => {
-      void poll();
+      void probeApiMetadata();
     }, API_METADATA_POLL_MS);
 
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [apiInfoURL, styleOnly]);
+    return () => window.clearInterval(timer);
+  }, [styleOnly]);
 
   useEffect(() => {
     addConnectionDebugEvent({
@@ -729,17 +621,6 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
         <BrowserRouter>
           <SyncWakeToast />
           <Routes>
-            <Route
-              path="/status"
-              element={
-                <BootStatusPage
-                  apiBase={apiBaseURL}
-                  zeroCacheURL={zeroCacheURL}
-                  sessionId={session.id}
-                  onRetry={() => window.location.reload()}
-                />
-              }
-            />
             <Route element={<AppShell />}>
               <Route path="/" element={<LazyRoute><HomePage sessionId={session.id} /></LazyRoute>} />
               <Route path="/imposter" element={<Navigate to="/?game=imposter" replace />} />
@@ -758,6 +639,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/shade/:id" element={<LazyRoute><ShadeSignalPage sessionId={session.id} /></LazyRoute>} />
               <Route path="/location/:id" element={<LazyRoute><LocationSignalPage sessionId={session.id} /></LazyRoute>} />
               <Route path="/shikaku" element={<LazyRoute><ShikakuPage /></LazyRoute>} />
+              <Route path="/status" element={<LazyRoute><StatusPage /></LazyRoute>} />
               <Route path="/pips" element={<LazyRoute><PipsPage /></LazyRoute>} />
               {/* Gallery for the shared PlayerCard. Not linked from anywhere on purpose. */}
               <Route path="/dev/player-cards" element={<LazyRoute><PlayerCardsPage /></LazyRoute>} />
