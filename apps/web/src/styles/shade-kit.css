@@ -6,13 +6,9 @@
    Shade is the hard case for the second rule, because the surface already has
    a hundred and twenty colors on it and none of them mean anything, they are
    the puzzle. So nothing drawn on top gets a hue: every mark is --foreground,
-   and distance is that one mark fading out as it goes. The old sheet answered
-   the same question with a white glow, a yellow glow and four unrelated zone
-   colors, which is five accents on the one surface that can least afford
-   them, and the bands read as decoration rather than as a ladder.
-
-   The old shade-signal.css stays until the old page comes out. Nothing here
-   shares a class name with it. */
+   and distance is that one mark fading out as it goes. Glows or extra zone
+   colors would be more accents on the one surface that can least afford them,
+   and the bands would read as decoration rather than as a ladder. */
 
 .sk-grid,
 .sk-bands,

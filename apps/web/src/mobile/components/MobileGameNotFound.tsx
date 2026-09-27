@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { GameEmpty, GamePanel } from "../../components/shared/GameKit";
 
+/** The desktop pages' empty state, with the same trip home after a moment. */
 export function MobileGameNotFound({ theme }: { theme: string }) {
   const navigate = useNavigate();
 
@@ -10,12 +12,10 @@ export function MobileGameNotFound({ theme }: { theme: string }) {
   }, [navigate]);
 
   return (
-    <div className="m-page" data-game-theme={theme}>
-      <div className="m-empty">
-        <p>Game not found</p>
-        <p style={{ fontSize: "0.8rem", opacity: 0.6, marginTop: "0.5rem" }}>Redirecting home…</p>
-        <button className="m-btn m-btn-primary" style={{ marginTop: "0.75rem" }} onClick={() => navigate("/")}>Go Home</button>
-      </div>
+    <div className="game-page m-game" data-game-theme={theme}>
+      <GamePanel>
+        <GameEmpty title="No game here" hint="Taking you home…" />
+      </GamePanel>
     </div>
   );
 }

@@ -49,7 +49,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     isCluePhase, isGuessPhase, isGameActive,
     leaderName, roundGuessers, guessesThisRound, totalRounds, visibleClues,
     submitClue, submitGuess, handleJoinClick, confirmLeaveAndJoin,
-  } = useLocationSignalGame(sessionId, { fallbackWidth: 900, height: 520 });
+  } = useLocationSignalGame(sessionId);
 
   if (!game) {
     return (

@@ -2009,32 +2009,6 @@ a.solo-card-title-link {
   text-underline-offset: 2px;
 }
 
-/* Styled checkbox row for config toggles (mobile home page) */
-.hc-config-check {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  padding: 0.35rem 0.55rem;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--secondary) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--secondary) 14%, transparent);
-  transition: background 0.15s, border-color 0.15s;
-}
-.hc-config-check:hover {
-  background: color-mix(in srgb, var(--secondary) 12%, transparent);
-  border-color: color-mix(in srgb, var(--secondary) 25%, transparent);
-}
-.hc-config-check input[type="checkbox"] {
-  accent-color: var(--card-accent, var(--primary));
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
-}
-
 /* Live summary panel beneath config */
 
 .hc-summary {
@@ -2328,68 +2302,6 @@ a.solo-card-title-link {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-}
-
-/* ── Globe Browse Buttons ──────────────────────────────── */
-
-.hc-globe-badge {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: var(--card-accent, var(--primary));
-  color: #fff;
-  font-size: 0.65rem;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-  pointer-events: none;
-  transition: top 0.15s ease, right 0.15s ease;
-}
-
-.m-browse-globe:hover .hc-globe-badge {
-  top: -5px;
-  right: -5px;
-}
-
-/* ── Globe Browse Button (mobile cards) ─────────────────── */
-.m-browse-globe {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--card-accent, var(--secondary));
-  opacity: 0.5;
-  border-radius: var(--radius-md);
-}
-.m-browse-globe svg {
-  width: 22px;
-  height: 22px;
-}
-.m-browse-globe:hover {
-  opacity: 1;
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 12%, transparent);
-  color: var(--card-accent, var(--secondary));
-}
-.m-browse-globe {
-  position: relative;
-}
-.m-globe-empty {
-  color: var(--muted-foreground);
-  opacity: 0.35;
-}
-.m-globe-empty:hover {
-  color: var(--muted-foreground);
-  opacity: 0.6;
-  background: color-mix(in srgb, var(--muted-foreground) 8%, transparent);
 }
 
 /* ── Card content enter animation + Public Games list ──── */

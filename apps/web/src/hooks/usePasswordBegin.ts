@@ -4,18 +4,14 @@ import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { buildPasswordPlayerNames } from "../lib/password-names";
-import { addRecentGame, SessionGameType } from "../lib/session";
+import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 
 /**
  * Shared lobby logic for the password begin screen: queries, the
- * start/kick/announcement watchers, and the derived facts both views need to
- * decide what to render.
- *
- * The join flows are deliberately not in here. Desktop joins the game and
- * lets you switch team afterwards; mobile joins a team directly. Those are
- * genuinely different interactions, so they stay in their own components
- * along with the state that serves them.
+ * start/kick/announcement watchers, the join flow, and the derived facts both
+ * views need to decide what to render. Both views join the game first and
+ * switch team afterwards.
  */
 export function usePasswordBegin(sessionId: string) {
   const zero = useZero();
@@ -87,6 +83,54 @@ export function usePasswordBegin(sessionId: string) {
   const activeGameId = mySession?.game_id ?? null;
   const teamsWithPlayers = game?.teams.filter((t) => t.members.length > 0).length ?? 0;
 
+  const inGame = game?.teams.some((t) => t.members.includes(sessionId)) ?? false;
+  const isSpectator = game?.spectators?.some((s) => s.sessionId === sessionId) ?? false;
+  const inAnotherGame = Boolean(
+    activeGameType && activeGameId && (activeGameType !== "password" || activeGameId !== gameId)
+  );
+
+  const joinGame = async () => {
+    await ensureName(zero, sessionId);
+    if (isSpectator) {
+      void zero.mutate(mutators.password.leaveSpectator({ gameId, sessionId }))
+        .client.then(() => zero.mutate(mutators.password.join({ gameId, sessionId })))
+        .catch(() => showToast("Couldn't join game", "error"));
+      return;
+    }
+    void zero.mutate(mutators.password.join({ gameId, sessionId }))
+      .client.catch(() => showToast("Couldn't join game", "error"));
+  };
+
+  const handleJoinClick = () => {
+    if (inAnotherGame && activeGameType && activeGameId) {
+      setJoiningFromOtherGame(true);
+      void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+        .catch(() => showToast("Couldn't leave current game", "error"))
+        .finally(() => {
+          setJoiningFromOtherGame(false);
+          void joinGame();
+        });
+      return;
+    }
+    void joinGame();
+  };
+
+  const confirmLeaveAndJoin = () => {
+    if (!activeGameType || !activeGameId) {
+      setShowInSessionModal(false);
+      void joinGame();
+      return;
+    }
+    setJoiningFromOtherGame(true);
+    void leaveCurrentGame(zero, sessionId, activeGameType, activeGameId)
+      .then(() => {
+        setShowInSessionModal(false);
+        void joinGame();
+      })
+      .catch(() => showToast("Couldn't leave current game", "error"))
+      .finally(() => setJoiningFromOtherGame(false));
+  };
+
   const startGame = async () => {
     if (!isHost || teamsWithPlayers < 2 || startingGame) return;
     setStartingGame(true);
@@ -103,26 +147,8 @@ export function usePasswordBegin(sessionId: string) {
   };
 
   return {
-    zero,
-    navigate,
-    gameId,
-    game,
-    names,
-    isHost,
-    inGame: game?.teams.some((t) => t.members.includes(sessionId)) ?? false,
-    isSpectator: game?.spectators?.some((s) => s.sessionId === sessionId) ?? false,
-    activeGameType,
-    activeGameId,
-    inAnotherGame: Boolean(
-      activeGameType && activeGameId && (activeGameType !== "password" || activeGameId !== gameId)
-    ),
-    teamsWithPlayers,
-    canStart: isHost && teamsWithPlayers >= 2,
-    startingGame,
-    startGame,
-    showInSessionModal,
-    setShowInSessionModal,
-    joiningFromOtherGame,
-    setJoiningFromOtherGame,
+    zero, gameId, game, names, isHost, inGame, isSpectator, activeGameType, startingGame,
+    startGame, showInSessionModal, setShowInSessionModal, joiningFromOtherGame, handleJoinClick,
+    confirmLeaveAndJoin,
   };
 }

@@ -1,9 +1,6 @@
 import { mutators } from "@games/shared";
 import { optimistic } from "../lib/zero";
 import "../styles/game-shared.css";
-/* The old sheet. Nothing on this page reaches for it any more, but the mobile
-   page below still draws its own markup and has not moved onto the kit yet. */
-import "../styles/shade-signal.css";
 import { useState } from "react";
 import { FiClock, FiEye } from "react-icons/fi";
 
