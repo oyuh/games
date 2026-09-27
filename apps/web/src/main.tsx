@@ -25,10 +25,11 @@ const sentryReactHandler = Sentry.reactErrorHandler((error) => console.error(err
 const reportReactError = (error: unknown, info: { componentStack?: string | undefined }) =>
   sentryReactHandler(error, { componentStack: info.componentStack ?? null });
 
-// A lazy chunk failed to load (flaky mobile network, or a deploy swapped the
-// hashed assets out from under an open tab). Reload once to pick up a fresh
-// index.html. The timestamp guard stops a reload loop if the chunk is truly
-// gone; in that case the error falls through to the ErrorBoundary.
+// A lazy chunk failed to load (flaky mobile network, a deploy swapped the
+// hashed assets out from under an open tab, or Safari holding a bad cached
+// copy that survives plain reloads). Refetch the page's assets past the HTTP
+// cache, then reload once. The timestamp guard stops a reload loop if the
+// chunk is truly gone; in that case the error falls through to the ErrorBoundary.
 window.addEventListener("vite:preloadError", (event) => {
   const key = "chunk-reload-at";
   try {
@@ -38,7 +39,8 @@ window.addEventListener("vite:preloadError", (event) => {
     return;
   }
   event.preventDefault();
-  window.location.reload();
+  const assets = [...document.querySelectorAll<HTMLLinkElement>('link[href*="/assets/"]')].map((link) => link.href);
+  void Promise.allSettled(assets.map((href) => fetch(href, { cache: "reload" }))).then(() => window.location.reload());
 });
 
 // React 19 hands errors to these hooks, including ones our ErrorBoundary

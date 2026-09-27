@@ -67,15 +67,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     <div className="m-home">
       <ActiveGameModal sessionId={sessionId} suppress={pendingAction !== null} />
 
+      <span className="m-home-mark" aria-hidden="true" />
       <header className="m-head">
-        <h1 className="m-head-title">Games</h1>
-        <p className="m-head-sub">
-          {savedName ? <>Playing as <strong>{savedName}</strong></> : "Pick a name, then start or join a game."}
-        </p>
+        <h1 className="m-head-title">
+          Games<span className="m-head-dot">.</span>
+        </h1>
       </header>
 
       <section className="m-section">
-        <h2 className="m-label">Your name</h2>
+        <h2 className="m-label">Your profile</h2>
         <form className="m-field-row" onSubmit={home.saveName}>
           <button className="m-avatar-btn" type="button" aria-label="Change your avatar" onClick={() => setAvatarOpen(true)}>
             <PlayerAvatar seed={sessionId} />
@@ -229,8 +229,9 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       {sheetGame && (
         <BottomSheet title={GAME_META[sheetGame].title} onClose={() => setSheetGame(null)}>
           <div className="m-create" style={accentStyle(sheetGame)}>
-            <p className="m-create-meta">
-              {GAME_META[sheetGame].players} players · {GAME_META[sheetGame].shortDescription}
+            <p className="m-create-meta meta-parts">
+              <span className="m-create-players">{GAME_META[sheetGame].players} players</span>
+              <span>{GAME_META[sheetGame].shortDescription}</span>
             </p>
 
             {browsing ? (

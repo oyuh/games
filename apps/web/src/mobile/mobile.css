@@ -211,31 +211,53 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
 
 /* ── Page head ─────────────────────────────────────────────────── */
 .m-home {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
   padding: 1.5rem 1rem 1rem;
 }
 
+/* The logo as a watermark behind the top of the page. It's a mask painted in
+   --primary, so it follows the theme's accent and works on light themes. The
+   isolation on .m-home keeps the negative z-index above the page background.
+   The mask lives on ::before because filter runs before mask on one element:
+   blurring the element that carries the mask blurs a flat fill, then cuts a
+   sharp logo out of it. */
+.m-home-mark {
+  position: absolute;
+  top: -3.5rem;
+  right: -4.5rem;
+  z-index: -1;
+  width: 17rem;
+  aspect-ratio: 264 / 288;
+  opacity: 0.06;
+  filter: blur(3px);
+  transform: rotate(30deg);
+  pointer-events: none;
+}
+
+.m-home-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  mask: url("/logo-mark.png") center / contain no-repeat;
+}
+
 .m-head-title {
   margin: 0;
   color: var(--foreground);
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.15;
+  font-size: 2.25rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
-.m-head-sub {
-  margin: 0.3rem 0 0;
-  color: var(--muted-foreground);
-  font-size: 0.92rem;
-  line-height: 1.4;
-}
-
-.m-head-sub strong {
+.m-head-dot {
   color: var(--primary);
-  font-weight: 700;
 }
 
 /* ── Sections ──────────────────────────────────────────────────── */
@@ -586,22 +608,23 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
   animation: m-fade-out 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
-.m-sheet-handle {
+/* Sized like loife's: a thin 100px pill. vaul injects its own
+   [data-vaul-handle] rules after ours, so the attribute keeps this ahead on
+   specificity. vaul also adds a 44px hit area inside, so the pill can stay thin. */
+.m-sheet-handle[data-vaul-handle] {
   flex-shrink: 0;
-  width: 2.25rem;
-  height: 0.3rem;
-  margin: 0.5rem auto 0.35rem;
-  padding: 0.5rem 2rem;
+  width: 100px;
+  height: 0.5rem;
+  margin: 1rem auto 0.25rem;
+  padding: 0;
   border-radius: 99px;
   background: var(--accent);
-  background-clip: content-box;
-  opacity: 0.6;
+  opacity: 1;
   cursor: grab;
 }
 
-.m-sheet-handle:active {
+.m-sheet-handle[data-vaul-handle]:active {
   cursor: grabbing;
-  opacity: 0.9;
 }
 
 .m-sheet-header {
@@ -732,6 +755,11 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
   color: var(--muted-foreground);
   font-size: 0.85rem;
   line-height: 1.4;
+}
+
+.m-create-players {
+  color: var(--foreground);
+  font-weight: 700;
 }
 
 .m-create-link {
