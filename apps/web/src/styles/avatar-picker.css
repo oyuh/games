@@ -120,3 +120,44 @@
   padding: calc(0.3rem - 1px);
   background: color-mix(in srgb, var(--primary) 10%, var(--surface-bottom));
 }
+
+/* ── Mobile drawer ─────────────────────────────────────────────
+   Preview on top and actions below stay put; only the choices scroll. The
+   sheet body normally scrolls itself, so it hands that job down here. */
+.m-sheet-body:has(> .ap-sheet) {
+  display: flex;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ap-sheet {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ap-sheet .ap-preview {
+  padding: 0.75rem 1rem;
+}
+
+.ap-sheet-choices {
+  flex: 1;
+  min-height: 0;
+  padding: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ap-sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.ap-sheet-actions .m-btn {
+  padding-inline: 0.5rem;
+  white-space: nowrap;
+}

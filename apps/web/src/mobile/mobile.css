@@ -343,6 +343,39 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
   min-width: 0;
 }
 
+/* The avatar sits in the name row at the field's height; the pencil badge
+   says it can be tapped, since there is no hover on a phone. */
+.m-avatar-btn {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--avatar-radius);
+  background: transparent;
+  line-height: 0;
+}
+
+.m-avatar-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.m-avatar-edit {
+  position: absolute;
+  right: -0.25rem;
+  bottom: -0.25rem;
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
 .m-code-input {
   font-weight: 700;
   letter-spacing: 0.12em;
