@@ -153,11 +153,12 @@ export function PasswordRoundsTable({
                         <span className="pw-history-event-time">{formatEntryTime(entry.ts)}</span>
                       </div>
                       <p className="pw-history-event-text">{entry.text}</p>
-                      <p className="pw-history-event-meta">
-                        {entry.playerName}
-                        {entry.type === "clue" && entry.clueNumber > 1 ? ` • clue ${entry.clueNumber}` : ""}
-                        {entry.type === "clue" && entry.repeatedText ? " • repeated word" : ""}
-                        {entry.type === "guess" ? ` • guess ${entry.guessNumber}${entry.correct ? " • correct" : ""}` : ""}
+                      <p className="pw-history-event-meta meta-parts">
+                        <span>{entry.playerName}</span>
+                        {entry.type === "clue" && entry.clueNumber > 1 && <span>clue {entry.clueNumber}</span>}
+                        {entry.type === "clue" && entry.repeatedText && <span>repeated word</span>}
+                        {entry.type === "guess" && <span>guess {entry.guessNumber}</span>}
+                        {entry.type === "guess" && entry.correct && <span>correct</span>}
                       </p>
                     </div>
                   ))}
