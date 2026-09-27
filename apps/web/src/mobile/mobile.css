@@ -222,7 +222,10 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
 
 /* The logo as a watermark behind the top of the page. It's a mask painted in
    --primary, so it follows the theme's accent and works on light themes. The
-   isolation on .m-home keeps the negative z-index above the page background. */
+   isolation on .m-home keeps the negative z-index above the page background.
+   The mask lives on ::before because filter runs before mask on one element:
+   blurring the element that carries the mask blurs a flat fill, then cuts a
+   sharp logo out of it. */
 .m-home-mark {
   position: absolute;
   top: -3.5rem;
@@ -230,12 +233,18 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
   z-index: -1;
   width: 17rem;
   aspect-ratio: 264 / 288;
-  background: var(--primary);
-  mask: url("/logo-mark.png") center / contain no-repeat;
   opacity: 0.09;
-  filter: blur(3px);
+  filter: blur(8px);
   transform: rotate(45deg);
   pointer-events: none;
+}
+
+.m-home-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  mask: url("/logo-mark.png") center / contain no-repeat;
 }
 
 .m-head-title {
@@ -745,6 +754,11 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
   color: var(--muted-foreground);
   font-size: 0.85rem;
   line-height: 1.4;
+}
+
+.m-create-players {
+  color: var(--foreground);
+  font-weight: 700;
 }
 
 .m-create-link {
