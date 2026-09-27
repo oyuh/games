@@ -67,8 +67,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
     <div className="m-home">
       <ActiveGameModal sessionId={sessionId} suppress={pendingAction !== null} />
 
+      <span className="m-home-mark" aria-hidden="true" />
       <header className="m-head">
-        <GameIcon game="home" size={44} className="m-head-logo" />
         <h1 className="m-head-title">
           Games<span className="m-head-dot">.</span>
         </h1>

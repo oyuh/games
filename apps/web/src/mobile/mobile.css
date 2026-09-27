@@ -211,21 +211,31 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
 
 /* ── Page head ─────────────────────────────────────────────────── */
 .m-home {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
   padding: 1.5rem 1rem 1rem;
 }
 
-.m-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.m-head-logo {
-  flex-shrink: 0;
-  border-radius: 22%;
+/* The logo as a watermark behind the top of the page. It's a mask painted in
+   --primary, so it follows the theme's accent and works on light themes. The
+   isolation on .m-home keeps the negative z-index above the page background. */
+.m-home-mark {
+  position: absolute;
+  top: -3.5rem;
+  right: -4.5rem;
+  z-index: -1;
+  width: 17rem;
+  aspect-ratio: 264 / 288;
+  background: var(--primary);
+  mask: url("/logo-mark.png") center / contain no-repeat;
+  opacity: 0.09;
+  filter: blur(3px);
+  transform: rotate(45deg);
+  pointer-events: none;
 }
 
 .m-head-title {
