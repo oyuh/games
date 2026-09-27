@@ -1,6 +1,6 @@
-import { FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiVolume2, FiVolumeX, FiNavigation, FiMonitor, FiMove, FiMoreVertical, FiMoreHorizontal, FiSettings } from "react-icons/fi";
+import { FiMoon, FiSun, FiAlignLeft, FiAlignRight, FiAlignCenter, FiArrowUp, FiArrowDown, FiVolume2, FiVolumeX, FiNavigation, FiMonitor, FiMove, FiMoreVertical, FiMoreHorizontal, FiSettings } from "react-icons/fi";
 import { CURSOR_SCALE_MAX, CURSOR_SCALE_MIN, CURSOR_SCALE_STEP, updateSettings, useSettings } from "../../lib/settings";
-import type { SidebarPosition, Theme, SoundPreferences } from "../../lib/settings";
+import type { MobileToastPosition, SidebarPosition, Theme, SoundPreferences, ToastPosition } from "../../lib/settings";
 import { playPress } from "../../lib/sounds";
 import { Segmented, type SoloSetupRow } from "./SoloGameMenu";
 import { MultiSelect } from "./Select";
@@ -94,6 +94,8 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
       </ModalSection>
 
       <SoundSection />
+
+      <ToastSection />
     </ModalShell>
   );
 }
@@ -153,6 +155,44 @@ export function SoundSection() {
           />
         </div>
       )}
+    </ModalSection>
+  );
+}
+
+/* Where notifications pop up. Desktop gets an edge and a side, six spots in
+   all; a phone is too narrow for sides, so it only picks the edge. */
+export function ToastSection({ phone }: { phone?: boolean }) {
+  const settings = useSettings();
+  const edgeOptions = [
+    { value: "top", label: "Top", title: "Along the top", icon: <FiArrowUp size={14} /> },
+    { value: "bottom", label: "Bottom", title: "Along the bottom", icon: <FiArrowDown size={14} /> },
+  ];
+
+  if (phone) {
+    return (
+      <ModalSection label="Notifications" hint="Where toasts pop up.">
+        <Segmented
+          row={pick("Notification edge", settings.toastPositionMobile, (value) => updateSettings({ toastPositionMobile: value as MobileToastPosition }), edgeOptions)}
+        />
+      </ModalSection>
+    );
+  }
+
+  const [edge, side] = settings.toastPosition.split("-") as ["top" | "bottom", "left" | "center" | "right"];
+  const place = (nextEdge: string, nextSide: string) => updateSettings({ toastPosition: `${nextEdge}-${nextSide}` as ToastPosition });
+
+  return (
+    <ModalSection label="Notifications" hint="Where toasts pop up.">
+      <div className="opt-stack">
+        <Segmented row={pick("Notification edge", edge, (value) => place(value, side), edgeOptions)} />
+        <Segmented
+          row={pick("Notification side", side, (value) => place(edge, value), [
+            { value: "left", label: "Left", title: "On the left", icon: <FiAlignLeft size={14} /> },
+            { value: "center", label: "Middle", title: "In the middle", icon: <FiAlignCenter size={14} /> },
+            { value: "right", label: "Right", title: "On the right", icon: <FiAlignRight size={14} /> },
+          ])}
+        />
+      </div>
     </ModalSection>
   );
 }

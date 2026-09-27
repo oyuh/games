@@ -9,11 +9,15 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Shell ─────────────────────────────────────────────────────── */
-.m-shell {
-  /* How far anything pinned to the bottom sits above the edge: half the
-     home-indicator inset plus a little, capped so it can't run away when
-     the browser chrome comes and goes. */
+/* How far anything pinned to the bottom sits above the edge: half the
+   home-indicator inset plus a little, capped so it can't run away when the
+   browser chrome comes and goes. On :root because the sync wake toast lives
+   outside the shell and has to clear the tab bar too. */
+:root {
   --m-bottom-inset: min(calc(env(safe-area-inset-bottom, 0px) / 2 + 0.5rem), 1.5rem);
+}
+
+.m-shell {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -41,15 +45,10 @@
 }
 
 /* ── Toasts ────────────────────────────────────────────────────── */
+/* Placement is in toast.css, off the toast position setting. This is the
+   look: flat, bordered, the same for the regular stack and the sync wake
+   toast, which renders outside the shell. */
 .m-shell .toast-container {
-  top: calc(0.5rem + env(safe-area-inset-top, 0px));
-  bottom: auto;
-  left: 0.5rem;
-  right: 0.5rem;
-  max-width: none;
-  width: auto;
-  display: flex;
-  flex-direction: column;
   gap: 0.4rem;
 }
 
@@ -57,10 +56,12 @@
   box-sizing: border-box;
   width: auto;
   max-width: 100%;
-  min-height: 2.5rem;
+  min-height: 3.25rem;
   gap: 0.5rem;
   overflow: hidden;
-  padding: 0.65rem 0.85rem;
+  /* The 44px close button sets the height, so the right side has no pad. */
+  padding: 0.25rem 0.25rem 0.25rem 0.85rem;
+  box-shadow: none;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--card);
@@ -95,8 +96,43 @@
   border-radius: 50%;
 }
 
+/* toast.css loads after this file, so these lead with html to outrank it. */
+@media (max-width: 767px) {
+  html .sync-wake-toast,
+  html .sync-wake-toast--warn,
+  html .sync-wake-toast--idle {
+    min-height: 3.25rem;
+    padding: 0.65rem 2.75rem 0.65rem 0.85rem;
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    box-shadow: none;
+    font-size: 0.85rem;
+    animation: m-toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html .sync-wake-dismiss {
+    top: 50%;
+    right: 0.35rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    transform: translateY(-50%);
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 @keyframes m-toast-in {
   from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* From the bottom edge, toasts rise into place instead of dropping. */
+html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
+  animation-name: m-toast-up;
+}
+
+@keyframes m-toast-up {
+  from { opacity: 0; transform: translateY(100%); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -593,6 +629,10 @@
 }
 
 .m-info-howto {
+  margin-top: 0.75rem;
+}
+
+.m-info-status {
   margin-top: 0.75rem;
 }
 
