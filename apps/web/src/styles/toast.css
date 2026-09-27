@@ -390,14 +390,24 @@ html[data-toast-pos="bottom-center"] :is(.toast-container, .sync-wake-toast-cont
   line-height: 1.45;
 }
 
+/* Two support links side by side, the status page full width under them. */
 .sync-hosting-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
 }
 
 .sync-hosting-actions .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
+  min-height: 2.75rem;
+  text-decoration: none;
+}
+
+.sync-hosting-actions .btn-muted {
+  color: var(--foreground);
+}
+
+.sync-hosting-status {
+  grid-column: 1 / -1;
+  min-height: 3.25rem;
+  font-size: 0.95rem;
 }
