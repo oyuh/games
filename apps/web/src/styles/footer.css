@@ -245,29 +245,30 @@
 }
 
 .fp-service-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--muted-foreground);
 }
 
-/* The site's badge, at the size a 288px panel can carry: tinted fill, edge
-   from the same tone, text in it. Same recipe as .badge in components.css. */
-.fp-pill {
+/* No pill: a dot and the word, both in the state's tone. */
+.fp-state {
   --fp-tone: var(--secondary);
-  padding: 0.12rem 0.55rem;
-  border-radius: 9999px;
-  border: 1px solid color-mix(in srgb, var(--fp-tone) 30%, transparent);
-  background: color-mix(in srgb, var(--fp-tone) 18%, transparent);
-  color: var(--fp-tone);
-  font-size: 0.68rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: color-mix(in srgb, var(--fp-tone) 75%, var(--foreground));
+  font-size: 0.72rem;
+  font-weight: 700;
   white-space: nowrap;
 }
 
-.fp-pill--ok { --fp-tone: #4ade80; }
-.fp-pill--partial { --fp-tone: #facc15; }
-.fp-pill--loading { --fp-tone: #facc15; }
-.fp-pill--err { --fp-tone: #f87171; }
+.fp-state--ok { --fp-tone: #4ade80; }
+.fp-state--partial { --fp-tone: #facc15; }
+.fp-state--loading { --fp-tone: #facc15; }
+.fp-state--err { --fp-tone: #f87171; }
 
 /* ── Partial note ────────────────────────────────────────────
    The one state that owes an explanation, in the panel voice the hosting
@@ -415,14 +416,40 @@
   color: var(--muted-foreground);
 }
 
-/* The way out to the full page, last thing in the popover. */
+/* Last line of the popover: the way out to the full page, then the two
+   support links as icons, split off by hairlines. */
+.fp-foot {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--border);
+}
+
+.fp-support {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  border-left: 1px solid var(--border);
+  color: var(--muted-foreground);
+  transition: color 0.15s;
+}
+
+.fp-support:hover {
+  color: var(--primary);
+}
+
+.fp-support:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
 .fp-more {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  min-height: 2.25rem;
-  border-top: 1px solid var(--border);
+  min-height: 2.75rem;
   color: var(--muted-foreground);
   font-size: 0.68rem;
   font-weight: 600;
@@ -452,7 +479,6 @@
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--dot-tone);
-  box-shadow: 0 0 4px color-mix(in srgb, var(--dot-tone) 40%, transparent);
 }
 
 .status-dot--ok { --dot-tone: #4ade80; }
@@ -478,14 +504,8 @@
 }
 
 @keyframes status-flash {
-  0%, 49.99% {
-    background: #4ade80;
-    box-shadow: 0 0 4px rgba(74, 222, 128, 0.4);
-  }
-  50%, 100% {
-    background: #facc15;
-    box-shadow: 0 0 5px rgba(250, 204, 21, 0.5);
-  }
+  0%, 49.99% { background: #4ade80; }
+  50%, 100% { background: #facc15; }
 }
 
 /* A flashing dot is the worst thing in the footer to leave running for
