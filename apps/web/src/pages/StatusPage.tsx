@@ -243,80 +243,82 @@ export function StatusPage() {
         </div>
       </section>
 
-      <section className="status-section" aria-labelledby="status-details-title">
-        <h2 className="status-section-title" id="status-details-title">Details</h2>
-        <dl className="status-facts">
-          <div>
-            <dt><FiServer aria-hidden="true" /> API</dt>
-            <dd><code>{debug.apiBaseURL}</code></dd>
-          </div>
-          <div>
-            <dt><FiZap aria-hidden="true" /> Sync server</dt>
-            <dd><code>{debug.zeroCacheURL}</code></dd>
-          </div>
-          <div>
-            <dt><FiUser aria-hidden="true" /> Session</dt>
-            <dd>
-              <button
-                className="status-copy"
-                type="button"
-                onClick={copySessionId}
-                data-tooltip="Copy session id"
-                data-tooltip-variant="info"
-              >
-                <code>{debug.sessionId}</code>
-                <FiCopy className="status-copy-icon" aria-hidden="true" />
-              </button>
-            </dd>
-          </div>
-          {commitShort && (
+      <div className="status-lower">
+        <section className="status-section" aria-labelledby="status-details-title">
+          <h2 className="status-section-title" id="status-details-title">Details</h2>
+          <dl className="status-facts">
             <div>
-              <dt><FiGitCommit aria-hidden="true" /> Deploy</dt>
+              <dt><FiServer aria-hidden="true" /> API</dt>
+              <dd><code>{debug.apiBaseURL}</code></dd>
+            </div>
+            <div>
+              <dt><FiZap aria-hidden="true" /> Sync server</dt>
+              <dd><code>{debug.zeroCacheURL}</code></dd>
+            </div>
+            <div>
+              <dt><FiUser aria-hidden="true" /> Session</dt>
               <dd>
-                <a className="status-link" href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`} target="_blank" rel="noreferrer">
-                  <code>{commitShort}</code>
-                  {debug.apiCommitMessage && <span className="status-commit-msg">{debug.apiCommitMessage}</span>}
-                </a>
+                <button
+                  className="status-copy"
+                  type="button"
+                  onClick={copySessionId}
+                  data-tooltip="Copy session id"
+                  data-tooltip-variant="info"
+                >
+                  <code>{debug.sessionId}</code>
+                  <FiCopy className="status-copy-icon" aria-hidden="true" />
+                </button>
               </dd>
             </div>
-          )}
-          {(debug.apiBuildTimestamp || debug.apiCommitRef) && (
-            <div>
-              <dt><FiPackage aria-hidden="true" /> Built</dt>
-              <dd>
-                {[debug.apiBuildTimestamp && relativeTime(debug.apiBuildTimestamp), debug.apiCommitRef]
-                  .filter(Boolean)
-                  .join(" from ")}
-              </dd>
-            </div>
-          )}
-        </dl>
-      </section>
+            {commitShort && (
+              <div>
+                <dt><FiGitCommit aria-hidden="true" /> Deploy</dt>
+                <dd>
+                  <a className="status-link" href={`${GITHUB_REPO}/commit/${debug.apiCommitSha}`} target="_blank" rel="noreferrer">
+                    <code>{commitShort}</code>
+                    {debug.apiCommitMessage && <span className="status-commit-msg">{debug.apiCommitMessage}</span>}
+                  </a>
+                </dd>
+              </div>
+            )}
+            {(debug.apiBuildTimestamp || debug.apiCommitRef) && (
+              <div>
+                <dt><FiPackage aria-hidden="true" /> Built</dt>
+                <dd>
+                  {[debug.apiBuildTimestamp && relativeTime(debug.apiBuildTimestamp), debug.apiCommitRef]
+                    .filter(Boolean)
+                    .join(" from ")}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </section>
 
-      <section className="status-section" aria-labelledby="status-events-title">
-        <h2 className="status-section-title" id="status-events-title">Recent events</h2>
-        {events.length === 0 ? (
-          <p className="status-empty">Nothing yet.</p>
-        ) : (
-          <ol className="status-events">
-            {events.map((event) => (
-              <li className={`status-event status-event--${event.level}`} key={event.id}>
-                <span className="status-event-level" data-tooltip={event.level} data-tooltip-variant="info">
-                  {EVENT_ICONS[event.level]}
-                </span>
-                <time dateTime={event.at}>
-                  {new Date(event.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}
-                </time>
-                <span className="status-event-source">{event.source}</span>
-                <span className="status-event-msg" title={event.details}>
-                  {event.message}
-                  {event.details && <span className="status-event-details"> {event.details}</span>}
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+        <section className="status-section" aria-labelledby="status-events-title">
+          <h2 className="status-section-title" id="status-events-title">Recent events</h2>
+          {events.length === 0 ? (
+            <p className="status-empty">Nothing yet.</p>
+          ) : (
+            <ol className="status-events">
+              {events.map((event) => (
+                <li className={`status-event status-event--${event.level}`} key={event.id}>
+                  <span className="status-event-level" data-tooltip={event.level} data-tooltip-variant="info">
+                    {EVENT_ICONS[event.level]}
+                  </span>
+                  <time dateTime={event.at}>
+                    {new Date(event.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}
+                  </time>
+                  <span className="status-event-source">{event.source}</span>
+                  <span className="status-event-msg" title={event.details}>
+                    {event.message}
+                    {event.details && <span className="status-event-details"> {event.details}</span>}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      </div>
 
       <nav className="solo-menu-links" aria-label="Elsewhere">
         <Link className="solo-menu-link" to="/"><FiHome size={14} aria-hidden="true" /> Home</Link>
