@@ -438,10 +438,12 @@
   flex-wrap: nowrap;
 }
 
-/* Except on a phone, where the stats get their own row. */
+/* Except on a phone, where the stats get their own row, centered under the
+   title the way Pips does it. */
 @media (max-width: 768px) {
   .shikaku-page .game-header .game-header-left {
     flex-wrap: wrap;
+    justify-content: center;
     row-gap: 0.3rem;
   }
 }
