@@ -1,10 +1,25 @@
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+// Source maps only get built when there's a token to upload them with. The
+// plugin reads SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT from env, and
+// deletes the maps after upload so they never ship to the public site.
+const uploadSourceMaps = !!process.env.SENTRY_AUTH_TOKEN;
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    sentryVitePlugin({
+      disable: !uploadSourceMaps,
+      telemetry: false,
+      sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] }
+    })
+  ],
   build: {
+    sourcemap: uploadSourceMaps ? "hidden" : false,
     rollupOptions: {
       output: {
         manualChunks(id) {
