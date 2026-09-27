@@ -608,22 +608,23 @@ html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
   animation: m-fade-out 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
-.m-sheet-handle {
+/* Sized like loife's: a thin 100px pill. vaul injects its own
+   [data-vaul-handle] rules after ours, so the attribute keeps this ahead on
+   specificity. vaul also adds a 44px hit area inside, so the pill can stay thin. */
+.m-sheet-handle[data-vaul-handle] {
   flex-shrink: 0;
-  width: 2.25rem;
-  height: 0.3rem;
-  margin: 0.5rem auto 0.35rem;
-  padding: 0.5rem 2rem;
+  width: 100px;
+  height: 0.5rem;
+  margin: 1rem auto 0.25rem;
+  padding: 0;
   border-radius: 99px;
   background: var(--accent);
-  background-clip: content-box;
-  opacity: 0.6;
+  opacity: 1;
   cursor: grab;
 }
 
-.m-sheet-handle:active {
+.m-sheet-handle[data-vaul-handle]:active {
   cursor: grabbing;
-  opacity: 0.9;
 }
 
 .m-sheet-header {
