@@ -1367,11 +1367,7 @@ export function ShikakuPage() {
               startLabel={SHIKAKU_START_LABELS[mode]}
               onStart={startFromMenu}
               onOpenLeaderboard={() => {
-                if (isMobile) {
-                  emitSolo("shikaku-open-leaderboard");
-                } else {
-                  setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
-                }
+                setLbDifficulty(difficulty); setShowLeaderboard(true); fetchLeaderboard(difficulty, 1, lbView);
               }}
               onOpenHowTo={() => setShowDemo(true)}
             />
@@ -1446,13 +1442,9 @@ export function ShikakuPage() {
               onPlayAgain={() => startRun(difficulty)}
               onMenu={() => setPhase("menu")}
               onOpenLeaderboard={() => {
-                if (isMobile) {
-                  emitSolo("shikaku-open-leaderboard");
-                } else {
-                  setLbDifficulty(difficulty);
-                  setShowLeaderboard(true);
-                  fetchLeaderboard(difficulty, 1, lbView);
-                }
+                setLbDifficulty(difficulty);
+                setShowLeaderboard(true);
+                fetchLeaderboard(difficulty, 1, lbView);
               }}
             />
           </div>

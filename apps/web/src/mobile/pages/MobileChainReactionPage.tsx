@@ -10,6 +10,7 @@ import { MobileSpectatorOverlay } from "../../components/shared/SpectatorOverlay
 import { ChainGuessField } from "../../components/chain/ChainGuessField";
 import { showToast } from "../../lib/toast";
 import { useChainReactionGame } from "../../hooks/useChainReactionGame";
+import { useMobileHostRegister } from "../../lib/mobile-host-context";
 
 
 export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
@@ -30,6 +31,14 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
     handleSlotClick, handleInlineGuess, handleHint, handleGiveUp, handleNavigate,
     submitChain, handleJoinClick, confirmLeaveAndJoin,
   } = useChainReactionGame(sessionId);
+
+  useMobileHostRegister(
+    isHost && game
+      ? { type: "chain_reaction", gameId, hostId: game.host_id, isPublic: game.is_public,
+          players: game.players.map((p) => ({ sessionId: p.sessionId, name: playerName(p.sessionId) })),
+          spectators: game.spectators ?? [] }
+      : null
+  );
 
   // Countdown timer
   const [timeLeft, setTimeLeft] = useState<number | null>(null);

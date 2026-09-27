@@ -36,8 +36,9 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
   const [passwordGames] = useQuery(gameType === "password" ? queries.password.byId({ id: gameId }) : queries.password.byId({ id: "__none__" }));
   const [chainGames] = useQuery(gameType === "chain_reaction" ? queries.chainReaction.byId({ id: gameId }) : queries.chainReaction.byId({ id: "__none__" }));
   const [shadeGames] = useQuery(gameType === "shade_signal" ? queries.shadeSignal.byId({ id: gameId }) : queries.shadeSignal.byId({ id: "__none__" }));
+  const [locationGames] = useQuery(gameType === "location_signal" ? queries.locationSignal.byId({ id: gameId }) : queries.locationSignal.byId({ id: "__none__" }));
 
-  const hostId = imposterGames[0]?.host_id ?? passwordGames[0]?.host_id ?? chainGames[0]?.host_id ?? shadeGames[0]?.host_id ?? "";
+  const hostId = imposterGames[0]?.host_id ?? passwordGames[0]?.host_id ?? chainGames[0]?.host_id ?? shadeGames[0]?.host_id ?? locationGames[0]?.host_id ?? "";
 
   useEffect(() => {
     if (bodyRef.current) {
@@ -118,7 +119,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
             }
           }}
         />
-        <button className="m-btn m-btn-primary" style={{ padding: "0.5rem 0.75rem", minHeight: 0 }} onClick={handleSend} disabled={!input.trim()}>
+        <button className="m-btn m-btn--primary" type="button" aria-label="Send message" onClick={handleSend} disabled={!input.trim()}>
           <FiSend size={14} />
         </button>
       </div>

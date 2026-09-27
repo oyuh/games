@@ -68,7 +68,6 @@ export interface PipsState {
 export interface SoloEventMap {
   // page -> chrome
   "shikaku-game-state": ShikakuState;
-  "shikaku-open-leaderboard": void;
   "pips-game-state": PipsState;
 
   // chrome -> page

@@ -266,3 +266,82 @@
 .m-sheet .solo-select-option {
   min-height: 2.75rem;
 }
+
+/* ── Sheets ─────────────────────────────────────────────────── */
+/* The sheets render the desktop modals' own bodies (InfoContent,
+   HostControls, the Options sections), so they set the same dials the
+   modal frame (.mshell) sets, sized up for a thumb. */
+.m-sheet {
+  --modal-accent: var(--primary);
+  --solo-pad: 0.25rem;
+  --solo-radius: var(--radius-lg);
+  --solo-control-h: 2.75rem;
+}
+
+.m-sheet-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.m-sheet-meta {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.m-sheet-foot {
+  margin-top: 1.25rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+.m-info-howto {
+  margin-top: 0.75rem;
+}
+
+/* Controls the desktop modals size for a mouse. */
+.m-sheet :is(.host-announce-input, .ui-clip, .info-link) {
+  height: 2.75rem;
+}
+
+.m-sheet :is(.host-announce-send, .host-person-btn, .ui-clip-btn) {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.m-sheet .host-person {
+  min-height: 3rem;
+}
+
+/* Rows that are actions rather than links. */
+.m-row:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.m-row--danger .m-row-title,
+.m-row--danger .m-row-icon {
+  color: var(--destructive);
+}
+
+.m-row--confirm {
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+
+/* Chat opens at a steady height instead of growing a line per message. */
+.m-sheet .m-chat-body {
+  min-height: 40dvh;
+}
+
+/* No frosted glass on phones. Desktop keeps its blurs; below the mobile
+   breakpoint every overlay and chip is a plain fill. Matches useIsMobile. */
+@media (max-width: 767px) {
+  *,
+  *::before,
+  *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
