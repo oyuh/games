@@ -5,10 +5,25 @@ import "./styles/themes.css";
 import "./styles/responsive.css";
 import "./mobile/mobile.css";
 
+import * as Sentry from "@sentry/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { getOrCreateSessionId, getStoredSessionProof } from "./lib/session";
+
+// No DSN locally, so dev errors stay out of the Sentry quota.
+const sentryEnabled = !!import.meta.env.VITE_SENTRY_DSN;
+if (sentryEnabled) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE
+  });
+}
+
+// Replacing React's error hooks drops its default console logging, so log too.
+const sentryReactHandler = Sentry.reactErrorHandler((error) => console.error(error));
+const reportReactError = (error: unknown, info: { componentStack?: string | undefined }) =>
+  sentryReactHandler(error, { componentStack: info.componentStack ?? null });
 
 // A lazy chunk failed to load (flaky mobile network, or a deploy swapped the
 // hashed assets out from under an open tab). Reload once to pick up a fresh
@@ -26,7 +41,14 @@ window.addEventListener("vite:preloadError", (event) => {
   window.location.reload();
 });
 
-const root = createRoot(document.getElementById("root")!);
+// React 19 hands errors to these hooks, including ones our ErrorBoundary
+// catches, so crashes reach Sentry without touching the boundary.
+const root = createRoot(
+  document.getElementById("root")!,
+  sentryEnabled
+    ? { onUncaughtError: reportReactError, onCaughtError: reportReactError, onRecoverableError: reportReactError }
+    : {}
+);
 
 // Mount immediately with whatever identity is already in localStorage (or a
 // fresh one for first-timers). Session verification and the Zero auth upgrade
