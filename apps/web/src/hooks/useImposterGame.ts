@@ -91,14 +91,6 @@ export function useImposterGame(sessionId: string) {
     }, {});
   }, [sessions]);
 
-  const tally = useMemo(() => {
-    if (!game) return {} as Record<string, number>;
-    return game.votes.reduce<Record<string, number>>((acc, v) => {
-      acc[v.targetId] = (acc[v.targetId] ?? 0) + 1;
-      return acc;
-    }, {});
-  }, [game]);
-
   const { decryptValue } = useGameSecret({
     gameType: "imposter",
     gameId,
@@ -239,13 +231,10 @@ export function useImposterGame(sessionId: string) {
   };
 
   return {
-    zero, navigate, gameId, game, me, isHost, inGame, isSpectator,
-    sessionById, tally, visibleSecretWord, decryptedRoundWords,
-    clue, setClue, voteTarget, setVoteTarget,
-    typing, announceTyping,
-    activeGameType, activeGameId, inAnotherGame,
-    showInSessionModal, setShowInSessionModal,
-    joiningFromOtherGame, setJoiningFromOtherGame,
+    zero, navigate, gameId, game, me, isHost, inGame, isSpectator, sessionById,
+    visibleSecretWord, decryptedRoundWords, clue, setClue, voteTarget, setVoteTarget, typing,
+    announceTyping, activeGameType, showInSessionModal, setShowInSessionModal,
+    joiningFromOtherGame,
 
     submitClue: async (event: FormEvent) => {
       event.preventDefault();
@@ -260,8 +249,6 @@ export function useImposterGame(sessionId: string) {
       await optimistic(zero.mutate(mutators.imposter.submitVote({ gameId, voterId: sessionId, targetId: voteTarget })));
       playVote();
     },
-
-    joinGame,
 
     handleJoinClick: () => {
       if (inAnotherGame && activeGameType && activeGameId) {

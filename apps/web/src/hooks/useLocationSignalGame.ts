@@ -3,7 +3,6 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { usePublishedAvatars } from "./useAvatars";
 import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
-import { fitRepeatingMapBounds } from "../components/location/WorldMap";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { useGameSounds, playSoundSubmit } from "./useGameSounds";
@@ -19,31 +18,15 @@ export const PLAYER_COLORS = [
   "#38bdf8", "#f472b6", "#4ade80", "#facc15", "#34d399",
 ];
 
-export function fitBounds(
-  points: { lat: number; lng: number }[],
-  mapWidth: number,
-  mapHeight: number,
-  padding = 0.25,
-) {
-  return fitRepeatingMapBounds(points, mapWidth, mapHeight, padding);
-}
-
 /**
  * The non-visual half of a location signal round: queries, sounds, the
- * leave-on-unmount guard, the map auto-zoom, the host-only phase timer, and the
- * clue / guess / target / join handlers.
- *
- * @param mapSize the two views render very different maps, so the auto-zoom
- *   needs their dimensions to fit bounds correctly. Everything else about the
- *   zoom logic is the same.
+ * leave-on-unmount guard, the host-only phase timer, and the clue / guess /
+ * target / join handlers. Each phase component brings its own map.
  *
  * buildMarkers stays in the views: the marker colours, labels and sizes are
  * styled per platform.
  */
-export function useLocationSignalGame(
-  sessionId: string,
-  mapSize: { fallbackWidth: number; height: number },
-) {
+export function useLocationSignalGame(sessionId: string) {
   const zero = useZero();
   const navigate = useNavigate();
   const params = useParams();
@@ -60,16 +43,7 @@ export function useLocationSignalGame(
   const [showInSessionModal, setShowInSessionModal] = useState(false);
   const [joiningFromOtherGame, setJoiningFromOtherGame] = useState(false);
   const [leaderTarget, setLeaderTarget] = useState<{ lat: number; lng: number } | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([25, 10]);
-  const [mapZoom, setMapZoom] = useState(2);
-  const clueInputRef = useRef<HTMLInputElement>(null);
   const prevAnnouncementRef = useRef<{ text: string; ts: number } | null>(null);
-  const mapWrapRef = useRef<HTMLDivElement>(null);
-
-  const handleBoundsChanged = useCallback(({ center, zoom }: { center: [number, number]; zoom: number }) => {
-    setMapCenter(center);
-    setMapZoom(zoom);
-  }, []);
 
   const isHost = game?.host_id === sessionId;
   const me = useMemo(() => game?.players.find((p) => p.sessionId === sessionId), [game, sessionId]);
@@ -180,97 +154,10 @@ export function useLocationSignalGame(
     setDraftMarker(null);
   }, [game?.settings.currentRound, game?.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!game?.phase.startsWith("clue") || !isLeader || isSpectator) return;
-    const input = clueInputRef.current;
-    if (!input) return;
-    const timer = window.setTimeout(() => {
-      input.focus();
-      input.select();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [game?.phase, isLeader, isSpectator]);
-
   // Reset leader target on round change
   useEffect(() => {
     setLeaderTarget(null);
   }, [game?.settings.currentRound]);
-
-  // Auto-zoom map on phase transitions
-  const autoZoomKeyRef = useRef("");
-  useEffect(() => {
-    if (!game) return;
-    const p = game.phase;
-    const tgtReady = p === "reveal" && game.target_lat != null;
-    const key = `${p}-${game.settings.currentRound}${tgtReady ? "-t" : ""}`;
-    if (autoZoomKeyRef.current === key) return;
-    autoZoomKeyRef.current = key;
-
-    const mapW = mapWrapRef.current?.clientWidth ?? mapSize.fallbackWidth;
-    const mapH = mapSize.height;
-
-    // Reveal: fit target + final-round guesses
-    if (p === "reveal") {
-      const pts: { lat: number; lng: number }[] = [];
-      if (game.target_lat != null && game.target_lng != null) {
-        pts.push({ lat: game.target_lat, lng: game.target_lng });
-      } else if (leaderTarget) {
-        pts.push(leaderTarget);
-      }
-      const maxR = game.guesses.length > 0 ? Math.max(...game.guesses.map((g) => g.round)) : 1;
-      for (const g of game.guesses.filter((gg) => gg.round === maxR)) {
-        pts.push({ lat: g.lat, lng: g.lng });
-      }
-      if (pts.length > 0) {
-        const f = fitBounds(pts, mapW, mapH);
-        setMapCenter(f.center);
-        setMapZoom(f.zoom);
-      }
-      return;
-    }
-
-    // Picking: reset to world view
-    if (p === "picking") {
-      setMapCenter([25, 10]);
-      setMapZoom(2);
-      return;
-    }
-
-    // Leader during clue/guess: zoom to target area + visible guesses
-    if (isLeader && leaderTarget) {
-      const cc = p.startsWith("clue") ? Number(p.replace("clue", "")) : 0;
-      const cg = p.startsWith("guess") ? Number(p.replace("guess", "")) : 0;
-      if (cc > 1 || cg > 1) {
-        const pts: { lat: number; lng: number }[] = [leaderTarget];
-        const upTo = cg > 1 ? cg - 1 : cc - 1;
-        for (let r = 1; r <= upTo; r++) {
-          for (const g of game.guesses.filter((gg) => gg.round === r)) pts.push({ lat: g.lat, lng: g.lng });
-        }
-        const f = fitBounds(pts, mapW, mapH);
-        setMapCenter(f.center);
-        setMapZoom(f.zoom);
-      } else if (cc === 1) {
-        setMapCenter([leaderTarget.lat, leaderTarget.lng]);
-        setMapZoom(6);
-      } else if (cg === 1) {
-        setMapCenter([leaderTarget.lat, leaderTarget.lng]);
-        setMapZoom(3);
-      }
-      return;
-    }
-
-    // Guesser in guess2+: center on their previous guess for context
-    if (!isLeader && inGame && p.startsWith("guess")) {
-      const gr = Number(p.replace("guess", ""));
-      if (gr > 1) {
-        const prev = game.guesses.find((g) => g.sessionId === sessionId && g.round === gr - 1);
-        if (prev) {
-          setMapCenter([prev.lat, prev.lng]);
-          setMapZoom(5);
-        }
-      }
-    }
-  }, [game?.phase, game?.settings.currentRound, game?.target_lat, isLeader, leaderTarget, inGame, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Timer auto-advance (host only)
   useEffect(() => {
@@ -332,29 +219,21 @@ export function useLocationSignalGame(
   };
 
   return {
-    zero, navigate, gameId, game, me, isHost, isLeader, inGame, isSpectator,
-    sessionById, playerName, myRoundGuess, guesserColorMap,
-    draftClue, setDraftClue, draftMarker, setDraftMarker,
-    leaderTarget, setLeaderTarget,
-    mapCenter, mapZoom, handleBoundsChanged, mapWrapRef, clueInputRef,
-    activeGameType, activeGameId, inAnotherGame,
-    showInSessionModal, setShowInSessionModal,
-    joiningFromOtherGame, setJoiningFromOtherGame,
-
+    zero, navigate, gameId, game, me, isHost, isLeader, inGame, isSpectator, sessionById,
+    playerName, myRoundGuess, guesserColorMap, draftClue, setDraftClue, draftMarker,
+    setDraftMarker, leaderTarget, setLeaderTarget, activeGameType, showInSessionModal, setShowInSessionModal, joiningFromOtherGame,
     phase, cluePairs, currentClueRound, currentGuessRound,
     isCluePhase: currentClueRound > 0,
     isGuessPhase,
-    isLastGuessPhase: currentGuessRound === cluePairs,
     isGameActive: phase !== "lobby" && phase !== "finished" && phase !== "ended",
+
     leaderName: game?.leader_id
       ? getDisplayName(game.players.find((p) => p.sessionId === game.leader_id)?.name, game.leader_id)
       : "---",
     roundGuessers: game ? game.players.filter((p) => p.sessionId !== game.leader_id) : [],
     guessesThisRound: (round: number) => game?.guesses.filter((g) => g.round === round) ?? [],
     totalRounds: game ? game.settings.roundsPerPlayer * game.players.length : 0,
-    sortedPlayers: game ? game.players.toSorted((a, b) => b.totalScore - a.totalScore) : [],
-    mapClickable: (phase === "picking" && isLeader) || (isGuessPhase && !isLeader && inGame),
-    getClue,
+
     visibleClues: (upTo: number) => {
       const clues: { round: number; text: string }[] = [];
       for (let i = 1; i <= upTo; i++) {
@@ -390,14 +269,6 @@ export function useLocationSignalGame(
         showToast(error instanceof Error ? error.message : "Guess failed", "error");
       }
     },
-
-    lockTarget: () => {
-      if (!draftMarker || !game) return;
-      setLeaderTarget({ lat: draftMarker.lat, lng: draftMarker.lng });
-      void zero.mutate(mutators.locationSignal.setTarget({ gameId: game.id, sessionId, lat: draftMarker.lat, lng: draftMarker.lng }));
-    },
-
-    joinGame,
 
     handleJoinClick: () => {
       if (inAnotherGame && activeGameType && activeGameId) {

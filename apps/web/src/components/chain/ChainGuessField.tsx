@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, Ref } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef } from "react";
 import { buildGuessCells, lockToPrefix } from "./chain-guess";
 import "../../styles/chain-guess-field.css";
 
@@ -21,7 +21,10 @@ type ChainGuessFieldProps = {
   onCancel?: () => void;
   /** Arrow up / down: move to the previous / next unsolved word. */
   onNavigate?: (delta: 1 | -1) => void;
-  inputRef?: Ref<HTMLInputElement>;
+  /** Take focus when shown, caret after the locked letters. Selecting instead
+   *  would let the first keystroke try to overwrite them. Re-runs when a hint
+   *  reveals another letter so the caret follows it. */
+  autoFocus?: boolean;
 };
 
 /**
@@ -43,8 +46,19 @@ export function ChainGuessField({
   onSubmit,
   onCancel,
   onNavigate,
-  inputRef,
+  autoFocus,
 }: ChainGuessFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!autoFocus || !input) return;
+    // No scroll: the word was just tapped, so it is already in view, and
+    // /dev/chain draws several of these at once.
+    input.focus({ preventScroll: true });
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
+  }, [autoFocus, lettersShown]);
+
   const total = word.length;
   const prefixLen = Math.min(Math.max(lettersShown, 0), total);
   const prefix = word.slice(0, prefixLen).toUpperCase();
