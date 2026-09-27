@@ -12,7 +12,12 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   timeout: 150_000,
   expect: { timeout: 15_000 },
-  reporter: process.env.CI ? [["github"], ["html", { open: "never", outputFolder: "playwright-report" }]] : "list",
+  // CI gets the list reporter too, with steps, so the log says which test is
+  // running and how far into it, instead of sitting on one line for minutes.
+  // github adds failure annotations, html the report artifact.
+  reporter: process.env.CI
+    ? [["list", { printSteps: true }], ["github"], ["html", { open: "never", outputFolder: "playwright-report" }]]
+    : "list",
   use: {
     baseURL,
     // Below this the fixed sidebar covers the left column of game cards.
@@ -31,5 +36,9 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: true,
     timeout: 300_000,
+    // Show the stack coming up (containers, the API, Vite) rather than a
+    // silent wait of a minute or more before the first test.
+    stdout: "pipe",
+    stderr: "pipe",
   },
 });

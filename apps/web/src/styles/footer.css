@@ -415,6 +415,32 @@
   color: var(--muted-foreground);
 }
 
+/* The way out to the full page, last thing in the popover. */
+.fp-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.fp-more:hover {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.fp-more:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
 /* ── Status dot ──────────────────────────────────────────────
    One shape, one tone token, so every state is the same dot in a different
    colour rather than four rules that drifted apart. */

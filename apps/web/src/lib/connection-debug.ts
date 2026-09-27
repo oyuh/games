@@ -109,6 +109,10 @@ function stringifyReason(reason: unknown) {
   if (reason instanceof Error) {
     return reason.message;
   }
+  // Zero hands over { type, reason } objects; the sentence is the useful part.
+  if (typeof reason === "object" && "reason" in reason && typeof reason.reason === "string") {
+    return reason.reason;
+  }
 
   try {
     return JSON.stringify(reason);
@@ -273,6 +277,145 @@ export function setZeroConnectionState(nextState: ConnectionState) {
   } else {
     emit();
   }
+}
+
+const API_PROBE_TIMEOUT_MS = 8_000;
+
+function describeFetchError(error: unknown) {
+  if (error instanceof DOMException && error.name === "TimeoutError") {
+    return `No answer after ${API_PROBE_TIMEOUT_MS / 1000}s`;
+  }
+  // fetch rejects with a bare TypeError for DNS, refused connections and CORS
+  // alike, and each browser words it differently.
+  if (error instanceof TypeError) {
+    return "Couldn't reach it";
+  }
+  return stringifyReason(error);
+}
+
+/**
+ * One round trip to build-info, which answers for the API and for the database
+ * the API probes. The app polls this and the status page calls it on demand,
+ * so both read the same numbers.
+ */
+export async function probeApiMetadata() {
+  if (!state.apiInfoURL) {
+    return;
+  }
+
+  const started = performance.now();
+  // Only the first probe says "loading". Flipping back on every poll made the
+  // footer and the wake toast blink "Checking" twice a minute.
+  if (state.apiMetaState === "idle") {
+    setApiConnectionProbe({ state: "loading" });
+  }
+
+  try {
+    const response = await fetch(state.apiInfoURL, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(API_PROBE_TIMEOUT_MS)
+    });
+    const latencyMs = Math.round(performance.now() - started);
+
+    if (!response.ok) {
+      throw new Error(`API answered ${response.status}`);
+    }
+
+    const payload = (await response.json()) as {
+      platform?: string;
+      commitSha?: string;
+      commitRef?: string;
+      commitMessage?: string;
+      commitTimestamp?: string;
+      commitStats?: { additions?: number; deletions?: number; filesChanged?: number } | null;
+      buildTimestamp?: string;
+      updatedAt?: string;
+      startedAt?: string;
+      uptimeMs?: number;
+      database?: {
+        state?: "ok" | "unknown" | "offline";
+        reason?: string;
+        key?: string;
+        expectedValue?: string;
+        actualValue?: string;
+        checkedAt?: string;
+      };
+    };
+
+    setApiBuildInfo({
+      platform: payload.platform,
+      commitSha: payload.commitSha,
+      commitRef: payload.commitRef,
+      commitMessage: payload.commitMessage,
+      commitTimestamp: payload.commitTimestamp,
+      commitStats: payload.commitStats,
+      buildTimestamp: payload.buildTimestamp,
+      updatedAt: payload.updatedAt,
+      startedAt: payload.startedAt,
+      uptimeMs: payload.uptimeMs
+    });
+
+    setApiConnectionProbe({ state: "ok", latencyMs, checkedAt: new Date().toISOString() });
+
+    setDatabaseStatusProbe({
+      state: payload.database?.state ?? "unknown",
+      checkedAt: payload.database?.checkedAt ?? new Date().toISOString(),
+      ...(payload.database?.reason ? { reason: payload.database.reason } : {}),
+      ...(payload.database?.key ? { key: payload.database.key } : {}),
+      ...(payload.database?.expectedValue ? { expectedValue: payload.database.expectedValue } : {}),
+      ...(payload.database?.actualValue ? { actualValue: payload.database.actualValue } : {})
+    });
+  } catch (error) {
+    const reason = describeFetchError(error);
+    const checkedAt = new Date().toISOString();
+
+    setApiConnectionProbe({
+      state: "error",
+      reason,
+      latencyMs: Math.round(performance.now() - started),
+      checkedAt
+    });
+    setDatabaseStatusProbe({ state: "offline", reason, checkedAt });
+    addConnectionDebugEvent({ level: "warn", source: "api", message: "metadata probe failed", details: reason });
+  }
+}
+
+export type ServiceTone = "loading" | "ok" | "partial" | "err";
+
+/**
+ * The one-word verdict the footer and the status page both lead with. Zero is
+ * local-first, so a sleeping sync server is "partial", not an outage: the games
+ * still play, they just aren't shared yet.
+ */
+export function overallTone(debug: ConnectionDebugState): ServiceTone {
+  if (debug.dbState === "loading" || debug.dbState === "idle") return "loading";
+  if (debug.apiMetaState !== "ok" || debug.dbState !== "ok") return "err";
+  return debug.zeroState === "connected" ? "ok" : "partial";
+}
+
+export function formatUptime(ms: number) {
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainMinutes = minutes % 60;
+  if (hours < 24) return `${hours}h ${remainMinutes}m`;
+  const days = Math.floor(hours / 24);
+  const remainHours = hours % 24;
+  return `${days}d ${remainHours}h`;
+}
+
+export function relativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 export function setPresenceConnectionState(next: { state: string; reason?: string }) {
