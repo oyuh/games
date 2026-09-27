@@ -8,7 +8,6 @@ import {
   derivedLook,
   formatAvatar,
   getStoredAvatar,
-  paletteAt,
   setStoredAvatar,
   avatarLook,
   type AvatarLook,
@@ -66,57 +65,56 @@ export function AvatarPreview({ picker, name }: { picker: AvatarPicker; name: st
   );
 }
 
+/* Every option is drawn as the avatar you'd end up with: colors wear your
+   current shape, shapes wear your current color. So both lists are a preview
+   of the choice rather than a catalogue of unrelated combinations. */
 export function AvatarChoices({ picker }: { picker: AvatarPicker }) {
   const { look, apply } = picker;
   return (
     <>
-      <ModalSection label="Color" hint="Sets the ground and the shape together.">
-        <div className="ap-colors" role="radiogroup" aria-label="Avatar color">
-          {Array.from({ length: AVATAR_COLOR_COUNT }, (_, color) => {
-            const { bg, fg } = paletteAt(color);
-            const on = color === look.color;
-            return (
-              <button
-                key={color}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                aria-label={`Color ${color + 1}`}
-                className={`ap-color${on ? " ap-color--on" : ""}`}
-                style={{ background: bg, color: fg }}
-                onClick={() => apply({ ...look, color })}
-              >
-                {on && <FiCheck size={12} />}
-              </button>
-            );
-          })}
+      <ModalSection label="Color">
+        <div className="ap-swatches ap-colors" role="radiogroup" aria-label="Avatar color">
+          {Array.from({ length: AVATAR_COLOR_COUNT }, (_, color) => (
+            <Swatch
+              key={color}
+              label={`Color ${color + 1}`}
+              look={{ ...look, color }}
+              on={color === look.color}
+              onPick={apply}
+            />
+          ))}
         </div>
       </ModalSection>
 
-      <ModalSection label="Shape" hint="Tap one to wear it. It saves as you go.">
-        <div className="ap-grid" role="radiogroup" aria-label="Avatar shape">
-          {Array.from({ length: AVATAR_SHAPE_COUNT }, (_, shape) => {
-            const on = shape === look.shape;
-            return (
-              <button
-                key={shape}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                aria-label={`Shape ${shape + 1}`}
-                className={`ap-opt${on ? " ap-opt--on" : ""}`}
-                onClick={() => apply({ ...look, shape })}
-              >
-                {/* Drawn in the color you are already wearing, so the grid is a
-                    preview of the choice rather than a catalogue of unrelated
-                    combinations. */}
-                <AvatarArt look={{ shape, color: look.color }} className="ap-opt-art" />
-              </button>
-            );
-          })}
+      <ModalSection label="Shape">
+        <div className="ap-swatches" role="radiogroup" aria-label="Avatar shape">
+          {Array.from({ length: AVATAR_SHAPE_COUNT }, (_, shape) => (
+            <Swatch
+              key={shape}
+              label={`Shape ${shape + 1}`}
+              look={{ ...look, shape }}
+              on={shape === look.shape}
+              onPick={apply}
+            />
+          ))}
         </div>
       </ModalSection>
     </>
+  );
+}
+
+function Swatch({ label, look, on, onPick }: { label: string; look: AvatarLook; on: boolean; onPick: (look: AvatarLook) => void }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      aria-label={label}
+      className={`ap-swatch${on ? " ap-swatch--on" : ""}`}
+      onClick={() => onPick(look)}
+    >
+      <AvatarArt look={look} className="ap-swatch-art" />
+    </button>
   );
 }
 
