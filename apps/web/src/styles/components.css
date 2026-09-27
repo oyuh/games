@@ -199,3 +199,12 @@
   background: color-mix(in srgb, var(--primary) 5%, transparent);
 }
 
+
+/* A short run of facts ("3-12 players", "Hard", "Seed 42") separated by
+   space instead of a dot or bullet glyph. Each fact is its own child. */
+.meta-parts {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.75rem;
+  row-gap: 0.15rem;
+}

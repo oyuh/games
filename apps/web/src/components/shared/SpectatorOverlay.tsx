@@ -14,8 +14,9 @@ export function SpectatorOverlay({ phase, playerCount, onLeave }: SpectatorOverl
         <p className="spectator-overlay-text">
           You are spectating this game
         </p>
-        <p className="spectator-overlay-sub">
-          {playerCount} player{playerCount !== 1 ? "s" : ""} &middot; {phase}
+        <p className="spectator-overlay-sub meta-parts">
+          <span>{playerCount} player{playerCount !== 1 ? "s" : ""}</span>
+          <span>{phase}</span>
         </p>
         <button className="btn btn-muted btn-sm" onClick={onLeave} style={{ marginTop: "0.5rem" }}>
           <FiLogOut size={14} /> Leave

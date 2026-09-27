@@ -229,8 +229,9 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       {sheetGame && (
         <BottomSheet title={GAME_META[sheetGame].title} onClose={() => setSheetGame(null)}>
           <div className="m-create" style={accentStyle(sheetGame)}>
-            <p className="m-create-meta">
-              {GAME_META[sheetGame].players} players · {GAME_META[sheetGame].shortDescription}
+            <p className="m-create-meta meta-parts">
+              <span className="m-create-players">{GAME_META[sheetGame].players} players</span>
+              <span>{GAME_META[sheetGame].shortDescription}</span>
             </p>
 
             {browsing ? (
