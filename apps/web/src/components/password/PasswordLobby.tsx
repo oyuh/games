@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { FiAward, FiBookOpen, FiCheck, FiClock, FiFlag, FiLock, FiLogIn, FiLogOut, FiMessageSquare, FiPlay, FiSkipForward, FiUnlock, FiUserPlus, FiUsers } from "react-icons/fi";
-import { passwordCategoryLabels } from "@games/shared";
-import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel } from "../shared/GameKit";
+import { LOBBY_SETTING_LIMITS, passwordCategories, passwordCategoryLabels } from "@games/shared";
+import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
+import { categoryOptions, durationCustom, durationOptions, formatDuration, numberCustom, numberOptions } from "../../lib/setting-options";
 import { GameTeamRoster } from "../shared/GameRoster";
 import { playerBadges } from "../shared/PlayerCard";
 import type { TeamCardProps } from "../shared/TeamCard";
@@ -46,9 +47,15 @@ export interface PasswordLobbySettings {
   teamsLocked?: boolean | undefined;
 }
 
+/** What the host can change from the lobby. */
+export type PasswordSettingsPatch = { targetScore?: number; roundDurationSec?: number; category?: string };
+
+const LIMITS = LOBBY_SETTING_LIMITS.password;
+const pointsUnit = () => "to win";
+
 /** 300 seconds is a number you have to do arithmetic on. Five minutes is not. */
 export function formatRoundLength(seconds: number) {
-  return seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60}m` : `${seconds}s`;
+  return formatDuration(seconds);
 }
 
 /**
@@ -193,6 +200,8 @@ export interface PasswordLobbyProps {
   /** Goes in first on the action row, where the visibility toggle lives, so
    *  this component never has to know what zero is. */
   actions?: ReactNode;
+  /** Turns the setup cells into pickers. Only reaches for it when you host. */
+  onSettingsChange?: (patch: PasswordSettingsPatch) => void;
 }
 
 export function PasswordLobby({
@@ -212,8 +221,10 @@ export function PasswordLobby({
   onMovePlayer,
   onToggleLock,
   actions,
+  onSettingsChange,
 }: PasswordLobbyProps) {
   const blocked = passwordStartBlock(teams);
+  const edit = (picker: GameFactEdit) => (isHost && onSettingsChange ? { edit: picker } : {});
   const locked = !!settings.teamsLocked;
 
   return (
@@ -241,13 +252,39 @@ export function PasswordLobby({
             icon: <FiBookOpen />,
             tone: "var(--game-accent)",
             tooltip: "Where the words get picked from",
+            ...edit({
+              label: "Word bank",
+              value: settings.category ?? "",
+              options: categoryOptions(passwordCategories, passwordCategoryLabels),
+              searchPlaceholder: "Search categories…",
+              onChange: (value) => onSettingsChange?.({ category: value }),
+            }),
           },
-          { value: settings.targetScore, label: "to win", icon: <FiFlag />, tooltip: "First team to this many words takes the game" },
+          {
+            value: settings.targetScore,
+            label: "to win",
+            icon: <FiFlag />,
+            tooltip: "First team to this many words takes the game",
+            ...edit({
+              label: "Points to win",
+              value: String(settings.targetScore),
+              options: numberOptions([3, 5, 7, 10, 15, 20], pointsUnit),
+              custom: numberCustom(LIMITS.targetScore, pointsUnit),
+              onChange: (value) => onSettingsChange?.({ targetScore: Number(value) }),
+            }),
+          },
           {
             value: formatRoundLength(settings.roundDurationSec),
             label: "a round",
             icon: <FiClock />,
             tooltip: "How long every team gets before the round ends",
+            ...edit({
+              label: "Round length",
+              value: String(settings.roundDurationSec),
+              options: durationOptions([60, 120, 180, 300, 420, 600]),
+              custom: durationCustom(LIMITS.roundDurationSec),
+              onChange: (value) => onSettingsChange?.({ roundDurationSec: Number(value) }),
+            }),
           },
           {
             value: PASSWORD_SKIPS,

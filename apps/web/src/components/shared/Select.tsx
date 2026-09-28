@@ -1,102 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { FiCheck, FiChevronDown } from "react-icons/fi";
+import { popupHost, revealActiveRow, useAnchoredPopup, useDismiss } from "./popup";
 
 export interface SelectOption {
   value: string;
   label: string;
-}
-
-/** Gap between the trigger and its list, and the list and the window edge. */
-const GAP = 6;
-
-/**
- * Where the list mounts: the body, so cards that clip their overflow can't cut
- * it off. The exception is a vaul drawer (the mobile sheets), which is modal
- * and turns the body inert, so a list portalled there shows up but never takes
- * a tap. Inside one, the list mounts in the drawer instead.
- */
-function popupHost(trigger: HTMLElement | null) {
-  return trigger?.closest<HTMLElement>("[data-vaul-drawer]") ?? null;
-}
-
-/**
- * Anchor a floating list to its trigger. It is positioned by hand and kept in
- * place while the page scrolls, against the viewport on the body or against
- * the drawer when it mounts inside one.
- */
-function useAnchoredPopup(
-  open: boolean,
-  triggerRef: RefObject<HTMLButtonElement | null>,
-  popupRef: RefObject<HTMLDivElement | null>,
-  optionCount: number,
-) {
-  const [pos, setPos] = useState<{ top: number; left: number; width: number; inHost: boolean } | null>(null);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    const place = () => {
-      const trigger = triggerRef.current;
-      const popup = popupRef.current;
-      if (!trigger || !popup) return;
-      const rect = trigger.getBoundingClientRect();
-      const height = popup.offsetHeight;
-      const below = window.innerHeight - rect.bottom - GAP;
-      // Flip above only when there is genuinely more room up there.
-      const flip = below < height && rect.top - GAP > below;
-      const host = popupHost(trigger)?.getBoundingClientRect();
-      setPos({
-        left: rect.left - (host?.left ?? 0),
-        width: rect.width,
-        top: (flip ? Math.max(GAP, rect.top - GAP - height) : rect.bottom + GAP) - (host?.top ?? 0),
-        inHost: Boolean(host),
-      });
-    };
-    place();
-    window.addEventListener("scroll", place, true);
-    window.addEventListener("resize", place);
-    return () => {
-      window.removeEventListener("scroll", place, true);
-      window.removeEventListener("resize", place);
-    };
-  }, [open, optionCount, triggerRef, popupRef]);
-
-  return pos
-    ? { top: pos.top, left: pos.left, minWidth: pos.width, ...(pos.inHost ? { position: "absolute" as const } : {}) }
-    // First pass, before the layout effect has measured: off-screen so the
-    // measurement is real but nothing flashes in the wrong place.
-    : { top: -9999, left: 0, visibility: "hidden" as const };
-}
-
-/** Close on a click anywhere outside, or on escape from anywhere. */
-function useDismiss(
-  open: boolean,
-  close: () => void,
-  triggerRef: RefObject<HTMLButtonElement | null>,
-  popupRef: RefObject<HTMLDivElement | null>,
-) {
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (triggerRef.current?.contains(target) || popupRef.current?.contains(target)) return;
-      close();
-    };
-    // On the document rather than the trigger, so escape still closes the list
-    // when focus has wandered off somewhere else.
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      close();
-      triggerRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onEscape);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onEscape);
-    };
-  }, [open, close, triggerRef, popupRef]);
 }
 
 /**
@@ -141,7 +50,7 @@ export function Select({
   // Keep the highlighted row in view, both on open and while arrowing.
   useEffect(() => {
     if (!open) return;
-    popupRef.current?.querySelector("[data-active]")?.scrollIntoView({ block: "nearest" });
+    revealActiveRow(popupRef.current);
   }, [open, active]);
 
   const commit = (index: number) => {
@@ -265,7 +174,7 @@ export function MultiSelect({
 
   useEffect(() => {
     if (!open) return;
-    popupRef.current?.querySelector("[data-active]")?.scrollIntoView({ block: "nearest" });
+    revealActiveRow(popupRef.current);
   }, [open, active]);
 
   const selected = options.filter((option) => values.includes(option.value));

@@ -1,7 +1,8 @@
 /**
  * Mutator tests run the real mutators against MockTx, so Zero itself is
  * stubbed out for every suite: defineMutator hands back the handler (callable
- * directly, and as `.fn` the way dev mutators call into game mutators), and
+ * directly, and as `.fn` the way dev mutators call into game mutators, with
+ * its zod schema on `.schema` for the tests that check the bounds), and
  * zql builds plain query objects MockTx.run can filter.
  */
 import { vi } from "vitest";
@@ -20,7 +21,7 @@ vi.mock("@rocicorp/zero", () => {
   const column = () => ({ optional: () => ({}) });
 
   return {
-    defineMutator: (_schema: unknown, handler: any) => Object.assign(handler, { fn: handler }),
+    defineMutator: (schema: unknown, handler: any) => Object.assign(handler, { fn: handler, schema }),
     defineMutators: (m: unknown) => m,
     createBuilder: () => zqlProxy,
     createSchema: () => ({}),

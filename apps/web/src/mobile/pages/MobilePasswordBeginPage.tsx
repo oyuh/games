@@ -82,6 +82,8 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
         inGame={inGame}
         isSpectator={isSpectator}
         starting={startingGame}
+        onSettingsChange={(settings) => void zero.mutate(mutators.password.updateSettings({ gameId, hostId: sessionId, settings }))
+          .client.catch(() => showToast("Couldn't change that setting", "error"))}
         onStart={() => void startGame()}
         onLeave={() => {
           void optimistic(zero.mutate(mutators.password.leave({ gameId, sessionId })))

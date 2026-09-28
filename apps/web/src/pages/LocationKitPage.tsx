@@ -359,6 +359,21 @@ const OVER = {
   onHome: NOOP,
 };
 
+function HostSettings() {
+  const [settings, setSettings] = useState(SETTINGS);
+  return (
+    <LocationLobby
+      {...LOBBY}
+      settings={settings}
+      players={CAST.slice(0, 3)}
+      sessionId={HOST}
+      isHost
+      inGame
+      onSettingsChange={(patch) => setSettings((current) => ({ ...current, ...patch }))}
+    />
+  );
+}
+
 export function LocationKitPage() {
   return (
     <main
@@ -373,6 +388,10 @@ export function LocationKitPage() {
 
       <Section title="Live" note="drive the lobby the way a player would meet it. the room fills, the round count follows it, and the start hint says what the mutator would have said">
         <Live />
+      </Section>
+
+      <Section title="Host settings" note="the host's setup cells are pickers: press one to change it, search the list, or type your own where a number is a number">
+        <HostSettings />
       </Section>
 
       <Section title="The place and the first clue, live" note="one screen where there were two. drop a pin and the box wakes up, because handing somebody a text box for a place they have not chosen yet is asking them to write a clue about nothing">

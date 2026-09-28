@@ -2,7 +2,9 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
-import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, isOneWord, pickPasswordWord, buildTeamRound, buildAllTeamRounds, scorePasswordGuessCount, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE } from "./helpers";
+import { LOBBY_SETTING_LIMITS } from "../../lobby-settings";
+import { passwordWordBank } from "./word-banks";
+import { getGameSecretResolver, isServerTx, now, code, normalized, isClueTooSimilar, isOneWord, pickPasswordWord, buildTeamRound, buildAllTeamRounds, scorePasswordGuessCount, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE, settingInRange, assertLobbySettingsChange, definedSettings } from "./helpers";
 
 async function maybeEncryptPasswordWord(ctx: unknown, gameId: string, word: string | null) {
   if (!word) {
@@ -834,6 +836,28 @@ export const passwordMutators = {
         game_type: undefined,
         game_id: undefined,
         last_seen: now()
+      });
+    }
+  ),
+
+  updateSettings: defineMutator(
+    z.object({
+      gameId: z.string(),
+      hostId: z.string(),
+      settings: z.object({
+        category: z.string().refine((c) => Object.hasOwn(passwordWordBank, c), "Unknown category").optional(),
+        targetScore: settingInRange(LOBBY_SETTING_LIMITS.password.targetScore).optional(),
+        roundDurationSec: settingInRange(LOBBY_SETTING_LIMITS.password.roundDurationSec).optional()
+      })
+    }),
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
+      const game = await tx.run(zql.password_games.where("id", args.gameId).one());
+      assertLobbySettingsChange(game, args.hostId);
+      await tx.mutate.password_games.update({
+        id: game.id,
+        settings: { ...game.settings, ...definedSettings(args.settings) },
+        updated_at: now()
       });
     }
   ),

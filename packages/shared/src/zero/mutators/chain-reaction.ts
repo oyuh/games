@@ -1,7 +1,9 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE } from "./helpers";
+import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE, settingInRange, assertLobbySettingsChange, definedSettings } from "./helpers";
+import { LOBBY_SETTING_LIMITS } from "../../lobby-settings";
+import { chainWordBank } from "./word-banks";
 
 type ChainSlot = { word: string; secret?: string | null; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 
@@ -198,25 +200,21 @@ export const chainReactionMutators = {
       gameId: z.string(),
       hostId: z.string(),
       settings: z.object({
-        chainLength: z.number(),
-        rounds: z.number(),
-        currentRound: z.number(),
-        turnTimeSec: z.number().nullable(),
-        phaseEndsAt: z.number().nullable(),
-        chainMode: z.enum(["premade", "custom"]),
-        category: z.string().optional()
+        chainLength: settingInRange(LOBBY_SETTING_LIMITS.chain.chainLength).optional(),
+        rounds: settingInRange(LOBBY_SETTING_LIMITS.chain.rounds).optional(),
+        /** Null is no clock: a round runs until both players are done. */
+        turnTimeSec: settingInRange(LOBBY_SETTING_LIMITS.chain.turnTimeSec).nullable().optional(),
+        chainMode: z.enum(["premade", "custom"]).optional(),
+        category: z.string().refine((c) => Object.hasOwn(chainWordBank, c), "Unknown category").optional()
       })
     }),
     async ({ args, tx, ctx }) => {
       assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
-      if (!game) throw new Error("Game not found");
-      if (game.host_id !== args.hostId) throw new Error("Only host can update settings");
-      if (game.phase !== "lobby") throw new Error("Can only update settings in lobby");
-      const newCategory = args.settings.category ?? game.settings.category ?? "animals";
+      assertLobbySettingsChange(game, args.hostId);
       await tx.mutate.chain_reaction_games.update({
         id: game.id,
-        settings: { ...game.settings, ...args.settings, category: newCategory },
+        settings: { ...game.settings, ...definedSettings(args.settings) },
         updated_at: now()
       });
     }
