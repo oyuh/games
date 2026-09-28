@@ -1,7 +1,8 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { code, now, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE } from "./helpers";
+import { code, now, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE, settingInRange, assertLobbySettingsChange, definedSettings } from "./helpers";
+import { LOBBY_SETTING_LIMITS } from "../../lobby-settings";
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -796,6 +797,29 @@ export const locationSignalMutators = {
         updated_at: now(),
       });
     }
+  ),
+
+  updateSettings: defineMutator(
+    z.object({
+      gameId: z.string(),
+      hostId: z.string(),
+      settings: z.object({
+        cluePairs: settingInRange(LOBBY_SETTING_LIMITS.location.cluePairs).optional(),
+        roundsPerPlayer: settingInRange(LOBBY_SETTING_LIMITS.location.roundsPerPlayer).optional(),
+        clueDurationSec: settingInRange(LOBBY_SETTING_LIMITS.location.clueDurationSec).optional(),
+        guessDurationSec: settingInRange(LOBBY_SETTING_LIMITS.location.guessDurationSec).optional(),
+      }),
+    }),
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
+      const game = await tx.run(zql.location_signal_games.where("id", args.gameId).one());
+      assertLobbySettingsChange(game, args.hostId);
+      await tx.mutate.location_signal_games.update({
+        id: game.id,
+        settings: { ...game.settings, ...definedSettings(args.settings) },
+        updated_at: now(),
+      });
+    },
   ),
 
   setPublic: defineMutator(

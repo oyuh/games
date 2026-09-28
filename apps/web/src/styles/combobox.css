@@ -1,0 +1,191 @@
+/* ─── Combobox ──────────────────────────────────────────────
+   The select popup's panel and rows (.solo-select-popup in game-shared.css)
+   with a search row on top. Flat: hairlines between the parts, the accent
+   only on the row that is on. Portalled to the body, so it stacks with the
+   select popup (950), over modals and under toasts. */
+
+.cbx {
+  --cbx-tone: var(--game-accent, var(--primary));
+  position: fixed;
+  z-index: 950;
+  display: flex;
+  flex-direction: column;
+  width: min(16rem, calc(100vw - 12px));
+  /* --popup-room is the space on the side it opened on, set by
+     useAnchoredPopup. The 20rem matches the cap passed to it. */
+  max-height: min(20rem, var(--popup-room, 20rem));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  color: var(--foreground);
+  overflow: hidden;
+  animation: cbx-open 0.12s ease-out;
+}
+
+[data-theme="light"] .cbx {
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.14);
+}
+
+/* A fade only. It opens up or down depending on the room, and a slide
+   would have to know which. */
+@keyframes cbx-open {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cbx { animation: none; }
+}
+
+/* Names the setting in the roster's label voice. */
+.cbx-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.cbx-head-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.cbx-head-icon svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.4;
+}
+
+/* A row of its own rather than a boxed field. Focus shows as the accent
+   along its bottom edge. */
+.cbx-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.35rem;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--secondary);
+  cursor: text;
+}
+
+.cbx-search:focus-within {
+  box-shadow: inset 0 -2px 0 var(--cbx-tone);
+  color: var(--foreground);
+}
+
+.cbx-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.cbx-search-input::placeholder {
+  color: var(--secondary);
+}
+
+.cbx-list {
+  /* The rows' offsetParent, so revealActiveRow can measure them. */
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.35rem 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  outline: none;
+}
+
+.cbx-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 1.9rem;
+  margin: 0 0.35rem;
+  padding: 0 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.cbx-option-value {
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.cbx-option-detail {
+  font-weight: 500;
+}
+
+.cbx-option-icon {
+  flex-shrink: 0;
+}
+
+.cbx-option[data-active] {
+  background: var(--accent);
+}
+
+/* The list has focus on a touch screen and when there is no search field,
+   and then the highlighted row is where the keyboard is, so it gets a ring. */
+.cbx-list:focus-visible .cbx-option[data-active] {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.cbx-option[data-selected],
+.cbx-option[data-selected] .cbx-option-value,
+.cbx-option--custom,
+.cbx-option--custom .cbx-option-value {
+  color: var(--cbx-tone);
+}
+
+.cbx-check {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.cbx-empty {
+  margin: 0;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--secondary);
+}
+
+/* The accents are picked for a dark page. On light, pull them darker so the
+   selected row still clears 4.5:1 against the card. */
+[data-theme="light"] :is(.cbx-option[data-selected], .cbx-option--custom) :is(.cbx-option-value, .cbx-option-detail, .cbx-check),
+[data-theme="light"] :is(.cbx-option[data-selected], .cbx-option--custom) {
+  color: color-mix(in srgb, var(--cbx-tone) 60%, #000);
+}
+
+[data-theme="light"] .cbx-search:focus-within {
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--cbx-tone) 60%, #000);
+}
+
+@media (pointer: coarse) {
+  .cbx-option {
+    min-height: 2.75rem;
+  }
+
+  .cbx-search {
+    min-height: 2.75rem;
+  }
+
+  /* Under 16px and iOS zooms the whole page in when the field takes focus. */
+  .cbx-search-input {
+    font-size: 16px;
+  }
+}

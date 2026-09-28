@@ -443,6 +443,22 @@ function LiveRound() {
   );
 }
 
+function HostSettings() {
+  const [settings, setSettings] = useState(SETTINGS);
+  return (
+    <PasswordLobby
+      {...LOBBY}
+      settings={settings}
+      teams={deal(3, 2)}
+      sessionId={HOST}
+      isHost
+      inGame
+      onJoinTeam={NOOP}
+      onSettingsChange={(patch) => setSettings((current) => ({ ...current, ...patch }))}
+    />
+  );
+}
+
 export function PasswordKitPage() {
   return (
     <main
@@ -457,6 +473,10 @@ export function PasswordKitPage() {
 
       <Section title="Live" note="drive the lobby the way a player would meet it. join a team, or drag somebody onto one">
         <Live />
+      </Section>
+
+      <Section title="Host settings" note="the host's setup cells are pickers: press one to change it, search the list, or type your own where a number is a number">
+        <HostSettings />
       </Section>
 
       <Section title="Waiting on people" note="the two ways a lobby is not a game yet, each said in its own words rather than a dead button">
