@@ -43,7 +43,7 @@
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="light"] .toast {
+[data-theme="light"] :is(.toast, .sync-wake-toast) {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
