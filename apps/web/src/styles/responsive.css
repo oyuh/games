@@ -415,18 +415,6 @@
     width: min(280px, calc(100vw - 2rem));
   }
 
-  /* ── Toast: wider on mobile ──────────────────────────── */
-  .toast-container {
-    left: 0.5rem;
-    right: 0.5rem;
-    max-width: none;
-    bottom: 3.5rem;
-  }
-
-  .toast {
-    font-size: 0.82rem;
-  }
-
   /* ── Clue recap ──────────────────────────────────────── */
   .game-clue-item {
     gap: 0.25rem;

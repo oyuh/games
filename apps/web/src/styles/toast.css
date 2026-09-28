@@ -36,9 +36,16 @@ html[data-sidebar="top"][data-toast-pos^="top"] :is(.toast-container, .sync-wake
 html[data-sidebar="left"][data-toast-pos$="left"] :is(.toast-container, .sync-wake-toast-container) { left: 5rem; }
 html[data-sidebar="right"][data-toast-pos$="right"] :is(.toast-container, .sync-wake-toast-container) { right: 5rem; }
 
-html[data-toast-pos^="top"] body.has-sync-wake-toast .toast-container { top: 5.25rem; }
-html[data-toast-pos^="bottom"] body.has-sync-wake-toast .toast-container { bottom: 8.75rem; }
-html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-container { top: 9.25rem; }
+/* --sync-wake-h is the wake toast's measured height, set by SyncWakeToast. */
+html[data-toast-pos^="top"] body.has-sync-wake-toast .toast-container {
+  top: calc(1rem + var(--sync-wake-h, 3.6rem) + 0.5rem);
+}
+html[data-toast-pos^="bottom"] body.has-sync-wake-toast .toast-container {
+  bottom: calc(4.5rem + var(--sync-wake-h, 3.6rem) + 0.5rem);
+}
+html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-container {
+  top: calc(5rem + var(--sync-wake-h, 3.6rem) + 0.5rem);
+}
 
 /* A phone has room for an edge, not a corner: full width, top or bottom. The
    bottom stack sits above the tab bar (see --m-bottom-inset in mobile.css). */
@@ -64,32 +71,156 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
   }
 
   html[data-toast-pos][data-toast-pos-mobile="top"] body.has-sync-wake-toast .toast-container {
-    top: calc(4.25rem + env(safe-area-inset-top, 0px));
+    top: calc(0.5rem + env(safe-area-inset-top, 0px) + var(--sync-wake-h, 3.6rem) + 0.4rem);
   }
 
   html[data-toast-pos][data-toast-pos-mobile="bottom"] body.has-sync-wake-toast .toast-container {
-    bottom: calc(8rem + 1px + var(--m-bottom-inset));
+    bottom: calc(4.25rem + 1px + var(--m-bottom-inset) + var(--sync-wake-h, 3.6rem) + 0.4rem);
   }
 }
 
-.toast {
+/* ── Tones ──────────────────────────────────────────────────
+   Each toast reads one color, --toast-tone, for its icon tile, its border
+   tint, and its countdown. The red, green, and amber are the ones the
+   game screens already use; --destructive is too dark to read on a dark
+   card, so it is not used here. */
+:is(.toast-container, .sync-wake-toast-container) {
+  --toast-red: #f87171;
+  --toast-green: #4ade80;
+  --toast-amber: #fbbf24;
+}
+
+[data-theme="light"] :is(.toast-container, .sync-wake-toast-container) {
+  --toast-red: #dc2626;
+  --toast-green: #16a34a;
+  --toast-amber: #b45309;
+}
+
+.toast--error { --toast-tone: var(--toast-red); }
+.toast--success { --toast-tone: var(--toast-green); }
+.toast--info { --toast-tone: var(--primary); }
+.sync-wake-toast--info { --toast-tone: var(--primary); }
+.sync-wake-toast--warn { --toast-tone: var(--toast-amber); }
+.sync-wake-toast--idle { --toast-tone: var(--secondary); }
+
+/* ── The bar ────────────────────────────────────────────────
+   Flat and bordered, like the game shell's panel: an icon tile, the
+   message, and a close segment cut off by a hairline that runs the full
+   height, so the button is as tall as the toast. */
+:is(.toast, .sync-wake-toast) {
+  position: relative;
   pointer-events: auto;
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
+  align-items: stretch;
+  gap: 0.65rem;
+  min-height: 2.75rem;
+  padding-left: 0.85rem;
   border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--toast-tone) 24%, var(--border));
   background: var(--card);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  animation: toast-in 0.28s ease-out;
-  font-size: 0.88rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   color: var(--foreground);
+  overflow: clip;
+  animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .toast--leaving {
   animation: toast-out 0.2s ease-in forwards;
   pointer-events: none;
+}
+
+/* Just the glyph in the tone color, in a fixed-width slot so the spinner
+   and the icons line the message up at the same spot. */
+.toast-icon {
+  flex: 0 0 auto;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  color: var(--toast-tone);
+}
+
+.toast-msg {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  padding: 0.65rem 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.toast-dismiss {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.toast-dismiss:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.toast-dismiss:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* The segment is already the toast's full 44px height. A finger also
+   needs the width. */
+@media (pointer: coarse) {
+  .toast-dismiss {
+    width: 2.75rem;
+  }
+}
+
+/* ── Countdown ──────────────────────────────────────────────
+   The game clock's track, at a whisper: pinned to the bottom edge and
+   filling toward the moment the toast goes. It stops while the toast is
+   held open, in step with the timer in lib/toast. */
+.toast-countdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  pointer-events: none;
+}
+
+.toast-countdown-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: color-mix(in srgb, var(--toast-tone) 70%, transparent);
+  transform-origin: left center;
+  animation: toast-countdown var(--toast-duration, 4500ms) linear forwards;
+}
+
+.toast--paused .toast-countdown-fill {
+  animation-play-state: paused;
+}
+
+.toast--leaving .toast-countdown {
+  visibility: hidden;
+}
+
+@keyframes toast-countdown {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 
 /* Toasts come in from, and leave toward, the edge they sit on: the side for
@@ -116,74 +247,11 @@ html[data-toast-pos="bottom-center"] :is(.toast-container, .sync-wake-toast-cont
 
 @media (prefers-reduced-motion: reduce) {
   :is(.toast-container, .sync-wake-toast-container) { --toast-from: none; }
-}
 
-.toast--error {
-  border-color: color-mix(in srgb, var(--destructive) 40%, transparent);
-}
-
-.toast--error .toast-icon {
-  color: var(--destructive);
-}
-
-.toast--success {
-  border-color: color-mix(in srgb, #22c55e 35%, transparent);
-}
-
-.toast--success .toast-icon {
-  color: #22c55e;
-}
-
-.toast--info {
-  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
-}
-
-.toast--info .toast-icon {
-  color: var(--primary);
-}
-
-.toast-icon {
-  flex-shrink: 0;
-  font-size: 1.1rem;
-}
-
-.toast-msg {
-  flex: 1;
-  line-height: 1.35;
-}
-
-.toast-dismiss {
-  background: none;
-  border: none;
-  color: var(--secondary);
-  cursor: pointer;
-  padding: 0.2rem;
-  border-radius: var(--radius-sm);
-  display: flex;
-  flex-shrink: 0;
-  transition: color 0.15s;
-}
-
-.toast-dismiss:hover {
-  color: var(--foreground);
-}
-
-/* The X is a 20px icon, well under the 44px touch minimum. Grow the hit
-   area with a pseudo-element rather than the button, so it stays visually
-   small. Fine pointers don't need it and it would only steal clicks from
-   the toast body, so it's coarse-pointer only. */
-@media (pointer: coarse) {
-  .toast-dismiss {
-    position: relative;
-  }
-  .toast-dismiss::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 44px;
-    height: 44px;
-    transform: translate(-50%, -50%);
+  /* Still counts down, in half-second ticks instead of a glide, the way
+     the game clock drops its transition. */
+  .toast-countdown-fill {
+    animation-timing-function: steps(9, jump-start);
   }
 }
 
@@ -197,22 +265,13 @@ html[data-toast-pos="bottom-center"] :is(.toast-container, .sync-wake-toast-cont
   pointer-events: none;
 }
 
-.sync-wake-toast {
-  position: relative;
-  pointer-events: auto;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  padding: 0.75rem 2.65rem 0.75rem 1rem;
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  animation: toast-in 0.28s ease-out;
-  font-size: 0.88rem;
-  color: var(--foreground);
+/* Nothing to close while idle, so the content runs to the edge. */
+.sync-wake-toast--idle {
+  padding-right: 0.85rem;
 }
 
+/* The whole toast opens the hosting info. The hitarea sits under the
+   content, and the close segment sits over it. */
 .sync-wake-toast-hitarea {
   position: absolute;
   inset: 0;
@@ -225,134 +284,126 @@ html[data-toast-pos="bottom-center"] :is(.toast-container, .sync-wake-toast-cont
 }
 
 .sync-wake-toast-hitarea:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--primary) 70%, transparent);
-  outline-offset: 2px;
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 
-.sync-wake-toast-content {
+.sync-wake-toast .toast-icon,
+.sync-wake-toast-content,
+.sync-wake-timer {
   position: relative;
   z-index: 2;
-  display: grid;
-  gap: 0.35rem;
-  flex: 1;
-  min-width: 0;
   pointer-events: none;
 }
 
-.sync-wake-toast-main {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-.sync-wake-toast--info {
-  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
-}
-
-.sync-wake-toast--warn {
-  border-color: color-mix(in srgb, #f59e0b 42%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, #f59e0b 10%, transparent), transparent 55%),
-    var(--card);
-  color: #f5d6a0;
-}
-
-.sync-wake-toast--warn::before {
-  content: "!";
+.sync-wake-toast-content {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
   display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  z-index: 2;
-  margin-top: 0.05rem;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: color-mix(in srgb, #f59e0b 18%, transparent);
-  border: 1px solid color-mix(in srgb, #f59e0b 42%, transparent);
-  color: #fbbf24;
-  font-size: 0.72rem;
-  font-weight: 900;
-}
-
-.sync-wake-toast--idle {
-  border-color: color-mix(in srgb, var(--secondary) 35%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--secondary) 10%, transparent), transparent 55%),
-    var(--card);
-  color: var(--foreground);
+  gap: 0.1rem;
+  padding: 0.6rem 0 0.7rem;
 }
 
 .sync-wake-msg {
-  flex: 1 1 auto;
-  min-width: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
   line-height: 1.35;
 }
 
 .sync-wake-detail {
-  color: var(--secondary);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   line-height: 1.35;
+  color: var(--secondary);
+  text-underline-offset: 2px;
 }
 
+/* The only hint that the toast is a button, so it reads as a link. */
+.sync-wake-toast:not(.sync-wake-toast--idle):hover .sync-wake-detail,
+.sync-wake-toast-hitarea:focus-visible ~ .sync-wake-toast-content .sync-wake-detail {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
+/* The game clock, shrunk to fit: heavy tabular figures in the tone color,
+   so the seconds tick over without the row shifting. */
 .sync-wake-timer {
   flex: 0 0 auto;
-  color: var(--secondary);
-  font-size: 0.78rem;
+  align-self: center;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
-  line-height: 1.35;
+  color: var(--toast-tone);
 }
 
-.sync-wake-progress {
-  display: block;
+/* Same track as .gsh-timer-track: 3px on the bottom edge, a fill that
+   moves once a second, and a breathing head so a slow crawl still reads
+   as moving. */
+.sync-wake-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
   height: 3px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  overflow: clip;
+  pointer-events: none;
 }
 
-.sync-wake-progress-bar {
+.sync-wake-track-fill {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--primary) 68%, #ffffff),
-    var(--primary)
-  );
-  transform: scaleX(var(--sync-wake-progress, 0));
+  background: var(--toast-tone);
   transform-origin: left center;
-  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: scaleX(var(--sync-wake-progress, 0));
+  transition: transform 0.95s linear;
 }
 
-.sync-wake-toast--warn .sync-wake-progress {
-  background: color-mix(in srgb, #f59e0b 16%, transparent);
-}
-
-.sync-wake-toast--warn .sync-wake-progress-bar {
-  background: linear-gradient(90deg, #fde68a, #f59e0b);
-}
-
-.sync-wake-dismiss {
+.sync-wake-track::after {
+  content: "";
   position: absolute;
-  top: 0.55rem;
-  right: 0.65rem;
-  z-index: 3;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sync-wake-progress, 0) * 100%);
+  width: 26px;
+  transform: translateX(-100%);
+  background: color-mix(in srgb, var(--toast-tone) 55%, #fff);
+  transition: left 0.95s linear;
+  animation: sync-wake-creep 2.4s ease-in-out infinite;
+}
+
+@keyframes sync-wake-creep {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 0.7; }
 }
 
 .sync-wake-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
-  border-top-color: var(--primary);
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--toast-tone) 30%, transparent);
+  border-top-color: var(--toast-tone);
   border-radius: 50%;
-  flex-shrink: 0;
   animation: sync-wake-spin 0.8s linear infinite;
 }
 
 @keyframes sync-wake-spin {
   to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-wake-track-fill { transition: none; }
+
+  .sync-wake-track::after {
+    animation: none;
+    transition: none;
+    opacity: 0.5;
+  }
+
+  .sync-wake-spinner { animation-duration: 2.4s; }
 }
 
 .sync-hosting-modal {

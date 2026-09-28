@@ -45,95 +45,16 @@
 }
 
 /* ── Toasts ────────────────────────────────────────────────────── */
-/* Placement is in toast.css, off the toast position setting. This is the
-   look: flat, bordered, the same for the regular stack and the sync wake
-   toast, which renders outside the shell. */
+/* Placement and the look are in toast.css, shared with desktop. A phone
+   only drops the shadow: the stack sits on an edge, not over the page. */
 .m-shell .toast-container {
   gap: 0.4rem;
 }
 
-.m-shell .toast {
-  box-sizing: border-box;
-  width: auto;
-  max-width: 100%;
-  min-height: 3.25rem;
-  gap: 0.5rem;
-  overflow: hidden;
-  /* The 44px close button sets the height, so the right side has no pad. */
-  padding: 0.25rem 0.25rem 0.25rem 0.85rem;
-  box-shadow: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  font-size: 0.85rem;
-  animation: m-toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-[data-theme="light"] .m-shell .toast {
-  color: var(--foreground);
-}
-
-[data-theme="light"] .m-shell .toast-dismiss {
-  color: var(--muted-foreground);
-}
-
-.m-shell .toast-msg {
-  flex: 1;
-  font-size: 0.85rem;
-}
-
-.m-shell .toast-icon {
-  flex-shrink: 0;
-}
-
-.m-shell .toast-dismiss {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  min-width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-}
-
-/* toast.css loads after this file, so these lead with html to outrank it. */
 @media (max-width: 767px) {
-  html .sync-wake-toast,
-  html .sync-wake-toast--warn,
-  html .sync-wake-toast--idle {
-    min-height: 3.25rem;
-    padding: 0.65rem 2.75rem 0.65rem 0.85rem;
-    border-radius: var(--radius-lg);
-    background: var(--card);
+  html :is(.m-shell .toast, .sync-wake-toast) {
     box-shadow: none;
-    font-size: 0.85rem;
-    animation: m-toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
-
-  html .sync-wake-dismiss {
-    top: 50%;
-    right: 0.35rem;
-    width: 2.75rem;
-    height: 2.75rem;
-    transform: translateY(-50%);
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-@keyframes m-toast-in {
-  from { opacity: 0; transform: translateY(-100%); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* From the bottom edge, toasts rise into place instead of dropping. */
-html[data-toast-pos-mobile="bottom"] :is(.m-shell .toast, .sync-wake-toast) {
-  animation-name: m-toast-up;
-}
-
-@keyframes m-toast-up {
-  from { opacity: 0; transform: translateY(100%); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Tab bar ───────────────────────────────────────────────────── */
