@@ -98,6 +98,8 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
           inGame={inGame}
           isSpectator={isSpectator}
           starting={starting}
+          onSettingsChange={(settings) => void zero.mutate(mutators.chainReaction.updateSettings({ gameId, hostId: sessionId, settings }))
+            .client.catch(() => showToast("Couldn't change that setting", "error"))}
           onStart={() => {
             setStarting(true);
             void optimistic(zero.mutate(mutators.chainReaction.start({ gameId, hostId: sessionId })))

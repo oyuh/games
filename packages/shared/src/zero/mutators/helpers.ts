@@ -1,4 +1,6 @@
 import { customAlphabet } from "nanoid";
+import { z } from "zod";
+import type { SettingRange } from "../../lobby-settings";
 export { fallbackPlayerName, randomPlayerName, resolvePlayerName } from "../../player-names";
 import { chainWordBank, passwordWordBank } from "./word-banks";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
@@ -12,6 +14,30 @@ export const code = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
  */
 export const ROOM_CODE = /^[A-Z0-9]{6}$/;
 export const PRESENCE_TIMEOUT_MS = 30_000;
+
+// ─── Lobby settings ─────────────────────────────────────────
+/** A whole number inside one of LOBBY_SETTING_LIMITS' ranges. */
+export function settingInRange(range: SettingRange) {
+  return z.number().int().min(range.min).max(range.max);
+}
+
+/** Every game's updateSettings asks the same two things before it writes. */
+export function assertLobbySettingsChange<G extends { host_id: string; phase: string }>(
+  game: G | undefined,
+  hostId: string,
+): asserts game is G {
+  if (!game) throw new Error("Game not found");
+  if (game.host_id !== hostId) throw new Error("Only host can update settings");
+  if (game.phase !== "lobby") throw new Error("Can only update settings in lobby");
+}
+
+/** The keys the host actually sent. Zod leaves the rest as undefined, and
+ *  spreading those would blank out settings nobody touched. */
+export function definedSettings<T extends Record<string, unknown>>(patch: T) {
+  return Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)) as {
+    [K in keyof T]?: Exclude<T[K], undefined>;
+  };
+}
 
 // ─── Input sanitization ─────────────────────────────────────
 const HTML_TAG_RE = /<[^>]*>/g;

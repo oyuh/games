@@ -1,7 +1,8 @@
 import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
-import { now, code, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE } from "./helpers";
+import { now, code, shuffle, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE, settingInRange, assertLobbySettingsChange, definedSettings } from "./helpers";
+import { LOBBY_SETTING_LIMITS } from "../../lobby-settings";
 
 /**
  * A new round's target, sealed so guessers' clients never see it. Only the
@@ -271,25 +272,18 @@ export const shadeSignalMutators = {
       settings: z.object({
         leaderPick: z.boolean().optional(),
         hardMode: z.boolean().optional(),
-        clueDurationSec: z.number().optional(),
-        guessDurationSec: z.number().optional(),
-        roundsPerPlayer: z.number().optional(),
+        clueDurationSec: settingInRange(LOBBY_SETTING_LIMITS.shade.clueDurationSec).optional(),
+        guessDurationSec: settingInRange(LOBBY_SETTING_LIMITS.shade.guessDurationSec).optional(),
+        roundsPerPlayer: settingInRange(LOBBY_SETTING_LIMITS.shade.roundsPerPlayer).optional(),
       })
     }),
     async ({ args, tx, ctx }) => {
       assertHost(tx, ctx, args.hostId, args.hostId);
       const game = await tx.run(zql.shade_signal_games.where("id", args.gameId).one());
-      if (!game) throw new Error("Game not found");
-      if (game.host_id !== args.hostId) throw new Error("Only host can update settings");
-      if (game.phase !== "lobby") throw new Error("Can only update settings in lobby");
-      // Only apply defined keys
-      const patch: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(args.settings)) {
-        if (v !== undefined) patch[k] = v;
-      }
+      assertLobbySettingsChange(game, args.hostId);
       await tx.mutate.shade_signal_games.update({
         id: game.id,
-        settings: { ...game.settings, ...patch },
+        settings: { ...game.settings, ...definedSettings(args.settings) },
         updated_at: now()
       });
     }

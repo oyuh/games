@@ -1,4 +1,6 @@
 import { useEffect, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
+import { FiEdit2 } from "react-icons/fi";
+import { Combobox, type ComboboxProps } from "./Combobox";
 import "../../styles/game-kit.css";
 
 /**
@@ -155,15 +157,28 @@ export interface GameFact {
   tone?: string;
   /** Worth writing. Half of these settings need a sentence to mean anything. */
   tooltip?: string;
+  /** Hands the host a picker for it: the cell turns into the button that
+   *  opens one. Left off for anything the lobby cannot change. */
+  edit?: GameFactEdit;
 }
+
+/** What the picker needs. The cell itself is the trigger, so none of the
+ *  trigger props are here, and the fact's icon and tone carry over. */
+export type GameFactEdit = Omit<
+  ComboboxProps,
+  "children" | "triggerClassName" | "triggerStyle" | "triggerAttrs" | "icon" | "tone"
+>;
 
 /**
  * What a game was set up with, read only: rounds, timers, word bank, whatever
  * the host picked before anyone joined.
  *
- * Pills, like every other small fact on the site. They are quiet by default
+ * One flat strip of cells split by hairlines. They are quiet by default
  * because five of them in a row all shouting is five of them saying nothing;
- * `tone` is there for the one that is actually worth a colour.
+ * `tone` colors the icon of the one that is actually worth a colour.
+ *
+ * A fact with `edit` is a button instead, marked with a pencil, that opens a
+ * picker for the setting. Only the host gets those, and only in the lobby.
  */
 export function GameFacts({ label, facts, className = "" }: { label?: ReactNode; facts: GameFact[]; className?: string }) {
   return (
@@ -171,18 +186,36 @@ export function GameFacts({ label, facts, className = "" }: { label?: ReactNode;
       {label && <span className="gk-roster-label">{label}</span>}
 
       <div className="gk-facts">
-        {facts.map((fact, i) => (
-          <span
-            key={i}
-            className="gk-fact"
-            style={fact.tone ? ({ "--gk-fact-tone": fact.tone } as CSSProperties) : undefined}
-            {...(fact.tooltip ? { "data-tooltip": fact.tooltip, "data-tooltip-variant": "game" } : {})}
-          >
-            {fact.icon && <span className="gk-fact-icon" aria-hidden="true">{fact.icon}</span>}
-            <span className="gk-fact-value">{fact.value}</span>
-            {fact.label && <span className="gk-fact-label">{fact.label}</span>}
-          </span>
-        ))}
+        {facts.map((fact, i) => {
+          const style = fact.tone ? ({ "--gk-fact-tone": fact.tone } as CSSProperties) : undefined;
+          const tooltip = fact.tooltip ? { "data-tooltip": fact.tooltip, "data-tooltip-variant": "game" } : {};
+          const body = (
+            <>
+              {fact.icon && <span className="gk-fact-icon" aria-hidden="true">{fact.icon}</span>}
+              <span className="gk-fact-value">{fact.value}</span>
+              {fact.label && <span className="gk-fact-label">{fact.label}</span>}
+            </>
+          );
+
+          if (!fact.edit) {
+            return <span key={i} className="gk-fact" style={style} {...tooltip}>{body}</span>;
+          }
+
+          return (
+            <Combobox
+              key={i}
+              {...fact.edit}
+              {...(fact.icon ? { icon: fact.icon } : {})}
+              {...(fact.tone ? { tone: fact.tone } : {})}
+              triggerClassName="gk-fact gk-fact--editable"
+              {...(style ? { triggerStyle: style } : {})}
+              triggerAttrs={tooltip}
+            >
+              {body}
+              <span className="gk-fact-edit" aria-hidden="true"><FiEdit2 /></span>
+            </Combobox>
+          );
+        })}
       </div>
     </div>
   );

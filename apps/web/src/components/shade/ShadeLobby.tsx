@@ -3,7 +3,9 @@ import {
   FiAward, FiClock, FiCrosshair, FiDroplet, FiEdit3, FiEye, FiFlag, FiGrid,
   FiLogIn, FiLogOut, FiPlay, FiRotateCcw, FiSlash, FiUsers,
 } from "react-icons/fi";
-import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel } from "../shared/GameKit";
+import { LOBBY_SETTING_LIMITS } from "@games/shared";
+import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
+import { durationCustom, durationOptions, formatDuration } from "../../lib/setting-options";
 import { GameRoster } from "../shared/GameRoster";
 import type { PlayerCardProps } from "../shared/PlayerCard";
 import type { GamePhase } from "../shared/GameShellHeader";
@@ -59,6 +61,16 @@ export interface ShadeLobbySettings {
   roundsPerPlayer: number;
   leaderPick?: boolean;
 }
+
+/** What the host can change from the lobby. */
+export type ShadeSettingsPatch = Partial<ShadeLobbySettings>;
+
+const LIMITS = LOBBY_SETTING_LIMITS.shade;
+const leadsOptions = [1, 2, 3].map((n) => ({
+  value: String(n),
+  label: n === 1 ? "Once" : n === 2 ? "Twice" : `${n} times`,
+  detail: "each",
+}));
 
 /** Why the start button is off, in the words the mutator would have used. */
 export function shadeStartBlock(players: ShadePlayer[]): string | undefined {
@@ -153,6 +165,8 @@ export interface ShadeLobbyProps {
   /** Goes in first on the action row, where the visibility toggle lives, so
    *  this component never has to know what zero is. */
   actions?: ReactNode;
+  /** Turns the setup cells into pickers. Only reaches for it when you host. */
+  onSettingsChange?: (patch: ShadeSettingsPatch) => void;
 }
 
 export function ShadeLobby({
@@ -171,7 +185,9 @@ export function ShadeLobby({
   onJoin,
   onKick,
   actions,
+  onSettingsChange,
 }: ShadeLobbyProps) {
+  const edit = (picker: GameFactEdit) => (isHost && onSettingsChange ? { edit: picker } : {});
   const blocked = shadeStartBlock(players);
 
   /* Everyone leads, so the length of the game is the room, and it grows as
@@ -203,6 +219,16 @@ export function ShadeLobby({
             tooltip: settings.hardMode
               ? "The leader cannot say red, blue, green and the rest, so the clues have to come at it sideways"
               : "The leader can name a color outright if they want to",
+            ...edit({
+              label: "Clue rules",
+              value: settings.hardMode ? "hard" : "normal",
+              options: [
+                { value: "normal", label: "Any clue goes" },
+                { value: "hard", label: "No color names", detail: "red, blue, green…" },
+              ],
+              searchable: false,
+              onChange: (value) => onSettingsChange?.({ hardMode: value === "hard" }),
+            }),
           },
           {
             value: settings.leaderPick ? "Leader picks" : "Grid picks",
@@ -210,12 +236,29 @@ export function ShadeLobby({
             tooltip: settings.leaderPick
               ? "Whoever is leading chooses the color they have to describe"
               : "The color is dealt at random, so the leader gets what everyone else gets",
+            ...edit({
+              label: "Leader color",
+              value: settings.leaderPick ? "leader" : "grid",
+              options: [
+                { value: "grid", label: "Grid picks", detail: "at random" },
+                { value: "leader", label: "Leader picks", detail: "their own color" },
+              ],
+              searchable: false,
+              onChange: (value) => onSettingsChange?.({ leaderPick: value === "leader" }),
+            }),
           },
           {
             value: rounds || settings.roundsPerPlayer,
             label: rounds === 1 ? "round" : "rounds",
             icon: <FiFlag />,
             tooltip: `Everyone leads ${settings.roundsPerPlayer === 1 ? "once" : `${settings.roundsPerPlayer} times`}, so the game gets longer as people join`,
+            ...edit({
+              label: "Turns leading",
+              value: String(settings.roundsPerPlayer),
+              options: leadsOptions,
+              searchable: false,
+              onChange: (value) => onSettingsChange?.({ roundsPerPlayer: Number(value) }),
+            }),
           },
           {
             value: `${grid.cols} x ${grid.rows}`,
@@ -224,16 +267,30 @@ export function ShadeLobby({
             tooltip: `${grid.rows * grid.cols} colors to pick out of`,
           },
           {
-            value: `${settings.clueDurationSec}s`,
+            value: formatDuration(settings.clueDurationSec),
             label: "to clue",
             icon: <FiClock />,
             tooltip: "How long the leader gets to write each clue",
+            ...edit({
+              label: "Time to clue",
+              value: String(settings.clueDurationSec),
+              options: durationOptions([15, 30, 45, 60, 90, 120]),
+              custom: durationCustom(LIMITS.clueDurationSec),
+              onChange: (value) => onSettingsChange?.({ clueDurationSec: Number(value) }),
+            }),
           },
           {
-            value: `${settings.guessDurationSec}s`,
+            value: formatDuration(settings.guessDurationSec),
             label: "to guess",
             icon: <FiCrosshair />,
             tooltip: "How long everyone else gets to lock a cell in",
+            ...edit({
+              label: "Time to guess",
+              value: String(settings.guessDurationSec),
+              options: durationOptions([15, 20, 30, 45, 60, 90]),
+              custom: durationCustom(LIMITS.guessDurationSec),
+              onChange: (value) => onSettingsChange?.({ guessDurationSec: Number(value) }),
+            }),
           },
         ]}
       />

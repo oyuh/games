@@ -2,7 +2,8 @@ import { defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { zql } from "../schema";
 import { DEFAULT_IMPOSTER_CLUE_VISIBILITY } from "../../types/game";
-import { now, code, pickRandom, sealSecret, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE, isServerTx } from "./helpers";
+import { LOBBY_SETTING_LIMITS } from "../../lobby-settings";
+import { now, code, pickRandom, sealSecret, chooseRoles, assertCaller, assertHost, sanitizeText, resolvePlayerName, ROOM_CODE, isServerTx, settingInRange, assertLobbySettingsChange, definedSettings } from "./helpers";
 import { imposterWordBank } from "./word-banks";
 
 export const imposterMutators = {
@@ -710,6 +711,34 @@ export const imposterMutators = {
           // If everyone voted skip, expire the timer immediately
           phaseEndsAt: allSkipped ? 1 : game.settings.phaseEndsAt
         },
+        updated_at: now()
+      });
+    }
+  ),
+
+  /** The host changing the setup before anyone has started. The word bank is
+   *  a column, not a setting, so it is split off and written on its own. */
+  updateSettings: defineMutator(
+    z.object({
+      gameId: z.string(),
+      hostId: z.string(),
+      settings: z.object({
+        category: z.string().refine((c) => Object.hasOwn(imposterWordBank, c), "Unknown category").optional(),
+        rounds: settingInRange(LOBBY_SETTING_LIMITS.imposter.rounds).optional(),
+        imposters: settingInRange(LOBBY_SETTING_LIMITS.imposter.imposters).optional(),
+        roundDurationSec: settingInRange(LOBBY_SETTING_LIMITS.imposter.roundDurationSec).optional(),
+        clueVisibility: z.number().min(0).max(1).optional()
+      })
+    }),
+    async ({ args, tx, ctx }) => {
+      assertHost(tx, ctx, args.hostId, args.hostId);
+      const game = await tx.run(zql.imposter_games.where("id", args.gameId).one());
+      assertLobbySettingsChange(game, args.hostId);
+      const { category, ...settings } = definedSettings(args.settings);
+      await tx.mutate.imposter_games.update({
+        id: game.id,
+        ...(category ? { category } : {}),
+        settings: { ...game.settings, ...settings },
         updated_at: now()
       });
     }
