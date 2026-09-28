@@ -482,6 +482,21 @@ const GUESSES = [
   { sessionId: "seed-eve", name: "Eve", row: 8, col: 1, note: "Clue 2, 4 away, nothing" },
 ];
 
+function HostSettings() {
+  const [settings, setSettings] = useState(SETTINGS);
+  return (
+    <ShadeLobby
+      {...LOBBY}
+      settings={settings}
+      players={CAST.slice(0, 3)}
+      sessionId={HOST}
+      isHost
+      inGame
+      onSettingsChange={(patch) => setSettings((current) => ({ ...current, ...patch }))}
+    />
+  );
+}
+
 export function ShadeKitPage() {
   return (
     <main
@@ -496,6 +511,10 @@ export function ShadeKitPage() {
 
       <Section title="Live" note="drive the lobby the way a player would meet it. the room fills, the round count follows it, and the start hint says what the mutator would have said">
         <Live />
+      </Section>
+
+      <Section title="Host settings" note="the host's setup cells are pickers: press one to change it, search the list, or type your own where a number is a number">
+        <HostSettings />
       </Section>
 
       <Section title="Waiting on somebody" note="two of the three. the board is already there to be poked at, which is the point of putting it in the lobby">

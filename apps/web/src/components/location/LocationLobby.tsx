@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { haversineKm, scoreForDistance, PERFECT_KM } from "@games/shared";
+import { haversineKm, scoreForDistance, PERFECT_KM, LOBBY_SETTING_LIMITS } from "@games/shared";
 import {
   FiAward, FiClock, FiCrosshair, FiEdit3, FiEye, FiFlag, FiLogIn, FiLogOut,
   FiMapPin, FiPlay, FiRotateCcw, FiUsers,
 } from "react-icons/fi";
-import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel } from "../shared/GameKit";
+import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
+import { durationCustom, durationOptions, formatDuration } from "../../lib/setting-options";
 import { GameRoster } from "../shared/GameRoster";
 import type { PlayerCardProps } from "../shared/PlayerCard";
 import type { GamePhase } from "../shared/GameShellHeader";
@@ -89,6 +90,16 @@ export interface LocationLobbySettings {
   roundsPerPlayer: number;
   cluePairs?: number;
 }
+
+/** What the host can change from the lobby. */
+export type LocationSettingsPatch = Partial<LocationLobbySettings>;
+
+const LIMITS = LOBBY_SETTING_LIMITS.location;
+const leadsOptions = [1, 2, 3].map((n) => ({
+  value: String(n),
+  label: n === 1 ? "Once" : n === 2 ? "Twice" : `${n} times`,
+  detail: "each",
+}));
 
 /** Why the start button is off, in the words the mutator would have used. */
 export function locationStartBlock(players: LocationPlayer[]): string | undefined {
@@ -239,6 +250,8 @@ export interface LocationLobbyProps {
   /** Goes in first on the action row, where the visibility toggle lives, so
    *  this component never has to know what zero is. */
   actions?: ReactNode;
+  /** Turns the setup cells into pickers. Only reaches for it when you host. */
+  onSettingsChange?: (patch: LocationSettingsPatch) => void;
 }
 
 export function LocationLobby({
@@ -256,7 +269,9 @@ export function LocationLobby({
   onJoin,
   onKick,
   actions,
+  onSettingsChange,
 }: LocationLobbyProps) {
+  const edit = (picker: GameFactEdit) => (isHost && onSettingsChange ? { edit: picker } : {});
   const blocked = locationStartBlock(players);
   const pairs = settings.cluePairs ?? 2;
 
@@ -290,12 +305,30 @@ export function LocationLobby({
             tooltip: pairs === 1
               ? "One clue, one guess, and that is the round. No second chances"
               : `The leader writes ${pairs} clues, and you get a go after each one. Only where you finish counts`,
+            ...edit({
+              label: "Clues a round",
+              value: String(pairs),
+              options: [1, 2, 3, 4].map((n) => ({
+                value: String(n),
+                label: String(n),
+                detail: n === 1 ? "clue and guess" : "clues and guesses",
+              })),
+              searchable: false,
+              onChange: (value) => onSettingsChange?.({ cluePairs: Number(value) }),
+            }),
           },
           {
             value: rounds || settings.roundsPerPlayer,
             label: rounds === 1 ? "round" : "rounds",
             icon: <FiFlag />,
             tooltip: `Everyone leads ${settings.roundsPerPlayer === 1 ? "once" : `${settings.roundsPerPlayer} times`}, so the game gets longer as people join`,
+            ...edit({
+              label: "Turns leading",
+              value: String(settings.roundsPerPlayer),
+              options: leadsOptions,
+              searchable: false,
+              onChange: (value) => onSettingsChange?.({ roundsPerPlayer: Number(value) }),
+            }),
           },
           {
             value: "5,000",
@@ -304,16 +337,30 @@ export function LocationLobby({
             tooltip: `Anywhere inside ${locationKmLabel(PERFECT_KM)} of the place is full marks, and it falls away slowly from there`,
           },
           {
-            value: `${settings.clueDurationSec}s`,
+            value: formatDuration(settings.clueDurationSec),
             label: "to clue",
             icon: <FiClock />,
             tooltip: "How long the leader gets to write each clue",
+            ...edit({
+              label: "Time to clue",
+              value: String(settings.clueDurationSec),
+              options: durationOptions([15, 30, 45, 60, 90, 120]),
+              custom: durationCustom(LIMITS.clueDurationSec),
+              onChange: (value) => onSettingsChange?.({ clueDurationSec: Number(value) }),
+            }),
           },
           {
-            value: `${settings.guessDurationSec}s`,
+            value: formatDuration(settings.guessDurationSec),
             label: "to guess",
             icon: <FiMapPin />,
             tooltip: "How long everyone else gets to drop a pin",
+            ...edit({
+              label: "Time to guess",
+              value: String(settings.guessDurationSec),
+              options: durationOptions([15, 30, 45, 60, 90, 120]),
+              custom: durationCustom(LIMITS.guessDurationSec),
+              onChange: (value) => onSettingsChange?.({ guessDurationSec: Number(value) }),
+            }),
           },
         ]}
       />

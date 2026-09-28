@@ -1738,7 +1738,9 @@
      the admin modal (940) rather than against whatever opened it. Stays under
      toasts (960) so a toast still lands on top of an open list. */
   z-index: 950;
-  max-height: 15rem;
+  /* --popup-room is the space on the side it opened on, set by
+     useAnchoredPopup. */
+  max-height: min(15rem, var(--popup-room, 15rem));
   padding: 0.35rem 0;
   overflow-y: auto;
   overscroll-behavior: contain;

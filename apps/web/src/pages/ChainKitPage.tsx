@@ -8,6 +8,7 @@ import {
   chainPhases,
   chainStartBlock,
   type ChainPlayer,
+  type ChainLobbySettings,
 } from "../components/chain/ChainLobby";
 import {
   ChainBoard,
@@ -487,6 +488,21 @@ const OVER = {
 const ADA = { sessionId: "seed-ada", name: "Ada" };
 const BRAM = { sessionId: "seed-bram", name: "Bram" };
 
+function HostSettings() {
+  const [settings, setSettings] = useState<ChainLobbySettings>(SETTINGS);
+  return (
+    <ChainLobby
+      {...LOBBY}
+      settings={settings}
+      players={CAST}
+      sessionId={HOST}
+      isHost
+      inGame
+      onSettingsChange={(patch) => setSettings((current) => ({ ...current, ...patch }))}
+    />
+  );
+}
+
 export function ChainKitPage() {
   return (
     <main
@@ -501,6 +517,10 @@ export function ChainKitPage() {
 
       <Section title="Live" note="drive the lobby the way a player would meet it. press the empty seat to take it">
         <Live />
+      </Section>
+
+      <Section title="Host settings" note="the host's setup cells are pickers: press one to change it, search the list, or type your own where a number is a number">
+        <HostSettings />
       </Section>
 
       <Section title="Waiting on somebody" note="one player and an empty seat. the duel keeps its shape, so it is obvious what is missing rather than what is broken">

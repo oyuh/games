@@ -78,6 +78,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
           isHost={isHost}
           inGame={inGame}
           isSpectator={isSpectator}
+          onSettingsChange={(settings) => void zero.mutate(mutators.imposter.updateSettings({ gameId, hostId: sessionId, settings }))
+            .client.catch(() => showToast("Couldn't change that setting", "error"))}
           onStart={() => void zero.mutate(mutators.imposter.start({ gameId, hostId: sessionId }))}
           onLeave={() => void zero.mutate(mutators.imposter.leave({ gameId, sessionId }))}
           onJoin={handleJoinClick}

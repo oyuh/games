@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { FiAward, FiBookOpen, FiClock, FiEdit3, FiFlag, FiLink, FiLogIn, FiLogOut, FiPlay, FiSend, FiUsers } from "react-icons/fi";
-import { chainCategoryLabels } from "@games/shared";
-import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel } from "../shared/GameKit";
+import { LOBBY_SETTING_LIMITS, chainCategories, chainCategoryLabels } from "@games/shared";
+import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
+import { categoryOptions, durationCustom, durationOptions, formatDuration, numberCustom, numberOptions } from "../../lib/setting-options";
 import { GameVersus, KickButton } from "../shared/GameRoster";
 import type { PlayerCardProps } from "../shared/PlayerCard";
 import type { GamePhase } from "../shared/GameShellHeader";
@@ -53,6 +54,14 @@ export interface ChainLobbySettings {
   chainMode: "premade" | "custom";
   category?: string | undefined;
 }
+
+/** What the host can change from the lobby. */
+export type ChainSettingsPatch = Partial<ChainLobbySettings>;
+
+const LIMITS = LOBBY_SETTING_LIMITS.chain;
+const roundsUnit = (n: number) => (n === 1 ? "round" : "rounds");
+/** The picker's value for a round with no clock, which the setting stores as null. */
+const NO_CLOCK = "none";
 
 /**
  * Why the start button is off, in the words the server would have used. The
@@ -144,6 +153,8 @@ export interface ChainLobbyProps {
   /** Goes in first on the action row, where the visibility toggle lives, so
    *  this component never has to know what zero is. */
   actions?: ReactNode;
+  /** Turns the setup cells into pickers. Only reaches for it when you host. */
+  onSettingsChange?: (patch: ChainSettingsPatch) => void;
 }
 
 export function ChainLobby({
@@ -161,10 +172,12 @@ export function ChainLobby({
   onJoin,
   onKick,
   actions,
+  onSettingsChange,
 }: ChainLobbyProps) {
   const blocked = chainStartBlock(players);
   const full = players.length >= CHAIN_PLAYERS;
   const custom = settings.chainMode === "custom";
+  const edit = (picker: GameFactEdit) => (isHost && onSettingsChange ? { edit: picker } : {});
 
   return (
     <>
@@ -194,19 +207,70 @@ export function ChainLobby({
             tooltip: custom
               ? "You each write the chain the other one has to crack"
               : "Both chains come out of the word bank",
+            ...edit({
+              label: "Chains",
+              value: settings.chainMode,
+              options: [
+                { value: "premade", label: "Premade chains", detail: "from the word bank" },
+                { value: "custom", label: "Your own chains", detail: "you write them" },
+              ],
+              searchable: false,
+              onChange: (value) => onSettingsChange?.({ chainMode: value as ChainLobbySettings["chainMode"] }),
+            }),
           },
           {
             value: settings.category ? (chainCategoryLabels[settings.category] ?? settings.category) : "Anything",
             icon: <FiBookOpen />,
             tooltip: custom ? "What to write about, if you want a steer" : "Where the chains get picked from",
+            ...edit({
+              label: "Word bank",
+              value: settings.category ?? "",
+              options: categoryOptions(chainCategories, chainCategoryLabels),
+              searchPlaceholder: "Search categories…",
+              onChange: (value) => onSettingsChange?.({ category: value }),
+            }),
           },
-          { value: settings.chainLength, label: "words", icon: <FiLink />, tooltip: "How long each chain is. The two ends are given to you" },
-          { value: settings.rounds, label: settings.rounds === 1 ? "round" : "rounds", icon: <FiFlag />, tooltip: "How many chains you play through" },
           {
-            value: settings.turnTimeSec ? `${settings.turnTimeSec}s` : "No clock",
+            value: settings.chainLength,
+            label: "words",
+            icon: <FiLink />,
+            tooltip: "How long each chain is. The two ends are given to you",
+            ...edit({
+              label: "Chain length",
+              value: String(settings.chainLength),
+              options: numberOptions([5, 6, 7, 8, 9, 10], () => "words"),
+              searchable: false,
+              onChange: (value) => onSettingsChange?.({ chainLength: Number(value) }),
+            }),
+          },
+          {
+            value: settings.rounds,
+            label: roundsUnit(settings.rounds),
+            icon: <FiFlag />,
+            tooltip: "How many chains you play through",
+            ...edit({
+              label: "Rounds",
+              value: String(settings.rounds),
+              options: numberOptions([1, 2, 3, 5, 7, 10], roundsUnit),
+              custom: numberCustom(LIMITS.rounds, roundsUnit),
+              onChange: (value) => onSettingsChange?.({ rounds: Number(value) }),
+            }),
+          },
+          {
+            value: settings.turnTimeSec ? formatDuration(settings.turnTimeSec) : "No clock",
             ...(settings.turnTimeSec ? { label: "a round" } : {}),
             icon: <FiClock />,
             tooltip: settings.turnTimeSec ? "How long a round runs before it ends itself" : "Rounds run until both of you are done",
+            ...edit({
+              label: "Round clock",
+              value: settings.turnTimeSec ? String(settings.turnTimeSec) : NO_CLOCK,
+              options: [
+                { value: NO_CLOCK, label: "No clock", detail: "until you're both done", keywords: ["off", "none", "unlimited"] },
+                ...durationOptions([30, 60, 90, 120, 180, 300]),
+              ],
+              custom: durationCustom(LIMITS.turnTimeSec),
+              onChange: (value) => onSettingsChange?.({ turnTimeSec: value === NO_CLOCK ? null : Number(value) }),
+            }),
           },
         ]}
       />

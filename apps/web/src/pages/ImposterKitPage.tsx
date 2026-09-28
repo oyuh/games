@@ -412,6 +412,26 @@ const GOT_AWAY: ImposterPlayer[] = ENDED_CAST.map((p) =>
   p.sessionId === "seed-cleo" ? { ...p, eliminated: false } : p,
 );
 
+function HostSettings() {
+  const [settings, setSettings] = useState(SETTINGS);
+  const [category, setCategory] = useState(LOBBY.category);
+  return (
+    <ImposterLobby
+      {...LOBBY}
+      settings={settings}
+      category={category}
+      players={CAST}
+      sessionId={HOST}
+      isHost
+      inGame
+      onSettingsChange={({ category: next, ...patch }) => {
+        setSettings((current) => ({ ...current, ...patch }));
+        if (next) setCategory(next);
+      }}
+    />
+  );
+}
+
 export function ImposterKitPage() {
   return (
     <main
@@ -426,6 +446,10 @@ export function ImposterKitPage() {
 
       <Section title="Live" note="drive the lobby the way a player would meet it">
         <Live />
+      </Section>
+
+      <Section title="Host settings" note="the host's setup cells are pickers: press one to change it, search the list, or type your own where a number is a number">
+        <HostSettings />
       </Section>
 
       <Section title="Waiting on people" note={`under ${MIN_IMPOSTER_PLAYERS}, the host gets told what is missing rather than a dead button`}>
