@@ -3,7 +3,7 @@ import { ZeroProvider } from "@rocicorp/zero/react";
 import type { ConnectionState } from "@rocicorp/zero";
 import { mutators, schema } from "@games/shared";
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { FiActivity, FiInfo, FiX } from "react-icons/fi";
+import { FiActivity, FiAlertTriangle, FiInfo, FiMoon, FiX } from "react-icons/fi";
 import { SiBuymeacoffee, SiKofi } from "react-icons/si";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
@@ -231,6 +231,7 @@ function SyncWakeToast() {
   const [showHostingInfo, setShowHostingInfo] = useState(false);
   const [dismissedWakeNoticeKey, setDismissedWakeNoticeKey] = useState<string | null>(null);
   const wakeNoticeTimerRef = useRef<number | null>(null);
+  const wakeToastRef = useRef<HTMLDivElement | null>(null);
   const syncIdle = needsSync && syncActivity.status === "idle";
   const showNeedsAuth = needsSync && zeroState === "needs-auth";
   const backendHealthy = debug.apiMetaState === "ok" && debug.dbState === "ok";
@@ -298,8 +299,19 @@ function SyncWakeToast() {
 
   useEffect(() => {
     document.body.classList.toggle("has-sync-wake-toast", syncWakeVisible);
+    // The regular stack steps past this toast, and a long message wraps it
+    // to a second line on a phone, so hand toast.css its real height.
+    const toast = wakeToastRef.current;
+    const observer = toast
+      ? new ResizeObserver(() => {
+          document.body.style.setProperty("--sync-wake-h", `${toast.offsetHeight}px`);
+        })
+      : null;
+    if (toast) observer?.observe(toast);
     return () => {
+      observer?.disconnect();
       document.body.classList.remove("has-sync-wake-toast");
+      document.body.style.removeProperty("--sync-wake-h");
     };
   }, [syncWakeVisible]);
 
@@ -337,36 +349,42 @@ function SyncWakeToast() {
   return (
     <>
       <div className="sync-wake-toast-container">
-        <div className={`sync-wake-toast sync-wake-toast--${toastTone}`}>
+        <div ref={wakeToastRef} className={`sync-wake-toast sync-wake-toast--${toastTone}`} role="status">
           <button
             type="button"
             className="sync-wake-toast-hitarea"
             onClick={() => setShowHostingInfo(true)}
             aria-label="Open why the server sleeps info"
           />
-          <div className="sync-wake-toast-content">
-            <div className="sync-wake-toast-main">
-              {showSpinner && <span className="sync-wake-spinner" />}
-              <span className="sync-wake-msg">
-                {message}
-              </span>
-              {showElapsedTimer && (
-                <span className="sync-wake-timer" aria-label={`Sync wait time ${elapsedLabel}`}>
-                  {elapsedLabel}
-                </span>
-              )}
-            </div>
-            {showElapsedTimer && (
-              <span className="sync-wake-progress" style={progressStyle} aria-hidden="true">
-                <span className="sync-wake-progress-bar" />
-              </span>
+          <span className="toast-icon" aria-hidden="true">
+            {showSpinner ? (
+              <span className="sync-wake-spinner" />
+            ) : syncIdle ? (
+              <FiMoon size={16} />
+            ) : (
+              <FiAlertTriangle size={16} />
             )}
-            {syncIdle && <span className="sync-wake-detail">Move, click, or press a key to continue.</span>}
+          </span>
+          <div className="sync-wake-toast-content">
+            <span className="sync-wake-msg">{message}</span>
+            <span className="sync-wake-detail">
+              {syncIdle ? "Move, click, or press a key to continue." : "Why the wait?"}
+            </span>
           </div>
+          {showElapsedTimer && (
+            <span className="sync-wake-timer" aria-label={`Sync wait time ${elapsedLabel}`}>
+              {elapsedLabel}
+            </span>
+          )}
           {!syncIdle && (
-            <button type="button" className="toast-dismiss sync-wake-dismiss" onClick={handleDismiss} aria-label="Dismiss sync status">
-              <FiX size={14} />
+            <button type="button" className="toast-dismiss" onClick={handleDismiss} aria-label="Dismiss sync status">
+              <FiX size={16} />
             </button>
+          )}
+          {showElapsedTimer && (
+            <span className="sync-wake-track" style={progressStyle} aria-hidden="true">
+              <span className="sync-wake-track-fill" />
+            </span>
           )}
         </div>
       </div>
