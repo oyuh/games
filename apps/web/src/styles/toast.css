@@ -151,6 +151,16 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
   overflow-wrap: anywhere;
 }
 
+/* Read out ahead of an admin's message, since the shield is aria-hidden. */
+.toast-sr-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .toast-dismiss {
   position: relative;
   z-index: 3;
@@ -179,6 +189,28 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
   outline-offset: -2px;
 }
 
+/* The close segment goes on the outer edge of the stack: data-toast-close,
+   from lib/settings, says which. On the left it leads the row, the hairline
+   moves to its other side, and the inset the icon had moves to the far end.
+   A phone stack spans the screen, so it keeps the close on the right. */
+@media (min-width: 768px) {
+  html[data-toast-close="left"] :is(.toast, .sync-wake-toast) {
+    padding-left: 0;
+    padding-right: 0.85rem;
+  }
+
+  html[data-toast-close="left"] .toast-dismiss {
+    order: -1;
+    border-left: 0;
+    border-right: 1px solid var(--border);
+  }
+
+  /* Nothing to close while idle, so the icon keeps its usual inset. */
+  html[data-toast-close="left"] .sync-wake-toast--idle {
+    padding-left: 0.85rem;
+  }
+}
+
 /* The segment is already the toast's full 44px height. A finger also
    needs the width. */
 @media (pointer: coarse) {
@@ -189,7 +221,7 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
 
 /* ── Countdown ──────────────────────────────────────────────
    The game clock's track, at a whisper: pinned to the bottom edge and
-   filling toward the moment the toast goes. It stops while the toast is
+   draining toward the moment the toast goes. It stops while the toast is
    held open, in step with the timer in lib/toast. */
 .toast-countdown {
   position: absolute;
@@ -219,8 +251,8 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
 }
 
 @keyframes toast-countdown {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
 }
 
 /* Toasts come in from, and leave toward, the edge they sit on: the side for
@@ -339,8 +371,9 @@ html[data-toast-pos="bottom-center"] :is(.toast-container, .sync-wake-toast-cont
 }
 
 /* Same track as .gsh-timer-track: 3px on the bottom edge, a fill that
-   moves once a second, and a breathing head so a slow crawl still reads
-   as moving. */
+   drains once a second, and a breathing head on its end so a slow crawl
+   still reads as moving. It runs out on the estimate's curve, easing off
+   near the end, so a slow wake never shows an empty bar. */
 .sync-wake-track {
   position: absolute;
   left: 0;
@@ -359,7 +392,7 @@ html[data-toast-pos="bottom-center"] :is(.toast-container, .sync-wake-toast-cont
   height: 100%;
   background: var(--toast-tone);
   transform-origin: left center;
-  transform: scaleX(var(--sync-wake-progress, 0));
+  transform: scaleX(calc(1 - var(--sync-wake-progress, 0)));
   transition: transform 0.95s linear;
 }
 
@@ -368,7 +401,7 @@ html[data-toast-pos="bottom-center"] :is(.toast-container, .sync-wake-toast-cont
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(var(--sync-wake-progress, 0) * 100%);
+  left: calc((1 - var(--sync-wake-progress, 0)) * 100%);
   width: 26px;
   transform: translateX(-100%);
   background: color-mix(in srgb, var(--toast-tone) 55%, #fff);

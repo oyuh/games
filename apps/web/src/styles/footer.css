@@ -52,6 +52,11 @@
   letter-spacing: 0.02em;
   transition: color 0.2s;
 }
+/* Marks the line as the admin's, like the shield on an admin toast. */
+.footer-custom-status-icon {
+  margin-right: 0.35em;
+  vertical-align: -1px;
+}
 .footer-custom-status--flash {
   animation: footer-flash 1s linear infinite alternate;
 }

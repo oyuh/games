@@ -1,6 +1,7 @@
-import { useEffect, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import { FiEdit2 } from "react-icons/fi";
 import { Combobox, type ComboboxProps } from "./Combobox";
+import { showDedupedToast } from "../../lib/toast";
 import "../../styles/game-kit.css";
 
 /**
@@ -160,6 +161,41 @@ export interface GameFact {
   /** Hands the host a picker for it: the cell turns into the button that
    *  opens one. Left off for anything the lobby cannot change. */
   edit?: GameFactEdit;
+  /** The setting's name, like "Rounds". A named fact whose value changes
+   *  while the strip is up gets a toast, so a host's change reaches the
+   *  whole room. Every client diffs the game row Zero syncs to it. */
+  name?: string;
+}
+
+/** Just the value, since the fact's label repeats the name: "Rounds to 5". */
+function factText(fact: GameFact): string | null {
+  return typeof fact.value === "string" || typeof fact.value === "number" ? String(fact.value) : null;
+}
+
+function useFactChangeToasts(facts: GameFact[]) {
+  const previous = useRef<Map<string, string> | null>(null);
+  const snapshot = JSON.stringify(facts.map((fact) => [fact.name, factText(fact)]));
+
+  useEffect(() => {
+    const next = new Map<string, string>();
+    for (const fact of facts) {
+      const text = factText(fact);
+      if (fact.name && text !== null) next.set(fact.name, text);
+    }
+    const before = previous.current;
+    previous.current = next;
+    // The first render is the setup as it stands, not a change to it.
+    if (!before) return;
+
+    const changed = [...next].filter(([name, text]) => before.has(name) && before.get(name) !== text);
+    if (changed.length === 0) return;
+    // A fact with a picker means this client is the host, who made the change.
+    const byYou = facts.some((fact) => fact.edit);
+    const parts = changed.map(([name, text]) => `${name} to ${text}`).join(", ");
+    showDedupedToast(byYou ? `You set ${parts}` : `Host set ${parts}`, "info");
+    // Keyed on the snapshot so a re-render with the same values stays quiet.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot]);
 }
 
 /** What the picker needs. The cell itself is the trigger, so none of the
@@ -181,6 +217,7 @@ export type GameFactEdit = Omit<
  * picker for the setting. Only the host gets those, and only in the lobby.
  */
 export function GameFacts({ label, facts, className = "" }: { label?: ReactNode; facts: GameFact[]; className?: string }) {
+  useFactChangeToasts(facts);
   return (
     <div className={`gk-facts-block ${className}`.trim()}>
       {label && <span className="gk-roster-label">{label}</span>}

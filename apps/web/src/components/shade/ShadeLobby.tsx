@@ -187,7 +187,12 @@ export function ShadeLobby({
   actions,
   onSettingsChange,
 }: ShadeLobbyProps) {
-  const edit = (picker: GameFactEdit) => (isHost && onSettingsChange ? { edit: picker } : {});
+  // Everyone gets the name, so a change the host makes can be announced to
+  // the room. Only the host gets the picker.
+  const edit = (picker: GameFactEdit) => ({
+    name: picker.label,
+    ...(isHost && onSettingsChange ? { edit: picker } : {}),
+  });
   const blocked = shadeStartBlock(players);
 
   /* Everyone leads, so the length of the game is the room, and it grows as

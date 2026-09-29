@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { FiX } from "react-icons/fi";
 import "../../styles/game-shared.css";
 
@@ -35,11 +35,24 @@ export function ModalShell({
   footer?: ReactNode;
   children: ReactNode;
 }) {
+  // On the window, since the modal opens from a sidebar button that keeps
+  // focus, and a listener on the overlay never heard the key. A popup inside
+  // the modal (a select, a combobox) claims its own escape first with
+  // preventDefault, so one press closes the popup and the next the modal.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) onCloseRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <div
       className="modal-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
       role="presentation"
     >
       <div

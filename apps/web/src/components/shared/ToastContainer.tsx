@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type FocusEvent } from "react";
-import { FiX, FiAlertCircle, FiCheck, FiInfo } from "react-icons/fi";
+import { FiX, FiAlertCircle, FiCheck, FiInfo, FiShield } from "react-icons/fi";
+import { useRouteGameTheme } from "../../hooks/useRouteGameTheme";
 import { useToasts, dismissToast, pauseToast, resumeToast, type Toast } from "../../lib/toast";
 import "../../styles/toast.css";
 
@@ -41,8 +42,11 @@ function ToastItem({ toast }: { toast: Toast }) {
       onFocus={() => setFocused(true)}
       onBlur={handleBlur}
     >
-      <span className="toast-icon" aria-hidden="true">{icons[toast.level]}</span>
-      <span className="toast-msg">{toast.message}</span>
+      <span className="toast-icon" aria-hidden="true">{toast.admin ? <FiShield size={16} /> : icons[toast.level]}</span>
+      <span className="toast-msg">
+        {toast.admin && <span className="toast-sr-label">From an admin: </span>}
+        {toast.message}
+      </span>
       <button
         type="button"
         className="toast-dismiss"
@@ -60,11 +64,14 @@ function ToastItem({ toast }: { toast: Toast }) {
 
 export function ToastContainer() {
   const toasts = useToasts();
+  // The stack lives outside the game page, so it takes the theme from the
+  // route: info toasts and focus rings read --primary, which the theme sets.
+  const theme = useRouteGameTheme();
 
   // Always mounted, even empty: a live region has to exist before the text
   // lands in it or screen readers never announce it.
   return (
-    <div className="toast-container" aria-live="polite" aria-label="Notifications">
+    <div className="toast-container" data-game-theme={theme} aria-live="polite" aria-label="Notifications">
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} />
       ))}

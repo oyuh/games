@@ -790,6 +790,128 @@
   margin: 0.5rem 0 0;
 }
 
+/* ── Desktop: a settings list ─────────────────────────────
+   The phone sheet stacks each section's label over full-width pickers,
+   which is right for a thumb. On a desktop screen that turned into a tall
+   column of fat two-line buttons, so here each section is one row: the
+   name and its help on the left, compact controls on the right, and a
+   hairline between rows. Flat throughout: the picker thumb is the only
+   fill, hovers underline, and focus gets a solid ring. */
+@media (min-width: 601px) {
+  .opt-modal {
+    --solo-control-h: 2.1rem;
+    --solo-pad: 0.2rem;
+  }
+
+  .opt-modal .mshell-body {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+  }
+
+  .opt-modal .mshell-section {
+    display: grid;
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 1.5rem;
+    padding: 0.9rem 0;
+  }
+
+  .opt-modal .mshell-section + .mshell-section {
+    margin-top: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .opt-modal .mshell-section-label {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+    padding-top: 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .opt-modal .mshell-section-hint {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0.2rem 0 0;
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
+
+  .opt-modal .opt-controls {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+
+  /* Icon beside the name, one line, instead of stacked. */
+  .opt-modal .solo-opt {
+    flex-direction: row;
+    gap: 0.4rem;
+    border-radius: calc(var(--solo-radius) - var(--solo-pad));
+  }
+
+  .opt-modal .solo-opt-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-underline-offset: 3px;
+  }
+
+  .opt-modal .solo-opt:hover:not(.solo-opt--on) .solo-opt-name {
+    text-decoration: underline;
+  }
+
+  .opt-modal .solo-opt:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+  }
+
+  /* The thumb reads as selected from its border and the accent text; a
+     flatter fill keeps the one blue in the row restrained. */
+  .opt-modal .solo-seg-thumb {
+    background: color-mix(in srgb, var(--seg-accent) 10%, var(--card));
+    border-color: color-mix(in srgb, var(--seg-accent) 45%, transparent);
+  }
+
+  .opt-modal .opt-slider-range,
+  .opt-modal .opt-drawer .solo-select-trigger {
+    height: 2.1rem;
+  }
+
+  /* Edge over side for the toasts, each a full-width picker like every
+     other row. Side by side they were too narrow for a label and the thumb
+     crowded the words. */
+  .opt-modal .opt-stack {
+    gap: 0.4rem;
+  }
+
+  /* Switches under a picker drop their boxes: a label and a switch per
+     line, like a settings list, not cards inside a card. */
+  .opt-modal .opt-switches {
+    margin-top: 0.4rem;
+  }
+
+  .opt-modal .ui-switch-row {
+    min-height: 2.1rem;
+    padding: 0 0.1rem;
+    border: 0;
+    background: transparent;
+  }
+
+  .opt-modal .ui-switch-row + .ui-switch-row {
+    margin-top: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .opt-modal .ui-switch-row-label {
+    font-weight: 500;
+  }
+
+  .opt-modal .opt-trailing-hint {
+    margin-top: 0.35rem;
+  }
+}
+
 .cursor-scale-control {
   margin-top: 0.65rem;
   padding: 0.65rem 0.75rem;
@@ -918,6 +1040,11 @@
   font-size: 0.78rem;
   line-height: 1.45;
   text-align: center;
+}
+
+:is(.mshell, .m-sheet) .info-status-icon {
+  margin-right: 0.4em;
+  vertical-align: -1px;
 }
 
 :is(.mshell, .m-sheet) .info-status a {
