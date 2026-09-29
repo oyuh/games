@@ -20,6 +20,7 @@ import { markSyncConnecting, markSyncConnected, useSyncElapsedSeconds, useSyncTi
 import { useSyncSessionActivityState, useSyncSessionActivityTracker } from "./lib/sync-session-activity";
 import { showDedupedToast } from "./lib/toast";
 import { useAdminBroadcast } from "./hooks/useAdminBroadcast";
+import { useRouteGameTheme } from "./hooks/useRouteGameTheme";
 import { useButtonSounds } from "./hooks/useButtonSounds";
 
 const HomePage = lazy(() => import("./pages/HomePage").then(({ HomePage }) => ({ default: HomePage })));
@@ -219,6 +220,7 @@ function HostingInfoModal({ onClose }: { onClose: () => void }) {
 /** Route-aware wake notice for a real sync cold start. */
 function SyncWakeToast() {
   const location = useLocation();
+  const gameTheme = useRouteGameTheme();
   const debug = useConnectionDebug();
   const zeroState = debug.zeroState;
   // The status page verifies the session like any other page, since it
@@ -348,7 +350,7 @@ function SyncWakeToast() {
 
   return (
     <>
-      <div className="sync-wake-toast-container">
+      <div className="sync-wake-toast-container" data-game-theme={gameTheme}>
         <div ref={wakeToastRef} className={`sync-wake-toast sync-wake-toast--${toastTone}`} role="status">
           <button
             type="button"
