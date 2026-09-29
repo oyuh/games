@@ -694,6 +694,15 @@ export function ShikakuPage() {
     if (validateSolution(currentPuzzle, justRects)) {
       debugLog("puzzle solved via placeRect", { rectCount: newRects.length });
       handlePuzzleSolved(newRects);
+    } else if (justRects.reduce((sum, pr) => sum + pr.w * pr.h, 0) === currentPuzzle.rows * currentPuzzle.cols) {
+      // Every cell is covered and it still isn't the answer, so say why.
+      const bad = nextFlashing.size;
+      showToast(
+        bad > 0
+          ? `Board is full, but ${bad} rectangle${bad === 1 ? " doesn't" : "s don't"} match ${bad === 1 ? "its" : "their"} number`
+          : "Board is full, but that's not the solution",
+        "error",
+      );
     }
   }, [autoFilledRects, colorCounter, currentPuzzle, isAutoFilledRect, isRectValid, placedRects, debugLog]);
 
@@ -746,6 +755,7 @@ export function ShikakuPage() {
       setTimeout(() => {
         setShowPuzzleSolvedAnim(false);
         setPhase("finished");
+        showToast("Puzzle solved", "success");
         setScoreSubmitted(false);
         setSubmittingScore(false);
         setScoreSubmissionStatus(null);
@@ -778,6 +788,7 @@ export function ShikakuPage() {
       setTimeout(() => {
         setShowPuzzleSolvedAnim(false);
         setPhase("finished");
+        showToast("Run complete", "success");
         setScoreSubmitted(false);
         setSubmittingScore(false);
         setScoreSubmissionStatus(null);
@@ -1144,13 +1155,20 @@ export function ShikakuPage() {
   }, [phase, scoreSubmitted, puzzleTimes.length, infiniteMode, customMode, seed, difficulty, finalScore, finalTimeMs, resolveScoreEligibility, makeReplayData]);
 
   /* ── Score submission ───────────────────────────────────── */
+  // The end screen shows the latest status inline. The toast also says it,
+  // since the submit button can be scrolled out of view on a short screen.
+  const reportSubmitStatus = useCallback((status: ScoreSubmissionStatus) => {
+    setScoreSubmissionStatus(status);
+    showToast(status.message, status.tone);
+  }, []);
+
   const submitScore = useCallback(async (
     runSeed: number, diff: Difficulty, score: number, timeMs: number, replayData: ShikakuRankedReplayData
   ) => {
     // Anti-spam: 5s cooldown between submissions
     const now = Date.now();
     if (now - lastSubmitTime.current < 5_000) {
-      setScoreSubmissionStatus({
+      reportSubmitStatus({
         canSubmit: true,
         pending: false,
         tone: "info",
@@ -1161,7 +1179,7 @@ export function ShikakuPage() {
     if (submittingScore || scoreSubmitted || !scoreSubmissionStatus?.canSubmit) return;
 
     setSubmittingScore(true);
-    setScoreSubmissionStatus({
+    reportSubmitStatus({
       canSubmit: false,
       pending: true,
       tone: "info",
@@ -1196,14 +1214,14 @@ export function ShikakuPage() {
         setScoreSubmitted(true);
         lbCacheRef.current.clear(); // invalidate cache so leaderboard picks up new score
         if (data?.id === null) {
-          setScoreSubmissionStatus({
+          reportSubmitStatus({
             canSubmit: false,
             pending: false,
             tone: "info",
             message: data.reason || "This score was verified, but it did not enter your saved leaderboard scores.",
           });
         } else {
-          setScoreSubmissionStatus({
+          reportSubmitStatus({
             canSubmit: false,
             pending: false,
             tone: "success",
@@ -1215,7 +1233,7 @@ export function ShikakuPage() {
         if (res.status === 409) {
           lastSubmitTime.current = now;
           setScoreSubmitted(true);
-          setScoreSubmissionStatus({
+          reportSubmitStatus({
             canSubmit: false,
             pending: false,
             tone: "info",
@@ -1223,23 +1241,23 @@ export function ShikakuPage() {
           });
         } else if (res.status === 403) {
           const nextStatus = await resolveScoreEligibility(runSeed, diff, score, timeMs, replayData);
-          setScoreSubmissionStatus(nextStatus);
+          reportSubmitStatus(nextStatus);
         } else if (res.status === 429) {
-          setScoreSubmissionStatus({
+          reportSubmitStatus({
             canSubmit: true,
             pending: false,
             tone: "info",
             message: "Too many requests - try again in a moment.",
           });
         } else if (data?.error === "Score rejected") {
-          setScoreSubmissionStatus({
+          reportSubmitStatus({
             canSubmit: false,
             pending: false,
             tone: "error",
             message: "This run could not be verified by the server.",
           });
         } else {
-          setScoreSubmissionStatus({
+          reportSubmitStatus({
             canSubmit: true,
             pending: false,
             tone: "error",
@@ -1248,7 +1266,7 @@ export function ShikakuPage() {
         }
       }
     } catch {
-      setScoreSubmissionStatus({
+      reportSubmitStatus({
         canSubmit: true,
         pending: false,
         tone: "error",
@@ -1259,7 +1277,7 @@ export function ShikakuPage() {
     }
     // Refresh the modal leaderboard. The end screen refetches off scoreSubmitted.
     fetchLeaderboard(diff, 1, lbView);
-  }, [fetchLeaderboard, lbView, resolveScoreEligibility, scoreSubmissionStatus?.canSubmit, submittingScore, scoreSubmitted]);
+  }, [fetchLeaderboard, lbView, reportSubmitStatus, resolveScoreEligibility, scoreSubmissionStatus?.canSubmit, submittingScore, scoreSubmitted]);
 
   /* ── Number cell lookup ─────────────────────────────────── */
   const numberMap = useMemo(() => {
