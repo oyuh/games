@@ -151,6 +151,16 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
   overflow-wrap: anywhere;
 }
 
+/* Read out ahead of an admin's message, since the shield is aria-hidden. */
+.toast-sr-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .toast-dismiss {
   position: relative;
   z-index: 3;

@@ -1042,6 +1042,11 @@
   text-align: center;
 }
 
+:is(.mshell, .m-sheet) .info-status-icon {
+  margin-right: 0.4em;
+  vertical-align: -1px;
+}
+
 :is(.mshell, .m-sheet) .info-status a {
   color: inherit;
   text-decoration: underline;
