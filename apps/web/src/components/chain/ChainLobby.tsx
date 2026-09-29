@@ -177,7 +177,12 @@ export function ChainLobby({
   const blocked = chainStartBlock(players);
   const full = players.length >= CHAIN_PLAYERS;
   const custom = settings.chainMode === "custom";
-  const edit = (picker: GameFactEdit) => (isHost && onSettingsChange ? { edit: picker } : {});
+  // Everyone gets the name, so a change the host makes can be announced to
+  // the room. Only the host gets the picker.
+  const edit = (picker: GameFactEdit) => ({
+    name: picker.label,
+    ...(isHost && onSettingsChange ? { edit: picker } : {}),
+  });
 
   return (
     <>
