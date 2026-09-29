@@ -878,16 +878,11 @@
     height: 2.1rem;
   }
 
-  /* Edge and side for the toasts sit side by side, sized by option count. */
+  /* Edge over side for the toasts, each a full-width picker like every
+     other row. Side by side they were too narrow for a label and the thumb
+     crowded the words. */
   .opt-modal .opt-stack {
-    display: grid;
-    grid-template-columns: 2fr 3fr;
-    gap: 0.5rem;
-  }
-
-  /* Two pickers share one row there, so the words carry it alone. */
-  .opt-modal .opt-stack .solo-opt-icon {
-    display: none;
+    gap: 0.4rem;
   }
 
   /* Switches under a picker drop their boxes: a label and a switch per
