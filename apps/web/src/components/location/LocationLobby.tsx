@@ -271,7 +271,12 @@ export function LocationLobby({
   actions,
   onSettingsChange,
 }: LocationLobbyProps) {
-  const edit = (picker: GameFactEdit) => (isHost && onSettingsChange ? { edit: picker } : {});
+  // Everyone gets the name, so a change the host makes can be announced to
+  // the room. Only the host gets the picker.
+  const edit = (picker: GameFactEdit) => ({
+    name: picker.label,
+    ...(isHost && onSettingsChange ? { edit: picker } : {}),
+  });
   const blocked = locationStartBlock(players);
   const pairs = settings.cluePairs ?? 2;
 

@@ -1,5 +1,5 @@
 import { GAME_META, getGameSlugFromPath, type GameSlug } from "@games/shared";
-import { FiArrowRight, FiGithub, FiInfo } from "react-icons/fi";
+import { FiArrowRight, FiGithub, FiInfo, FiShield } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { useSyncExternalStore, type ReactNode } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
@@ -129,6 +129,7 @@ export function InfoContent({ pageAction }: { pageAction?: ReactNode }) {
 
       {customStatus?.text && (
         <div className="info-status" style={{ borderColor: customStatus.color || "var(--primary)" }}>
+          <FiShield className="info-status-icon" size={12} aria-hidden="true" />
           {customStatus.link ? (
             <a href={customStatus.link} target="_blank" rel="noopener noreferrer">{customStatus.text}</a>
           ) : customStatus.text}

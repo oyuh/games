@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { FiArrowRight, FiDatabase, FiServer, FiZap } from "react-icons/fi";
+import { FiArrowRight, FiDatabase, FiServer, FiShield, FiZap } from "react-icons/fi";
 import type { IconType } from "react-icons";
 import { SiBuymeacoffee, SiKofi } from "react-icons/si";
 import { Link } from "react-router-dom";
@@ -139,7 +139,10 @@ export function Footer() {
     );
     return (
       <div className="footer-row footer-row--status">
-        <span className={className} style={style}>{content}</span>
+        <span className={className} style={style}>
+          <FiShield className="footer-custom-status-icon" size={11} aria-hidden="true" />
+          {content}
+        </span>
       </div>
     );
   }

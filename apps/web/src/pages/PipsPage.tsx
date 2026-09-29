@@ -946,6 +946,24 @@ export function PipsPage() {
     showToast(`${difficultyLabel(puzzle.difficulty)} solved`, "success");
   }, [solved, phase, seed, puzzleIndex, puzzle.difficulty, puzzleStartedAt, run.puzzles.length, runMode, leaderboardView, placements]);
 
+  // Every domino is down and it still isn't the answer: point at the ones
+  // breaking a rule, once each time the board fills.
+  const boardFull = placedCount > 0 && placedCount === puzzle.dominoes.length;
+  useEffect(() => {
+    if (!boardFull || solved || phase !== "playing") return;
+    const invalidDominoIds = getInvalidDominoIds(puzzle, placements);
+    if (invalidDominoIds.size > 0) flashDominoes(invalidDominoIds);
+    const bad = invalidDominoIds.size;
+    showToast(
+      bad > 0
+        ? `Every domino is down, but ${bad} break${bad === 1 ? "s" : ""} a rule`
+        : "Every domino is down, but a rule is still unmet",
+      "error",
+    );
+    // Only on the fill itself, not on every later render of a full board.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardFull, solved, phase]);
+
   useEffect(() => {
     if (advanceCountdown == null) return;
 
@@ -1029,10 +1047,17 @@ export function PipsPage() {
     }
   };
 
+  // The end screen shows the latest status inline. The toast also says it,
+  // since the submit button can be scrolled out of view on a short screen.
+  const reportSubmitStatus = (status: ScoreSubmissionStatus) => {
+    setScoreSubmissionStatus(status);
+    showToast(status.message, status.tone);
+  };
+
   const submitScore = async () => {
     const nowMs = Date.now();
     if (nowMs - lastSubmitTime.current < 5_000) {
-      setScoreSubmissionStatus({
+      reportSubmitStatus({
         canSubmit: true,
         pending: false,
         tone: "info",
@@ -1043,7 +1068,7 @@ export function PipsPage() {
     if (submittingScore || scoreSubmitted || !scoreSubmissionStatus?.canSubmit || !hasAllRankedSplits(runSplits)) return;
     const replayData = makeRankedReplayData(runSplits);
     if (!replayData) {
-      setScoreSubmissionStatus({
+      reportSubmitStatus({
         canSubmit: false,
         pending: false,
         tone: "error",
@@ -1053,7 +1078,7 @@ export function PipsPage() {
     }
 
     setSubmittingScore(true);
-    setScoreSubmissionStatus({
+    reportSubmitStatus({
       canSubmit: false,
       pending: true,
       tone: "info",
@@ -1087,14 +1112,14 @@ export function PipsPage() {
         lastSubmitTime.current = nowMs;
         setScoreSubmitted(true);
         if (data?.id === null) {
-          setScoreSubmissionStatus({
+          reportSubmitStatus({
             canSubmit: false,
             pending: false,
             tone: "info",
             message: data.reason || "This run was verified, but it did not enter your saved leaderboard runs.",
           });
         } else {
-          setScoreSubmissionStatus({
+          reportSubmitStatus({
             canSubmit: false,
             pending: false,
             tone: "success",
@@ -1109,30 +1134,30 @@ export function PipsPage() {
       if (res.status === 409) {
         lastSubmitTime.current = nowMs;
         setScoreSubmitted(true);
-        setScoreSubmissionStatus({
+        reportSubmitStatus({
           canSubmit: false,
           pending: false,
           tone: "info",
           message: "This run has already been submitted to the leaderboard.",
         });
       } else if (res.status === 403) {
-        setScoreSubmissionStatus(await resolveScoreEligibility());
+        reportSubmitStatus(await resolveScoreEligibility());
       } else if (res.status === 429) {
-        setScoreSubmissionStatus({
+        reportSubmitStatus({
           canSubmit: true,
           pending: false,
           tone: "info",
           message: "Too many requests - try again in a moment.",
         });
       } else if (data?.error === "Score rejected") {
-        setScoreSubmissionStatus({
+        reportSubmitStatus({
           canSubmit: false,
           pending: false,
           tone: "error",
           message: "This run could not be verified by the server.",
         });
       } else {
-        setScoreSubmissionStatus({
+        reportSubmitStatus({
           canSubmit: true,
           pending: false,
           tone: "error",
@@ -1140,7 +1165,7 @@ export function PipsPage() {
         });
       }
     } catch {
-      setScoreSubmissionStatus({
+      reportSubmitStatus({
         canSubmit: true,
         pending: false,
         tone: "error",

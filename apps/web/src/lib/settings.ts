@@ -165,10 +165,26 @@ function applyCustomCursor(enabled: boolean) {
   document.documentElement.setAttribute("data-custom-cursor", enabled ? "on" : "off");
 }
 
+/**
+ * Which side of a toast its close button sits on: the outer edge of a corner
+ * stack, so it is the part nearest the screen edge. A centered stack has no
+ * outer edge, so it follows a side sidebar, where the hand already is, and
+ * falls back to the right for a top bar.
+ */
+export function getToastCloseSide(s: Settings): "left" | "right" {
+  if (s.toastPosition.endsWith("left")) return "left";
+  if (s.toastPosition.endsWith("right")) return "right";
+  if (s.sidebarCustom) {
+    return s.sidebarOrientation === "vertical" && s.sidebarCustomPos.fx < 0.5 ? "left" : "right";
+  }
+  return s.sidebarPosition === "left" ? "left" : "right";
+}
+
 /* toast.css places the toast stacks off these, one attribute per screen size. */
 function applyToasts(s: Settings) {
   document.documentElement.setAttribute("data-toast-pos", s.toastPosition);
   document.documentElement.setAttribute("data-toast-pos-mobile", s.toastPositionMobile);
+  document.documentElement.setAttribute("data-toast-close", getToastCloseSide(s));
 }
 
 // Apply on load

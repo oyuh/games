@@ -4,6 +4,8 @@ export interface Toast {
   id: number;
   message: string;
   level: "error" | "success" | "info";
+  /** Sent by an admin, so it wears a shield instead of the level's icon. */
+  admin?: boolean;
   createdAt: number;
   /** How long it stays up, in ms, not counting time spent held open. */
   duration: number;
@@ -52,9 +54,13 @@ function remove(id: number) {
   }, EXIT_MS);
 }
 
-export function showToast(message: string, level: Toast["level"] = "error") {
+export interface ToastOptions {
+  admin?: boolean;
+}
+
+export function showToast(message: string, level: Toast["level"] = "error", options: ToastOptions = {}) {
   const id = ++nextId;
-  toasts = [...toasts, { id, message, level, createdAt: Date.now(), duration: TOAST_DURATION }];
+  toasts = [...toasts, { id, message, level, admin: options.admin === true, createdAt: Date.now(), duration: TOAST_DURATION }];
   emit();
   dismissTimers.set(id, {
     handle: setTimeout(() => remove(id), TOAST_DURATION),

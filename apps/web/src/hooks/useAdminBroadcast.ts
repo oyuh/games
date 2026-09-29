@@ -65,7 +65,7 @@ function handleMessage(msg: AdminBroadcastMessage) {
 
   switch (msg.type) {
     case "admin:toast":
-      showToast(msg.message, msg.level || "info");
+      showToast(msg.message, msg.level || "info", { admin: true });
       break;
 
     case "admin:refresh":
@@ -78,7 +78,7 @@ function handleMessage(msg: AdminBroadcastMessage) {
 
     case "admin:kick":
       if (msg.sessionId === sessionId) {
-        showToast(msg.reason || "You have been disconnected by an admin.", "error");
+        showToast(msg.reason || "You have been disconnected by an admin.", "error", { admin: true });
         setTimeout(() => {
           window.location.href = "/";
         }, 2000);
@@ -90,9 +90,9 @@ function handleMessage(msg: AdminBroadcastMessage) {
         const nextName = getDisplayName(msg.name, sessionId);
         setStoredName(nextName);
         if (msg.name) {
-          showToast(`Your name has been changed to "${nextName}" by an admin.`, "info");
+          showToast(`Your name has been changed to "${nextName}" by an admin.`, "info", { admin: true });
         } else {
-          showToast(`Your display name is now ${nextName}.`, "info");
+          showToast(`Your display name is now ${nextName}.`, "info", { admin: true });
         }
       }
       break;
