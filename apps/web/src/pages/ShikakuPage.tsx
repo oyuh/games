@@ -25,6 +25,7 @@ import {
   validateSolution,
 } from "../lib/shikaku-engine";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
+import { fetchWithChallenge } from "../lib/challenge";
 import { showToast } from "../lib/toast";
 import { playCountdownTick, playGameOver } from "../lib/sounds";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -348,7 +349,7 @@ export function ShikakuPage() {
       const activeSessionId = identity.sessionId;
       const activeName = getDisplayName(identity.name, identity.sessionId);
 
-      const res = await fetch(`${API_BASE}/api/shikaku/score/eligibility`, {
+      const res = await fetchWithChallenge(`${API_BASE}/api/shikaku/score/eligibility`, {
         method: "POST",
         credentials: "include",
         headers: getSessionRequestHeaders(activeSessionId, {
@@ -1191,7 +1192,7 @@ export function ShikakuPage() {
       const activeSessionId = identity.sessionId;
       const activeName = getDisplayName(identity.name, identity.sessionId);
 
-      const res = await fetch(`${API_BASE}/api/shikaku/score`, {
+      const res = await fetchWithChallenge(`${API_BASE}/api/shikaku/score`, {
         method: "POST",
         credentials: "include",
         headers: getSessionRequestHeaders(activeSessionId, {

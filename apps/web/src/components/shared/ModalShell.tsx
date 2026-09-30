@@ -29,7 +29,8 @@ export function ModalShell({
   accent?: string;
   size?: "md" | "lg" | "xl";
   className?: string;
-  onClose: () => void;
+  /** Left out for a modal the player has to finish: no X, escape, or backdrop close. */
+  onClose?: () => void;
   /** Fixed chrome under the header, outside the scrolling body. */
   aside?: ReactNode;
   footer?: ReactNode;
@@ -43,7 +44,7 @@ export function ModalShell({
   onCloseRef.current = onClose;
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented) onCloseRef.current();
+      if (event.key === "Escape" && !event.defaultPrevented) onCloseRef.current?.();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -52,7 +53,7 @@ export function ModalShell({
   return (
     <div
       className="modal-overlay"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
       role="presentation"
     >
       <div
@@ -65,9 +66,11 @@ export function ModalShell({
             {kicker && <span className="mshell-kicker">{kicker}</span>}
             <h2 className="mshell-title">{title}</h2>
           </div>
-          <button className="modal-close" onClick={onClose} aria-label="Close">
-            <FiX size={18} />
-          </button>
+          {onClose && (
+            <button className="modal-close" onClick={onClose} aria-label="Close">
+              <FiX size={18} />
+            </button>
+          )}
         </header>
 
         {aside}

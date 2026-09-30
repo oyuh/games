@@ -11,7 +11,9 @@
   /* Default resting place; dragging sets inline left/top which wins over this. */
   left: 12px;
   bottom: 12px;
-  z-index: 60;
+  /* Above .modal-overlay (900) so the bot check's popup, which can't be
+     closed, never hides the buttons that test it. */
+  z-index: 950;
   width: 15rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -140,4 +142,9 @@
   font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+/* The bot check block sits above the game tools. */
+.devp-section {
+  border-bottom: 1px solid var(--border);
 }

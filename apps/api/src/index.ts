@@ -50,7 +50,8 @@ import {
   verifyClaimedSessionId,
 } from "./session-identity";
 import { getClientInfo } from "./client-info";
-import { authorizeMutation } from "./mutator-auth";
+import { authorizeMutation, isDevOnlyMutator } from "./mutator-auth";
+import { addBotSignal, botStatus, setBotScore, turnstileEnforced, verifyTurnstileToken } from "./bot-score";
 import { getOrCreateGameKey, type GameType } from "./game-keys";
 import { shikakuImageRoutes } from "./shikaku-image";
 import { embedRoutes } from "./embed-routes";
@@ -83,6 +84,9 @@ if (!DEV_MODE) {
 const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || SESSION_COOKIE_SECRET_DEV_DEFAULT;
 if (DEV_MODE) {
   console.log("[dev-mode] Security relaxations active: fingerprint binding, session proof, and rate limits are loosened for local testing.");
+}
+if (!turnstileEnforced()) {
+  console.warn("[bot-score] TURNSTILE_SECRET_KEY is not set; bot scores are tracked but never enforced.");
 }
 
 function parseOriginList(value: string | undefined) {
@@ -165,6 +169,28 @@ app.use(
 // and future) is covered. The numbers live in RATE_LIMITS (see rate-limit.ts);
 // tiers are layered (e.g. a score submission hits global → game → score).
 //
+// ─── Bot check ─────────────────────────────────────────────
+// Registered ahead of the limiters so it sees their 429s on the way out.
+// A session in limbo (see bot-score.ts) is refused the score writes here; its
+// game writes are refused per mutation in /api/zero/mutate. Reads stay open so
+// a player waiting on the check never stares at a stale game.
+const CHALLENGE_REQUIRED = "CHALLENGE_REQUIRED";
+const LIMBO_GATED_PATH = /^\/api\/(pips|shikaku)\/score/;
+
+app.use("/api/*", async (c, next) => {
+  const sessionId = requestSessionId(c);
+  if (sessionId && LIMBO_GATED_PATH.test(c.req.path) && botStatus(sessionId).limbo) {
+    addBotSignal(sessionId, "blocked");
+    return c.json({ error: "Verification required", code: CHALLENGE_REQUIRED }, 403);
+  }
+  await next();
+  // zero-cache sends every push from its own address, so a 429 there is the
+  // shared bucket filling up, not this player.
+  if (c.res.status === 429 && !c.req.path.startsWith("/api/zero/")) {
+    addBotSignal(sessionId, "rateLimited");
+  }
+});
+
 // A global catch-all runs first so nothing is ever accidentally unprotected.
 app.use("/api/*", rateLimit("global"));
 app.use("/debug/*", rateLimit("global", "global_debug"));
@@ -176,6 +202,9 @@ app.use("/api/session/sync", rateLimit("sessionSync"));
 
 // Per-game encryption key exchange.
 app.use("/api/game-secret/*", rateLimit("gameSecret"));
+
+// Bot check status and Turnstile verification. Verify calls Cloudflare.
+app.use("/api/challenge/*", rateLimit("challenge"));
 
 // Map helpers. Geocode proxies an external provider, so it's tighter.
 app.use("/api/maps/config", rateLimit("mapsConfig"));
@@ -546,6 +575,10 @@ app.post("/api/session/sync", async (c) => {
     return c.json({ error: "Invalid session" }, 403);
   }
 
+  if (AUTOMATION_AGENT.test(c.req.header("user-agent") ?? "")) {
+    addBotSignal(resolved.sessionId, "automationAgent");
+  }
+
   return c.json({
     ok: true,
     sessionId: resolved.sessionId,
@@ -556,6 +589,40 @@ app.post("/api/session/sync", async (c) => {
     source: resolved.source,
   });
 });
+
+// ─── Bot check endpoints ───────────────────────────────────
+app.get("/api/challenge/status", (c) => c.json(botStatus(requestSessionId(c))));
+
+app.post("/api/challenge/verify", async (c) => {
+  const sessionId = requestSessionId(c);
+  if (!sessionId) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+  const body = await c.req.json().catch(() => null) as { token?: unknown } | null;
+  const token = typeof body?.token === "string" ? body.token : "";
+  // Turnstile tokens are capped at 2048 characters.
+  if (!token || token.length > 2048) {
+    return c.json({ ok: false, errors: ["invalid-input-response"] }, 400);
+  }
+  const { ip } = await getClientInfo(c.req);
+  const result = await verifyTurnstileToken(token, ip);
+  if (!result.ok) {
+    return c.json({ ok: false, errors: result.errors }, 400);
+  }
+  return c.json({ ok: true, ...setBotScore(sessionId, 0) });
+});
+
+// Dev tools drive the score directly to test limbo without spamming for real.
+if (DEV_MODE) {
+  app.post("/api/challenge/dev", async (c) => {
+    const body = await c.req.json().catch(() => null) as { score?: unknown } | null;
+    const score = typeof body?.score === "number" && Number.isFinite(body.score) ? body.score : null;
+    if (score === null) {
+      return c.json({ error: "score must be a number" }, 400);
+    }
+    return c.json(setBotScore(requestSessionId(c), score));
+  });
+}
 
 // Presence is now driven entirely by the realtime `/ws` connection
 // (see presence-server.ts). The old HTTP heartbeat polling endpoint was
@@ -600,6 +667,31 @@ function getCallerProofFromRequest(c: { req: { header: (name: string) => string 
 
 function getCallerProofUserId(c: { req: { header: (name: string) => string | undefined } }): string | null {
   return getCallerProofFromRequest(c);
+}
+
+/**
+ * The verified session behind a plain REST call: the signed proof header, then
+ * the signed cookie. Dev also takes the bare header, like the rest of the API.
+ */
+function requestSessionId(c: { req: { header: (name: string) => string | undefined } }): string | null {
+  const devClaim = DEV_MODE ? getCallerUserId(c) : "anon";
+  return getCallerProofFromRequest(c)
+    ?? readSignedSessionCookie(c.req.header("cookie"), SESSION_COOKIE_SECRET)
+    ?? (devClaim === "anon" ? null : devClaim);
+}
+
+// Scripted HTTP clients announce themselves; browsers never send these.
+const AUTOMATION_AGENT = /^$|curl|wget|python-requests|python-urllib|aiohttp|httpx|go-http-client|node-fetch|axios|okhttp|java\/|libwww|scrapy|^node$|^bun\//i;
+
+// What a player in limbo may still do: leave a game, the session bookkeeping
+// the app boots with, and expire a phase timer any player in the room can
+// expire. Everything else waits for the check.
+function limboAllowsMutation(name: string) {
+  const [namespace, action] = name.split(".");
+  return (namespace === "sessions" && action !== "setName" && action !== "setAvatar")
+    || action === "leave"
+    || action === "leaveSpectator"
+    || action === "advanceTimer";
 }
 
 function getVerifiedClaimedSessionId(
@@ -2395,12 +2487,25 @@ app.post("/api/zero/mutate", async (c) => {
       handler: (transact) =>
         transact((tx, name, args) => {
           return Promise.resolve().then(async () => {
-            const { userId: resolvedCallerUserId, args: normalizedArgs } = authorizeMutation(
-              name,
-              args,
-              { headerUserId: rawCallerUserId, proofUserId },
-              !DEV_MODE,
-            );
+            let authorized: ReturnType<typeof authorizeMutation<typeof args>>;
+            try {
+              authorized = authorizeMutation(name, args, { headerUserId: rawCallerUserId, proofUserId }, !DEV_MODE);
+            } catch (error) {
+              // Only the proof is scored: a bare header could be anyone's id,
+              // and scoring it would let a stranger push someone into limbo.
+              addBotSignal(proofUserId, "rejected");
+              throw error;
+            }
+            const { userId: resolvedCallerUserId, args: normalizedArgs } = authorized;
+            // Throwing here is an app error to Zero: this one mutation is
+            // refused and rolled back on the client, the push keeps flowing.
+            if (!isDevOnlyMutator(name)) {
+              if (botStatus(resolvedCallerUserId).limbo && !limboAllowsMutation(name)) {
+                addBotSignal(resolvedCallerUserId, "blocked");
+                throw new Error(CHALLENGE_REQUIRED);
+              }
+              addBotSignal(resolvedCallerUserId, name === "chat.send" ? "chat" : "mutation");
+            }
             // Everything below runs inside this mutation's transaction, so any
             // database work has to go through it. A second pool connection here
             // deadlocks the pool once every connection is held by a mutation.
