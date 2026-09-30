@@ -52,3 +52,6 @@ Thumbs.db
 # Playwright
 e2e/test-results
 e2e/playwright-report
+
+# Local deploy notes (not published)
+apps/web/DEPLOY.md

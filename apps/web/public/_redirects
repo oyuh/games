@@ -1,0 +1,5 @@
+# Cloudflare Pages SPA fallback: every path that isn't a real file serves the
+# app shell so react-router handles the route client-side. Assets are real
+# files and are matched before this. Bot/crawler preview requests are handled
+# earlier by functions/_middleware.js (User-Agent can't be matched here).
+/*  /index.html  200
