@@ -125,6 +125,9 @@ export function DevGamePanel() {
   // rather than state matters: moves that arrive before React re-renders would
   // otherwise see a stale `dragging === false` and be dropped.
   const onPointerDown = (event: React.PointerEvent) => {
+    // Capturing the pointer retargets the click to the header, so a press on
+    // the collapse button must not start a drag or the button never fires.
+    if ((event.target as HTMLElement).closest("button")) return;
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
