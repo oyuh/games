@@ -45,6 +45,17 @@ const joinFor = {
   location_signal: mutators.locationSignal.join,
 } as const;
 
+/** Subscribes to one game's row. A switch, since each query has its own row type. */
+function watchGame(zero: ReturnType<typeof useZero>, gameType: DevGameType, id: string) {
+  switch (gameType) {
+    case "imposter": return zero.preload(queries.imposter.byId({ id }));
+    case "password": return zero.preload(queries.password.byId({ id }));
+    case "chain_reaction": return zero.preload(queries.chainReaction.byId({ id }));
+    case "shade_signal": return zero.preload(queries.shadeSignal.byId({ id }));
+    case "location_signal": return zero.preload(queries.locationSignal.byId({ id }));
+  }
+}
+
 /** Chain reaction is turn-based and has no timer to expire. */
 const advanceTimerFor = {
   imposter: mutators.imposter.advanceTimer,
@@ -186,14 +197,25 @@ export function DevGamePanel() {
     const id = nanoid();
 
     return run(`Joined as ${as}`, async () => {
-      await zero.mutate(mutators.dev.createHosted({ id, gameType: newType, bots })).client;
-      // Start before joining: a game past its lobby puts new arrivals in the
-      // spectator list, which is exactly the state we want to land in.
-      if (as === "spectator") {
-        await zero.mutate(mutators.dev.asHost({ gameId: id, gameType: newType, action: "start" })).client;
+      // Watch the game before it exists. When the server confirms the create,
+      // Zero replays the still-pending join against synced rows only, and a
+      // game nobody queries is not one of them: the join throws "Game not
+      // found" and the client drops into its error state.
+      const watch = watchGame(zero, newType, id);
+      try {
+        await watch.complete;
+        await zero.mutate(mutators.dev.createHosted({ id, gameType: newType, bots })).client;
+        // Start before joining: a game past its lobby puts new arrivals in the
+        // spectator list, which is exactly the state we want to land in.
+        if (as === "spectator") {
+          await zero.mutate(mutators.dev.asHost({ gameId: id, gameType: newType, action: "start" })).client;
+        }
+        await zero.mutate(joinFor[newType]({ gameId: id, sessionId })).client;
+        navigate(`/${meta.route}/${id}`);
+      } finally {
+        // The game page runs its own query from here.
+        watch.cleanup();
       }
-      await zero.mutate(joinFor[newType]({ gameId: id, sessionId })).client;
-      navigate(`/${meta.route}/${id}`);
     });
   };
 
