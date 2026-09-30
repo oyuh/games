@@ -22,6 +22,10 @@ export { isOneWord, isClueTooSimilar, scorePasswordGuessCount, scoreForLetters }
 /* Room codes are rolled on the client and passed to create. See ROOM_CODE. */
 export { code as newRoomCode } from "./helpers";
 
+/* The imposter chat's key id, derived the same way on the send mutator and the
+   key endpoint so both sides address the same key. */
+export { imposterChatKeyId } from "./helpers";
+
 /* Shade's version of the same deal: what makes a clue legal, so the composer
    can say why the send button is off in the words the mutator would have
    thrown. */

@@ -1,6 +1,6 @@
 import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, SHIKAKU_VALID_DIFFS, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
 import { recordedCleanup } from "./cleanup";
-import { fallbackPlayerName, mutators, queries, schema } from "@games/shared";
+import { fallbackPlayerName, imposterChatKeyId, mutators, queries, schema } from "@games/shared";
 import { adminNameOverrides, chatMessages, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared/db";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
@@ -61,8 +61,26 @@ const app = new Hono();
 const DB_STATUS_KEY = process.env.DB_STATUS_KEY?.trim() || "footer";
 const DB_STATUS_EXPECTED_VALUE = process.env.DB_STATUS_EXPECTED_VALUE?.trim() || "ok";
 const DEFAULT_PUBLIC_ORIGIN = "https://games.lawsonhart.me";
-const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || "games-dev-session-secret";
 const DEV_MODE = process.env.NODE_ENV !== "production";
+
+// A secret left at its committed dev default is a public key. SESSION_COOKIE_SECRET
+// signs both the session cookie and the x-zero-session-proof the whole identity
+// model trusts; CLEANUP_SECRET gates the destructive /api/cleanup endpoint. In
+// production, refuse to boot on a missing or default value rather than run forgeable.
+const SESSION_COOKIE_SECRET_DEV_DEFAULT = "games-dev-session-secret";
+const CLEANUP_SECRET_DEV_DEFAULT = "cleanup-local";
+if (!DEV_MODE) {
+  const rawSessionSecret = process.env.SESSION_COOKIE_SECRET?.trim();
+  if (!rawSessionSecret || rawSessionSecret === SESSION_COOKIE_SECRET_DEV_DEFAULT) {
+    throw new Error("SESSION_COOKIE_SECRET must be set to a non-default value in production");
+  }
+  const rawCleanupSecret = process.env.CLEANUP_SECRET?.trim();
+  if (!rawCleanupSecret || rawCleanupSecret === CLEANUP_SECRET_DEV_DEFAULT) {
+    throw new Error("CLEANUP_SECRET must be set to a non-default value in production");
+  }
+}
+
+const SESSION_COOKIE_SECRET = process.env.SESSION_COOKIE_SECRET?.trim() || SESSION_COOKIE_SECRET_DEV_DEFAULT;
 if (DEV_MODE) {
   console.log("[dev-mode] Security relaxations active: fingerprint binding, session proof, and rate limits are loosened for local testing.");
 }
@@ -740,6 +758,55 @@ app.post("/api/game-secret/key", async (c) => {
   const key = await getOrCreateGameKey(gameType, gameId);
 
   return c.json({ ok: true, key, myRole: access.myRole ?? null });
+});
+
+// The imposter back-channel's key. Opposite audience from the secret-word key
+// above: only imposters get it during play (so they can read their own channel),
+// and everyone once the game is revealed/over. See imposterChatKeyId.
+app.post("/api/game-secret/imposter-chat-key", async (c) => {
+  const body = await c.req.json().catch(() => null) as {
+    gameId?: unknown;
+    sessionId?: unknown;
+  } | null;
+
+  const gameId = validId(body?.gameId);
+  const claimedSessionId = validId(body?.sessionId);
+  if (!gameId || !claimedSessionId) {
+    return c.json({ error: "gameId, sessionId required" }, 400);
+  }
+
+  const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, claimedSessionId);
+  if (!verifiedClaimedSessionId) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const resolvedIdentity = await resolveSessionIdentity(c, {
+    claimedSessionId: verifiedClaimedSessionId,
+    allowCreate: false,
+  });
+  if (!resolvedIdentity) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+  const sessionId = resolvedIdentity.sessionId;
+
+  const [game] = await drizzleClient
+    .select({ phase: imposterGames.phase, players: imposterGames.players })
+    .from(imposterGames)
+    .where(eq(imposterGames.id, gameId));
+  if (!game) {
+    return c.json({ error: "Game not found" }, 404);
+  }
+  const me = game.players.find((p) => p.sessionId === sessionId);
+  if (!me) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  const revealPhase = game.phase === "results" || game.phase === "finished" || game.phase === "ended";
+  if (me.role !== "imposter" && !revealPhase) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const key = await getOrCreateGameKey("imposter", imposterChatKeyId(gameId));
+  return c.json({ ok: true, key });
 });
 
 function detectPlatform() {
@@ -2371,7 +2438,7 @@ app.post("/api/zero/mutate", async (c) => {
 // Accept both GET and POST so any cron service works
 app.on(["GET", "POST"], "/api/cleanup", async (c) => {
   const authHeader = c.req.header("Authorization");
-  const expectedToken = process.env.CLEANUP_SECRET ?? "cleanup-local";
+  const expectedToken = process.env.CLEANUP_SECRET ?? CLEANUP_SECRET_DEV_DEFAULT;
   if (authHeader !== `Bearer ${expectedToken}`) {
     return c.json({ error: "Unauthorized" }, 401);
   }

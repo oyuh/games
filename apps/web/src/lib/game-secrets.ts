@@ -17,6 +17,12 @@ interface UseGameSecretOptions {
    * the key at the reveal.
    */
   resetOn?: string | number;
+  /**
+   * Which key to fetch. Default is the game's secret key (the word/target).
+   * "imposter-chat" fetches the separate back-channel key, whose audience is
+   * the opposite: imposters during play, everyone once revealed.
+   */
+  secret?: "game" | "imposter-chat";
 }
 
 /* The server decides from the row in the database, and the client asks the
@@ -51,7 +57,7 @@ interface UseGameSecretResult {
  * The key is only fetched once per mount and cached in memory.
  * Authorized players (e.g. non-imposters in Imposter) get the key; others get a 403.
  */
-export function useGameSecret({ gameType, gameId, sessionId, enabled = true, resetOn }: UseGameSecretOptions): UseGameSecretResult {
+export function useGameSecret({ gameType, gameId, sessionId, enabled = true, resetOn, secret = "game" }: UseGameSecretOptions): UseGameSecretResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /* The key is state as well as a ref. Callers decrypt inside an effect keyed
@@ -88,13 +94,17 @@ export function useGameSecret({ gameType, gameId, sessionId, enabled = true, res
       triesRef.current += 1;
       setLoading(true);
 
-      const promise = fetch(`${API_BASE}/api/game-secret/key`, {
+      const endpoint = secret === "imposter-chat" ? "/api/game-secret/imposter-chat-key" : "/api/game-secret/key";
+      const requestBody = secret === "imposter-chat"
+        ? { gameId, sessionId }
+        : { gameType, gameId, sessionId };
+      const promise = fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
         credentials: "include",
         headers: getSessionRequestHeaders(sessionId, {
           "Content-Type": "application/json"
         }),
-        body: JSON.stringify({ gameType, gameId, sessionId })
+        body: JSON.stringify(requestBody)
       })
         .then(async (res) => {
           if (!res.ok) {
@@ -135,7 +145,7 @@ export function useGameSecret({ gameType, gameId, sessionId, enabled = true, res
       cancelled = true;
       clearInterval(timer);
     };
-  }, [enabled, gameType, gameId, sessionId, key, resetOn]);
+  }, [enabled, gameType, gameId, sessionId, key, resetOn, secret]);
 
   const decryptValue = useCallback(async (value: string | null | undefined): Promise<string | null> => {
     if (!value) return null;
@@ -152,4 +162,57 @@ export function useGameSecret({ gameType, gameId, sessionId, enabled = true, res
   }, [key]);
 
   return { loading, error, decryptValue };
+}
+
+/**
+ * Decrypts the sealed text of imposter-channel chat messages. Fetches the
+ * back-channel key (imposters only) and returns a map of message id → plaintext.
+ * Non-imposters never get the key, so the map stays empty and the ciphertext
+ * they hold stays unreadable. Messages on the "all" channel are plaintext and
+ * are left alone.
+ */
+export function useImposterChatText(
+  messages: Array<{ id: string; channel?: string | null; text: string }>,
+  gameId: string,
+  sessionId: string,
+  enabled: boolean,
+): Record<string, string> {
+  const { decryptValue } = useGameSecret({
+    gameType: "imposter",
+    gameId,
+    sessionId,
+    enabled,
+    secret: "imposter-chat",
+  });
+  const [decrypted, setDecrypted] = useState<Record<string, string>>({});
+
+  // A stable signature of just the sealed rows, so the effect re-runs when a
+  // new imposter message arrives but not on every unrelated re-render.
+  const sealedSig = messages
+    .filter((m) => m.channel === "imposter" && isEncrypted(m.text))
+    .map((m) => m.id)
+    .join(",");
+
+  useEffect(() => {
+    let cancelled = false;
+    const sealed = messages.filter((m) => m.channel === "imposter" && isEncrypted(m.text));
+    if (!enabled || sealed.length === 0) {
+      setDecrypted({});
+      return;
+    }
+    void Promise.all(
+      sealed.map(async (m) => [m.id, await decryptValue(m.text)] as const)
+    ).then((pairs) => {
+      if (cancelled) return;
+      const next: Record<string, string> = {};
+      for (const [id, value] of pairs) {
+        if (value != null) next[id] = value;
+      }
+      setDecrypted(next);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sealedSig, enabled, decryptValue]);
+
+  return decrypted;
 }
