@@ -309,7 +309,7 @@ export function StatusPage() {
                     {new Date(event.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}
                   </time>
                   <span className="status-event-source">{event.source}</span>
-                  <span className="status-event-msg" title={event.details}>
+                  <span className="status-event-msg" title={event.details ? `${event.message} ${event.details}` : event.message}>
                     {event.message}
                     {event.details && <span className="status-event-details"> {event.details}</span>}
                   </span>
