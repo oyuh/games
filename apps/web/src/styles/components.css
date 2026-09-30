@@ -110,7 +110,7 @@
 /* ── Game accents ────────────────────────────────────────────
    The five game colors for the desktop cards. Mobile rows set
    --card-accent inline from GAME_META instead. */
-.home-card--imposter { --card-accent: #7eb8ff; }
+.home-card--imposter { --card-accent: #f05252; }
 .home-card--password { --card-accent: #a78bfa; }
 .home-card--chain    { --card-accent: #34d399; }
 .home-card--shade    { --card-accent: #f472b6; }

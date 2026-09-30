@@ -1,6 +1,5 @@
 import { useEffect, useState, type CSSProperties, type FocusEvent } from "react";
 import { FiX, FiAlertCircle, FiCheck, FiInfo, FiShield } from "react-icons/fi";
-import { useRouteGameTheme } from "../../hooks/useRouteGameTheme";
 import { useToasts, dismissToast, pauseToast, resumeToast, type Toast } from "../../lib/toast";
 import "../../styles/toast.css";
 
@@ -36,6 +35,7 @@ function ToastItem({ toast }: { toast: Toast }) {
   return (
     <div
       className={className}
+      data-game-theme={toast.game}
       style={{ "--toast-duration": `${toast.duration}ms` } as CSSProperties}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -64,14 +64,11 @@ function ToastItem({ toast }: { toast: Toast }) {
 
 export function ToastContainer() {
   const toasts = useToasts();
-  // The stack lives outside the game page, so it takes the theme from the
-  // route: info toasts and focus rings read --primary, which the theme sets.
-  const theme = useRouteGameTheme();
 
   // Always mounted, even empty: a live region has to exist before the text
   // lands in it or screen readers never announce it.
   return (
-    <div className="toast-container" data-game-theme={theme} aria-live="polite" aria-label="Notifications">
+    <div className="toast-container" aria-live="polite" aria-label="Notifications">
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} />
       ))}

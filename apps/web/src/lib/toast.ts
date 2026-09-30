@@ -1,3 +1,4 @@
+import { getGameSlugFromPath, type GameSlug } from "@games/shared";
 import { useSyncExternalStore } from "react";
 
 export interface Toast {
@@ -6,6 +7,8 @@ export interface Toast {
   level: "error" | "success" | "info";
   /** Sent by an admin, so it wears a shield instead of the level's icon. */
   admin?: boolean;
+  /** The game whose page raised it, so it keeps that color after you leave. */
+  game: Exclude<GameSlug, "home"> | undefined;
   createdAt: number;
   /** How long it stays up, in ms, not counting time spent held open. */
   duration: number;
@@ -60,7 +63,11 @@ export interface ToastOptions {
 
 export function showToast(message: string, level: Toast["level"] = "error", options: ToastOptions = {}) {
   const id = ++nextId;
-  toasts = [...toasts, { id, message, level, admin: options.admin === true, createdAt: Date.now(), duration: TOAST_DURATION }];
+  const admin = options.admin === true;
+  // An admin's message comes from outside any game, so it keeps the site color.
+  const slug = admin ? "home" : getGameSlugFromPath(window.location.pathname);
+  const game = slug === "home" ? undefined : slug;
+  toasts = [...toasts, { id, message, level, admin, game, createdAt: Date.now(), duration: TOAST_DURATION }];
   emit();
   dismissTimers.set(id, {
     handle: setTimeout(() => remove(id), TOAST_DURATION),
