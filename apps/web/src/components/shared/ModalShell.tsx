@@ -4,7 +4,7 @@ import "../../styles/game-shared.css";
 
 /**
  * The frame every modal on the site shares: an icon in the modal's own
- * accent, a kicker, a title, a close button, then a scrolling body.
+ * accent, a title, a close button, then a scrolling body.
  *
  * Same rules as the solo menu the look comes from: no shadows on the content,
  * no glows, depth from borders and fills, one primary button. Panels that need
@@ -13,7 +13,6 @@ import "../../styles/game-shared.css";
  */
 export function ModalShell({
   icon,
-  kicker,
   title,
   accent = "var(--primary)",
   size = "md",
@@ -24,7 +23,6 @@ export function ModalShell({
   children,
 }: {
   icon?: ReactNode;
-  kicker?: string;
   title: string;
   accent?: string;
   size?: "md" | "lg" | "xl";
@@ -63,7 +61,6 @@ export function ModalShell({
         <header className="mshell-head">
           {icon && <span className="mshell-icon">{icon}</span>}
           <div className="mshell-head-text">
-            {kicker && <span className="mshell-kicker">{kicker}</span>}
             <h2 className="mshell-title">{title}</h2>
           </div>
           {onClose && (

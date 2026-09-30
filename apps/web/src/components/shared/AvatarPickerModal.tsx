@@ -132,7 +132,6 @@ export function AvatarPickerModal({
   return (
     <ModalShell
       icon={<FiSmile size={18} />}
-      kicker="Your look"
       title="Choose an avatar"
       onClose={onClose}
       footer={

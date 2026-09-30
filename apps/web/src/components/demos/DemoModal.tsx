@@ -59,7 +59,6 @@ export function DemoModal({
       className="howto"
       size="xl"
       icon={icon}
-      kicker="How to play"
       title={title}
       accent={color}
       onClose={onClose}
