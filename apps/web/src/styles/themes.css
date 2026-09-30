@@ -98,7 +98,7 @@
 /* ── Light Theme – game-specific overrides ────────────── */
 
 [data-theme='light'][data-game-theme='imposter'] {
-  --game-bg: #e0f0ff;
+  --game-bg: #fee2e2;
 }
 [data-theme='light'][data-game-theme='password'] {
   --game-bg: #f3e8ff;

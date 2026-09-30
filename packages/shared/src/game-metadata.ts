@@ -129,9 +129,9 @@ export const GAME_META: Record<GameSlug, GameMetadata> = {
     description: "A social deduction word game. Everyone gives clues, then votes for who is faking it.",
     shortDescription: "Find the fake from one-word clues.",
     players: "3-12",
-    accent: "#7eb8ff",
-    themeColor: "#7eb8ff",
-    background: "#1d2430",
+    accent: "#f05252",
+    themeColor: "#f05252",
+    background: "#2e1a1c",
     icon: "eye",
   },
   password: {
