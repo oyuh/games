@@ -159,7 +159,6 @@ function ChallengeModal() {
     <ModalShell
       className="challenge"
       icon={<FiShield size={20} />}
-      kicker="Quick check"
       title="Prove you're a person"
       footer={(
         <>

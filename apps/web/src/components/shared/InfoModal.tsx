@@ -96,7 +96,7 @@ function useCustomStatus() {
 
 export function InfoModal({ onClose }: { onClose: () => void }) {
   return (
-    <ModalShell icon={<FiInfo size={18} />} kicker="About" title={siteInfo.title} onClose={onClose} footer={<InfoFooter />}>
+    <ModalShell icon={<FiInfo size={18} />} title={siteInfo.title} onClose={onClose} footer={<InfoFooter />}>
       <InfoContent />
     </ModalShell>
   );

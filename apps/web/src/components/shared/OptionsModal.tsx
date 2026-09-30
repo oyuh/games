@@ -19,7 +19,6 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
   return (
     <ModalShell
       icon={<FiSettings size={18} />}
-      kicker="Preferences"
       title="Options"
       size="lg"
       className="opt-modal"

@@ -23,7 +23,7 @@ type HostControlsProps = {
 
 export function HostControlsModal(props: HostControlsProps) {
   return (
-    <ModalShell icon={<FiSliders size={18} />} kicker="Host only" title="Host Controls" size="lg" onClose={props.onClose}>
+    <ModalShell icon={<FiSliders size={18} />} title="Host Controls" size="lg" onClose={props.onClose}>
       <HostControls {...props} />
     </ModalShell>
   );
