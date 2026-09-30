@@ -235,7 +235,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
     <DemoModal
       title="Imposter"
       icon={<FiEye size={20} />}
-      color="#7eb8ff"
+      color="#f05252"
       steps={steps}
       currentStep={step}
       onStepChange={setStep}
