@@ -10,3 +10,5 @@ dockerfilePath = "apps/admin/Dockerfile"
 startCommand = "bun run --filter @games/admin start"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
+
+# rebuild trigger: per-service Dockerfile via RAILWAY_DOCKERFILE_PATH
