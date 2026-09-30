@@ -35,6 +35,16 @@
   --imp-accent: #f87171;
 }
 
+/* The page is imposter red, so everyone who is not one gets the same green
+   the results use for "innocent": you can tell which side you are on at a
+   glance. */
+.imp-word--crew,
+.imp-composer--crew {
+  --imp-accent: #4ade80;
+  /* The kit's buttons take their accent from this, so the send button turns too. */
+  --card-accent: #4ade80;
+}
+
 .imp-word-role {
   display: inline-flex;
   align-items: center;

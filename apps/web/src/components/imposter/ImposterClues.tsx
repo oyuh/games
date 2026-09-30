@@ -61,7 +61,7 @@ export function ImposterWordCard({
   const missing = imposters > 1 ? "some of you" : "one of you";
 
   return (
-    <section className={`imp-word${isImposter ? " imp-word--imposter" : ""}`}>
+    <section className={`imp-word ${isImposter ? "imp-word--imposter" : "imp-word--crew"}`}>
       <p className="imp-word-role">
         <span className="imp-word-role-icon" aria-hidden="true">{isImposter ? <FiEyeOff /> : <FiEye />}</span>
         {isImposter ? "You are the imposter" : "Your word"}
@@ -121,7 +121,7 @@ export function ImposterComposer({
 
   if (submitted) {
     return (
-      <div className="imp-composer imp-composer--done">
+      <div className={`imp-composer imp-composer--done${role === "player" ? " imp-composer--crew" : ""}`}>
         <span className="imp-composer-done-mark" aria-hidden="true"><FiCheck /></span>
         <p className="imp-composer-done-clue">{value}</p>
         <p className="imp-composer-done-note">That is your clue. No taking it back.</p>
@@ -130,7 +130,7 @@ export function ImposterComposer({
   }
 
   return (
-    <form className="imp-composer" onSubmit={onSubmit}>
+    <form className={`imp-composer${role === "player" ? " imp-composer--crew" : ""}`} onSubmit={onSubmit}>
       <input
         ref={inputRef}
         className="imp-composer-input"
