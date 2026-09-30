@@ -1,14 +1,19 @@
 @import "tailwindcss";
 
 /* ── Custom Fonts ────────────────────────────────────────────── */
+/* The overrides decide where text sits in its line. They add up to 123% so
+   no line height moves; the split centers capitals and digits in pills and
+   buttons. 95/28 looked right on paper but Chrome's pixel rounding at 10 to
+   22px left caps about 1px high; 100/23 was measured to land within half a
+   pixel in most sizes. apps/admin/src/app/globals.css must match. */
 @font-face {
   font-family: 'Axiforma';
   src: url('/font/Axiforma-Light.woff2') format('woff2');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
-  ascent-override: 95%;
-  descent-override: 28%;
+  ascent-override: 100%;
+  descent-override: 23%;
   line-gap-override: 0%;
 }
 @font-face {
@@ -17,8 +22,8 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  ascent-override: 95%;
-  descent-override: 28%;
+  ascent-override: 100%;
+  descent-override: 23%;
   line-gap-override: 0%;
 }
 @font-face {
@@ -27,8 +32,8 @@
   font-weight: 500;
   font-style: normal;
   font-display: swap;
-  ascent-override: 95%;
-  descent-override: 28%;
+  ascent-override: 100%;
+  descent-override: 23%;
   line-gap-override: 0%;
 }
 @font-face {
@@ -37,8 +42,8 @@
   font-weight: 600;
   font-style: normal;
   font-display: swap;
-  ascent-override: 95%;
-  descent-override: 28%;
+  ascent-override: 100%;
+  descent-override: 23%;
   line-gap-override: 0%;
 }
 @font-face {
@@ -47,8 +52,8 @@
   font-weight: 700;
   font-style: normal;
   font-display: swap;
-  ascent-override: 95%;
-  descent-override: 28%;
+  ascent-override: 100%;
+  descent-override: 23%;
   line-gap-override: 0%;
 }
 @font-face {
@@ -57,8 +62,8 @@
   font-weight: 800;
   font-style: normal;
   font-display: swap;
-  ascent-override: 95%;
-  descent-override: 28%;
+  ascent-override: 100%;
+  descent-override: 23%;
   line-gap-override: 0%;
 }
 @font-face {
@@ -67,8 +72,8 @@
   font-weight: 900;
   font-style: normal;
   font-display: swap;
-  ascent-override: 95%;
-  descent-override: 28%;
+  ascent-override: 100%;
+  descent-override: 23%;
   line-gap-override: 0%;
 }
 
