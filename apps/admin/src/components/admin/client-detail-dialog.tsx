@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Ban,
+  Bot,
   Fingerprint,
   Globe2,
   MessageSquareMore,
@@ -123,6 +124,17 @@ export function ClientDetailDialog({
   }, [client?.sessionId, open, show]);
 
   const activeClient = detail?.client ?? client;
+
+  const setBotScore = (score: number, message: string) =>
+    activeClient?.sessionId &&
+    runAction(score > 0 ? "limbo" : "unlimbo", async () => {
+      const result = (await api(`/clients/${activeClient.sessionId}/bot`, {
+        method: "POST",
+        body: { score },
+      })) as { bot: ClientDetailResponse["bot"] };
+      setDetail((current) => (current ? { ...current, bot: result.bot } : current));
+      show(message, "success");
+    });
 
   const runAction = async (label: string, action: () => Promise<void>) => {
     setPendingAction(label);
@@ -290,6 +302,50 @@ export function ClientDetailDialog({
             </Surface>
 
             <div className="space-y-4">
+              {detail && (
+                <Surface tone="panel">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Bot className="size-4" />
+                      Bot check
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="border border-border bg-muted text-foreground tabular-nums">
+                        Score {detail.bot.score}
+                      </Badge>
+                      {detail.bot.limbo && (
+                        <Badge className="border border-amber-500/40 bg-amber-400/10 text-amber-700 dark:text-amber-300">
+                          In limbo
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {detail.botEnforced
+                      ? "Limbo puts the verification popup in front of them and holds their game moves until they pass it, or until the score cools under 20 (about two minutes after they go quiet)."
+                      : "The API has no TURNSTILE_SECRET_KEY, so scores are tracked but nobody can be sent to limbo."}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      className="rounded-lg border-border bg-card text-foreground hover:bg-accent"
+                      disabled={!detail.botEnforced || detail.bot.limbo || pendingAction !== null}
+                      onClick={() => void setBotScore(100, "Sent to limbo.")}
+                    >
+                      Send to limbo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="rounded-lg border-border bg-card text-foreground hover:bg-accent"
+                      disabled={detail.bot.score === 0 || pendingAction !== null}
+                      onClick={() => void setBotScore(0, "Bot score cleared.")}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </Surface>
+              )}
+
               <Surface tone="panel">
                 <div className="text-sm font-semibold text-foreground">
                   Name override

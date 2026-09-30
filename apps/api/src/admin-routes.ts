@@ -34,6 +34,7 @@ import {
   type CustomStatusPayload,
 } from "./broadcast-server";
 import { isSessionOnline } from "./presence-server";
+import { botStatus, setBotScore, turnstileEnforced } from "./bot-score";
 import {
   isRestrictedName,
   loadRestrictedNamePatterns,
@@ -652,7 +653,19 @@ adminRoutes.get("/clients/:sessionId", async (c) => {
     client: mapSessionToClient(client),
     nameOverride,
     matchedBans,
+    bot: botStatus(sessionId),
+    botEnforced: turnstileEnforced(),
   });
+});
+
+// Bot check: 100 sends the session to limbo, 0 lets it out. See bot-score.ts.
+adminRoutes.post("/clients/:sessionId/bot", async (c) => {
+  const { sessionId } = c.req.param();
+  const body = await c.req.json().catch(() => null) as { score?: unknown } | null;
+  if (typeof body?.score !== "number" || !Number.isFinite(body.score)) {
+    return c.json({ error: "score must be a number" }, 400);
+  }
+  return c.json({ ok: true, bot: setBotScore(sessionId, body.score) });
 });
 
 // ─── Games list, including ended-but-not-deleted rooms ──────

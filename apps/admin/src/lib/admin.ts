@@ -128,6 +128,10 @@ export type ClientDetailResponse = {
   client: ClientRecord;
   nameOverride: NameOverrideRecord | null;
   matchedBans: BanRecord[];
+  /** The API's bot score for this session; limbo means the Turnstile popup is up. */
+  bot: { score: number; limbo: boolean };
+  /** False when the API has no Turnstile secret, so nobody can be sent to limbo. */
+  botEnforced: boolean;
 };
 
 export type GameDetailResponse = {
