@@ -130,3 +130,37 @@ describe("rateLimiter: edge cases", () => {
     expect(body.retryAfterMs).toBeGreaterThanOrEqual(500);
   });
 });
+
+// ─── Sessions ───────────────────────────────────────────────
+describe("rateLimiter: per session", () => {
+  // Stands in for the bot gate in index.ts, which sets the verified session.
+  function sessionApp(opts: { maxRequests: number; ipMaxRequests: number; scope: string }) {
+    const app = new Hono();
+    app.use("*", (c, next) => {
+      c.set("sessionId", c.req.header("x-test-session") ?? null);
+      return next();
+    });
+    app.use("*", rateLimiter({ windowMs: 60_000, ...opts }));
+    app.get("/test", (c) => c.json({ ok: true }));
+    return app;
+  }
+
+  const hit = (app: Hono, session: string) =>
+    app.request("/test", { headers: { "x-forwarded-for": "10.9.9.9", "x-test-session": session } });
+
+  it("gives each session on one network its own budget, under a wider cap for the address", async () => {
+    const app = sessionApp({ maxRequests: 2, ipMaxRequests: 5, scope: "test-sessions" });
+    expect((await hit(app, "a")).status).toBe(200);
+    expect((await hit(app, "a")).status).toBe(200);
+    expect((await hit(app, "a")).status).toBe(429);
+
+    // A classmate on the same IP is not blocked by "a" spending its budget.
+    expect((await hit(app, "b")).status).toBe(200);
+    expect((await hit(app, "b")).status).toBe(200);
+
+    // Four landed from this address (a's third was refused); one more fills it.
+    expect((await hit(app, "c")).status).toBe(200);
+    const capped = await hit(app, "d");
+    expect(capped.status).toBe(429);
+  });
+});

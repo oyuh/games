@@ -179,14 +179,16 @@ const LIMBO_GATED_PATH = /^\/api\/(pips|shikaku)\/score/;
 
 app.use("/api/*", async (c, next) => {
   const sessionId = requestSessionId(c);
+  // The limiters below budget per session, falling back to the IP without one.
+  c.set("sessionId", sessionId);
   if (sessionId && LIMBO_GATED_PATH.test(c.req.path) && botStatus(sessionId).limbo) {
     addBotSignal(sessionId, "blocked");
     return c.json({ error: "Verification required", code: CHALLENGE_REQUIRED }, 403);
   }
   await next();
-  // zero-cache sends every push from its own address, so a 429 there is the
-  // shared bucket filling up, not this player.
-  if (c.res.status === 429 && !c.req.path.startsWith("/api/zero/")) {
+  // Only a session running out of its own budget says anything about it. A
+  // full IP bucket is everyone on that network, or zero-cache for every push.
+  if (c.res.status === 429 && c.get("rateLimitedBy") === "session") {
     addBotSignal(sessionId, "rateLimited");
   }
 });

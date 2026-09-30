@@ -1,10 +1,29 @@
 import type { MiddlewareHandler } from "hono";
 
+declare module "hono" {
+  interface ContextVariableMap {
+    /** Verified session behind the request, set by the bot gate in index.ts. */
+    sessionId: string | null;
+    /** Which bucket turned the request away, so only a session's own 429s score it. */
+    rateLimitedBy: "session" | "ip";
+  }
+}
+
 interface RateLimitOptions {
   windowMs: number;
+  /** Per session, or per IP for a request with no session. */
   maxRequests: number;
+  /** Everyone behind one IP together. Defaults to IP_SHARE times maxRequests. */
+  ipMaxRequests?: number;
   scope: string;
 }
+
+/**
+ * A school or office puts a whole room behind one address, so the IP bucket
+ * is a spam ceiling rather than a per-player budget: room for this many
+ * players at full tilt before the address is turned away.
+ */
+const IP_SHARE = 5;
 
 // In-memory sliding window store: compositeKey → timestamps[]
 const store = new Map<string, number[]>();
@@ -29,45 +48,60 @@ function getClientIP(c: { req: { header: (name: string) => string | undefined } 
   return raw.length <= 45 ? raw : raw.slice(0, 45);
 }
 
+/** Recent hits in the bucket, or how long until it has room again. */
+function check(bucketKey: string, max: number, windowMs: number, now: number) {
+  const timestamps = (store.get(bucketKey) ?? []).filter((t) => t > now - windowMs);
+  return timestamps.length >= max
+    ? { timestamps, retryAfterMs: Math.max(500, windowMs - (now - timestamps[0]!)) }
+    : { timestamps, retryAfterMs: 0 };
+}
+
 export function rateLimiter(options: RateLimitOptions): MiddlewareHandler {
   const { windowMs, maxRequests, scope } = options;
   // In local development (not test, not production), multiply the limit by 10x
   // so rapid manual testing isn't blocked by rate limits.
   const isDev = process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test";
-  const effectiveMax = isDev ? maxRequests * 10 : maxRequests;
+  const devScale = isDev ? 10 : 1;
+  const effectiveMax = maxRequests * devScale;
+  const effectiveIpMax = (options.ipMaxRequests ?? maxRequests * IP_SHARE) * devScale;
 
   return async (c, next) => {
     const ip = getClientIP(c);
+    const sessionId = c.get("sessionId") ?? null;
     const now = Date.now();
-    const windowStart = now - windowMs;
 
-    const bucketKey = `${scope}:${ip}`;
-    let timestamps = store.get(bucketKey) || [];
-    timestamps = timestamps.filter((t) => t > windowStart);
+    // A session gets its own budget and the address a wider shared one. With
+    // no session the address is all there is, so it gets the tight budget.
+    const buckets = sessionId
+      ? [
+          { by: "session" as const, key: `${scope}:s:${sessionId}`, max: effectiveMax },
+          { by: "ip" as const, key: `${scope}:ip:${ip}`, max: effectiveIpMax },
+        ]
+      : [{ by: "ip" as const, key: `${scope}:${ip}`, max: effectiveMax }];
 
-    if (timestamps.length >= effectiveMax) {
-      const retryAfterMs = Math.max(500, windowMs - (now - timestamps[0]!));
-      c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
+    const checked = buckets.map((bucket) => ({ ...bucket, ...check(bucket.key, bucket.max, windowMs, now) }));
+    const full = checked.find((bucket) => bucket.retryAfterMs > 0);
+    if (full) {
+      c.set("rateLimitedBy", full.by);
+      c.header("Retry-After", String(Math.ceil(full.retryAfterMs / 1000)));
       return c.json(
         {
           error: "Too many requests",
           code: "RATE_LIMITED",
           message: "Too many requests. Please slow down.",
-          retryAfterMs,
+          retryAfterMs: full.retryAfterMs,
           scope,
         },
         429
       );
     }
 
-    // Prevent unbounded memory growth from many unique IPs
-    if (!store.has(bucketKey) && store.size >= MAX_BUCKETS) {
-      await next();
-      return;
+    for (const bucket of checked) {
+      // Prevent unbounded memory growth from many unique IPs and sessions
+      if (!store.has(bucket.key) && store.size >= MAX_BUCKETS) continue;
+      bucket.timestamps.push(now);
+      store.set(bucket.key, bucket.timestamps);
     }
-
-    timestamps.push(now);
-    store.set(bucketKey, timestamps);
 
     await next();
   };
@@ -75,7 +109,8 @@ export function rateLimiter(options: RateLimitOptions): MiddlewareHandler {
 
 // ─── Rate limit tiers ───────────────────────────────────────
 // Central, named tiers so every route pulls from one tunable table instead of
-// scattering magic numbers. All windows are 60s and counted per client IP.
+// scattering magic numbers. All windows are 60s. maxRequests is per session
+// (per IP when there is none); each IP also gets IP_SHARE times that, shared.
 // (Dev gets a 10x multiplier, see rateLimiter above.) Tune a tier here and it
 // applies everywhere that tier is used.
 //
@@ -90,7 +125,10 @@ export const RATE_LIMITS = {
   global: { windowMs: 60_000, maxRequests: 600 },
 
   // Real-time Zero sync push endpoint. Chatty by design, so it stays generous.
-  zero: { windowMs: 60_000, maxRequests: 240 },
+  // Every push arrives from zero-cache's own address, so the IP bucket here is
+  // one ceiling for the whole server, not per player; the session bucket is
+  // the real per-player limit.
+  zero: { windowMs: 60_000, maxRequests: 240, ipMaxRequests: 12_000 },
 
   // Session/identity resolution, hit on most page loads and reconnects.
   sessionSync: { windowMs: 60_000, maxRequests: 120 },
@@ -147,6 +185,5 @@ export type RateLimitTier = keyof typeof RATE_LIMITS;
  * tiers but need independent buckets).
  */
 export function rateLimit(tier: RateLimitTier, scope?: string): MiddlewareHandler {
-  const { windowMs, maxRequests } = RATE_LIMITS[tier];
-  return rateLimiter({ windowMs, maxRequests, scope: scope ?? tier });
+  return rateLimiter({ ...RATE_LIMITS[tier], scope: scope ?? tier });
 }
