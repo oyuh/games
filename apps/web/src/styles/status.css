@@ -199,7 +199,6 @@
 .status-lower {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  align-items: start;
   gap: 1.4rem;
 }
 
@@ -335,7 +334,10 @@
   border-radius: var(--solo-radius);
   background: var(--background);
   font-size: 0.72rem;
-  max-height: 22rem;
+  /* Zero height so it adds nothing to the row: Details sets the height and
+     the log fills it, scrolling inside. */
+  flex: 1 1 0;
+  height: 0;
   overflow-y: auto;
 }
 
@@ -346,11 +348,6 @@
   gap: 0.6rem;
   padding: 0.3rem 1rem;
   color: var(--foreground);
-}
-
-.status-event:hover .status-event-msg {
-  overflow: visible;
-  white-space: normal;
 }
 
 .status-event-level {
@@ -398,7 +395,7 @@
   /* Stacked, the log only holds ten lines, so let it run full height
      instead of trapping the scroll. */
   .status-events {
-    max-height: none;
+    height: auto;
   }
 }
 
