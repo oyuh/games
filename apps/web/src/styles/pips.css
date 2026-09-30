@@ -73,8 +73,6 @@
 
 .pips-header-icon {
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 13%, transparent);
-  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
 .pips-run-track {

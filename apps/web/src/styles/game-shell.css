@@ -46,9 +46,6 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--gsh-line);
-  background: color-mix(in srgb, var(--gsh-accent) 10%, transparent);
   color: var(--gsh-accent);
 }
 
@@ -342,9 +339,6 @@
 .gsh--folded .gsh-game-icon {
   width: auto;
   height: auto;
-  border-color: transparent;
-  background: transparent;
-  color: var(--gsh-accent);
 }
 
 /* Folded, the pills are the only thing left beside the clock, so they get to

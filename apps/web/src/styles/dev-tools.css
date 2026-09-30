@@ -44,9 +44,6 @@
   flex-shrink: 0;
   width: 1.5rem;
   height: 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
-  border-radius: var(--radius-sm, 0.35rem);
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
   color: var(--primary);
 }
 

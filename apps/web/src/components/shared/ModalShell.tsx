@@ -3,7 +3,7 @@ import { FiX } from "react-icons/fi";
 import "../../styles/game-shared.css";
 
 /**
- * The frame every modal on the site shares: an icon tile in the modal's own
+ * The frame every modal on the site shares: an icon in the modal's own
  * accent, a kicker, a title, a close button, then a scrolling body.
  *
  * Same rules as the solo menu the look comes from: no shadows on the content,
