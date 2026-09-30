@@ -141,6 +141,18 @@ export function getGameSecretResolver(ctx: unknown): GameSecretResolver | null {
 type SecretGameType = Parameters<GameSecretResolver>[0];
 
 /**
+ * The imposter back-channel gets its own encryption key, separate from the one
+ * that hides the secret word. They protect opposite audiences: the word key is
+ * handed to the innocents, the chat key to the imposters, so they can never be
+ * the same key. Storing it under a distinct game_id in the existing key table
+ * keeps a second keyspace without a schema change. Both the send mutator and
+ * the key endpoint derive the id here so they always agree.
+ */
+export function imposterChatKeyId(gameId: string) {
+  return `chat:${gameId}`;
+}
+
+/**
  * Encrypts a round secret before it goes on a synced row, so zero-cache never
  * ships it in the clear. Only the server holds keys. A server without a key
  * store (unit tests) writes plaintext, like password always has. The client's

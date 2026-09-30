@@ -6,6 +6,8 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { getDisplayName, getOrCreateSessionId } from "../../lib/session";
 import { useChatContext } from "../../lib/chat-context";
+import { useImposterChatText } from "../../lib/game-secrets";
+import { isEncrypted } from "@games/shared";
 import { BottomSheet } from "./BottomSheet";
 
 export function MobileChatSheet({ onClose }: { onClose: () => void }) {
@@ -26,6 +28,19 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
   const filteredMessages = showChannels
     ? messages.filter((m) => (m.channel ?? "all") === channel)
     : messages.filter((m) => !m.channel || m.channel === "all");
+
+  // Imposter-channel text is sealed on the synced row; imposters decrypt it
+  // here with the back-channel key. Everyone else lacks the key.
+  const decryptedImposterText = useImposterChatText(
+    messages,
+    gameId,
+    sessionId,
+    Boolean(isImposter && gameType === "imposter"),
+  );
+  const textFor = (msg: { id: string; channel?: string | null; text: string }) =>
+    msg.channel === "imposter" && isEncrypted(msg.text)
+      ? decryptedImposterText[msg.id] ?? "🔒 encrypted"
+      : msg.text;
 
   // Get my session name
   const [sessions] = useQuery(queries.sessions.byId({ id: sessionId }));
@@ -99,7 +114,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
                   {isMe && <span className="m-chat-badge">You</span>}
                 </div>
               )}
-              <span className="m-chat-msg-text">{msg.text}</span>
+              <span className="m-chat-msg-text">{textFor(msg)}</span>
             </div>
           );
         })}

@@ -6,6 +6,8 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { getDisplayName, getOrCreateSessionId } from "../../lib/session";
 import { useChatContext } from "../../lib/chat-context";
+import { useImposterChatText } from "../../lib/game-secrets";
+import { isEncrypted } from "@games/shared";
 
 export interface ChatWindowProps {
   hostId: string;
@@ -33,6 +35,19 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
   const filteredMessages = showChannels
     ? messages.filter((m) => (m.channel ?? "all") === channel)
     : messages.filter((m) => !m.channel || m.channel === "all");
+
+  // Imposter-channel text is sealed on the synced row; imposters fetch the
+  // back-channel key and decrypt it here. Everyone else lacks the key.
+  const decryptedImposterText = useImposterChatText(
+    messages,
+    gameId,
+    sessionId,
+    Boolean(isImposter && gameType === "imposter"),
+  );
+  const textFor = (msg: { id: string; channel?: string | null; text: string }) =>
+    msg.channel === "imposter" && isEncrypted(msg.text)
+      ? decryptedImposterText[msg.id] ?? "🔒 encrypted"
+      : msg.text;
 
   const [minimized, setMinimized] = useState(false);
   const [input, setInput] = useState("");
@@ -182,7 +197,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
                 <ChatMessage
                   key={msg.id}
                   senderName={displayName}
-                  text={msg.text}
+                  text={textFor(msg)}
                   isHost={msg.sender_id === hostId}
                   isMe={msg.sender_id === sessionId}
                   grouped={sameSender}
