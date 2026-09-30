@@ -500,22 +500,3 @@ DO UPDATE SET
   value = EXCLUDED.value,
   updated_at = EXCLUDED.updated_at;
 ```
-
-### Smoke test after a deploy
-
-1. Open the web app.
-2. Create one room for each multiplayer game.
-3. Join a room from a second tab or device.
-4. Check chat, presence, phase changes, and host controls.
-5. Play one Shikaku run and one Pips run, and confirm both land on the leaderboard.
-6. Open the admin dashboard and check clients, games, broadcasts, bans, scores, and cleanups.
-7. Hit `/health`, `/debug/build-info`, and the Zero cache public URL.
-
-## Known constraints
-
-- No player accounts. Identity is browser-local.
-- No linter yet. The lint scripts are placeholders.
-- Multiplayer state is mostly JSON-column snapshots, by design.
-- The API runs TypeScript through Bun in production, with no compiled `dist` entry.
-- The Zero cache image and the workspace `@rocicorp/zero` version have to match.
-- Shikaku and Pips aren't Zero-synced. They use REST for the leaderboard only.
