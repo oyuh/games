@@ -1458,3 +1458,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Bot check (ChallengeGate) ──────────────────────────── */
+.challenge-lede {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.challenge-lede + .challenge-lede {
+  margin-top: 0.6rem;
+}
+
+.challenge-widget:not(:empty) {
+  margin-top: 0.9rem;
+}
+
+.challenge-note {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.challenge-actions {
+  display: flex;
+  gap: 0.5rem;
+}

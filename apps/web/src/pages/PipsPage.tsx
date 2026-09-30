@@ -49,6 +49,7 @@ import {
   type Rotation,
 } from "../lib/pips-rotation";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
+import { fetchWithChallenge } from "../lib/challenge";
 import { playCorrect, playCountdownTick, playGameOver } from "../lib/sounds";
 import { showToast } from "../lib/toast";
 
@@ -1011,7 +1012,7 @@ export function PipsPage() {
       const identity = await syncSessionIdentity(API_BASE, { allowCreate: true, reason: "pips-eligibility" });
       const activeSessionId = identity.sessionId;
       const activeName = getDisplayName(identity.name, identity.sessionId);
-      const res = await fetch(`${API_BASE}/api/pips/score/eligibility`, {
+      const res = await fetchWithChallenge(`${API_BASE}/api/pips/score/eligibility`, {
         method: "POST",
         credentials: "include",
         headers: getSessionRequestHeaders(activeSessionId, {
@@ -1089,7 +1090,7 @@ export function PipsPage() {
       const identity = await syncSessionIdentity(API_BASE, { allowCreate: true, reason: "pips-submit" });
       const activeSessionId = identity.sessionId;
       const activeName = getDisplayName(identity.name, identity.sessionId);
-      const res = await fetch(`${API_BASE}/api/pips/score`, {
+      const res = await fetchWithChallenge(`${API_BASE}/api/pips/score`, {
         method: "POST",
         credentials: "include",
         headers: getSessionRequestHeaders(activeSessionId, {

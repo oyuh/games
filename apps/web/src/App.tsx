@@ -7,6 +7,7 @@ import { FiActivity, FiAlertTriangle, FiInfo, FiMoon, FiX } from "react-icons/fi
 import { SiBuymeacoffee, SiKofi } from "react-icons/si";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { ChallengeGate } from "./components/shared/ChallengeGate";
 import {
   addConnectionDebugEvent,
   initConnectionDebug,
@@ -643,6 +644,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
       <ErrorBoundary>
         <BrowserRouter>
           <SyncWakeToast />
+          <ChallengeGate />
           <Routes>
             <Route element={<AppShell />}>
               <Route path="/" element={<LazyRoute><HomePage sessionId={session.id} /></LazyRoute>} />

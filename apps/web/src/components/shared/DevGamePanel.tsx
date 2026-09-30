@@ -8,12 +8,21 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useZero as useRawZero } from "@rocicorp/zero/react";
 import { FiChevronDown, FiChevronUp, FiTool } from "react-icons/fi";
 import { nanoid } from "nanoid";
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { useChatContext } from "../../lib/chat-context";
 import { getOrCreateSessionId } from "../../lib/session";
+import {
+  getTurnstileTestMode,
+  refreshChallengeStatus,
+  setDevBotScore,
+  setTurnstileTestMode,
+  type ChallengeStatus,
+  type TurnstileTestMode,
+} from "../../lib/challenge";
 import { showToast } from "../../lib/toast";
 import "../../styles/dev-tools.css";
 
@@ -214,6 +223,8 @@ export function DevGamePanel() {
         </button>
       </header>
 
+      {open && <DevBotCheck btn={btn} busy={busy} run={run} sessionId={sessionId} />}
+
       {open && (inGame ? (
         <DevInGame
           btn={btn}
@@ -365,6 +376,76 @@ function DevInGame({
         >
           Clear bots
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Drives the bot score (apps/api/src/bot-score.ts) so limbo can be tried
+ * without spamming for real. "Spam" does go the real way: plain mutations
+ * through zero-cache, scored by the API like any other. It skips the client
+ * rate limiter on purpose, since a real bot never runs our client code.
+ */
+function DevBotCheck({
+  btn, busy, run, sessionId,
+}: {
+  btn: string;
+  busy: boolean;
+  run: (label: string, action: () => Promise<unknown>) => Promise<void>;
+  sessionId: string;
+}) {
+  const zero = useRawZero();
+  const [status, setStatus] = useState<ChallengeStatus | null>(null);
+  const [mode, setMode] = useState<TurnstileTestMode>(getTurnstileTestMode);
+  const hasRealKey = Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim());
+
+  // Dev only, so a poll is fine; it is also what shows the score decaying.
+  useEffect(() => {
+    const tick = () => void refreshChallengeStatus().then(setStatus, () => setStatus(null));
+    tick();
+    const id = window.setInterval(tick, 3_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const set = (label: string, score: number) =>
+    run(label, async () => setStatus(await setDevBotScore(score)));
+
+  const spam = () =>
+    run("Sent 40 writes", async () => {
+      for (let i = 0; i < 40; i++) {
+        void zero.mutate(mutators.sessions.touchPresence({ id: sessionId }));
+      }
+      setStatus(await refreshChallengeStatus());
+    });
+
+  return (
+    <div className="devp-body devp-section">
+      <div className="devp-meta">
+        <span className="devp-chip">bot <strong>{status ? status.score : "?"}</strong></span>
+        <span className="devp-chip">{status?.limbo ? "limbo" : "clear"}</span>
+        {!hasRealKey && (
+          <select
+            className="devp-select devp-grow"
+            aria-label="Turnstile test widget"
+            value={mode}
+            onChange={(e) => {
+              const next = e.target.value as TurnstileTestMode;
+              setTurnstileTestMode(next);
+              setMode(next);
+            }}
+          >
+            <option value="pass">Widget passes</option>
+            <option value="interactive">Widget asks</option>
+            <option value="fail">Widget fails</option>
+          </select>
+        )}
+      </div>
+      <div className="devp-row">
+        <button type="button" className={btn} disabled={busy} onClick={() => void spam()}>Spam</button>
+        <button type="button" className={btn} disabled={busy} onClick={() => void set("Score +15", (status?.score ?? 0) + 15)}>+15</button>
+        <button type="button" className={`${btn} devp-grow`} disabled={busy} onClick={() => void set("In limbo", 100)}>Limbo</button>
+        <button type="button" className={btn} disabled={busy} onClick={() => void set("Score cleared", 0)}>Clear</button>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { chainReactionGames, passwordGames } from "@games/shared/db";
 import { eq } from "drizzle-orm";
 import { drizzleClient } from "./db-provider";
+import { botStatus } from "./bot-score";
 import { presenceActivity, presenceClose, presenceOpen } from "./presence-server";
 
 export type CustomStatusPayload = {
@@ -16,7 +17,8 @@ export type BroadcastMessage =
   | { type: "admin:status"; status: CustomStatusPayload }
   | { type: "admin:kick"; sessionId: string; reason?: string }
   | { type: "admin:name-changed"; sessionId: string; name: string }
-  | { type: "admin:name-restricted"; patterns: string[] };
+  | { type: "admin:name-restricted"; patterns: string[] }
+  | { type: "bot:challenge"; required: boolean };
 
 export type PasswordLiveTypingRole = "clue" | "guess";
 
@@ -257,6 +259,13 @@ export function onRealtimeOpen(socket: Bun.ServerWebSocket<RealtimeSocketData>) 
   }
   // The open socket itself is the presence signal, so no client polling needed.
   presenceOpen(socket.data.sessionId);
+
+  // A tab that connects while in limbo missed the push that put it there.
+  // Sent straight down this socket: the user topic is not subscribed yet.
+  if (botStatus(socket.data.sessionId).limbo) {
+    const topic = buildRealtimeUserTopic(socket.data.sessionId);
+    sendToSocket(socket, { type: "event", topic, event: "bot:challenge", payload: { type: "bot:challenge", required: true } });
+  }
 }
 
 export function onRealtimeClose(socket: Bun.ServerWebSocket<RealtimeSocketData>) {

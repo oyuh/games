@@ -9,6 +9,7 @@ import { useZero as _useZero } from "@rocicorp/zero/react";
 import { useMemo } from "react";
 import { checkRateLimit } from "./rate-limit";
 import { showDedupedToast } from "./toast";
+import { setChallengeRequired } from "./challenge";
 
 export { useQuery } from "@rocicorp/zero/react";
 
@@ -41,6 +42,13 @@ function normalizeErrorMessage(error: unknown): string {
 
 function handleSecurityError(error: unknown) {
   const message = normalizeErrorMessage(error).toLowerCase();
+
+  // The API refused this write because the session is in limbo. The socket
+  // usually said so first; this covers a tab whose socket was down.
+  if (message.includes("challenge_required")) {
+    setChallengeRequired(true);
+    return;
+  }
 
   if (message.includes("429") || message.includes("rate_limited") || message.includes("too many requests")) {
     showDedupedToast("You're doing that too fast. Try again in a second.", "error");

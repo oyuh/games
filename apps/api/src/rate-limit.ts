@@ -98,6 +98,10 @@ export const RATE_LIMITS = {
   // Per-game encryption key exchange.
   gameSecret: { windowMs: 60_000, maxRequests: 30 },
 
+  // Bot check status and Turnstile verify. Verify calls Cloudflare, and a
+  // person solves one check a minute at most.
+  challenge: { windowMs: 60_000, maxRequests: 30 },
+
   // Map tile config (cheap, static-ish).
   mapsConfig: { windowMs: 60_000, maxRequests: 60 },
 
