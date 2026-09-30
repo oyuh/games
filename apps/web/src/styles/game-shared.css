@@ -342,11 +342,8 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-md);
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
   color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 .game-empty {
@@ -652,8 +649,6 @@
 .game-role-icon {
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
   color: var(--primary);
   display: flex;
   align-items: center;
@@ -669,14 +664,13 @@
 }
 
 .game-role-card--danger .game-role-icon {
-  background: color-mix(in srgb, #f87171 15%, transparent);
   color: #f87171;
   animation: game-role-icon-pop 0.4s ease-out 0.15s both, game-role-icon-pulse-danger 2.5s ease-in-out 1s infinite;
 }
 
 @keyframes game-role-icon-pulse-danger {
-  0%, 100% { background: color-mix(in srgb, #f87171 15%, transparent); }
-  50%      { background: color-mix(in srgb, #f87171 28%, transparent); }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
 }
 
 .game-role-title {
