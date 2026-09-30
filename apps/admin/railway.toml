@@ -1,0 +1,12 @@
+# Per-service Railway config for the admin app. Point the games/admin service's
+# "Railway Config File" at apps/admin/railway.toml so it stops inheriting the
+# repo-root railway.toml (which builds the API's Dockerfile). Root Directory
+# stays the repo root so the build context includes the whole workspace.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/admin/Dockerfile"
+
+[deploy]
+startCommand = "bun run --filter @games/admin start"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
