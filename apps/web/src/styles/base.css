@@ -134,10 +134,10 @@
 
 /* ── Game page theming: per-game --primary overrides ────────── */
 [data-game-theme="imposter"] {
-  --primary: #7eb8ff;
+  --primary: #f05252;
   --primary-foreground: #181a1b;
-  --game-accent: #7eb8ff;
-  --game-bg: #1d2430;
+  --game-accent: #f05252;
+  --game-bg: #2e1a1c;
 }
 [data-game-theme="password"] {
   --primary: #a78bfa;

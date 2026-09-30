@@ -153,7 +153,7 @@
    The seven hexes the site paints each game with. Set --card-accent on any
    element to tint a surface, or read them directly for badges and nav. */
 :root {
-  --game-imposter: #7eb8ff;
+  --game-imposter: #f05252;
   --game-password: #a78bfa;
   --game-chain: #34d399;
   --game-shade: #f472b6;
