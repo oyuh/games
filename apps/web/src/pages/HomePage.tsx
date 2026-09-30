@@ -805,7 +805,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   <span className="hc-chain-word hc-chain-word--revealed">FIRE</span>
                   <span className="hc-chain-word hc-chain-word--wrong">SMOKE ✕</span>
                   <span className="hc-chain-word hc-chain-word--wrong">SPARK ✕</span>
-                  <span className="hc-chain-word hc-chain-word--hidden">_ _ _ _</span>
+                  <span className="hc-chain-word hc-chain-word--hidden" aria-label="Hidden word">– – – –</span>
                   <span className="hc-chain-word hc-chain-word--revealed">LANGUAGE</span>
                 </div>
               </div>
