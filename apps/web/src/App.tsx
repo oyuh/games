@@ -114,6 +114,21 @@ const KOFI_URL = "https://ko-fi.com/lawsonhart";
 const ZERO_CLIENT_RESET_COOLDOWN_MS = 5_000;
 let lastSyncWakeNoticeShownAt = 0;
 
+// When a connect attempt times out, Zero calls close() on a socket that is
+// still handshaking, and Chrome prints "WebSocket is closed before the
+// connection is established" for it, which page code can't silence. Zero
+// detaches its listeners before that close(), so for the sync socket we can
+// let the handshake finish and close it right after, which Chrome doesn't log.
+const zeroCacheHost = new URL(zeroCacheURL).host;
+const nativeWebSocketClose = WebSocket.prototype.close;
+WebSocket.prototype.close = function (code?: number, reason?: string) {
+  if (this.readyState === WebSocket.CONNECTING && new URL(this.url).host === zeroCacheHost) {
+    this.addEventListener("open", () => nativeWebSocketClose.call(this, code, reason), { once: true });
+    return;
+  }
+  nativeWebSocketClose.call(this, code, reason);
+};
+
 function createZero(sessionId: string, sessionProof: string | null, onClientStateNotFound: () => void) {
   return new Zero({
     auth: sessionProof ?? undefined,
@@ -121,6 +136,9 @@ function createZero(sessionId: string, sessionProof: string | null, onClientStat
     cacheURL: zeroCacheURL,
     schema,
     mutators,
+    // Zero logs every reconnect hiccup (timeouts, purged clients) as a console
+    // error even though it recovers on its own. Keep that noise in dev only.
+    logSink: import.meta.env.PROD ? { log() {} } : undefined,
     // Zero's default reaction to "zero-cache no longer knows this client" is
     // location.reload(). A sync server that restarted or woke from sleep hits
     // that path on the very next connect, so the page kept refreshing under
