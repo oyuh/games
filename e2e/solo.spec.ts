@@ -1,14 +1,16 @@
-import { expect, test } from "@playwright/test";
+import type { BrowserContext } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // Solo games have to stay playable when the API and sync server are down.
-test.beforeEach(async ({ context }) => {
+async function goOffline(context: BrowserContext) {
   const api = new URL(process.env.E2E_API_URL ?? "http://localhost:3001");
   const sync = new URL(process.env.E2E_SYNC_URL ?? "http://localhost:4848");
   await context.route((url) => url.host === api.host || url.host === sync.host, (route) => route.abort());
-});
+}
 
 for (const mode of ["Ranked run", "Endless run"]) {
-  test(`pips starts a ${mode.toLowerCase()} with the backend offline`, async ({ page }) => {
+  test(`pips starts a ${mode.toLowerCase()} with the backend offline`, async ({ context, page }) => {
+    await goOffline(context);
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto("/pips");
@@ -20,7 +22,8 @@ for (const mode of ["Ranked run", "Endless run"]) {
     expect(errors).toEqual([]);
   });
 
-  test(`shikaku starts a ${mode.toLowerCase()} with the backend offline`, async ({ page }) => {
+  test(`shikaku starts a ${mode.toLowerCase()} with the backend offline`, async ({ context, page }) => {
+    await goOffline(context);
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto("/shikaku");

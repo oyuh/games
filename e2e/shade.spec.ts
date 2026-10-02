@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { openRoom, recordSyncFrames, whichPage } from "./helpers";
 
 const NAMES = ["HostE2E", "AliceE2E", "BobE2E"];
@@ -23,9 +24,9 @@ async function startAndFindLeader(players: Page[]) {
   return whichPage(players, (p) => p.getByRole("textbox", { name: "Clue 1" }).isVisible());
 }
 
+// Each guess phase waits out its clock even once everyone locks in, so this
+// one gets longer than the default.
 test("the leader clues a color and guesses are scored by distance", async ({ browser }) => {
-  // Each guess phase waits out its clock even once everyone locks in.
-  test.setTimeout(180_000);
   const { players } = await openRoom(browser, "Shade Signal", ROUTE, NAMES);
   const li = await startAndFindLeader(players);
   const leader = players[li]!;
@@ -61,7 +62,7 @@ test("the leader clues a color and guesses are scored by distance", async ({ bro
     await expect(page.getByRole("main")).toContainText(new RegExp(`${spotOnName}\\s*(you)?\\s*Spot on\\s*5\\s*pts`));
     await expect(page.getByRole("main")).toContainText(new RegExp(`${nextDoorName}\\s*(you)?\\s*1 away\\s*3\\s*pts`));
   }));
-});
+}, 180_000);
 
 test("guessers' sync sockets never carry the target", async ({ browser }) => {
   // The target is sealed on the server until the reveal, even when the grid

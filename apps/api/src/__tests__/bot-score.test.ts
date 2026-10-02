@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, mock, vi } from "bun:test";
 
 const pushed: Array<{ sessionId: string; required: boolean }> = [];
-vi.mock("../broadcast-server", () => ({
+mock.module("../broadcast-server", () => ({
   broadcastToSession: (sessionId: string, msg: { required: boolean }) => pushed.push({ sessionId, required: msg.required }),
 }));
 
@@ -12,9 +12,14 @@ beforeEach(() => {
   pushed.length = 0;
 });
 
+const savedEnv = { NODE_ENV: process.env.NODE_ENV, TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY };
+
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllEnvs();
+  for (const [key, value] of Object.entries(savedEnv)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 });
 
 it("enters limbo at the threshold and only leaves once the score decays under the exit line", () => {
@@ -39,8 +44,8 @@ it("clears limbo at once when a challenge passes", () => {
 });
 
 it("never puts anyone in limbo in production without a Turnstile secret, since nobody could get out", () => {
-  vi.stubEnv("NODE_ENV", "production");
-  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  process.env.NODE_ENV = "production";
+  process.env.TURNSTILE_SECRET_KEY = "";
   expect(setBotScore("prod-user", 100)).toEqual({ score: 100, limbo: false });
   expect(pushed).toEqual([]);
 });

@@ -7,9 +7,9 @@
     "dev": "node ../../scripts/dev-api.mjs",
     "build": "tsc -p tsconfig.json",
     "start": "bun src/index.ts",
-    "test": "vitest run",
-    "test:ci": "vitest run",
-    "test:watch": "vitest --watch",
+    "test": "bun test",
+    "test:ci": "bun test",
+    "test:watch": "bun test --watch",
     "lint": "echo 'No lint configured yet'",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -24,7 +24,6 @@
   "devDependencies": {
     "@types/bun": "^1.4.2",
     "@types/pg": "^8.23.1",
-    "typescript": "^7.0.2",
-    "vitest": "^5.0.1"
+    "typescript": "^7.0.2"
   }
 }

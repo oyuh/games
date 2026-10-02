@@ -1,0 +1,4 @@
+# `bun run test:e2e` runs these from this directory, so the root bunfig and
+# its unit-test preload stay out of it.
+[test]
+preload = ["./setup.ts"]

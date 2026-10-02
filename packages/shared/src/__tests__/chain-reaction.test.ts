@@ -3,7 +3,7 @@
  *
  * Tests lobby, identity enforcement, and sanitization.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import {
   MockTx,
   serverCtx,

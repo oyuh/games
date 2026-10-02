@@ -59,7 +59,7 @@ Shikaku and Pips skip the Zero cache. Their puzzle engines run in the browser, a
 +-- packages/
 |   +-- shared/         # Drizzle/Zero contracts, metadata, solo puzzle engines
 +-- docs/              # Game docs
-+-- e2e/               # Playwright suite that runs against the local stack
++-- e2e/               # Browser tests (bun test + Playwright) against the local stack
 +-- scripts/           # Local stack and production DB helper scripts
 +-- docker-compose.yml # Postgres + Zero cache, for the manual start path
 +-- Dockerfile         # API container image
@@ -302,9 +302,10 @@ Run these from the repo root.
 | `bun run local:doctor` | Check the machine for anything that will break the stack |
 | `bun run build` | Build all workspaces |
 | `bun run typecheck` | Typecheck all workspaces |
-| `bun run test` | Run the Vitest suites |
-| `bun run test:ci` | Run the Vitest suites the way CI does |
-| `bun run test:e2e` | Run the Playwright suite against the local stack |
+| `bun test` | Run every unit test in one process |
+| `bun run test` | Run each package's unit tests through Turbo |
+| `bun run test:ci` | Run the unit tests the way CI does |
+| `bun run test:e2e` | Run the browser tests against the local stack, starting it if it is down |
 | `bun run lint` | Placeholder, no linter is configured yet |
 | `bun run db:push` | Push the Drizzle schema to the configured database |
 | `bun run db:studio` | Open Drizzle Studio |
@@ -333,7 +334,7 @@ bun run test:ci
 bun run build
 ```
 
-`E2E` runs `bun run test:e2e` against a fresh local stack and uploads the Playwright report when it fails.
+`E2E` runs `bun run test:e2e` against a fresh local stack, then the database tests. It uploads a Playwright trace for every failed attempt. Open one with `bunx playwright show-trace <zip>`.
 
 The `Deploy Hooks` workflow fires after a successful `CI` run on `main` or `master` and calls the deploy hooks. To use it, add these repository secrets:
 

@@ -1,0 +1,5 @@
+# `bun test` from the root runs every package's unit tests in one process.
+# e2e/ has its own bunfig and runs with `bun run test:e2e`.
+[test]
+preload = ["./packages/shared/src/__tests__/zero-mock.ts"]
+pathIgnorePatterns = ["e2e/**"]

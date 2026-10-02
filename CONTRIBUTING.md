@@ -53,7 +53,7 @@ bun run test:ci
 bun run build
 ```
 
-CI also runs the Playwright suite. If you touched gameplay, run it locally with `bun run test:e2e`.
+CI also runs the browser tests in `e2e/`. If you touched gameplay, run them locally with `bun run test:e2e`.
 
 If you touch game state, the database schema, Zero mutators, admin tools, or deployment config, say in the PR how you tested it.
 

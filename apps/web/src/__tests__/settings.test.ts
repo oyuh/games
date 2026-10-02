@@ -2,28 +2,25 @@
  * Tests for user settings (theme & sidebar persistence).
  *
  * settings.ts calls `document.setAttribute` at module level, so we must
- * install DOM mocks before the module is loaded. We use vi.hoisted() to
- * guarantee the mocks run before any import is evaluated.
+ * install DOM mocks before the module is loaded, then import it.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
+import type { Theme, SidebarPosition } from "../lib/settings";
 
-const { setAttrMock, localStorageMock, store } = vi.hoisted(() => {
-  const store: Record<string, string> = {};
-  const setAttrMock = vi.fn();
-  const localStorageMock = {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
-    removeItem: vi.fn((key: string) => { delete store[key]; }),
-    clear: vi.fn(() => { for (const k of Object.keys(store)) delete store[k]; }),
-    get length() { return Object.keys(store).length; },
-    key: vi.fn((i: number) => Object.keys(store)[i] ?? null),
-  };
-  (globalThis as any).localStorage = localStorageMock;
-  (globalThis as any).document = { documentElement: { setAttribute: setAttrMock } };
-  return { setAttrMock, localStorageMock, store };
-});
+const store: Record<string, string> = {};
+const setAttrMock = vi.fn();
+const localStorageMock = {
+  getItem: vi.fn((key: string) => store[key] ?? null),
+  setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
+  removeItem: vi.fn((key: string) => { delete store[key]; }),
+  clear: vi.fn(() => { for (const k of Object.keys(store)) delete store[k]; }),
+  get length() { return Object.keys(store).length; },
+  key: vi.fn((i: number) => Object.keys(store)[i] ?? null),
+};
+(globalThis as any).localStorage = localStorageMock;
+(globalThis as any).document = { documentElement: { setAttribute: setAttrMock } };
 
-import { getSettings, updateSettings, type Theme, type SidebarPosition } from "../lib/settings";
+const { getSettings, updateSettings } = await import("../lib/settings");
 
 beforeEach(() => {
   for (const k of Object.keys(store)) delete store[k];

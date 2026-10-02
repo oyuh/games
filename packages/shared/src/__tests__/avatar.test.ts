@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   AVATAR_COLOR_COUNT,
   AVATAR_SHAPE_COUNT,
