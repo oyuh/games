@@ -2,7 +2,7 @@ import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import type { SettingRange } from "../../lobby-settings";
 export { fallbackPlayerName, randomPlayerName, resolvePlayerName } from "../../player-names";
-import { chainWordBank, passwordWordBank } from "./word-banks";
+import { chainLinks, chainStarts, passwordWordBank } from "./word-banks";
 import { decryptSecret, encryptSecret, isEncrypted } from "../../crypto";
 
 export const now = () => Date.now();
@@ -216,19 +216,26 @@ export function chooseRoles(
   }));
 }
 
+/** A fresh chain every deal: a random walk over the link graph from one of the
+ *  category's themed starting words, backtracking out of dead ends and never
+ *  repeating a word. */
 export function pickChain(length: number, category?: string): string[] {
-  const catChains = category && chainWordBank[category] ? chainWordBank[category] : Object.values(chainWordBank).flat();
-  const matching = catChains.filter((c) => c.length === length);
-  const pool = matching.length > 0 ? matching : catChains.filter((c) => c.length >= length);
-  if (pool.length === 0) {
-    // Fallback to any category if the selected one has no chains of this length
-    const allChains = Object.values(chainWordBank).flat();
-    const fallback = allChains.filter((c) => c.length === length);
-    const chain = pickRandom(fallback.length > 0 ? fallback : allChains.filter((c) => c.length >= length));
-    return chain.slice(0, length);
+  const starts = category && chainStarts[category] ? chainStarts[category] : Object.values(chainStarts).flat();
+  for (const start of shuffle(starts)) {
+    const chain = extendChain([start], length);
+    if (chain) return chain;
   }
-  const chain = pickRandom(pool);
-  return chain.slice(0, length);
+  throw new Error(`No ${length}-word chain starts in ${category ?? "any category"}`);
+}
+
+function extendChain(chain: string[], length: number): string[] | null {
+  if (chain.length === length) return chain;
+  for (const next of shuffle(chainLinks[chain.at(-1)!] ?? [])) {
+    if (chain.includes(next)) continue;
+    const done = extendChain([...chain, next], length);
+    if (done) return done;
+  }
+  return null;
 }
 
 export function scoreForLetters(lettersShown: number): number {

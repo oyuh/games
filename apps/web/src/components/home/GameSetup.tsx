@@ -24,7 +24,7 @@ export function formatClueVisibility(value: number) {
 /* ── Create-game settings, in the single-player menu's language ──
    The same segmented pickers Pips and Shikaku use, in the card's own
    accent. Anything with a handful of choices is a picker; Category has
-   fifteen, so it stays a select dressed as one of the same controls.
+   two dozen, so it stays a select dressed as one of the same controls.
    Desktop cards and the mobile create sheet both render these, so a
    setting added here shows up on both. */
 

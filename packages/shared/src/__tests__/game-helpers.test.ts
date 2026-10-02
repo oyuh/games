@@ -9,7 +9,8 @@ import {
   scoreForLetters,
   getConnectedSet,
 } from "../zero/mutators/helpers";
-import { chainWordBank, passwordWordBank } from "../zero/mutators/word-banks";
+import { chainLinks, chainStarts, passwordWordBank } from "../zero/mutators/word-banks";
+import { LOBBY_SETTING_LIMITS } from "../lobby-settings";
 
 // ───────────────────────────────────────────────────────────
 // shuffle
@@ -61,6 +62,11 @@ describe("pickPasswordWord", () => {
     expect(pickPasswordWord(used, "animals")).toBe(last);
   });
 
+  it("only holds plain single words, since guesses match by a lowercased compare", () => {
+    const untypeable = Object.values(passwordWordBank).flat().filter((w) => !/^[A-Za-z]+$/.test(w));
+    expect(untypeable).toEqual([]);
+  });
+
   it("stays inside the chosen category", () => {
     for (let i = 0; i < 20; i++) {
       expect(passwordWordBank.animals).toContain(pickPasswordWord([], "animals"));
@@ -72,10 +78,17 @@ describe("pickPasswordWord", () => {
 // pickChain
 // ───────────────────────────────────────────────────────────
 describe("pickChain", () => {
-  it("returns a chain of the requested length from the chosen category", () => {
-    const chain = pickChain(4, "animals");
-    expect(chain).toHaveLength(4);
-    expect(chainWordBank.animals!.some((c) => c.slice(0, 4).join() === chain.join())).toBe(true);
+  it("deals every lobby length from every category as a walk of real links", () => {
+    const { min, max } = LOBBY_SETTING_LIMITS.chain.chainLength;
+    for (const [category, starts] of Object.entries(chainStarts)) {
+      for (let length = min; length <= max; length++) {
+        const chain = pickChain(length, category);
+        expect(chain).toHaveLength(length);
+        expect(starts).toContain(chain[0]!);
+        expect(new Set(chain).size).toBe(length);
+        for (let i = 1; i < length; i++) expect(chainLinks[chain[i - 1]!]).toContain(chain[i]!);
+      }
+    }
   });
 });
 

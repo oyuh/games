@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { openRoom, recordSyncFrames } from "./helpers";
-import { chainWordBank } from "../packages/shared/src/zero/mutators/word-banks";
+import { chainLinks } from "../packages/shared/src/zero/mutators/word-banks";
 
 const NAMES = ["HostE2E", "AliceE2E"];
 const ROUTE = /\/chain\/[\w-]+$/;
@@ -12,32 +12,32 @@ function chainRows(page: Page) {
 }
 
 /**
- * The premade chains this page could have been dealt. Mirrors pickChain's
- * pool for the default Animals room, then narrows it by the shown ends and
- * the length of every masked word. Chains can share all of that, so this can
- * return more than one; the caller tries them in order.
+ * The chains this page could have been dealt: every walk through the link
+ * graph from the shown first word to the shown last word whose middle words
+ * match the masked lengths, with no word repeated, the same rules pickChain
+ * deals by. Several walks can fit, so the caller tries them in order.
  */
 async function candidateChains(page: Page) {
   const rows = chainRows(page);
   await expect(rows.first()).toContainText("given");
   const texts = await rows.allTextContents();
-  const n = texts.length;
   const first = texts[0]!.match(/[A-Z]{2,}/)![0];
   const last = texts.at(-1)!.match(/[A-Z]{2,}/)![0];
   // A masked row reads like "2H___↵3": index, hinted letters and blanks, points.
   const lengths = texts.slice(1, -1).map((text) => text.match(/[A-Z_]{2,}/)![0].length);
 
-  const animals = chainWordBank.animals!;
-  const all = Object.values(chainWordBank).flat();
-  const exact = animals.filter((c) => c.length === n);
-  let pool = exact.length > 0 ? exact : animals.filter((c) => c.length >= n);
-  if (pool.length === 0) {
-    const anyExact = all.filter((c) => c.length === n);
-    pool = anyExact.length > 0 ? anyExact : all.filter((c) => c.length >= n);
-  }
-  const unique = new Map(pool.map((c) => c.slice(0, n)).map((c) => [c.join(" "), c]));
-  const matches = [...unique.values()].filter((c) =>
-    c[0] === first && c.at(-1) === last && lengths.every((len, i) => c[i + 1]!.length === len));
+  const matches: string[][] = [];
+  const walk = (chain: string[]) => {
+    const prev = chain.at(-1)!;
+    if (chain.length === texts.length - 1) {
+      if (chainLinks[prev]?.includes(last)) matches.push([...chain, last]);
+      return;
+    }
+    for (const next of chainLinks[prev] ?? []) {
+      if (next.length === lengths[chain.length - 1] && next !== last && !chain.includes(next)) walk([...chain, next]);
+    }
+  };
+  walk([first]);
   expect(matches.length).toBeGreaterThan(0);
   return matches;
 }
@@ -48,7 +48,7 @@ test("a duel where one player cracks their chain and the other gives up", async 
   await host.getByRole("button", { name: "Start the duel" }).click();
 
   // The host solves every hidden word. Solving one jumps to the next.
-  const candidates = await candidateChains(host);
+  let candidates = await candidateChains(host);
   const rows = chainRows(host);
   const middle = candidates[0]!.length - 2;
   for (let i = 1; i <= middle; i++) {
@@ -61,7 +61,10 @@ test("a duel where one player cracks their chain and the other gives up", async 
       await box.press("Enter");
       // The submit glyph can linger in the row for a beat after it is solved.
       const solved = await expect(row).toContainText(new RegExp(`${word}\\W*yours`), { timeout: 5_000 }).then(() => true, () => false);
-      if (solved) break;
+      if (solved) {
+        candidates = candidates.filter((c) => c[i] === word);
+        break;
+      }
     }
     await expect(row).toContainText("yours");
   }
