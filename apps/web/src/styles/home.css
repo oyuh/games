@@ -1978,7 +1978,7 @@ a.solo-card-title-link {
   font-size: 0.75rem;
 }
 
-/* Category has fifteen options, too many for a segmented row, so it uses
+/* Category has two dozen options, too many for a segmented row, so it uses
    the shared Select: same bordered control, own floating list. */
 .hc-setup .solo-select {
   --select-accent: var(--card-accent, var(--primary));

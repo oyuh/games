@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zql } from "../schema";
 import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE, settingInRange, assertLobbySettingsChange, definedSettings } from "./helpers";
 import { LOBBY_SETTING_LIMITS } from "../../lobby-settings";
-import { chainWordBank } from "./word-banks";
+import { chainStarts } from "./word-banks";
 
 type ChainSlot = { word: string; secret?: string | null; revealed: boolean; lettersShown: number; solvedBy?: string | null };
 
@@ -205,7 +205,7 @@ export const chainReactionMutators = {
         /** Null is no clock: a round runs until both players are done. */
         turnTimeSec: settingInRange(LOBBY_SETTING_LIMITS.chain.turnTimeSec).nullable().optional(),
         chainMode: z.enum(["premade", "custom"]).optional(),
-        category: z.string().refine((c) => Object.hasOwn(chainWordBank, c), "Unknown category").optional()
+        category: z.string().refine((c) => Object.hasOwn(chainStarts, c), "Unknown category").optional()
       })
     }),
     async ({ args, tx, ctx }) => {
