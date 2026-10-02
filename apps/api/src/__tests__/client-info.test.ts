@@ -1,6 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 // The geo cache is module state, so every test gets a fresh copy of the module.
+// A new query string makes Bun evaluate it again.
+let version = 0;
 let extractClientInfo: typeof import("../client-info").extractClientInfo;
 let getClientInfo: typeof import("../client-info").getClientInfo;
 
@@ -18,8 +20,7 @@ function makeHeaders(values: Record<string, string | undefined>) {
 
 describe("client-info", () => {
   beforeEach(async () => {
-    vi.resetModules();
-    ({ extractClientInfo, getClientInfo } = await import("../client-info"));
+    ({ extractClientInfo, getClientInfo } = (await import(`../client-info?${++version}`)) as typeof import("../client-info"));
   });
 
   afterEach(() => {

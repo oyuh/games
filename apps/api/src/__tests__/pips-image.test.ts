@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { generateRun } from "@games/shared/games/pips-engine";
 import { renderPipsSvg } from "../pips-image";
 

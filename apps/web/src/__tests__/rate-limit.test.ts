@@ -2,30 +2,21 @@
  * Tests for client-side rate limiter.
  *
  * The rate-limit module has persistent module-level state (timestamps,
- * warnings, etc.), so we reset modules before each test for isolation.
+ * warnings, etc.), so each test imports a fresh copy. A new query string
+ * makes Bun evaluate it again.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, mock, vi, beforeEach, afterEach } from "bun:test";
 
-// Mock the toast module before importing rate-limit
-vi.mock("../lib/toast", () => ({
-  showToast: vi.fn(),
-}));
-
+let version = 0;
 let checkRateLimit: () => boolean;
 let showToastMock: ReturnType<typeof vi.fn>;
 
 beforeEach(async () => {
   vi.useFakeTimers();
-  vi.resetModules();
-  // Re-mock toast after resetModules
-  vi.doMock("../lib/toast", () => ({
-    showToast: vi.fn(),
-  }));
-  // Dynamically import fresh module instances
-  const rl = await import("../lib/rate-limit");
-  const toast = await import("../lib/toast");
+  showToastMock = vi.fn();
+  mock.module("../lib/toast", () => ({ showToast: showToastMock }));
+  const rl = (await import(`../lib/rate-limit?${++version}`)) as typeof import("../lib/rate-limit");
   checkRateLimit = rl.checkRateLimit;
-  showToastMock = toast.showToast as unknown as ReturnType<typeof vi.fn>;
 });
 
 afterEach(() => {

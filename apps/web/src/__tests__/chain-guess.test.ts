@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { buildGuessCells, lockToPrefix, nextUnsolvedIndex } from "../components/chain/chain-guess";
 
 describe("lockToPrefix: revealed letters are a locked prefix", () => {

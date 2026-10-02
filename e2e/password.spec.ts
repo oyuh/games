@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { keyStatuses, openRoom, recordSyncFrames } from "./helpers";
 
 const NAMES = ["HostE2E", "AliceE2E", "BobE2E", "CaraE2E"];

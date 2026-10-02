@@ -4,7 +4,7 @@
  * Tests message sending/clearing, session management,
  * identity enforcement, and input sanitization.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import {
   MockTx,
   serverCtx,

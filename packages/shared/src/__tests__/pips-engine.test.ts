@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
   PIPS_DIFFICULTY_CONFIG,
   PIPS_PUZZLES_PER_RUN,

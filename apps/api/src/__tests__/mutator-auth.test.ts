@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { authorizeMutation } from "../mutator-auth";
 
 const prod = (headerUserId: string, proofUserId: string | null) => ({ headerUserId, proofUserId });

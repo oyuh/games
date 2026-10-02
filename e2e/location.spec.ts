@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { openRoom, recordSyncFrames, whichPage } from "./helpers";
 
 const NAMES = ["HostE2E", "AliceE2E", "BobE2E"];

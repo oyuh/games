@@ -4,7 +4,7 @@
  * Tests game phases (lobby → picking → clue → guess → reveal)
  * and security enforcement.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import {
   MockTx,
   serverCtx,

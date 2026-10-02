@@ -17,7 +17,7 @@
     "test": "turbo run test --cache-dir=.turbo-cache",
     "test:ci": "turbo run test:ci --cache-dir=.turbo-cache",
     "test:watch": "bun --filter @games/shared test:watch",
-    "test:e2e": "playwright test -c e2e",
+    "test:e2e": "cd e2e && bun test",
     "lint": "turbo run lint --cache-dir=.turbo-cache",
     "typecheck": "turbo run typecheck --cache-dir=.turbo-cache",
     "db:push": "bun --filter @games/shared db:push",
@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@types/bun": "^1.4.2",
     "turbo": "^2.11.3",
     "typescript": "^7.0.2"
   },

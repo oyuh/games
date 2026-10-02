@@ -5,7 +5,7 @@
  * live in the zod schema, which Zero runs before the handler, so those cases
  * go straight at the schema the mock keeps on `.schema`.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import type { ZodType } from "zod";
 import {
   MockTx,

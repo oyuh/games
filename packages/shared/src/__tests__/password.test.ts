@@ -4,7 +4,7 @@
  * Tests game phases (lobby → playing → results) and
  * security enforcement (identity, sanitization, team rules).
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import {
   MockTx,
   serverCtx,

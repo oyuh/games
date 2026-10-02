@@ -5,7 +5,7 @@
  * lobby and making bots act must produce exactly the state real players would,
  * including the automatic lobby → playing → voting → results transitions.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "bun:test";
 import { MockTx, serverCtx, makeSession, makeImposterGame } from "./test-helpers";
 
 import { devMutators, isDevBot } from "../zero/mutators/dev";

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 
 const originalFetch = globalThis.fetch;
 
@@ -21,6 +21,8 @@ Object.defineProperty(globalThis, "window", {
 Object.defineProperty(globalThis, "CustomEvent", { value: CE, writable: true });
 
 // The module caches identity in memory, so every test gets a fresh copy of it.
+// A new query string makes Bun evaluate it again.
+let version = 0;
 let session: typeof import("../lib/session");
 
 beforeEach(async () => {
@@ -32,8 +34,7 @@ beforeEach(async () => {
   } else {
     Reflect.deleteProperty(globalThis, "fetch");
   }
-  vi.resetModules();
-  session = await import("../lib/session");
+  session = (await import(`../lib/session?${++version}`)) as typeof import("../lib/session");
 });
 
 describe("getOrCreateSessionId", () => {

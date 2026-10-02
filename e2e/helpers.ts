@@ -1,4 +1,5 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import type { Browser, Page } from "@playwright/test";
+import { expect, step } from "./fixtures";
 
 const SYNC_SOCKET = /:4848\//;
 
@@ -35,7 +36,7 @@ export async function waitForSync(page: Page, syncing: Map<object, string>) {
 /** A fresh player: own browser context, so own session, cookie and storage.
  *  Each helper here is a named step, so the CI log says how far a test got. */
 export async function newPlayer(browser: Browser, name: string) {
-  return test.step(`join as ${name}`, async () => {
+  return step(`join as ${name}`, async () => {
     const page = await (await browser.newContext()).newPage();
     const connected = watchSync(page);
     // The Vite dev server now and then refuses a module request under load and
@@ -63,7 +64,7 @@ export function createButton(page: Page, game: string) {
 
 /** Creates a room from the home page, picking the given setup radios, and returns its code. */
 export async function createRoom(host: Page, game: string, route: RegExp, options: string[] = []) {
-  return test.step(`create a ${game} room`, async () => {
+  return step(`create a ${game} room`, async () => {
     await createButton(host, game).click();
     for (const option of options) await host.getByRole("radio", { name: option }).click();
     await host.getByRole("button", { name: "Create It!" }).click();
@@ -81,7 +82,7 @@ export async function createRoom(host: Page, game: string, route: RegExp, option
  * way a person would.
  */
 export async function joinByCode(page: Page, code: string, route: RegExp) {
-  return test.step(`join room ${code}`, async () => {
+  return step(`join room ${code}`, async () => {
     const box = page.getByRole("textbox", { name: "ABCXYZ" });
     await expect(async () => {
       await box.fill("");
@@ -94,7 +95,7 @@ export async function joinByCode(page: Page, code: string, route: RegExp) {
 
 /** A host plus everyone else joined by code, in the order of `names`. */
 export async function openRoom(browser: Browser, game: string, route: RegExp, names: string[], options: string[] = []) {
-  return test.step(`open a ${game} room for ${names.length}`, async () => {
+  return step(`open a ${game} room for ${names.length}`, async () => {
     const host = await newPlayer(browser, names[0]!);
     const code = await createRoom(host, game, route, options);
     const players = [host];

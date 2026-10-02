@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { durationCustom, formatDuration, numberCustom, parseDuration } from "../lib/setting-options";
 
 describe("parseDuration", () => {

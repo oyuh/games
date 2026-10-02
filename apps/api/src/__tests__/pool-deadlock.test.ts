@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, mock } from "bun:test";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import { Pool } from "pg";
@@ -15,17 +15,13 @@ import { Pool } from "pg";
  */
 const url = process.env.POOL_TEST_DATABASE_URL;
 
-const { pool, db } = await vi.hoisted(async () => {
-  const { Pool } = await import("pg");
-  const { drizzle } = await import("drizzle-orm/node-postgres");
-  const url = process.env.POOL_TEST_DATABASE_URL;
-  const pool = url ? new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 2_000 }) : null;
-  return { pool, db: pool ? drizzle(pool) : null };
-});
-vi.mock("../db-provider", () => ({ drizzleClient: db }));
-import { recordedCleanup } from "../cleanup";
-import { getOrCreateGameKey } from "../game-keys";
-import { findRestrictedNameMatch } from "../name-rules";
+const pool = url ? new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 2_000 }) : null;
+const db = pool ? drizzle(pool) : null;
+mock.module("../db-provider", () => ({ drizzleClient: db }));
+// Imported after the mock, which Bun does not hoist.
+const { recordedCleanup } = await import("../cleanup");
+const { getOrCreateGameKey } = await import("../game-keys");
+const { findRestrictedNameMatch } = await import("../name-rules");
 
 describe.skipIf(!url)("with one pool connection", () => {
   afterAll(() => pool?.end());

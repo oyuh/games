@@ -1,11 +1,12 @@
-import { describe, expect, it, vi, afterAll } from "vitest";
+import { describe, expect, it, mock, afterAll } from "bun:test";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { sql } from "drizzle-orm";
 import { cleanupDayLines, cleanupReportLines, compactSummary, expandStats, foldCleanupRuns, formatCleanupReport, legacyReportStats, percentage, storedReportLines } from "../cleanup-report";
 
-vi.mock("../db-provider", () => ({ drizzleClient: null }));
-import { recordedCleanup } from "../cleanup";
+mock.module("../db-provider", () => ({ drizzleClient: null }));
+// Imported after the mock, which Bun does not hoist.
+const { recordedCleanup } = await import("../cleanup");
 
 it("formats percentages and readable reports with optional terminal color", () => {
   expect(percentage(0, 0)).toBe("0.0%");
