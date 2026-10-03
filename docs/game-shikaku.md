@@ -16,28 +16,36 @@ Shikaku is a grid-based logic puzzle. The board has numbered cells, and each num
 
 ## How to Play
 
-1. **Pick a difficulty.** Easy (5x5), Medium (9x9), Hard (15x15), or Expert (22x22).
-2. **Solve puzzles.** Click and drag on the grid to place rectangles. Each rectangle must contain exactly one number, and its area must equal that number. Cells with a `1` clue are auto-filled as locked `1x1` rectangles when the puzzle starts.
+1. **Pick a mode and difficulty.** Ranked, Endless, or Seeded up top, then Easy (5x5), Medium (9x9), Hard (15x15), or Expert (22x22).
+2. **Solve puzzles.** Drag on the grid to place rectangles. Each rectangle must contain exactly one number, and its area must equal that number. Cells with a `1` clue are auto-filled as locked `1x1` rectangles when the puzzle starts.
 3. **Complete the run.** Solve all 5 puzzles as fast as you can. Your score is based on speed and difficulty.
-4. **Check the leaderboard.** Your score is submitted automatically and ranked against other players per difficulty.
+4. **Submit.** A finished ranked run gets checked for eligibility, and then you can submit it to the leaderboard for that difficulty.
 
 ---
 
 ## Game Modes
 
-### Standard Mode
+### Ranked
 
 - 5 puzzles per run, timed.
 - Score is calculated from total solve time and the difficulty multiplier.
 - A completed run can be submitted to the server-side leaderboard.
 - Giving up early ends the run unranked and shows a penalized local score only.
 
-### Infinite Mode
+### Endless
 
-- Endless puzzles generated on the fly with seeded RNG.
-- No score submission; this one's for fun or practice.
+- Endless puzzles at one size, generated on the fly with seeded RNG.
+- No score submission. This one's for fun or practice.
 - Give up at any time to see your stats (puzzles solved, time, unranked score).
-- Toggle it from the sidebar ∞ button (only available on the menu screen).
+
+### Seeded
+
+- The same 5-puzzle run as ranked, on a seed you type in. Unranked.
+- A link with `?seed=<n>&difficulty=<level>` opens the menu on that seed.
+
+### Challenge
+
+- `?seed=<n>&difficulty=<level>&challenge=1` starts a single puzzle right away, with no score. The play button on the puzzle image page (`/api/shikaku/puzzle`) links here.
 
 ---
 
@@ -62,7 +70,7 @@ Score = basePts x difficultyMultiplier x timeBonus
 - **Time bonus:** `max(0.1, 2 - totalTime / parTime)`. Beating par doubles the multiplier; slower times shrink it.
 - **Give-up penalty:** `rawScore x (completedPuzzles / 5) x 0.5`
 
-### Infinite Mode Scoring (Unranked)
+### Endless Scoring (Unranked)
 
 - 500 points per puzzle solved, times the difficulty multiplier.
 - Never submitted to the leaderboard.
@@ -74,7 +82,7 @@ Score = basePts x difficultyMultiplier x timeBonus
 | Action | Input |
 |--------|-------|
 | Place rectangle | Click and drag on empty cells |
-| Remove rectangle | Click a placed rectangle, or right-click |
+| Remove rectangle | Click a placed rectangle, or right-click (tap it on a phone) |
 | Undo | Undo button in the toolbar |
 | Clear all | Clear button in the toolbar |
 
@@ -84,19 +92,19 @@ Invalid rectangles (wrong area, no number, multiple numbers) flash red and get a
 
 ## Leaderboard
 
-- Top 10 scores shown per difficulty level.
+- One board per difficulty, 10 scores to a page, with name search.
 - Your personal best rank and score are shown too.
-- Completed standard runs are checked for eligibility before submission.
+- Completed ranked runs are checked for eligibility before you can submit.
 - Server-side validation covers a lot: session proof, canonical replay verification, minimum time checks, exact score recalculation, duplicate seed protection, top-20 replacement, rate limits, and ban checks.
-- Reachable from the sidebar trophy button or the finished screen.
+- Three strikes (tampered times, impossible scores, failed replays, and so on) inside 30 minutes bans the session from Shikaku scores, stored in `shikaku_banned_sessions`. Site-wide admin bans and the bot check apply too.
 
 ---
 
 ## Puzzle Generation
 
-- Puzzles are generated client-side using a seeded PRNG (mulberry32).
+- Puzzles are generated in the browser using a seeded PRNG (mulberry32).
 - The generator randomly partitions the grid into rectangles, places numbers, then verifies unique solvability with a backtracking solver.
-- Standard mode generates all 5 puzzles upfront from one seed. Infinite mode generates one at a time.
+- Ranked and Seeded generate all 5 puzzles upfront from one seed. Endless generates one at a time.
 
 ---
 
@@ -116,7 +124,7 @@ For ranked validation, the finished client sends the seed, difficulty, time, sco
 
 - **Route:** `/shikaku` (no game ID; single-player, no Zero sync)
 - **State:** entirely client-side React state. No multiplayer data model.
-- **API:** REST endpoints for the leaderboard (`GET /api/shikaku/leaderboard`) and score submission (`POST /api/shikaku/score`).
+- **API:** REST endpoints for the leaderboard (`GET /api/shikaku/leaderboard`), the eligibility check (`POST /api/shikaku/score/eligibility`), and score submission (`POST /api/shikaku/score`). `GET /api/shikaku/puzzle` serves a shareable puzzle image page.
 - **Schema:** the `shikaku_scores` table stores sessionId, name, seed, difficulty, score, timeMs, puzzleCount, and replayData.
 - **Engine:** `packages/shared/src/games/shikaku-engine.ts` contains generation, validation, scoring, replay verification, and the seeded PRNG. `apps/web/src/lib/shikaku-engine.ts` re-exports it for the web app.
-- **No mobile version.** Desktop only, on purpose.
+- **Mobile:** the same page works on phones. Drag to draw, tap a rectangle to remove it, and big boards get scroll controls.

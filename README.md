@@ -27,7 +27,6 @@ Live links:
 - [API](#api)
 - [Deployment](#deployment)
 - [Operations](#operations)
-- [Known constraints](#known-constraints)
 
 Community files: [Code of Conduct](CODE_OF_CONDUCT.md), [Contributing](CONTRIBUTING.md), [License](LICENSE), [Security](SECURITY.md).
 
@@ -39,15 +38,16 @@ Community files: [Code of Conduct](CODE_OF_CONDUCT.md), [Contributing](CONTRIBUT
 | Password | Team word guessing | 4+ | `/password/:id/begin`, `/password/:id`, `/password/:id/results` | [game-password.md](docs/game-password.md) |
 | Chain Reaction | Word-chain duel | 2 | `/chain/:id` | [game-chain-reaction.md](docs/game-chain-reaction.md) |
 | Shade Signal | Color clue guessing | 3-8 | `/shade/:id` | [game-shade-signal.md](docs/game-shade-signal.md) |
-| Location Signal | Map clue guessing | 3-8 | `/location/:id` | [game-location-signal.md](docs/game-location-signal.md) |
+| Location Signal | Map clue guessing | 2+ | `/location/:id` | [game-location-signal.md](docs/game-location-signal.md) |
 | Shikaku | Timed rectangle logic puzzle | Solo | `/shikaku` | [game-shikaku.md](docs/game-shikaku.md) |
 | Pips | Timed domino logic run | Solo | `/pips` | [game-pips.md](docs/game-pips.md) |
+| Zip | Timed path-drawing logic puzzle | Solo | `/zip` | [game-zip.md](docs/game-zip.md) |
 
 Each game doc covers rules, flow, scoring, and implementation notes.
 
 The five multiplayer games share the same plumbing: room creation, join codes, a public lobby browser, spectators, host controls, chat, presence, admin kicks, and state synced through Rocicorp Zero.
 
-Shikaku and Pips skip the Zero cache. Their puzzle engines run in the browser, and they call REST endpoints only for eligibility checks, leaderboard reads, and score submission. A ranked submission carries replay data. The API runs the same shared engine, regenerates the puzzle from the public seed, and checks the replay before it writes a leaderboard row.
+Shikaku, Pips, and Zip skip the Zero cache. Their puzzle engines run in the browser, and they call REST endpoints only for eligibility checks, leaderboard reads, and score submission. A ranked submission carries replay data. The API runs the same shared engine, regenerates the puzzles from the seed, and checks the replay before it writes a leaderboard row. Shikaku and Pips use a public seed. A ranked Zip run gets its seed from the server in a signed ticket, so nobody can practice a ranked board first.
 
 ## Repository layout
 
@@ -64,7 +64,6 @@ Shikaku and Pips skip the Zero cache. Their puzzle engines run in the browser, a
 +-- scripts/           # Local stack and production DB helper scripts
 +-- docker-compose.yml # Postgres + Zero cache, for the manual start path
 +-- Dockerfile         # API container image
-+-- railway.toml       # API Railway deployment config
 +-- vercel.json        # Web Vercel config with SPA + bot preview rewrites
 +-- turbo.json         # Workspace task orchestration
 +-- package.json       # Bun workspace scripts
@@ -76,7 +75,7 @@ Shikaku and Pips skip the Zero cache. Their puzzle engines run in the browser, a
 
 A React 19 single-page app built by Vite. It handles:
 
-- Routes for the home page, multiplayer rooms, Shikaku, Pips, a `/status` connection page, and `/dev/*` sandbox pages.
+- Routes for the home page, multiplayer rooms, Shikaku, Pips, Zip, a `/status` connection page, and `/dev/*` sandbox pages.
 - A module-scoped Zero client for multiplayer sync.
 - Browser-local identity, recent games, display name, and first-visit state.
 - HTTP session sync against the API, with presence sent over the realtime WebSocket.
@@ -89,12 +88,13 @@ Key files: `apps/web/src/App.tsx`, `apps/web/src/pages/`, `apps/web/src/mobile/`
 
 ### Solo puzzle engines
 
-Shikaku and Pips engines live in `packages/shared/src/games/`, so the browser and the API apply the same ranked rules. The web app imports them through thin wrappers in `apps/web/src/lib/*-engine.ts`. The API imports them directly for leaderboard validation.
+The Shikaku, Pips, and Zip engines live in `packages/shared/src/games/`, so the browser and the API apply the same ranked rules. The web app imports them through thin wrappers in `apps/web/src/lib/*-engine.ts`. The API imports them directly for leaderboard validation.
 
 - `shikaku-engine.ts` does seeded generation, rectangle validation, scoring, auto-filled `1x1` detection, and replay verification.
 - `pips-engine.ts` does seeded generation, board and region validation, domino placement checks, solver utilities, run time scoring, and replay verification.
+- `zip-engine.ts` does seeded generation, path validation, and ranked run verification.
 
-Shikaku sends the solved rectangles for all five puzzles. Pips sends the domino placements for Easy, Medium, and Hard. The API regenerates the run from the seed, validates the replay, checks the score and time, then runs duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
+Shikaku sends the solved rectangles for all five puzzles. Pips sends the domino placements for Easy, Medium, and Hard. Zip sends the drawn path and split time for each puzzle, plus its ticket. The API regenerates the run from the seed, validates the replay, checks the score and time, then runs duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
 
 ### API: `apps/api`
 
@@ -105,8 +105,9 @@ A Bun-powered Hono service. It handles:
 - Session sync and WebSocket presence tracking.
 - WebSocket upgrade auth and admin event triggers.
 - Server-held keys for hidden game data.
-- Shikaku and Pips leaderboards, eligibility, and score validation.
-- Location Signal map tile config and a geocode proxy.
+- Shikaku, Pips, and Zip leaderboards, eligibility, and score validation.
+- Bot scoring, with a Cloudflare Turnstile check for sessions that look scripted.
+- Location Signal map tile config and a geocode proxy. The current map loads Google tiles straight from the browser and doesn't call either one.
 - The admin API under `/api/admin/*`.
 - Scheduled and manual cleanup of stale games and sessions, with a run history.
 - `/health` and `/debug/build-info`.
@@ -126,11 +127,12 @@ A Next.js 16 app behind NextAuth, on port `3002` locally. It proxies admin reque
 | `/bans` | Session/IP/region bans, restricted names, name overrides |
 | `/shikaku` | Shikaku leaderboard management |
 | `/pips` | Pips leaderboard management |
+| `/zip` | Zip leaderboard management |
 | `/cleanups` | Cleanup run history |
 
 `/names` redirects to `/bans` and `/broadcast` redirects to `/`.
 
-From the dashboard you can inspect live sessions and games, end one game or all of them, kick players, ban by session, IP, or region, send global or targeted toasts, force-refresh clients, publish a site-wide status, schedule update warnings, override names, maintain restricted name patterns, and edit or bulk-clear Shikaku and Pips scores.
+From the dashboard you can inspect live sessions and games, end one game or all of them, kick players, ban by session, IP, or region, send global or targeted toasts, force-refresh clients, publish a site-wide status, schedule update warnings, override names, maintain restricted name patterns, and edit or bulk-clear Shikaku, Pips, and Zip scores.
 
 Key files: `apps/admin/src/auth.ts`, `apps/admin/src/lib/api.ts`, `apps/admin/src/app/(dashboard)/`, `apps/admin/src/components/admin/`.
 
@@ -144,7 +146,7 @@ Mutators live in `packages/shared/src/zero/mutators/`, one file per game plus `s
 
 The mobile pages live in `apps/web/src/mobile`. Desktop page components call `useIsMobile()` and switch at the `768px` breakpoint. Mobile pages get their own shell, bottom navigation, sheets, and `m-` prefixed CSS classes, so desktop and mobile changes don't collide.
 
-Mobile pages exist for Home, Imposter, Password (begin, game, results), Chain Reaction, Shade Signal, and Location Signal. Shikaku is desktop-only on purpose. Pips has one responsive page instead of a separate mobile one.
+Mobile pages exist for Home, Imposter, Password (begin, game, results), Chain Reaction, Shade Signal, and Location Signal. Shikaku, Pips, and Zip each have one responsive page instead of a separate mobile one.
 
 ## Local development
 
@@ -245,6 +247,7 @@ MAP_TILE_URL_TEMPLATE=https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
 MAP_TILE_ATTRIBUTION=(c) OpenStreetMap contributors
 MAP_GEOCODE_URL=https://nominatim.openstreetmap.org/search
 WEB_ORIGIN=https://games.lawsonhart.me   # used in social preview links
+TURNSTILE_SECRET_KEY=                    # bot check; blank in dev uses Cloudflare's always-pass test key
 ```
 
 ### Web app
@@ -256,6 +259,8 @@ VITE_ZERO_CACHE_URL=http://localhost:4848
 VITE_API_URL=http://localhost:3001
 VITE_WS_URL=ws://localhost:3001/ws
 VITE_STYLE_ONLY=false
+VITE_TURNSTILE_SITE_KEY=   # bot check; dev falls back to Cloudflare's test key, production needs a real one
+VITE_SENTRY_DSN=           # optional, turns on Sentry error reporting
 ```
 
 The client derives `VITE_WS_URL` from `VITE_API_URL` plus `/ws`, so you only set it when the socket lives somewhere else.
@@ -394,6 +399,8 @@ The schema lives in `packages/shared/src/drizzle/schema.ts`.
 | `shikaku_banned_sessions` | Shikaku abuse bans |
 | `pips_scores` | Pips leaderboard entries with easy/medium/hard splits |
 | `pips_banned_sessions` | Pips abuse bans |
+| `zip_scores` | Zip leaderboard entries by difficulty and grid size, with replay data |
+| `zip_banned_sessions` | Zip abuse bans |
 | `admin_bans` | Session, IP, and region bans |
 | `admin_restricted_names` | Restricted display-name patterns |
 | `admin_name_overrides` | Forced display names by session |
@@ -420,6 +427,9 @@ The multiplayer tables keep most live state in JSON columns on purpose. Room sna
 | `GET /api/maps/config` | Location Signal map tile config |
 | `GET /api/maps/geocode` | Location Signal geocoding proxy |
 | `POST /api/game-secret/key` | Game secret key for authorized reveal paths |
+| `POST /api/game-secret/imposter-chat-key` | Key for the Imposter back-channel chat |
+| `GET /api/challenge/status` | Bot check status for the current session |
+| `POST /api/challenge/verify` | Verify a Turnstile token |
 | `GET/POST /api/cleanup` | Run cleanup, needs `CLEANUP_SECRET` as a bearer token |
 | `POST /api/zero/query` | Resolve Zero query requests |
 | `POST /api/zero/mutate` | Resolve Zero mutation requests |
@@ -434,10 +444,14 @@ The multiplayer tables keep most live state in JSON columns on purpose. Room sna
 | `GET /api/pips/leaderboard` | Read the Pips leaderboard |
 | `POST /api/pips/score/eligibility` | Check eligibility and replay validity |
 | `POST /api/pips/score` | Submit a run with the solved-domino replay |
+| `GET /api/zip/leaderboard` | Read the Zip leaderboard |
+| `POST /api/zip/run` | Start a ranked run and get its signed seed ticket |
+| `POST /api/zip/score/eligibility` | Check eligibility and replay validity |
+| `POST /api/zip/score` | Submit a run with the drawn-path replay and its ticket |
 
 ### Admin
 
-Admin routes sit under `/api/admin/*` and need `Authorization: Bearer <ADMIN_SECRET>`. The groups are `/dashboard/summary`, `/clients`, `/games`, `/bans`, `/broadcast/*`, `/status`, `/names/*`, `/shikaku/scores`, `/pips/scores`, and `/cleanups`.
+Admin routes sit under `/api/admin/*` and need `Authorization: Bearer <ADMIN_SECRET>`. The groups are `/dashboard/summary`, `/clients`, `/games`, `/bans`, `/broadcast/*`, `/status`, `/names/*`, `/shikaku/scores`, `/pips/scores`, `/zip/scores`, and `/cleanups`.
 
 ## Deployment
 
@@ -460,11 +474,12 @@ Vercel variables:
 VITE_ZERO_CACHE_URL=https://<zero-domain>
 VITE_API_URL=https://<api-domain>
 VITE_WS_URL=wss://<api-domain>/ws
+VITE_TURNSTILE_SITE_KEY=<turnstile_site_key>
 ```
 
 ### Railway API
 
-`railway.toml` builds from the `Dockerfile` and runs `bun apps/api/src/index.ts`.
+Railway builds the API from the `Dockerfile`, which runs `bun apps/api/src/index.ts`.
 
 API variables:
 
@@ -475,6 +490,7 @@ CLEANUP_SECRET=<strong_secret>
 SESSION_COOKIE_SECRET=<long_random_secret>
 ADMIN_SECRET=<strong_admin_secret>
 CORS_ALLOWED_ORIGINS=https://<web-domain>
+TURNSTILE_SECRET_KEY=<turnstile_secret>   # without it, bot scores are tracked but never enforced
 ```
 
 If Railway autodeploys from GitHub, turn on Wait for CI in the service settings. After a deploy, check `https://<api-domain>/health` and `https://<api-domain>/debug/build-info`.

@@ -28,40 +28,47 @@ A live team word-guessing game. The clue givers and the guesser work at the same
 
 | Setting | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Teams** | 2-6 | 2 | Number of teams |
+| **Teams** | 2-6 | 2 | Number of teams, picked when the room is created |
 | **Target Score** | 1-50 | 10 | Points needed to win |
+| **Timer** | 30-900 s | 300 s | How long the whole game lasts |
+| **Category** | 23 options | Animals | Word bank to draw words from |
+
+The host can change the target score, timer, and category from the lobby. Categories are the same list Imposter uses.
 
 ---
 
 ## Team mechanics
 
 - **Auto-assignment.** Players joining the lobby land on the smallest team.
-- **Manual moves.** The host can drag any player to any team.
-- **Lock teams.** The host can lock teams so nobody switches mid-game.
+- **Switching.** Players can switch teams themselves in the lobby.
+- **Manual moves.** The host can move any player to any team.
+- **Lock teams.** The host can lock teams. Then nobody can switch, and new players have to wait for the host to place them.
 - **Minimum.** Each team needs at least 2 members to start (one guesser plus one clue giver).
 
 ---
 
 ## Round flow
 
-1. A random word is assigned to the team from a pool of common nouns.
-2. The **guesser** rotates each solved round: `members[(round - 1) % teamSize]`.
+1. Each team gets a random word from the chosen category. A word used earlier in the game doesn't come back until the category runs out.
+2. The **guesser** rotates after each solved word: `members[(round - 1) % teamSize]`.
 3. All non-guesser teammates can submit one-word clues whenever they want during the round.
 4. The guesser can guess at any time and sees the full clue-and-guess history while playing.
 5. Duplicate guesses are blocked so the guess history stays meaningful.
-6. **Correct guess:** the team scores based on how many guesses it took, then rotates into a fresh word and guesser.
-7. **Timer expires:** the in-progress round is recorded as incomplete and the game moves to results.
+6. **Skip:** each team gets 3 skips per game. Anyone on the team can use one to swap in a new word.
+7. **Correct guess:** the team scores based on how many guesses it took, then rotates into a fresh word and guesser.
+8. **Timer expires:** every in-progress round is recorded with 0 points and the game moves to results.
 
 ---
 
 ## Rules
 
-- Clues must be **one word** and can't be identical to or contain the target word.
+- Clues and guesses must be **one word**. A clue can't be the target word, start with it, or be the start of it.
 - Clue givers can submit multiple clues in the same round.
 - The guesser can't see the target word.
-- The timer is shared for the whole game round window.
+- One timer covers the whole game, not each word.
 - Players who join after the game starts can spectate and chat, but can't join a team.
-- The host can kick players from the lobby.
+- The host can kick players and remove spectators. Kicked players can't rejoin.
+- The host leaving ends the game for everyone.
 
 ---
 
@@ -74,13 +81,14 @@ A live team word-guessing game. The clue givers and the guesser work at the same
 | Third guess or later | 1 |
 | Timer expires | 0 |
 
-**Win condition:** first team to reach the configured target score.
+**Win condition:** first team to reach the target score. If the timer runs out first, the highest score wins.
 
 ---
 
 ## Technical notes
 
 - Real-time sync via Zero stores committed clues, guesses, scores, and round history.
+- Words are rolled on the server and sealed with a per-game key before they sync. Clue givers fetch the key from `/api/game-secret/key`. Guessers can't get it while a round is live.
 - Per-character teammate typing is broadcast on a private team Bun WebSocket topic.
 - Other teams can't see your in-progress round; only the scoreboard totals are shared during play.
 - Round history stores words, clue events, guess events, attempts, and awarded points for the end-of-game review.

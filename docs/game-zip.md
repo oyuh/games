@@ -124,7 +124,7 @@ In benchmarks, 6x6 generates in about 1 ms and 8x8 in under 20 ms at the median.
 
 ## Technical Engine Flow
 
-The engine lives in `packages/shared/src/games/zip-engine.ts`, so the web app and the API can both import it later. Cells are addressed by a single index, `r * size + c`. A puzzle is `{ size, checkpoints, walls, solution }`: checkpoints are cell indices in number order, walls are pairs of neighboring cells, and `solution` is the intended path.
+The engine lives in `packages/shared/src/games/zip-engine.ts`, so the web app and the API both import it. Cells are addressed by a single index, `r * size + c`. A puzzle is `{ size, checkpoints, walls, solution }`: checkpoints are cell indices in number order, walls are pairs of neighboring cells, and `solution` is the intended path.
 
 For the random path, `randomHamiltonianPath` starts from a snake pattern and applies backbite moves. Each move picks one end of the path, links it to a random neighbor, and reverses the tail so the path stays valid. It never fails or backtracks, so this step costs almost nothing.
 

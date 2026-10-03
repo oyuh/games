@@ -1,14 +1,14 @@
-# Chain Reaction (Game Design Document)
+# Chain Reaction
 
 > **Status:** Implemented
 > **Players:** 2
-> **Type:** Competitive word-chain puzzle
+> **Type:** Competitive word-chain race
 
 ---
 
 ## Core Idea
 
-Two players race to solve a chain of associated words. Each hidden word connects naturally to the word above and below it through common phrases or associations.
+Two players race to solve a chain of linked words. Each hidden word makes a common phrase or compound word with the word above it.
 
 **Example chain:**
 ```
@@ -23,13 +23,13 @@ LANGUAGE    <- sign language
 
 ---
 
-## Game Phases
+## How to Play
 
-### Phase 1: Build the Chain
-
-- Generate a chain of 5-7 words. Chain length should be an option on the homepage when setting up the game.
-- Each word must form a valid, common phrase with the word directly above and below it.
-- Only the **first** and **last** words are revealed; everything in between stays hidden.
+1. **Create or join.** The host creates a lobby and shares the 6-character join code. The room holds exactly 2 players.
+2. **Get your chain.** Each player gets their own chain. Only the first and last words show. Everything in between is blanks.
+3. **Solve it.** Both players play at the same time, no turns. Pick any hidden word and guess it, or ask for a hint letter first.
+4. **Round over.** The round ends when both chains are fully solved. Then the next round deals new chains.
+5. **Game over.** After the last round, the higher score wins. Equal scores are a tie.
 
 **Starting state example:**
 ```
@@ -40,60 +40,73 @@ _ _ _ _
 LANGUAGE
 ```
 
-### Phase 2: Turn Loop
+---
 
-Players alternate turns. On each turn:
+## Game Phases
 
-1. **Choose** which hidden word to attack (usually one adjacent to something already revealed).
-2. **Reveal one letter.** The next unrevealed letter of that word appears. The final letter stays hidden until the word is solved, to preserve some deduction.
-3. **Make one guess.** One attempt at the full word, unless neither player has gotten it yet.
+| Phase | What happens |
+|-------|-------------|
+| **Lobby** | Two players join. The host changes settings and starts the game. |
+| **Submitting** | Custom mode only. Each player writes a chain for the other one to solve. |
+| **Playing** | Both players solve their own chain at the same time. |
+| **Finished** | All rounds done. Final scores and every chain from every round. |
 
-**Resolution:**
-- **Correct:** score the word and reveal it fully.
-- **Wrong:** the turn ends, and the partial letters stay visible to both players.
+---
 
-### Phase 3: Clue Escalation
+## Chain Modes
 
-When a word is guessed incorrectly:
-- One additional letter is revealed the next time that word is chosen.
-- The partial pattern stays visible to both players.
+- **Premade.** The server builds a chain for each player from the chosen category. The two players get different chains.
+- **Custom.** Before each round, each player types a chain of the set length. You solve the chain your opponent wrote.
 
-```
-First attempt:  _ R _ C K   -> wrong
-Next attempt:   T R _ C K   -> much easier to solve as TRUCK
-```
+---
 
-### Phase 4: Scoring
+## Configuration
 
-**Points per word solved, based on how many letters were showing:**
+| Setting | Range | Default | Description |
+|---------|-------|---------|-------------|
+| **Chain length** | 5-10 | 5 | Words per chain, including the two given ends |
+| **Rounds** | 1-10 | 3 | Rounds to play |
+| **Round clock** | Off, or 15-600 s | Off | A countdown shown during each round |
+| **Mode** | Premade, Custom | Premade | Where chains come from |
+| **Category** | 9 options | Animals | Theme for premade chains |
 
-| Letters shown | Points |
-|---------------|--------|
-| 1-2           | 3      |
-| 3-4           | 2      |
-| 5+            | 1      |
+The host can change all of these from the lobby.
 
-**Bonus:** whoever solves the final hidden word gets +1.
+The round clock is display-only right now. Nothing ends the round when it hits zero, so a round always runs until both chains are solved.
 
-The whole point is to reward guessing early instead of camping until the word spells itself out.
+### Categories
 
-### Phase 5: End of Round
+Animals · Movies & Shows · Disney & Pixar · Shooter Games · Video Games · Food · Drinks · Sports · Around the House
 
-The round ends when all hidden words are solved.
-
-**Win conditions (pick one per game mode):**
-- Best of X rounds (selectable)
-- First to X points (selectable)
-- Timed session, most points when time runs out
+A category only picks the first word. The rest of the chain is whatever the link bank finds from there.
 
 ---
 
 ## Rules
 
-- Only **one guess** per turn.
-- Every link in the chain must be a defensible common phrase or association.
-- No hyper-obscure slang unless both players agree to it.
-- If both players dispute a link, replace the chain.
+- **Hint.** Reveals the next letter of a hidden word. The last letter never shows, so you always have to make the final call.
+- **Wrong guess.** Reveals one more letter for free, up to the same limit.
+- **Give up.** Reveals the word for 0 points.
+- Guesses aren't case sensitive. You can guess as often as you like.
+- Players who join after the game starts can spectate and chat.
+- The host can kick players and remove spectators. Kicked players can't rejoin.
+- If either player leaves mid-game, the game ends. The host leaving ends it for everyone.
+
+---
+
+## Scoring
+
+Points per solved word, based on how many letters were showing when you got it:
+
+| Letters shown | Points |
+|---------------|--------|
+| 0-2           | 3      |
+| 3-4           | 2      |
+| 5+            | 1      |
+
+**Bonus:** solving the last hidden word in your chain is worth +1.
+
+The whole point is to reward guessing early instead of waiting for the word to spell itself out.
 
 ---
 
@@ -103,59 +116,39 @@ The round ends when all hidden words are solved.
 
 ```
 chain_reaction_games {
-  id: string
-  code: string (6-char join code)
-  host_id: string (session ID)
-  phase: "lobby" | "playing" | "finished" | "ended"
-
-  players: [
-    { sessionId, name, connected }  // exactly 2
-  ]
-
-  chain: [
-    { word: string, revealed: boolean, lettersShown: number }
-  ]
-
-  current_turn: string  // sessionId of whose turn it is
-
+  id, code, host_id
+  phase: "lobby" | "submitting" | "playing" | "finished" | "ended"
+  players: [{ sessionId, name, connected }]          // exactly 2
+  chain: { [sessionId]: [{ word, secret, revealed, lettersShown, solvedBy }] }
+  submitted_chains: { [sessionId]: string[] }        // custom mode, sealed
   scores: { [sessionId]: number }
-
-  round_history: [
-    { round, chain, scores }
-  ]
-
-  settings: {
-    chainLength: 5 | 6 | 7
-    rounds: number
-    turnTimeSec: number | null
-  }
+  round_history: [{ round, chains, scores }]
+  settings: { chainLength, rounds, currentRound, turnTimeSec, phaseEndsAt, chainMode, category }
 }
 ```
 
+`current_turn` is still a column but nothing uses it, since both players play at once.
+
 ### Chain Generation
 
-This needs a curated bank of word chains where each pair forms a common compound word or phrase. Options:
+`word-banks.ts` holds a link bank (`chainLinks`): each word maps to the words that can follow it. `pickChain` starts from a random themed word in `chainStarts` and walks the bank until the chain is long enough, without repeating a word.
 
-1. **Pre-built chains.** Most reliable; curate 50-100+ chains by hand.
-2. **Pair-bank with solver.** Store valid word pairs and use a graph algorithm to build chains of the target length.
-3. **AI-assisted.** Generate and validate at build time, ship as static data.
+### Hidden words
 
-The recommendation: start with pre-built chains and expand later.
+A hidden word syncs as a mask (`TR___`) plus a sealed copy only the server can open. Clients never hold their own answers, so guesses, hints, and give-ups are all resolved on the server. No client can fetch the chain key.
 
 ### Key Mutators
 
-- `chainReaction.create`: create the game; the host joins automatically
-- `chainReaction.join`: second player joins
-- `chainReaction.start`: host starts, chain is generated
-- `chainReaction.revealLetter`: reveal the next letter of the chosen word
-- `chainReaction.guess`: submit a guess for a word
-- `chainReaction.leave`: player leaves (ends the game)
+- `chainReaction.create`, `join`, `leave`, `start`, `updateSettings`
+- `chainReaction.submitChain`: custom mode chain entry
+- `chainReaction.revealLetter`: hint letter
+- `chainReaction.guess`: check a guess on the server
+- `chainReaction.giveUp`: reveal a word for 0 points
 
 ### UI Components
 
 - `ChainReactionPage`: main game page
-- `ChainDisplay`: vertical chain visualization with revealed/hidden words
-- `WordSlot`: individual word slot showing partial letters
-- `GuessInput`: input for submitting a guess
-- `ScoreBoard`: two-player score comparison
-- `TurnIndicator`: whose turn it is
+- `ChainLobby`: settings and players
+- `ChainRound`: the round in play
+- `ChainGuessField`: the inline guess input
+- `ChainGameOver`: final scores and round history

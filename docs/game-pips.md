@@ -10,7 +10,7 @@
 
 Pips is a domino-placement logic puzzle inspired by NYT Pips. You fill a shaped grid with dominoes. Each domino covers exactly two adjacent cells, and each half contributes its pip value to the cell it covers. Colored regions on the board define math rules that have to hold once the grid is filled.
 
-This version is generative and seeded like Shikaku, but it doesn't ask you to pick Easy, Medium, or Hard as separate modes. A ranked run always contains three puzzles, in order:
+This version is generative and seeded like Shikaku, but a ranked run doesn't ask you to pick Easy, Medium, or Hard. It always contains three puzzles, in order:
 
 1. Easy
 2. Medium
@@ -25,16 +25,18 @@ The run is timed from start to finish, and the leaderboard is ranked by total so
 ## How to Play
 
 1. **Start a run.** The game creates one run seed and generates an Easy, Medium, and Hard puzzle from it.
-2. **Place dominoes.** Drag or click dominoes from the tray onto the board. Each domino can be rotated and must cover two orthogonally adjacent open cells.
+2. **Place dominoes.** Drag dominoes from the tray onto the board. Each domino can be rotated and must cover two orthogonally adjacent open cells.
 3. **Satisfy regions.** Every colored region has a condition: a target sum, all equal, all different, greater than a number, or less than a number.
 4. **Use every domino.** The puzzle only counts as solved when every board cell is filled, every supplied domino is placed, and every region condition passes.
 5. **Complete the run.** Solving Easy advances to Medium, then Hard. Finishing Hard stops the timer and records the run time.
 
 ---
 
-## Game Mode
+## Game Modes
 
-### Standard Run
+The menu is the shared solo menu. Pick Ranked, Endless, or Seeded up top.
+
+### Ranked
 
 - One timed run contains 3 puzzles: Easy, Medium, Hard.
 - One seed deterministically generates all three.
@@ -42,12 +44,17 @@ The run is timed from start to finish, and the leaderboard is ranked by total so
 - The result is ranked by total time, not points.
 - Only fully completed runs can be submitted to the leaderboard.
 
-### Practice / Custom Seed
+### Seeded
 
-- Optional unranked mode.
-- You can enter a seed and replay the same three-puzzle run.
-- Handy for sharing runs and debugging generated puzzles.
+- Unranked.
+- You enter a seed and replay the same three-puzzle run.
+- Handy for sharing runs and debugging generated puzzles. The seed can be copied from the results screen.
 - No leaderboard submission.
+
+### Endless
+
+- Unranked.
+- Pick one size and keep getting new puzzles at it.
 
 ---
 
@@ -79,11 +86,11 @@ These five rule types are the starting set. More can be added later, as long as 
 
 | Puzzle | Board Target | Domino Count | Rule Density | Goal |
 |--------|--------------|---------------|--------------|------|
-| Easy | Small board, simple shape | 4-6 dominoes | Low | Teach placement and sums |
-| Medium | Wider board, mild branching | 7-10 dominoes | Medium | Add mixed rule interactions |
-| Hard | Larger/irregular board | 11-15 dominoes | High | Force deduction and backtracking |
+| Easy | Up to 4x5, irregular | 6 dominoes | Regions of 1-2 cells | Teach placement and sums |
+| Medium | Up to 6x6, irregular | 10 dominoes | Regions of 1-3 cells | Add mixed rule interactions |
+| Hard | Up to 7x9, irregular | 15 dominoes | Regions of 1-4 cells | Force deduction and backtracking |
 
-Exact board size can vary by seed. Every generated board has to have an even number of cells, since it's fully tiled by dominoes.
+The board shape varies by seed, inside those bounds (`PIPS_DIFFICULTY_CONFIG`). Every generated board has to have an even number of cells, since it's fully tiled by dominoes.
 
 ---
 
@@ -105,17 +112,7 @@ Leaderboard order = ascending totalRunTimeMs
 ### Display
 
 - Primary result: `MM:SS.mmm`
-- Secondary stats: split times for Easy, Medium, and Hard
-- Optional share text:
-
-```
-Pips Run
-Seed 482913
-Easy 00:31
-Medium 01:24
-Hard 03:10
-Total 05:05
-```
+- Secondary stats: split times for Easy, Medium, and Hard, plus the seed
 
 ---
 
@@ -123,16 +120,17 @@ Total 05:05
 
 | Action | Input |
 |--------|-------|
-| Select domino | Click/tap a tray domino |
-| Place domino | Click/tap a valid board pair, or drag onto the board |
-| Rotate selected domino | Rotate button, keyboard `R`, or tap the selected domino |
-| Pick orientation while placing | Hover/drag direction, or second-cell tap |
-| Remove placed domino | Click/tap the placed domino |
+| Place domino | Drag it from the tray onto the board |
+| Rotate a tray domino | Click/tap it |
+| Rotate while dragging | Keyboard `R` |
+| Rotate a placed domino | Click/tap it, or `R` while it's selected |
+| Move a placed domino | Drag it somewhere else on the board |
+| Remove placed domino | Drag it back to the tray, or right-click it |
 | Undo | Undo button |
-| Reset current puzzle | Reset button |
-| Give up run | Give up button, with confirmation |
+| Restart run | Restart, on the sidebar (or the phone menu) |
+| Give up run | Give up, on the sidebar (or the phone menu) |
 
-Mobile should support tap-first placement: select a domino, tap a cell, then tap an adjacent cell or use the orientation controls.
+The same controls work by touch on phones.
 
 ---
 
@@ -180,8 +178,11 @@ runSeed
 - Sorted by `timeMs` ascending.
 - Split times are stored for auditing and display.
 - Seed and solved-placement replay metadata are stored for validation.
-- Custom seed runs are unranked.
+- Seeded and Endless runs are unranked.
+- Finished ranked runs get an eligibility check, then you can submit.
 - Duplicate seed submissions are rejected per session.
+- Minimum times: 12 seconds for the run and 1.5 seconds per puzzle (`score-policy.ts`).
+- Three strikes (impossibly fast runs, failed replays, too many clients on one session) inside 30 minutes bans the session from Pips scores, stored in `pips_banned_sessions`. Site-wide admin bans and the bot check apply too.
 
 ---
 
@@ -201,10 +202,10 @@ For ranked validation, the finished client sends the seed, total time, the Easy/
 
 - **Route:** `/pips`
 - **State:** client-side React state, same as Shikaku.
-- **API:** REST endpoints for the leaderboard and score submission.
+- **API:** REST endpoints for the leaderboard (`GET /api/pips/leaderboard`), the eligibility check (`POST /api/pips/score/eligibility`), and score submission (`POST /api/pips/score`).
 - **Schema:** `pips_scores` stores sessionId, name, seed, totalMs, easyMs, mediumMs, hardMs, puzzleCount, replayData, and createdAt.
 - **Engine:** `packages/shared/src/games/pips-engine.ts` contains the seeded RNG, generation, validation, solver utilities, run scoring, and replay verification. `apps/web/src/lib/pips-engine.ts` re-exports it for the web app.
-- **UI:** `PipsPage` renders the board, tray, run header, results, leaderboard, seeded/infinite modes, and the admin score helper.
+- **UI:** `PipsPage` renders the board, tray, run header, results, leaderboard, and the ranked, seeded, and endless modes. It's one responsive page for desktop and phones.
 
 ---
 
