@@ -1,0 +1,189 @@
+/* ─── Info modal arcade (InfoArcade.tsx) ───────────────────
+   Same rules as the rest of the modal: a bordered board on --background,
+   no glows, no pulsing. Everything on the board is placed in percentages
+   by the component, so the board only has to hold its aspect ratio. */
+
+.arcade {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  outline: none;
+}
+
+.arcade-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 1.4rem;
+}
+
+.arcade-score {
+  color: var(--foreground);
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Snake's progress: each game dims until it has been eaten twice. */
+.arcade-tray {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.arcade-tray-item {
+  display: grid;
+  place-items: center;
+  opacity: 0.25;
+}
+
+.arcade-tray-item[data-count="1"] { opacity: 0.6; }
+.arcade-tray-item[data-count="2"] { opacity: 1; }
+
+.arcade-lives {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.arcade-life {
+  display: grid;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.arcade-life[data-lost="true"] {
+  opacity: 0.2;
+  filter: grayscale(1);
+}
+
+.arcade-board {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+}
+
+.arcade-board > span {
+  position: absolute;
+}
+
+.arcade-board--snake {
+  aspect-ratio: 20 / 14;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--border) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 45%, transparent) 1px, transparent 1px);
+  background-size: calc(100% / 20) calc(100% / 14);
+}
+
+.arcade-board--invaders {
+  aspect-ratio: 4 / 3;
+}
+
+/* The --background border is the gap between segments. The avatar's fg is
+   lifted toward its bg so the darkest palettes still read on the board. */
+.snake-seg {
+  box-sizing: border-box;
+  border: 2px solid var(--background);
+  border-radius: 6px;
+  background: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--snake-fg) 65%, var(--snake-bg)) var(--seg-mix, 100%),
+    transparent
+  );
+}
+
+/* Grid, not the default inline box: the avatar is inline-flex and would sit
+   on a text baseline, a few pixels below the segments. The padding matches
+   their 2px gap so head and body are the same size. */
+.snake-head {
+  z-index: 1;
+  display: grid;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.snake-food {
+  display: grid;
+  place-items: center;
+}
+
+.inv-alien,
+.inv-pop,
+.inv-player {
+  display: grid;
+  place-items: center;
+}
+
+.inv-pop {
+  animation: inv-pop 0.3s ease-out forwards;
+}
+
+@keyframes inv-pop {
+  to { opacity: 0; transform: scale(1.6); }
+}
+
+.inv-shot {
+  border-radius: 1px;
+}
+
+.inv-player[data-shield="true"] {
+  animation: inv-blink 0.2s steps(2) infinite;
+}
+
+@keyframes inv-blink {
+  50% { opacity: 0.25; }
+}
+
+.arcade-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--background) 82%, transparent);
+  text-align: center;
+}
+
+.arcade-overlay p {
+  margin: 0;
+}
+
+.arcade-overlay-title {
+  color: var(--foreground);
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.arcade-overlay-text {
+  max-width: 18rem;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.arcade-overlay-keys {
+  margin-top: 0.4rem !important;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+}
+
+.arcade-overlay-keys kbd {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-pop { animation: none; opacity: 0; }
+  .inv-player[data-shield="true"] { animation: none; opacity: 0.5; }
+}
