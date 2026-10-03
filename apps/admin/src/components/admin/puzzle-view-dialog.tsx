@@ -14,7 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-type Game = "pips" | "shikaku";
+type Game = "pips" | "shikaku" | "zip";
+
+const GAME_TITLES: Record<Game, string> = { pips: "Pips", shikaku: "Shikaku", zip: "Zip" };
 type View = "board" | "solution" | "replay";
 
 const VIEWS: Array<{ value: View; label: string; hint: string }> = [
@@ -48,7 +50,7 @@ export function PuzzleViewDialog({
   game: Game;
   scoreId: string | null;
   seed: number | null;
-  /** 3 for Pips, 5 for Shikaku. */
+  /** 3 for Pips, 5 for Shikaku, 3 or 5 for Zip by difficulty. */
   puzzleCount: number;
   accent: string;
   open: boolean;
@@ -81,14 +83,16 @@ export function PuzzleViewDialog({
               style={{ background: accent }}
               aria-hidden
             />
-            {game === "pips" ? "Pips" : "Shikaku"} board
+            {GAME_TITLES[game]} board
             <Badge variant="muted" className="ml-1 font-mono">
               seed {seed}
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            Rebuilt from the seed on this score row. Cells that differ from the
-            canonical answer are outlined in red.
+            Rebuilt from the seed on this score row.{" "}
+            {game === "zip"
+              ? "A submitted line that doesn't solve the board turns the frame red."
+              : "Cells that differ from the canonical answer are outlined in red."}
           </DialogDescription>
         </DialogHeader>
 
