@@ -20,6 +20,7 @@ const ShadeDemo = lazy(() => import("./demos/ShadeDemo").then(({ ShadeDemo }) =>
 const LocationDemo = lazy(() => import("./demos/LocationDemo").then(({ LocationDemo }) => ({ default: LocationDemo })));
 const ShikakuDemo = lazy(() => import("./demos/ShikakuDemo").then(({ ShikakuDemo }) => ({ default: ShikakuDemo })));
 const PipsDemo = lazy(() => import("./demos/PipsDemo").then(({ PipsDemo }) => ({ default: PipsDemo })));
+const ZipDemo = lazy(() => import("./zip/ZipDemo").then(({ ZipDemo }) => ({ default: ZipDemo })));
 const OptionsModal = lazy(() => import("./shared/OptionsModal").then(({ OptionsModal }) => ({ default: OptionsModal })));
 const InfoModal = lazy(() => import("./shared/InfoModal").then(({ InfoModal }) => ({ default: InfoModal })));
 const HostControlsModal = lazy(() =>
@@ -151,7 +152,7 @@ const CHAIN_STEP: Record<string, number> = { lobby: 0, submitting: 1, playing: 2
 const SHADE_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, guess1: 2, clue2: 3, guess2: 3, reveal: 4, finished: 4 };
 const LOCATION_STEP: Record<string, number> = { lobby: 0, picking: 1, clue1: 2, guess1: 2, clue2: 3, guess2: 3, clue3: 3, guess3: 3, clue4: 3, guess4: 3, reveal: 4, finished: 4 };
 
-function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | "pips" | null; step: number } {
+function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "shade" | "location" | "shikaku" | "pips" | "zip" | null; step: number } {
   const { pathname } = useLocation();
   const imposterMatch = pathname.match(/^\/imposter\/([^/]+)/);
   const passwordMatch = pathname.match(/^\/password\/([^/]+)/);
@@ -160,6 +161,7 @@ function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "sha
   const locationMatch = pathname.match(/^\/location\/([^/]+)/);
   const shikakuMatch = /^\/shikaku(\/|$)/.test(pathname);
   const pipsMatch = /^\/pips(\/|$)/.test(pathname);
+  const zipMatch = /^\/(dev\/)?zip(\/|$)/.test(pathname);
 
   const detected = imposterMatch ? "imposter" as const
     : passwordMatch ? "password" as const
@@ -168,6 +170,7 @@ function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "sha
     : locationMatch ? "location" as const
     : shikakuMatch ? "shikaku" as const
     : pipsMatch ? "pips" as const
+    : zipMatch ? "zip" as const
     : null;
 
   const gameId = imposterMatch?.[1] ?? passwordMatch?.[1] ?? chainMatch?.[1] ?? shadeMatch?.[1] ?? locationMatch?.[1] ?? "";
@@ -186,6 +189,7 @@ function useGameDemoInfo(): { gameType: "imposter" | "password" | "chain" | "sha
     if (detected === "location") return { gameType: "location", step: LOCATION_STEP[loc[0]?.phase ?? "lobby"] ?? 0 };
     if (detected === "shikaku") return { gameType: "shikaku", step: 0 };
     if (detected === "pips") return { gameType: "pips", step: 0 };
+    if (detected === "zip") return { gameType: "zip", step: 0 };
     return { gameType: null, step: 0 };
   }, [detected, imp, pwd, chr, shd, loc]);
 }
@@ -870,6 +874,7 @@ export function Sidebar() {
         {modal === "info" && demoInfo.gameType === "location" && <LocationDemo initialStep={demoInfo.step} onClose={() => setModal(null)} />}
         {modal === "info" && demoInfo.gameType === "shikaku" && <ShikakuDemo onClose={() => setModal(null)} />}
         {modal === "info" && demoInfo.gameType === "pips" && <PipsDemo onClose={() => setModal(null)} />}
+        {modal === "info" && demoInfo.gameType === "zip" && <ZipDemo onClose={() => setModal(null)} />}
         {modal === "info" && !demoInfo.gameType && <InfoModal onClose={() => setModal(null)} />}
         {modal === "host" && gameContext && (
           <HostControlsModal game={gameContext} sessionId={sessionId} onClose={() => setModal(null)} />
