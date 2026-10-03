@@ -10,6 +10,7 @@ import {
   shortId,
   toLocalDateTimeValue,
   type ShikakuScoreRecord,
+  type ZipScoreRecord,
 } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/Toast";
 
-type GameKind = "shikaku" | "pips";
+type GameKind = "shikaku" | "pips" | "zip";
 type DifficultyValue = ShikakuScoreRecord["difficulty"];
 
 type ShikakuCreateDraft = {
@@ -55,6 +56,22 @@ type PipsCreateDraft = {
   puzzleCount: string;
   createdAt: string;
 };
+
+type ZipCreateDraft = {
+  sessionId: string;
+  name: string;
+  seed: string;
+  difficulty: ZipScoreRecord["difficulty"];
+  size: ZipScoreRecord["size"];
+  timeMs: string;
+  puzzleCount: string;
+  createdAt: string;
+};
+
+const ZIP_DIFFICULTIES: ZipScoreRecord["difficulty"][] = ["easy", "medium", "hard"];
+const ZIP_SIZES: ZipScoreRecord["size"][] = [6, 8, 10, 12];
+/** Mirrors RUN_LENGTH in the shared Zip engine. */
+const ZIP_RUN_LENGTH: Record<ZipScoreRecord["difficulty"], number> = { easy: 3, medium: 5, hard: 5 };
 
 type ScoreCreateDialogProps = {
   game: GameKind;
@@ -139,6 +156,19 @@ function createShikakuDraft(
   };
 }
 
+function createZipDraft(): ZipCreateDraft {
+  return {
+    sessionId: "",
+    name: "",
+    seed: String(randomSeed()),
+    difficulty: "medium",
+    size: 6,
+    timeMs: "90000",
+    puzzleCount: String(ZIP_RUN_LENGTH.medium),
+    createdAt: toLocalDateTimeValue(Date.now()),
+  };
+}
+
 function createPipsDraft(): PipsCreateDraft {
   const easyMs = 22_000;
   const mediumMs = 42_000;
@@ -172,6 +202,7 @@ export function ScoreCreateDialog({
     createShikakuDraft(defaultDifficulty),
   );
   const [pipsDraft, setPipsDraft] = useState(() => createPipsDraft());
+  const [zipDraft, setZipDraft] = useState(() => createZipDraft());
 
   const usableClients = useMemo(
     () =>
@@ -189,8 +220,10 @@ export function ScoreCreateDialog({
     setSelectedSessionId("");
     if (game === "shikaku") {
       setShikakuDraft(createShikakuDraft(defaultDifficulty));
-    } else {
+    } else if (game === "pips") {
       setPipsDraft(createPipsDraft());
+    } else {
+      setZipDraft(createZipDraft());
     }
     void loadClients();
   }, [defaultDifficulty, game, open]);
@@ -226,6 +259,11 @@ export function ScoreCreateDialog({
       name,
     }));
     setPipsDraft((current) => ({
+      ...current,
+      sessionId: client.sessionId,
+      name,
+    }));
+    setZipDraft((current) => ({
       ...current,
       sessionId: client.sessionId,
       name,
@@ -341,6 +379,21 @@ export function ScoreCreateDialog({
           },
         });
         show("Shikaku score added.", "success");
+      } else if (game === "zip") {
+        await api("/zip/scores", {
+          method: "POST",
+          body: {
+            sessionId: zipDraft.sessionId.trim(),
+            name: zipDraft.name.trim(),
+            seed: requireWholeNumber(zipDraft.seed, "Seed"),
+            difficulty: zipDraft.difficulty,
+            size: zipDraft.size,
+            timeMs: requireWholeNumber(zipDraft.timeMs, "Time"),
+            puzzleCount: requireWholeNumber(zipDraft.puzzleCount, "Puzzle count"),
+            createdAt: fromLocalDateTimeValue(zipDraft.createdAt),
+          },
+        });
+        show("Zip run added.", "success");
       } else {
         const easyMs = requireWholeNumber(pipsDraft.easyMs, "Easy split");
         const mediumMs = requireWholeNumber(pipsDraft.mediumMs, "Medium split");
@@ -377,11 +430,12 @@ export function ScoreCreateDialog({
     }
   };
 
-  const title = game === "shikaku" ? "Add Shikaku score" : "Add Pips run";
-  const description =
-    game === "shikaku"
-      ? "Create a leaderboard row with the same persisted fields used by Shikaku submissions."
-      : "Create a ranked Pips run. Total is calculated from the easy, medium, and hard splits.";
+  const title = { shikaku: "Add Shikaku score", pips: "Add Pips run", zip: "Add Zip run" }[game];
+  const description = {
+    shikaku: "Create a leaderboard row with the same persisted fields used by Shikaku submissions.",
+    pips: "Create a ranked Pips run. Total is calculated from the easy, medium, and hard splits.",
+    zip: "Create a ranked Zip run on one board. Runs are ranked by total time, fastest first.",
+  }[game];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -539,6 +593,96 @@ export function ScoreCreateDialog({
                       createdAt: value,
                     }))
                   }
+                />
+              </div>
+            </section>
+          ) : game === "zip" ? (
+            <section className="rounded-lg border border-border bg-muted p-4">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+                Run fields
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <CreateField
+                  label="Session id"
+                  value={zipDraft.sessionId}
+                  onChange={(value) => setZipDraft((current) => ({ ...current, sessionId: value }))}
+                />
+                <CreateField
+                  label="Player name"
+                  value={zipDraft.name}
+                  onChange={(value) => setZipDraft((current) => ({ ...current, name: value }))}
+                />
+                <CreateField
+                  label="Seed"
+                  type="number"
+                  value={zipDraft.seed}
+                  onChange={(value) => setZipDraft((current) => ({ ...current, seed: value }))}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="new-zip-difficulty" className="mb-2">
+                      Difficulty
+                    </Label>
+                    <Select
+                      value={zipDraft.difficulty}
+                      onValueChange={(value) => {
+                        const difficulty = value as ZipCreateDraft["difficulty"];
+                        setZipDraft((current) => ({ ...current, difficulty, puzzleCount: String(ZIP_RUN_LENGTH[difficulty]) }));
+                      }}
+                    >
+                      <SelectTrigger id="new-zip-difficulty" className="h-10 w-full capitalize">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ZIP_DIFFICULTIES.map((difficulty) => (
+                          <SelectItem key={difficulty} value={difficulty} className="capitalize">
+                            {difficulty}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="new-zip-size" className="mb-2">
+                      Grid size
+                    </Label>
+                    <Select
+                      value={String(zipDraft.size)}
+                      onValueChange={(value) =>
+                        setZipDraft((current) => ({ ...current, size: Number(value) as ZipCreateDraft["size"] }))
+                      }
+                    >
+                      <SelectTrigger id="new-zip-size" className="h-10 w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ZIP_SIZES.map((size) => (
+                          <SelectItem key={size} value={String(size)}>
+                            {size}x{size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <CreateField
+                  label="Time in ms"
+                  type="number"
+                  value={zipDraft.timeMs}
+                  onChange={(value) => setZipDraft((current) => ({ ...current, timeMs: value }))}
+                  hint={formatPreciseTime(zipDraft.timeMs)}
+                />
+                <CreateField
+                  label="Puzzle count"
+                  type="number"
+                  value={zipDraft.puzzleCount}
+                  onChange={(value) => setZipDraft((current) => ({ ...current, puzzleCount: value }))}
+                />
+                <CreateField
+                  label="Submitted at"
+                  type="datetime-local"
+                  value={zipDraft.createdAt}
+                  onChange={(value) => setZipDraft((current) => ({ ...current, createdAt: value }))}
                 />
               </div>
             </section>

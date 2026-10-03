@@ -173,6 +173,18 @@ export type PipsScoreRecord = {
   createdAt: number;
 };
 
+export type ZipScoreRecord = {
+  id: string;
+  sessionId: string;
+  name: string;
+  seed: number;
+  difficulty: "easy" | "medium" | "hard";
+  size: 6 | 8 | 10 | 12;
+  timeMs: number;
+  puzzleCount: number;
+  createdAt: number;
+};
+
 const GAME_TYPE_LABELS: Record<GameType, string> = {
   imposter: "Imposter",
   password: "Password",
@@ -205,7 +217,7 @@ export function formatGameType(type: GameType | string | null | undefined) {
  * hex. The hexes live once in globals.css, so a game recolours in both apps by
  * editing one file, and light mode can override them without touching this.
  *
- * Keys cover the multiplayer game types plus the two solo routes, which are not
+ * Keys cover the multiplayer game types plus the solo routes, which are not
  * in the game_type enum but do have a colour.
  */
 export const GAME_ACCENT: Record<string, string> = {
@@ -216,6 +228,7 @@ export const GAME_ACCENT: Record<string, string> = {
   location_signal: "var(--game-location)",
   shikaku: "var(--game-shikaku)",
   pips: "var(--game-pips)",
+  zip: "var(--game-zip)",
 };
 
 /** Falls back to the panel's own accent for anything unrecognised. */
@@ -228,6 +241,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   browsing: "Browsing",
   pips: "Pips",
   shikaku: "Shikaku",
+  zip: "Zip",
   imposter: "Imposter",
   password: "Password",
   chain_reaction: "Chain Reaction",
