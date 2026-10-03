@@ -16,6 +16,7 @@ import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useGameMeta } from "../hooks/useGameMeta";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { usePresence } from "../hooks/usePresence";
+import { useUndoShortcut } from "../hooks/useUndoShortcut";
 
 const ChatWindow = lazy(() => import("./shared/ChatWindow").then(({ ChatWindow }) => ({ default: ChatWindow })));
 const MobileLayout = lazy(() => import("../mobile/MobileLayout").then(({ MobileLayout }) => ({ default: MobileLayout })));
@@ -34,6 +35,8 @@ function AppShellInner() {
   // Global presence heartbeat for EVERY client (home, single-player, and
   // multiplayer) so they all stay visible on the admin panel.
   usePresence(getOrCreateSessionId());
+  // Ctrl+Z undo for the solo games, on desktop and mobile alike.
+  useUndoShortcut();
   const isMobile = useIsMobile();
 
   if (isMobile) {
