@@ -96,22 +96,28 @@
 }
 
 /* ── Light Theme – game-specific overrides ────────────── */
+/* Descendant selectors: data-theme lives on <html> and data-game-theme on the
+   page wrapper (and on portals like the leaderboard), so a compound selector
+   never matched anything. */
 
-[data-theme='light'][data-game-theme='imposter'] {
+[data-theme='light'] [data-game-theme='imposter'] {
   --game-bg: #fee2e2;
 }
-[data-theme='light'][data-game-theme='password'] {
+[data-theme='light'] [data-game-theme='password'] {
   --game-bg: #f3e8ff;
 }
-[data-theme='light'][data-game-theme='chain'] {
+[data-theme='light'] [data-game-theme='chain'] {
   --game-bg: #d1fae5;
 }
-[data-theme='light'][data-game-theme='shade'] {
+[data-theme='light'] [data-game-theme='shade'] {
   --game-bg: #fce7f3;
 }
-[data-theme='light'][data-game-theme='location'] {
+[data-theme='light'] [data-game-theme='location'] {
   --game-bg: #fef3c7;
 }
-[data-theme='light'][data-game-theme='shikaku'] {
+[data-theme='light'] [data-game-theme='shikaku'] {
   --game-bg: #d1fae5;
+}
+[data-theme='light'] [data-game-theme='pips'] {
+  --game-bg: #ffedd5;
 }
