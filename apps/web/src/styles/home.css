@@ -239,9 +239,7 @@ a.solo-card-title-link {
 }
 
 .solo-card--playable:hover .solo-shikaku-cell,
-.solo-card--playable:hover .solo-pips-domino--board,
-.solo-card--playable:hover .solo-suggestion-line,
-.solo-card--playable:hover .solo-suggestion-check {
+.solo-card--playable:hover .solo-pips-domino--board {
   animation-play-state: paused;
 }
 
@@ -515,95 +513,6 @@ a.solo-card-title-link {
 .solo-pips-face--5 .solo-pips-dot:nth-child(3) { grid-area: 2 / 2; }
 .solo-pips-face--5 .solo-pips-dot:nth-child(4) { grid-area: 3 / 1; }
 .solo-pips-face--5 .solo-pips-dot:nth-child(5) { grid-area: 3 / 3; }
-
-/* ── Coming soon suggestion preview ──────────────────────────── */
-.solo-preview-suggestion {
-  display: grid;
-  place-items: center;
-  width: 100%;
-}
-
-.solo-suggestion-doc {
-  width: min(118px, 62%);
-  aspect-ratio: 0.78;
-  display: grid;
-  align-content: center;
-  gap: 0.42rem;
-  padding: 0.82rem 0.78rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--card-accent) 28%, transparent);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04)),
-    color-mix(in srgb, var(--card-accent) 7%, transparent);
-  box-shadow: 0 16px 24px rgba(0, 0, 0, 0.24);
-}
-
-.solo-suggestion-title-line,
-.solo-suggestion-line,
-.solo-suggestion-short-line {
-  display: block;
-  height: 0.38rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--card-accent) 26%, transparent);
-}
-
-.solo-suggestion-title-line {
-  width: 62%;
-  height: 0.48rem;
-  background: color-mix(in srgb, var(--card-accent) 46%, transparent);
-}
-
-.solo-suggestion-line {
-  width: 100%;
-  animation: solo-suggestion-fill-line 5.8s ease-in-out infinite;
-}
-
-.solo-suggestion-line--two {
-  animation-delay: 0.75s;
-}
-
-.solo-suggestion-line--three {
-  width: 78%;
-  animation-delay: 1.5s;
-}
-
-.solo-suggestion-check-row {
-  display: flex;
-  align-items: center;
-  gap: 0.38rem;
-  margin-top: 0.12rem;
-}
-
-.solo-suggestion-check {
-  width: 0.72rem;
-  height: 0.72rem;
-  border-radius: var(--radius-xs);
-  border: 1px solid color-mix(in srgb, var(--card-accent) 42%, transparent);
-  background: color-mix(in srgb, var(--card-accent) 9%, transparent);
-  animation: solo-suggestion-check-fill 5.8s ease-in-out infinite;
-}
-
-.solo-suggestion-short-line {
-  flex: 1;
-}
-
-@keyframes solo-suggestion-fill-line {
-  0%, 15%, 100% {
-    background: color-mix(in srgb, var(--card-accent) 16%, transparent);
-  }
-  32%, 70% {
-    background: color-mix(in srgb, var(--card-accent) 42%, transparent);
-  }
-}
-
-@keyframes solo-suggestion-check-fill {
-  0%, 54%, 100% {
-    background: color-mix(in srgb, var(--card-accent) 9%, transparent);
-  }
-  68%, 82% {
-    background: color-mix(in srgb, var(--card-accent) 38%, transparent);
-  }
-}
 
 .home-cards-dots {
   display: none;
@@ -1282,8 +1191,6 @@ a.solo-card-title-link {
   .home-card--chain .hc-chain-word,
   .home-card--shade .hc-shade-cell,
   .home-card--route-highlight,
-  .solo-suggestion-line,
-  .solo-suggestion-check,
   .hc-imp-row,
   .hc-pw-step,
   .hc-loc-pin,
