@@ -36,3 +36,22 @@ export function shikakuMaxScore(timeMs: number, difficulty: string): number {
 export function isShikakuDifficulty(value: unknown): value is ShikakuDifficulty {
   return typeof value === "string" && SHIKAKU_VALID_DIFFS.includes(value as ShikakuDifficulty);
 }
+
+/*
+ * Zip floors scale with the board, since a line has to cross every square.
+ * 25 ms a square is faster than anyone draws: 0.9 s for a 6x6, 3.6 s for a
+ * 12x12. The auto-ban line sits at half that, where only a script lands.
+ */
+export const ZIP_MIN_MS_PER_CELL = 25;
+
+export const ZIP_AUTO_BAN_MS_PER_CELL = 12;
+
+export const ZIP_MAX_TIME_MS = 7_200_000;
+
+export const ZIP_MAX_SCORES_PER_SESSION = 20;
+
+/** A ranked ticket is good for the longest allowed run plus a little slack. */
+export const ZIP_TICKET_TTL_MS = ZIP_MAX_TIME_MS + 10 * 60_000;
+
+/** Network and render lag between the server's clock and the client's. */
+export const ZIP_CLOCK_SLACK_MS = 5_000;

@@ -7,11 +7,14 @@ type Summary = {
   detachedSessions: number;
   shikaku: { scoresChecked: number; scoresTrimmed: number; suspiciousRemoved: number };
   pips: { scoresChecked: number; scoresTrimmed: number; suspiciousRemoved: number };
+  zip: { scoresChecked: number; scoresTrimmed: number; suspiciousRemoved: number };
 };
 
 export function percentage(part: number, total: number) {
   return total > 0 ? `${(part / total * 100).toFixed(1)}%` : "0.0%";
 }
+
+const SCORE_LABELS = { shikaku: "Shikaku", pips: "Pips", zip: "Zip" } as const;
 
 const GAME_LABELS = { imposter: "Imposter", password: "Password", chainReaction: "Chain Reaction", shadeSignal: "Shade Signal", locationSignal: "Location Signal" };
 
@@ -24,9 +27,9 @@ export function cleanupReportLines(summary: Summary): CleanupReportLine[] {
     const checked = remaining + deleted;
     lines.push({ label, value: `${checked} ${checked === 1 ? "room" : "rooms"} checked, ${ended} ended (${percentage(ended, checked)}), ${deleted} deleted (${percentage(deleted, checked)}), ${remaining} remaining`, tone: ended + deleted ? "warning" : "success" });
   }
-  for (const key of ["shikaku", "pips"] as const) {
+  for (const key of ["shikaku", "pips", "zip"] as const) {
     const audit = summary[key];
-    lines.push({ label: key === "pips" ? "Pips" : "Shikaku", value: `${audit.scoresChecked} ${audit.scoresChecked === 1 ? "score" : "scores"} checked, ${audit.suspiciousRemoved} invalid removed (${percentage(audit.suspiciousRemoved, audit.scoresChecked)}), ${audit.scoresTrimmed} over the 20-score limit removed`, tone: audit.suspiciousRemoved ? "warning" : "success" });
+    lines.push({ label: SCORE_LABELS[key], value: `${audit.scoresChecked} ${audit.scoresChecked === 1 ? "score" : "scores"} checked, ${audit.suspiciousRemoved} invalid removed (${percentage(audit.suspiciousRemoved, audit.scoresChecked)}), ${audit.scoresTrimmed} over the 20-score limit removed`, tone: audit.suspiciousRemoved ? "warning" : "success" });
   }
   lines.push(
     { label: "Sessions", value: `${summary.detachedSessions} room links cleared, ${summary.archive.sessionsArchived} archived, ${summary.deleted.sessions} deleted, ${summary.totals.sessions} remaining`, tone: "info" },
@@ -36,7 +39,7 @@ export function cleanupReportLines(summary: Summary): CleanupReportLine[] {
   return lines;
 }
 
-export const CLEANUP_POLICY = "End rooms after 20 minutes idle. Delete rooms ended for 1 hour. Keep up to 20 scores per player, per difficulty for Shikaku. Validate stored replays when present; legacy scores without replays receive metadata checks.";
+export const CLEANUP_POLICY = "End rooms after 20 minutes idle. Delete rooms ended for 1 hour. Keep up to 20 scores per player, per difficulty for Shikaku and per board for Zip. Validate stored replays when present; legacy scores without replays receive metadata checks.";
 
 export type CleanupStats = Record<string, number>;
 
@@ -65,6 +68,7 @@ export function expandStats(stats: CleanupStats): Summary {
     detachedSessions: n("detachedSessions"),
     shikaku: audit("shikaku"),
     pips: audit("pips"),
+    zip: audit("zip"),
   };
 }
 
@@ -76,7 +80,7 @@ export function legacyReportStats(lines: CleanupReportLine[]): CleanupStats | nu
   const patterns = (label: string): [RegExp, string[]] | null => {
     const game = labels[label];
     if (game) return [/(\d+) rooms? checked, (\d+) ended .*?, (\d+) deleted .*?, (\d+) remaining/, ["", `ended.${game}`, `deleted.${game}`, `totals.${game}Games`]];
-    const audit = label === "Pips" ? "pips" : label === "Shikaku" ? "shikaku" : null;
+    const audit = (Object.keys(SCORE_LABELS) as (keyof typeof SCORE_LABELS)[]).find((key) => SCORE_LABELS[key] === label) ?? null;
     if (audit) return [/(\d+) scores? checked, (\d+) invalid removed .*?, (\d+) over/, [`${audit}.scoresChecked`, `${audit}.suspiciousRemoved`, `${audit}.scoresTrimmed`]];
     if (label === "Sessions") return [/(\d+) room links cleared, (\d+) archived, (\d+) deleted, (\d+) remaining/, ["detachedSessions", "archive.sessionsArchived", "deleted.sessions", "totals.sessions"]];
     if (label === "Orphaned data") return [/(\d+) encryption keys and (\d+) chat messages/, ["deleted.encryptionKeys", "deleted.chatMessages"]];
@@ -135,10 +139,11 @@ export function cleanupDayLines(stats: CleanupStats): CleanupReportLine[] {
     .filter(([key]) => key.startsWith(prefix) && (!keys || keys.includes(key.slice(prefix.length))))
     .reduce((total, [, value]) => total + value, 0);
   const games = ["imposter", "password", "chainReaction", "shadeSignal", "locationSignal"];
-  const invalid = sum("shikaku.", ["suspiciousRemoved"]) + sum("pips.", ["suspiciousRemoved"]);
+  const scoreSum = (stat: string) => Object.keys(SCORE_LABELS).reduce((total, game) => total + sum(`${game}.`, [stat]), 0);
+  const invalid = scoreSum("suspiciousRemoved");
   return [
     { label: "Rooms", value: `${sum("ended.")} ended, ${sum("deleted.", games)} deleted`, tone: "info" },
-    { label: "Scores", value: `${invalid} invalid removed, ${sum("shikaku.", ["scoresTrimmed"]) + sum("pips.", ["scoresTrimmed"])} over the limit removed`, tone: invalid ? "warning" : "info" },
+    { label: "Scores", value: `${invalid} invalid removed, ${scoreSum("scoresTrimmed")} over the limit removed`, tone: invalid ? "warning" : "info" },
     { label: "Sessions", value: `${stats["archive.sessionsArchived"] ?? 0} archived, ${stats["deleted.sessions"] ?? 0} deleted, ${stats["archive.sessionsTrimmed"] ?? 0} trimmed from the archive`, tone: "info" },
     { label: "Orphaned data", value: `${stats["deleted.encryptionKeys"] ?? 0} encryption keys and ${stats["deleted.chatMessages"] ?? 0} chat messages deleted`, tone: "info" },
   ];

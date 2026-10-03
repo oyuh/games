@@ -1,7 +1,7 @@
-import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, SHIKAKU_VALID_DIFFS, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
+import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, SHIKAKU_VALID_DIFFS, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, ZIP_MIN_MS_PER_CELL, ZIP_AUTO_BAN_MS_PER_CELL, ZIP_MAX_TIME_MS, ZIP_MAX_SCORES_PER_SESSION, ZIP_TICKET_TTL_MS, ZIP_CLOCK_SLACK_MS, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
 import { recordedCleanup } from "./cleanup";
 import { fallbackPlayerName, imposterChatKeyId, mutators, queries, schema } from "@games/shared";
-import { adminNameOverrides, chatMessages, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable } from "@games/shared/db";
+import { adminNameOverrides, chatMessages, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable, zipBannedSessions, zipScores } from "@games/shared/db";
 
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
@@ -54,6 +54,15 @@ import { authorizeMutation, isDevOnlyMutator } from "./mutator-auth";
 import { addBotSignal, botStatus, setBotScore, turnstileEnforced, verifyTurnstileToken } from "./bot-score";
 import { getOrCreateGameKey, type GameType } from "./game-keys";
 import { shikakuImageRoutes } from "./shikaku-image";
+import { createZipTicket, readZipTicket, type ZipTicket } from "./zip-ticket";
+import {
+  RUN_LENGTH as ZIP_RUN_LENGTH,
+  isDifficulty as isZipDifficulty,
+  isGridSize as isZipGridSize,
+  validateRankedZipRun,
+  type ZipRankedValidationCode,
+  type ZipReplayData,
+} from "@games/shared/games/zip-engine";
 import { embedRoutes } from "./embed-routes";
 
 config({ path: "../../.env", quiet: true });
@@ -175,7 +184,7 @@ app.use(
 // game writes are refused per mutation in /api/zero/mutate. Reads stay open so
 // a player waiting on the check never stares at a stale game.
 const CHALLENGE_REQUIRED = "CHALLENGE_REQUIRED";
-const LIMBO_GATED_PATH = /^\/api\/(pips|shikaku)\/score/;
+const LIMBO_GATED_PATH = /^\/api\/(pips|shikaku|zip)\/score/;
 
 app.use("/api/*", async (c, next) => {
   const sessionId = requestSessionId(c);
@@ -212,13 +221,17 @@ app.use("/api/challenge/*", rateLimit("challenge"));
 app.use("/api/maps/config", rateLimit("mapsConfig"));
 app.use("/api/maps/geocode", rateLimit("mapsGeocode"));
 
-// Solo games (shikaku/pips): general reads + image generation share the "game"
+// Solo games (shikaku/pips/zip): general reads + image generation share the "game"
 // tier; score submission gets a tighter layer on top. Registered before the
 // shikaku image routes are mounted below so they're actually covered.
 app.use("/api/shikaku/*", rateLimit("game", "shikaku"));
 app.use("/api/shikaku/score", rateLimit("score", "shikaku_score"));
 app.use("/api/pips/*", rateLimit("game", "pips"));
 app.use("/api/pips/score", rateLimit("score", "pips_score"));
+app.use("/api/zip/*", rateLimit("game", "zip"));
+app.use("/api/zip/score", rateLimit("score", "zip_score"));
+// One ticket per ranked run, so the score tier's budget is plenty.
+app.use("/api/zip/run", rateLimit("score", "zip_run"));
 
 // Searching a leaderboard is the same route with a `q`, so the extra layer only
 // applies when there is one. Both games share the bucket: it is one budget for
@@ -228,6 +241,7 @@ const limitLeaderboardSearch: MiddlewareHandler = (c, next) =>
   c.req.query("q") ? searchLimiter(c, next) : next();
 app.use("/api/shikaku/leaderboard", limitLeaderboardSearch);
 app.use("/api/pips/leaderboard", limitLeaderboardSearch);
+app.use("/api/zip/leaderboard", limitLeaderboardSearch);
 
 // Embeds (crawler/social previews) + public read-only lookups.
 app.use("/api/embed/*", rateLimit("embed"));
@@ -2305,6 +2319,351 @@ app.post("/api/pips/score", async (c) => {
   });
 
   return c.json({ ok: true, id, replaced: assessment.willReplace });
+});
+
+// ─── Zip solo game endpoints ─────────────────────────────────
+//
+// Ranked Zip differs from the other two in one way: the server picks the seed.
+// POST /api/zip/run hands back a seed and a signed ticket, and the score has to
+// come with that ticket. So a ranked board is never one the player has already
+// seen, and a run can't claim more time than passed on the server's clock. On
+// top of that the replay is checked path by path against the regenerated run.
+
+type ZipScoreRequestBody = {
+  sessionId?: string;
+  name?: string;
+  ticket?: string;
+  timeMs?: number;
+  replayData?: unknown;
+};
+
+type ZipScoreErrorCode =
+  | "invalid-body"
+  | "invalid-session"
+  | "invalid-ticket"
+  | "expired-ticket"
+  | "invalid-time"
+  | "banned"
+  | "too-fast"
+  | "too-slow"
+  | ZipRankedValidationCode
+  | "duplicate";
+
+type ZipSubmissionCheck =
+  | {
+      kind: "error";
+      status: 400 | 403 | 409;
+      error: string;
+      reason: string;
+      code: ZipScoreErrorCode;
+      /** Set when the failure looks deliberate, so the POST route counts it. */
+      strike?: string;
+    }
+  | { kind: "not-ranked"; reason: string }
+  | {
+      kind: "eligible";
+      sessionId: string;
+      name: string;
+      ticket: ZipTicket;
+      timeMs: number;
+      replayData: ZipReplayData;
+      replaceId: string | null;
+      callerIp: string;
+      callerUA: string;
+    };
+
+const zipBanCache = new Set<string>();
+
+async function loadZipBans() {
+  try {
+    const rows = await drizzleClient.select({ sessionId: zipBannedSessions.sessionId }).from(zipBannedSessions);
+    for (const r of rows) zipBanCache.add(r.sessionId);
+  } catch {
+    // table may not exist yet
+  }
+}
+loadZipBans().catch(console.error);
+
+async function autoBanZipSession(sessionId: string, reasons: string[]) {
+  const reason = `Auto-ban: ${reasons.join("; ")}`;
+  zipBanCache.add(sessionId);
+  try {
+    await drizzleClient
+      .insert(zipBannedSessions)
+      .values({ sessionId, reason, violations: reasons.length, createdAt: Date.now() })
+      .onConflictDoUpdate({
+        target: zipBannedSessions.sessionId,
+        set: { reason, violations: sql`${zipBannedSessions.violations} + ${reasons.length}` },
+      });
+  } catch {
+    // DB write failed, in-memory ban still active
+  }
+}
+
+async function strikeZipSession(sessionId: string, reason: string) {
+  if (recordStrike(sessionId, reason)) {
+    await autoBanZipSession(sessionId, abuseStrikes.get(sessionId)?.reasons ?? [reason]);
+  }
+}
+
+function zipError(status: 400 | 403 | 409, code: ZipScoreErrorCode, reason: string, strike?: string): ZipSubmissionCheck {
+  return { kind: "error", status, error: "Score rejected", reason, code, ...(strike ? { strike } : {}) };
+}
+
+/** Everything a Zip score has to pass, shared by the eligibility check and the real submit. */
+async function checkZipSubmission(
+  c: { req: { header: (name: string) => string | undefined }; header: (name: string, value: string) => void },
+  body: ZipScoreRequestBody | null,
+): Promise<ZipSubmissionCheck> {
+  if (!body) return zipError(400, "invalid-body", "This run could not be verified because the score payload was invalid.");
+
+  const claimed = getVerifiedClaimedSessionId(c, body.sessionId);
+  const identity = claimed
+    ? await resolveSessionIdentity(c, { claimedSessionId: claimed, claimedName: body.name, allowCreate: false })
+    : null;
+  if (!identity?.sessionId || identity.sessionId.length > 64) {
+    return zipError(403, "invalid-session", "Your session could not be verified for this run.");
+  }
+  const sessionId = identity.sessionId;
+  const name = (sanitizeSessionName(identity.name) ?? fallbackPlayerName(sessionId)).slice(0, 50);
+
+  // A bad signature is tampering and counts as a strike. A good ticket for a
+  // different session is refused but not counted, since a session can get
+  // reset mid-run without anyone cheating.
+  const ticket = readZipTicket(body.ticket, SESSION_COOKIE_SECRET);
+  if (!ticket) {
+    return zipError(403, "invalid-ticket", "This run wasn't started as a ranked run.", "zip ticket forged");
+  }
+  if (ticket.sessionId !== sessionId) {
+    return zipError(403, "invalid-ticket", "This ranked run was started by a different session.");
+  }
+  const elapsed = Date.now() - ticket.issuedAt;
+  if (elapsed > ZIP_TICKET_TTL_MS) {
+    return zipError(400, "expired-ticket", "This ranked run started too long ago to submit.");
+  }
+
+  const { timeMs, replayData } = body;
+  if (typeof timeMs !== "number" || !Number.isInteger(timeMs) || timeMs <= 0) {
+    return zipError(400, "invalid-time", "This run could not be verified because the recorded time was invalid.");
+  }
+  if (timeMs > elapsed + ZIP_CLOCK_SLACK_MS) {
+    return zipError(400, "invalid-time", "This run claims more time than has passed since it started.", "zip time beyond ticket age");
+  }
+
+  const { ip: callerIp, region: callerRegion, userAgent: callerUA } = await getClientInfo(c.req);
+  if (zipBanCache.has(sessionId) || isBanned(sessionId, callerIp, callerRegion)) {
+    return zipError(403, "banned", "This session is not allowed to submit Zip scores.");
+  }
+  if (timeMs > ZIP_MAX_TIME_MS) {
+    return zipError(400, "too-slow", "This run went past the maximum allowed time.");
+  }
+
+  // Cheap floors before the expensive regenerate: every split has to be long
+  // enough to draw a line across the whole board.
+  const cells = ticket.size * ticket.size;
+  const splits = (replayData as { puzzleTimes?: unknown } | null)?.puzzleTimes;
+  if (Array.isArray(splits) && splits.some((split) => typeof split === "number" && split < cells * ZIP_MIN_MS_PER_CELL)) {
+    const scripted = splits.some((split) => typeof split === "number" && split < cells * ZIP_AUTO_BAN_MS_PER_CELL);
+    return zipError(400, "too-fast", "One of these puzzles was solved faster than a line can be drawn.", scripted ? `zip impossibly fast on ${ticket.size}x${ticket.size}` : undefined);
+  }
+
+  const validation = validateRankedZipRun({
+    seed: ticket.seed,
+    difficulty: ticket.difficulty,
+    size: ticket.size,
+    timeMs,
+    puzzleCount: ZIP_RUN_LENGTH[ticket.difficulty],
+    replayData,
+  });
+  if (!validation.ok) {
+    return zipError(400, validation.code, validation.reason, `zip replay validation failed: ${validation.code}`);
+  }
+
+  const [existing] = await drizzleClient
+    .select({ id: zipScores.id })
+    .from(zipScores)
+    .where(and(eq(zipScores.sessionId, sessionId), eq(zipScores.seed, ticket.seed)))
+    .limit(1);
+  if (existing) {
+    return zipError(409, "duplicate", "This run has already been submitted to the leaderboard.");
+  }
+
+  // Keep a session's 20 fastest per board. A full board only takes a faster run.
+  const own = await drizzleClient
+    .select({ id: zipScores.id, timeMs: zipScores.timeMs })
+    .from(zipScores)
+    .where(and(eq(zipScores.sessionId, sessionId), eq(zipScores.difficulty, ticket.difficulty), eq(zipScores.size, ticket.size)))
+    .orderBy(asc(zipScores.timeMs));
+  let replaceId: string | null = null;
+  if (own.length >= ZIP_MAX_SCORES_PER_SESSION) {
+    const slowest = own[own.length - 1]!;
+    if (timeMs >= slowest.timeMs) {
+      return { kind: "not-ranked", reason: "This run was verified, but it isn't faster than your saved top 20 on this board." };
+    }
+    replaceId = slowest.id;
+  }
+
+  return { kind: "eligible", sessionId, name, ticket, timeMs, replayData: validation.replayData, replaceId, callerIp, callerUA };
+}
+
+app.post("/api/zip/run", async (c) => {
+  const body = await c.req.json().catch(() => null) as { sessionId?: string; difficulty?: unknown; size?: unknown } | null;
+  if (!body || !isZipDifficulty(body.difficulty) || !isZipGridSize(body.size)) {
+    return c.json({ error: "Invalid run" }, 400);
+  }
+  const claimed = getVerifiedClaimedSessionId(c, body.sessionId);
+  const identity = claimed ? await resolveSessionIdentity(c, { claimedSessionId: claimed, allowCreate: false }) : null;
+  if (!identity?.sessionId) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+
+  const seed = (crypto.getRandomValues(new Uint32Array(1))[0]! % 2_147_483_646) + 1;
+  const ticket = createZipTicket(
+    { sessionId: identity.sessionId, seed, difficulty: body.difficulty, size: body.size, issuedAt: Date.now() },
+    SESSION_COOKIE_SECRET,
+  );
+  return c.json({ ok: true, seed, ticket });
+});
+
+app.post("/api/zip/score/eligibility", async (c) => {
+  const body = await c.req.json().catch(() => null) as ZipScoreRequestBody | null;
+  const check = await checkZipSubmission(c, body);
+  if (check.kind === "eligible") {
+    return c.json({
+      ok: true,
+      canSubmit: true,
+      code: "eligible",
+      reason: check.replaceId
+        ? "This run is verified and will replace your slowest saved run on this board."
+        : "This run is verified and ready to submit.",
+      willReplace: Boolean(check.replaceId),
+    });
+  }
+  return c.json({ ok: true, canSubmit: false, code: check.kind === "not-ranked" ? "not-ranked" : check.code, reason: check.reason });
+});
+
+app.post("/api/zip/score", async (c) => {
+  const body = await c.req.json().catch(() => null) as ZipScoreRequestBody | null;
+  const check = await checkZipSubmission(c, body);
+
+  if (check.kind === "error") {
+    const sessionId = getVerifiedClaimedSessionId(c, body?.sessionId);
+    if (check.strike && sessionId) await strikeZipSession(sessionId, check.strike);
+    return c.json({ error: check.error, code: check.code, reason: check.reason }, check.status);
+  }
+  if (check.kind === "not-ranked") {
+    return c.json({ ok: true, id: null, replaced: false, reason: check.reason });
+  }
+
+  if (checkFingerprintAnomaly(check.sessionId, computeFingerprint(check.callerIp, check.callerUA))) {
+    await strikeZipSession(check.sessionId, "zip fingerprint anomaly: too many distinct clients");
+  }
+  if (check.replaceId) {
+    await drizzleClient.delete(zipScores).where(eq(zipScores.id, check.replaceId));
+  }
+
+  const id = crypto.randomUUID();
+  await drizzleClient.insert(zipScores).values({
+    id,
+    sessionId: check.sessionId,
+    name: check.name,
+    seed: check.ticket.seed,
+    difficulty: check.ticket.difficulty,
+    size: check.ticket.size,
+    timeMs: check.timeMs,
+    puzzleCount: check.replayData.paths.length,
+    replayData: check.replayData,
+    createdAt: Date.now(),
+  });
+  return c.json({ ok: true, id, replaced: Boolean(check.replaceId) });
+});
+
+function zipLeaderboardRow(row: Record<string, any>, sessionId: string | null) {
+  return {
+    id: row.id,
+    name: row.name,
+    timeMs: Number(row.time_ms),
+    difficulty: row.difficulty,
+    size: Number(row.size),
+    createdAt: Number(row.created_at),
+    seed: Number(row.seed),
+    rank: Number(row.rank),
+    isOwn: sessionId != null && row.session_id === sessionId,
+  };
+}
+
+app.get("/api/zip/leaderboard", async (c) => {
+  const difficulty = c.req.query("difficulty")?.trim() ?? "easy";
+  const size = Number(c.req.query("size") ?? "6");
+  if (!isZipDifficulty(difficulty) || !isZipGridSize(size)) {
+    return c.json({ error: "Invalid board" }, 400);
+  }
+  const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") ?? "10", 10) || 10), 50);
+  const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
+  const offset = (page - 1) * limit;
+  const mineOnly = ["1", "true", "yes"].includes((c.req.query("mineOnly") ?? "").toLowerCase());
+  const requestedSessionId = c.req.query("sessionId")?.trim() ?? null;
+  const resolvedIdentity = requestedSessionId
+    ? await resolveSessionIdentity(c, { claimedSessionId: requestedSessionId, allowCreate: false })
+    : null;
+  const sessionId = resolvedIdentity?.sessionId ?? (normalizeSessionId(requestedSessionId) || null);
+
+  // Every view ranks the whole board first, so a filtered row keeps the
+  // standing it actually holds. Fastest first, earliest breaks a tie.
+  const ranked = sql`
+    SELECT id, name, time_ms, difficulty, size, created_at, seed, session_id,
+           row_number() OVER (ORDER BY time_ms ASC, created_at ASC) AS rank,
+           count(*) OVER () AS total
+    FROM zip_scores
+    WHERE difficulty = ${difficulty} AND size = ${size}
+  `;
+
+  // The end screen's standings slice, in one round trip. See selectScoreWindow.
+  if (c.req.query("window") === "me") {
+    const { rows, total } = await selectScoreWindow(ranked, sessionId);
+    const own = rows.find((row) => row.isOwn);
+    return c.json({
+      entries: rows.map((row) => zipLeaderboardRow(row, sessionId)),
+      personalBest: own ? { timeMs: Number(own.time_ms), rank: own.rank } : null,
+      page: 1,
+      pageSize: rows.length,
+      total,
+      totalPages: 1,
+    });
+  }
+
+  if (mineOnly && !sessionId) {
+    return c.json({ entries: [], personalBest: null, page: 1, pageSize: limit, total: 0, totalPages: 1 });
+  }
+
+  const search = parseLeaderboardSearch(c.req.query("q"));
+  const result = await drizzleClient.execute(sql`
+    WITH ranked AS (${ranked}),
+    shown AS (
+      SELECT * FROM ranked
+      WHERE true
+      ${mineOnly ? sql`AND session_id = ${sessionId}` : sql``}
+      ${search ? sql`AND (name ILIKE ${search.namePattern} ESCAPE '\' ${search.seed != null ? sql`OR seed = ${search.seed}` : sql``})` : sql``}
+    )
+    SELECT *, count(*) OVER () AS match_total,
+           (SELECT min(rank) FROM ranked WHERE session_id = ${sessionId ?? ""}) AS own_rank,
+           (SELECT min(time_ms) FROM ranked WHERE session_id = ${sessionId ?? ""}) AS own_time
+    FROM shown
+    ORDER BY rank
+    LIMIT ${limit} OFFSET ${offset}
+  `);
+  const rows = (Array.isArray(result) ? result : result.rows ?? []) as Record<string, any>[];
+  const total = Number(rows[0]?.match_total ?? 0);
+  const ownRank = rows[0]?.own_rank;
+
+  return c.json({
+    entries: rows.map((row) => zipLeaderboardRow(row, sessionId)),
+    personalBest: ownRank != null ? { timeMs: Number(rows[0]!.own_time), rank: Number(ownRank) } : null,
+    page,
+    pageSize: limit,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  });
 });
 
 app.get("/health", (c) => c.json({ ok: true }));

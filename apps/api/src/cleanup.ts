@@ -1,10 +1,11 @@
-import { cleanupRunDays, cleanupRuns, sessionArchive, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsScores, sessions, shadeSignalGames, shikakuScores } from "@games/shared/db";
+import { cleanupRunDays, cleanupRuns, sessionArchive, chatMessages, chainReactionGames, gameEncryptionKeys, imposterGames, locationSignalGames, passwordGames, pipsScores, sessions, shadeSignalGames, shikakuScores, zipScores } from "@games/shared/db";
 import { lt, and, count, eq, inArray, ne, sql } from "drizzle-orm";
 import { PUZZLES_PER_RUN as ENGINE_SHIKAKU_PUZZLES, validateRankedShikakuRun } from "@games/shared/games/shikaku-engine";
 import { PIPS_PUZZLES_PER_RUN as ENGINE_PIPS_PUZZLES, validateRankedPipsRun } from "@games/shared/games/pips-engine";
+import { RUN_LENGTH as ZIP_RUN_LENGTH, isDifficulty as isZipDifficulty, isGridSize as isZipGridSize } from "@games/shared/games/zip-engine";
 import { drizzleClient } from "./db-provider";
 import { cleanupReportLines, compactSummary, foldCleanupRuns, formatCleanupReport, legacyReportStats, type CleanupReportLine } from "./cleanup-report";
-import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
+import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, ZIP_MAX_SCORES_PER_SESSION, ZIP_MAX_TIME_MS, ZIP_MIN_MS_PER_CELL, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
 
 // ─── Stale game cleanup ────────────────────────────────────
 const STALE_MS = 20 * 60 * 1000;   // 20 min idle → end game
@@ -250,6 +251,19 @@ export async function runCleanup(drizzleClient: CleanupTx) {
   if (invalidPips.length) {
     await drizzleClient.delete(pipsScores).where(inArray(pipsScores.id, invalidPips.map((score) => score.id)));
   }
+  // ponytail: metadata checks only. Replays were validated on the way in, and
+  // regenerating up to five boards per row on every run costs about a second
+  // of CPU each; revalidate here if an engine change ever needs a sweep.
+  const allZipScores = await drizzleClient.select().from(zipScores);
+  const invalidZip = allZipScores.filter((score) =>
+    !isZipDifficulty(score.difficulty) || !isZipGridSize(score.size)
+    || score.puzzleCount !== ZIP_RUN_LENGTH[score.difficulty] || score.seed <= 0
+    || score.timeMs > ZIP_MAX_TIME_MS
+    || score.timeMs < score.puzzleCount * score.size * score.size * ZIP_MIN_MS_PER_CELL
+  );
+  if (invalidZip.length) {
+    await drizzleClient.delete(zipScores).where(inArray(zipScores.id, invalidZip.map((score) => score.id)));
+  }
   // Audit first so invalid scores cannot displace valid personal bests.
   const trimmedShikaku = await drizzleClient.execute(sql`
     DELETE FROM shikaku_scores WHERE id IN (
@@ -265,7 +279,15 @@ export async function runCleanup(drizzleClient: CleanupTx) {
       ) AS rank FROM pips_scores) ranked WHERE rank > ${PIPS_MAX_SCORES_PER_SESSION}
     ) RETURNING id
   `);
+  const trimmedZip = await drizzleClient.execute(sql`
+    DELETE FROM zip_scores WHERE id IN (
+      SELECT id FROM (SELECT id, row_number() OVER (
+        PARTITION BY session_id, difficulty, size ORDER BY time_ms ASC, created_at ASC, id
+      ) AS rank FROM zip_scores) ranked WHERE rank > ${ZIP_MAX_SCORES_PER_SESSION}
+    ) RETURNING id
+  `);
   const [pipsCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(pipsScores);
+  const [zipCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(zipScores);
 
   // ── 9) Counts for diagnostics ─────────────────────────────
   const [imposterCount = { total: 0 }] = await drizzleClient.select({ total: count() }).from(imposterGames);
@@ -310,6 +332,11 @@ export async function runCleanup(drizzleClient: CleanupTx) {
       scoresTrimmed: trimmedPips.rowCount ?? 0,
       suspiciousRemoved: invalidPips.length,
     },
+    zip: {
+      scoresChecked: allZipScores.length,
+      scoresTrimmed: trimmedZip.rowCount ?? 0,
+      suspiciousRemoved: invalidZip.length,
+    },
     detachedSessions: detachedSessions.rowCount ?? 0,
     cutoffs: {
       stale: new Date(staleCutoff).toISOString(),
@@ -323,6 +350,7 @@ export async function runCleanup(drizzleClient: CleanupTx) {
       locationSignalGames: locationCount.total,
       sessions: sessionCount.total,
       pipsScores: pipsCount.total,
+      zipScores: zipCount.total,
       shikakuScores: shikakuCount.total,
       encryptionKeys: encKeyCount.total,
     },
