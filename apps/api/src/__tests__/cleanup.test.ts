@@ -11,7 +11,7 @@ const { recordedCleanup } = await import("../cleanup");
 it("formats percentages and readable reports with optional terminal color", () => {
   expect(percentage(0, 0)).toBe("0.0%");
   expect(percentage(1, 4)).toBe("25.0%");
-  const lines = cleanupReportLines({ ended: { imposter: 1 }, deleted: { imposter: 1, sessions: 0, encryptionKeys: 0, chatMessages: 0 }, totals: { imposterGames: 3, sessions: 0 }, archive: { sessionsArchived: 0, sessionsTrimmed: 0 }, detachedSessions: 0, shikaku: { scoresChecked: 0, scoresTrimmed: 0, suspiciousRemoved: 0 }, pips: { scoresChecked: 4, scoresTrimmed: 1, suspiciousRemoved: 1 } });
+  const lines = cleanupReportLines({ ended: { imposter: 1 }, deleted: { imposter: 1, sessions: 0, encryptionKeys: 0, chatMessages: 0 }, totals: { imposterGames: 3, sessions: 0 }, archive: { sessionsArchived: 0, sessionsTrimmed: 0 }, detachedSessions: 0, shikaku: { scoresChecked: 0, scoresTrimmed: 0, suspiciousRemoved: 0 }, pips: { scoresChecked: 4, scoresTrimmed: 1, suspiciousRemoved: 1 }, zip: { scoresChecked: 0, scoresTrimmed: 0, suspiciousRemoved: 0 } });
   expect(lines[0]?.value).toContain("4 rooms checked, 1 ended (25.0%), 1 deleted (25.0%)");
   expect(lines.find((line) => line.label === "Pips")?.value).toContain("1 invalid removed (25.0%)");
   expect(formatCleanupReport(lines, "test", 1000)).not.toMatch(/[╔═║🧹]|\x1b/);
@@ -19,7 +19,7 @@ it("formats percentages and readable reports with optional terminal color", () =
 });
 
 it("stores runs as compact counters and renders the same report from them", () => {
-  const summary = { ended: { imposter: 1, password: 0 }, deleted: { imposter: 1, sessions: 2, encryptionKeys: 0, chatMessages: 0 }, totals: { imposterGames: 3, sessions: 5 }, archive: { sessionsArchived: 2, sessionsTrimmed: 0 }, detachedSessions: 0, shikaku: { scoresChecked: 0, scoresTrimmed: 0, suspiciousRemoved: 0 }, pips: { scoresChecked: 4, scoresTrimmed: 1, suspiciousRemoved: 1 }, cutoffs: { stale: "2026-01-01T00:00:00.000Z" } };
+  const summary = { ended: { imposter: 1, password: 0 }, deleted: { imposter: 1, sessions: 2, encryptionKeys: 0, chatMessages: 0 }, totals: { imposterGames: 3, sessions: 5 }, archive: { sessionsArchived: 2, sessionsTrimmed: 0 }, detachedSessions: 0, shikaku: { scoresChecked: 0, scoresTrimmed: 0, suspiciousRemoved: 0 }, pips: { scoresChecked: 4, scoresTrimmed: 1, suspiciousRemoved: 1 }, zip: { scoresChecked: 0, scoresTrimmed: 0, suspiciousRemoved: 0 }, cutoffs: { stale: "2026-01-01T00:00:00.000Z" } };
   const stats = compactSummary(summary);
   expect(stats).toEqual({ "ended.imposter": 1, "deleted.imposter": 1, "deleted.sessions": 2, "totals.imposterGames": 3, "totals.sessions": 5, "archive.sessionsArchived": 2, "pips.scoresChecked": 4, "pips.scoresTrimmed": 1, "pips.suspiciousRemoved": 1 });
   expect(JSON.stringify(stats).length).toBeLessThan(JSON.stringify(cleanupReportLines(summary)).length / 4);
