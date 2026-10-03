@@ -614,7 +614,7 @@
 }
 
 /* Controls the desktop modals size for a mouse. */
-.m-sheet :is(.host-announce-input, .ui-clip, .info-link) {
+.m-sheet :is(.host-announce-input, .ui-clip) {
   height: 2.75rem;
 }
 

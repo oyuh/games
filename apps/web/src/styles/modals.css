@@ -1004,20 +1004,19 @@
 }
 
 /* ─── Info Modal ────────────────────────────────────────── */
-
-/* ─── Info Modal ────────────────────────────────────────── */
 /* The desktop modal and the mobile info sheet render the same InfoContent,
-   so these rules cover both frames. */
+   so these rules cover both frames. --modal-accent follows --primary, which
+   the page theme already sets to the current game's color. */
 
 :is(.mshell, .m-sheet) .info-site-desc {
-  margin: 0 0 0.9rem;
+  margin: 0 0 1rem;
   color: var(--muted-foreground);
   font-size: 0.85rem;
   line-height: 1.55;
 }
 
 :is(.mshell, .m-sheet) .info-status {
-  margin-bottom: 0.9rem;
+  margin-bottom: 1rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
   border-left-width: 3px;
@@ -1040,60 +1039,93 @@
   text-underline-offset: 2px;
 }
 
-:is(.mshell, .m-sheet) .info-tips {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* The mobile home page's corner mark, hung off the desktop modal's top right.
+   The panel clips it, so only a corner of the logo shows. */
+.info-modal {
+  position: relative;
 }
 
-:is(.mshell, .m-sheet) .info-tip {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.4rem;
-  margin: 0;
-  padding: 0;
-  color: var(--secondary);
-  font-size: 0.78rem;
-  line-height: 1.45;
+.info-mark {
+  position: absolute;
+  top: -2.75rem;
+  right: -3.25rem;
+  width: 11rem;
+  aspect-ratio: 264 / 288;
+  opacity: 0.07;
+  filter: blur(2px);
+  transform: rotate(30deg);
+  pointer-events: none;
 }
 
-:is(.mshell, .m-sheet) .info-tip::before {
-  content: none;
-}
-
-:is(.mshell, .m-sheet) .info-tip svg {
-  flex-shrink: 0;
-  margin-top: 0.2rem;
-  color: var(--modal-accent);
+.info-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  mask: url("/logo-mark.png") center / contain no-repeat;
 }
 
 :is(.mshell, .m-sheet) .info-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
 }
 
 :is(.mshell, .m-sheet) .info-link {
-  display: inline-flex;
-  align-items: center;
-  height: 2.1rem;
-  padding: 0 0.7rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--solo-radius);
   background: var(--background);
-  color: var(--foreground);
-  font-size: 0.78rem;
-  font-weight: 600;
+  color: var(--modal-accent);
   text-decoration: none;
-  transition: border-color 0.16s, color 0.16s;
+  transition: border-color 0.16s;
+}
+
+:is(.mshell, .m-sheet) .info-link svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+:is(.mshell, .m-sheet) .info-link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+:is(.mshell, .m-sheet) .info-link-label {
+  color: var(--foreground);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+:is(.mshell, .m-sheet) .info-link-sub {
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  line-height: 1.35;
 }
 
 :is(.mshell, .m-sheet) .info-link:hover {
-  border-color: color-mix(in srgb, var(--modal-accent) 50%, transparent);
-  color: var(--modal-accent);
+  border-color: color-mix(in srgb, var(--modal-accent) 45%, var(--border));
+}
+
+:is(.mshell, .m-sheet) .info-link:hover .info-link-label {
+  text-decoration: underline;
+}
+
+:is(.mshell, .m-sheet) .info-link:focus-visible {
+  outline: 2px solid var(--modal-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 380px) {
+  :is(.mshell, .m-sheet) .info-links {
+    grid-template-columns: 1fr;
+  }
 }
 
 :is(.mshell, .m-sheet) .info-footer {
@@ -1110,21 +1142,44 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--muted-foreground);
+  font: inherit;
   font-weight: 600;
   text-decoration: none;
-  transition: color 0.16s;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.info-footer-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.info-footer-hint kbd {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
 :is(.mshell, .m-sheet) .info-footer-link:hover,
 :is(.mshell, .m-sheet) .info-footer-by a:hover {
-  color: var(--modal-accent);
+  text-decoration: underline;
 }
 
 :is(.mshell, .m-sheet) .info-footer-by a {
   color: var(--foreground);
   font-weight: 600;
   text-decoration: none;
+  text-underline-offset: 3px;
 }
 
 .welcome-icon {

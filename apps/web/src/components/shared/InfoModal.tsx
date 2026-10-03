@@ -1,118 +1,86 @@
-import { GAME_META, getGameSlugFromPath, type GameSlug } from "@games/shared";
-import { FiArrowRight, FiGithub, FiInfo, FiShield } from "react-icons/fi";
+import { GAME_META, getGameSlugFromPath } from "@games/shared";
+import { FiAlertCircle, FiArrowLeft, FiGithub, FiInfo, FiShield, FiZap } from "react-icons/fi";
+import { LuGamepad2 } from "react-icons/lu";
 import { useLocation } from "react-router-dom";
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { getCustomStatus, subscribeCustomStatus } from "../../hooks/useAdminBroadcast";
 import { ModalSection, ModalShell } from "./ModalShell";
 import { ClipboardText } from "./ClipboardText";
+import { InfoArcade, type ArcadeGame } from "./InfoArcade";
 
 const GITHUB_REPO = "https://github.com/oyuh/games";
 const BUG_REPORT_URL = `${GITHUB_REPO}/issues/new?title=%5BBug%5D%20`;
 const IDEA_REPORT_URL = `${GITHUB_REPO}/issues/new?title=%5BIdea%5D%20`;
 
-const supportLinks = [
-  { href: BUG_REPORT_URL, label: "Report a bug" },
-  { href: IDEA_REPORT_URL, label: "Suggest an idea" },
-];
-
-const siteInfo = {
-  title: "Games",
-  description: "Quick multiplayer puzzle and party games. Create a lobby, share the code, and play with friends - no accounts required.",
-};
-
-interface PageInfo {
-  title: string;
-  description: string;
-  tips?: string[];
-}
-
-const pageTips: Record<GameSlug, string[]> = {
-  home: [
-    "Set your name before joining a game",
-    "Use the join code to hop into a friend's lobby",
-    "Configure game options before creating",
-  ],
-  imposter: [
-    "Give a clue that proves you know the word without giving it away",
-    "The imposter should try to blend in",
-    "Review all clues carefully before voting",
-  ],
-  password: [
-    "Clue givers: your clue must be exactly one word",
-    "Guessers: type your best guess before time runs out",
-    "Watch the scoreboard to track team progress",
-  ],
-  chain: [
-    "Wrong guesses auto-reveal one letter as a hint",
-    "Fewer hints used = more points per word",
-    "Finish your chain first for a bonus point on the last word",
-  ],
-  shade: [
-    "Leaders: describe the color without naming it directly",
-    "Closer guesses earn more points",
-    "Every player takes a turn as leader across rounds",
-  ],
-  location: [
-    "Leaders: don't name the place directly",
-    "You get clues to narrow it down",
-    "Closer guesses score more points",
-  ],
-  shikaku: [
-    "Drag to draw rectangles on the grid",
-    "Each rectangle must contain exactly one number",
-    "Complete all puzzles as fast as you can for a higher score",
-  ],
-  pips: [
-    "Drag dominoes from the tray onto adjacent cells",
-    "Click a domino or press R while holding it to rotate clockwise",
-    "Ranked runs use Easy, Medium, and Hard splits; fastest total time ranks",
-  ],
-  zip: [
-    "Start on 1 and drag through every square without lifting",
-    "Hit the numbers in order, and never cross a wall",
-    "Drag back over your line to undo, fastest total time ranks",
-  ],
-};
-
-function getPageInfo(pathname: string): PageInfo {
-  const slug = getGameSlugFromPath(pathname);
-
-  if (slug === "home" && pathname !== "/") {
-    return {
-      title: "Page",
-      description: "You're on an unknown page.",
-    };
-  }
-
-  const meta = GAME_META[slug];
-  return {
-    title: slug === "home" ? "Home" : meta.title,
-    description: slug === "home"
-      ? "Create a new game or join an existing one with a code. Set your display name so others can see you."
-      : meta.description,
-    tips: pageTips[slug],
-  };
-}
-
 function useCustomStatus() {
   return useSyncExternalStore(subscribeCustomStatus, getCustomStatus);
 }
 
+/** Space on a focused control is that control's own press, not the easter egg. */
+function isTyping(target: EventTarget | null) {
+  return target instanceof HTMLElement
+    && (target.isContentEditable || target.matches("input, textarea, select, .mshell button, .mshell a"));
+}
+
 export function InfoModal({ onClose }: { onClose: () => void }) {
+  const [arcade, setArcade] = useState<ArcadeGame | null>(null);
+
+  // Capture phase, so Escape backs out of a game before ModalShell's own
+  // window listener sees it and closes the whole modal.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (arcade && event.key === "Escape") {
+        event.preventDefault();
+        setArcade(null);
+      } else if (!arcade && event.key === " " && !event.repeat && !isTyping(event.target)) {
+        event.preventDefault();
+        setArcade(Math.random() < 0.5 ? "snake" : "invaders");
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [arcade]);
+
+  const other: ArcadeGame = arcade === "snake" ? "invaders" : "snake";
+
   return (
-    <ModalShell icon={<FiInfo size={18} />} title={siteInfo.title} onClose={onClose} footer={<InfoFooter />}>
-      <InfoContent />
+    <ModalShell
+      className="info-modal"
+      icon={arcade ? <LuGamepad2 size={18} /> : <FiInfo size={18} />}
+      title={arcade === "snake" ? "Snake" : arcade === "invaders" ? "Invaders" : "Games"}
+      onClose={onClose}
+      footer={arcade ? (
+        <div className="info-footer">
+          <button type="button" className="info-footer-link" onClick={() => setArcade(null)}>
+            <FiArrowLeft size={13} /> Back
+          </button>
+          <button type="button" className="info-footer-link" onClick={() => setArcade(other)}>
+            Play {other === "snake" ? "Snake" : "Invaders"} instead
+          </button>
+        </div>
+      ) : <InfoFooter hint />}
+    >
+      {arcade ? (
+        <InfoArcade game={arcade} seed={getOrCreateSessionId()} />
+      ) : (
+        <>
+          <span className="info-mark" aria-hidden="true" />
+          <InfoContent />
+        </>
+      )}
     </ModalShell>
   );
 }
 
-export function InfoFooter() {
+/** `hint` adds the Space prompt, for frames that have a keyboard. */
+export function InfoFooter({ hint = false }: { hint?: boolean }) {
   return (
     <div className="info-footer">
       <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" className="info-footer-link">
         <FiGithub size={13} /> Source
       </a>
+      {hint && <span className="info-footer-hint"><kbd>Space</kbd> for a break</span>}
       <span className="info-footer-by">
         Built by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson</a>
       </span>
@@ -121,16 +89,18 @@ export function InfoFooter() {
 }
 
 /** What the info modal says, framed by the desktop modal or the mobile sheet.
- *  `pageAction` sits under the current page's tips, e.g. the mobile How to Play. */
+ *  `pageAction` sits under the current game, e.g. the mobile How to Play. */
 export function InfoContent({ pageAction }: { pageAction?: ReactNode }) {
   const location = useLocation();
-  const page = getPageInfo(location.pathname);
+  const slug = getGameSlugFromPath(location.pathname);
   const sessionId = getOrCreateSessionId();
   const customStatus = useCustomStatus();
 
   return (
     <>
-      <p className="info-site-desc">{siteInfo.description}</p>
+      <p className="info-site-desc">
+        Party games and logic puzzles that run in the browser. Make a room, send the code, play. Free, open source, and no accounts.
+      </p>
 
       {customStatus?.text && (
         <div className="info-status" style={{ borderColor: customStatus.color || "var(--primary)" }}>
@@ -141,31 +111,35 @@ export function InfoContent({ pageAction }: { pageAction?: ReactNode }) {
         </div>
       )}
 
-      <ModalSection label={page.title} hint={page.description}>
-        {page.tips && page.tips.length > 0 && (
-          <ul className="info-tips">
-            {page.tips.map((tip) => (
-              <li key={`${page.title}-${tip}`} className="info-tip">
-                <FiArrowRight size={12} aria-hidden="true" />
-                <span>{tip}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {pageAction}
-      </ModalSection>
+      {slug !== "home" && (
+        <ModalSection label={GAME_META[slug].title} hint={GAME_META[slug].description}>
+          {pageAction}
+        </ModalSection>
+      )}
 
-      <ModalSection label="Feedback" hint="Found a bug or have an idea? Send it over on GitHub.">
+      <ModalSection label="Feedback">
         <div className="info-links">
-          {supportLinks.map((link) => (
-            <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="info-link">
-              {link.label}
-            </a>
-          ))}
+          <a href={BUG_REPORT_URL} target="_blank" rel="noopener noreferrer" className="info-link">
+            <FiAlertCircle size={15} aria-hidden="true" />
+            <span className="info-link-text">
+              <span className="info-link-label">Report a bug</span>
+              <span className="info-link-sub">Something broke or looks off</span>
+            </span>
+          </a>
+          <a href={IDEA_REPORT_URL} target="_blank" rel="noopener noreferrer" className="info-link">
+            <FiZap size={15} aria-hidden="true" />
+            <span className="info-link-text">
+              <span className="info-link-label">Suggest an idea</span>
+              <span className="info-link-sub">A game, a mode, a tweak</span>
+            </span>
+          </a>
         </div>
       </ModalSection>
 
-      <ModalSection label="Session" hint="Include this when reporting lobby or sync issues.">
+      <ModalSection
+        label="Session ID"
+        hint="Your name and this id live in this browser, and that's the whole account. Paste it into bug reports about lobbies or sync."
+      >
         <ClipboardText text={sessionId} label="Copy session id" />
       </ModalSection>
     </>
