@@ -20,6 +20,7 @@ import { PublicGamesList, usePublicGameCount } from "../components/shared/Public
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { PlayerAvatar } from "../components/shared/PlayerAvatar";
 import { GameIcon } from "../components/shared/GameIcon";
+import { ShikakuPreview } from "../components/home/ShikakuPreview";
 import { ZipPreview } from "../components/zip/ZipPreview";
 import { type HomeRouteGame } from "../lib/home-route-highlight";
 import { useHomePage } from "../hooks/useHomePage";
@@ -70,27 +71,7 @@ const SOLO_GAMES: SoloGameDef[] = [
     description: shikakuMeta.shortDescription,
     accent: shikakuMeta.accent,
     href: "/shikaku",
-    preview: (
-      <div className="solo-preview-shikaku">
-        {/* 4×4 grid with number hints and filled rectangles */}
-        <div className="solo-shikaku-cell solo-shikaku-cell--filled-a" />
-        <div className="solo-shikaku-cell solo-shikaku-cell--filled-a" />
-        <div className="solo-shikaku-cell solo-shikaku-num">4</div>
-        <div className="solo-shikaku-cell solo-shikaku-cell--filled-b" />
-        <div className="solo-shikaku-cell solo-shikaku-cell--filled-a" />
-        <div className="solo-shikaku-cell solo-shikaku-cell--filled-a" />
-        <div className="solo-shikaku-cell" />
-        <div className="solo-shikaku-cell solo-shikaku-cell--filled-b" />
-        <div className="solo-shikaku-cell solo-shikaku-num">6</div>
-        <div className="solo-shikaku-cell" />
-        <div className="solo-shikaku-cell" />
-        <div className="solo-shikaku-cell solo-shikaku-cell--filled-b" />
-        <div className="solo-shikaku-cell" />
-        <div className="solo-shikaku-cell" />
-        <div className="solo-shikaku-cell solo-shikaku-num">2</div>
-        <div className="solo-shikaku-cell solo-shikaku-cell--filled-b" />
-      </div>
-    ),
+    preview: <ShikakuPreview />,
   },
   {
     id: "pips", gameSlug: "pips", title: pipsMeta.title,

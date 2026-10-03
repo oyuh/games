@@ -238,7 +238,6 @@ a.solo-card-title-link {
   padding: 0.35rem 0 0.15rem;
 }
 
-.solo-card--playable:hover .solo-shikaku-cell,
 .solo-card--playable:hover .solo-pips-domino--board {
   animation-play-state: paused;
 }
@@ -265,72 +264,26 @@ a.solo-card-title-link {
   color: var(--muted-foreground);
 }
 
-.solo-preview-shikaku .solo-shikaku-cell {
-  animation: solo-shikaku-grid-rest 7.2s ease-in-out infinite;
-}
-
 .solo-shikaku-num {
   color: var(--card-accent);
   font-weight: 900;
   font-size: 0.65rem;
 }
 
-.solo-preview-shikaku .solo-shikaku-cell--filled-a {
-  background: color-mix(in srgb, var(--card-accent) 18%, transparent);
-  border-color: color-mix(in srgb, var(--card-accent) 35%, transparent);
-  animation-name: solo-shikaku-fill-a;
+/* ShikakuPreview drives these from state: a dashed rectangle while it's being
+   dragged out, then its own color once it locks in. */
+.solo-preview-shikaku .solo-shikaku-cell[data-filled] {
+  background: color-mix(in srgb, var(--rect-color) 18%, transparent);
+  border-color: color-mix(in srgb, var(--rect-color) 40%, transparent);
 }
 
-.solo-preview-shikaku .solo-shikaku-cell--filled-b {
-  background: color-mix(in srgb, #38bdf8 14%, transparent);
-  border-color: color-mix(in srgb, #38bdf8 28%, transparent);
-  animation-name: solo-shikaku-fill-b;
+.solo-preview-shikaku .solo-shikaku-cell[data-dragging] {
+  border: 1px dashed var(--card-accent);
+  background: color-mix(in srgb, var(--card-accent) 10%, transparent);
 }
 
-.solo-preview-shikaku .solo-shikaku-cell:nth-child(7),
-.solo-preview-shikaku .solo-shikaku-cell:nth-child(10),
-.solo-preview-shikaku .solo-shikaku-cell:nth-child(11) {
-  animation-name: solo-shikaku-fill-c;
-}
-
-@keyframes solo-shikaku-grid-rest {
-  0%, 100% {
-    background: color-mix(in srgb, var(--secondary) 8%, transparent);
-    border-color: color-mix(in srgb, var(--secondary) 16%, transparent);
-  }
-}
-
-@keyframes solo-shikaku-fill-a {
-  0%, 10%, 88%, 100% {
-    background: color-mix(in srgb, var(--secondary) 8%, transparent);
-    border-color: color-mix(in srgb, var(--secondary) 16%, transparent);
-  }
-  20%, 76% {
-    background: color-mix(in srgb, var(--card-accent) 18%, transparent);
-    border-color: color-mix(in srgb, var(--card-accent) 35%, transparent);
-  }
-}
-
-@keyframes solo-shikaku-fill-b {
-  0%, 24%, 88%, 100% {
-    background: color-mix(in srgb, var(--secondary) 8%, transparent);
-    border-color: color-mix(in srgb, var(--secondary) 16%, transparent);
-  }
-  34%, 76% {
-    background: color-mix(in srgb, #38bdf8 14%, transparent);
-    border-color: color-mix(in srgb, #38bdf8 28%, transparent);
-  }
-}
-
-@keyframes solo-shikaku-fill-c {
-  0%, 40%, 88%, 100% {
-    background: color-mix(in srgb, var(--secondary) 8%, transparent);
-    border-color: color-mix(in srgb, var(--secondary) 16%, transparent);
-  }
-  50%, 76% {
-    background: color-mix(in srgb, #a78bfa 15%, transparent);
-    border-color: color-mix(in srgb, #a78bfa 32%, transparent);
-  }
+.solo-preview-shikaku[data-solved] .solo-shikaku-cell {
+  border-color: color-mix(in srgb, #22c55e 55%, transparent);
 }
 
 /* ── Pips preview ────────────────────────────────────────────── */
