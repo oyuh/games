@@ -1,16 +1,16 @@
-# Location Signal (Game Design Document)
+# Location Signal
 
 > **Status:** Implemented
-> **Players:** 2-10
-> **Type:** Competitive map + clue party game
+> **Players:** 2 or more (3-8 is the sweet spot)
+> **Type:** Competitive map and clue party game
 
 ---
 
 ## Core Idea
 
-Each round, one player is the **Leader** and secretly picks a real-world location (a city, landmark, or region) on a world map. The Leader gives up to **two clues**. Everyone else clicks where they think the location is. Closer guesses collect fewer points.
+Each round, one player is the **Leader** and secretly drops a pin anywhere on a world map. The leader gives short clues, and everyone else clicks where they think the pin is. The closer you land, the more points you get.
 
-**Scoring style:** golf. **Lowest total score wins.**
+**Highest total score wins.**
 
 It's basically a social spin on GeoGuessr-style distance guessing, where clue quality and mind games are the core skill.
 
@@ -18,158 +18,95 @@ It's basically a social spin on GeoGuessr-style distance guessing, where clue qu
 
 ## Round Flow
 
-### Phase 1: Leader Pick
+1. **Pick.** The leader pans the map and drops the target pin. No timer.
+2. **Clue.** The leader writes a short clue, like "Mediterranean" or "mountain capital".
+3. **Guess.** Every guesser drops a marker on the map.
+4. **Repeat.** With more than one clue pair, the leader gives another clue and guessers can move their marker. This repeats once per clue pair.
+5. **Reveal.** The real spot and every final marker show up, with each guesser's distance and points. The reveal lasts 10 seconds, or the host can move on sooner.
+6. **Rotate.** The next player in the order becomes leader and picks a new spot.
 
-- The leader gets an interactive map and chooses a hidden target point.
-- Guessers can't see the target.
-- Optional: lock the location scope by category (city-only, country-only, landmark-only).
+If the leader runs out of time on a clue, the round moves on with no clue. When every guesser has locked in, the guess phase ends 5 seconds later instead of waiting out the timer.
 
-### Phase 2: Clue 1
-
-- The leader submits a first clue (short text).
-- Example clues: "Mediterranean", "mountain capital", "desert coast".
-
-### Phase 3: Guess 1
-
-- All guessers place their first marker on the map.
-- Guesses stay hidden until everyone has submitted (or the timer ends).
-
-### Phase 4: Clue 2 (Correction Clue)
-
-- The leader submits a second clue after seeing the first-guess spread.
-- The point is to let guessers recover if they're wildly off.
-
-### Phase 5: Final Guess
-
-- Guessers can move their marker and submit a final guess.
-- The final guess is what counts for scoring (in the default mode).
-
-### Phase 6: Reveal + Scoring
-
-- The true location and all final markers are revealed.
-- Each guesser's distance to the target is computed.
-- Distance is converted to penalty points; lower is better.
-
-### Phase 7: Rotate Leader
-
-- The next player becomes leader.
-- Repeat until everyone has led once (or for the configured number of rounds).
+**Duel shortcut:** with exactly one guesser, a guess within 120.7 km (75 miles) of the target ends the round right away with full points.
 
 ---
 
-## Scoring Model (Golf)
+## Scoring
 
-### Default (Distance Buckets)
+Each guesser scores their last marker of the round:
 
-| Distance to target | Penalty points |
-|--------------------|----------------|
-| <= 25 km           | 0              |
-| <= 100 km          | 1              |
-| <= 250 km          | 2              |
-| <= 500 km          | 3              |
-| <= 1000 km         | 5              |
-| > 1000 km          | 8              |
+- Within 120.7 km (75 miles) of the target: **5000 points**.
+- Farther out, points fall off smoothly: `5000 × e^(-(km - 120.7) / 3000)`, rounded. That's about 2700 points at 2000 km, and it never quite reaches 0.
 
-- Lowest cumulative score after all rounds wins.
-- Tie-breaker: best (lowest) single-round score, then most exact/near hits.
+The leader doesn't score in their own round.
 
-### Optional Variant (Raw Distance)
-
-- Use the exact km distance as points (capped); lowest still wins.
-- More precise, but less casual-friendly.
+The scorer is `scoreForDistance` in `location-signal.ts`, and distance is great-circle (haversine) distance.
 
 ---
 
 ## Rules
 
-- The leader can't use exact coordinates or lat/long.
-- The leader can't name the exact location directly.
-- Clue 1 and clue 2 each have a character limit (e.g. 40 chars).
-- Guessers can't submit after the timer expires.
-- The host can turn second-clue mode on or off.
+- Clues can be up to 80 characters. The game doesn't police what's in them, so naming the exact place is a table rule, not a code rule.
+- Guessers can move their marker until the phase ends.
+- The leader order is shuffled once at the start.
+- Players who join after the game starts can spectate and chat.
+- The host can kick players and remove spectators. Kicked players can't rejoin. The host leaving ends the game for everyone.
 
 ---
 
-## Suggested Settings
+## Settings
 
 | Setting | Range | Default |
 |--------|-------|---------|
-| Rounds | 1-10 | player count (everyone leads once) |
-| Guess timer | 15-120 sec | 45 sec |
-| Clue timer | 10-60 sec | 20 sec |
-| Map scope | world / region / category | world |
-| Second clue | on/off | on |
-| Scoring mode | bucket / raw km | bucket |
+| Rounds per player | 1-3 | 1 |
+| Clue pairs per round | 1-4 | 2 |
+| Clue timer | 10-180 s | 45 s |
+| Guess timer | 10-180 s | 45 s |
+
+The host can change all of these from the lobby. The game runs `players × rounds per player` rounds.
 
 ---
 
-## Data Model
+## Implementation Notes
 
-```ts
+### Map
+
+`WorldMap.tsx` draws its own tile map with Google Hybrid tiles (satellite plus labels), wrapped so the map repeats sideways forever. It loads tiles straight from Google. The API's `/api/maps/config` and `/api/maps/geocode` endpoints exist, but the current map doesn't call them.
+
+### Hidden target
+
+When the leader picks, the server seals the spot with a per-game key (`encrypted_target`), so guessers' clients never hold it. Only the leader can fetch the key from `/api/game-secret/key` before the reveal. At the reveal the server opens it, scores the round, and writes the target in the clear.
+
+### Data Model
+
+```
 location_signal_games {
-  id: string
-  code: string
-  host_id: string
-  phase: "lobby" | "pick" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended"
-
-  players: Array<{ sessionId: string; name: string; connected: boolean }>
-  spectators: Array<{ sessionId: string }>
-
-  settings: {
-    rounds: number
-    clueDurationSec: number
-    guessDurationSec: number
-    useSecondClue: boolean
-    scoringMode: "bucket" | "raw"
-    mapScope: "world" | "region" | "country-only" | "landmarks"
-  }
-
-  currentRound: number
-  leaderOrder: string[]
-  leaderId: string
-
-  target: { lat: number; lng: number } | null
-  clue1: string | null
-  clue2: string | null
-
-  guesses1: Record<string, { lat: number; lng: number }>
-  guesses2: Record<string, { lat: number; lng: number }>
-
-  scores: Record<string, number> // golf: lower is better
-
-  roundHistory: Array<{
-    round: number
-    leaderId: string
-    target: { lat: number; lng: number }
-    clue1: string
-    clue2: string | null
-    guesses: Record<string, { lat: number; lng: number }>
-    distancesKm: Record<string, number>
-    penalties: Record<string, number>
-  }>
-
-  kicked: string[]
-  endedAt?: number
+  id, code, host_id
+  phase: "lobby" | "picking" | "clue1" | "guess1" | ... | "clue4" | "guess4" | "reveal" | "finished" | "ended"
+  players: [{ sessionId, name, connected, totalScore }]
+  leader_id, leader_order, current_leader_index
+  target_lat, target_lng, encrypted_target
+  clue1, clue2, clue3, clue4
+  guesses: [{ sessionId, round: 1-4, lat, lng }]
+  round_history: [{ round, leaderId, target, clue1, clue2, clue3, clue4, guesses, scores }]
+  settings: { clueDurationSec, guessDurationSec, roundsPerPlayer, cluePairs, currentRound, phaseEndsAt }
 }
 ```
+
+`scores` in a round history entry is every player's running total after that round.
 
 ---
 
 ## Key Mutators
 
-- `locationSignal.create`
-- `locationSignal.join`
-- `locationSignal.start`
-- `locationSignal.pickLocation`
-- `locationSignal.submitClue1`
-- `locationSignal.submitGuess1`
-- `locationSignal.submitClue2`
-- `locationSignal.submitGuess2`
-- `locationSignal.revealRound`
-- `locationSignal.nextRound`
-- `locationSignal.leave`
-- `locationSignal.kick`
-- `locationSignal.end`
+- `locationSignal.create`, `join`, `leave`, `start`, `updateSettings`
+- `locationSignal.setTarget`: the leader's pick
+- `locationSignal.submitClue`: clue for pair 1-4
+- `locationSignal.submitGuess`: place or move a marker
+- `locationSignal.advanceTimer`: moves the phase along when the timer runs out, and scores the last guess phase
+- `locationSignal.revealRound`: host skip to the next clue or the reveal
+- `locationSignal.nextRound`: host skip from the reveal
+- `locationSignal.kick`, `endGame`
 
 ---
 
@@ -177,20 +114,6 @@ location_signal_games {
 
 - `LocationSignalPage` (desktop)
 - `MobileLocationSignalPage` (mobile)
-- `WorldMapCanvas` / `WorldMap` (click-to-guess)
-- `LeaderPickPanel`
-- `CluePanel`
-- `GuessMarkersOverlay`
-- `DistanceResultsPanel`
-- `ScoreboardGolf`
-- `RoundTimeline`
-
----
-
-## UX Notes
-
-- Auto-focus the clue inputs when clue phases start.
-- Keep the map center/zoom smooth between phases.
-- Show a clear phase countdown and lock state.
-- On reveal, animate lines from guesses to the target so results read instantly.
-- Keep spectators read-only but fully informed.
+- `LocationLobby`: settings and players
+- `LocationRound`: the round in play
+- `WorldMap`: the map, click to pick or guess

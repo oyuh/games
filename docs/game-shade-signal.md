@@ -1,14 +1,14 @@
-# Shade Signal (Game Design Document)
+# Shade Signal
 
 > **Status:** Implemented
-> **Players:** 3-10
-> **Type:** Cooperative/competitive color-guessing party game
+> **Players:** 3-8
+> **Type:** Competitive color-guessing party game
 
 ---
 
 ## Core Idea
 
-One **Leader** secretly knows a target color on a shared color grid. Everyone else (the **Guessers**) tries to land on the right square using only the leader's word clues. Scoring is by proximity.
+One **Leader** secretly knows a target color on a shared color grid. Everyone else (the **Guessers**) tries to land on it using only the leader's word clues. Scoring is by how close you get.
 
 **What it tests:** color perception, communication, shared references, and understanding how other people interpret language.
 
@@ -16,56 +16,65 @@ The fun lives in the gap between what the leader meant and what the guessers hea
 
 ---
 
+## How to Play
+
+1. **Create or join.** The host creates a lobby and shares the 6-character join code. The game needs at least 3 players.
+2. **Pick (optional).** With leader picking on, the leader chooses the target square. Otherwise the server picks one at random.
+3. **First clue.** The leader gives a one-word clue.
+4. **First guess.** Every guesser places a marker on the grid.
+5. **Second clue.** The leader gives a second clue of up to two words to steer people in.
+6. **Final guess.** Guessers can move their marker.
+7. **Reveal.** The target shows up, along with everyone's markers and the round's scores.
+8. **Rotate.** The next player in the order becomes leader, with a fresh board and target.
+
+---
+
 ## Game Phases
 
-### Phase 1: Setup
+| Phase | What happens |
+|-------|-------------|
+| **Lobby** | Players join. The host changes settings and starts the game. |
+| **Picking** | Leader picking only. The leader chooses the target. No timer. |
+| **Clue 1** | The leader writes a one-word clue (45 second timer by default). |
+| **Guess 1** | Guessers place a marker (30 second timer by default). |
+| **Clue 2** | The leader writes a clue of up to two words. |
+| **Guess 2** | Guessers can move their marker. |
+| **Reveal** | Target and scores shown for 8 seconds, then the next round starts. The host can skip ahead. |
+| **Finished** | Every round played. Final scores and round history. |
 
-- Display a visible color grid (say, 10x10 or 8x12 squares of distinct hues and shades).
-- One player is the **Leader**; everyone else is a **Guesser**.
-- The leader secretly receives one target square, assigned at random.
+If the leader runs out of time on a clue, the round moves on with no clue. When every guesser has locked in, the guess phase ends 5 seconds later instead of waiting out the timer.
 
-### Phase 2: First Clue
+---
 
-The leader gives **one word**.
+## Configuration
 
-**Good clue types:**
-- Object references: "peach," "ocean," "lavender"
-- Mood references: "moody," "toxic," "calm"
-- Vibe/style references: "neon," "vintage," "royal"
+| Setting | Range | Default | Description |
+|---------|-------|---------|-------------|
+| **Rounds per player** | 1-3 | 1 | How many times each player leads |
+| **Clue timer** | 10-180 s | 45 s | Time the leader gets for each clue |
+| **Guess timer** | 10-180 s | 30 s | Time guessers get for each guess |
+| **Hard mode** | On/Off | Off | Bans color names in clues |
+| **Leader picks** | On/Off | Off | The leader chooses the target instead of the server |
 
-**Restricted clues:**
-- No coordinates or position references ("top-left," "row 3")
-- No direct color-family names in hard mode ("blue," "red")
-- No pointing at things in the room
+The host can change all of these from the lobby. The board is 10 rows by 12 columns.
 
-### Phase 3: First Guess
+---
 
-All guessers place their first guess on the grid **simultaneously**.
+## Rules
 
-- Multiple guessers can pick the same square (stacking is allowed).
-- Guesses stay hidden from other players until everyone has submitted.
+- Clue 1 is one word. Clue 2 is two words at most.
+- In hard mode, clues can't use color names like "blue", "teal", or "burgundy". The full list is `SHADE_COLOR_WORDS` in `shade-signal.ts`.
+- Guessers can change their marker until the phase ends. Your final guess is the one that scores. If you skipped the second guess, your first one counts.
+- Multiple guessers can pick the same square.
+- The leader order is shuffled once at the start.
+- Players who join after the game starts can spectate and chat.
+- The host can kick players and remove spectators. Kicked players can't rejoin. The host leaving ends the game for everyone.
 
-### Phase 4: Second Clue
+---
 
-The leader gives a **second clue** (one or two words) to refine the first one.
+## Scoring
 
-Example flow:
-- First clue: "sunset"
-- Second clue: "dusty orange"
-
-### Phase 5: Final Guess
-
-Each guesser can either:
-- **Move** their original marker, or
-- **Place a second marker** (if playing the two-guess scoring variant)
-
-### Phase 6: Reveal
-
-The leader reveals the exact target color. This is the payoff moment.
-
-### Phase 7: Scoring
-
-**Guesser scoring, per guess:**
+**Guessers, per round:**
 
 | Distance from target | Points |
 |---------------------|--------|
@@ -75,29 +84,11 @@ The leader reveals the exact target color. This is the payoff moment.
 | 3 squares away      | 1      |
 | Farther             | 0      |
 
-"Distance" here is Manhattan distance (horizontal plus vertical squares).
+Distance counts diagonals as one step (Chebyshev distance), so every square touching the target is 1 away.
 
-**Leader scoring:**
-- +1 point for each guesser within 3 squares
-- +2 bonus if any guesser hit the exact square
+**Leader:** the average of the guessers' points that round, rounded. A leader who gets everyone close scores well.
 
-This rewards leaders for being understandable, not just clever.
-
-### Phase 8: Rotate Leader
-
-- The next player becomes leader.
-- A new target color is chosen.
-- Repeat until everyone has led once (or twice for shorter games).
-
----
-
-## Rules
-
-- The leader can't use color-family names in hard mode.
-- No board-position clues ("left," "top," "row 2").
-- Clue 1 is always one word. Clue 2 can be one or two words.
-- Guesses are simultaneous and hidden until everyone has submitted.
-- Stacking (multiple guessers on the same square) is allowed.
+Highest total after every round wins.
 
 ---
 
@@ -105,90 +96,45 @@ This rewards leaders for being understandable, not just clever.
 
 ### Color Grid
 
-Generate a grid of distinct, evenly-distributed colors. Options:
+Colors are generated from a seed, so only the seed is stored. Hue runs across the columns, lightness runs down the rows from 16% to 84%, and saturation gets a small seeded wobble. Every round rolls a new seed. See `generateGridColor` in `apps/web/src/components/shade/ColorGrid.tsx`.
 
-1. **HSL grid.** Vary hue across columns and lightness across rows, e.g. 10 hues x 8 lightness levels = 80 cells.
-2. **Curated palette.** Hand-pick ~100 distinct colors for maximum ambiguity and fun.
-3. **Named-color board.** Each cell gets a CSS-named color for easy reference.
+### Hidden target
 
-The recommendation: an HSL grid with slight saturation variation. It looks great and generates programmatically.
+The target is sealed with a per-game key before it syncs (`encrypted_target`), so guessers' clients never hold it. Only the leader can fetch the key from `/api/game-secret/key` before the reveal. At the reveal the server opens it, scores the round, and writes the target in the clear.
 
 ### Data Model
 
 ```
 shade_signal_games {
-  id: string
-  code: string (6-char join code)
-  host_id: string
-  phase: "lobby" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended"
-
-  players: [
-    { sessionId, name, connected, totalScore }
-  ]
-
-  leader_id: string  // current round's leader
-  leader_order: string[]  // rotation order
-
-  grid: {
-    rows: number
-    cols: number
-    // Colors are generated deterministically from the seed, no need to store each cell
-    seed: number
-  }
-
-  target: { row: number, col: number }  // leader's secret target
-
-  clue1: string | null
-  clue2: string | null
-
-  guesses: [
-    { sessionId, round: 1 | 2, row: number, col: number }
-  ]
-
-  round_history: [
-    { round, leaderId, target, clue1, clue2, guesses, scores }
-  ]
-
-  settings: {
-    hardMode: boolean  // restricts color-name clues
-    clueDurationSec: number
-    guessDurationSec: number
-    roundsPerPlayer: 1 | 2
-  }
-}
-```
-
-### Manhattan Distance Scoring
-
-```ts
-function scoreGuess(guess: {row, col}, target: {row, col}): number {
-  const dist = Math.abs(guess.row - target.row) + Math.abs(guess.col - target.col);
-  if (dist === 0) return 5;
-  if (dist === 1) return 3;
-  if (dist === 2) return 2;
-  if (dist <= 3) return 1;
-  return 0;
+  id, code, host_id
+  phase: "lobby" | "picking" | "clue1" | "guess1" | "clue2" | "guess2" | "reveal" | "finished" | "ended"
+  players: [{ sessionId, name, connected, totalScore }]
+  leader_id, leader_order, current_leader_index
+  grid_seed, grid_rows, grid_cols
+  target_row, target_col, encrypted_target
+  clue1, clue2
+  guesses: [{ sessionId, round: 1 | 2, row, col }]
+  round_history: [{ round, leaderId, target, seed, clue1, clue2, guesses, scores, leaderScore }]
+  settings: { hardMode, leaderPick, clueDurationSec, guessDurationSec, roundsPerPlayer, currentRound, phaseEndsAt }
 }
 ```
 
 ### Key Mutators
 
-- `shadeSignal.create`: create the game
-- `shadeSignal.join`: player joins
-- `shadeSignal.start`: host starts; assigns the first leader, generates the grid and target
-- `shadeSignal.submitClue`: leader submits a clue (1 or 2)
-- `shadeSignal.submitGuess`: guesser places a marker on the grid
-- `shadeSignal.reveal`: advance to the reveal phase and compute scores
-- `shadeSignal.nextRound`: rotate the leader, pick a new target
-- `shadeSignal.leave`: player leaves
+- `shadeSignal.create`, `join`, `leave`, `start`, `updateSettings`
+- `shadeSignal.setTarget`: the leader's pick
+- `shadeSignal.submitClue`: checked by `shadeClueProblem`, the same function the clue box uses
+- `shadeSignal.submitGuess`: place or move a marker
+- `shadeSignal.advanceTimer`: moves the phase along when the timer runs out
+- `shadeSignal.reveal`: score the round on the server
+- `shadeSignal.nextRound`: host skip from the reveal
 
 ### UI Components
 
 - `ShadeSignalPage`: main game page
-- `ColorGrid`: interactive color grid (clickable for guessers, display-only for the leader)
-- `ClueInput`: the leader's clue submission
-- `ClueDisplay`: shows the current clue(s) to guessers
-- `GuessMarkers`: overlay markers on the grid showing player guesses
-- `RevealOverlay`: highlights the target square and draws distance lines
-- `ScoreBoard`: all player scores, including the leader bonus
-- `LeaderBadge`: marks the current leader
+- `ShadeLobby`: settings and players
+- `ColorGrid` / `ShadeGrid`: the board, clickable for guessers
+- `ShadeClue`: the leader's clue box
+- `ShadeGuess`: the guesser's view
+- `ShadeResult`: the reveal
+- `ShadeGameOver`: final scores and round history

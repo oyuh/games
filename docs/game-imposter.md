@@ -1,17 +1,16 @@
 # Imposter
 
-A social deduction game. Every round, players see a secret word, except the imposter, who sees nothing. Everyone gives one-word clues, then votes on who the imposter is.
+A social deduction game. Everyone sees a secret word except the imposters, who see nothing. Everyone gives a clue, then votes someone out. Vote out every imposter to win. Let them survive long enough and they win instead.
 
 ---
 
 ## How to play
 
-1. **Create or join.** The host creates a lobby and shares the 6-character join code. Players join via the code on the home page.
-2. **Clue phase.** A secret word is revealed to everyone except the imposter(s). Each player submits a single one-word clue that proves they know the word without giving it away. The imposter has to bluff.
-3. **Voting phase.** Once the clues are in, everyone reviews them and votes for who they think is the imposter. You can't vote for yourself.
-4. **Results.** The votes are tallied. If the imposter got the most votes, they're caught. Then the next round begins.
-
-The game runs for the configured number of rounds, then shows a full summary.
+1. **Create or join.** The host creates a lobby and shares the 6-character join code. Players join with the code on the home page, or from the public lobby list if the host made the room public.
+2. **Clue phase.** The secret word goes to everyone except the imposters. Each player submits a short clue that proves they know the word without giving it away. The imposters have to bluff.
+3. **Voting phase.** Once the clues are in, everyone votes for who they think is an imposter. You can't vote for yourself.
+4. **Results.** The player with the most votes is out and moves to the spectators. The results screen says whether they were an imposter.
+5. **Next round.** If the game isn't over, the survivors get a fresh word and go again with the same roles.
 
 ---
 
@@ -19,11 +18,13 @@ The game runs for the configured number of rounds, then shows a full summary.
 
 | Phase | What happens |
 |-------|-------------|
-| **Lobby** | Players join. Host configures settings and starts the game (minimum 3 players). |
-| **Playing** | Secret word assigned. All players submit one clue (75 second timer). Auto-advances when all clues are in. |
-| **Voting** | Players vote on who the imposter is (45 second timer). Auto-advances when all votes are in. |
-| **Results** | Vote tally shown. Reveals whether the imposter was caught. Host advances to the next round or finishes. |
-| **Finished** | All rounds complete. Full round history displayed. |
+| **Lobby** | Players join. The host changes settings and starts the game (minimum 3 players). |
+| **Playing** | Secret word handed out. Every remaining player submits one clue (75 second timer by default). Moves on as soon as every clue is in. |
+| **Voting** | Players vote on who the imposter is (45 second timer). Moves on as soon as every vote is in. |
+| **Results** | Vote tally and the reveal. Moves on after 8 seconds, or right away if every remaining player votes to skip. |
+| **Finished** | Game over. Full round history displayed. |
+
+The host leaving ends the game for everyone.
 
 ---
 
@@ -31,43 +32,52 @@ The game runs for the configured number of rounds, then shows a full summary.
 
 | Setting | Range | Default | Description |
 |---------|-------|---------|-------------|
-| **Rounds** | 1-10 | 3 | Number of rounds to play |
-| **Imposters** | 1-5 | 1 | Imposters per round (capped to `players - 1`) |
-| **Category** | 15 options | Animals | Word bank to draw secret words from |
+| **Rounds** | 1-10 | 3 | Most rounds the game can run |
+| **Imposters** | 1-5 | 1 | Imposters in the game (capped to `players - 1`) |
+| **Clue timer** | 15-300 s | 75 s | How long the clue phase lasts |
+| **Imposter peek** | 0, 25%, 50%, 65%, 100% | 65% | How much of each clue the imposters can see while clues come in |
+| **Category** | 23 options | Animals | Word bank to draw secret words from |
+
+The host can change all of these from the lobby before the game starts.
 
 ### Categories
 
-Animals · Movies & Shows · Disney & Pixar · FPS Games · Other Games · Food · Drinks · Restaurants · Car Brands · Luxury Brands · Sports · Celebrities · Countries · Cities · Minecraft Mobs
+Animals · Movies & Shows · Disney & Pixar · Shooter Games · Video Games · Food · Drinks · Restaurants · Car Brands · Luxury Brands · Sports · Celebrities · Countries · Cities · Minecraft Mobs · Superheroes · Musicians · Anime · Apps & Websites · Pokémon · Jobs · Around the House · Places
 
-Each category has 15-20 words.
+Each category has 60-100 words.
 
 ---
 
 ## Rules
 
-- Clues must be **one word** and can't contain the secret word.
-- If a player doesn't submit a clue before the timer runs out, it auto-fills as "(no clue)".
+- Clues can be up to 80 characters. If a player doesn't submit one before the timer runs out, it fills in as "(no clue)".
+- Regular players only see that someone locked in a clue, not what it says, until voting. Imposters see other players' clues with letters blanked out, as much as the peek setting allows.
 - You **cannot vote for yourself**. Nice try.
-- Roles (imposter vs regular) are randomly re-assigned each round.
-- Players who join after the game starts can spectate and chat, but can't participate.
-- The host can kick players from the lobby.
+- The most-voted player is out. A tie knocks out one of the tied players. If nobody votes, nobody is out.
+- Roles are picked once, when the game starts, and stay the same every round.
+- With more than one imposter, the imposters get a private chat channel only they can read.
+- Players who join after the game starts can spectate and chat, but can't play.
+- The host can kick players and remove spectators. Kicked players can't rejoin.
 
 ---
 
-## Scoring
+## Winning
 
-There's no point system. Each round is a binary outcome:
+The game ends when any of these happen:
 
-- **Caught.** The imposter(s) received the most votes.
-- **Not caught.** The imposter(s) blended in.
+- **Every imposter is out.** The regular players win.
+- **Imposters equal or outnumber the regular players.** The imposters win.
+- **The last round ends.** Any imposter still in survived.
 
-The round history at the end shows the secret word, all clues, the vote distribution, and whether the imposter was caught, for every round.
+The round history at the end shows the secret word, every clue, every vote, and who was voted out for every round.
 
 ---
 
 ## Technical notes
 
-- Real-time sync via Zero (Rocicorp), so all state changes propagate instantly.
+- Real-time sync via Zero (Rocicorp), so every state change shows up for everyone right away.
 - Phase timers are server-authoritative (`phaseEndsAt` timestamp).
-- Round history is stored as a JSON array of `{ round, secretWord, imposters, caught, clues, votes }`.
+- Roles and the secret word are rolled on the server only. The secret word is sealed with a per-game key, so it never syncs to clients in the clear. Players fetch the key from `/api/game-secret/key`, and imposters don't get it until the results screen.
+- Imposter channel messages are sealed with a separate key from `/api/game-secret/imposter-chat-key`.
+- Round history is stored as a JSON array of `{ round, secretWord, votedOutId, votedOutName, wasImposter, clues, votes }`.
 - The join code is a random 6-character uppercase string, unique per game.
