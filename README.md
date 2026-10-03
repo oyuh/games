@@ -22,6 +22,7 @@ Live links:
 - [Environment variables](#environment-variables)
 - [Commands](#commands)
 - [CI and deployment gates](#ci-and-deployment-gates)
+- [Pull requests](#pull-requests)
 - [Data model](#data-model)
 - [API](#api)
 - [Deployment](#deployment)
@@ -349,6 +350,29 @@ To keep failing commits out of production, protect the production branch and req
 - Railway: turn on Wait for CI for each GitHub-connected service, or turn off automatic deploys and trigger Railway from the post-CI workflow.
 
 Don't rename the CI job. GitHub, Vercel, and Railway match on the check name, and a rename un-gates every merge and deploy without any warning.
+
+## Pull requests
+
+Use [#90](https://github.com/oyuh/games/pull/90), the PR that added Zip, as the model for yours. Keep it open next to this section while you write.
+
+### The process
+
+1. Branch off `master` with a short name that says what the branch does, like `feat/zip` or `fix/lobby-timer`.
+2. Commit in pieces, one per area. #90 is five commits: engine, API, admin, web, and docs. Each one builds on its own, so a reviewer can read them in order.
+3. Write commit subjects as `type(scope): what changed`. The types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, and `revert`.
+4. Add a `psa:` line when a commit has a deploy gotcha, and a `tests:` line with the pass count when tests changed. Most commits need neither.
+5. Run the four `Quality Gate` commands above. If you touched gameplay, run `bun run test:e2e` too.
+6. Open the PR against `master` and fill in [the template](.github/PULL_REQUEST_TEMPLATE.md).
+7. Keep unrelated fixes out of the PR. Send them as their own PR.
+
+### What the description covers
+
+- **What it does**: two or three sentences a reviewer reads before the diff.
+- **What changed**: one entry per commit or area, with the files and the behavior that moved.
+- **How you tested it**: each command you ran with its pass count, plus what you clicked through in the browser.
+- **Deploy notes**: schema pushes, new environment variables, and anything that adds server load.
+- **Checklists**: tick the template boxes that apply. For a box that doesn't apply, say why.
+- **Screenshots**: required for UI changes. A new game can point reviewers at its `/dev/<game>` kit page instead.
 
 ## Data model
 
