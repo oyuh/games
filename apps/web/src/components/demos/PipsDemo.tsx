@@ -1,5 +1,5 @@
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import { FiAward, FiCheck, FiClock, FiMove, FiRefreshCw, FiRotateCw } from "react-icons/fi";
+import { FiAward, FiCheck, FiClock, FiRefreshCw } from "react-icons/fi";
 import { DemoModal, DemoScoring, type DemoStep } from "./DemoModal";
 import { GameIcon } from "../shared/GameIcon";
 import "../../styles/game-shared.css";
@@ -259,18 +259,6 @@ function MiniPipsBoard({ step }: { step: number }) {
             ),
           )}
         </div>
-      </div>
-
-      <div className="pips-demo-status" aria-live="polite">
-        {solved
-          ? <><FiCheck size={14} /> Solved. Every chip is happy.</>
-          : held
-            ? <><FiRotateCw size={14} /> Tap a square for its first half. Tap it again or press R to rotate.</>
-            : step === 0
-              ? <><GameIcon game="pips" size={14} /> Ranked run: Easy / Medium / Hard. Try this board first.</>
-              : step === 1
-                ? <><FiCheck size={14} /> Rule chips sit on region edges</>
-                : <><FiMove size={14} /> Tap a domino to pick it up. Tap a placed one to take it back.</>}
       </div>
     </div>
   );

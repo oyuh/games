@@ -1047,22 +1047,6 @@
   cursor: default;
 }
 
-.pips-demo-status {
-  min-height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.72rem;
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 9%, transparent);
-  color: color-mix(in srgb, var(--primary) 82%, white 8%);
-  font-size: 0.78rem;
-  font-weight: 850;
-  text-align: center;
-}
-
 @keyframes pips-demo-place {
   from {
     opacity: 0;
