@@ -17,6 +17,7 @@ import {
   FiRepeat,
   FiSettings,
   FiSkipForward,
+  FiTarget,
   FiTrash2,
 } from "react-icons/fi";
 import { FaCrown } from "react-icons/fa";
@@ -31,7 +32,7 @@ import { MobileHostControlsSheet } from "./components/MobileHostControlsSheet";
 import { ToastContainer } from "../components/shared/ToastContainer";
 import { DebugPanels } from "../components/shared/DebugPanels";
 import { showToast } from "../lib/toast";
-import { emitSolo, useSoloEvent, type PipsState, type ShikakuState } from "../lib/solo-bus";
+import { emitSolo, useSoloEvent, type PipsState, type ShikakuState, type ZipState } from "../lib/solo-bus";
 
 type MobileSheet = "chat" | "info" | "options" | "host" | "actions" | null;
 type ConfirmAction = "restart" | "give-up";
@@ -71,6 +72,18 @@ const DEFAULT_PIPS_STATE: PipsState = {
   canLeaderboard: false,
   canUndo: false,
   showDevTools: false,
+  canDevSkip: false,
+};
+
+const DEFAULT_ZIP_STATE: ZipState = {
+  phase: "menu",
+  canUndo: false,
+  canClear: false,
+  hint: true,
+  canRestart: false,
+  canGiveUp: false,
+  showDevTools: false,
+  canDevSolve: false,
   canDevSkip: false,
 };
 
@@ -139,19 +152,23 @@ function MobileLayoutInner() {
   const [pipsConfirmAction, setPipsConfirmAction] = useState<ConfirmAction | null>(null);
   const [shikakuState, setShikakuState] = useState<ShikakuState>(DEFAULT_SHIKAKU_STATE);
   const [pipsState, setPipsState] = useState<PipsState>(DEFAULT_PIPS_STATE);
+  const [zipConfirmAction, setZipConfirmAction] = useState<ConfirmAction | null>(null);
+  const [zipState, setZipState] = useState<ZipState>(DEFAULT_ZIP_STATE);
   const isHome = location.pathname === "/";
   /* Home drops you out of whatever you are in the middle of, so it takes a
      second tap there, like Restart and Give up do. */
   const [homeArmed, setHomeArmed] = useState(false);
   const isShikaku = /^\/shikaku(\/|$)/.test(location.pathname);
   const isPips = /^\/pips(\/|$)/.test(location.pathname);
-  const hasGameActions = isShikaku || isPips;
+  const isZip = /^\/zip(\/|$)/.test(location.pathname);
+  const hasGameActions = isShikaku || isPips || isZip;
   const sessionId = getOrCreateSessionId();
 
   useEffect(() => {
     setSheet(null);
     setShikakuConfirmAction(null);
     setPipsConfirmAction(null);
+    setZipConfirmAction(null);
     setHomeArmed(false);
   }, [location.pathname]);
 
@@ -166,6 +183,28 @@ function MobileLayoutInner() {
      listeners. The effects below still clear state on the way out. */
   useSoloEvent("shikaku-game-state", setShikakuState);
   useSoloEvent("pips-game-state", setPipsState);
+  useSoloEvent("zip-game-state", setZipState);
+
+  useEffect(() => {
+    if (!isZip) setZipState(DEFAULT_ZIP_STATE);
+  }, [isZip]);
+
+  useEffect(() => {
+    if (!zipConfirmAction) return;
+    const timeoutId = window.setTimeout(() => setZipConfirmAction(null), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [zipConfirmAction]);
+
+  const handleZipConfirmedAction = (action: ConfirmAction) => {
+    if (zipConfirmAction === action) {
+      setZipConfirmAction(null);
+      emitSolo(action === "restart" ? "zip-restart-run" : "zip-give-up");
+      setSheet(null);
+      return;
+    }
+    setZipConfirmAction(action);
+    showToast(action === "restart" ? "Tap restart again to restart this run" : "Tap give up again to end this run", "info");
+  };
 
   useEffect(() => {
     if (!isShikaku) setShikakuState(DEFAULT_SHIKAKU_STATE);
@@ -213,9 +252,42 @@ function MobileLayoutInner() {
 
   const midGame = (chat.inGame && !chat.isSpectator)
     || (isShikaku && shikakuState.phase === "playing")
-    || (isPips && pipsState.phase === "playing");
+    || (isPips && pipsState.phase === "playing")
+    || (isZip && zipState.phase === "playing");
 
   const renderGameActionsSheet = () => {
+    if (isZip) {
+      return (
+        <BottomSheet title="Zip" onClose={() => setSheet(null)}>
+          <div className="m-sheet-stack">
+            <p className="m-sheet-meta meta-parts"><span>{titleCase(zipState.phase)}</span></p>
+            <ActionList
+              actions={[
+                { icon: <FiCornerUpLeft size={18} />, label: "Undo", detail: "Last square", disabled: !zipState.canUndo, onClick: () => { emitSolo("zip-undo"); setSheet(null); } },
+                { icon: <FiTrash2 size={18} />, label: "Clear", detail: "Whole line", disabled: !zipState.canClear, onClick: () => { emitSolo("zip-clear"); setSheet(null); } },
+                { icon: <FiTarget size={18} />, label: zipState.hint ? "Hint on" : "Hint off", detail: "Ring the next number", onClick: () => emitSolo("zip-toggle-hint") },
+                { icon: <FiRepeat size={18} />, label: zipConfirmAction === "restart" ? "Tap again to restart" : "Restart", detail: "Fresh run", disabled: !zipState.canRestart, confirm: zipConfirmAction === "restart", onClick: () => handleZipConfirmedAction("restart") },
+                { icon: <FiFlag size={18} />, label: zipConfirmAction === "give-up" ? "Tap again to give up" : "Give up", detail: "End run", disabled: !zipState.canGiveUp, danger: true, confirm: zipConfirmAction === "give-up", onClick: () => handleZipConfirmedAction("give-up") },
+                { icon: <FiAward size={18} />, label: "Leaderboard", detail: "Best times", onClick: () => { emitSolo("zip-toggle-leaderboard"); setSheet(null); } },
+              ]}
+            />
+
+            {zipState.showDevTools && (
+              <section className="m-section">
+                <h3 className="m-label">Dev tools</h3>
+                <ActionList
+                  actions={[
+                    { icon: <FiEye size={18} />, label: "Solve", detail: "This board", disabled: !zipState.canDevSolve, onClick: () => { emitSolo("zip-dev-solve"); setSheet(null); } },
+                    { icon: <FiSkipForward size={18} />, label: "Skip", detail: "Solve the rest", disabled: !zipState.canDevSkip, onClick: () => { emitSolo("zip-dev-skip"); setSheet(null); } },
+                  ]}
+                />
+              </section>
+            )}
+          </div>
+        </BottomSheet>
+      );
+    }
+
     if (isShikaku) {
       const ranked = shikakuState.customMode || shikakuState.showSeedInput || shikakuState.infiniteMode ? "Unranked" : "Ranked";
       const summary = [shikakuModeLabel(shikakuState), titleCase(shikakuState.difficulty), titleCase(shikakuState.phase)];

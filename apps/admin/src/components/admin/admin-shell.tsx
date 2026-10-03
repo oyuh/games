@@ -12,6 +12,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   RotateCcw,
+  Route,
   Shield,
   Trophy,
   Users,
@@ -64,6 +65,12 @@ const NAV_ITEMS = [
     label: "Pips",
     icon: Dice5,
     accent: "var(--game-pips)",
+  },
+  {
+    href: "/zip",
+    label: "Zip",
+    icon: Route,
+    accent: "var(--game-zip)",
   },
   { href: "/cleanups", label: "Cleanups", icon: RotateCcw, accent: "var(--primary)" },
 ] as const;

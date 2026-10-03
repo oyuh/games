@@ -20,6 +20,7 @@ import { PublicGamesList, usePublicGameCount } from "../components/shared/Public
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { PlayerAvatar } from "../components/shared/PlayerAvatar";
 import { GameIcon } from "../components/shared/GameIcon";
+import { ZipPreview } from "../components/zip/ZipPreview";
 import { type HomeRouteGame } from "../lib/home-route-highlight";
 import { useHomePage } from "../hooks/useHomePage";
 
@@ -33,6 +34,7 @@ const AvatarPickerModal = lazy(() =>
 );
 const ShikakuDemo = lazy(() => import("../components/demos/ShikakuDemo").then(({ ShikakuDemo }) => ({ default: ShikakuDemo })));
 const PipsDemo = lazy(() => import("../components/demos/PipsDemo").then(({ PipsDemo }) => ({ default: PipsDemo })));
+const ZipDemo = lazy(() => import("../components/zip/ZipDemo").then(({ ZipDemo }) => ({ default: ZipDemo })));
 
 const isDev = import.meta.env.DEV;
 const SHADE_PREVIEW_CELLS = Array.from({ length: 20 }, (_, index) => ({
@@ -49,6 +51,7 @@ const GAME_CARD_DOTS = Array.from({ length: GAME_CARD_COUNT }, (_, index) => ({
 /* ── Solo game definitions ────────────────────────────────────── */
 const shikakuMeta = GAME_META.shikaku;
 const pipsMeta = GAME_META.pips;
+const zipMeta = GAME_META.zip;
 
 function SoloPipsFace({ value }: { value: number }) {
   return (
@@ -110,6 +113,14 @@ const SOLO_GAMES: SoloGameDef[] = [
         </div>
       </div>
     ),
+  },
+  {
+    id: "zip", gameSlug: "zip", title: zipMeta.title,
+    demoId: "zip",
+    description: zipMeta.shortDescription,
+    accent: zipMeta.accent,
+    href: "/zip",
+    preview: <ZipPreview />,
   },
 ];
 
@@ -1087,6 +1098,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
       {activeDemo === "location" && <LocationDemo onClose={() => setActiveDemo(null)} />}
       {activeDemo === "shikaku" && <ShikakuDemo onClose={() => setActiveDemo(null)} />}
       {activeDemo === "pips" && <PipsDemo onClose={() => setActiveDemo(null)} />}
+      {activeDemo === "zip" && <ZipDemo onClose={() => setActiveDemo(null)} />}
       {avatarPickerOpen && (
         <AvatarPickerModal
           sessionId={sessionId}

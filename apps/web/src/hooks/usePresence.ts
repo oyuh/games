@@ -5,12 +5,13 @@ import { setRealtimePresence } from "../lib/realtime";
 /**
  * Maps the current route to a short activity label so the admin panel can see
  * what every connected client is doing, including idle/home clients and
- * single-player games (pips/shikaku) that aren't attached to a game row.
+ * single-player games (pips/shikaku/zip) that aren't attached to a game row.
  */
 export function activityFromPath(pathname: string): string {
   if (pathname === "/") return "home";
   if (pathname.startsWith("/pips")) return "pips";
   if (pathname.startsWith("/shikaku")) return "shikaku";
+  if (pathname.startsWith("/zip")) return "zip";
   if (pathname.startsWith("/imposter")) return "imposter";
   if (pathname.startsWith("/password")) return "password";
   if (pathname.startsWith("/chain")) return "chain_reaction";

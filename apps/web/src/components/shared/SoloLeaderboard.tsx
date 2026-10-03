@@ -37,7 +37,7 @@ export function SoloLeaderboard({
   onClose,
 }: {
   /** Colours the modal, since a portal sits outside the page's theme scope. */
-  game: "pips" | "shikaku";
+  game: "pips" | "shikaku" | "zip";
   title: string;
   /** One line under the title, usually the total run count. */
   subtitle: string;

@@ -521,6 +521,39 @@ export const pipsBannedSessions = pgTable(
   }
 );
 
+// One row per ranked Zip run. Boards are split by difficulty and grid size,
+// and rank by total time, fastest first.
+export const zipScores = pgTable(
+  "zip_scores",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    name: text("name").notNull(),
+    seed: integer("seed").notNull(),
+    difficulty: text("difficulty").notNull(),
+    size: integer("size").notNull(),
+    timeMs: integer("time_ms").notNull(),
+    puzzleCount: integer("puzzle_count").notNull(),
+    replayData: jsonb("replay_data"),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  },
+  (table) => ({
+    boardTimeIdx: index("zip_scores_board_time_idx").on(table.difficulty, table.size, table.timeMs),
+    sessionIdx: index("zip_scores_session_idx").on(table.sessionId),
+    sessionSeedIdx: index("zip_scores_session_seed_idx").on(table.sessionId, table.seed),
+  })
+);
+
+export const zipBannedSessions = pgTable(
+  "zip_banned_sessions",
+  {
+    sessionId: text("session_id").primaryKey(),
+    reason: text("reason").notNull(),
+    violations: integer("violations").notNull().default(1),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  }
+);
+
 export type DrizzleSchema = {
   sessions: typeof sessions;
   statusTable: typeof statusTable;
@@ -539,6 +572,8 @@ export type DrizzleSchema = {
   shikakuBannedSessions: typeof shikakuBannedSessions;
   pipsScores: typeof pipsScores;
   pipsBannedSessions: typeof pipsBannedSessions;
+  zipScores: typeof zipScores;
+  zipBannedSessions: typeof zipBannedSessions;
 };
 
 // Cleanup history contains aggregate counts only and survives process restarts.
