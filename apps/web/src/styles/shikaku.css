@@ -617,3 +617,64 @@
 }
 
 /* (Old custom-seed styles removed: replaced by .shikaku-seed-* above) */
+
+/* ── How to Play practice board ─────────────────────────── */
+.shikaku-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.shikaku-demo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  width: min(15rem, 100%);
+  aspect-ratio: 1;
+  touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+}
+
+.shikaku-demo-cell {
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--secondary) 8%, transparent);
+  color: #34d399;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.shikaku-demo-cell[data-filled] {
+  border: 2px solid var(--rect-color);
+  background: color-mix(in srgb, var(--rect-color) 20%, transparent);
+}
+
+.shikaku-demo-cell[data-preview] {
+  border: 2px dashed #34d399;
+  background: color-mix(in srgb, #34d399 12%, transparent);
+}
+
+.shikaku-demo-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 1.2rem;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.shikaku-demo-note[data-tone="solved"] {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.shikaku-demo-note[data-tone="error"] {
+  color: #f87171;
+}

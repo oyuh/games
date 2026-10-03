@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { FiAward, FiCheck, FiClock, FiFlag, FiTarget } from "react-icons/fi";
 import { DemoModal, DemoScoring, type DemoStep } from "./DemoModal";
 import { GameIcon } from "../shared/GameIcon";
+import { validateSolution, type Rect, type ShikakuPuzzle } from "../../lib/shikaku-engine";
 import "../../styles/game-shared.css";
 import "../../styles/shikaku.css";
 
@@ -37,95 +38,138 @@ const steps: DemoStep[] = [
 
 /* ── Demo grid ──────────────────────────────────────────── */
 
+/* A 4x4 with one answer: the top row is the 4, the 2 sits under it, the 6 is
+   the right-hand block, and the bottom-left 4 fills what's left. */
+const DEMO_PUZZLE: ShikakuPuzzle = {
+  rows: 4,
+  cols: 4,
+  numbers: [
+    { r: 0, c: 2, value: 4 },
+    { r: 1, c: 1, value: 2 },
+    { r: 2, c: 3, value: 6 },
+    { r: 3, c: 1, value: 4 },
+  ],
+  solution: [
+    { r: 0, c: 0, w: 4, h: 1 },
+    { r: 1, c: 0, w: 2, h: 1 },
+    { r: 1, c: 2, w: 2, h: 3 },
+    { r: 2, c: 0, w: 2, h: 2 },
+  ],
+};
+
+const RECT_COLORS = ["#34d399", "#60a5fa", "#f472b6", "#a78bfa"];
+
+/** Where each step's board starts. Every step is live, so you can keep going. */
+const STARTS: Rect[][] = [[], DEMO_PUZZLE.solution.slice(0, 2), DEMO_PUZZLE.solution.slice(0, 3), DEMO_PUZZLE.solution];
+
+const inRect = (rect: Rect, r: number, c: number) => r >= rect.r && r < rect.r + rect.h && c >= rect.c && c < rect.c + rect.w;
+
+function rectBetween(a: { r: number; c: number }, b: { r: number; c: number }): Rect {
+  return { r: Math.min(a.r, b.r), c: Math.min(a.c, b.c), w: Math.abs(a.c - b.c) + 1, h: Math.abs(a.r - b.r) + 1 };
+}
+
+/** Why a dragged rectangle can't go down, or null when it can. */
+function rectProblem(rect: Rect, placed: Rect[]): string | null {
+  if (placed.some((other) => other.r < rect.r + rect.h && rect.r < other.r + other.h && other.c < rect.c + rect.w && rect.c < other.c + other.w)) {
+    return "Rectangles can't overlap.";
+  }
+  const inside = DEMO_PUZZLE.numbers.filter((n) => inRect(rect, n.r, n.c));
+  if (inside.length !== 1) return "Each rectangle needs exactly one number.";
+  if (inside[0]!.value !== rect.w * rect.h) return `That one covers ${rect.w * rect.h} squares, but its number is ${inside[0]!.value}.`;
+  return null;
+}
+
 function DemoGrid({ step }: { step: number }) {
-  // A simple 4×4 visual that changes based on step
-  const cells = Array.from({ length: 16 }, (_, index) => ({ id: `demo-shikaku-cell-${index}`, index }));
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [placed, setPlaced] = useState<Rect[]>(STARTS[step] ?? []);
+  const [anchor, setAnchor] = useState<{ r: number; c: number } | null>(null);
+  const [hover, setHover] = useState<{ r: number; c: number } | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  // Step 0: empty grid with numbers
-  // Step 1: partially filled
-  // Step 2: fully solved
-  // Step 3-4: scoring/leaderboard view
+  // A new step resets the board to that step's starting rectangles.
+  useEffect(() => {
+    setPlaced(STARTS[step] ?? []);
+    setAnchor(null);
+    setMessage(null);
+  }, [step]);
 
-  const numbers: Record<number, number> = { 2: 4, 5: 2, 11: 6, 13: 4 };
-  const filled: Record<number, string> = {};
+  const solved = validateSolution(DEMO_PUZZLE, placed);
+  const preview = anchor && hover ? rectBetween(anchor, hover) : null;
 
-  if (step >= 1) {
-    // First rectangle: cells 0,1,2,3 (top row) - area 4
-    [0, 1, 2, 3].forEach((i) => { filled[i] = "#34d399"; });
-    // Second rectangle: cells 4,5 - area 2
-    [4, 5].forEach((i) => { filled[i] = "#60a5fa"; });
-  }
+  const cellAt = (x: number, y: number) => {
+    const box = gridRef.current?.getBoundingClientRect();
+    if (!box) return null;
+    const c = Math.floor(((x - box.left) / box.width) * 4);
+    const r = Math.floor(((y - box.top) / box.height) * 4);
+    return r < 0 || c < 0 || r > 3 || c > 3 ? null : { r, c };
+  };
 
-  if (step >= 2) {
-    // Third rectangle: cells 6,7,8,9,10,11 - area 6
-    [6, 7, 10, 11, 14, 15].forEach((i) => { filled[i] = "#f472b6"; });
-    // Fourth rectangle: cells 12,13,14,15 - area 4
-    [8, 9, 12, 13].forEach((i) => { filled[i] = "#a78bfa"; });
-  }
+  const finish = () => {
+    if (!anchor || !hover) return;
+    const rect = rectBetween(anchor, hover);
+    setAnchor(null);
+    // A tap on a placed rectangle takes it back off.
+    const tapped = rect.w === 1 && rect.h === 1 ? placed.find((p) => inRect(p, rect.r, rect.c)) : undefined;
+    if (tapped) {
+      setPlaced((all) => all.filter((p) => p !== tapped));
+      setMessage(null);
+      return;
+    }
+    const problem = rectProblem(rect, placed);
+    setMessage(problem);
+    if (!problem) setPlaced((all) => [...all, rect]);
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+    <div className="shikaku-demo">
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 3rem)",
-          gridTemplateRows: "repeat(4, 3rem)",
-          gap: "3px",
+        ref={gridRef}
+        className="shikaku-demo-grid"
+        role="application"
+        aria-label="Practice board, 4 by 4. Drag across squares to draw a rectangle, tap one to remove it."
+        onPointerDown={(event) => {
+          const cell = cellAt(event.clientX, event.clientY);
+          if (!cell || solved) return;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setAnchor(cell);
+          setHover(cell);
         }}
+        onPointerMove={(event) => {
+          if (!anchor) return;
+          const cell = cellAt(event.clientX, event.clientY);
+          if (cell) setHover(cell);
+        }}
+        onPointerUp={finish}
+        onPointerCancel={() => setAnchor(null)}
       >
-        {cells.map(({ id, index }) => {
-          const i = index;
-          const bg = filled[i] ?? "rgba(255,255,255,0.06)";
-          const border = filled[i]
-            ? `2px solid ${filled[i]}`
-            : "1px solid rgba(255,255,255,0.12)";
-          const num = numbers[i];
-
+        {Array.from({ length: 16 }, (_, index) => {
+          const r = Math.floor(index / 4);
+          const c = index % 4;
+          const owner = placed.findIndex((rect) => inRect(rect, r, c));
+          const color = owner === -1 ? null : RECT_COLORS[owner % RECT_COLORS.length]!;
+          const number = DEMO_PUZZLE.numbers.find((n) => n.r === r && n.c === c);
           return (
             <div
-              key={id}
-              style={{
-                background: filled[i] ? `color-mix(in srgb, ${filled[i]} 20%, transparent)` : bg,
-                border,
-                borderRadius: "4px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.85rem",
-                fontWeight: 800,
-                color: num ? "#34d399" : "transparent",
-              }}
+              key={index}
+              className="shikaku-demo-cell"
+              data-preview={preview && inRect(preview, r, c) ? "" : undefined}
+              style={color ? ({ "--rect-color": color } as CSSProperties) : undefined}
+              data-filled={color ? "" : undefined}
             >
-              {num ?? ""}
+              {number?.value}
             </div>
           );
         })}
       </div>
 
-      {step === 0 && (
-        <p style={{ fontSize: "0.75rem", color: "var(--muted-foreground)", textAlign: "center", margin: 0 }}>
-          Numbers tell you the area each rectangle must be
-        </p>
-      )}
-      {step === 1 && (
-        <p style={{ fontSize: "0.75rem", color: "var(--muted-foreground)", textAlign: "center", margin: 0 }}>
-          Drag to draw - each rectangle covers exactly one number
-        </p>
-      )}
-      {step === 2 && (
-        <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem", fontSize: "0.75rem", color: "#34d399", textAlign: "center", margin: 0, fontWeight: 700 }}>
-          <FiCheck size={14} /> Solved! Every cell covered, every number matched
-        </p>
-      )}
+      <p className="shikaku-demo-note" data-tone={solved ? "solved" : message ? "error" : undefined} aria-live="polite">
+        {solved ? (
+          <><FiCheck size={14} /> Solved. Every square covered, every number matched.</>
+        ) : message ?? (step === 0 ? "Drag across squares to draw a rectangle." : "Your turn. Tap a rectangle to take it back off.")}
+      </p>
+
       {step === 3 && (
-        <div style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--muted-foreground)", lineHeight: 1.6 }}>
-          <p style={{ margin: 0 }}>
-            Scores ranked per difficulty. Compete for #1!
-          </p>
-          <p style={{ margin: "0.3rem 0 0" }}>
-            Your personal best is shown at the top of the leaderboard.
-          </p>
-        </div>
+        <p className="shikaku-demo-note">Scores rank per difficulty, and your personal best sits at the top of the leaderboard.</p>
       )}
     </div>
   );

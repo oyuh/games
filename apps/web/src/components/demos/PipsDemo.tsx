@@ -1,4 +1,4 @@
-import { type CSSProperties, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { FiAward, FiCheck, FiClock, FiMove, FiRefreshCw, FiRotateCw } from "react-icons/fi";
 import { DemoModal, DemoScoring, type DemoStep } from "./DemoModal";
 import { GameIcon } from "../shared/GameIcon";
@@ -19,7 +19,7 @@ const steps: DemoStep[] = [
   {
     label: "Place Dominoes",
     description: "Drag a domino from the tray onto two adjacent board cells. Let go to place it, or drop it back on the tray to return it.",
-    hint: "The board itself is only the target. The dominoes are the pieces you move.",
+    hint: "On this practice board, tap a domino to pick it up, then tap where its first half goes.",
   },
   {
     label: "Rotate",
@@ -69,20 +69,55 @@ const demoRules = [
   { label: "=", kind: "eq", r: 3, c: 1, region: 3 },
 ] as const;
 
-const demoPlaced = [
-  { id: "3-3", a: 3 as MiniDominoValue, b: 3 as MiniDominoValue, r1: 0, c1: 1, r2: 0, c2: 2, showAt: 1 },
-  { id: "1-5", a: 1 as MiniDominoValue, b: 5 as MiniDominoValue, r1: 1, c1: 0, r2: 2, c2: 0, showAt: 2 },
-  { id: "2-4", a: 2 as MiniDominoValue, b: 4 as MiniDominoValue, r1: 1, c1: 1, r2: 1, c2: 2, showAt: 3 },
-  { id: "2-2", a: 2 as MiniDominoValue, b: 2 as MiniDominoValue, r1: 2, c1: 1, r2: 2, c2: 2, showAt: 4 },
-] as const;
+/** Whether a region's pips pass its chip, using the rules the step text spells out. */
+function rulePasses(kind: (typeof demoRules)[number]["kind"], values: number[]): boolean {
+  const total = values.reduce((sum, value) => sum + value, 0);
+  if (kind === "sum") return total === 8;
+  if (kind === "lt") return total < 4;
+  if (kind === "eq") return values.every((value) => value === values[0]);
+  return !values.every((value) => value === values[0]);
+}
 
-const demoTray = [
-  { id: "3-3", a: 3 as MiniDominoValue, b: 3 as MiniDominoValue, rotation: 0 },
-  { id: "1-5", a: 1 as MiniDominoValue, b: 5 as MiniDominoValue, rotation: 1 },
-  { id: "2-4", a: 2 as MiniDominoValue, b: 4 as MiniDominoValue, rotation: 0 },
-  { id: "2-2", a: 2 as MiniDominoValue, b: 2 as MiniDominoValue, rotation: 0 },
-  { id: "0-6", a: 0 as MiniDominoValue, b: 6 as MiniDominoValue, rotation: 0 },
-] as const;
+interface DemoDomino {
+  id: string;
+  a: MiniDominoValue;
+  b: MiniDominoValue;
+}
+
+/* Six dominoes for twelve squares, with an answer that passes every chip:
+   3-3 and the 2 of 2-6 make the 8, the cyan column adds to 2, the orange
+   corner is all 2s, and the purple row runs 4, 5, 6. */
+const demoTray: DemoDomino[] = [
+  { id: "3-3", a: 3, b: 3 },
+  { id: "1-0", a: 1, b: 0 },
+  { id: "4-5", a: 4, b: 5 },
+  { id: "2-2", a: 2, b: 2 },
+  { id: "2-6", a: 2, b: 6 },
+  { id: "1-2", a: 1, b: 2 },
+];
+
+interface Placement {
+  id: string;
+  /** The value on the first cell, then the second. */
+  a: MiniDominoValue;
+  b: MiniDominoValue;
+  r1: number;
+  c1: number;
+  r2: number;
+  c2: number;
+}
+
+const solutionPlacements: Placement[] = [
+  { id: "3-3", a: 3, b: 3, r1: 0, c1: 1, r2: 0, c2: 2 },
+  { id: "2-6", a: 2, b: 6, r1: 0, c1: 3, r2: 1, c2: 3 },
+  { id: "1-0", a: 1, b: 0, r1: 1, c1: 0, r2: 2, c2: 0 },
+  { id: "4-5", a: 4, b: 5, r1: 1, c1: 1, r2: 1, c2: 2 },
+  { id: "2-2", a: 2, b: 2, r1: 2, c1: 1, r2: 2, c2: 2 },
+  { id: "1-2", a: 1, b: 2, r1: 3, c1: 0, r2: 3, c2: 1 },
+];
+
+/** Where each step's board starts. Every step is live, so you can keep going. */
+const STARTS: Placement[][] = [[], [], solutionPlacements.slice(0, 2), solutionPlacements.slice(0, 3), solutionPlacements.slice(0, 5)];
 
 const bufferedCells = Array.from({ length: demoBoardRows * demoBoardCols }, (_, index) => ({
   r: Math.floor(index / demoBoardCols) - demoBuffer,
@@ -92,13 +127,53 @@ const bufferedCells = Array.from({ length: demoBoardRows * demoBoardCols }, (_, 
 const demoCellByKey = new Map(demoCells.map((cell) => [`${cell.r}:${cell.c}`, cell]));
 
 function MiniPipsBoard({ step }: { step: number }) {
-  const placedCount = step >= 4 ? 4 : step >= 2 ? 2 : step >= 1 ? 1 : 0;
-  const placedDominoes = useMemo(() => demoPlaced.filter((domino) => placedCount >= domino.showAt), [placedCount]);
-  const usedDominoIds = useMemo(() => new Set<string>(placedDominoes.map((domino) => domino.id)), [placedDominoes]);
-  const usedCells = useMemo(
-    () => new Set(placedDominoes.flatMap((domino) => [`${domino.r1}:${domino.c1}`, `${domino.r2}:${domino.c2}`])),
-    [placedDominoes],
+  const [placed, setPlaced] = useState<Placement[]>(STARTS[step] ?? []);
+  const [held, setHeld] = useState<{ id: string; rotation: number } | null>(null);
+
+  // A new step resets the board to that step's starting dominoes.
+  useEffect(() => {
+    setPlaced(STARTS[step] ?? []);
+    setHeld(null);
+  }, [step]);
+
+  const rotate = () => setHeld((current) => (current ? { ...current, rotation: (current.rotation + 1) % 4 } : current));
+
+  // R turns the held domino, same as in the game.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey) rotate();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const valueAt = new Map<string, number>();
+  for (const p of placed) {
+    valueAt.set(`${p.r1}:${p.c1}`, p.a);
+    valueAt.set(`${p.r2}:${p.c2}`, p.b);
+  }
+  const usedIds = new Set(placed.map((p) => p.id));
+  const solved = valueAt.size === demoCells.length && demoRules.every((rule) =>
+    rulePasses(rule.kind, demoCells.filter((cell) => cell.region === rule.region).map((cell) => valueAt.get(`${cell.r}:${cell.c}`)!)),
   );
+
+  /** Drops the held domino with its first half on (r, c), if both halves land on open squares. */
+  const dropAt = (r: number, c: number) => {
+    if (!held) return;
+    const domino = demoTray.find((d) => d.id === held.id)!;
+    const vertical = held.rotation % 2 === 1;
+    const r2 = vertical ? r + 1 : r;
+    const c2 = vertical ? c : c + 1;
+    if (!demoCellByKey.has(`${r2}:${c2}`) || valueAt.has(`${r}:${c}`) || valueAt.has(`${r2}:${c2}`)) return;
+    const [a, b] = held.rotation < 2 ? [domino.a, domino.b] : [domino.b, domino.a];
+    setPlaced((all) => [...all, { id: domino.id, a, b, r1: r, c1: c, r2, c2 }]);
+    setHeld(null);
+  };
+
+  const pickUp = (placement: Placement) => {
+    setPlaced((all) => all.filter((p) => p !== placement));
+    setHeld({ id: placement.id, rotation: 0 });
+  };
 
   return (
     <div
@@ -106,9 +181,10 @@ function MiniPipsBoard({ step }: { step: number }) {
       style={{ "--pips-rows": demoBoardRows, "--pips-cols": demoBoardCols } as CSSProperties}
     >
       <div className="pips-demo-board-wrap">
-        <div className="pips-board-shell pips-demo-board-shell" aria-hidden="true">
+        <div className="pips-board-shell pips-demo-board-shell">
           <div
             className="pips-board"
+            data-solved={solved ? "" : undefined}
             style={{
               gridTemplateColumns: `repeat(${demoBoardCols}, minmax(0, 1fr))`,
               gridTemplateRows: `repeat(${demoBoardRows}, minmax(0, 1fr))`,
@@ -119,46 +195,27 @@ function MiniPipsBoard({ step }: { step: number }) {
             {bufferedCells.map((cell) => {
               const key = `${cell.r}:${cell.c}`;
               const activeCell = demoCellByKey.get(key);
-              const color = activeCell ? regionColors[activeCell.region] : "#6b7280";
-
+              const style = {
+                gridColumn: cell.c + demoBuffer + 1,
+                gridRow: cell.r + demoBuffer + 1,
+                "--region-color": activeCell ? regionColors[activeCell.region] : "#6b7280",
+              } as CSSProperties;
+              if (!activeCell) return <div key={key} className="pips-cell pips-cell--void" style={style} />;
               return (
-                <div
+                <button
                   key={key}
-                  className={`pips-cell${activeCell ? "" : " pips-cell--void"}${step >= 2 && activeCell && !usedCells.has(key) && !usedDominoIds.has("2-4") ? " pips-cell--drop" : ""}`}
-                  style={{
-                    gridColumn: cell.c + demoBuffer + 1,
-                    gridRow: cell.r + demoBuffer + 1,
-                    "--region-color": color,
-                  } as CSSProperties}
+                  type="button"
+                  className={`pips-cell pips-demo-hit${held && !valueAt.has(key) ? " pips-cell--drop" : ""}`}
+                  style={style}
+                  aria-label={`Row ${cell.r + 1}, column ${cell.c + 1}`}
+                  onClick={() => dropAt(cell.r, cell.c)}
                 />
               );
             })}
 
-            {placedDominoes.map((domino, index) => (
-              <MiniBoardDomino
-                key={domino.id}
-                a={domino.a}
-                b={domino.b}
-                r1={domino.r1}
-                c1={domino.c1}
-                r2={domino.r2}
-                c2={domino.c2}
-                selected={step === 3 && domino.id === "2-4"}
-                style={{ "--demo-delay": `${index * 70}ms` } as CSSProperties}
-              />
+            {placed.map((p) => (
+              <MiniBoardDomino key={p.id} {...p} onClick={() => pickUp(p)} />
             ))}
-
-            {step === 2 && (
-              <MiniBoardDomino
-                a={2}
-                b={4}
-                r1={1}
-                c1={1}
-                r2={1}
-                c2={2}
-                ghost
-              />
-            )}
 
             {demoRules.map((rule) => (
               <span
@@ -179,10 +236,10 @@ function MiniPipsBoard({ step }: { step: number }) {
         </div>
       </div>
 
-      <div className="pips-demo-tray" aria-hidden="true">
+      <div className="pips-demo-tray">
         <div className="pips-tray">
           {demoTray.map((domino) =>
-            usedDominoIds.has(domino.id) ? (
+            usedIds.has(domino.id) ? (
               <span className="pips-tray-slot pips-tray-slot--placeholder" key={domino.id}>
                 <span className="pips-domino-placeholder">
                   <span />
@@ -190,25 +247,30 @@ function MiniPipsBoard({ step }: { step: number }) {
                 </span>
               </span>
             ) : (
-              <span className="pips-tray-slot" key={domino.id}>
-                <MiniDomino
-                  a={domino.a}
-                  b={domino.b}
-                  active={(step >= 2 && step <= 3 && domino.id === "2-4") || (step >= 4 && domino.id === "2-2")}
-                  rotation={step === 3 && domino.id === "2-4" ? 1 : domino.rotation}
-                />
-              </span>
-            )
+              <button
+                type="button"
+                className="pips-tray-slot pips-demo-hit"
+                key={domino.id}
+                aria-label={`Domino ${domino.a} and ${domino.b}${held?.id === domino.id ? ", held, press to rotate" : ""}`}
+                onClick={() => (held?.id === domino.id ? rotate() : setHeld({ id: domino.id, rotation: 0 }))}
+              >
+                <MiniDomino a={domino.a} b={domino.b} active={held?.id === domino.id} rotation={held?.id === domino.id ? held.rotation : 0} />
+              </button>
+            ),
           )}
         </div>
       </div>
 
-      <div className="pips-demo-status">
-        {step === 0 && <><GameIcon game="pips" size={14} /> Ranked run: Easy / Medium / Hard</>}
-        {step === 1 && <><FiCheck size={14} /> Rule chips sit on region edges</>}
-        {step === 2 && <><FiMove size={14} /> Drag, drop, and snap into place</>}
-        {step === 3 && <><FiRotateCw size={14} /> Rotate clockwise with click or R</>}
-        {step >= 4 && <><FiClock size={14} /> Submit the verified total time</>}
+      <div className="pips-demo-status" aria-live="polite">
+        {solved
+          ? <><FiCheck size={14} /> Solved. Every chip is happy.</>
+          : held
+            ? <><FiRotateCw size={14} /> Tap a square for its first half. Tap it again or press R to rotate.</>
+            : step === 0
+              ? <><GameIcon game="pips" size={14} /> Ranked run: Easy / Medium / Hard. Try this board first.</>
+              : step === 1
+                ? <><FiCheck size={14} /> Rule chips sit on region edges</>
+                : <><FiMove size={14} /> Tap a domino to pick it up. Tap a placed one to take it back.</>}
       </div>
     </div>
   );
@@ -255,9 +317,7 @@ function MiniBoardDomino({
   c1,
   r2,
   c2,
-  selected,
-  ghost,
-  style,
+  onClick,
 }: {
   a: MiniDominoValue;
   b: MiniDominoValue;
@@ -265,23 +325,22 @@ function MiniBoardDomino({
   c1: number;
   r2: number;
   c2: number;
-  selected?: boolean;
-  ghost?: boolean;
-  style?: CSSProperties;
+  onClick: () => void;
 }) {
   const vertical = c1 === c2;
   const rowStart = Math.min(r1, r2) + demoBuffer + 1;
   const colStart = Math.min(c1, c2) + demoBuffer + 1;
-  const placementStyle = {
-    gridRow: vertical ? `${rowStart} / span 2` : rowStart,
-    gridColumn: vertical ? colStart : `${colStart} / span 2`,
-    ...style,
-  } as CSSProperties;
 
   return (
-    <span
-      className={`pips-domino pips-board-domino${vertical ? " pips-domino--vertical" : ""}${selected ? " pips-domino--selected" : ""}${ghost ? " pips-demo-board-domino--ghost" : ""}`}
-      style={placementStyle}
+    <button
+      type="button"
+      className={`pips-domino pips-board-domino pips-demo-hit${vertical ? " pips-domino--vertical" : ""}`}
+      style={{
+        gridRow: vertical ? `${rowStart} / span 2` : rowStart,
+        gridColumn: vertical ? colStart : `${colStart} / span 2`,
+      }}
+      aria-label={`Placed domino ${a} and ${b}, press to pick it back up`}
+      onClick={onClick}
     >
       <span className="pips-domino-half">
         <MiniFace value={a} />
@@ -289,7 +348,7 @@ function MiniBoardDomino({
       <span className="pips-domino-half">
         <MiniFace value={b} />
       </span>
-    </span>
+    </button>
   );
 }
 
