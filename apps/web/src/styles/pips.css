@@ -1261,3 +1261,22 @@
 
 }
 
+
+/* The How to Play board is playable, so its cells and dominoes are buttons.
+   They keep the board's own look and only add a pointer and a focus ring. */
+.pips-demo-hit {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pips-demo-hit:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.pips-demo .pips-board[data-solved] .pips-board-domino {
+  box-shadow: none;
+  outline: 2px solid #22c55e;
+  outline-offset: -1px;
+}
