@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { FiActivity, FiChevronRight } from "react-icons/fi";
-import { getGameSlugFromPath } from "@games/shared";
-import { useState } from "react";
+import { getGameSlugFromPath, type GameSlug } from "@games/shared";
+import { useState, type ComponentType } from "react";
 import { BottomSheet } from "./BottomSheet";
 import { InfoContent, InfoFooter } from "../../components/shared/InfoModal";
 import { ImposterDemo } from "../../components/demos/ImposterDemo";
@@ -12,7 +12,8 @@ import { LocationDemo } from "../../components/demos/LocationDemo";
 import { ShikakuDemo } from "../../components/demos/ShikakuDemo";
 import { PipsDemo } from "../../components/demos/PipsDemo";
 
-const DEMOS = {
+// Partial because a game can ship before its walkthrough does (Zip, for now).
+const DEMOS: Partial<Record<GameSlug, ComponentType<{ onClose: () => void }>>> = {
   imposter: ImposterDemo,
   password: PasswordDemo,
   chain: ChainDemo,
@@ -25,7 +26,7 @@ const DEMOS = {
 export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
   const location = useLocation();
   const slug = getGameSlugFromPath(location.pathname);
-  const Demo = slug === "home" ? null : DEMOS[slug];
+  const Demo = DEMOS[slug] ?? null;
   const [showDemo, setShowDemo] = useState(false);
 
   if (showDemo && Demo) return <Demo onClose={onClose} />;

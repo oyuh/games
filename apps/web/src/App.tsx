@@ -68,7 +68,11 @@ const ChainKitPage = lazy(() =>
 const LocationKitPage = lazy(() =>
   import("./pages/LocationKitPage").then(({ LocationKitPage }) => ({ default: LocationKitPage }))
 );
+const ZipKitPage = lazy(() =>
+  import("./pages/ZipKitPage").then(({ ZipKitPage }) => ({ default: ZipKitPage }))
+);
 const ShikakuPage = lazy(() => import("./pages/ShikakuPage").then(({ ShikakuPage }) => ({ default: ShikakuPage })));
+const ZipPage = lazy(() => import("./pages/ZipPage").then(({ ZipPage }) => ({ default: ZipPage })));
 const PipsPage = lazy(() => import("./pages/PipsPage").then(({ PipsPage }) => ({ default: PipsPage })));
 const StatusPage = lazy(() => import("./pages/StatusPage").then(({ StatusPage }) => ({ default: StatusPage })));
 
@@ -168,7 +172,7 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
 }
 
 /** Routes that don't use the Zero sync server (solo/offline games). */
-const SYNC_FREE_ROUTES = ["/shikaku", "/pips", "/admin"];
+const SYNC_FREE_ROUTES = ["/shikaku", "/pips", "/zip", "/admin"];
 
 function isSyncFreePath(pathname: string) {
   return SYNC_FREE_ROUTES.some((prefix) => pathname.startsWith(prefix));
@@ -684,6 +688,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/shikaku" element={<LazyRoute><ShikakuPage /></LazyRoute>} />
               <Route path="/status" element={<LazyRoute><StatusPage /></LazyRoute>} />
               <Route path="/pips" element={<LazyRoute><PipsPage /></LazyRoute>} />
+              <Route path="/zip" element={<LazyRoute><ZipPage /></LazyRoute>} />
               {/* Gallery for the shared PlayerCard. Not linked from anywhere on purpose. */}
               <Route path="/dev/player-cards" element={<LazyRoute><PlayerCardsPage /></LazyRoute>} />
               <Route path="/dev/game-shell" element={<LazyRoute><GameShellPage /></LazyRoute>} />
@@ -692,6 +697,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/dev/chain" element={<LazyRoute><ChainKitPage /></LazyRoute>} />
               <Route path="/dev/shade" element={<LazyRoute><ShadeKitPage /></LazyRoute>} />
               <Route path="/dev/location" element={<LazyRoute><LocationKitPage /></LazyRoute>} />
+              <Route path="/dev/zip" element={<LazyRoute><ZipKitPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

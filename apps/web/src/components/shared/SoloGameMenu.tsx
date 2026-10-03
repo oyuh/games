@@ -110,6 +110,7 @@ export function SoloGameMenu({
   subtitle,
   modeRow,
   difficultyRow,
+  sizeRow,
   note,
   seed,
   ladder,
@@ -122,6 +123,8 @@ export function SoloGameMenu({
   subtitle: string;
   modeRow: SoloSetupRow;
   difficultyRow: SoloSetupRow;
+  /** A second picker under difficulty, for games where size is its own choice. */
+  sizeRow?: SoloSetupRow;
   /** One short line under the mode control. Keep it to 40 characters. */
   note: string;
   /** Seed drawer under the mode picker. Open for any run that can take a seed. */
@@ -206,7 +209,8 @@ export function SoloGameMenu({
         <p className="solo-setup-note">{note}</p>
 
         <div className="solo-setup-difficulty">
-          <Segmented row={difficultyRow} attached={ladderOpen} />
+          {sizeRow && <Segmented row={difficultyRow} />}
+          <Segmented row={sizeRow ?? difficultyRow} attached={ladderOpen} />
 
           {ladderOpen && (
             <div className="solo-drawer solo-ladder">

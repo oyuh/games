@@ -27,13 +27,16 @@ export function useSoloEndBoard<E extends SoloEndEntry, P>({
   active,
   view,
   difficulty,
+  size,
   refreshKey,
 }: {
-  game: "pips" | "shikaku";
+  game: "pips" | "shikaku" | "zip";
   /** False on every screen but the end screen, so nothing is fetched. */
   active: boolean;
   view: SoloEndView;
   difficulty?: string;
+  /** Zip boards are one difficulty at one size. */
+  size?: number;
   refreshKey?: unknown;
 }) {
   const [entries, setEntries] = useState<E[]>([]);
@@ -45,6 +48,7 @@ export function useSoloEndBoard<E extends SoloEndEntry, P>({
     if (!active) return;
     const params = new URLSearchParams({ sessionId: getOrCreateSessionId() });
     if (difficulty) params.set("difficulty", difficulty);
+    if (size) params.set("size", String(size));
     if (view === "standings") {
       params.set("window", "me");
     } else {
@@ -75,7 +79,7 @@ export function useSoloEndBoard<E extends SoloEndEntry, P>({
       });
 
     return () => { cancelled = true; };
-  }, [game, active, view, difficulty, refreshKey]);
+  }, [game, active, view, difficulty, size, refreshKey]);
 
   return { entries, personalBest, total, loading };
 }
