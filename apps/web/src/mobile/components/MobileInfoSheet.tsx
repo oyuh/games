@@ -11,8 +11,9 @@ import { ShadeDemo } from "../../components/demos/ShadeDemo";
 import { LocationDemo } from "../../components/demos/LocationDemo";
 import { ShikakuDemo } from "../../components/demos/ShikakuDemo";
 import { PipsDemo } from "../../components/demos/PipsDemo";
+import { ZipDemo } from "../../components/zip/ZipDemo";
 
-// Partial because a game can ship before its walkthrough does (Zip, for now).
+// Partial because a game can ship before its walkthrough does.
 const DEMOS: Partial<Record<GameSlug, ComponentType<{ onClose: () => void }>>> = {
   imposter: ImposterDemo,
   password: PasswordDemo,
@@ -21,6 +22,7 @@ const DEMOS: Partial<Record<GameSlug, ComponentType<{ onClose: () => void }>>> =
   location: LocationDemo,
   shikaku: ShikakuDemo,
   pips: PipsDemo,
+  zip: ZipDemo,
 };
 
 export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
