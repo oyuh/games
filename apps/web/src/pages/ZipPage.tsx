@@ -162,6 +162,8 @@ export function ZipPage() {
   // Ranked never replays a seed, so a restart there asks for a fresh one.
   const restart = () => {
     if (!run) return;
+    // Ranked waits on the server, which toasts on its own if it fails.
+    if (run.mode !== "ranked") showToast(run.mode === "seed" ? "Seeded run restarted" : "Run restarted", "info");
     void startRun(run.mode, run.difficulty, run.size, run.mode === "ranked" ? undefined : run.seed);
   };
 
@@ -170,6 +172,9 @@ export function ZipPage() {
     setSolved(false);
     setPhase("finished");
     playGameOver();
+    if (how === "gave-up") showToast("Run abandoned", "info");
+    else if (run?.length === null) showToast(`Endless run over, ${splits.length} solved`, "info");
+    else showToast("Run complete", "success");
   };
 
   /* ── Countdown ─────────────────────────────────────────── */
@@ -256,9 +261,12 @@ export function ZipPage() {
 
   useEffect(() => {
     if (!solved || !run) return;
+    const lastBoard = run.length !== null && index + 1 >= run.length;
+    // The last board gets "Run complete" from finish instead.
+    if (!lastBoard) showToast(`Puzzle ${index + 1} solved`, "success");
     const timer = window.setTimeout(() => {
       const nextIndex = index + 1;
-      if (run.length !== null && nextIndex >= run.length) {
+      if (lastBoard) {
         finish("completed");
         return;
       }
@@ -292,10 +300,12 @@ export function ZipPage() {
       .then((result) => {
         if (cancelled) return;
         setSubmission({ tone: result.ok ? "info" : "error", pending: false, canSubmit: result.ok, message: result.reason });
+        if (!result.ok) showToast(result.reason, "error");
       })
       .catch(() => {
         if (cancelled) return;
         setSubmission({ tone: "error", pending: false, canSubmit: false, message: "Couldn't reach the server to check this run." });
+        showToast("Couldn't reach the server to check this run.", "error");
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -307,9 +317,11 @@ export function ZipPage() {
     try {
       const result = await submitZipScore({ ticket: run.ticket, timeMs: doneMs, replayData: replay });
       setSubmission({ tone: result.ok ? "success" : "error", pending: false, canSubmit: !result.ok && result.code !== "duplicate", message: result.reason });
+      showToast(result.reason, result.ok ? "success" : "error");
       if (result.ok || result.code === "duplicate") setSubmitted(true);
     } catch {
       setSubmission({ tone: "error", pending: false, canSubmit: true, message: "Couldn't reach the server. Your run is kept, try again." });
+      showToast("Couldn't reach the server. Your run is kept, try again.", "error");
     } finally {
       setSubmitting(false);
     }
