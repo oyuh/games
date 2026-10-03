@@ -1,6 +1,6 @@
-import { defineMutator } from "@rocicorp/zero";
+import { defineMutator, type Row, type Transaction } from "@rocicorp/zero";
 import { z } from "zod";
-import { zql } from "../schema";
+import { type schema, zql } from "../schema";
 import { now, code, pickChain, scoreForLetters, normalized, pickRandom, assertCaller, assertHost, sanitizeText, resolvePlayerName, sealSecret, openSecret, isServerTx, ROOM_CODE, settingInRange, assertLobbySettingsChange, definedSettings } from "./helpers";
 import { LOBBY_SETTING_LIMITS } from "../../lobby-settings";
 import { chainStarts } from "./word-banks";
@@ -29,6 +29,89 @@ async function dealChain(tx: unknown, ctx: unknown, gameId: string, words: strin
 export async function chainSlotWord(ctx: unknown, gameId: string, slot: ChainSlot) {
   if (slot.revealed) return slot.word;
   return slot.secret ? openSecret(ctx, "chain_reaction", gameId, slot.secret) : null;
+}
+
+type ChainGame = Row<typeof schema.tables.chain_reaction_games>;
+
+/**
+ * Ends a round whose hidden words are all out, whether solved, skipped, or
+ * timed out: records it, then deals the next round or finishes the game.
+ * `lead` goes in front of the announcement, e.g. "Time's up!".
+ */
+async function finishRound(tx: Transaction, ctx: unknown, game: ChainGame, chain: ChainGame["chain"], scores: Record<string, number>, lead = "") {
+  const say = (text: string) => ({ text: lead ? `${lead} ${text}` : text, ts: now() });
+  const roundResult = {
+    round: game.settings.currentRound,
+    chains: Object.fromEntries(
+      Object.entries(chain).map(([pid, ch]) => [
+        pid,
+        ch.map((s) => ({ word: s.word, solvedBy: s.solvedBy ?? null, lettersShown: s.lettersShown }))
+      ])
+    ),
+    scores: { ...scores }
+  };
+  const roundHistory = [...game.round_history, roundResult];
+
+  if (game.settings.currentRound >= game.settings.rounds) {
+    const sorted = Object.entries(scores).sort(([,a], [,b]) => b - a);
+    const winner = sorted[0];
+    const isTie = sorted.length >= 2 && sorted[0]![1] === sorted[1]![1];
+    const winnerSession = winner ? await tx.run(zql.sessions.where("id", winner[0]).one()) : null;
+    const winnerName = winner ? resolvePlayerName(winnerSession?.name, winner[0]) : "???";
+    const endText = isTie ? "Game over! It's a tie!" : `Game over! ${winnerName} wins!`;
+
+    await tx.mutate.chain_reaction_games.update({
+      id: game.id,
+      phase: "finished",
+      chain,
+      scores,
+      round_history: roundHistory,
+      announcement: say(endText),
+      settings: { ...game.settings, phaseEndsAt: null },
+      updated_at: now()
+    });
+    return;
+  }
+
+  const nextRound = game.settings.currentRound + 1;
+
+  if (game.settings.chainMode === "custom") {
+    await tx.mutate.chain_reaction_games.update({
+      id: game.id,
+      phase: "submitting",
+      chain: {},
+      submitted_chains: {},
+      scores,
+      current_turn: undefined,
+      round_history: roundHistory,
+      announcement: say(`Round ${nextRound}: submit your chains!`),
+      settings: { ...game.settings, currentRound: nextRound, phaseEndsAt: null },
+      updated_at: now()
+    });
+    return;
+  }
+
+  if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
+  const p1 = game.players[0]!.sessionId;
+  const p2 = game.players[1]!.sessionId;
+  const newChain = {
+    [p1]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category)),
+    [p2]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category))
+  };
+  const phaseEndsAt = game.settings.turnTimeSec
+    ? now() + game.settings.turnTimeSec * 1000
+    : null;
+
+  await tx.mutate.chain_reaction_games.update({
+    id: game.id,
+    chain: newChain,
+    scores,
+    current_turn: undefined,
+    round_history: roundHistory,
+    announcement: say(`Round ${nextRound} starting!`),
+    settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
+    updated_at: now()
+  });
 }
 
 export const chainReactionMutators = {
@@ -457,79 +540,7 @@ export const chainReactionMutators = {
       const allDone = Object.values(updatedChains).every((ch) => ch.every((s) => s.revealed));
 
       if (allDone) {
-        // Round complete
-        const roundResult = {
-          round: game.settings.currentRound,
-          chains: Object.fromEntries(
-            Object.entries(updatedChains).map(([pid, ch]) => [
-              pid,
-              ch.map((s) => ({ word: s.word, solvedBy: s.solvedBy ?? null, lettersShown: s.lettersShown }))
-            ])
-          ),
-          scores: { ...scores }
-        };
-        const roundHistory = [...game.round_history, roundResult];
-
-        if (game.settings.currentRound >= game.settings.rounds) {
-          // Game over
-          const sorted = Object.entries(scores).sort(([,a], [,b]) => b - a);
-          const winner = sorted[0];
-          const isTie = sorted.length >= 2 && sorted[0]![1] === sorted[1]![1];
-          const winnerSession = winner ? await tx.run(zql.sessions.where("id", winner[0]).one()) : null;
-          const winnerName = winner ? resolvePlayerName(winnerSession?.name, winner[0]) : "???";
-          const endText = isTie ? "Game over! It's a tie!" : `Game over! ${winnerName} wins!`;
-
-          await tx.mutate.chain_reaction_games.update({
-            id: game.id,
-            phase: "finished",
-            chain: updatedChains,
-            scores,
-            round_history: roundHistory,
-            announcement: { text: endText, ts: now() },
-            settings: { ...game.settings, phaseEndsAt: null },
-            updated_at: now()
-          });
-        } else {
-          // Next round
-          const nextRound = game.settings.currentRound + 1;
-
-          if (game.settings.chainMode === "custom") {
-            await tx.mutate.chain_reaction_games.update({
-              id: game.id,
-              phase: "submitting",
-              chain: {},
-              submitted_chains: {},
-              scores,
-              current_turn: undefined,
-              round_history: roundHistory,
-              announcement: { text: `Round ${nextRound}: submit your chains!`, ts: now() },
-              settings: { ...game.settings, currentRound: nextRound, phaseEndsAt: null },
-              updated_at: now()
-            });
-          } else {
-            if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
-            const p1 = game.players[0]!.sessionId;
-            const p2 = game.players[1]!.sessionId;
-            const newChain = {
-              [p1]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category)),
-              [p2]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category))
-            };
-            const phaseEndsAt = game.settings.turnTimeSec
-              ? now() + game.settings.turnTimeSec * 1000
-              : null;
-
-            await tx.mutate.chain_reaction_games.update({
-              id: game.id,
-              chain: newChain,
-              scores,
-              current_turn: undefined,
-              round_history: roundHistory,
-              announcement: { text: `Round ${nextRound} starting!`, ts: now() },
-              settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
-              updated_at: now()
-            });
-          }
-        }
+        await finishRound(tx, ctx, game, updatedChains, scores);
         return;
       }
 
@@ -576,76 +587,7 @@ export const chainReactionMutators = {
       const allDone = Object.values(updatedChains).every((ch) => ch.every((s) => s.revealed));
 
       if (allDone) {
-        const roundResult = {
-          round: game.settings.currentRound,
-          chains: Object.fromEntries(
-            Object.entries(updatedChains).map(([pid, ch]) => [
-              pid,
-              ch.map((s) => ({ word: s.word, solvedBy: s.solvedBy ?? null, lettersShown: s.lettersShown }))
-            ])
-          ),
-          scores: { ...scores }
-        };
-        const roundHistory = [...game.round_history, roundResult];
-
-        if (game.settings.currentRound >= game.settings.rounds) {
-          const sorted = Object.entries(scores).sort(([,a], [,b]) => b - a);
-          const winner = sorted[0];
-          const isTie = sorted.length >= 2 && sorted[0]![1] === sorted[1]![1];
-          const winnerSession = winner ? await tx.run(zql.sessions.where("id", winner[0]).one()) : null;
-          const winnerName = winner ? resolvePlayerName(winnerSession?.name, winner[0]) : "???";
-          const endText = isTie ? "Game over! It's a tie!" : `Game over! ${winnerName} wins!`;
-
-          await tx.mutate.chain_reaction_games.update({
-            id: game.id,
-            phase: "finished",
-            chain: updatedChains,
-            scores,
-            round_history: roundHistory,
-            announcement: { text: endText, ts: now() },
-            settings: { ...game.settings, phaseEndsAt: null },
-            updated_at: now()
-          });
-        } else {
-          const nextRound = game.settings.currentRound + 1;
-
-          if (game.settings.chainMode === "custom") {
-            await tx.mutate.chain_reaction_games.update({
-              id: game.id,
-              phase: "submitting",
-              chain: {},
-              submitted_chains: {},
-              scores,
-              current_turn: undefined,
-              round_history: roundHistory,
-              announcement: { text: `Round ${nextRound}: submit your chains!`, ts: now() },
-              settings: { ...game.settings, currentRound: nextRound, phaseEndsAt: null },
-              updated_at: now()
-            });
-          } else {
-            if (!isServerTx(tx)) return; // rolled on the server only, see isServerTx
-            const p1 = game.players[0]!.sessionId;
-            const p2 = game.players[1]!.sessionId;
-            const newChain = {
-              [p1]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category)),
-              [p2]: await dealChain(tx, ctx, game.id, pickChain(game.settings.chainLength, game.settings.category))
-            };
-            const phaseEndsAt = game.settings.turnTimeSec
-              ? now() + game.settings.turnTimeSec * 1000
-              : null;
-
-            await tx.mutate.chain_reaction_games.update({
-              id: game.id,
-              chain: newChain,
-              scores,
-              current_turn: undefined,
-              round_history: roundHistory,
-              announcement: { text: `Round ${nextRound} starting!`, ts: now() },
-              settings: { ...game.settings, currentRound: nextRound, phaseEndsAt },
-              updated_at: now()
-            });
-          }
-        }
+        await finishRound(tx, ctx, game, updatedChains, scores);
         return;
       }
 
@@ -656,6 +598,28 @@ export const chainReactionMutators = {
         announcement: { text: `${playerName} gave up on "${word}"`, ts: now() },
         updated_at: now()
       });
+    }
+  ),
+
+  /** The round clock ran out: every word still hidden is revealed for 0 points and the round ends. */
+  advanceTimer: defineMutator(
+    z.object({ gameId: z.string() }),
+    async ({ args, tx, ctx }) => {
+      const game = await tx.run(zql.chain_reaction_games.where("id", args.gameId).one());
+      if (!game || game.phase !== "playing") return;
+      const phaseEnd = game.settings.phaseEndsAt;
+      if (!phaseEnd || phaseEnd > now()) return;
+      // Hidden words are sealed, so only the server can say what they were.
+      if (!isServerTx(tx)) return;
+
+      const chain = Object.fromEntries(await Promise.all(
+        Object.entries(game.chain).map(async ([pid, slots]) => [pid, await Promise.all(slots.map(async (s) => {
+          if (s.revealed) return s;
+          const word = (await chainSlotWord(ctx, game.id, s)) ?? s.word;
+          return { ...s, word, secret: null, revealed: true, lettersShown: word.length, solvedBy: null };
+        }))] as const)
+      ));
+      await finishRound(tx, ctx, game, chain, game.scores, "Time's up!");
     }
   ),
 

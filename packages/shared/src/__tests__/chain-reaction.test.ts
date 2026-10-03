@@ -262,4 +262,33 @@ describe("Chain Reaction: hidden words stay on the server", () => {
     expect(mine.map((s: any) => s.word)).toEqual(["SUN", "______", "___", "HOLE"]);
     expect(await openForTest("chain_reaction", "game1", mine[1].secret)).toBe("FLOWER");
   });
+
+  it("ends the round when the clock runs out, revealing the hidden words for 0 points", async () => {
+    tx.seed("chain_reaction_games", [makeChainReactionGame({
+      id: "game1", host_id: "host1", players,
+      settings: { chainLength: 5, rounds: 2, currentRound: 1, turnTimeSec: 60, phaseEndsAt: null, chainMode: "premade", category: "animals" },
+    })]);
+    await mutators.start({ args: { gameId: "game1", hostId: "host1" }, tx, ctx: serverCtx("host1") });
+    const hidden = await openForTest("chain_reaction", "game1", game().chain.p1[1].secret);
+
+    // Not yet expired: nothing happens.
+    await mutators.advanceTimer({ args: { gameId: "game1" }, tx, ctx: serverCtx("p1") });
+    expect(game().settings.currentRound).toBe(1);
+
+    tx.seed("chain_reaction_games", [{ ...game(), settings: { ...game().settings, phaseEndsAt: 1 } }]);
+    // The client can't open sealed words, so it leaves the reveal to the server.
+    const client = new MockTx("client");
+    client.seed("chain_reaction_games", [game()]);
+    await mutators.advanceTimer({ args: { gameId: "game1" }, tx: client, ctx: {} });
+    expect(client._mutations).toEqual([]);
+
+    await mutators.advanceTimer({ args: { gameId: "game1" }, tx, ctx: serverCtx("p1") });
+    const g = game();
+    expect(g.round_history).toHaveLength(1);
+    expect(g.round_history[0].chains.p1[1]).toEqual({ word: hidden, solvedBy: null, lettersShown: hidden.length });
+    expect(g.scores).toEqual({ host1: 0, p1: 0 });
+    expect(g.settings.currentRound).toBe(2);
+    expect(g.settings.phaseEndsAt).toBeGreaterThan(Date.now());
+    expect(g.announcement.text).toBe("Time's up! Round 2 starting!");
+  });
 });

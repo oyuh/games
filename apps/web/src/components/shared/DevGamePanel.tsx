@@ -56,10 +56,10 @@ function watchGame(zero: ReturnType<typeof useZero>, gameType: DevGameType, id: 
   }
 }
 
-/** Chain reaction is turn-based and has no timer to expire. */
 const advanceTimerFor = {
   imposter: mutators.imposter.advanceTimer,
   password: mutators.password.advanceTimer,
+  chain_reaction: mutators.chainReaction.advanceTimer,
   shade_signal: mutators.shadeSignal.advanceTimer,
   location_signal: mutators.locationSignal.advanceTimer,
 } as const;
@@ -359,14 +359,12 @@ function DevInGame({
         <button
           type="button"
           className={`${btn} devp-grow`}
-          disabled={busy || gameType === "chain_reaction"}
-          title={gameType === "chain_reaction" ? "Chain reaction has no phase timer" : undefined}
+          disabled={busy}
           onClick={() => void run("Phase skipped", async () => {
             // Expire the timer, then let the game's own advanceTimer do the
             // transition so phase logic lives in exactly one place.
             await zero.mutate(mutators.dev.expirePhase({ gameId, gameType })).client;
-            const advance = gameType === "chain_reaction" ? null : advanceTimerFor[gameType];
-            if (advance) await zero.mutate(advance({ gameId })).client;
+            await zero.mutate(advanceTimerFor[gameType]({ gameId })).client;
           })}
         >
           Skip phase
