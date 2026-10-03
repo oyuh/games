@@ -1543,6 +1543,11 @@
   flex-direction: column;
 }
 
+/* Difficulty and size stacked: two pickers, close enough to read as one block. */
+.solo-setup-difficulty > .solo-seg + .solo-seg {
+  margin-top: 0.5rem;
+}
+
 /* One line of explanation. It has to stay one line: if it wraps, the
    card grows and everything below shifts. Keep every note string at or
    under 40 characters, which fits down to a 320px viewport. */

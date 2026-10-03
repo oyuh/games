@@ -18,11 +18,13 @@ import {
   statusTable,
   pipsScores,
   shikakuScores,
+  zipScores,
 } from "@games/shared/db";
 import { drizzleClient } from "./db-provider";
-import { pipsEngine, shikakuEngine } from "@games/shared";
+import { pipsEngine, shikakuEngine, zipEngine } from "@games/shared";
 import { likeTerm } from "./sql-like";
 import { renderPipsSvg } from "./pips-image";
+import { renderZipSvg } from "./zip-image";
 import { CLEANUP_POLICY, cleanupDayLines, storedReportLines } from "./cleanup-report";
 import { renderPuzzleSvg as renderShikakuSvg } from "./shikaku-image";
 import {
@@ -1741,6 +1743,120 @@ adminRoutes.delete("/pips/scores", async (c) => {
   return c.json({ ok: true, cleared: "all" });
 });
 
+// ─── Zip leaderboard management ─────────────────────────────
+// Boards are split by difficulty and size, so both filter the list, and the
+// list runs fastest first like the public board.
+adminRoutes.get("/zip/scores", async (c) => {
+  const { page, pageSize, offset } = parsePagination(c, 50, 200);
+  const difficulty = c.req.query("difficulty");
+  const size = Number(c.req.query("size"));
+  const filters = [
+    zipEngine.isDifficulty(difficulty) ? eq(zipScores.difficulty, difficulty) : undefined,
+    zipEngine.isGridSize(size) ? eq(zipScores.size, size) : undefined,
+  ].filter((filter) => filter !== undefined);
+  const where = filters.length ? and(...filters) : undefined;
+
+  const [scores, countResult] = await Promise.all([
+    drizzleClient.select().from(zipScores).where(where).orderBy(asc(zipScores.timeMs), asc(zipScores.createdAt)).limit(pageSize).offset(offset),
+    drizzleClient.select({ total: count() }).from(zipScores).where(where),
+  ]);
+  const totalCount = countResult[0]?.total ?? 0;
+
+  return c.json({ ok: true, scores, total: totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) });
+});
+
+adminRoutes.post("/zip/scores", async (c) => {
+  const body = await c.req.json<{
+    id?: string;
+    sessionId?: string;
+    name?: string;
+    seed?: number;
+    difficulty?: string;
+    size?: number;
+    timeMs?: number;
+    puzzleCount?: number;
+    createdAt?: number;
+  }>().catch(() => null);
+
+  if (!body) return c.json({ error: "Invalid body" }, 400);
+
+  const sessionId = readTrimmedText(body.sessionId);
+  const name = readTrimmedText(body.name).slice(0, 50);
+  const seed = readWholeNumber(body.seed);
+  const difficulty = readTrimmedText(body.difficulty);
+  const size = readWholeNumber(body.size);
+  const timeMs = readWholeNumber(body.timeMs);
+  const createdAt = readWholeNumber(body.createdAt) ?? Date.now();
+  const id = readTrimmedText(body.id) || crypto.randomUUID();
+
+  if (!sessionId || sessionId.length > 64) return c.json({ error: "Invalid sessionId" }, 400);
+  if (!name) return c.json({ error: "Invalid name" }, 400);
+  if (seed == null || seed < 0) return c.json({ error: "Invalid seed" }, 400);
+  if (!zipEngine.isDifficulty(difficulty)) return c.json({ error: "Invalid difficulty" }, 400);
+  if (!zipEngine.isGridSize(size)) return c.json({ error: "Invalid size" }, 400);
+  if (timeMs == null || timeMs < 0) return c.json({ error: "Invalid timeMs" }, 400);
+  const puzzleCount = readWholeNumber(body.puzzleCount) ?? zipEngine.RUN_LENGTH[difficulty];
+  if (puzzleCount < 1) return c.json({ error: "Invalid puzzleCount" }, 400);
+  if (createdAt < 1) return c.json({ error: "Invalid createdAt" }, 400);
+
+  const score = { id, sessionId, name, seed, difficulty, size, timeMs, puzzleCount, createdAt };
+  await drizzleClient.insert(zipScores).values(score);
+  return c.json({ ok: true, score });
+});
+
+adminRoutes.patch("/zip/scores/:id", async (c) => {
+  const { id } = c.req.param();
+  const body = await c.req.json<{
+    sessionId?: string;
+    name?: string;
+    seed?: number;
+    difficulty?: string;
+    size?: number;
+    timeMs?: number;
+    puzzleCount?: number;
+    createdAt?: number;
+  }>().catch(() => null);
+  if (!body) return c.json({ error: "Invalid body" }, 400);
+
+  const [existing] = await drizzleClient.select({ id: zipScores.id }).from(zipScores).where(eq(zipScores.id, id));
+  if (!existing) return c.json({ error: "Score not found" }, 404);
+
+  const updates: Partial<typeof zipScores.$inferInsert> = {};
+  const sessionId = readTrimmedText(body.sessionId);
+  if (sessionId && sessionId.length <= 64) updates.sessionId = sessionId;
+  const name = readTrimmedText(body.name).slice(0, 50);
+  if (name) updates.name = name;
+  const seed = readWholeNumber(body.seed);
+  if (seed != null && seed >= 0) updates.seed = seed;
+  if (zipEngine.isDifficulty(body.difficulty)) updates.difficulty = body.difficulty;
+  if (zipEngine.isGridSize(body.size)) updates.size = body.size;
+  const timeMs = readWholeNumber(body.timeMs);
+  if (timeMs != null && timeMs >= 0) updates.timeMs = timeMs;
+  const puzzleCount = readWholeNumber(body.puzzleCount);
+  if (puzzleCount != null && puzzleCount >= 0) updates.puzzleCount = puzzleCount;
+  const createdAt = readWholeNumber(body.createdAt);
+  if (createdAt != null && createdAt > 0) updates.createdAt = createdAt;
+
+  if (Object.keys(updates).length === 0) return c.json({ error: "No valid fields to update" }, 400);
+
+  await drizzleClient.update(zipScores).set(updates).where(eq(zipScores.id, id));
+  return c.json({ ok: true, updated: { id, ...updates } });
+});
+
+adminRoutes.delete("/zip/scores/:id", async (c) => {
+  const { id } = c.req.param();
+  const [existing] = await drizzleClient.select({ id: zipScores.id }).from(zipScores).where(eq(zipScores.id, id));
+  if (!existing) return c.json({ error: "Score not found" }, 404);
+
+  await drizzleClient.delete(zipScores).where(eq(zipScores.id, id));
+  return c.json({ ok: true, deleted: id });
+});
+
+adminRoutes.delete("/zip/scores", async (c) => {
+  await drizzleClient.delete(zipScores);
+  return c.json({ ok: true, cleared: "all" });
+});
+
 // ─── Load persisted custom status from DB on startup ────────
 // ─── Solo puzzle rendering ──────────────────────────────────
 //
@@ -1847,6 +1963,34 @@ adminRoutes.get("/shikaku/scores/:id/puzzle.svg", async (c) => {
     ...(replay ? { replay } : {}),
   });
   return svgResponse(c, svg, `shikaku-${score.seed}-${index}-${view}.svg`);
+});
+
+adminRoutes.get("/zip/scores/:id/puzzle.svg", async (c) => {
+  const { id } = c.req.param();
+  const [score] = await drizzleClient.select().from(zipScores).where(eq(zipScores.id, id)).limit(1);
+  if (!score) {
+    return c.json({ error: "Score not found" }, 404);
+  }
+  if (!zipEngine.isDifficulty(score.difficulty) || !zipEngine.isGridSize(score.size)) {
+    return c.json({ error: "Score has no valid board" }, 422);
+  }
+
+  const puzzles = zipEngine.generateRun(score.seed, score.difficulty, score.size);
+  const index = Math.min(Math.max(0, parseInt(c.req.query("index") ?? "0", 10) || 0), puzzles.length - 1);
+  const puzzle = puzzles[index]!;
+  const view = parsePuzzleView(c.req.query("view"));
+  const theme = c.req.query("theme") === "light" ? "light" : "dark";
+
+  // Stored replays went through validation on the way in, but they're still
+  // stored JSON, so only whole numbers make it into the markup.
+  let replay: number[] | undefined;
+  if (view === "replay") {
+    const forPuzzle = (score.replayData as { paths?: unknown[] } | null)?.paths?.[index];
+    replay = Array.isArray(forPuzzle) ? forPuzzle.filter(Number.isInteger) as number[] : [];
+  }
+
+  const svg = renderZipSvg(puzzle, score.seed, { theme, view, ...(replay ? { replay } : {}) });
+  return svgResponse(c, svg, `zip-${score.seed}-${score.size}-${index}-${view}.svg`);
 });
 
 export async function loadPersistedStatus() {

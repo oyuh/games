@@ -68,6 +68,11 @@ const pageTips: Record<GameSlug, string[]> = {
     "Click a domino or press R while holding it to rotate clockwise",
     "Ranked runs use Easy, Medium, and Hard splits; fastest total time ranks",
   ],
+  zip: [
+    "Start on 1 and drag through every square without lifting",
+    "Hit the numbers in order, and never cross a wall",
+    "Drag back over your line to undo, fastest total time ranks",
+  ],
 };
 
 function getPageInfo(pathname: string): PageInfo {

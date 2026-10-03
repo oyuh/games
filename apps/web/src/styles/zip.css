@@ -1,0 +1,209 @@
+/* Zip board. Four layers stacked in one grid cell: the squares, the line,
+   the numbers over the line, and the walls over everything. All of them are
+   sized in cells, so one --zip-n sets the whole board. */
+
+.zip-board {
+  --zip-done: #34d399;
+  --zip-line: color-mix(in srgb, var(--secondary) 30%, transparent);
+
+  position: relative;
+  display: grid;
+  /* Bigger grids get a bigger board so the squares stay easy to hit:
+     about 518px at 6x6, 584 at 8x8, 650 at 10x10, 716 at 12x12. The
+     viewport caps still win on small screens. */
+  width: min(calc(320px + var(--zip-n) * 33px), 100%, calc(100dvh - 12rem));
+  aspect-ratio: 1;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  container-type: inline-size;
+}
+
+.zip-board[data-size="sm"] {
+  width: min(220px, 100%);
+}
+
+.zip-board[data-interactive] {
+  cursor: pointer;
+  /* The board owns the drag, so the page doesn't scroll under a finger. */
+  touch-action: none;
+}
+
+.zip-board:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+/* The line keeps its colors when solved, since they're the record of how you
+   got there. The edge is what says it's done. */
+.zip-board[data-solved] {
+  border-color: var(--zip-done);
+}
+
+.zip-board > * {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+}
+
+.zip-cells,
+.zip-nums {
+  display: grid;
+  grid-template-columns: repeat(var(--zip-n), 1fr);
+  grid-template-rows: repeat(var(--zip-n), 1fr);
+}
+
+.zip-cell {
+  box-shadow: inset -0.5px -0.5px 0 var(--zip-line), inset 0.5px 0.5px 0 var(--zip-line);
+}
+
+.zip-cell[data-on] {
+  background: color-mix(in srgb, var(--zip-seg) 12%, transparent);
+}
+
+.zip-ink {
+  pointer-events: none;
+}
+
+.zip-ink polyline {
+  fill: none;
+  stroke-width: 0.24;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.zip-nums {
+  pointer-events: none;
+}
+
+/* The ball is the ring, and the face sits inside it. The ring's left half is
+   the stretch of line coming in, the right half the stretch going out. */
+.zip-num {
+  place-self: center;
+  display: grid;
+  width: 50%;
+  aspect-ratio: 1;
+  padding: 9%;
+  border-radius: 50%;
+  background: conic-gradient(var(--zip-out) 0 50%, var(--zip-in) 50% 100%);
+}
+
+.zip-num-face {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--foreground);
+  color: var(--background);
+  font-weight: 800;
+  /* Scales with the cell, whatever size the board ends up. */
+  font-size: calc(100cqw / var(--zip-n) * 0.24);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.zip-num[data-next] {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .zip-num[data-next] {
+    animation: zip-next 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes zip-next {
+  50% { outline-offset: 5px; }
+}
+
+.zip-walls {
+  pointer-events: none;
+  overflow: visible;
+}
+
+.zip-walls line {
+  stroke: var(--foreground);
+  stroke-width: 0.12;
+  stroke-linecap: round;
+}
+
+.zip-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The home card's preview: the real board, small. */
+.solo-preview-zip {
+  display: grid;
+  place-items: center;
+  width: 100%;
+}
+
+.solo-preview-zip .zip-board {
+  width: min(150px, 100%);
+}
+
+/* How to Play: big enough to actually draw on. */
+.zip-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 0;
+}
+
+.zip-demo .zip-board {
+  width: min(300px, 100%);
+}
+
+/* ── The game page ───────────────────────────────────────── */
+
+.shell-main:has(.zip-page) {
+  padding: 0;
+}
+
+.zip-page.game-page {
+  max-width: none;
+  min-height: calc(100dvh - 3.5rem);
+  padding: clamp(1rem, 3vmin, 2rem);
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.zip-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+}
+
+.zip-page .zip-head .game-title {
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+}
+
+.zip-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem 1rem;
+}
+
+/* Holds the board's place during the countdown, so nobody gets to study a
+   ranked board before the clock starts. */
+.zip-board-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}

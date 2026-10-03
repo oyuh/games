@@ -142,7 +142,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
       <section className="m-section">
         <h2 className="m-label">Solo</h2>
         <ul className="m-list">
-          {(["shikaku", "pips"] as const).map((game) => (
+          {(["shikaku", "pips", "zip"] as const).map((game) => (
             <li key={game}>
               <Link className="m-row" to={`/${game}`} style={accentStyle(game)}>
                 <span className="m-row-icon"><GameIcon game={game} size={18} /></span>

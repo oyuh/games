@@ -3,7 +3,7 @@ import type { Difficulty } from "./shikaku-engine";
 import type { PipsDifficulty } from "./pips-engine";
 
 /**
- * Typed channel between the solo game pages (Pips, Shikaku) and the chrome
+ * Typed channel between the solo game pages (Pips, Shikaku, Zip) and the chrome
  * around them: the mobile shell's action sheet and the desktop floating
  * header. Both of those sit outside the page's React tree and one is behind
  * a lazy boundary, so this stays a window event rather than a context.
@@ -58,6 +58,19 @@ export interface PipsState {
   canDevSkip: boolean;
 }
 
+export interface ZipState {
+  /** "menu" and "finished" have no board, so only the leaderboard is live then. */
+  phase: "menu" | "countdown" | "playing" | "finished";
+  canUndo: boolean;
+  canClear: boolean;
+  hint: boolean;
+  canRestart: boolean;
+  canGiveUp: boolean;
+  showDevTools: boolean;
+  canDevSolve: boolean;
+  canDevSkip: boolean;
+}
+
 /**
  * Every event on the bus. `void` means the event carries no payload.
  *
@@ -69,6 +82,7 @@ export interface SoloEventMap {
   // page -> chrome
   "shikaku-game-state": ShikakuState;
   "pips-game-state": PipsState;
+  "zip-game-state": ZipState;
 
   // chrome -> page
   "shikaku-undo": void;
@@ -88,6 +102,14 @@ export interface SoloEventMap {
   "pips-toggle-leaderboard": void;
   "pips-dev-solution": void;
   "pips-dev-skip": void;
+  "zip-undo": void;
+  "zip-clear": void;
+  "zip-toggle-hint": void;
+  "zip-restart-run": void;
+  "zip-give-up": void;
+  "zip-toggle-leaderboard": void;
+  "zip-dev-solve": void;
+  "zip-dev-skip": void;
 }
 
 export type SoloEvent = keyof SoloEventMap;
