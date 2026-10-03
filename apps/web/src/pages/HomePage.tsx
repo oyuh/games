@@ -49,7 +49,6 @@ const GAME_CARD_DOTS = Array.from({ length: GAME_CARD_COUNT }, (_, index) => ({
 /* ── Solo game definitions ────────────────────────────────────── */
 const shikakuMeta = GAME_META.shikaku;
 const pipsMeta = GAME_META.pips;
-const NEW_GAME_ISSUE_URL = "https://github.com/oyuh/games/issues/new?template=new-game.md&title=%5BNew%20Game%5D%20";
 
 function SoloPipsFace({ value }: { value: number }) {
   return (
@@ -107,28 +106,6 @@ const SOLO_GAMES: SoloGameDef[] = [
           <span className="solo-pips-domino solo-pips-domino--board">
             <span className="solo-pips-half"><SoloPipsFace value={2} /></span>
             <span className="solo-pips-half"><SoloPipsFace value={4} /></span>
-          </span>
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: "nexus", title: "Coming Soon!",
-    description: "Submit a suggestion for a new game! or create it yourself!",
-    accent: "#38bdf8",
-    href: NEW_GAME_ISSUE_URL,
-    actionLabel: "Suggest a new game",
-    comingSoon: true,
-    preview: (
-      <div className="solo-preview-suggestion" aria-hidden="true">
-        <div className="solo-suggestion-doc">
-          <span className="solo-suggestion-title-line" />
-          <span className="solo-suggestion-line solo-suggestion-line--one" />
-          <span className="solo-suggestion-line solo-suggestion-line--two" />
-          <span className="solo-suggestion-line solo-suggestion-line--three" />
-          <span className="solo-suggestion-check-row">
-            <span className="solo-suggestion-check" />
-            <span className="solo-suggestion-short-line" />
           </span>
         </div>
       </div>

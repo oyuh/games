@@ -13,7 +13,6 @@ export interface SoloGameDef {
   preview: ReactNode;
   href?: string;
   actionLabel?: string;
-  comingSoon?: boolean;
 }
 
 export function SoloGameCard({ game, onDemo }: { game: SoloGameDef; onDemo?: (demoId: string) => void }) {
@@ -29,7 +28,7 @@ export function SoloGameCard({ game, onDemo }: { game: SoloGameDef; onDemo?: (de
 
   return (
     <div
-      className={`solo-card${canPlay ? " solo-card--playable" : " solo-card--disabled"}${game.comingSoon ? " solo-card--coming-soon" : ""}`}
+      className={`solo-card${canPlay ? " solo-card--playable" : " solo-card--disabled"}`}
       data-game-theme={game.gameSlug}
       style={{ "--card-accent": game.accent } as CSSProperties}
     >
