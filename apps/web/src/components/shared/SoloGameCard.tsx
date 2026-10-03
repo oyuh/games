@@ -38,7 +38,7 @@ export function SoloGameCard({ game, onDemo }: { game: SoloGameDef; onDemo?: (de
           className="solo-card-hit-area"
           aria-label={actionLabel}
           data-tooltip={tooltip}
-          data-tooltip-variant="game"
+          data-tooltip-variant="info"
           target="_blank"
           rel="noreferrer"
         />
@@ -49,7 +49,7 @@ export function SoloGameCard({ game, onDemo }: { game: SoloGameDef; onDemo?: (de
           className="solo-card-hit-area"
           aria-label={actionLabel}
           data-tooltip={tooltip}
-          data-tooltip-variant="game"
+          data-tooltip-variant="info"
         />
       )}
       <div className="solo-card-body">
@@ -60,7 +60,7 @@ export function SoloGameCard({ game, onDemo }: { game: SoloGameDef; onDemo?: (de
               className="solo-card-title-link"
               aria-label={actionLabel}
               data-tooltip={tooltip}
-              data-tooltip-variant="game"
+              data-tooltip-variant="info"
               target="_blank"
               rel="noreferrer"
             >
@@ -72,7 +72,7 @@ export function SoloGameCard({ game, onDemo }: { game: SoloGameDef; onDemo?: (de
               className="solo-card-title-link"
               aria-label={actionLabel}
               data-tooltip={tooltip}
-              data-tooltip-variant="game"
+              data-tooltip-variant="info"
             >
               <h3 className="solo-card-title">{game.title}</h3>
             </Link>
