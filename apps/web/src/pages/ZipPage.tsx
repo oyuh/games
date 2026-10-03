@@ -577,7 +577,7 @@ function ZipEndScreen({
         ...(canSubmit || submitting
           ? [{ label: "New Ranked Run", icon: <FiFlag size={14} />, onClick: onPlayAgain, confirm: true }]
           : []),
-        { label: "Menu", icon: <FiHome size={14} />, onClick: onMenu, confirm: canSubmit },
+        { label: "Menu", icon: <FiHome size={14} />, onClick: onMenu, confirm: true },
         { label: "Full Leaderboard", icon: <FiAward size={14} />, onClick: onOpenLeaderboard },
       ]}
     />
