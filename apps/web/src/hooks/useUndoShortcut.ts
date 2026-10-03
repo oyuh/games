@@ -3,9 +3,10 @@ import { useLocation } from "react-router-dom";
 import { emitSolo } from "../lib/solo-bus";
 
 /** Which game's undo Ctrl+Z means on each route. Only the solo games have moves to take back. */
-const UNDO_BY_ROUTE: [RegExp, "shikaku-undo" | "pips-undo"][] = [
+const UNDO_BY_ROUTE: [RegExp, "shikaku-undo" | "pips-undo" | "zip-undo"][] = [
   [/^\/shikaku(\/|$)/, "shikaku-undo"],
   [/^\/pips(\/|$)/, "pips-undo"],
+  [/^\/(dev\/)?zip(\/|$)/, "zip-undo"],
 ];
 
 /**

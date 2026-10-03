@@ -121,3 +121,10 @@
 [data-theme='light'] [data-game-theme='pips'] {
   --game-bg: #ffedd5;
 }
+/* Bright yellow washes out on the light card, so the accent drops to a
+   deeper gold that still reads against it. */
+[data-theme='light'] [data-game-theme='zip'] {
+  --primary: #ca8a04;
+  --game-accent: #ca8a04;
+  --game-bg: #fef9c3;
+}

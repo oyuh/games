@@ -13,7 +13,8 @@ export type GameSlug =
   | "shade"
   | "location"
   | "shikaku"
-  | "pips";
+  | "pips"
+  | "zip";
 
 export type GameIconName =
   | "globe"
@@ -23,7 +24,8 @@ export type GameIconName =
   | "droplet"
   | "map-pin"
   | "grid-3x3"
-  | "domino";
+  | "domino"
+  | "path";
 
 export type GameMetadata = {
   slug: GameSlug;
@@ -101,6 +103,15 @@ export const GAME_ICON_SVGS: Record<GameIconName, { viewBox: string; markup: str
       '<circle cx="18.25" cy="12" r="1.25" fill="currentColor"/>',
       '<circle cx="16.25" cy="15.25" r="1.25" fill="currentColor"/>',
       "</g>",
+    ].join(""),
+  },
+  // One line snaking through a grid, from a start dot to an end dot.
+  path: {
+    viewBox: "0 0 24 24",
+    markup: [
+      '<path d="M5 5h14v7H5v7h14" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>',
+      '<circle cx="5" cy="5" r="2.25" fill="currentColor"/>',
+      '<circle cx="19" cy="19" r="2.25" fill="currentColor"/>',
     ].join(""),
   },
 };
@@ -218,6 +229,20 @@ export const GAME_META: Record<GameSlug, GameMetadata> = {
     icon: "domino",
     href: "/pips",
   },
+  zip: {
+    slug: "zip",
+    title: "Zip",
+    shortTitle: "Zip",
+    pageTitle: "Zip | Games",
+    description: "A timed path puzzle. Draw one line through every square, hitting the numbers in order.",
+    shortDescription: "Draw one line through every square.",
+    players: "Solo",
+    accent: "#facc15",
+    themeColor: "#facc15",
+    background: "#2c2712",
+    icon: "path",
+    href: "/zip",
+  },
 };
 
 export const GAME_SLUGS = Object.keys(GAME_META) as GameSlug[];
@@ -247,6 +272,7 @@ export function getGameSlugFromPath(pathname: string): GameSlug {
   if (normalized.startsWith("/location")) return "location";
   if (/^\/shikaku(\/|$)/.test(normalized)) return "shikaku";
   if (/^\/pips(\/|$)/.test(normalized)) return "pips";
+  if (/^\/zip(\/|$)/.test(normalized)) return "zip";
   return "home";
 }
 

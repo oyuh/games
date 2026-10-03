@@ -180,6 +180,12 @@
   --game-accent: #fb923c;
   --game-bg: #2f2118;
 }
+[data-game-theme="zip"] {
+  --primary: #facc15;
+  --primary-foreground: #181a1b;
+  --game-accent: #facc15;
+  --game-bg: #2c2712;
+}
 
 /* ── Base ────────────────────────────────────────────────────── */
 *,

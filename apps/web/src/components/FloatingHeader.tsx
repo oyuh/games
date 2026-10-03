@@ -1,13 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward, FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight, FiTrash2 } from "react-icons/fi";
+import { FiHome, FiMenu, FiX, FiSettings, FiInfo, FiMessageCircle, FiAward, FiHash, FiRepeat, FiCornerUpLeft, FiEye, FiFlag, FiSkipForward, FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight, FiTrash2, FiTarget } from "react-icons/fi";
 import { FaCrown } from "react-icons/fa";
 import { queries } from "@games/shared";
 import { useQuery } from "@rocicorp/zero/react";
 import type { GameContext } from "./shared/HostControlsModal";
 import { updateSettings, useSettings } from "../lib/settings";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { emitSolo, useSoloEvent } from "../lib/solo-bus";
+import { emitSolo, useSoloEvent, type ZipState } from "../lib/solo-bus";
 import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
 import { showToast } from "../lib/toast";
@@ -271,9 +271,11 @@ export function Sidebar() {
   const sessionId = getOrCreateSessionId();
   const chat = useChatContext();
 
-  const isInGame = /^\/(imposter|password|chain|shade|location)\/|^\/shikaku(\/|$)|^\/pips(\/|$)/.test(pathname);
+  const isInGame = /^\/(imposter|password|chain|shade|location)\/|^\/shikaku(\/|$)|^\/pips(\/|$)|^\/zip(\/|$)/.test(pathname);
   const isShikaku = /^\/shikaku(\/|$)/.test(pathname);
   const isPips = /^\/pips(\/|$)/.test(pathname);
+  // ponytail: /dev/zip until the real /zip page exists
+  const isZip = /^\/(dev\/)?zip(\/|$)/.test(pathname);
 
   // Track infinite mode state from ShikakuPage
   /* infiniteEnabled / infiniteCanToggle lived here for a sidebar toggle that
@@ -350,6 +352,30 @@ export function Sidebar() {
   });
   useSoloEvent("pips-game-state", (state) => {
     if (isPips) setPipsState(state);
+  });
+  const [zipState, setZipState] = useState<ZipState>({
+    phase: "menu", canUndo: false, canClear: false, hint: false, canRestart: false, canGiveUp: false,
+    showDevTools: false, canDevSolve: false, canDevSkip: false,
+  });
+  // Restart and give up throw a run away, so each takes a second press, the
+  // same as Pips. The arm disarms itself after 3 seconds.
+  const [zipConfirm, setZipConfirm] = useState<"restart" | "give-up" | null>(null);
+  useEffect(() => {
+    if (!zipConfirm) return;
+    const timer = setTimeout(() => setZipConfirm(null), 3000);
+    return () => clearTimeout(timer);
+  }, [zipConfirm]);
+  const confirmZip = (action: "restart" | "give-up") => {
+    if (zipConfirm !== action) {
+      setZipConfirm(action);
+      return;
+    }
+    setZipConfirm(null);
+    emitSolo(action === "restart" ? "zip-restart-run" : "zip-give-up");
+    setMobileOpen(false);
+  };
+  useSoloEvent("zip-game-state", (state) => {
+    if (isZip) setZipState(state);
   });
 
   useEffect(() => {
@@ -676,6 +702,87 @@ export function Sidebar() {
             )}
           </>
         )}
+        {isZip && (
+          <>
+            <SidebarButton
+              icon={<FiCornerUpLeft size={24} />}
+              label="Undo"
+              disabled={!zipState.canUndo}
+              className="sidebar-link--zip"
+              onClick={() => {
+                emitSolo("zip-undo");
+                setMobileOpen(false);
+              }}
+            />
+            <SidebarButton
+              icon={<FiTrash2 size={24} />}
+              label="Clear"
+              disabled={!zipState.canClear}
+              className="sidebar-link--zip"
+              onClick={() => {
+                emitSolo("zip-clear");
+                setMobileOpen(false);
+              }}
+            />
+            <SidebarButton
+              icon={<FiTarget size={24} />}
+              label="Highlight Next Number"
+              pressed={zipState.hint}
+              className={`sidebar-link--zip${zipState.hint ? " sidebar-link--active" : ""}`}
+              onClick={() => emitSolo("zip-toggle-hint")}
+            />
+            <SidebarButton
+              icon={<FiRepeat size={24} />}
+              label={zipConfirm === "restart" ? "Confirm Restart" : "Restart"}
+              disabled={!zipState.canRestart}
+              className={`sidebar-link--zip${zipConfirm === "restart" ? " sidebar-link--zip-confirm" : ""}`}
+              tooltipVariant={zipConfirm === "restart" ? "danger" : undefined}
+              onClick={() => confirmZip("restart")}
+            />
+            <SidebarButton
+              icon={<FiFlag size={24} />}
+              label={zipConfirm === "give-up" ? "Confirm Give Up" : "Give Up"}
+              disabled={!zipState.canGiveUp}
+              className={`sidebar-link--zip${zipConfirm === "give-up" ? " sidebar-link--zip-confirm" : ""}`}
+              tooltipVariant={zipConfirm === "give-up" ? "danger" : undefined}
+              onClick={() => confirmZip("give-up")}
+            />
+            <SidebarButton
+              icon={<FiAward size={24} />}
+              label="Leaderboard"
+              className="sidebar-link--zip"
+              onClick={() => {
+                emitSolo("zip-toggle-leaderboard");
+                setMobileOpen(false);
+              }}
+            />
+            {zipState.showDevTools && (
+              <>
+                <span className="sidebar-separator" aria-hidden="true" />
+                <SidebarButton
+                  icon={<FiEye size={24} />}
+                  label="DEV Solve"
+                  disabled={!zipState.canDevSolve}
+                  className="sidebar-link--zip"
+                  onClick={() => {
+                    emitSolo("zip-dev-solve");
+                    setMobileOpen(false);
+                  }}
+                />
+                <SidebarButton
+                  icon={<FiSkipForward size={24} />}
+                  label="DEV Skip"
+                  disabled={!zipState.canDevSkip}
+                  className="sidebar-link--zip"
+                  onClick={() => {
+                    emitSolo("zip-dev-skip");
+                    setMobileOpen(false);
+                  }}
+                />
+              </>
+            )}
+          </>
+        )}
         {isPips && (
           <>
             <SidebarButton
@@ -798,6 +905,7 @@ function SidebarButton({
   disabled,
   className = "",
   tooltipVariant,
+  pressed,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -805,10 +913,13 @@ function SidebarButton({
   disabled?: boolean;
   className?: string;
   tooltipVariant?: string | undefined;
+  /** For a button that toggles something on and off. */
+  pressed?: boolean;
 }) {
   return (
     <button
       className={`sidebar-link ${className}`}
+      aria-pressed={pressed}
       data-tooltip={label}
       data-tooltip-pos="right"
       data-tooltip-variant={tooltipVariant}
