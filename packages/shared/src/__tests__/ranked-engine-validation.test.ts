@@ -10,6 +10,11 @@ import {
   generateRun as generatePipsRun,
   validateRankedPipsRun,
 } from "../games/pips-engine";
+import {
+  RUN_LENGTH as ZIP_RUN_LENGTH,
+  generateRun as generateZipRun,
+  validateRankedZipRun,
+} from "../games/zip-engine";
 
 describe("ranked Shikaku replay validation", () => {
   it("accepts canonical replay rectangles for the generated seed", () => {
@@ -95,5 +100,34 @@ describe("ranked Pips replay validation", () => {
     });
 
     expect(result).toMatchObject({ ok: false, code: "non-canonical-solution" });
+  });
+});
+
+describe("ranked Zip replay validation", () => {
+  const seed = 97531;
+  const run = generateZipRun(seed, "easy", 6);
+  const base = {
+    seed,
+    difficulty: "easy",
+    size: 6,
+    timeMs: 30_000,
+    puzzleCount: ZIP_RUN_LENGTH.easy,
+    replayData: { puzzleTimes: [10_000, 10_000, 10_000], paths: run.map((puzzle) => puzzle.solution) },
+  };
+
+  it("accepts the generated run's own paths", () => {
+    expect(validateRankedZipRun(base).ok).toBe(true);
+  });
+
+  it("rejects a path drawn on a different board", () => {
+    const otherBoard = generateZipRun(seed + 1, "easy", 6)[0]!.solution;
+    const paths = [otherBoard, ...base.replayData.paths.slice(1)];
+    expect(validateRankedZipRun({ ...base, replayData: { ...base.replayData, paths } }))
+      .toMatchObject({ ok: false, code: "non-canonical-solution" });
+  });
+
+  it("rejects splits that don't add up to the total, and runs of the wrong length", () => {
+    expect(validateRankedZipRun({ ...base, timeMs: 12_000 })).toMatchObject({ ok: false, code: "invalid-time" });
+    expect(validateRankedZipRun({ ...base, puzzleCount: 5 })).toMatchObject({ ok: false, code: "invalid-puzzle-count" });
   });
 });
