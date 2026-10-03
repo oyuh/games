@@ -66,13 +66,13 @@ LANGUAGE
 |---------|-------|---------|-------------|
 | **Chain length** | 5-10 | 5 | Words per chain, including the two given ends |
 | **Rounds** | 1-10 | 3 | Rounds to play |
-| **Round clock** | Off, or 15-600 s | Off | A countdown shown during each round |
+| **Round clock** | Off, or 15-600 s | Off | Ends the round when it hits zero |
 | **Mode** | Premade, Custom | Premade | Where chains come from |
 | **Category** | 9 options | Animals | Theme for premade chains |
 
 The host can change all of these from the lobby.
 
-The round clock is display-only right now. Nothing ends the round when it hits zero, so a round always runs until both chains are solved.
+When the round clock hits zero, every word still hidden is revealed for 0 points. The round goes into the history, and the next one starts or the game ends. With the clock off, a round runs until both chains are solved.
 
 ### Categories
 
@@ -144,6 +144,7 @@ A hidden word syncs as a mask (`TR___`) plus a sealed copy only the server can o
 - `chainReaction.revealLetter`: hint letter
 - `chainReaction.guess`: check a guess on the server
 - `chainReaction.giveUp`: reveal a word for 0 points
+- `chainReaction.advanceTimer`: end the round once the clock runs out. Each client calls it when its countdown hits zero, and the server ignores it until the clock has really expired.
 
 ### UI Components
 

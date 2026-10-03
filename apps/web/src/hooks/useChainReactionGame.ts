@@ -127,6 +127,22 @@ export function useChainReactionGame(
     }
   }, [game?.phase, game?.kicked, sessionId, navigate]);
 
+  // Round clock auto-advance
+  useEffect(() => {
+    if (!game) return;
+    const phaseEnd = game.settings.phaseEndsAt;
+    if (!phaseEnd || game.phase !== "playing") return;
+    const remaining = phaseEnd - Date.now();
+    if (remaining <= 0) {
+      void zero.mutate(mutators.chainReaction.advanceTimer({ gameId }));
+      return;
+    }
+    const timer = setTimeout(() => {
+      void zero.mutate(mutators.chainReaction.advanceTimer({ gameId }));
+    }, remaining + 500);
+    return () => clearTimeout(timer);
+  }, [game?.settings.phaseEndsAt, game?.phase, gameId, zero]);
+
   useEffect(() => {
     if (!game?.announcement) return;
     const prev = prevAnnouncementRef.current;
