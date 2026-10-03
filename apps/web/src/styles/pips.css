@@ -1264,3 +1264,24 @@
   outline: 2px solid #22c55e;
   outline-offset: -1px;
 }
+
+/* The held domino's layer: the demo's sizes, laid over the whole viewport. */
+.pips-demo.pips-demo-drag-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: block;
+  width: auto;
+  margin: 0;
+  pointer-events: none;
+}
+
+.pips-demo-drag-layer .pips-drag-preview .pips-domino {
+  width: var(--pips-domino-width);
+  height: var(--pips-domino-height);
+}
+
+.pips-demo .pips-board-domino.pips-demo-hit,
+.pips-demo .pips-tray-slot.pips-demo-hit {
+  touch-action: none;
+}
