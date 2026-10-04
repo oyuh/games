@@ -12,9 +12,9 @@ import { useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
 import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import { playCountdownTick, playCorrect, playGameOver } from "../lib/sounds";
 import { showToast } from "../lib/toast";
+import { devMoveTimes, startRankedRun } from "../lib/solo-run";
 import {
   checkZipEligibility,
-  startZipRankedRun,
   submitZipScore,
   type ZipLeaderboardEntry,
   type ZipPersonalBest,
@@ -22,6 +22,7 @@ import {
 import {
   DIFFICULTY_CONFIG,
   RUN_LENGTH,
+  RUN_PACING,
   generatePuzzle,
   mulberry32,
   validatePath,
@@ -49,9 +50,6 @@ interface Submission {
   canSubmit: boolean;
   message: string;
 }
-
-/** How long a solved board stays up, green, before the next one. Off the clock. */
-const SOLVED_PAUSE_MS = 900;
 
 /** Endless has no end, so it keeps this many boards built ahead of you. */
 const ENDLESS_AHEAD = 3;
@@ -88,9 +86,14 @@ export function ZipPage() {
   const [hint, setHint] = useState(true);
   const [splits, setSplits] = useState<number[]>([]);
   const [paths, setPaths] = useState<number[][]>([]);
+  const [moveTimes, setMoveTimes] = useState<number[][]>([]);
+  // The board on screen's move log: one entry per square the line grows by,
+  // or per edit that shrinks it. A drag can add several squares in one event.
+  const boardMoves = useRef<number[]>([]);
+  const lineLength = useRef(0);
   const [puzzleStartedAt, setPuzzleStartedAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const [countdown, setCountdown] = useState(3);
+  const [countdown, setCountdown] = useState<number>(RUN_PACING.countdownFrom);
   const [solved, setSolved] = useState(false);
   const [outcome, setOutcome] = useState<"completed" | "gave-up">("completed");
 
@@ -117,12 +120,15 @@ export function ZipPage() {
     setPath([]);
     setSplits([]);
     setPaths([]);
+    setMoveTimes([]);
+    boardMoves.current = [];
+    lineLength.current = 0;
     setSolved(false);
     setSubmission(null);
     setSubmitting(false);
     setSubmitted(false);
     setOutcome("completed");
-    setCountdown(3);
+    setCountdown(RUN_PACING.countdownFrom);
     setPanel(null);
     setPhase("countdown");
   };
@@ -138,7 +144,7 @@ export function ZipPage() {
     }
     setStarting(true);
     try {
-      const ranked = await startZipRankedRun(difficulty);
+      const ranked = await startRankedRun("zip", difficulty);
       begin({ mode, difficulty, seed: ranked.seed, ticket: ranked.ticket, length });
     } catch {
       showToast("Couldn't reach the server for a ranked run. Endless and Seeded still work.", "error");
@@ -203,11 +209,11 @@ export function ZipPage() {
         setPuzzleStartedAt(Date.now());
         setNow(Date.now());
         setPhase("playing");
-      }, 650);
+      }, RUN_PACING.goMs);
       return () => window.clearTimeout(timer);
     }
     playCountdownTick();
-    const timer = window.setTimeout(() => setCountdown((n) => n - 1), 800);
+    const timer = window.setTimeout(() => setCountdown((n) => n - 1), RUN_PACING.countdownTickMs);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countdown, phase, run]);
@@ -225,10 +231,18 @@ export function ZipPage() {
   /* ── Solving ───────────────────────────────────────────── */
   const onPathChange = (next: number[]) => {
     if (phase !== "playing" || solved || !puzzle) return;
+    const at = Date.now() - puzzleStartedAt;
+    const grew = next.length - lineLength.current;
+    lineLength.current = next.length;
+    for (let i = 0; i < Math.max(1, grew); i++) boardMoves.current.push(at);
     setPath(next);
     if (!validatePath(puzzle, next)) return;
-    setSplits((all) => [...all, Date.now() - puzzleStartedAt]);
+    const log = boardMoves.current;
+    boardMoves.current = [];
+    lineLength.current = 0;
+    setSplits((all) => [...all, at]);
     setPaths((all) => [...all, next]);
+    setMoveTimes((all) => [...all, log]);
     setSolved(true);
     playCorrect();
   };
@@ -239,9 +253,13 @@ export function ZipPage() {
 
   const devSolve = () => {
     if (phase !== "playing" || solved || !puzzle || !run) return;
+    const split = devSplit(run);
+    boardMoves.current = [];
+    lineLength.current = 0;
     setPath(puzzle.solution);
-    setSplits((all) => [...all, devSplit(run)]);
+    setSplits((all) => [...all, split]);
     setPaths((all) => [...all, puzzle.solution]);
+    setMoveTimes((all) => [...all, devMoveTimes(puzzle.solution.length, split)]);
     setSolved(true);
   };
 
@@ -252,8 +270,10 @@ export function ZipPage() {
     const first = solved ? index + 1 : index;
     const remaining = Array.from({ length: run.length - first }, (_, i) => boardAt(first + i, run));
     const floor = sizeOf(run.difficulty) ** 2 * 30;
-    setSplits((all) => [...all, ...remaining.map((_, i) => (i === 0 && !solved ? devSplit(run) : floor))]);
+    const skipped = remaining.map((_, i) => (i === 0 && !solved ? devSplit(run) : floor));
+    setSplits((all) => [...all, ...skipped]);
     setPaths((all) => [...all, ...remaining.map((board) => board.solution)]);
+    setMoveTimes((all) => [...all, ...remaining.map((board, i) => devMoveTimes(board.solution.length, skipped[i]!))]);
     finish("completed");
   };
 
@@ -273,7 +293,7 @@ export function ZipPage() {
       setPath([]);
       setSolved(false);
       setPuzzleStartedAt(Date.now());
-    }, SOLVED_PAUSE_MS);
+    }, RUN_PACING.solvedPauseMs);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [solved]);
@@ -294,9 +314,11 @@ export function ZipPage() {
     if (!rankedFinish || !run?.ticket) return;
     let cancelled = false;
     setSubmission({ tone: "info", pending: true, canSubmit: false, message: "Checking your run with the server." });
-    checkZipEligibility({ ticket: run.ticket, timeMs: doneMs, replayData: replay })
+    checkZipEligibility({ ticket: run.ticket, timeMs: doneMs, replayData: replay, moveTimes })
       .then((result) => {
         if (cancelled) return;
+        // The submit has to bring back the ticket stamped with this finish.
+        if (result.ticket) setRun((current) => current && { ...current, ticket: result.ticket! });
         setSubmission({ tone: result.ok ? "info" : "error", pending: false, canSubmit: result.ok, message: result.reason });
         if (!result.ok) showToast(result.reason, "error");
       })
@@ -313,7 +335,7 @@ export function ZipPage() {
     if (!run?.ticket || submitting) return;
     setSubmitting(true);
     try {
-      const result = await submitZipScore({ ticket: run.ticket, timeMs: doneMs, replayData: replay });
+      const result = await submitZipScore({ ticket: run.ticket, timeMs: doneMs, replayData: replay, moveTimes });
       setSubmission({ tone: result.ok ? "success" : "error", pending: false, canSubmit: !result.ok && result.code !== "duplicate", message: result.reason });
       showToast(result.reason, result.ok ? "success" : "error");
       if (result.ok || result.code === "duplicate") setSubmitted(true);
@@ -341,8 +363,8 @@ export function ZipPage() {
     });
   }, [phase, canEdit, hint, solved, run]);
 
-  useSoloEvent("zip-undo", () => { if (canEdit) setPath((p) => p.slice(0, -1)); });
-  useSoloEvent("zip-clear", () => { if (canEdit) setPath([]); });
+  useSoloEvent("zip-undo", () => { if (canEdit) onPathChange(path.slice(0, -1)); });
+  useSoloEvent("zip-clear", () => { if (canEdit) onPathChange([]); });
   useSoloEvent("zip-toggle-hint", () => setHint((h) => !h));
   useSoloEvent("zip-restart-run", restart);
   useSoloEvent("zip-give-up", () => { if (phase === "playing") finish(run?.length === null ? "completed" : "gave-up"); });

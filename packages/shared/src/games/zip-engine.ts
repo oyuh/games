@@ -46,6 +46,17 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, { size: GridSize; clueDensity
 /** Puzzles in a ranked or seeded run, at every difficulty. */
 export const RUN_LENGTH = 3;
 
+/**
+ * The run's off-the-clock beats: a 3-2-1 countdown and a GO, then a solved
+ * pause after every board. The page plays these and the API's clock check
+ * allows for exactly this much, so they only ever change here.
+ */
+export const RUN_PACING = { countdownFrom: 3, countdownTickMs: 800, goMs: 650, solvedPauseMs: 900 } as const;
+
+/** How long a full ranked run spends on screen with its timer stopped. */
+export const RANKED_OFF_CLOCK_MS =
+  RUN_PACING.countdownFrom * RUN_PACING.countdownTickMs + RUN_PACING.goMs + RUN_LENGTH * RUN_PACING.solvedPauseMs;
+
 export function isDifficulty(value: unknown): value is Difficulty {
   return typeof value === "string" && value in DIFFICULTY_CONFIG;
 }

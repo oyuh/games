@@ -468,6 +468,8 @@ export const shikakuScores = pgTable(
     timeMs: integer("time_ms").notNull(),
     puzzleCount: integer("puzzle_count").notNull().default(5),
     replayData: jsonb("replay_data"),
+    /** 0-100 from the run's move timing (apps/api/src/move-timing.ts). Null for runs saved before it, or added by an admin. */
+    legitimacy: integer("legitimacy"),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
   },
   (table) => ({
@@ -502,6 +504,8 @@ export const pipsScores = pgTable(
     hardMs: integer("hard_ms").notNull(),
     puzzleCount: integer("puzzle_count").notNull().default(3),
     replayData: jsonb("replay_data"),
+    /** 0-100 from the run's move timing (apps/api/src/move-timing.ts). Null for runs saved before it, or added by an admin. */
+    legitimacy: integer("legitimacy"),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
   },
   (table) => ({
@@ -536,6 +540,8 @@ export const zipScores = pgTable(
     timeMs: integer("time_ms").notNull(),
     puzzleCount: integer("puzzle_count").notNull(),
     replayData: jsonb("replay_data"),
+    /** 0-100 from the run's move timing (apps/api/src/move-timing.ts). Null for runs saved before it, or added by an admin. */
+    legitimacy: integer("legitimacy"),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
   },
   (table) => ({

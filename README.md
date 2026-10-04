@@ -47,7 +47,7 @@ Each game doc covers rules, flow, scoring, and implementation notes.
 
 The five multiplayer games share the same plumbing: room creation, join codes, a public lobby browser, spectators, host controls, chat, presence, admin kicks, and state synced through Rocicorp Zero.
 
-Shikaku, Pips, and Zip skip the Zero cache. Their puzzle engines run in the browser, and they call REST endpoints only for eligibility checks, leaderboard reads, and score submission. A ranked submission carries replay data. The API runs the same shared engine, regenerates the puzzles from the seed, and checks the replay before it writes a leaderboard row. Shikaku and Pips use a public seed. A ranked Zip run gets its seed from the server in a signed ticket, so nobody can practice a ranked board first.
+Shikaku, Pips, and Zip skip the Zero cache. Their puzzle engines run in the browser, and they call REST endpoints only for eligibility checks, leaderboard reads, and score submission. A ranked submission carries replay data. The API runs the same shared engine, regenerates the puzzles from the seed, and checks the replay before it writes a leaderboard row. A ranked run gets its seed from the server in a signed ticket, so nobody can practice a ranked board first. The ticket also holds the run's time to the server's clock.
 
 ## Repository layout
 
@@ -93,7 +93,7 @@ The Shikaku, Pips, and Zip engines live in `packages/shared/src/games/`, so the 
 - `pips-engine.ts` does seeded generation, board and region validation, domino placement checks, solver utilities, run time scoring, and replay verification.
 - `zip-engine.ts` does seeded generation, path validation, and ranked run verification.
 
-Shikaku sends the solved rectangles for all five puzzles. Pips sends the domino placements for Easy, Medium, and Hard. Zip sends the drawn path and split time for each puzzle, plus its ticket. The API regenerates the run from the seed, validates the replay, checks the score and time, then runs duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
+Shikaku sends the solved rectangles for all five puzzles. Pips sends the domino placements for Easy, Medium, and Hard. Zip sends the drawn path and split time for each puzzle. Every ranked submission also carries its run ticket. The API regenerates the run from the seed, validates the replay, checks the score and time, then runs duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
 
 ### API: `apps/api`
 
@@ -437,9 +437,11 @@ The multiplayer tables keep most live state in JSON columns on purpose. Room sna
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /api/shikaku/leaderboard` | Read the Shikaku leaderboard |
+| `POST /api/shikaku/run` | Start a ranked run and get its signed seed ticket |
 | `POST /api/shikaku/score/eligibility` | Check eligibility and replay validity |
 | `POST /api/shikaku/score` | Submit a score with the solved-rectangle replay |
 | `GET /api/pips/leaderboard` | Read the Pips leaderboard |
+| `POST /api/pips/run` | Start a ranked run and get its signed seed ticket |
 | `POST /api/pips/score/eligibility` | Check eligibility and replay validity |
 | `POST /api/pips/score` | Submit a run with the solved-domino replay |
 | `GET /api/zip/leaderboard` | Read the Zip leaderboard |

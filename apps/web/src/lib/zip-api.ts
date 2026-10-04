@@ -1,12 +1,11 @@
-import { fetchWithChallenge } from "./challenge";
-import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "./session";
+import { getOrCreateSessionId } from "./session";
+import { postAsSession } from "./solo-run";
 import type { Difficulty, ZipReplayData } from "./zip-engine";
 
 /**
- * The browser's half of ranked Zip. A ranked run starts by asking the API for
- * a seed and a signed ticket, and the finished run hands the ticket back with
- * its paths and splits. Endless and seeded runs never touch any of this, so
- * Zip stays playable with the API down; only ranked needs it.
+ * Zip's leaderboard and score calls. The ranked ticket itself comes from
+ * startRankedRun in solo-run.ts. Endless and seeded runs never touch any of
+ * this, so Zip stays playable with the API down; only ranked needs it.
  */
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
@@ -38,15 +37,12 @@ export interface ZipLeaderboardPage {
   totalPages: number;
 }
 
-export interface ZipRankedRun {
-  seed: number;
-  ticket: string;
-}
-
 export interface ZipSubmission {
   ticket: string;
   timeMs: number;
   replayData: ZipReplayData;
+  /** Per board, when each move landed, in ms from the board's start. */
+  moveTimes: number[][];
 }
 
 export interface ZipSubmitResult {
@@ -55,6 +51,8 @@ export interface ZipSubmitResult {
   reason: string;
   /** The stable code behind a refusal, e.g. "duplicate" or "too-fast". */
   code?: string;
+  /** From an eligible check: the ticket stamped with the run's finish, to submit with. */
+  ticket?: string;
 }
 
 /** One page of a board, or the "you and your neighbors" slice with `window`. */
@@ -81,35 +79,15 @@ export async function fetchZipLeaderboard(args: {
   return res.json() as Promise<ZipLeaderboardPage>;
 }
 
-async function postAsSession(path: string, payload: Record<string, unknown>, reason: string) {
-  const identity = await syncSessionIdentity(API_BASE, { allowCreate: true, reason });
-  return fetchWithChallenge(`${API_BASE}${path}`, {
-    method: "POST",
-    credentials: "include",
-    headers: getSessionRequestHeaders(identity.sessionId, { "Content-Type": "application/json" }),
-    body: JSON.stringify({
-      sessionId: identity.sessionId,
-      name: getDisplayName(identity.name, identity.sessionId),
-      ...payload,
-    }),
-  });
-}
-
-/** Asks the server for a ranked seed. Throws when the API can't hand one out. */
-export async function startZipRankedRun(difficulty: Difficulty): Promise<ZipRankedRun> {
-  const res = await postAsSession("/api/zip/run", { difficulty }, "zip-run");
-  if (!res.ok) throw new Error(`Couldn't start a ranked Zip run (${res.status})`);
-  return res.json() as Promise<ZipRankedRun>;
-}
-
 /** Whether a finished run would be accepted, without saving it. */
 export async function checkZipEligibility(run: ZipSubmission): Promise<ZipSubmitResult> {
   const res = await postAsSession("/api/zip/score/eligibility", { ...run }, "zip-eligibility");
-  const data = await res.json().catch(() => null) as { canSubmit?: boolean; code?: string; reason?: string } | null;
+  const data = await res.json().catch(() => null) as { canSubmit?: boolean; code?: string; reason?: string; ticket?: string } | null;
   return {
     ok: Boolean(data?.canSubmit),
     reason: data?.reason ?? "This run couldn't be checked right now.",
     ...(data?.code ? { code: data.code } : {}),
+    ...(data?.ticket ? { ticket: data.ticket } : {}),
   };
 }
 
