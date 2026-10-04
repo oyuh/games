@@ -2,7 +2,7 @@ import { cleanupRunDays, cleanupRuns, sessionArchive, chatMessages, chainReactio
 import { lt, and, count, eq, inArray, ne, sql } from "drizzle-orm";
 import { PUZZLES_PER_RUN as ENGINE_SHIKAKU_PUZZLES, validateRankedShikakuRun } from "@games/shared/games/shikaku-engine";
 import { PIPS_PUZZLES_PER_RUN as ENGINE_PIPS_PUZZLES, validateRankedPipsRun } from "@games/shared/games/pips-engine";
-import { RUN_LENGTH as ZIP_RUN_LENGTH, isDifficulty as isZipDifficulty, isGridSize as isZipGridSize } from "@games/shared/games/zip-engine";
+import { DIFFICULTY_CONFIG as ZIP_DIFFICULTY_CONFIG, RUN_LENGTH as ZIP_RUN_LENGTH, isDifficulty as isZipDifficulty } from "@games/shared/games/zip-engine";
 import { drizzleClient } from "./db-provider";
 import { cleanupReportLines, compactSummary, foldCleanupRuns, formatCleanupReport, legacyReportStats, type CleanupReportLine } from "./cleanup-report";
 import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, ZIP_MAX_SCORES_PER_SESSION, ZIP_MAX_TIME_MS, ZIP_MIN_MS_PER_CELL, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
@@ -252,12 +252,12 @@ export async function runCleanup(drizzleClient: CleanupTx) {
     await drizzleClient.delete(pipsScores).where(inArray(pipsScores.id, invalidPips.map((score) => score.id)));
   }
   // ponytail: metadata checks only. Replays were validated on the way in, and
-  // regenerating up to five boards per row on every run costs about a second
+  // regenerating three boards per row on every run costs about a second
   // of CPU each; revalidate here if an engine change ever needs a sweep.
   const allZipScores = await drizzleClient.select().from(zipScores);
   const invalidZip = allZipScores.filter((score) =>
-    !isZipDifficulty(score.difficulty) || !isZipGridSize(score.size)
-    || score.puzzleCount !== ZIP_RUN_LENGTH[score.difficulty] || score.seed <= 0
+    !isZipDifficulty(score.difficulty) || score.size !== ZIP_DIFFICULTY_CONFIG[score.difficulty].size
+    || score.puzzleCount !== ZIP_RUN_LENGTH || score.seed <= 0
     || score.timeMs > ZIP_MAX_TIME_MS
     || score.timeMs < score.puzzleCount * score.size * score.size * ZIP_MIN_MS_PER_CELL
   );

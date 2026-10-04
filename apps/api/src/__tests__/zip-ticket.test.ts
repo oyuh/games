@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { createZipTicket, readZipTicket, type ZipTicket } from "../zip-ticket";
 
 const SECRET = "test-secret";
-const TICKET: ZipTicket = { sessionId: "s1", seed: 4242, difficulty: "hard", size: 10, issuedAt: 1_700_000_000_000 };
+const TICKET: ZipTicket = { sessionId: "s1", seed: 4242, difficulty: "hard", issuedAt: 1_700_000_000_000 };
 
 describe("zip run tickets", () => {
   it("reads back what it signed", () => {

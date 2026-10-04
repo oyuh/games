@@ -50,7 +50,7 @@ export function PuzzleViewDialog({
   game: Game;
   scoreId: string | null;
   seed: number | null;
-  /** 3 for Pips, 5 for Shikaku, 3 or 5 for Zip by difficulty. */
+  /** 3 for Pips, 5 for Shikaku, 3 for Zip. */
   puzzleCount: number;
   accent: string;
   open: boolean;

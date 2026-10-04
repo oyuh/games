@@ -178,7 +178,7 @@ export type ZipScoreRecord = {
   sessionId: string;
   name: string;
   seed: number;
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: "easy" | "medium" | "hard" | "expert";
   size: 6 | 8 | 10 | 12;
   timeMs: number;
   puzzleCount: number;

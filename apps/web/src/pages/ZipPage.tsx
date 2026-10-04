@@ -26,7 +26,6 @@ import {
   mulberry32,
   validatePath,
   type Difficulty,
-  type GridSize,
   type ZipPuzzle,
 } from "../lib/zip-engine";
 import "../styles/game-shared.css";
@@ -37,7 +36,6 @@ type Phase = "menu" | "countdown" | "playing" | "finished";
 interface Run {
   mode: ZipMenuMode;
   difficulty: Difficulty;
-  size: GridSize;
   seed: number;
   /** Only ranked runs have one; it's what the score gets submitted with. */
   ticket: string | null;
@@ -69,7 +67,8 @@ const END_VIEWS: SoloSetupOption[] = [
 
 const MODE_LABELS: Record<ZipMenuMode, string> = { ranked: "Ranked", endless: "Endless", seed: "Seeded" };
 
-const boardLabel = (difficulty: Difficulty, size: GridSize) => `${DIFFICULTY_CONFIG[difficulty].label} ${size}×${size}`;
+const sizeOf = (difficulty: Difficulty) => DIFFICULTY_CONFIG[difficulty].size;
+const boardLabel = (difficulty: Difficulty) => `${DIFFICULTY_CONFIG[difficulty].label} ${sizeOf(difficulty)}×${sizeOf(difficulty)}`;
 
 function randomSeed() {
   return Math.floor(Math.random() * 2_147_483_646) + 1;
@@ -79,7 +78,6 @@ export function ZipPage() {
   const [phase, setPhase] = useState<Phase>("menu");
   const [menuMode, setMenuMode] = useState<ZipMenuMode>("ranked");
   const [menuDifficulty, setMenuDifficulty] = useState<Difficulty>("medium");
-  const [menuSize, setMenuSize] = useState<GridSize>(6);
   const [seedInput, setSeedInput] = useState("");
   const [starting, setStarting] = useState(false);
 
@@ -107,7 +105,7 @@ export function ZipPage() {
   const boards = useRef<{ rng: () => number; puzzles: ZipPuzzle[] } | null>(null);
   const boardAt = (i: number, r: Run): ZipPuzzle => {
     const state = boards.current!;
-    while (state.puzzles.length <= i) state.puzzles.push(generatePuzzle(r.size, r.difficulty, state.rng));
+    while (state.puzzles.length <= i) state.puzzles.push(generatePuzzle(sizeOf(r.difficulty), r.difficulty, state.rng));
     return state.puzzles[i]!;
   };
 
@@ -132,16 +130,16 @@ export function ZipPage() {
   /** How many boards to have ready: the whole run, or a few ahead for endless. */
   const preloadCount = (r: Run, from: number) => (r.length === null ? from + ENDLESS_AHEAD : r.length);
 
-  const startRun = async (mode: ZipMenuMode, difficulty: Difficulty, size: GridSize, seed?: number) => {
-    const length = mode === "endless" ? null : RUN_LENGTH[difficulty];
+  const startRun = async (mode: ZipMenuMode, difficulty: Difficulty, seed?: number) => {
+    const length = mode === "endless" ? null : RUN_LENGTH;
     if (mode !== "ranked") {
-      begin({ mode, difficulty, size, seed: seed ?? randomSeed(), ticket: null, length });
+      begin({ mode, difficulty, seed: seed ?? randomSeed(), ticket: null, length });
       return;
     }
     setStarting(true);
     try {
-      const ranked = await startZipRankedRun(difficulty, size);
-      begin({ mode, difficulty, size, seed: ranked.seed, ticket: ranked.ticket, length });
+      const ranked = await startZipRankedRun(difficulty);
+      begin({ mode, difficulty, seed: ranked.seed, ticket: ranked.ticket, length });
     } catch {
       showToast("Couldn't reach the server for a ranked run. Endless and Seeded still work.", "error");
     } finally {
@@ -156,7 +154,7 @@ export function ZipPage() {
       showToast("Enter a seed first", "info");
       return;
     }
-    void startRun(menuMode, menuDifficulty, menuSize, menuMode === "ranked" ? undefined : seed);
+    void startRun(menuMode, menuDifficulty, menuMode === "ranked" ? undefined : seed);
   };
 
   // Ranked never replays a seed, so a restart there asks for a fresh one.
@@ -164,7 +162,7 @@ export function ZipPage() {
     if (!run) return;
     // Ranked waits on the server, which toasts on its own if it fails.
     if (run.mode !== "ranked") showToast(run.mode === "seed" ? "Seeded run restarted" : "Run restarted", "info");
-    void startRun(run.mode, run.difficulty, run.size, run.mode === "ranked" ? undefined : run.seed);
+    void startRun(run.mode, run.difficulty, run.mode === "ranked" ? undefined : run.seed);
   };
 
   const finish = (how: "completed" | "gave-up") => {
@@ -237,7 +235,7 @@ export function ZipPage() {
 
   // ponytail: dev solves log at least 30 ms a square, so a dev-tested ranked
   // run clears the server's time floors instead of striking your local session.
-  const devSplit = (r: Run) => Math.max(Date.now() - puzzleStartedAt, r.size * r.size * 30);
+  const devSplit = (r: Run) => Math.max(Date.now() - puzzleStartedAt, sizeOf(r.difficulty) ** 2 * 30);
 
   const devSolve = () => {
     if (phase !== "playing" || solved || !puzzle || !run) return;
@@ -253,7 +251,7 @@ export function ZipPage() {
     if (phase !== "playing" || !run || run.length === null) return;
     const first = solved ? index + 1 : index;
     const remaining = Array.from({ length: run.length - first }, (_, i) => boardAt(first + i, run));
-    const floor = run.size * run.size * 30;
+    const floor = sizeOf(run.difficulty) ** 2 * 30;
     setSplits((all) => [...all, ...remaining.map((_, i) => (i === 0 && !solved ? devSplit(run) : floor))]);
     setPaths((all) => [...all, ...remaining.map((board) => board.solution)]);
     finish("completed");
@@ -358,7 +356,6 @@ export function ZipPage() {
       {panel === "leaderboard" && (
         <ZipLeaderboardModal
           initialDifficulty={run?.difficulty ?? menuDifficulty}
-          initialSize={run?.size ?? menuSize}
           onClose={() => setPanel(null)}
         />
       )}
@@ -373,12 +370,10 @@ export function ZipPage() {
           <ZipMenu
             mode={menuMode}
             difficulty={menuDifficulty}
-            size={menuSize}
             seed={seedInput}
             starting={starting}
             onModeChange={setMenuMode}
             onDifficultyChange={setMenuDifficulty}
-            onSizeChange={setMenuSize}
             onSeedChange={setSeedInput}
             onStart={startFromMenu}
             onOpenLeaderboard={() => setPanel("leaderboard")}
@@ -402,7 +397,7 @@ export function ZipPage() {
             submitting={submitting}
             submitted={submitted}
             onSubmit={() => void submit()}
-            onPlayAgain={() => void startRun(run.mode, run.difficulty, run.size, run.mode === "seed" ? run.seed : undefined)}
+            onPlayAgain={() => void startRun(run.mode, run.difficulty, run.mode === "seed" ? run.seed : undefined)}
             onMenu={() => { setPanel(null); setPhase("menu"); }}
             onOpenLeaderboard={() => setPanel("leaderboard")}
           />
@@ -433,7 +428,7 @@ export function ZipPage() {
           {phase === "playing" && puzzle ? (
             <ZipBoard puzzle={puzzle} path={path} onPathChange={onPathChange} hint={hint} solved={solved} />
           ) : (
-            <div className="zip-board zip-board-placeholder" style={{ "--zip-n": run.size } as CSSProperties} aria-hidden="true" />
+            <div className="zip-board zip-board-placeholder" style={{ "--zip-n": sizeOf(run.difficulty) } as CSSProperties} aria-hidden="true" />
           )}
 
         {/* Inside the stage rather than straight under .game-page, whose
@@ -446,7 +441,7 @@ export function ZipPage() {
               {countdown > 0 ? countdown : "GO!"}
             </div>
             <p className="game-start-countdown-label">
-              {run.mode === "seed" ? `Seed ${run.seed}, ` : ""}{boardLabel(run.difficulty, run.size)}
+              {run.mode === "seed" ? `Seed ${run.seed}, ` : ""}{boardLabel(run.difficulty)}
             </p>
           </div>
         )}
@@ -488,7 +483,6 @@ function ZipEndScreen({
     active: view !== SPLITS_VIEW,
     view: view === SPLITS_VIEW ? "standings" : view,
     difficulty: run.difficulty,
-    size: run.size,
     refreshKey: submitted,
   });
 
@@ -496,9 +490,8 @@ function ZipEndScreen({
   const endless = run.length === null;
   const completed = outcome === "completed";
   const totalMs = splits.reduce((total, split) => total + split, 0);
-  const label = boardLabel(run.difficulty, run.size);
+  const label = boardLabel(run.difficulty);
   const canSubmit = ranked && completed && !submitted && !submitting && Boolean(submission?.canSubmit) && !submission?.pending;
-  const runs = RUN_LENGTH[run.difficulty];
   const shownSplits = endless ? splits.slice(-6) : splits;
   const firstShown = splits.length - shownSplits.length;
 
@@ -520,7 +513,7 @@ function ZipEndScreen({
         endless
           ? { label: "Puzzles", value: String(splits.length), note: "unranked" }
           : { label: "Rank", value: rankValue, ...(ranked ? {} : { note: "unranked" }) },
-        { label: "Board", value: `${run.size}×${run.size}`, note: DIFFICULTY_CONFIG[run.difficulty].label.toLowerCase(), accent: "var(--muted-foreground)" },
+        { label: "Board", value: `${sizeOf(run.difficulty)}×${sizeOf(run.difficulty)}`, note: DIFFICULTY_CONFIG[run.difficulty].label.toLowerCase(), accent: "var(--muted-foreground)" },
         { label: "Seed", value: String(run.seed), accent: "var(--muted-foreground)", onCopy: () => void copySeed(run.seed) },
       ]}
       splits={shownSplits.map((split, i) => ({ label: `Puzzle ${firstShown + i + 1}`, value: formatTime(split) }))}
@@ -532,7 +525,7 @@ function ZipEndScreen({
           name: entry.name,
           isOwn: Boolean(entry.isOwn),
           seed: entry.seed,
-          cells: [formatTime(entry.timeMs), formatTime(entry.timeMs / runs)],
+          cells: [formatTime(entry.timeMs), formatTime(entry.timeMs / RUN_LENGTH)],
         })),
         loading: board.loading,
         empty: view === "mine" ? `No submitted ${label} runs on this device yet.` : `No ranked ${label} runs yet, be the first.`,

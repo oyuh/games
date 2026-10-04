@@ -105,13 +105,12 @@ describe("ranked Pips replay validation", () => {
 
 describe("ranked Zip replay validation", () => {
   const seed = 97531;
-  const run = generateZipRun(seed, "easy", 6);
+  const run = generateZipRun(seed, "easy");
   const base = {
     seed,
     difficulty: "easy",
-    size: 6,
     timeMs: 30_000,
-    puzzleCount: ZIP_RUN_LENGTH.easy,
+    puzzleCount: ZIP_RUN_LENGTH,
     replayData: { puzzleTimes: [10_000, 10_000, 10_000], paths: run.map((puzzle) => puzzle.solution) },
   };
 
@@ -120,7 +119,7 @@ describe("ranked Zip replay validation", () => {
   });
 
   it("rejects a path drawn on a different board", () => {
-    const otherBoard = generateZipRun(seed + 1, "easy", 6)[0]!.solution;
+    const otherBoard = generateZipRun(seed + 1, "easy")[0]!.solution;
     const paths = [otherBoard, ...base.replayData.paths.slice(1)];
     expect(validateRankedZipRun({ ...base, replayData: { ...base.replayData, paths } }))
       .toMatchObject({ ok: false, code: "non-canonical-solution" });

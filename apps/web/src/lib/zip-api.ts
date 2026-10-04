@@ -1,6 +1,6 @@
 import { fetchWithChallenge } from "./challenge";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "./session";
-import type { Difficulty, GridSize, ZipReplayData } from "./zip-engine";
+import type { Difficulty, ZipReplayData } from "./zip-engine";
 
 /**
  * The browser's half of ranked Zip. A ranked run starts by asking the API for
@@ -18,7 +18,6 @@ export interface ZipLeaderboardEntry {
   name: string;
   timeMs: number;
   difficulty: Difficulty;
-  size: GridSize;
   createdAt: number;
   seed: number;
   rank: number;
@@ -61,7 +60,6 @@ export interface ZipSubmitResult {
 /** One page of a board, or the "you and your neighbors" slice with `window`. */
 export async function fetchZipLeaderboard(args: {
   difficulty: Difficulty;
-  size: GridSize;
   page?: number;
   limit?: number;
   view?: ZipLeaderboardView;
@@ -70,7 +68,6 @@ export async function fetchZipLeaderboard(args: {
 }): Promise<ZipLeaderboardPage> {
   const params = new URLSearchParams({
     difficulty: args.difficulty,
-    size: String(args.size),
     page: String(args.page ?? 1),
     limit: String(args.limit ?? 10),
     sessionId: getOrCreateSessionId(),
@@ -99,8 +96,8 @@ async function postAsSession(path: string, payload: Record<string, unknown>, rea
 }
 
 /** Asks the server for a ranked seed. Throws when the API can't hand one out. */
-export async function startZipRankedRun(difficulty: Difficulty, size: GridSize): Promise<ZipRankedRun> {
-  const res = await postAsSession("/api/zip/run", { difficulty, size }, "zip-run");
+export async function startZipRankedRun(difficulty: Difficulty): Promise<ZipRankedRun> {
+  const res = await postAsSession("/api/zip/run", { difficulty }, "zip-run");
   if (!res.ok) throw new Error(`Couldn't start a ranked Zip run (${res.status})`);
   return res.json() as Promise<ZipRankedRun>;
 }
