@@ -56,17 +56,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 type Difficulty = ZipScoreRecord["difficulty"];
-type Size = ZipScoreRecord["size"];
 
-const DIFFICULTIES: Difficulty[] = ["easy", "medium", "hard"];
-const SIZES: Size[] = [6, 8, 10, 12];
+const DIFFICULTIES: Difficulty[] = ["easy", "medium", "hard", "expert"];
 
 type ScoreDraft = {
   sessionId: string;
   name: string;
   seed: string;
   difficulty: Difficulty;
-  size: Size;
   timeMs: string;
   puzzleCount: string;
   createdAt: string;
@@ -78,7 +75,6 @@ function createDraft(score: ZipScoreRecord): ScoreDraft {
     name: score.name,
     seed: String(score.seed),
     difficulty: score.difficulty,
-    size: score.size,
     timeMs: String(score.timeMs),
     puzzleCount: String(score.puzzleCount),
     createdAt: toLocalDateTimeValue(score.createdAt),
@@ -106,7 +102,6 @@ export default function ZipAdminPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty | "all">("all");
-  const [size, setSize] = useState<Size | "all">("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [total, setTotal] = useState(0);
@@ -125,7 +120,6 @@ export default function ZipAdminPage() {
       try {
         const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
         if (difficulty !== "all") params.set("difficulty", difficulty);
-        if (size !== "all") params.set("size", String(size));
         const response = await api(`/zip/scores?${params}`);
         if (cancelled) return;
         setScores((response.scores ?? []) as ZipScoreRecord[]);
@@ -144,7 +138,7 @@ export default function ZipAdminPage() {
     return () => {
       cancelled = true;
     };
-  }, [difficulty, page, pageSize, refreshKey, show, size]);
+  }, [difficulty, page, pageSize, refreshKey, show]);
 
   const normalizedSearch = normalizeSearchText(search);
 
@@ -200,7 +194,6 @@ export default function ZipAdminPage() {
     if (draft.name.trim() && draft.name.trim() !== selectedScore.name) payload.name = draft.name.trim();
     if (Number.isInteger(nextSeed) && nextSeed >= 0 && nextSeed !== selectedScore.seed) payload.seed = nextSeed;
     if (draft.difficulty !== selectedScore.difficulty) payload.difficulty = draft.difficulty;
-    if (draft.size !== selectedScore.size) payload.size = draft.size;
     if (Number.isFinite(nextTimeMs) && nextTimeMs >= 0 && nextTimeMs !== selectedScore.timeMs) payload.timeMs = Math.floor(nextTimeMs);
     if (Number.isInteger(nextPuzzleCount) && nextPuzzleCount >= 0 && nextPuzzleCount !== selectedScore.puzzleCount) payload.puzzleCount = nextPuzzleCount;
     if (nextCreatedAt > 0 && nextCreatedAt !== selectedScore.createdAt) payload.createdAt = nextCreatedAt;
@@ -435,25 +428,6 @@ export default function ZipAdminPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select
-              value={String(size)}
-              onValueChange={(value) => {
-                setSize(value === "all" ? "all" : (Number(value) as Size));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-10 w-full md:w-36" aria-label="Grid size">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All sizes</SelectItem>
-                {SIZES.map((value) => (
-                  <SelectItem key={value} value={String(value)}>
-                    {value}x{value}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -570,47 +544,25 @@ export default function ZipAdminPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="zip-difficulty" className="mb-2">
-                      Difficulty
-                    </Label>
-                    <Select
-                      value={draft.difficulty}
-                      onValueChange={(value) => setDraft((current) => (current ? { ...current, difficulty: value as Difficulty } : current))}
-                    >
-                      <SelectTrigger id="zip-difficulty" className="h-10 w-full capitalize">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DIFFICULTIES.map((value) => (
-                          <SelectItem key={value} value={value} className="capitalize">
-                            {value}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="zip-size" className="mb-2">
-                      Grid size
-                    </Label>
-                    <Select
-                      value={String(draft.size)}
-                      onValueChange={(value) => setDraft((current) => (current ? { ...current, size: Number(value) as Size } : current))}
-                    >
-                      <SelectTrigger id="zip-size" className="h-10 w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SIZES.map((value) => (
-                          <SelectItem key={value} value={String(value)}>
-                            {value}x{value}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label htmlFor="zip-difficulty" className="mb-2">
+                    Difficulty
+                  </Label>
+                  <Select
+                    value={draft.difficulty}
+                    onValueChange={(value) => setDraft((current) => (current ? { ...current, difficulty: value as Difficulty } : current))}
+                  >
+                    <SelectTrigger id="zip-difficulty" className="h-10 w-full capitalize">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIFFICULTIES.map((value) => (
+                        <SelectItem key={value} value={value} className="capitalize">
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {(
                   [

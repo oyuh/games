@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { isDifficulty, isGridSize, type Difficulty, type GridSize } from "@games/shared/games/zip-engine";
+import { isDifficulty, type Difficulty } from "@games/shared/games/zip-engine";
 
 /**
  * A ranked Zip run starts with the server handing out the seed, signed
@@ -12,7 +12,6 @@ export interface ZipTicket {
   sessionId: string;
   seed: number;
   difficulty: Difficulty;
-  size: GridSize;
   issuedAt: number;
 }
 
@@ -42,8 +41,8 @@ export function readZipTicket(value: unknown, secret: string): ZipTicket | null 
     return null;
   }
   if (parsed === null || typeof parsed !== "object") return null;
-  const { sessionId, seed, difficulty, size, issuedAt } = parsed as Record<string, unknown>;
+  const { sessionId, seed, difficulty, issuedAt } = parsed as Record<string, unknown>;
   if (typeof sessionId !== "string" || !Number.isInteger(seed) || !Number.isInteger(issuedAt)) return null;
-  if (!isDifficulty(difficulty) || !isGridSize(size)) return null;
-  return { sessionId, seed: seed as number, difficulty, size, issuedAt: issuedAt as number };
+  if (!isDifficulty(difficulty)) return null;
+  return { sessionId, seed: seed as number, difficulty, issuedAt: issuedAt as number };
 }

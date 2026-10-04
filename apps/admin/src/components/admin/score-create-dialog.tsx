@@ -62,16 +62,14 @@ type ZipCreateDraft = {
   name: string;
   seed: string;
   difficulty: ZipScoreRecord["difficulty"];
-  size: ZipScoreRecord["size"];
   timeMs: string;
   puzzleCount: string;
   createdAt: string;
 };
 
-const ZIP_DIFFICULTIES: ZipScoreRecord["difficulty"][] = ["easy", "medium", "hard"];
-const ZIP_SIZES: ZipScoreRecord["size"][] = [6, 8, 10, 12];
+const ZIP_DIFFICULTIES: ZipScoreRecord["difficulty"][] = ["easy", "medium", "hard", "expert"];
 /** Mirrors RUN_LENGTH in the shared Zip engine. */
-const ZIP_RUN_LENGTH: Record<ZipScoreRecord["difficulty"], number> = { easy: 3, medium: 5, hard: 5 };
+const ZIP_RUN_LENGTH = 3;
 
 type ScoreCreateDialogProps = {
   game: GameKind;
@@ -162,9 +160,8 @@ function createZipDraft(): ZipCreateDraft {
     name: "",
     seed: String(randomSeed()),
     difficulty: "medium",
-    size: 6,
     timeMs: "90000",
-    puzzleCount: String(ZIP_RUN_LENGTH.medium),
+    puzzleCount: String(ZIP_RUN_LENGTH),
     createdAt: toLocalDateTimeValue(Date.now()),
   };
 }
@@ -387,7 +384,6 @@ export function ScoreCreateDialog({
             name: zipDraft.name.trim(),
             seed: requireWholeNumber(zipDraft.seed, "Seed"),
             difficulty: zipDraft.difficulty,
-            size: zipDraft.size,
             timeMs: requireWholeNumber(zipDraft.timeMs, "Time"),
             puzzleCount: requireWholeNumber(zipDraft.puzzleCount, "Puzzle count"),
             createdAt: fromLocalDateTimeValue(zipDraft.createdAt),
@@ -618,52 +614,25 @@ export function ScoreCreateDialog({
                   value={zipDraft.seed}
                   onChange={(value) => setZipDraft((current) => ({ ...current, seed: value }))}
                 />
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="new-zip-difficulty" className="mb-2">
-                      Difficulty
-                    </Label>
-                    <Select
-                      value={zipDraft.difficulty}
-                      onValueChange={(value) => {
-                        const difficulty = value as ZipCreateDraft["difficulty"];
-                        setZipDraft((current) => ({ ...current, difficulty, puzzleCount: String(ZIP_RUN_LENGTH[difficulty]) }));
-                      }}
-                    >
-                      <SelectTrigger id="new-zip-difficulty" className="h-10 w-full capitalize">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ZIP_DIFFICULTIES.map((difficulty) => (
-                          <SelectItem key={difficulty} value={difficulty} className="capitalize">
-                            {difficulty}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="new-zip-size" className="mb-2">
-                      Grid size
-                    </Label>
-                    <Select
-                      value={String(zipDraft.size)}
-                      onValueChange={(value) =>
-                        setZipDraft((current) => ({ ...current, size: Number(value) as ZipCreateDraft["size"] }))
-                      }
-                    >
-                      <SelectTrigger id="new-zip-size" className="h-10 w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ZIP_SIZES.map((size) => (
-                          <SelectItem key={size} value={String(size)}>
-                            {size}x{size}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label htmlFor="new-zip-difficulty" className="mb-2">
+                    Difficulty
+                  </Label>
+                  <Select
+                    value={zipDraft.difficulty}
+                    onValueChange={(value) => setZipDraft((current) => ({ ...current, difficulty: value as ZipCreateDraft["difficulty"] }))}
+                  >
+                    <SelectTrigger id="new-zip-difficulty" className="h-10 w-full capitalize">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ZIP_DIFFICULTIES.map((difficulty) => (
+                        <SelectItem key={difficulty} value={difficulty} className="capitalize">
+                          {difficulty}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <CreateField
                   label="Time in ms"

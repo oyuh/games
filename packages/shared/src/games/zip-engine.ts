@@ -24,24 +24,27 @@ export interface ZipPuzzle {
   solution: number[];
 }
 
-export type Difficulty = "easy" | "medium" | "hard";
+export type Difficulty = "easy" | "medium" | "hard" | "expert";
 
 export const GRID_SIZES = [6, 8, 10, 12] as const;
 export type GridSize = (typeof GRID_SIZES)[number];
 
 /**
+ * Each difficulty plays at one size, so a difficulty is a whole board.
  * `clueDensity` is the share of cells seeded as checkpoints before the
- * uniqueness pass. `wallChance` is how often that pass resolves an ambiguity
- * with a wall instead of another checkpoint.
+ * uniqueness pass, as a [min, max] range rolled per puzzle (most are fixed).
+ * `wallChance` is how often that pass resolves an ambiguity with a wall
+ * instead of another checkpoint.
  */
-export const DIFFICULTY_CONFIG: Record<Difficulty, { clueDensity: number; wallChance: number; label: string }> = {
-  easy:   { clueDensity: 0.3,  wallChance: 0,    label: "Easy" },
-  medium: { clueDensity: 0.2,  wallChance: 0.35, label: "Medium" },
-  hard:   { clueDensity: 0.12, wallChance: 0.7,  label: "Hard" },
+export const DIFFICULTY_CONFIG: Record<Difficulty, { size: GridSize; clueDensity: readonly [number, number]; wallChance: number; label: string }> = {
+  easy:   { size: 6,  clueDensity: [0.3, 0.3],   wallChance: 0,    label: "Easy" },
+  medium: { size: 8,  clueDensity: [0.2, 0.2],   wallChance: 0.35, label: "Medium" },
+  hard:   { size: 10, clueDensity: [0.12, 0.12], wallChance: 0.7,  label: "Hard" },
+  expert: { size: 12, clueDensity: [0.04, 0.16], wallChance: 0.7,  label: "Expert" },
 };
 
-/** Puzzles in a ranked or seeded run. Easy is a short warmup. */
-export const RUN_LENGTH: Record<Difficulty, number> = { easy: 3, medium: 5, hard: 5 };
+/** Puzzles in a ranked or seeded run, at every difficulty. */
+export const RUN_LENGTH = 3;
 
 export function isDifficulty(value: unknown): value is Difficulty {
   return typeof value === "string" && value in DIFFICULTY_CONFIG;
@@ -186,9 +189,11 @@ const SOLVER_BUDGET = 600_000;
  * the solver budget runs out.
  */
 export function generatePuzzle(size: GridSize, difficulty: Difficulty, rng: () => number): ZipPuzzle {
-  const { clueDensity, wallChance } = DIFFICULTY_CONFIG[difficulty];
+  const { clueDensity: [minDensity, maxDensity], wallChance } = DIFFICULTY_CONFIG[difficulty];
   const total = size * size;
   const solution = randomHamiltonianPath(size, rng);
+  // Only a ranged difficulty rolls, so fixed ones keep their old seeds' boards.
+  const clueDensity = minDensity === maxDensity ? minDensity : minDensity + rng() * (maxDensity - minDensity);
 
   const isCheckpoint = new Uint8Array(total); // indexed by path position
   isCheckpoint[0] = 1;
@@ -264,9 +269,10 @@ function shuffleArray<T>(arr: T[], rng: () => number) {
  * Every puzzle in a run, from one seed. The client and the server both call
  * this, so a seed always means the same boards on both sides.
  */
-export function generateRun(seed: number, difficulty: Difficulty, size: GridSize): ZipPuzzle[] {
+export function generateRun(seed: number, difficulty: Difficulty): ZipPuzzle[] {
   const rng = mulberry32(seed);
-  return Array.from({ length: RUN_LENGTH[difficulty] }, () => generatePuzzle(size, difficulty, rng));
+  const { size } = DIFFICULTY_CONFIG[difficulty];
+  return Array.from({ length: RUN_LENGTH }, () => generatePuzzle(size, difficulty, rng));
 }
 
 /* ── Ranked replay validation ──────────────────────────────── */
@@ -281,7 +287,6 @@ export interface ZipReplayData {
 export type ZipRankedValidationCode =
   | "invalid-seed"
   | "invalid-difficulty"
-  | "invalid-size"
   | "invalid-time"
   | "invalid-puzzle-count"
   | "invalid-replay"
@@ -299,13 +304,12 @@ export type ZipRankedValidationResult =
 export function validateRankedZipRun(args: {
   seed: number;
   difficulty: unknown;
-  size: unknown;
   timeMs: number;
   puzzleCount: number;
   replayData: unknown;
   timeToleranceMs?: number;
 }): ZipRankedValidationResult {
-  const { seed, difficulty, size, timeMs, puzzleCount, replayData, timeToleranceMs = 2_000 } = args;
+  const { seed, difficulty, timeMs, puzzleCount, replayData, timeToleranceMs = 2_000 } = args;
 
   if (!Number.isInteger(seed) || seed <= 0 || seed > 2_147_483_647) {
     return { ok: false, code: "invalid-seed", reason: "Ranked Zip runs need a positive 32-bit seed." };
@@ -313,15 +317,12 @@ export function validateRankedZipRun(args: {
   if (!isDifficulty(difficulty)) {
     return { ok: false, code: "invalid-difficulty", reason: "Ranked Zip runs need a known difficulty." };
   }
-  if (!isGridSize(size)) {
-    return { ok: false, code: "invalid-size", reason: "Ranked Zip runs need a known grid size." };
-  }
   if (!Number.isInteger(timeMs) || timeMs <= 0) {
     return { ok: false, code: "invalid-time", reason: "Ranked Zip runs need a positive whole-millisecond time." };
   }
-  const length = RUN_LENGTH[difficulty];
+  const length = RUN_LENGTH;
   if (puzzleCount !== length) {
-    return { ok: false, code: "invalid-puzzle-count", reason: `Ranked ${difficulty} runs are ${length} puzzles.` };
+    return { ok: false, code: "invalid-puzzle-count", reason: `Ranked runs are ${length} puzzles.` };
   }
 
   const replay = readReplay(replayData);
@@ -333,7 +334,7 @@ export function validateRankedZipRun(args: {
     return { ok: false, code: "invalid-time", reason: "The puzzle times don't add up to the submitted total." };
   }
 
-  const run = generateRun(seed, difficulty, size);
+  const run = generateRun(seed, difficulty);
   for (let i = 0; i < run.length; i++) {
     if (!validatePath(run[i]!, replay.paths[i]!)) {
       return { ok: false, code: "non-canonical-solution", reason: `Puzzle ${i + 1} wasn't solved on the canonical board.` };

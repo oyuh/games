@@ -3,7 +3,8 @@ import { FiAward, FiUser } from "react-icons/fi";
 import { formatTime } from "../shared/GameStatBar";
 import { SoloLeaderboard, type SoloLeaderboardSearch } from "../shared/SoloLeaderboard";
 import type { SoloSetupOption } from "../shared/SoloGameMenu";
-import { DIFFICULTY_CONFIG, GRID_SIZES, RUN_LENGTH, type Difficulty, type GridSize } from "../../lib/zip-engine";
+import { DIFFICULTY_CONFIG, RUN_LENGTH, type Difficulty } from "../../lib/zip-engine";
+import { difficultyTitle } from "./ZipMenu";
 import {
   fetchZipLeaderboard,
   type ZipLeaderboardEntry,
@@ -18,13 +19,7 @@ const DIFFICULTY_OPTIONS: SoloSetupOption[] = (Object.keys(DIFFICULTY_CONFIG) as
   value: difficulty,
   label: DIFFICULTY_CONFIG[difficulty].label,
   ring: { total: all.length, filled: index + 1 },
-  title: `${DIFFICULTY_CONFIG[difficulty].label}, ${RUN_LENGTH[difficulty]} puzzles a run`,
-}));
-
-const SIZE_OPTIONS: SoloSetupOption[] = GRID_SIZES.map((size) => ({
-  value: String(size),
-  label: `${size}×${size}`,
-  title: `${size} by ${size} grid`,
+  title: difficultyTitle(difficulty),
 }));
 
 const VIEW_OPTIONS: SoloSetupOption[] = [
@@ -33,16 +28,14 @@ const VIEW_OPTIONS: SoloSetupOption[] = [
 ];
 
 /**
- * Zip's full leaderboard. Every board is one difficulty at one size, so both
- * pick the board and the view row sits under them. Runs rank by total time,
- * and Avg is that time spread over the run's puzzles, which is
- * the number that compares across difficulties.
+ * Zip's full leaderboard. There's one board per difficulty, with the view row
+ * under it. Runs rank by total time, and Avg is that time spread over the
+ * run's puzzles.
  */
 export function ZipLeaderboard({
   entries,
   loading,
   difficulty,
-  size,
   view,
   personalBest,
   page,
@@ -50,7 +43,6 @@ export function ZipLeaderboard({
   total,
   search,
   onDifficultyChange,
-  onSizeChange,
   onViewChange,
   onPageChange,
   onClose,
@@ -58,7 +50,6 @@ export function ZipLeaderboard({
   entries: ZipLeaderboardEntry[];
   loading: boolean;
   difficulty: Difficulty;
-  size: GridSize;
   view: ZipLeaderboardView;
   personalBest: ZipPersonalBest | null;
   page: number;
@@ -66,14 +57,12 @@ export function ZipLeaderboard({
   total: number;
   search?: SoloLeaderboardSearch;
   onDifficultyChange: (difficulty: Difficulty) => void;
-  onSizeChange: (size: GridSize) => void;
   onViewChange: (view: ZipLeaderboardView) => void;
   onPageChange: (page: number) => void;
   onClose: () => void;
 }) {
-  const board = `${DIFFICULTY_CONFIG[difficulty].label.toLowerCase()} ${size}×${size}`;
+  const board = DIFFICULTY_CONFIG[difficulty].label.toLowerCase();
   const searching = Boolean(search?.open && search.value.trim());
-  const runs = RUN_LENGTH[difficulty];
 
   return (
     <SoloLeaderboard
@@ -85,11 +74,10 @@ export function ZipLeaderboard({
       {...(search ? { search } : {})}
       filters={[
         { label: "Difficulty", value: difficulty, options: DIFFICULTY_OPTIONS, onChange: (next) => onDifficultyChange(next as Difficulty) },
-        { label: "Grid size", value: String(size), options: SIZE_OPTIONS, onChange: (next) => onSizeChange(Number(next) as GridSize) },
         { label: "Leaderboard view", value: view, options: VIEW_OPTIONS, onChange: (next) => onViewChange(next as ZipLeaderboardView) },
       ]}
       facts={personalBest
-        ? [`Your best #${personalBest.rank}`, formatTime(personalBest.timeMs), `${formatTime(personalBest.timeMs / runs)} a puzzle`]
+        ? [`Your best #${personalBest.rank}`, formatTime(personalBest.timeMs), `${formatTime(personalBest.timeMs / RUN_LENGTH)} a puzzle`]
         : undefined}
       columns={["Time", "Avg"]}
       rows={entries.map((entry, index) => ({
@@ -98,7 +86,7 @@ export function ZipLeaderboard({
         name: entry.name,
         isOwn: entry.isOwn,
         seed: entry.seed,
-        cells: [formatTime(entry.timeMs), formatTime(entry.timeMs / runs)],
+        cells: [formatTime(entry.timeMs), formatTime(entry.timeMs / RUN_LENGTH)],
       }))}
       loading={loading}
       empty={searching
@@ -121,15 +109,12 @@ export function ZipLeaderboard({
  */
 export function ZipLeaderboardModal({
   initialDifficulty,
-  initialSize,
   onClose,
 }: {
   initialDifficulty: Difficulty;
-  initialSize: GridSize;
   onClose: () => void;
 }) {
   const [difficulty, setDifficulty] = useState(initialDifficulty);
-  const [size, setSize] = useState(initialSize);
   const [view, setView] = useState<ZipLeaderboardView>("all");
   const [page, setPage] = useState(1);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -140,12 +125,12 @@ export function ZipLeaderboardModal({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchZipLeaderboard({ difficulty, size, page, view, q: searchOpen ? query.trim() : "" })
+    fetchZipLeaderboard({ difficulty, page, view, q: searchOpen ? query.trim() : "" })
       .then((next) => { if (!cancelled) setData(next); })
       .catch(() => { if (!cancelled) setData(null); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [difficulty, size, page, view, searchOpen, query]);
+  }, [difficulty, page, view, searchOpen, query]);
 
   // A new board, view, or search starts back on its first page.
   const pick = <T,>(set: (value: T) => void) => (value: T) => { set(value); setPage(1); };
@@ -155,7 +140,6 @@ export function ZipLeaderboardModal({
       entries={data?.entries ?? []}
       loading={loading}
       difficulty={difficulty}
-      size={size}
       view={view}
       personalBest={data?.personalBest ?? null}
       page={page}
@@ -168,7 +152,6 @@ export function ZipLeaderboardModal({
         onChange: pick(setQuery),
       }}
       onDifficultyChange={pick(setDifficulty)}
-      onSizeChange={pick(setSize)}
       onViewChange={pick(setView)}
       onPageChange={setPage}
       onClose={onClose}

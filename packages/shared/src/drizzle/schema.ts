@@ -521,8 +521,9 @@ export const pipsBannedSessions = pgTable(
   }
 );
 
-// One row per ranked Zip run. Boards are split by difficulty and grid size,
-// and rank by total time, fastest first.
+// One row per ranked Zip run. There's one board per difficulty, ranked by
+// total time, fastest first. Each difficulty plays at one grid size, so `size`
+// always matches it; rows from before that rule are left to cleanup.
 export const zipScores = pgTable(
   "zip_scores",
   {

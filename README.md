@@ -399,7 +399,7 @@ The schema lives in `packages/shared/src/drizzle/schema.ts`.
 | `shikaku_banned_sessions` | Shikaku abuse bans |
 | `pips_scores` | Pips leaderboard entries with easy/medium/hard splits |
 | `pips_banned_sessions` | Pips abuse bans |
-| `zip_scores` | Zip leaderboard entries by difficulty and grid size, with replay data |
+| `zip_scores` | Zip leaderboard entries by difficulty, with replay data |
 | `zip_banned_sessions` | Zip abuse bans |
 | `admin_bans` | Session, IP, and region bans |
 | `admin_restricted_names` | Restricted display-name patterns |

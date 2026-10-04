@@ -5,7 +5,7 @@ import { GameStat, GameStatBar, GameTimer } from "../components/shared/GameStatB
 import { Segmented } from "../components/shared/SoloGameMenu";
 import { ZipBoard, nextCheckpoint } from "../components/zip/ZipBoard";
 import { ZipLeaderboardModal } from "../components/zip/ZipLeaderboard";
-import { ZipMenu, difficultyRow, sizeRow, type ZipMenuMode } from "../components/zip/ZipMenu";
+import { ZipMenu, difficultyRow, type ZipMenuMode } from "../components/zip/ZipMenu";
 import {
   DIFFICULTY_CONFIG,
   GRID_SIZES,
@@ -13,7 +13,6 @@ import {
   mulberry32,
   validatePath,
   type Difficulty,
-  type GridSize,
 } from "../lib/zip-engine";
 import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import "../styles/game-shared.css";
@@ -43,13 +42,13 @@ function Section({ title, note, children }: { title: string; note?: string; chil
 }
 
 /**
- * The board the way a player meets it: pick a size, draw, back up, solve.
+ * The board the way a player meets it: pick a difficulty, draw, back up, solve.
  * Undo, clear, and the hint live on the sidebar, same as Shikaku's, so this
  * talks to it over the solo bus the way the real page will.
  */
 function Live() {
-  const [size, setSize] = useState<GridSize>(6);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const { size } = DIFFICULTY_CONFIG[difficulty];
   const [seed, setSeed] = useState(1);
   const [path, setPath] = useState<number[]>([]);
   const [hint, setHint] = useState(true);
@@ -84,7 +83,6 @@ function Live() {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", width: "100%" }}>
       <div style={{ display: "grid", gap: "0.5rem", width: "min(500px, 100%)" }}>
-        <Segmented row={sizeRow(size, setSize)} />
         <Segmented row={difficultyRow(difficulty, setDifficulty)} />
       </div>
 
@@ -113,18 +111,15 @@ function Live() {
 
 function Menu() {
   const [mode, setMode] = useState<ZipMenuMode>("ranked");
-  const [size, setSize] = useState<GridSize>(6);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [seed, setSeed] = useState("");
   return (
     <ZipMenu
       mode={mode}
       difficulty={difficulty}
-      size={size}
       seed={seed}
       onModeChange={setMode}
       onDifficultyChange={setDifficulty}
-      onSizeChange={setSize}
       onSeedChange={setSeed}
       onStart={NOOP}
       onOpenLeaderboard={NOOP}
@@ -139,7 +134,7 @@ function LiveLeaderboard() {
   return (
     <>
       <GameButton variant="primary" icon={<FiAward />} onClick={() => setOpen(true)}>Open the leaderboard</GameButton>
-      {open && <ZipLeaderboardModal initialDifficulty="easy" initialSize={6} onClose={() => setOpen(false)} />}
+      {open && <ZipLeaderboardModal initialDifficulty="easy" onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -163,11 +158,11 @@ export function ZipKitPage() {
         <Live />
       </Section>
 
-      <Section title="The menu" note="same as shikaku's: ranked, endless, or seeded up top with the seed drawer under it, then difficulty and size below the line">
+      <Section title="The menu" note="same as shikaku's: ranked, endless, or seeded up top with the seed drawer under it, then difficulty below the line, which also picks the size">
         <Menu />
       </Section>
 
-      <Section title="The leaderboard" note="live off the api. one board per difficulty and size, fastest run first, and avg spreads the time over the run's puzzles">
+      <Section title="The leaderboard" note="live off the api. one board per difficulty, fastest run first, and avg spreads the time over the run's puzzles">
         <LiveLeaderboard />
       </Section>
 

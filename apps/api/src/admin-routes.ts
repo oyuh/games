@@ -1744,17 +1744,12 @@ adminRoutes.delete("/pips/scores", async (c) => {
 });
 
 // ─── Zip leaderboard management ─────────────────────────────
-// Boards are split by difficulty and size, so both filter the list, and the
-// list runs fastest first like the public board.
+// One board per difficulty, so difficulty filters the list, and the list runs
+// fastest first like the public board.
 adminRoutes.get("/zip/scores", async (c) => {
   const { page, pageSize, offset } = parsePagination(c, 50, 200);
   const difficulty = c.req.query("difficulty");
-  const size = Number(c.req.query("size"));
-  const filters = [
-    zipEngine.isDifficulty(difficulty) ? eq(zipScores.difficulty, difficulty) : undefined,
-    zipEngine.isGridSize(size) ? eq(zipScores.size, size) : undefined,
-  ].filter((filter) => filter !== undefined);
-  const where = filters.length ? and(...filters) : undefined;
+  const where = zipEngine.isDifficulty(difficulty) ? eq(zipScores.difficulty, difficulty) : undefined;
 
   const [scores, countResult] = await Promise.all([
     drizzleClient.select().from(zipScores).where(where).orderBy(asc(zipScores.timeMs), asc(zipScores.createdAt)).limit(pageSize).offset(offset),
@@ -1772,7 +1767,6 @@ adminRoutes.post("/zip/scores", async (c) => {
     name?: string;
     seed?: number;
     difficulty?: string;
-    size?: number;
     timeMs?: number;
     puzzleCount?: number;
     createdAt?: number;
@@ -1784,7 +1778,6 @@ adminRoutes.post("/zip/scores", async (c) => {
   const name = readTrimmedText(body.name).slice(0, 50);
   const seed = readWholeNumber(body.seed);
   const difficulty = readTrimmedText(body.difficulty);
-  const size = readWholeNumber(body.size);
   const timeMs = readWholeNumber(body.timeMs);
   const createdAt = readWholeNumber(body.createdAt) ?? Date.now();
   const id = readTrimmedText(body.id) || crypto.randomUUID();
@@ -1793,12 +1786,12 @@ adminRoutes.post("/zip/scores", async (c) => {
   if (!name) return c.json({ error: "Invalid name" }, 400);
   if (seed == null || seed < 0) return c.json({ error: "Invalid seed" }, 400);
   if (!zipEngine.isDifficulty(difficulty)) return c.json({ error: "Invalid difficulty" }, 400);
-  if (!zipEngine.isGridSize(size)) return c.json({ error: "Invalid size" }, 400);
   if (timeMs == null || timeMs < 0) return c.json({ error: "Invalid timeMs" }, 400);
-  const puzzleCount = readWholeNumber(body.puzzleCount) ?? zipEngine.RUN_LENGTH[difficulty];
+  const puzzleCount = readWholeNumber(body.puzzleCount) ?? zipEngine.RUN_LENGTH;
   if (puzzleCount < 1) return c.json({ error: "Invalid puzzleCount" }, 400);
   if (createdAt < 1) return c.json({ error: "Invalid createdAt" }, 400);
 
+  const { size } = zipEngine.DIFFICULTY_CONFIG[difficulty];
   const score = { id, sessionId, name, seed, difficulty, size, timeMs, puzzleCount, createdAt };
   await drizzleClient.insert(zipScores).values(score);
   return c.json({ ok: true, score });
@@ -1811,7 +1804,6 @@ adminRoutes.patch("/zip/scores/:id", async (c) => {
     name?: string;
     seed?: number;
     difficulty?: string;
-    size?: number;
     timeMs?: number;
     puzzleCount?: number;
     createdAt?: number;
@@ -1828,8 +1820,10 @@ adminRoutes.patch("/zip/scores/:id", async (c) => {
   if (name) updates.name = name;
   const seed = readWholeNumber(body.seed);
   if (seed != null && seed >= 0) updates.seed = seed;
-  if (zipEngine.isDifficulty(body.difficulty)) updates.difficulty = body.difficulty;
-  if (zipEngine.isGridSize(body.size)) updates.size = body.size;
+  if (zipEngine.isDifficulty(body.difficulty)) {
+    updates.difficulty = body.difficulty;
+    updates.size = zipEngine.DIFFICULTY_CONFIG[body.difficulty].size;
+  }
   const timeMs = readWholeNumber(body.timeMs);
   if (timeMs != null && timeMs >= 0) updates.timeMs = timeMs;
   const puzzleCount = readWholeNumber(body.puzzleCount);
@@ -1971,11 +1965,11 @@ adminRoutes.get("/zip/scores/:id/puzzle.svg", async (c) => {
   if (!score) {
     return c.json({ error: "Score not found" }, 404);
   }
-  if (!zipEngine.isDifficulty(score.difficulty) || !zipEngine.isGridSize(score.size)) {
+  if (!zipEngine.isDifficulty(score.difficulty) || score.size !== zipEngine.DIFFICULTY_CONFIG[score.difficulty].size) {
     return c.json({ error: "Score has no valid board" }, 422);
   }
 
-  const puzzles = zipEngine.generateRun(score.seed, score.difficulty, score.size);
+  const puzzles = zipEngine.generateRun(score.seed, score.difficulty);
   const index = Math.min(Math.max(0, parseInt(c.req.query("index") ?? "0", 10) || 0), puzzles.length - 1);
   const puzzle = puzzles[index]!;
   const view = parsePuzzleView(c.req.query("view"));

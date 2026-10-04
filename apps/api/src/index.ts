@@ -56,9 +56,9 @@ import { getOrCreateGameKey, type GameType } from "./game-keys";
 import { shikakuImageRoutes } from "./shikaku-image";
 import { createZipTicket, readZipTicket, type ZipTicket } from "./zip-ticket";
 import {
+  DIFFICULTY_CONFIG as ZIP_DIFFICULTY_CONFIG,
   RUN_LENGTH as ZIP_RUN_LENGTH,
   isDifficulty as isZipDifficulty,
-  isGridSize as isZipGridSize,
   validateRankedZipRun,
   type ZipRankedValidationCode,
   type ZipReplayData,
@@ -2460,19 +2460,19 @@ async function checkZipSubmission(
 
   // Cheap floors before the expensive regenerate: every split has to be long
   // enough to draw a line across the whole board.
-  const cells = ticket.size * ticket.size;
+  const { size } = ZIP_DIFFICULTY_CONFIG[ticket.difficulty];
+  const cells = size * size;
   const splits = (replayData as { puzzleTimes?: unknown } | null)?.puzzleTimes;
   if (Array.isArray(splits) && splits.some((split) => typeof split === "number" && split < cells * ZIP_MIN_MS_PER_CELL)) {
     const scripted = splits.some((split) => typeof split === "number" && split < cells * ZIP_AUTO_BAN_MS_PER_CELL);
-    return zipError(400, "too-fast", "One of these puzzles was solved faster than a line can be drawn.", scripted ? `zip impossibly fast on ${ticket.size}x${ticket.size}` : undefined);
+    return zipError(400, "too-fast", "One of these puzzles was solved faster than a line can be drawn.", scripted ? `zip impossibly fast on ${size}x${size}` : undefined);
   }
 
   const validation = validateRankedZipRun({
     seed: ticket.seed,
     difficulty: ticket.difficulty,
-    size: ticket.size,
     timeMs,
-    puzzleCount: ZIP_RUN_LENGTH[ticket.difficulty],
+    puzzleCount: ZIP_RUN_LENGTH,
     replayData,
   });
   if (!validation.ok) {
@@ -2492,7 +2492,7 @@ async function checkZipSubmission(
   const own = await drizzleClient
     .select({ id: zipScores.id, timeMs: zipScores.timeMs })
     .from(zipScores)
-    .where(and(eq(zipScores.sessionId, sessionId), eq(zipScores.difficulty, ticket.difficulty), eq(zipScores.size, ticket.size)))
+    .where(and(eq(zipScores.sessionId, sessionId), eq(zipScores.difficulty, ticket.difficulty), eq(zipScores.size, size)))
     .orderBy(asc(zipScores.timeMs));
   let replaceId: string | null = null;
   if (own.length >= ZIP_MAX_SCORES_PER_SESSION) {
@@ -2507,8 +2507,8 @@ async function checkZipSubmission(
 }
 
 app.post("/api/zip/run", async (c) => {
-  const body = await c.req.json().catch(() => null) as { sessionId?: string; difficulty?: unknown; size?: unknown } | null;
-  if (!body || !isZipDifficulty(body.difficulty) || !isZipGridSize(body.size)) {
+  const body = await c.req.json().catch(() => null) as { sessionId?: string; difficulty?: unknown } | null;
+  if (!body || !isZipDifficulty(body.difficulty)) {
     return c.json({ error: "Invalid run" }, 400);
   }
   const claimed = getVerifiedClaimedSessionId(c, body.sessionId);
@@ -2519,7 +2519,7 @@ app.post("/api/zip/run", async (c) => {
 
   const seed = (crypto.getRandomValues(new Uint32Array(1))[0]! % 2_147_483_646) + 1;
   const ticket = createZipTicket(
-    { sessionId: identity.sessionId, seed, difficulty: body.difficulty, size: body.size, issuedAt: Date.now() },
+    { sessionId: identity.sessionId, seed, difficulty: body.difficulty, issuedAt: Date.now() },
     SESSION_COOKIE_SECRET,
   );
   return c.json({ ok: true, seed, ticket });
@@ -2569,7 +2569,7 @@ app.post("/api/zip/score", async (c) => {
     name: check.name,
     seed: check.ticket.seed,
     difficulty: check.ticket.difficulty,
-    size: check.ticket.size,
+    size: ZIP_DIFFICULTY_CONFIG[check.ticket.difficulty].size,
     timeMs: check.timeMs,
     puzzleCount: check.replayData.paths.length,
     replayData: check.replayData,
@@ -2594,10 +2594,11 @@ function zipLeaderboardRow(row: Record<string, any>, sessionId: string | null) {
 
 app.get("/api/zip/leaderboard", async (c) => {
   const difficulty = c.req.query("difficulty")?.trim() ?? "easy";
-  const size = Number(c.req.query("size") ?? "6");
-  if (!isZipDifficulty(difficulty) || !isZipGridSize(size)) {
+  if (!isZipDifficulty(difficulty)) {
     return c.json({ error: "Invalid board" }, 400);
   }
+  // Pinning the size too keeps runs from the old size-per-board days off it.
+  const { size } = ZIP_DIFFICULTY_CONFIG[difficulty];
   const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") ?? "10", 10) || 10), 50);
   const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
   const offset = (page - 1) * limit;

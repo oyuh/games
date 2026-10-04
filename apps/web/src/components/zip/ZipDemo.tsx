@@ -3,7 +3,7 @@ import { FiAward, FiClock, FiFlag, FiShield } from "react-icons/fi";
 import { DemoModal, DemoScoring, type DemoStep } from "../demos/DemoModal";
 import { GameIcon } from "../shared/GameIcon";
 import { ZipBoard } from "./ZipBoard";
-import { RUN_LENGTH, validatePath, type ZipPuzzle } from "../../lib/zip-engine";
+import { DIFFICULTY_CONFIG, RUN_LENGTH, validatePath, type Difficulty, type ZipPuzzle } from "../../lib/zip-engine";
 import "../../styles/game-shared.css";
 
 const steps: DemoStep[] = [
@@ -29,8 +29,8 @@ const steps: DemoStep[] = [
   },
   {
     label: "Ranked runs",
-    description: "A ranked run is a set of puzzles at one difficulty and size, and your total time is what ranks.",
-    hint: "Each difficulty and size has its own leaderboard.",
+    description: `A ranked run is ${RUN_LENGTH} puzzles at one difficulty, and your total time is what ranks.`,
+    hint: "Each difficulty plays one grid size and has its own leaderboard.",
   },
 ];
 
@@ -86,15 +86,14 @@ export function ZipDemo({ onClose, initialStep = 0 }: { onClose: () => void; ini
       <div className="game-page" data-game-theme="zip">
         {step === steps.length - 1 ? (
           <DemoScoring
-            columns={["Difficulty", "Puzzles a run"]}
-            rows={[
-              { label: "Easy", value: String(RUN_LENGTH.easy) },
-              { label: "Medium", value: String(RUN_LENGTH.medium) },
-              { label: "Hard", value: String(RUN_LENGTH.hard) },
-            ]}
+            columns={["Difficulty", "Board"]}
+            rows={(Object.keys(DIFFICULTY_CONFIG) as Difficulty[]).map((difficulty) => {
+              const { label, size } = DIFFICULTY_CONFIG[difficulty];
+              return { label, value: difficulty === "expert" ? `${size}×${size}, random dots` : `${size}×${size}` };
+            })}
             rules={[
               { icon: <FiClock size={13} />, title: "Time ranks", text: "Fastest total time wins. The clock only runs while a board is up." },
-              { icon: <FiAward size={13} />, title: "12 boards", text: "Every difficulty at every size, 6x6 to 12x12, keeps its own leaderboard." },
+              { icon: <FiAward size={13} />, title: `${RUN_LENGTH} a run`, text: `A ranked run is ${RUN_LENGTH} puzzles, and each difficulty keeps its own leaderboard.` },
               { icon: <FiFlag size={13} />, title: "Fresh seeds", text: "The server picks a ranked seed when the run starts, so nobody's practiced it." },
               { icon: <FiShield size={13} />, title: "Checked runs", text: "Every line you draw is replayed on the server before your time counts." },
             ]}
