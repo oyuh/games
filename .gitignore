@@ -1,7 +1,7 @@
 # Dependencies
 node_modules
 .pnpm-store
-./claude/
+.claude/
 
 # Build outputs
 **/dist
@@ -39,8 +39,6 @@ Thumbs.db
 # Next.js auto-generated
 **/next-env.d.ts
 
-# Vercel
-.vercel
 
 # Misc
 *.log
