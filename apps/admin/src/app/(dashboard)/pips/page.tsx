@@ -432,6 +432,17 @@ export default function PipsAdminPage() {
       cell: (score) => formatPreciseTime(score.hardMs),
     },
     {
+      id: "legitimacy",
+      header: "Legitimacy",
+      width: 110,
+      align: "right",
+      // Unscored runs (older, or added here) sort after every scored one.
+      sortValue: (score) => score.legitimacy ?? 101,
+      cell: (score) => score.legitimacy == null
+        ? <span className="text-muted-foreground">--</span>
+        : <span className={score.legitimacy < 60 ? "font-semibold text-amber-700 dark:text-amber-300" : undefined}>{score.legitimacy}</span>,
+    },
+    {
       id: "seed",
       header: "Seed",
       width: 130,

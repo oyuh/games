@@ -24,7 +24,7 @@ The run is timed from start to finish, and the leaderboard is ranked by total so
 
 ## How to Play
 
-1. **Start a run.** The game creates one run seed and generates an Easy, Medium, and Hard puzzle from it.
+1. **Start a run.** The server hands out one run seed, and the game generates an Easy, Medium, and Hard puzzle from it.
 2. **Place dominoes.** Drag dominoes from the tray onto the board. Each domino can be rotated and must cover two orthogonally adjacent open cells.
 3. **Satisfy regions.** Every colored region has a condition: a target sum, all equal, all different, greater than a number, or less than a number.
 4. **Use every domino.** The puzzle only counts as solved when every board cell is filled, every supplied domino is placed, and every region condition passes.
@@ -180,6 +180,8 @@ runSeed
 - Seed and solved-placement replay metadata are stored for validation.
 - Seeded and Endless runs are unranked.
 - Finished ranked runs get an eligibility check, then you can submit.
+- Ranked runs use the shared solo ticket (`apps/api/src/solo-ticket.ts`). `POST /api/pips/run` picks the seed and signs a ticket, the eligibility check stamps it with the finish time, and the submit has to bring it back. The total time has to match the server's clock, less the countdown and the pauses between boards. The page also logs when every move landed, and the API scores that log for legitimacy (one move per domino at least). The Zip doc's anti-cheat section covers the details.
+- With the API down, a ranked run still starts on a local seed, but it can't be submitted.
 - Duplicate seed submissions are rejected per session.
 - Minimum times: 12 seconds for the run and 1.5 seconds per puzzle (`score-policy.ts`).
 - Three strikes (impossibly fast runs, failed replays, too many clients on one session) inside 30 minutes bans the session from Pips scores, stored in `pips_banned_sessions`. Site-wide admin bans and the bot check apply too.
@@ -194,7 +196,7 @@ For generation, one public run seed goes through `mulberry32` and produces Easy,
 
 For validation, `validatePuzzleShape` checks that active cells are in bounds, unique, covered by exactly one region, and match the supplied domino count. `validateSolution` checks that every submitted placement uses a real domino exactly once, covers two active adjacent cells, avoids overlaps, fills the board, and satisfies every region rule through `evaluateRegionRule`.
 
-For ranked validation, the finished client sends the seed, total time, the Easy/Medium/Hard splits, and the solved placements for each difficulty. The API calls `validateRankedPipsRun`, regenerates the canonical run from the seed, verifies the split total, checks each generated puzzle against the engine invariants, and validates the submitted placements against the canonical Easy, Medium, and Hard puzzles before storing `replayData` in `pips_scores`.
+For ranked validation, the finished client sends its ticket, total time, the Easy/Medium/Hard splits, and the solved placements for each difficulty. The API calls `validateRankedPipsRun`, regenerates the canonical run from the ticket's seed, verifies the split total, checks each generated puzzle against the engine invariants, and validates the submitted placements against the canonical Easy, Medium, and Hard puzzles before storing `replayData` in `pips_scores`.
 
 ---
 
@@ -202,8 +204,8 @@ For ranked validation, the finished client sends the seed, total time, the Easy/
 
 - **Route:** `/pips`
 - **State:** client-side React state, same as Shikaku.
-- **API:** REST endpoints for the leaderboard (`GET /api/pips/leaderboard`), the eligibility check (`POST /api/pips/score/eligibility`), and score submission (`POST /api/pips/score`).
-- **Schema:** `pips_scores` stores sessionId, name, seed, totalMs, easyMs, mediumMs, hardMs, puzzleCount, replayData, and createdAt.
+- **API:** REST endpoints for the leaderboard (`GET /api/pips/leaderboard`), the ranked seed ticket (`POST /api/pips/run`), the eligibility check (`POST /api/pips/score/eligibility`), and score submission (`POST /api/pips/score`).
+- **Schema:** `pips_scores` stores sessionId, name, seed, totalMs, easyMs, mediumMs, hardMs, puzzleCount, replayData, legitimacy, and createdAt.
 - **Engine:** `packages/shared/src/games/pips-engine.ts` contains the seeded RNG, generation, validation, solver utilities, run scoring, and replay verification. `apps/web/src/lib/pips-engine.ts` re-exports it for the web app.
 - **UI:** `PipsPage` renders the board, tray, run header, results, leaderboard, and the ranked, seeded, and endless modes. It's one responsive page for desktop and phones.
 

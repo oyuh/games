@@ -20,12 +20,14 @@ import {
   PlacedRect,
   PUZZLES_PER_RUN,
   Rect,
+  RUN_PACING,
   ShikakuRankedReplayData,
   ShikakuPuzzle,
   validateSolution,
 } from "../lib/shikaku-engine";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { fetchWithChallenge } from "../lib/challenge";
+import { devMoveTimes, startRankedRun as requestRankedRun, type RankedRun } from "../lib/solo-run";
 import { showToast } from "../lib/toast";
 import { playCountdownTick, playGameOver } from "../lib/sounds";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -103,6 +105,8 @@ interface ScoreEligibilityResponse {
   code?: string;
   reason?: string;
   willReplace?: boolean;
+  /** From an eligible check: the ticket stamped with the run's finish, to submit with. */
+  ticket?: string;
 }
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -117,7 +121,7 @@ export function ShikakuPage() {
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [lbDifficulty, setLbDifficulty] = useState<Difficulty>("easy");
   const [lbView, setLbView] = useState<LeaderboardView>("all");
-  const [countdownNum, setCountdownNum] = useState(3);
+  const [countdownNum, setCountdownNum] = useState<number>(RUN_PACING.countdownFrom);
   const previousPhaseRef = useRef<GamePhase | null>(null);
 
   // Game state
@@ -135,6 +139,12 @@ export function ShikakuPage() {
   const [gaveUp, setGaveUp] = useState(false);
   const [puzzleStartTime, setPuzzleStartTime] = useState(0);
   const solvedReplayRectsRef = useRef<Rect[][]>([]);
+  // When each move on the board landed, in ms from its start, and the logs of
+  // the boards already solved. Ranked submits send them for the server's move check.
+  const boardMovesRef = useRef<number[]>([]);
+  const solvedMovesRef = useRef<number[][]>([]);
+  const puzzleStartRef = useRef(0);
+  puzzleStartRef.current = puzzleStartTime;
 
   // Drag state
   const [dragStart, setDragStart] = useState<{ r: number; c: number } | null>(null);
@@ -172,6 +182,9 @@ export function ShikakuPage() {
   const [submittingScore, setSubmittingScore] = useState(false);
   const [scoreSubmissionStatus, setScoreSubmissionStatus] = useState<ScoreSubmissionStatus | null>(null);
   const lastSubmitTime = useRef(0);
+  // The ranked run's signed ticket; null for a ranked run started with the API
+  // down. Other run types never submit, so they never read it.
+  const rankedTicketRef = useRef<string | null>(null);
 
   // Completion animation
   const [showPuzzleSolvedAnim, setShowPuzzleSolvedAnim] = useState(false);
@@ -325,6 +338,12 @@ export function ShikakuPage() {
 
   const resetReplayData = useCallback(() => {
     solvedReplayRectsRef.current = [];
+    solvedMovesRef.current = [];
+    boardMovesRef.current = [];
+  }, []);
+
+  const logMove = useCallback(() => {
+    boardMovesRef.current.push(Date.now() - puzzleStartRef.current);
   }, []);
 
   const recordSolvedReplayRects = useCallback((rects: Rect[]) => {
@@ -338,8 +357,6 @@ export function ShikakuPage() {
   }), [puzzleTimes]);
 
   const resolveScoreEligibility = useCallback(async (
-    runSeed: number,
-    diff: Difficulty,
     score: number,
     timeMs: number,
     replayData: ShikakuRankedReplayData,
@@ -358,8 +375,8 @@ export function ShikakuPage() {
         body: JSON.stringify({
           sessionId: activeSessionId,
           name: activeName,
-          seed: runSeed,
-          difficulty: diff,
+          ticket: rankedTicketRef.current,
+          moveTimes: solvedMovesRef.current,
           score,
           timeMs,
           puzzleCount: PUZZLES_PER_RUN,
@@ -368,6 +385,8 @@ export function ShikakuPage() {
       });
 
       const data = await res.json().catch(() => null) as ScoreEligibilityResponse | null;
+      // The submit has to bring back the ticket stamped with this finish.
+      if (data?.ticket) rankedTicketRef.current = data.ticket;
       const canSubmit = Boolean(data?.canSubmit);
       const code = data?.code ?? "unknown";
       const message = typeof data?.reason === "string" && data.reason.trim()
@@ -503,7 +522,7 @@ export function ShikakuPage() {
       return;
     }
     playCountdownTick();
-    const t = setTimeout(() => setCountdownNum((n) => n - 1), 700);
+    const t = setTimeout(() => setCountdownNum((n) => n - 1), RUN_PACING.countdownTickMs);
     return () => clearTimeout(t);
   }, [phase, countdownNum]);
 
@@ -518,13 +537,14 @@ export function ShikakuPage() {
   /* ── Start a new run ────────────────────────────────────── */
   const pendingGenRef = useRef<{ diff: Difficulty; newSeed: number; custom: boolean; challenge?: boolean } | null>(null);
 
-  const startRun = useCallback((diff: Difficulty) => {
+  const resetRun = useCallback((diff: Difficulty, ranked: RankedRun | null) => {
     // Auto-disable debug for ranked runs
     if (!infiniteMode && debugRef.current) {
       debugRef.current = false;
       console.log("%c[Shikaku Debug] Auto-disabled for ranked run", "color: #f87171; font-weight: bold;");
     }
-    const newSeed = Math.floor(Math.random() * 2147483647);
+    const newSeed = ranked?.seed ?? Math.floor(Math.random() * 2147483647);
+    rankedTicketRef.current = ranked?.ticket ?? null;
     setSeed(newSeed);
     setCurrentPuzzleIdx(0);
     setPlacedRects([]);
@@ -536,7 +556,7 @@ export function ShikakuPage() {
     setFlashingRects(new Set());
     setUndoStack([]);
     setDifficulty(diff);
-    setCountdownNum(3);
+    setCountdownNum(RUN_PACING.countdownFrom);
     setScoreSubmitted(false);
     setSubmittingScore(false);
     setScoreSubmissionStatus(null);
@@ -551,6 +571,22 @@ export function ShikakuPage() {
     debugLog("startRun", { diff, seed: newSeed, infiniteMode });
   }, [infiniteMode, debugLog, resetReplayData]);
 
+  // Ranked seeds come from the server. With the API down the run still starts
+  // on a local seed, it just can't be submitted.
+  const startRun = useCallback(async (diff: Difficulty) => {
+    if (infiniteMode) {
+      resetRun(diff, null);
+      return;
+    }
+    let ranked: RankedRun | null = null;
+    try {
+      ranked = await requestRankedRun("shikaku", diff);
+    } catch {
+      showToast("Couldn't reach the server, so this run is unranked.", "error");
+    }
+    resetRun(diff, ranked);
+  }, [infiniteMode, resetRun]);
+
   /* ── Start a custom seed run ─────────────────────────────── */
   const startCustomRun = useCallback((diff: Difficulty, customSeed: number) => {
     setSeed(customSeed);
@@ -564,7 +600,7 @@ export function ShikakuPage() {
     setFlashingRects(new Set());
     setUndoStack([]);
     setDifficulty(diff);
-    setCountdownNum(3);
+    setCountdownNum(RUN_PACING.countdownFrom);
     setScoreSubmitted(false);
     setSubmittingScore(false);
     setScoreSubmissionStatus(null);
@@ -592,7 +628,7 @@ export function ShikakuPage() {
     setFlashingRects(new Set());
     setUndoStack([]);
     setDifficulty(diff);
-    setCountdownNum(3);
+    setCountdownNum(RUN_PACING.countdownFrom);
     setScoreSubmitted(false);
     setSubmittingScore(false);
     setScoreSubmissionStatus(null);
@@ -681,6 +717,7 @@ export function ShikakuPage() {
 
     const newRects = [...surviving, placed];
     setPlacedRects(newRects);
+    logMove();
     setColorCounter((c) => c + 1);
 
     // Flash any invalid rects (wrong number count or wrong area)
@@ -705,7 +742,7 @@ export function ShikakuPage() {
         "error",
       );
     }
-  }, [autoFilledRects, colorCounter, currentPuzzle, isAutoFilledRect, isRectValid, placedRects, debugLog]);
+  }, [autoFilledRects, colorCounter, currentPuzzle, isAutoFilledRect, isRectValid, placedRects, debugLog, logMove]);
 
   /* ── Puzzle solved handler ──────────────────────────────── */
   const handlePuzzleSolved = useCallback((rects: PlacedRect[]) => {
@@ -713,7 +750,9 @@ export function ShikakuPage() {
     const puzzleTime = now - puzzleStartTime;
     if (!infiniteMode && !challengeMode) {
       recordSolvedReplayRects(rects);
+      solvedMovesRef.current = [...solvedMovesRef.current, boardMovesRef.current];
     }
+    boardMovesRef.current = [];
 
     setShowPuzzleSolvedAnim(true);
     // Pause timer during solved animation
@@ -745,7 +784,7 @@ export function ShikakuPage() {
         setFlashingRects(new Set());
         setUndoStack([]);
         setPuzzleStartTime(Date.now());
-      }, 1200);
+      }, RUN_PACING.solvedPauseMs);
     } else if (challengeMode) {
       // Challenge mode - single puzzle complete
       const totalTime = now - startTime - pausedMsRef.current;
@@ -760,7 +799,7 @@ export function ShikakuPage() {
         setScoreSubmitted(false);
         setSubmittingScore(false);
         setScoreSubmissionStatus(null);
-      }, 1200);
+      }, RUN_PACING.solvedPauseMs);
     } else if (currentPuzzleIdx < PUZZLES_PER_RUN - 1) {
       // Show solve animation, then next puzzle
       setPuzzleTimes((prev) => [...prev, puzzleTime]);
@@ -777,7 +816,7 @@ export function ShikakuPage() {
         setFlashingRects(new Set());
         setUndoStack([]);
         setPuzzleStartTime(Date.now());
-      }, 1200);
+      }, RUN_PACING.solvedPauseMs);
     } else {
       // Run complete!
       const totalTime = now - startTime - pausedMsRef.current;
@@ -796,7 +835,7 @@ export function ShikakuPage() {
 
         // Fetch leaderboard for finished screen
         fetchLeaderboard(difficulty, 1, lbView);
-      }, 1200);
+      }, RUN_PACING.solvedPauseMs);
     }
   }, [currentPuzzleIdx, puzzleStartTime, startTime, difficulty, infiniteMode, challengeMode, fetchLeaderboard, lbView, debugLog, infiniteSolved, recordSolvedReplayRects]);
   handlePuzzleSolvedRef.current = handlePuzzleSolved;
@@ -809,6 +848,7 @@ export function ShikakuPage() {
     setUndoStack((prev) => [...prev, placedRects]);
     const newRects = placedRects.filter((_, i) => i !== index);
     setPlacedRects(newRects);
+    logMove();
     // Recompute flashing
     const nextFlashing = new Set<number>();
     newRects.forEach((pr, i) => { if (!isRectValid(pr)) nextFlashing.add(i); });
@@ -822,11 +862,12 @@ export function ShikakuPage() {
     if (!prev) return;
     setUndoStack((s) => s.slice(0, -1));
     setPlacedRects(prev);
+    logMove();
     // Recompute flashing
     const nextFlashing = new Set<number>();
     prev.forEach((pr, i) => { if (!isRectValid(pr)) nextFlashing.add(i); });
     setFlashingRects(nextFlashing);
-  }, [undoStack, isRectValid]);
+  }, [undoStack, isRectValid, logMove]);
 
   const clearPlacedRects = useCallback(() => {
     if (!hasClearableRects) return;
@@ -834,7 +875,8 @@ export function ShikakuPage() {
     setPlacedRects(autoFilledRects);
     setColorCounter(autoFilledRects.length);
     setFlashingRects(new Set());
-  }, [autoFilledRects, hasClearableRects, placedRects]);
+    logMove();
+  }, [autoFilledRects, hasClearableRects, placedRects, logMove]);
 
   const restartCurrentRun = useCallback(() => {
     if (challengeMode && seed > 0) {
@@ -849,7 +891,7 @@ export function ShikakuPage() {
       return;
     }
 
-    startRun(difficulty);
+    void startRun(difficulty);
     showToast(infiniteMode ? "New infinite seed generated" : "New run generated", "info");
   }, [challengeMode, customMode, difficulty, infiniteMode, seed, startChallenge, startCustomRun, startRun]);
 
@@ -1036,6 +1078,7 @@ export function ShikakuPage() {
     const handleDevSolve = () => {
       if (!SHOW_SHIKAKU_DEV_TOOLS || phase !== "playing" || !currentPuzzle || showPuzzleSolvedAnim) return;
       const solution = currentPuzzle.solution.map((rect, index) => ({ ...rect, colorIndex: index % RECT_COLORS.length }));
+      boardMovesRef.current = devMoveTimes(solution.filter((rect) => rect.w * rect.h > 1).length, Date.now() - puzzleStartRef.current);
       setPlacedRects(solution);
       setUndoStack([]);
       setFlashingRects(new Set());
@@ -1135,6 +1178,16 @@ export function ShikakuPage() {
       return;
     }
 
+    if (!rankedTicketRef.current) {
+      setScoreSubmissionStatus({
+        canSubmit: false,
+        pending: false,
+        tone: "info",
+        message: "This run started while the server was unreachable, so it's unranked.",
+      });
+      return;
+    }
+
     let cancelled = false;
     setScoreSubmissionStatus({
       canSubmit: false,
@@ -1144,16 +1197,16 @@ export function ShikakuPage() {
     });
 
     const replayData = makeReplayData();
-    void resolveScoreEligibility(seed, difficulty, finalScore, finalTimeMs, replayData).then((status) => {
-      if (!cancelled) {
-        setScoreSubmissionStatus(status);
-      }
+    void resolveScoreEligibility(finalScore, finalTimeMs, replayData).then((status) => {
+      if (cancelled) return;
+      setScoreSubmissionStatus(status);
+      if (status.tone === "error") showToast(status.message, "error");
     });
 
     return () => {
       cancelled = true;
     };
-  }, [phase, scoreSubmitted, puzzleTimes.length, infiniteMode, customMode, seed, difficulty, finalScore, finalTimeMs, resolveScoreEligibility, makeReplayData]);
+  }, [phase, scoreSubmitted, puzzleTimes.length, infiniteMode, customMode, finalScore, finalTimeMs, resolveScoreEligibility, makeReplayData]);
 
   /* ── Score submission ───────────────────────────────────── */
   // The end screen shows the latest status inline. The toast also says it,
@@ -1164,7 +1217,7 @@ export function ShikakuPage() {
   }, []);
 
   const submitScore = useCallback(async (
-    runSeed: number, diff: Difficulty, score: number, timeMs: number, replayData: ShikakuRankedReplayData
+    diff: Difficulty, score: number, timeMs: number, replayData: ShikakuRankedReplayData
   ) => {
     // Anti-spam: 5s cooldown between submissions
     const now = Date.now();
@@ -1201,8 +1254,8 @@ export function ShikakuPage() {
         body: JSON.stringify({
           sessionId: activeSessionId,
           name: activeName,
-          seed: runSeed,
-          difficulty: diff,
+          ticket: rankedTicketRef.current,
+          moveTimes: solvedMovesRef.current,
           score,
           timeMs,
           puzzleCount: PUZZLES_PER_RUN,
@@ -1230,7 +1283,7 @@ export function ShikakuPage() {
           });
         }
       } else {
-        const data = await res.json().catch(() => null) as { error?: string } | null;
+        const data = await res.json().catch(() => null) as { error?: string; reason?: string } | null;
         if (res.status === 409) {
           lastSubmitTime.current = now;
           setScoreSubmitted(true);
@@ -1241,7 +1294,7 @@ export function ShikakuPage() {
             message: "This run has already been submitted to the leaderboard.",
           });
         } else if (res.status === 403) {
-          const nextStatus = await resolveScoreEligibility(runSeed, diff, score, timeMs, replayData);
+          const nextStatus = await resolveScoreEligibility(score, timeMs, replayData);
           reportSubmitStatus(nextStatus);
         } else if (res.status === 429) {
           reportSubmitStatus({
@@ -1255,7 +1308,7 @@ export function ShikakuPage() {
             canSubmit: false,
             pending: false,
             tone: "error",
-            message: "This run could not be verified by the server.",
+            message: data.reason ?? "This run could not be verified by the server.",
           });
         } else {
           reportSubmitStatus({
@@ -1337,7 +1390,7 @@ export function ShikakuPage() {
         setCustomSeedInput("");
         return;
       }
-      startRun(difficulty);
+      void startRun(difficulty);
     };
 
     return (
@@ -1457,8 +1510,8 @@ export function ShikakuPage() {
               scoreSubmitted={scoreSubmitted}
               submittingScore={submittingScore}
               scoreSubmissionStatus={scoreSubmissionStatus}
-              onSubmitScore={() => submitScore(seed, difficulty, finalScore, finalTimeMs, makeReplayData())}
-              onPlayAgain={() => startRun(difficulty)}
+              onSubmitScore={() => submitScore(difficulty, finalScore, finalTimeMs, makeReplayData())}
+              onPlayAgain={() => void startRun(difficulty)}
               onMenu={() => setPhase("menu")}
               onOpenLeaderboard={() => {
                 setLbDifficulty(difficulty);

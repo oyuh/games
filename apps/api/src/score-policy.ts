@@ -1,4 +1,6 @@
-import { calculateScore as calculateShikakuScore } from "@games/shared/games/shikaku-engine";
+import { calculateScore as calculateShikakuScore, RANKED_OFF_CLOCK_MS as SHIKAKU_RANKED_OFF_CLOCK_MS } from "@games/shared/games/shikaku-engine";
+import { PIPS_RANKED_OFF_CLOCK_MS } from "@games/shared/games/pips-engine";
+import { RANKED_OFF_CLOCK_MS as ZIP_RANKED_OFF_CLOCK_MS } from "@games/shared/games/zip-engine";
 type ShikakuDifficulty = "easy" | "medium" | "hard" | "expert";
 
 export const SHIKAKU_MIN_TIME_MS: Record<string, number> = {
@@ -50,8 +52,16 @@ export const ZIP_MAX_TIME_MS = 7_200_000;
 
 export const ZIP_MAX_SCORES_PER_SESSION = 20;
 
-/** A ranked ticket is good for the longest allowed run plus a little slack. */
-export const ZIP_TICKET_TTL_MS = ZIP_MAX_TIME_MS + 10 * 60_000;
+/** A ranked ticket is good for the longest allowed run (Shikaku expert) plus a little slack. */
+export const SOLO_TICKET_TTL_MS =
+  Math.max(...Object.values(SHIKAKU_MAX_TIME_MS), PIPS_MAX_TOTAL_TIME_MS, ZIP_MAX_TIME_MS) + 10 * 60_000;
 
-/** Network and render lag between the server's clock and the client's. */
-export const ZIP_CLOCK_SLACK_MS = 5_000;
+/** Network, render, and background-tab timer lag between the server's clock and the client's. */
+export const SOLO_CLOCK_SLACK_MS = 2_000;
+
+/** Time a full ranked run spends with its timer stopped, from each game's shared pacing. */
+export const SOLO_OFF_CLOCK_MS = {
+  pips: PIPS_RANKED_OFF_CLOCK_MS,
+  shikaku: SHIKAKU_RANKED_OFF_CLOCK_MS,
+  zip: ZIP_RANKED_OFF_CLOCK_MS,
+} as const;

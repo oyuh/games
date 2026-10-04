@@ -95,7 +95,9 @@ Invalid rectangles (wrong area, no number, multiple numbers) flash red and get a
 - One board per difficulty, 10 scores to a page, with name search.
 - Your personal best rank and score are shown too.
 - Completed ranked runs are checked for eligibility before you can submit.
-- Server-side validation covers a lot: session proof, canonical replay verification, minimum time checks, exact score recalculation, duplicate seed protection, top-20 replacement, rate limits, and ban checks.
+- Ranked runs use the shared solo ticket (`apps/api/src/solo-ticket.ts`). `POST /api/shikaku/run` picks the seed and signs a ticket, the eligibility check stamps it with the finish time, and the submit has to bring it back. The run's time has to match the server's clock, less the countdown and solved pauses. The page also logs when every move landed, and the API scores that log for legitimacy (one move per rectangle bigger than 1x1 at least). The Zip doc's anti-cheat section covers the details.
+- With the API down, a ranked run still starts on a local seed, but it can't be submitted.
+- Server-side validation covers a lot: session proof, the run ticket, canonical replay verification, minimum time checks, exact score recalculation, duplicate seed protection, top-20 replacement, rate limits, and ban checks.
 - Three strikes (tampered times, impossible scores, failed replays, and so on) inside 30 minutes bans the session from Shikaku scores, stored in `shikaku_banned_sessions`. Site-wide admin bans and the bot check apply too.
 
 ---
@@ -110,13 +112,13 @@ Invalid rectangles (wrong area, no number, multiple numbers) flash red and get a
 
 ## Technical Engine Flow
 
-The Shikaku engine lives in `packages/shared/src/games/shikaku-engine.ts` and is imported by both the web app and the API. The browser still generates and validates puzzles locally, so Shikaku stays playable even when the API is down; ranked leaderboard writes simply wait until the REST API can verify the run.
+The Shikaku engine lives in `packages/shared/src/games/shikaku-engine.ts` and is imported by both the web app and the API. The browser still generates and validates puzzles locally, so Shikaku stays playable even when the API is down. A ranked run started offline plays on a local seed and can't be submitted.
 
 For generation, the engine feeds a public run seed into `mulberry32`, picks the configured grid size for the difficulty, and creates five puzzles. Each puzzle is built by partitioning the grid into non-overlapping rectangles, placing one numeric clue inside each rectangle, validating the hidden solution, then running a bounded backtracking solver to prefer uniquely solvable boards. If generation ever falls back to an all-`1x1` board, that board stays playable but gets rejected for ranked scoring.
 
 For solving, `validateSolution` builds a coverage grid from the submitted rectangles. It rejects out-of-bounds rectangles, overlaps, uncovered cells, rectangles with zero or multiple clues, and rectangles whose area doesn't match the contained clue.
 
-For ranked validation, the finished client sends the seed, difficulty, time, score, the five puzzle split times, and the solved rectangles for each puzzle. The API calls the shared `validateRankedShikakuRun` helper, regenerates the canonical five-puzzle run from the seed, recalculates the score, checks split-time consistency, and validates every submitted rectangle set against the canonical puzzle before inserting `replayData` into `shikaku_scores`.
+For ranked validation, the finished client sends its ticket (which carries the seed and difficulty), time, score, the five puzzle split times, and the solved rectangles for each puzzle. The API calls the shared `validateRankedShikakuRun` helper, regenerates the canonical five-puzzle run from the ticket's seed, recalculates the score, checks split-time consistency, and validates every submitted rectangle set against the canonical puzzle before inserting `replayData` into `shikaku_scores`.
 
 ---
 
@@ -124,7 +126,7 @@ For ranked validation, the finished client sends the seed, difficulty, time, sco
 
 - **Route:** `/shikaku` (no game ID; single-player, no Zero sync)
 - **State:** entirely client-side React state. No multiplayer data model.
-- **API:** REST endpoints for the leaderboard (`GET /api/shikaku/leaderboard`), the eligibility check (`POST /api/shikaku/score/eligibility`), and score submission (`POST /api/shikaku/score`). `GET /api/shikaku/puzzle` serves a shareable puzzle image page.
-- **Schema:** the `shikaku_scores` table stores sessionId, name, seed, difficulty, score, timeMs, puzzleCount, and replayData.
+- **API:** REST endpoints for the leaderboard (`GET /api/shikaku/leaderboard`), the ranked seed ticket (`POST /api/shikaku/run`), the eligibility check (`POST /api/shikaku/score/eligibility`), and score submission (`POST /api/shikaku/score`). `GET /api/shikaku/puzzle` serves a shareable puzzle image page.
+- **Schema:** the `shikaku_scores` table stores sessionId, name, seed, difficulty, score, timeMs, puzzleCount, replayData, and legitimacy.
 - **Engine:** `packages/shared/src/games/shikaku-engine.ts` contains generation, validation, scoring, replay verification, and the seeded PRNG. `apps/web/src/lib/shikaku-engine.ts` re-exports it for the web app.
 - **Mobile:** the same page works on phones. Drag to draw, tap a rectangle to remove it, and big boards get scroll controls.

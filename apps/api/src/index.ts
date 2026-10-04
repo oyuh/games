@@ -1,4 +1,4 @@
-import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, SHIKAKU_VALID_DIFFS, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, ZIP_MIN_MS_PER_CELL, ZIP_AUTO_BAN_MS_PER_CELL, ZIP_MAX_TIME_MS, ZIP_MAX_SCORES_PER_SESSION, ZIP_TICKET_TTL_MS, ZIP_CLOCK_SLACK_MS, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
+import { SHIKAKU_MIN_TIME_MS, SHIKAKU_MAX_TIME_MS, SHIKAKU_MAX_SCORES_PER_SESSION, SHIKAKU_VALID_DIFFS, PIPS_MIN_TOTAL_TIME_MS, PIPS_MIN_SPLIT_TIME_MS, PIPS_MAX_TOTAL_TIME_MS, PIPS_MAX_SCORES_PER_SESSION, PIPS_SPLIT_SUM_TOLERANCE_MS, ZIP_MIN_MS_PER_CELL, ZIP_AUTO_BAN_MS_PER_CELL, ZIP_MAX_TIME_MS, ZIP_MAX_SCORES_PER_SESSION, shikakuMaxScore, isShikakuDifficulty } from "./score-policy";
 import { recordedCleanup } from "./cleanup";
 import { fallbackPlayerName, imposterChatKeyId, mutators, queries, schema } from "@games/shared";
 import { adminNameOverrides, chatMessages, imposterGames, locationSignalGames, passwordGames, pipsBannedSessions, pipsScores, sessions, shadeSignalGames, shikakuScores, shikakuBannedSessions, statusTable, zipBannedSessions, zipScores } from "@games/shared/db";
@@ -7,7 +7,7 @@ import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
 import { lt, and, asc, count, desc, eq, gt, inArray, or, sql, type SQL } from "drizzle-orm";
-import { Hono, type MiddlewareHandler } from "hono";
+import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import {
   PUZZLES_PER_RUN as ENGINE_SHIKAKU_PUZZLES,
@@ -15,6 +15,7 @@ import {
 } from "@games/shared/games/shikaku-engine";
 import {
   PIPS_PUZZLES_PER_RUN as ENGINE_PIPS_PUZZLES,
+  PIPS_RUN_DIFFICULTIES,
   validateRankedPipsRun,
 } from "@games/shared/games/pips-engine";
 import { dbProvider, type Db } from "./db-provider";
@@ -54,12 +55,14 @@ import { authorizeMutation, isDevOnlyMutator } from "./mutator-auth";
 import { addBotSignal, botStatus, setBotScore, turnstileEnforced, verifyTurnstileToken } from "./bot-score";
 import { getOrCreateGameKey, type GameType } from "./game-keys";
 import { shikakuImageRoutes } from "./shikaku-image";
-import { createZipTicket, readZipTicket, type ZipTicket } from "./zip-ticket";
+import { checkSoloRun, createSoloTicket, type SoloGame } from "./solo-ticket";
+import { checkMoveTimes } from "./move-timing";
 import {
   DIFFICULTY_CONFIG as ZIP_DIFFICULTY_CONFIG,
   RUN_LENGTH as ZIP_RUN_LENGTH,
   isDifficulty as isZipDifficulty,
   validateRankedZipRun,
+  type Difficulty as ZipDifficulty,
   type ZipRankedValidationCode,
   type ZipReplayData,
 } from "@games/shared/games/zip-engine";
@@ -231,6 +234,8 @@ app.use("/api/pips/score", rateLimit("score", "pips_score"));
 app.use("/api/zip/*", rateLimit("game", "zip"));
 app.use("/api/zip/score", rateLimit("score", "zip_score"));
 // One ticket per ranked run, so the score tier's budget is plenty.
+app.use("/api/shikaku/run", rateLimit("score", "shikaku_run"));
+app.use("/api/pips/run", rateLimit("score", "pips_run"));
 app.use("/api/zip/run", rateLimit("score", "zip_run"));
 
 // Searching a leaderboard is the same route with a `q`, so the extra layer only
@@ -1010,6 +1015,37 @@ async function selectScoreWindow(ranked: SQL, sessionId: string | null) {
   };
 }
 
+// ─── Ranked solo run tickets ─────────────────────────────────
+//
+// Every ranked Shikaku, Pips, and Zip run starts here: the server picks the
+// seed and signs a ticket the score has to come back with. See solo-ticket.ts.
+
+async function issueSoloTicket(c: Context, game: SoloGame, isValidDifficulty: ((value: unknown) => boolean) | null) {
+  const body = await c.req.json().catch(() => null) as { sessionId?: string; difficulty?: unknown } | null;
+  if (!body || (isValidDifficulty && !isValidDifficulty(body.difficulty))) {
+    return c.json({ error: "Invalid run" }, 400);
+  }
+  const claimed = getVerifiedClaimedSessionId(c, body.sessionId);
+  const identity = claimed ? await resolveSessionIdentity(c, { claimedSessionId: claimed, allowCreate: false }) : null;
+  if (!identity?.sessionId) {
+    return c.json({ error: "Invalid session" }, 403);
+  }
+
+  const random = crypto.getRandomValues(new Uint32Array(1))[0]!;
+  // Pips seeds have always been six digits.
+  const seed = game === "pips" ? 100_000 + (random % 900_000) : (random % 2_147_483_646) + 1;
+  const difficulty = isValidDifficulty ? body.difficulty as string : null;
+  const ticket = createSoloTicket(
+    { game, sessionId: identity.sessionId, seed, difficulty, issuedAt: Date.now() },
+    SESSION_COOKIE_SECRET,
+  );
+  return c.json({ ok: true, seed, ticket });
+}
+
+app.post("/api/shikaku/run", (c) => issueSoloTicket(c, "shikaku", isShikakuDifficulty));
+app.post("/api/pips/run", (c) => issueSoloTicket(c, "pips", null));
+app.post("/api/zip/run", (c) => issueSoloTicket(c, "zip", isZipDifficulty));
+
 // ─── Shikaku solo game endpoints ─────────────────────────────
 
 // Server-side score calculation uses the shared engine formula exactly.
@@ -1027,9 +1063,9 @@ type ShikakuDifficulty = (typeof SHIKAKU_VALID_DIFFS)[number];
 type ShikakuScoreRequestBody = {
   sessionId?: string;
   name?: string;
-  seed?: number;
-  difficulty?: string;
+  ticket?: string;
   score?: number;
+  moveTimes?: unknown;
   timeMs?: number;
   puzzleCount?: number;
   replayData?: unknown;
@@ -1044,6 +1080,9 @@ type ShikakuScoreCandidate = {
   timeMs: number;
   puzzleCount: number;
   replayData: unknown;
+  moveTimes: unknown;
+  /** The ticket stamped with this run's finish, for the end screen to submit with. */
+  stamped: string;
   callerIp: string;
   callerRegion: string;
   callerUA: string;
@@ -1054,6 +1093,9 @@ type ShikakuScoreErrorCode =
   | "invalid-session"
   | "invalid-session-id"
   | "invalid-name"
+  | "invalid-ticket"
+  | "expired-ticket"
+  | "time-mismatch"
   | "invalid-seed"
   | "invalid-difficulty"
   | "invalid-score"
@@ -1066,6 +1108,8 @@ type ShikakuScoreErrorCode =
   | "invalid-replay"
   | "invalid-generated-run"
   | "non-canonical-solution"
+  | "invalid-moves"
+  | "scripted"
   | "duplicate";
 
 type ShikakuScoreValidationResult =
@@ -1075,6 +1119,7 @@ type ShikakuScoreValidationResult =
       error: string;
       reason: string;
       code: ShikakuScoreErrorCode;
+      strike?: string | undefined;
     }
   | {
       ok: true;
@@ -1098,6 +1143,7 @@ type ShikakuScoreAssessment =
       willReplace: boolean;
       lowestScoreId: string | null;
       replayData: unknown;
+      legitimacy: number;
     };
 
 async function buildShikakuScoreCandidate(
@@ -1114,7 +1160,7 @@ async function buildShikakuScoreCandidate(
     };
   }
 
-  const { sessionId, name, seed, difficulty, score, timeMs, puzzleCount, replayData } = body;
+  const { sessionId, name, score, timeMs, puzzleCount, replayData } = body;
   const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, sessionId);
   if (!verifiedClaimedSessionId) {
     return {
@@ -1163,24 +1209,6 @@ async function buildShikakuScoreCandidate(
       code: "invalid-name",
     };
   }
-  if (typeof seed !== "number" || !Number.isInteger(seed)) {
-    return {
-      ok: false,
-      status: 400,
-      error: "Invalid seed",
-      reason: "This run could not be verified because the puzzle seed was invalid.",
-      code: "invalid-seed",
-    };
-  }
-  if (!isShikakuDifficulty(difficulty)) {
-    return {
-      ok: false,
-      status: 400,
-      error: "Invalid difficulty",
-      reason: "This run could not be verified because the difficulty was invalid.",
-      code: "invalid-difficulty",
-    };
-  }
   if (typeof score !== "number" || score < 0 || score > 100000) {
     return {
       ok: false,
@@ -1209,6 +1237,22 @@ async function buildShikakuScoreCandidate(
     };
   }
 
+  const run = checkSoloRun({
+    ticket: body.ticket,
+    game: "shikaku",
+    sessionId: effectiveSessionId,
+    timeMs,
+    run: [score, timeMs, puzzleCount, replayData, body.moveTimes],
+    secret: SESSION_COOKIE_SECRET,
+  });
+  if (!run.ok) {
+    return { ok: false, status: run.status, error: "Score rejected", reason: run.reason, code: run.code, strike: run.strike };
+  }
+  const { seed, difficulty } = run.ticket;
+  if (!isShikakuDifficulty(difficulty)) {
+    return { ok: false, status: 403, error: "Score rejected", reason: "This run wasn't started as a ranked run.", code: "invalid-ticket" };
+  }
+
   const { ip: callerIp, region: callerRegion, userAgent: callerUA } = await getClientInfo(c.req);
 
   return {
@@ -1222,6 +1266,8 @@ async function buildShikakuScoreCandidate(
       timeMs,
       puzzleCount,
       replayData,
+      moveTimes: body.moveTimes,
+      stamped: run.stamped,
       callerIp,
       callerRegion,
       callerUA,
@@ -1301,6 +1347,13 @@ async function assessShikakuScoreCandidate(candidate: ShikakuScoreCandidate): Pr
     };
   }
 
+  // Locked 1x1s are filled in for you, so every other rectangle is a move.
+  const { puzzleTimes, solutions } = rankedValidation.replayData;
+  const moves = checkMoveTimes("shikaku", candidate.moveTimes, puzzleTimes, solutions.map((rects) => rects.filter((rect) => rect.w * rect.h > 1).length));
+  if (!moves.ok) {
+    return { kind: "error", status: 400, error: "Score rejected", reason: moves.reason, code: moves.code };
+  }
+
   const [existing] = await drizzleClient
     .select({ id: shikakuScores.id })
     .from(shikakuScores)
@@ -1340,6 +1393,7 @@ async function assessShikakuScoreCandidate(candidate: ShikakuScoreCandidate): Pr
       willReplace: Boolean(lowest),
       lowestScoreId: lowest?.id ?? null,
       replayData: rankedValidation.replayData,
+      legitimacy: moves.legitimacy,
     };
   }
 
@@ -1348,6 +1402,7 @@ async function assessShikakuScoreCandidate(candidate: ShikakuScoreCandidate): Pr
     willReplace: false,
     lowestScoreId: null,
     replayData: rankedValidation.replayData,
+    legitimacy: moves.legitimacy,
   };
 }
 
@@ -1598,6 +1653,7 @@ app.post("/api/shikaku/score/eligibility", async (c) => {
         ? "This score is verified and will replace your current lowest saved score."
         : "This score is verified and ready to submit.",
       willReplace: assessment.willReplace,
+      ticket: validation.candidate.stamped,
     });
   }
 
@@ -1622,7 +1678,11 @@ app.post("/api/shikaku/score", async (c) => {
   const body = await c.req.json().catch(() => null) as ShikakuScoreRequestBody | null;
   const validation = await buildShikakuScoreCandidate(c, body);
   if (!validation.ok) {
-    return c.json({ error: validation.error }, { status: validation.status as 400 | 403 | 409 });
+    const sessionId = getVerifiedClaimedSessionId(c, body?.sessionId);
+    if (validation.strike && sessionId && recordStrike(sessionId, validation.strike)) {
+      await autoBanSession(sessionId, abuseStrikes.get(sessionId)?.reasons ?? [validation.strike]);
+    }
+    return c.json({ error: validation.error, code: validation.code, reason: validation.reason }, { status: validation.status as 400 | 403 | 409 });
   }
 
   const { candidate } = validation;
@@ -1659,7 +1719,7 @@ app.post("/api/shikaku/score", async (c) => {
       }
     }
 
-    if (assessment.code === "invalid-replay" || assessment.code === "invalid-generated-run" || assessment.code === "non-canonical-solution") {
+    if (assessment.code === "invalid-replay" || assessment.code === "invalid-generated-run" || assessment.code === "non-canonical-solution" || assessment.code === "invalid-moves" || assessment.code === "scripted") {
       const shouldBan = recordStrike(candidate.effectiveSessionId, `shikaku replay validation failed: ${assessment.code}`);
       if (shouldBan) {
         const entry = abuseStrikes.get(candidate.effectiveSessionId);
@@ -1691,6 +1751,7 @@ app.post("/api/shikaku/score", async (c) => {
     timeMs: candidate.timeMs,
     puzzleCount: candidate.puzzleCount,
     replayData: assessment.replayData,
+    legitimacy: assessment.legitimacy,
     createdAt: Date.now(),
   });
 
@@ -1706,13 +1767,14 @@ const PIPS_AUTO_BAN_MIN_TIME_MS = 4_000;
 type PipsScoreRequestBody = {
   sessionId?: string;
   name?: string;
-  seed?: number;
+  ticket?: string;
   totalMs?: number;
   easyMs?: number;
   mediumMs?: number;
   hardMs?: number;
   puzzleCount?: number;
   replayData?: unknown;
+  moveTimes?: unknown;
 };
 
 type PipsScoreCandidate = {
@@ -1725,6 +1787,9 @@ type PipsScoreCandidate = {
   hardMs: number;
   puzzleCount: number;
   replayData: unknown;
+  moveTimes: unknown;
+  /** The ticket stamped with this run's finish, for the end screen to submit with. */
+  stamped: string;
   callerIp: string;
   callerRegion: string;
   callerUA: string;
@@ -1735,6 +1800,9 @@ type PipsScoreErrorCode =
   | "invalid-session"
   | "invalid-session-id"
   | "invalid-name"
+  | "invalid-ticket"
+  | "expired-ticket"
+  | "time-mismatch"
   | "invalid-seed"
   | "invalid-time"
   | "invalid-splits"
@@ -1745,6 +1813,8 @@ type PipsScoreErrorCode =
   | "invalid-replay"
   | "invalid-generated-run"
   | "non-canonical-solution"
+  | "invalid-moves"
+  | "scripted"
   | "duplicate";
 
 type PipsScoreValidationResult =
@@ -1754,6 +1824,7 @@ type PipsScoreValidationResult =
       error: string;
       reason: string;
       code: PipsScoreErrorCode;
+      strike?: string | undefined;
     }
   | {
       ok: true;
@@ -1777,6 +1848,7 @@ type PipsScoreAssessment =
       willReplace: boolean;
       worstScoreId: string | null;
       replayData: unknown;
+      legitimacy: number;
     };
 
 function isValidPipsTime(value: unknown): value is number {
@@ -1797,7 +1869,7 @@ async function buildPipsScoreCandidate(
     };
   }
 
-  const { sessionId, name, seed, totalMs, easyMs, mediumMs, hardMs, puzzleCount, replayData } = body;
+  const { sessionId, name, totalMs, easyMs, mediumMs, hardMs, puzzleCount, replayData } = body;
   const verifiedClaimedSessionId = getVerifiedClaimedSessionId(c, sessionId);
   if (!verifiedClaimedSessionId) {
     return {
@@ -1846,15 +1918,6 @@ async function buildPipsScoreCandidate(
       code: "invalid-name",
     };
   }
-  if (typeof seed !== "number" || !Number.isInteger(seed)) {
-    return {
-      ok: false,
-      status: 400,
-      error: "Invalid seed",
-      reason: "This run could not be verified because the puzzle seed was invalid.",
-      code: "invalid-seed",
-    };
-  }
   if (!isValidPipsTime(totalMs) || !isValidPipsTime(easyMs) || !isValidPipsTime(mediumMs) || !isValidPipsTime(hardMs)) {
     return {
       ok: false,
@@ -1894,6 +1957,18 @@ async function buildPipsScoreCandidate(
     };
   }
 
+  const run = checkSoloRun({
+    ticket: body.ticket,
+    game: "pips",
+    sessionId: effectiveSessionId,
+    timeMs: totalMs,
+    run: [totalMs, easyMs, mediumMs, hardMs, replayData, body.moveTimes],
+    secret: SESSION_COOKIE_SECRET,
+  });
+  if (!run.ok) {
+    return { ok: false, status: run.status, error: "Score rejected", reason: run.reason, code: run.code, strike: run.strike };
+  }
+
   const { ip: callerIp, region: callerRegion, userAgent: callerUA } = await getClientInfo(c.req);
 
   return {
@@ -1901,13 +1976,15 @@ async function buildPipsScoreCandidate(
     candidate: {
       effectiveSessionId,
       effectiveName,
-      seed,
+      seed: run.ticket.seed,
       totalMs,
       easyMs,
       mediumMs,
       hardMs,
       puzzleCount,
       replayData,
+      moveTimes: body.moveTimes,
+      stamped: run.stamped,
       callerIp,
       callerRegion,
       callerUA,
@@ -2002,6 +2079,18 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
     };
   }
 
+  // Every domino is placed by hand, one move each.
+  const { placements } = rankedValidation.replayData;
+  const moves = checkMoveTimes(
+    "pips",
+    candidate.moveTimes,
+    [candidate.easyMs, candidate.mediumMs, candidate.hardMs],
+    PIPS_RUN_DIFFICULTIES.map((difficulty) => placements[difficulty].length),
+  );
+  if (!moves.ok) {
+    return { kind: "error", status: 400, error: "Score rejected", reason: moves.reason, code: moves.code };
+  }
+
   const [existing] = await drizzleClient
     .select({ id: pipsScores.id })
     .from(pipsScores)
@@ -2037,6 +2126,7 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
       willReplace: Boolean(worst),
       worstScoreId: worst?.id ?? null,
       replayData: rankedValidation.replayData,
+      legitimacy: moves.legitimacy,
     };
   }
 
@@ -2045,6 +2135,7 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
     willReplace: false,
     worstScoreId: null,
     replayData: rankedValidation.replayData,
+    legitimacy: moves.legitimacy,
   };
 }
 
@@ -2243,6 +2334,7 @@ app.post("/api/pips/score/eligibility", async (c) => {
         ? "This run is verified and will replace your current slowest saved run."
         : "This run is verified and ready to submit.",
       willReplace: assessment.willReplace,
+      ticket: validation.candidate.stamped,
     });
   }
 
@@ -2257,7 +2349,11 @@ app.post("/api/pips/score", async (c) => {
   const body = await c.req.json().catch(() => null) as PipsScoreRequestBody | null;
   const validation = await buildPipsScoreCandidate(c, body);
   if (!validation.ok) {
-    return c.json({ error: validation.error }, { status: validation.status as 400 | 403 | 409 });
+    const sessionId = getVerifiedClaimedSessionId(c, body?.sessionId);
+    if (validation.strike && sessionId && recordStrike(sessionId, validation.strike)) {
+      await autoBanPipsSession(sessionId, abuseStrikes.get(sessionId)?.reasons ?? [validation.strike]);
+    }
+    return c.json({ error: validation.error, code: validation.code, reason: validation.reason }, { status: validation.status as 400 | 403 | 409 });
   }
 
   const { candidate } = validation;
@@ -2280,7 +2376,7 @@ app.post("/api/pips/score", async (c) => {
         await autoBanPipsSession(candidate.effectiveSessionId, entry?.reasons ?? ["speed abuse"]);
       }
     }
-    if (assessment.code === "invalid-replay" || assessment.code === "invalid-generated-run" || assessment.code === "non-canonical-solution") {
+    if (assessment.code === "invalid-replay" || assessment.code === "invalid-generated-run" || assessment.code === "non-canonical-solution" || assessment.code === "invalid-moves" || assessment.code === "scripted") {
       const shouldBan = recordStrike(candidate.effectiveSessionId, `pips replay validation failed: ${assessment.code}`);
       if (shouldBan) {
         const entry = abuseStrikes.get(candidate.effectiveSessionId);
@@ -2312,6 +2408,7 @@ app.post("/api/pips/score", async (c) => {
     hardMs: candidate.hardMs,
     puzzleCount: candidate.puzzleCount,
     replayData: assessment.replayData,
+    legitimacy: assessment.legitimacy,
     createdAt: Date.now(),
   });
 
@@ -2320,11 +2417,9 @@ app.post("/api/pips/score", async (c) => {
 
 // ─── Zip solo game endpoints ─────────────────────────────────
 //
-// Ranked Zip differs from the other two in one way: the server picks the seed.
-// POST /api/zip/run hands back a seed and a signed ticket, and the score has to
-// come with that ticket. So a ranked board is never one the player has already
-// seen, and a run can't claim more time than passed on the server's clock. On
-// top of that the replay is checked path by path against the regenerated run.
+// Like the other two, ranked Zip starts at POST /api/zip/run, which hands back
+// a server-picked seed and a signed ticket (see solo-ticket.ts). On top of the
+// ticket the replay is checked path by path against the regenerated run.
 
 type ZipScoreRequestBody = {
   sessionId?: string;
@@ -2332,6 +2427,7 @@ type ZipScoreRequestBody = {
   ticket?: string;
   timeMs?: number;
   replayData?: unknown;
+  moveTimes?: unknown;
 };
 
 type ZipScoreErrorCode =
@@ -2340,10 +2436,13 @@ type ZipScoreErrorCode =
   | "invalid-ticket"
   | "expired-ticket"
   | "invalid-time"
+  | "time-mismatch"
   | "banned"
   | "too-fast"
   | "too-slow"
   | ZipRankedValidationCode
+  | "invalid-moves"
+  | "scripted"
   | "duplicate";
 
 type ZipSubmissionCheck =
@@ -2361,9 +2460,13 @@ type ZipSubmissionCheck =
       kind: "eligible";
       sessionId: string;
       name: string;
-      ticket: ZipTicket;
+      seed: number;
+      difficulty: ZipDifficulty;
+      /** The ticket stamped with this run's finish, for the end screen to submit with. */
+      stamped: string;
       timeMs: number;
       replayData: ZipReplayData;
+      legitimacy: number;
       replaceId: string | null;
       callerIp: string;
       callerUA: string;
@@ -2424,28 +2527,14 @@ async function checkZipSubmission(
   const sessionId = identity.sessionId;
   const name = (sanitizeSessionName(identity.name) ?? fallbackPlayerName(sessionId)).slice(0, 50);
 
-  // A bad signature is tampering and counts as a strike. A good ticket for a
-  // different session is refused but not counted, since a session can get
-  // reset mid-run without anyone cheating.
-  const ticket = readZipTicket(body.ticket, SESSION_COOKIE_SECRET);
-  if (!ticket) {
-    return zipError(403, "invalid-ticket", "This run wasn't started as a ranked run.", "zip ticket forged");
-  }
-  if (ticket.sessionId !== sessionId) {
-    return zipError(403, "invalid-ticket", "This ranked run was started by a different session.");
-  }
-  const elapsed = Date.now() - ticket.issuedAt;
-  if (elapsed > ZIP_TICKET_TTL_MS) {
-    return zipError(400, "expired-ticket", "This ranked run started too long ago to submit.");
-  }
-
   const { timeMs, replayData } = body;
   if (typeof timeMs !== "number" || !Number.isInteger(timeMs) || timeMs <= 0) {
     return zipError(400, "invalid-time", "This run could not be verified because the recorded time was invalid.");
   }
-  if (timeMs > elapsed + ZIP_CLOCK_SLACK_MS) {
-    return zipError(400, "invalid-time", "This run claims more time than has passed since it started.", "zip time beyond ticket age");
-  }
+  const run = checkSoloRun({ ticket: body.ticket, game: "zip", sessionId, timeMs, run: [timeMs, replayData, body.moveTimes], secret: SESSION_COOKIE_SECRET });
+  if (!run.ok) return zipError(run.status, run.code, run.reason, run.strike);
+  const { seed, difficulty } = run.ticket;
+  if (!isZipDifficulty(difficulty)) return zipError(403, "invalid-ticket", "This run wasn't started as a ranked run.");
 
   const { ip: callerIp, region: callerRegion, userAgent: callerUA } = await getClientInfo(c.req);
   if (zipBanCache.has(sessionId) || isBanned(sessionId, callerIp, callerRegion)) {
@@ -2457,7 +2546,7 @@ async function checkZipSubmission(
 
   // Cheap floors before the expensive regenerate: every split has to be long
   // enough to draw a line across the whole board.
-  const { size } = ZIP_DIFFICULTY_CONFIG[ticket.difficulty];
+  const { size } = ZIP_DIFFICULTY_CONFIG[difficulty];
   const cells = size * size;
   const splits = (replayData as { puzzleTimes?: unknown } | null)?.puzzleTimes;
   if (Array.isArray(splits) && splits.some((split) => typeof split === "number" && split < cells * ZIP_MIN_MS_PER_CELL)) {
@@ -2466,8 +2555,8 @@ async function checkZipSubmission(
   }
 
   const validation = validateRankedZipRun({
-    seed: ticket.seed,
-    difficulty: ticket.difficulty,
+    seed,
+    difficulty,
     timeMs,
     puzzleCount: ZIP_RUN_LENGTH,
     replayData,
@@ -2475,11 +2564,15 @@ async function checkZipSubmission(
   if (!validation.ok) {
     return zipError(400, validation.code, validation.reason, `zip replay validation failed: ${validation.code}`);
   }
+  // Every square on the line was drawn into it, one move each.
+  const { puzzleTimes, paths } = validation.replayData;
+  const moves = checkMoveTimes("zip", body.moveTimes, puzzleTimes, paths.map((path) => path.length));
+  if (!moves.ok) return zipError(400, moves.code, moves.reason, `zip replay validation failed: ${moves.code}`);
 
   const [existing] = await drizzleClient
     .select({ id: zipScores.id })
     .from(zipScores)
-    .where(and(eq(zipScores.sessionId, sessionId), eq(zipScores.seed, ticket.seed)))
+    .where(and(eq(zipScores.sessionId, sessionId), eq(zipScores.seed, seed)))
     .limit(1);
   if (existing) {
     return zipError(409, "duplicate", "This run has already been submitted to the leaderboard.");
@@ -2489,7 +2582,7 @@ async function checkZipSubmission(
   const own = await drizzleClient
     .select({ id: zipScores.id, timeMs: zipScores.timeMs })
     .from(zipScores)
-    .where(and(eq(zipScores.sessionId, sessionId), eq(zipScores.difficulty, ticket.difficulty), eq(zipScores.size, size)))
+    .where(and(eq(zipScores.sessionId, sessionId), eq(zipScores.difficulty, difficulty), eq(zipScores.size, size)))
     .orderBy(asc(zipScores.timeMs));
   let replaceId: string | null = null;
   if (own.length >= ZIP_MAX_SCORES_PER_SESSION) {
@@ -2500,27 +2593,8 @@ async function checkZipSubmission(
     replaceId = slowest.id;
   }
 
-  return { kind: "eligible", sessionId, name, ticket, timeMs, replayData: validation.replayData, replaceId, callerIp, callerUA };
+  return { kind: "eligible", sessionId, name, seed, difficulty, stamped: run.stamped, timeMs, replayData: validation.replayData, legitimacy: moves.legitimacy, replaceId, callerIp, callerUA };
 }
-
-app.post("/api/zip/run", async (c) => {
-  const body = await c.req.json().catch(() => null) as { sessionId?: string; difficulty?: unknown } | null;
-  if (!body || !isZipDifficulty(body.difficulty)) {
-    return c.json({ error: "Invalid run" }, 400);
-  }
-  const claimed = getVerifiedClaimedSessionId(c, body.sessionId);
-  const identity = claimed ? await resolveSessionIdentity(c, { claimedSessionId: claimed, allowCreate: false }) : null;
-  if (!identity?.sessionId) {
-    return c.json({ error: "Invalid session" }, 403);
-  }
-
-  const seed = (crypto.getRandomValues(new Uint32Array(1))[0]! % 2_147_483_646) + 1;
-  const ticket = createZipTicket(
-    { sessionId: identity.sessionId, seed, difficulty: body.difficulty, issuedAt: Date.now() },
-    SESSION_COOKIE_SECRET,
-  );
-  return c.json({ ok: true, seed, ticket });
-});
 
 app.post("/api/zip/score/eligibility", async (c) => {
   const body = await c.req.json().catch(() => null) as ZipScoreRequestBody | null;
@@ -2534,6 +2608,7 @@ app.post("/api/zip/score/eligibility", async (c) => {
         ? "This run is verified and will replace your slowest saved run on this board."
         : "This run is verified and ready to submit.",
       willReplace: Boolean(check.replaceId),
+      ticket: check.stamped,
     });
   }
   return c.json({ ok: true, canSubmit: false, code: check.kind === "not-ranked" ? "not-ranked" : check.code, reason: check.reason });
@@ -2564,12 +2639,13 @@ app.post("/api/zip/score", async (c) => {
     id,
     sessionId: check.sessionId,
     name: check.name,
-    seed: check.ticket.seed,
-    difficulty: check.ticket.difficulty,
-    size: ZIP_DIFFICULTY_CONFIG[check.ticket.difficulty].size,
+    seed: check.seed,
+    difficulty: check.difficulty,
+    size: ZIP_DIFFICULTY_CONFIG[check.difficulty].size,
     timeMs: check.timeMs,
     puzzleCount: check.replayData.paths.length,
     replayData: check.replayData,
+    legitimacy: check.legitimacy,
     createdAt: Date.now(),
   });
   return c.json({ ok: true, id, replaced: Boolean(check.replaceId) });
