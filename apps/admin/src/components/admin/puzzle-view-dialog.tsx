@@ -41,6 +41,7 @@ export function PuzzleViewDialog({
   game,
   scoreId,
   seed,
+  hasReplay,
   puzzleCount,
   accent,
   open,
@@ -50,6 +51,8 @@ export function PuzzleViewDialog({
   game: Game;
   scoreId: string | null;
   seed: number | null;
+  /** False for runs saved before replays were stored, or added by hand. */
+  hasReplay: boolean;
   /** 3 for Pips, 5 for Shikaku, 3 for Zip. */
   puzzleCount: number;
   accent: string;
@@ -66,8 +69,11 @@ export function PuzzleViewDialog({
   }
 
   const safeIndex = Math.min(index, Math.max(0, puzzleCount - 1));
+  // The dialog stays mounted between rows, so a "replay" picked on one row
+  // falls back to the board on a row that has nothing to replay.
+  const shownView = view === "replay" && !hasReplay ? "board" : view;
   const src = `/api/proxy/svg?path=${encodeURIComponent(
-    `/${game}/scores/${scoreId}/puzzle.svg?index=${safeIndex}&view=${view}`,
+    `/${game}/scores/${scoreId}/puzzle.svg?index=${safeIndex}&view=${shownView}`,
   )}`;
 
   return (
@@ -90,6 +96,7 @@ export function PuzzleViewDialog({
           </DialogTitle>
           <DialogDescription>
             Rebuilt from the seed on this score row.{" "}
+            {hasReplay ? null : "No replay was saved for this run. "}
             {game === "zip"
               ? "A submitted line that doesn't solve the board turns the frame red."
               : "Cells that differ from the canonical answer are outlined in red."}
@@ -118,22 +125,26 @@ export function PuzzleViewDialog({
           ) : null}
 
           <div className="flex overflow-hidden rounded-md border border-border">
-            {VIEWS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                title={option.hint}
-                onClick={() => setView(option.value)}
-                className={cn(
-                  "h-8 px-3 text-xs font-semibold transition-colors",
-                  view === option.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-muted-foreground hover:bg-accent hover:text-foreground",
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
+            {VIEWS.map((option) => {
+              const missing = option.value === "replay" && !hasReplay;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  title={missing ? "Scored before replays were saved" : option.hint}
+                  disabled={missing}
+                  onClick={() => setView(option.value)}
+                  className={cn(
+                    "h-8 px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                    shownView === option.value
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground enabled:hover:bg-accent enabled:hover:text-foreground",
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
 
           <Button variant="outline" size="sm" className="ml-auto" asChild>
@@ -150,7 +161,7 @@ export function PuzzleViewDialog({
           <img
             key={src}
             src={src}
-            alt={`${game} puzzle ${safeIndex + 1}, ${view} view`}
+            alt={`${game} puzzle ${safeIndex + 1}, ${shownView} view`}
             className="max-h-[60vh] max-w-full object-contain"
           />
         </div>

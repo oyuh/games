@@ -641,6 +641,7 @@ export default function PipsAdminPage() {
         game="pips"
         scoreId={boardScore?.id ?? null}
         seed={boardScore?.seed ?? null}
+        hasReplay={boardScore?.replayData != null}
         puzzleCount={3}
         accent="var(--game-pips)"
         labels={["Easy", "Medium", "Hard"]}

@@ -675,6 +675,7 @@ export default function ShikakuPage() {
         game="shikaku"
         scoreId={boardScore?.id ?? null}
         seed={boardScore?.seed ?? null}
+        hasReplay={boardScore?.replayData != null}
         puzzleCount={5}
         accent="var(--game-shikaku)"
         open={Boolean(boardScore)}

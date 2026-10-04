@@ -159,6 +159,8 @@ export type ShikakuScoreRecord = {
   puzzleCount: number;
   /** 0-100 from the run's move timing; null for runs from before it, or added here. */
   legitimacy: number | null;
+  /** The player's solved boards; null for runs from before replays were saved, or added here. */
+  replayData: unknown;
   createdAt: number;
 };
 
@@ -174,6 +176,8 @@ export type PipsScoreRecord = {
   puzzleCount: number;
   /** 0-100 from the run's move timing; null for runs from before it, or added here. */
   legitimacy: number | null;
+  /** The player's solved boards; null for runs from before replays were saved, or added here. */
+  replayData: unknown;
   createdAt: number;
 };
 
@@ -188,6 +192,8 @@ export type ZipScoreRecord = {
   puzzleCount: number;
   /** 0-100 from the run's move timing; null for runs from before it, or added here. */
   legitimacy: number | null;
+  /** The player's solved boards; null for runs from before replays were saved, or added here. */
+  replayData: unknown;
   createdAt: number;
 };
 
