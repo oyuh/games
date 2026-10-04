@@ -23,16 +23,6 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Vercel deploy hook
-        run: |
-          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
-            echo "VERCEL_DEPLOY_HOOK_URL is not configured; skipping Vercel."
-            exit 0
-          fi
-          curl -fsSL -X POST "$VERCEL_DEPLOY_HOOK_URL"
-        env:
-          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
-
       - name: Trigger Railway deploy hook
         run: |
           if [ -z "$RAILWAY_DEPLOY_HOOK_URL" ]; then
