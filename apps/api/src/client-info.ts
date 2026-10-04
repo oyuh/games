@@ -190,12 +190,11 @@ export function extractClientInfo(headers: HeaderReader): ClientInfo {
     normalizeIpCandidate(headers.header("x-real-ip")),
     normalizeIpCandidate(headers.header("x-client-ip")),
     normalizeIpCandidate(headers.header("x-forwarded-for")),
-    normalizeIpCandidate(headers.header("x-vercel-forwarded-for")),
   ]);
 
   return {
     ip: ip || UNKNOWN_IP,
-    region: sanitizeRegion(firstNonEmpty([headers.header("cf-ipcountry"), headers.header("x-vercel-ip-country")])),
+    region: sanitizeRegion(headers.header("cf-ipcountry")),
     userAgent: sanitizeUserAgent(headers.header("user-agent")),
   };
 }
