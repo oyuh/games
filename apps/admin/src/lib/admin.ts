@@ -157,6 +157,8 @@ export type ShikakuScoreRecord = {
   score: number;
   timeMs: number;
   puzzleCount: number;
+  /** 0-100 from the run's move timing; null for runs from before it, or added here. */
+  legitimacy: number | null;
   createdAt: number;
 };
 
@@ -170,6 +172,8 @@ export type PipsScoreRecord = {
   mediumMs: number;
   hardMs: number;
   puzzleCount: number;
+  /** 0-100 from the run's move timing; null for runs from before it, or added here. */
+  legitimacy: number | null;
   createdAt: number;
 };
 
@@ -182,6 +186,8 @@ export type ZipScoreRecord = {
   size: 6 | 8 | 10 | 12;
   timeMs: number;
   puzzleCount: number;
+  /** 0-100 from the run's move timing; null for runs from before it, or added here. */
+  legitimacy: number | null;
   createdAt: number;
 };
 

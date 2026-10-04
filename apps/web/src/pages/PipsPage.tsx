@@ -27,6 +27,7 @@ import {
   evaluateRegionRule,
   generateRun,
   PIPS_DIFFICULTY_CONFIG,
+  PIPS_RUN_PACING,
   getPlacementValueGrid,
   getRunScoreTime,
   validateSolution,
@@ -50,6 +51,7 @@ import {
 } from "../lib/pips-rotation";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { fetchWithChallenge } from "../lib/challenge";
+import { devMoveTimes, startRankedRun as requestRankedRun, type RankedRun } from "../lib/solo-run";
 import { playCorrect, playCountdownTick, playGameOver } from "../lib/sounds";
 import { showToast } from "../lib/toast";
 
@@ -105,6 +107,8 @@ interface ScoreEligibilityResponse {
   code?: string;
   reason?: string;
   willReplace?: boolean;
+  /** From an eligible check: the ticket stamped with the run's finish, to submit with. */
+  ticket?: string;
 }
 
 interface PipsProgress {
@@ -177,7 +181,7 @@ export function PipsPage() {
   const [infiniteDifficulty, setInfiniteDifficulty] = useState<PipsDifficulty>("easy");
   const [infiniteSeedBase, setInfiniteSeedBase] = useState<number | null>(null);
   const [customSeedInput, setCustomSeedInput] = useState("");
-  const [countdownNum, setCountdownNum] = useState(3);
+  const [countdownNum, setCountdownNum] = useState<number>(PIPS_RUN_PACING.countdownFrom);
   const [puzzleIndex, setPuzzleIndex] = useState(0);
   const [placements, setPlacements] = useState<PipsPlacement[]>([]);
   const [selectedDominoId, setSelectedDominoId] = useState<string | null>(run.puzzles[0]?.dominoes[0]?.id ?? null);
@@ -190,6 +194,15 @@ export function PipsPage() {
   const [puzzleStartedAt, setPuzzleStartedAt] = useState(() => Date.now());
   const [runSplits, setRunSplits] = useState<PipsRunSplits>({});
   const rankedReplayPlacementsRef = useRef<Partial<Record<PipsDifficulty, PipsPlacement[]>>>({});
+  // When each move on the board landed, in ms from its start, and the logs of
+  // the boards already solved. Ranked submits send them for the server's move check.
+  const boardMovesRef = useRef<number[]>([]);
+  const rankedMovesRef = useRef<Partial<Record<PipsDifficulty, number[]>>>({});
+  const puzzleStartRef = useRef(0);
+  puzzleStartRef.current = puzzleStartedAt;
+  const logMove = () => {
+    boardMovesRef.current.push(Date.now() - puzzleStartRef.current);
+  };
   const [infiniteTimes, setInfiniteTimes] = useState<number[]>([]);
   const [infiniteSolved, setInfiniteSolved] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -212,6 +225,9 @@ export function PipsPage() {
   const [advanceCountdown, setAdvanceCountdown] = useState<PipsAdvanceStep | null>(null);
   const solvedAnnouncedRef = useRef<string>("");
   const lastSubmitTime = useRef(0);
+  // The ranked run's signed ticket; null for any other run, or a ranked one
+  // started with the API down.
+  const rankedTicketRef = useRef<string | null>(null);
   const flashTimerRef = useRef<number | null>(null);
   const advancePuzzleRef = useRef<() => void>(() => {});
 
@@ -416,14 +432,14 @@ export function PipsPage() {
         setPuzzleStartedAt(Date.now());
         setNow(Date.now());
         setPhase("playing");
-      }, 650);
+      }, PIPS_RUN_PACING.goMs);
       return () => window.clearTimeout(timer);
     }
 
     playCountdownTick();
     const timer = window.setTimeout(() => {
       setCountdownNum((current) => current - 1);
-    }, 800);
+    }, PIPS_RUN_PACING.countdownTickMs);
     return () => window.clearTimeout(timer);
   }, [countdownNum, phase]);
 
@@ -455,6 +471,8 @@ export function PipsPage() {
 
   const resetRankedReplayData = () => {
     rankedReplayPlacementsRef.current = {};
+    rankedMovesRef.current = {};
+    boardMovesRef.current = [];
   };
 
   const recordRankedReplayPlacements = (difficulty: PipsDifficulty, solvedPlacements: PipsPlacement[]) => {
@@ -501,7 +519,7 @@ export function PipsPage() {
     setPlacements([]);
     setRotation(0);
     setPhase("countdown");
-    setCountdownNum(3);
+    setCountdownNum(PIPS_RUN_PACING.countdownFrom);
     setFinishedAt(null);
     setPuzzleStartedAt(Date.now());
     setRunSplits({});
@@ -518,13 +536,22 @@ export function PipsPage() {
     clearFlashingDominoes();
     setAdvanceCountdown(null);
     solvedAnnouncedRef.current = "";
+    rankedTicketRef.current = null;
     setSelectedDominoId(firstPuzzle.dominoes[0]?.id ?? null);
   };
 
-  const startRankedRun = () => {
-    const nextSeed = makeRunSeed();
-    const nextRun = generateRun(nextSeed);
-    beginRun(nextRun, nextSeed, "ranked");
+  // Ranked seeds come from the server. With the API down the run still starts
+  // on a local seed, it just can't be submitted.
+  const startRankedRun = async () => {
+    let ranked: RankedRun | null = null;
+    try {
+      ranked = await requestRankedRun("pips");
+    } catch {
+      showToast("Couldn't reach the server, so this run is unranked.", "error");
+    }
+    const nextSeed = ranked?.seed ?? makeRunSeed();
+    beginRun(generateRun(nextSeed), nextSeed, "ranked");
+    rankedTicketRef.current = ranked?.ticket ?? null;
   };
 
   const startSeededRun = () => {
@@ -554,8 +581,7 @@ export function PipsPage() {
 
   const restartRun = () => {
     if (runMode === "ranked") {
-      const nextSeed = makeRunSeed();
-      beginRun(generateRun(nextSeed), nextSeed, "ranked");
+      void startRankedRun();
       showToast("New ranked seed generated", "info");
       return;
     }
@@ -605,6 +631,7 @@ export function PipsPage() {
       return next;
     });
     setRotation(0);
+    logMove();
   };
 
   const advancePuzzle = () => {
@@ -665,6 +692,7 @@ export function PipsPage() {
     if (!SHOW_PIPS_DEV_TOOLS) return;
     if (phase !== "playing") return;
     const solution = puzzle.solution.map((placement) => ({ ...placement }));
+    boardMovesRef.current = devMoveTimes(solution.length, Date.now() - puzzleStartRef.current);
     setPlacements(solution);
     setDominoRotations(Object.fromEntries(solution.map((placement) => [placement.dominoId, placementToRotation(placement)])));
     setRotation(0);
@@ -721,6 +749,7 @@ export function PipsPage() {
       ...current.filter((placement) => placement.dominoId !== domino.id),
       nextPlacement,
     ]);
+    logMove();
     setDominoRotation(domino.id, nextRotation);
     if (movingDominoId === domino.id) {
       setSelectedDominoId(domino.id);
@@ -756,6 +785,7 @@ export function PipsPage() {
         setPlacements((current) =>
           current.map((item) => (item.dominoId === placement.dominoId ? nextPlacement : item)),
         );
+        logMove();
         setDominoRotation(placement.dominoId, rotation);
         return;
       }
@@ -768,6 +798,7 @@ export function PipsPage() {
     event.preventDefault();
     if (phase !== "playing" || advanceCountdown != null) return;
     setPlacements((current) => current.filter((item) => item.dominoId !== placement.dominoId));
+    logMove();
     setSelectedDominoId(placement.dominoId);
     setDominoRotation(placement.dominoId, placementToRotation(placement));
   };
@@ -857,6 +888,7 @@ export function PipsPage() {
 
     if (isOverTray && currentDrag.origin.kind === "board") {
       setPlacements((current) => current.filter((placement) => placement.dominoId !== currentDrag.dominoId));
+      logMove();
       setSelectedDominoId(currentDrag.dominoId);
       setDominoRotation(currentDrag.dominoId, currentDrag.rotation);
     }
@@ -926,7 +958,9 @@ export function PipsPage() {
     } else {
       if (runMode === "ranked") {
         recordRankedReplayPlacements(puzzle.difficulty, placements);
+        rankedMovesRef.current = { ...rankedMovesRef.current, [puzzle.difficulty]: boardMovesRef.current };
       }
+      boardMovesRef.current = [];
       setRunSplits((current) => {
         if (current[puzzle.difficulty] != null) return current;
         return { ...current, [puzzle.difficulty]: solvedMs };
@@ -970,7 +1004,7 @@ export function PipsPage() {
 
     if (advanceCountdown === "solved") {
       playCorrect();
-      const timer = window.setTimeout(() => setAdvanceCountdown(3), 850);
+      const timer = window.setTimeout(() => setAdvanceCountdown(PIPS_RUN_PACING.countdownFrom), PIPS_RUN_PACING.solvedMs);
       return () => window.clearTimeout(timer);
     }
 
@@ -978,14 +1012,14 @@ export function PipsPage() {
       const timer = window.setTimeout(() => {
         setAdvanceCountdown(null);
         advancePuzzleRef.current();
-      }, 450);
+      }, PIPS_RUN_PACING.advanceGoMs);
       return () => window.clearTimeout(timer);
     }
 
     playCountdownTick();
     const timer = window.setTimeout(() => {
       setAdvanceCountdown((current) => (typeof current === "number" ? current - 1 : current));
-    }, 700);
+    }, PIPS_RUN_PACING.advanceTickMs);
     return () => window.clearTimeout(timer);
   }, [advanceCountdown]);
 
@@ -1007,6 +1041,15 @@ export function PipsPage() {
         message: "This run could not be verified locally. Start a fresh ranked run and try again.",
       };
     }
+    const ticket = rankedTicketRef.current;
+    if (!ticket) {
+      return {
+        canSubmit: false,
+        pending: false,
+        tone: "info",
+        message: "This run started while the server was unreachable, so it's unranked.",
+      };
+    }
 
     try {
       const identity = await syncSessionIdentity(API_BASE, { allowCreate: true, reason: "pips-eligibility" });
@@ -1021,8 +1064,9 @@ export function PipsPage() {
         body: JSON.stringify({
           sessionId: activeSessionId,
           name: activeName,
-          seed,
+          ticket,
           totalMs: getRunSplitTotal(runSplits),
+          moveTimes: PIPS_DIFFICULTIES.map((difficulty) => rankedMovesRef.current[difficulty] ?? []),
           easyMs: runSplits.easy,
           mediumMs: runSplits.medium,
           hardMs: runSplits.hard,
@@ -1032,10 +1076,12 @@ export function PipsPage() {
       });
       const data = await res.json().catch(() => null) as ScoreEligibilityResponse | null;
       if (!res.ok || !data) throw new Error("Eligibility unavailable");
+      // The submit has to bring back the ticket stamped with this finish.
+      if (data.ticket) rankedTicketRef.current = data.ticket;
       return {
         canSubmit: Boolean(data.canSubmit),
         pending: false,
-        tone: data.canSubmit ? "success" : "info",
+        tone: data.canSubmit ? "success" : data.code === "duplicate" || data.code === "not-ranked" ? "info" : "error",
         message: data.reason ?? (data.canSubmit ? "This run is verified and ready to submit." : "This run cannot be submitted right now."),
       };
     } catch {
@@ -1099,8 +1145,9 @@ export function PipsPage() {
         body: JSON.stringify({
           sessionId: activeSessionId,
           name: activeName,
-          seed,
+          ticket: rankedTicketRef.current,
           totalMs: getRunSplitTotal(runSplits),
+          moveTimes: PIPS_DIFFICULTIES.map((difficulty) => rankedMovesRef.current[difficulty] ?? []),
           easyMs: runSplits.easy,
           mediumMs: runSplits.medium,
           hardMs: runSplits.hard,
@@ -1131,7 +1178,7 @@ export function PipsPage() {
         return;
       }
 
-      const data = await res.json().catch(() => null) as { error?: string } | null;
+      const data = await res.json().catch(() => null) as { error?: string; reason?: string } | null;
       if (res.status === 409) {
         lastSubmitTime.current = nowMs;
         setScoreSubmitted(true);
@@ -1155,7 +1202,7 @@ export function PipsPage() {
           canSubmit: false,
           pending: false,
           tone: "error",
-          message: "This run could not be verified by the server.",
+          message: data.reason ?? "This run could not be verified by the server.",
         });
       } else {
         reportSubmitStatus({
@@ -1218,7 +1265,9 @@ export function PipsPage() {
       message: "Checking leaderboard eligibility!",
     });
     void resolveScoreEligibility().then((status) => {
-      if (!cancelled) setScoreSubmissionStatus(status);
+      if (cancelled) return;
+      setScoreSubmissionStatus(status);
+      if (status.tone === "error") showToast(status.message, "error");
     });
     return () => {
       cancelled = true;
