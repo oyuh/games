@@ -500,6 +500,7 @@ export default function ZipAdminPage() {
         game="zip"
         scoreId={boardScore?.id ?? null}
         seed={boardScore?.seed ?? null}
+        hasReplay={boardScore?.replayData != null}
         puzzleCount={boardScore?.puzzleCount ?? 1}
         accent="var(--game-zip)"
         open={Boolean(boardScore)}
