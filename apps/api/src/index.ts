@@ -918,9 +918,6 @@ app.post("/api/game-secret/imposter-chat-key", async (c) => {
 });
 
 function detectPlatform() {
-  if (process.env.VERCEL === "1") {
-    return "vercel";
-  }
   if (process.env.RAILWAY_ENVIRONMENT) {
     return "railway";
   }
@@ -2690,14 +2687,7 @@ const commitStatsCache = new Map<string, { stats: CommitStats | null; retryAfter
 const commitStatsInFlight = new Set<string>();
 
 function githubRepoSlug() {
-  const owner = process.env.VERCEL_GIT_REPO_OWNER;
-  const slug = process.env.VERCEL_GIT_REPO_SLUG;
-
-  return firstNonEmpty([
-    process.env.GITHUB_REPOSITORY,
-    owner && slug ? `${owner}/${slug}` : undefined,
-    "oyuh/games"
-  ]);
+  return firstNonEmpty([process.env.GITHUB_REPOSITORY, "oyuh/games"]);
 }
 
 async function loadCommitStats(sha: string): Promise<void> {
@@ -2769,27 +2759,23 @@ function getCommitStats(sha: string): CommitStats | null {
 
 app.get("/debug/build-info", async (c) => {
   const commitSha = firstNonEmpty([
-    process.env.VERCEL_GIT_COMMIT_SHA,
     process.env.RAILWAY_GIT_COMMIT_SHA,
     process.env.GITHUB_SHA,
     process.env.SOURCE_VERSION
   ]);
 
   const commitRef = firstNonEmpty([
-    process.env.VERCEL_GIT_COMMIT_REF,
     process.env.RAILWAY_GIT_BRANCH,
     process.env.GITHUB_REF_NAME,
     process.env.BRANCH_NAME
   ]);
 
   const commitMessage = firstNonEmpty([
-    process.env.VERCEL_GIT_COMMIT_MESSAGE,
     process.env.RAILWAY_GIT_COMMIT_MESSAGE,
     process.env.GITHUB_COMMIT_MESSAGE
   ]);
 
   const commitTimestamp = firstNonEmpty([
-    process.env.VERCEL_GIT_COMMIT_TIMESTAMP,
     process.env.RAILWAY_GIT_COMMIT_TIMESTAMP,
     process.env.GITHUB_COMMIT_TIMESTAMP
   ]);
@@ -2797,8 +2783,7 @@ app.get("/debug/build-info", async (c) => {
   const buildTimestamp = firstNonEmpty([
     process.env.API_BUILD_AT,
     process.env.BUILD_TIMESTAMP,
-    process.env.BUILD_TIME,
-    process.env.VERCEL_BUILD_TIME
+    process.env.BUILD_TIME
   ]);
 
   const database = await probeDatabaseStatus();

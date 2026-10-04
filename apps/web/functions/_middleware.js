@@ -1,8 +1,6 @@
-// Social/crawler link previews. Vercel did this with a User-Agent rewrite in
-// vercel.json; Cloudflare's _redirects can't match on User-Agent, so a Pages
-// Function does it. Bots get server-rendered embed HTML (title, image, meta);
-// real browsers fall through to the SPA. Keep this regex in sync with the
-// "has.user-agent" list in vercel.json.
+// Social/crawler link previews. Cloudflare's _redirects can't match on
+// User-Agent, so a Pages Function does it. Bots get server-rendered embed HTML
+// (title, image, meta); real browsers fall through to the SPA.
 const BOT =
   /(bot|crawler|spider|preview|facebookexternalhit|Facebot|Twitterbot|Discordbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot|SkypeUriPreview|vkShare|Embedly|redditbot|Pinterest|ia_archiver)/i;
 

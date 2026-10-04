@@ -64,7 +64,6 @@ Shikaku, Pips, and Zip skip the Zero cache. Their puzzle engines run in the brow
 +-- scripts/           # Local stack and production DB helper scripts
 +-- docker-compose.yml # Postgres + Zero cache, for the manual start path
 +-- Dockerfile         # API container image
-+-- vercel.json        # Web Vercel config with SPA + bot preview rewrites
 +-- turbo.json         # Workspace task orchestration
 +-- package.json       # Bun workspace scripts
 ```
@@ -342,19 +341,18 @@ bun run build
 
 `E2E` runs `bun run test:e2e` against a fresh local stack, then the database tests. It uploads a Playwright trace for every failed attempt. Open one with `bunx playwright show-trace <zip>`.
 
-The `Deploy Hooks` workflow fires after a successful `CI` run on `main` or `master` and calls the deploy hooks. To use it, add these repository secrets:
+The `Deploy Hooks` workflow fires after a successful `CI` run on `main` or `master` and calls the Railway deploy hook. To use it, add this repository secret:
 
 ```bash
-VERCEL_DEPLOY_HOOK_URL=<vercel_deploy_hook_url>
-RAILWAY_DEPLOY_HOOK_URL=<optional_custom_or_platform_deploy_trigger_url>
+RAILWAY_DEPLOY_HOOK_URL=<railway_deploy_trigger_url>
 ```
 
 To keep failing commits out of production, protect the production branch and require `Quality Gate` before merging. Then set up the hosts:
 
-- Vercel: turn on Deployment Checks with the `Quality Gate` check, or leave Git production deploys off and use the post-CI hook.
 - Railway: turn on Wait for CI for each GitHub-connected service, or turn off automatic deploys and trigger Railway from the post-CI workflow.
+- Cloudflare Pages: builds the web app on every push and doesn't wait for CI. See [Cloudflare Pages web app](#cloudflare-pages-web-app).
 
-Don't rename the CI job. GitHub, Vercel, and Railway match on the check name, and a rename un-gates every merge and deploy without any warning.
+Don't rename the CI job. GitHub and Railway match on the check name, and a rename un-gates every merge and deploy without any warning.
 
 ## Pull requests
 
@@ -457,18 +455,19 @@ Admin routes sit under `/api/admin/*` and need `Authorization: Bearer <ADMIN_SEC
 
 Production runs on separate services:
 
-- Vercel: `apps/web`
+- Cloudflare Pages: `apps/web`
 - Railway: `apps/api`, which also serves the WebSockets
+- Railway: `apps/admin`
 - Railway: Zero cache
 - Railway Postgres or Neon: database
 
-### Vercel web app
+### Cloudflare Pages web app
 
-`vercel.json` installs with `bun install --frozen-lockfile`, builds with `bun run --filter @games/web build`, and serves `apps/web/dist`. It rewrites bot and social-preview user agents to the API embed endpoint and everything else to `/index.html`.
+Pages builds from the repo root on every push to `master`. It installs with `bun install`, builds with `bun run --filter @games/web build`, and serves `apps/web/dist`. `apps/web/public/_redirects` sends every path to `/index.html`, and `apps/web/functions/_middleware.js` hands bot and social-preview user agents the API's embed HTML.
 
-It also turns off Git deploys from `main` and `master`, so production goes out through the post-CI deploy hook. Store the Vercel hook as `VERCEL_DEPLOY_HOOK_URL`. If you'd rather use Vercel's Deployment Checks, remove the `git.deploymentEnabled` block and make `Quality Gate` the required check.
+Pages doesn't wait for CI, but the API does, so a new client can go live minutes before the API it talks to. Keep API changes working with the previous client, or land the API change first.
 
-Vercel variables:
+Pages build variables. They're read at build time, so changing one needs a rebuild:
 
 ```bash
 VITE_ZERO_CACHE_URL=https://<zero-domain>
