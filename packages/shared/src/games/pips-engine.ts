@@ -87,6 +87,26 @@ export const PIPS_DIFFICULTY_CONFIG: Record<
 
 export const PIPS_PUZZLES_PER_RUN = PIPS_RUN_DIFFICULTIES.length;
 
+/**
+ * The run's off-the-clock beats: a 3-2-1 countdown and a GO, then between
+ * boards a solved beat, another 3-2-1, and a GO. The page plays these and the
+ * API's clock check allows for exactly this much, so they only ever change here.
+ */
+export const PIPS_RUN_PACING = {
+  countdownFrom: 3,
+  countdownTickMs: 800,
+  goMs: 650,
+  solvedMs: 850,
+  advanceTickMs: 700,
+  advanceGoMs: 450,
+} as const;
+
+/** How long a full ranked run spends on screen with its timer stopped. */
+export const PIPS_RANKED_OFF_CLOCK_MS =
+  PIPS_RUN_PACING.countdownFrom * PIPS_RUN_PACING.countdownTickMs + PIPS_RUN_PACING.goMs
+  + (PIPS_PUZZLES_PER_RUN - 1)
+    * (PIPS_RUN_PACING.solvedMs + PIPS_RUN_PACING.countdownFrom * PIPS_RUN_PACING.advanceTickMs + PIPS_RUN_PACING.advanceGoMs);
+
 /* -- Generation ---------------------------------------------- */
 /**
  * Generate a complete ranked-style Pips run from one seed.

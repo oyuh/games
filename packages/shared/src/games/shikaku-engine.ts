@@ -54,6 +54,17 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, { rows: number; cols: number;
 
 export const PUZZLES_PER_RUN = 5;
 
+/**
+ * The run's off-the-clock beats: a 3-2-1 countdown, then a solved pause after
+ * every board. The page plays these and the API's clock check allows for
+ * exactly this much, so they only ever change here.
+ */
+export const RUN_PACING = { countdownFrom: 3, countdownTickMs: 700, solvedPauseMs: 1_200 } as const;
+
+/** How long a full ranked run spends on screen with its timer stopped. */
+export const RANKED_OFF_CLOCK_MS =
+  RUN_PACING.countdownFrom * RUN_PACING.countdownTickMs + PUZZLES_PER_RUN * RUN_PACING.solvedPauseMs;
+
 export function getAutoFilledRects(puzzle: ShikakuPuzzle): Rect[] {
   return puzzle.solution
     .filter((rect) => rect.w === 1 && rect.h === 1)
