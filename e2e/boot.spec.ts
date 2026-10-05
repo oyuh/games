@@ -92,7 +92,7 @@ test("a game made before the backend wakes is still there once it does", async (
   await page.getByRole("textbox", { name: "Enter name…" }).fill("AsleepE2E");
   await page.getByRole("textbox", { name: "Enter name…" }).press("Enter");
   await createButton(page, "Imposter").click();
-  await page.getByRole("button", { name: "Create It!" }).click();
+  await page.getByRole("button", { name: "Create it", exact: true }).click();
   await expect(page).toHaveURL(/\/imposter\/[\w-]+$/);
   const roomUrl = page.url();
   await expect(page.getByRole("main").getByText("Lobby")).toBeVisible();
