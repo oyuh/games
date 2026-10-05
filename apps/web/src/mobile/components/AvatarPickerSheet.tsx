@@ -1,6 +1,7 @@
 import { FiCheck, FiRotateCcw, FiShuffle } from "react-icons/fi";
 import { Drawer } from "vaul";
 import { AvatarChoices, AvatarPreview, useAvatarPicker } from "../../components/shared/AvatarPickerModal";
+import { Button } from "../../components/shared/Button";
 import { BottomSheet } from "./BottomSheet";
 import "../../styles/avatar-picker.css";
 
@@ -16,16 +17,16 @@ export function AvatarPickerSheet({ sessionId, name, onClose }: { sessionId: str
           <AvatarChoices picker={picker} />
         </div>
         <div className="ap-sheet-actions">
-          <button className="m-btn m-btn--quiet" type="button" onClick={picker.reset} disabled={!picker.custom}>
-            <FiRotateCcw size={14} /> Reset
-          </button>
-          <button className="m-btn m-btn--quiet" type="button" onClick={picker.shuffle}>
-            <FiShuffle size={14} /> Surprise me
-          </button>
+          <Button variant="ghost" size="lg" icon={<FiRotateCcw />} onClick={picker.reset} disabled={!picker.custom}>
+            Reset
+          </Button>
+          <Button size="lg" icon={<FiShuffle />} onClick={picker.shuffle}>
+            Surprise me
+          </Button>
           <Drawer.Close asChild>
-            <button className="m-btn m-btn--primary" type="button">
-              <FiCheck size={14} /> Done
-            </button>
+            <Button variant="primary" size="lg" icon={<FiCheck />}>
+              Done
+            </Button>
           </Drawer.Close>
         </div>
       </div>

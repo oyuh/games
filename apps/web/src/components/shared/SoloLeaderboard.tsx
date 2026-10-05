@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { FiChevronLeft, FiChevronRight, FiSearch, FiX } from "react-icons/fi";
+import { Button } from "./Button";
 import { Segmented, type SoloSetupRow } from "./SoloGameMenu";
 import { SoloScoreTable, type SoloScoreRow } from "./SoloScoreTable";
 
@@ -84,9 +85,7 @@ export function SoloLeaderboard({
       onWheel={(event) => event.stopPropagation()}
     >
       <section className="solo-lb" role="dialog" aria-modal="true" aria-label={title}>
-        <button className="solo-lb-close" type="button" onClick={onClose} aria-label="Close" data-tooltip="Close">
-          <FiX size={16} />
-        </button>
+        <Button variant="ghost" shape="square" className="solo-lb-close" icon={<FiX />} onClick={onClose} aria-label="Close" data-tooltip="Close" />
 
         <header className="solo-menu-hero solo-lb-hero">
           <h1 className="solo-menu-title solo-lb-title">{title}</h1>
@@ -165,23 +164,13 @@ export function SoloLeaderboard({
         />
 
         <nav className="solo-menu-links solo-lb-pages">
-          <button
-            className="solo-menu-link"
-            type="button"
-            onClick={() => onPageChange(page - 1)}
-            disabled={loading || page <= 1}
-          >
-            <FiChevronLeft size={14} /> Prev
-          </button>
+          <Button size="sm" icon={<FiChevronLeft />} onClick={() => onPageChange(page - 1)} disabled={loading || page <= 1}>
+            Prev
+          </Button>
           <span className="solo-lb-page-count">Page {Math.min(page, pages)} of {pages}</span>
-          <button
-            className="solo-menu-link"
-            type="button"
-            onClick={() => onPageChange(page + 1)}
-            disabled={loading || page >= pages}
-          >
-            Next <FiChevronRight size={14} />
-          </button>
+          <Button size="sm" trailing={<FiChevronRight />} onClick={() => onPageChange(page + 1)} disabled={loading || page >= pages}>
+            Next
+          </Button>
         </nav>
       </section>
     </div>,

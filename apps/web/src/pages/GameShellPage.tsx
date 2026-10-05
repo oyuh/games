@@ -7,6 +7,7 @@ import { GameButton, GameEmpty, GamePanel, type GameButtonSize, type GameButtonV
 import { GameRoster, GameTeamRoster, GameVersus } from "../components/shared/GameRoster";
 import { playerBadges } from "../components/shared/PlayerCard";
 import "../styles/game-shared.css";
+import { Button } from "../components/shared/Button";
 
 const CAST = [
   { sessionId: "seed-ada", name: "Ada" },
@@ -54,27 +55,19 @@ function Live() {
   const [isSpectator, setIsSpectator] = useState(false);
   const [endsAt, setEndsAt] = useState(() => Date.now() + 90_000);
 
-  const btn = {
-    fontSize: "0.72rem",
-    padding: "0.3rem 0.6rem",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "0.35rem",
-  } as const;
-
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
         {IMPOSTER_PHASES.map((p, i) => (
-          <button key={p.id} type="button" className={`btn ${i === index ? "btn-primary" : "btn-ghost"}`} style={btn} onClick={() => setIndex(i)}>
+          <Button size="sm" aria-pressed={i === index} key={p.id} onClick={() => setIndex(i)}>
             {p.label}
-          </button>
+          </Button>
         ))}
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
-        <button type="button" className={`btn ${isHost ? "btn-primary" : "btn-ghost"}`} style={btn} onClick={() => setIsHost((v) => !v)}>Host</button>
-        <button type="button" className={`btn ${isSpectator ? "btn-primary" : "btn-ghost"}`} style={btn} onClick={() => setIsSpectator((v) => !v)}>Spectator</button>
-        <button type="button" className="btn btn-ghost" style={btn} onClick={() => setEndsAt(Date.now() + 90_000)}><FiRefreshCw size={12} /> Restart clock</button>
-        <button type="button" className="btn btn-ghost" style={btn} onClick={() => setEndsAt(Date.now() + 8_000)}>Nearly out</button>
+        <Button size="sm" aria-pressed={isHost} onClick={() => setIsHost((v) => !v)}>Host</Button>
+        <Button size="sm" aria-pressed={isSpectator} onClick={() => setIsSpectator((v) => !v)}>Spectator</Button>
+        <Button size="sm" icon={<FiRefreshCw />} onClick={() => setEndsAt(Date.now() + 90_000)}>Restart clock</Button>
+        <Button size="sm" onClick={() => setEndsAt(Date.now() + 8_000)}>Nearly out</Button>
       </div>
 
       <GameShellHeader

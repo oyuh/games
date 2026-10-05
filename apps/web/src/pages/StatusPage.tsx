@@ -22,7 +22,7 @@ import {
   FiXCircle,
   FiZap
 } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { ButtonLink } from "../components/shared/Button";
 import { GameIcon } from "../components/shared/GameIcon";
 import {
   formatUptime,
@@ -321,16 +321,14 @@ export function StatusPage() {
       </div>
 
       <nav className="solo-menu-links" aria-label="Elsewhere">
-        <Link className="solo-menu-link" to="/"><FiHome size={14} aria-hidden="true" /> Home</Link>
-        <Link className="solo-menu-link" to="/pips"><GameIcon game="pips" size={14} /> Pips</Link>
-        <Link className="solo-menu-link" to="/shikaku"><GameIcon game="shikaku" size={14} /> Shikaku</Link>
-        <a className="solo-menu-link" href={GITHUB_REPO} target="_blank" rel="noreferrer">
-          <FiGithub size={14} aria-hidden="true" /> Source
-        </a>
+        <ButtonLink variant="text" to="/" icon={<FiHome />}>Home</ButtonLink>
+        <ButtonLink variant="text" to="/pips" icon={<GameIcon game="pips" size={14} />}>Pips</ButtonLink>
+        <ButtonLink variant="text" to="/shikaku" icon={<GameIcon game="shikaku" size={14} />}>Shikaku</ButtonLink>
+        <ButtonLink variant="text" href={GITHUB_REPO} icon={<FiGithub />}>Source</ButtonLink>
         {debug.apiInfoURL && (
-          <a className="solo-menu-link" href={debug.apiInfoURL} target="_blank" rel="noreferrer">
-            <FiCode size={14} aria-hidden="true" /> Raw API <FiExternalLink size={12} aria-hidden="true" />
-          </a>
+          <ButtonLink variant="text" href={debug.apiInfoURL} icon={<FiCode />} trailing={<FiExternalLink />}>
+            Raw API
+          </ButtonLink>
         )}
       </nav>
     </main>

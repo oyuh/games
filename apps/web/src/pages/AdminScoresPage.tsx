@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { FiExternalLink, FiRefreshCw, FiShield, FiZap } from "react-icons/fi";
+import { Button, ButtonLink } from "../components/shared/Button";
 import "../styles/admin.css";
 import { showToast } from "../lib/toast";
 
@@ -321,9 +321,7 @@ export function AdminScoresPage() {
             Add Shikaku and Pips leaderboard rows manually, using recent scores and quick-fill presets as examples.
           </p>
         </div>
-        <Link to="/" className="btn btn-muted">
-          Back Home
-        </Link>
+        <ButtonLink to="/">Back Home</ButtonLink>
       </header>
 
       <section className="admin-scores-card admin-scores-auth">
@@ -342,13 +340,12 @@ export function AdminScoresPage() {
             onChange={(event) => setTokenInput(event.target.value)}
             placeholder="Bearer secret"
           />
-          <button className="btn btn-primary" type="button" onClick={saveToken}>
+          <Button variant="primary" onClick={saveToken}>
             Save Token
-          </button>
-          <button className="btn btn-muted" type="button" onClick={() => void loadRecentScores(tokenInput)}>
-            <FiRefreshCw size={16} />
+          </Button>
+          <Button icon={<FiRefreshCw />} onClick={() => void loadRecentScores(tokenInput)}>
             Refresh
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -378,9 +375,9 @@ export function AdminScoresPage() {
                   <h2>New Shikaku Score</h2>
                   <p>Fields match the leaderboard table exactly. Leave created time blank to use right now.</p>
                 </div>
-                <button className="btn btn-muted" type="button" onClick={() => setShikakuForm(EMPTY_SHIKAKU_FORM)}>
+                <Button variant="outline" onClick={() => setShikakuForm(EMPTY_SHIKAKU_FORM)}>
                   Reset
-                </button>
+                </Button>
               </div>
 
               <div className="admin-scores-grid">
@@ -424,9 +421,9 @@ export function AdminScoresPage() {
               </div>
 
               <div className="admin-scores-actions">
-                <button className="btn btn-primary" type="submit" disabled={submitting === "shikaku"}>
-                  {submitting === "shikaku" ? "Adding…" : "Add Shikaku Score"}
-                </button>
+                <Button variant="primary" type="submit" loading={submitting === "shikaku"}>
+                  Add Shikaku Score
+                </Button>
               </div>
             </form>
 
@@ -482,9 +479,9 @@ export function AdminScoresPage() {
                   <h2>New Pips Score</h2>
                   <p>Use the split fields plus total. The API checks that total matches Easy + Medium + Hard.</p>
                 </div>
-                <button className="btn btn-muted" type="button" onClick={() => setPipsForm(EMPTY_PIPS_FORM)}>
+                <Button variant="outline" onClick={() => setPipsForm(EMPTY_PIPS_FORM)}>
                   Reset
-                </button>
+                </Button>
               </div>
 
               <div className="admin-scores-grid">
@@ -527,12 +524,11 @@ export function AdminScoresPage() {
               </div>
 
               <div className="admin-scores-actions">
-                <button className="btn btn-primary" type="submit" disabled={submitting === "pips"}>
-                  {submitting === "pips" ? "Adding…" : "Add Pips Score"}
-                </button>
-                <button
-                  className="btn btn-muted"
-                  type="button"
+                <Button variant="primary" type="submit" loading={submitting === "pips"}>
+                  Add Pips Score
+                </Button>
+                <Button
+                  icon={<FiZap />}
                   onClick={() => setPipsForm((prev) => {
                     const easyMs = Number.parseInt(prev.easyMs, 10) || 0;
                     const mediumMs = Number.parseInt(prev.mediumMs, 10) || 0;
@@ -540,9 +536,8 @@ export function AdminScoresPage() {
                     return { ...prev, totalMs: String(easyMs + mediumMs + hardMs) };
                   })}
                 >
-                  <FiZap size={16} />
                   Sum Splits
-                </button>
+                </Button>
               </div>
             </form>
 

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useZero as useRawZero } from "@rocicorp/zero/react";
 import { FiChevronDown, FiChevronUp, FiTool } from "react-icons/fi";
+import "../../styles/button.css";
 import { nanoid } from "nanoid";
 import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
@@ -219,7 +220,9 @@ export function DevGamePanel() {
     });
   };
 
-  const btn = "mshell-action mshell-action--muted";
+  // The shared Button's classes, written out because these are passed around
+  // as a string to plain <button>s all over the panel.
+  const btn = "ui-btn ui-btn--secondary ui-btn--xs";
 
   return (
     <section

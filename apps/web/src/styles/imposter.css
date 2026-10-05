@@ -1169,7 +1169,7 @@ label.imp-ballot:hover {
     flex: 1 1 100%;
   }
 
-  .imp-composer .gk-btn {
+  .imp-composer :is(.gk-btn, .ui-btn) {
     flex: 1;
   }
 

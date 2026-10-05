@@ -136,54 +136,21 @@
   flex-wrap: nowrap;
 }
 
-.active-game-actions .btn {
-  justify-content: center;
+/* Rejoin wears the game's color, same as a home card's Create. */
+.active-game-actions .ui-btn {
+  --primary: var(--active-game-accent);
+  --primary-foreground: #181a1b;
 }
 
-.active-game-rejoin-btn {
-  /* Fills whatever the fixed-width leave button leaves behind (~88%). */
+.active-game-rejoin-btn.ui-btn {
   flex: 1 1 0;
-}
-
-.active-game-leave-btn {
-  /* Fixed 12% of the row; min-width:0 lets it actually reach that narrow. */
-  flex: 0 0 12%;
+  width: auto;
   min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  /* Icon-only button: trim side padding so the icon sits cleanly in the narrow width. */
-  padding-inline: 0.5rem;
-  background: color-mix(in srgb, #ef4444 12%, transparent);
-  border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
-  color: #f87171;
 }
 
-/* When the leave button is the only action (e.g. you were removed), let it fill the row. */
-.active-game-leave-btn:only-child {
-  flex: 1 1 auto;
-}
-
-/* Leave sits on the left, so mirror the log-out arrow to point outward (left). */
-.active-game-leave-btn svg {
+/* Leave sits on the left, so mirror the log-out arrow to point outward. */
+.active-game-leave-btn .ui-btn-icon svg {
   transform: scaleX(-1);
-}
-
-.active-game-leave-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, #ef4444 18%, transparent);
-  border-color: color-mix(in srgb, #ef4444 45%, transparent);
-}
-
-.active-game-rejoin-btn {
-  background: color-mix(in srgb, var(--active-game-accent) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--active-game-accent) 36%, transparent);
-  color: var(--active-game-accent);
-}
-
-.active-game-rejoin-btn:hover {
-  background: color-mix(in srgb, var(--active-game-accent) 24%, transparent);
-  border-color: color-mix(in srgb, var(--active-game-accent) 52%, transparent);
 }
 
 /* ─── Admin Score Modal ─────────────────────────────────── */
@@ -474,47 +441,6 @@
 /* The switch lives in controls.css: it is shared with the mobile sheets. */
 
 /* ── The one primary button a modal gets ────────────────── */
-.mshell-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  height: var(--solo-control-h);
-  padding: 0 1rem;
-  border: 0;
-  border-radius: var(--solo-radius);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 800;
-  transition: filter 0.16s;
-}
-
-.mshell-action--wide {
-  width: 100%;
-}
-
-.mshell-action--muted {
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--foreground);
-}
-
-.mshell-action--danger {
-  background: #ef4444;
-  color: #fff;
-}
-
-.mshell-action:hover:not(:disabled) { filter: brightness(1.08); }
-.mshell-action:active:not(:disabled) { filter: brightness(0.94); }
-
-.mshell-action:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
 @media (max-width: 600px) {
   .mshell {
     --mshell-gutter: 0.8rem;
@@ -633,44 +559,11 @@
   width: 100%;
 }
 
-.howto-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0;
-  border: 0;
-  background: none;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: color 0.16s;
-}
-
-.howto-back:hover:not(:disabled) {
-  color: var(--foreground);
-}
-
-.howto-back:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
 .howto-count {
   color: var(--muted-foreground);
   font-size: 0.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-
-.mshell-action-arrow {
-  flex-shrink: 0;
-  transition: transform 0.16s;
-}
-
-.mshell-action:hover .mshell-action-arrow {
-  transform: translateX(3px);
 }
 
 /* ─── Arrow pointer inside a demo ────────────────────────
@@ -703,34 +596,46 @@
    The .cursor-scale-* and .sound-* rules below still dress the mobile
    sheets, which keep their own markup. */
 
+/* Both drawers hang off the bottom of a picker and share one inner height,
+   so the slider row sits as tall as the sound row instead of pinching the
+   slider against the picker above it. */
+.opt-slider,
+.opt-drawer {
+  --opt-drawer-h: 2.4rem;
+  min-height: calc(var(--opt-drawer-h) + var(--solo-pad) * 2 + 1px);
+}
+
 /* Slider hung off the bottom of a picker, same drawer as the solo seed. */
 .opt-slider {
-  gap: 0.6rem;
+  gap: 0.75rem;
   padding-left: 0.7rem;
   padding-right: 0.7rem;
 }
 
-.opt-slider-label {
+/* A touch slimmer than a free-standing slider, so it reads as part of the
+   drawer rather than a second control wedged into it. */
+.opt-slider .ui-slider {
+  --sl-h: 1rem;
+}
+
+/* Both drawers lead with an icon, in the voice of the picker above them,
+   rather than a text label crammed in beside the control. */
+.opt-drawer-icon {
   flex-shrink: 0;
   color: var(--muted-foreground);
-  font-size: 0.76rem;
-  font-weight: 700;
 }
 
 .opt-slider-range {
   flex: 1;
   min-width: 0;
-  height: 2.4rem;
-  accent-color: var(--modal-accent);
-  cursor: pointer;
 }
 
 .opt-slider-value {
   flex-shrink: 0;
   min-width: 2.6rem;
   color: var(--modal-accent);
-  font-size: 0.76rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -746,28 +651,17 @@
   gap: 0.5rem;
 }
 
-/* Drawer holding a control rather than a slider, e.g. the sound picker. */
+/* Drawer holding a control. The control fills it, inset by the same pad
+   as the options in the picker above. */
 .opt-drawer {
-  gap: 0.6rem;
-  padding-left: 0.7rem;
-  padding-right: var(--solo-pad);
-}
-
-.opt-drawer-label {
-  flex-shrink: 0;
-  color: var(--muted-foreground);
-  font-size: 0.76rem;
-  font-weight: 700;
-}
-
-.opt-drawer .solo-select {
-  flex: 1;
-  min-width: 0;
+  padding: var(--solo-pad);
 }
 
 /* The drawer sets the height, so the trigger inside it does not. */
 .opt-drawer .solo-select-trigger {
-  height: 2.4rem;
+  flex: 1;
+  min-width: 0;
+  height: var(--opt-drawer-h);
 }
 
 .opt-trailing-hint {
@@ -860,9 +754,8 @@
     border-color: color-mix(in srgb, var(--seg-accent) 45%, transparent);
   }
 
-  .opt-modal .opt-slider-range,
-  .opt-modal .opt-drawer .solo-select-trigger {
-    height: 2.1rem;
+  .opt-modal :is(.opt-slider, .opt-drawer) {
+    --opt-drawer-h: 2.1rem;
   }
 
   /* Edge over side for the toasts, each a full-width picker like every

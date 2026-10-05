@@ -148,7 +148,7 @@
   border-top: 1px solid var(--border);
 }
 
-.ap-sheet-actions .m-btn {
-  padding-inline: 0.5rem;
-  white-space: nowrap;
+.ap-sheet-actions .ui-btn {
+  --btn-px: 0.5rem;
+  min-width: 0;
 }

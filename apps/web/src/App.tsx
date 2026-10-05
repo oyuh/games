@@ -5,8 +5,9 @@ import { mutators, schema } from "@games/shared";
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { FiActivity, FiAlertTriangle, FiInfo, FiMoon, FiX } from "react-icons/fi";
 import { SiBuymeacoffee, SiKofi } from "react-icons/si";
-import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { ButtonLink } from "./components/shared/Button";
 import { ChallengeGate } from "./components/shared/ChallengeGate";
 import {
   addConnectionDebugEvent,
@@ -70,6 +71,9 @@ const LocationKitPage = lazy(() =>
 );
 const ZipKitPage = lazy(() =>
   import("./pages/ZipKitPage").then(({ ZipKitPage }) => ({ default: ZipKitPage }))
+);
+const SharedKitPage = lazy(() =>
+  import("./pages/SharedKitPage").then(({ SharedKitPage }) => ({ default: SharedKitPage }))
 );
 const ShikakuPage = lazy(() => import("./pages/ShikakuPage").then(({ ShikakuPage }) => ({ default: ShikakuPage })));
 const ZipPage = lazy(() => import("./pages/ZipPage").then(({ ZipPage }) => ({ default: ZipPage })));
@@ -221,18 +225,15 @@ function HostingInfoModal({ onClose }: { onClose: () => void }) {
             Chipping in pays the hosting bill, and more of that means the server can stay awake longer.
           </div>
           <div className="sync-hosting-actions">
-            <a className="btn btn-muted" href={BUY_ME_A_COFFEE_URL} target="_blank" rel="noreferrer">
-              <SiBuymeacoffee size={16} aria-hidden="true" />
+            <ButtonLink href={BUY_ME_A_COFFEE_URL} size="lg" icon={<SiBuymeacoffee />}>
               Buy Me a Coffee
-            </a>
-            <a className="btn btn-muted" href={KOFI_URL} target="_blank" rel="noreferrer">
-              <SiKofi size={16} aria-hidden="true" />
+            </ButtonLink>
+            <ButtonLink href={KOFI_URL} size="lg" icon={<SiKofi />}>
               Ko-fi
-            </a>
-            <Link className="btn btn-primary sync-hosting-status" to="/status" onClick={onClose}>
-              <FiActivity size={16} aria-hidden="true" />
+            </ButtonLink>
+            <ButtonLink to="/status" variant="primary" size="lg" full className="sync-hosting-status" icon={<FiActivity />} onClick={onClose}>
               Check service status
-            </Link>
+            </ButtonLink>
           </div>
         </div>
       </div>
@@ -698,6 +699,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/dev/shade" element={<LazyRoute><ShadeKitPage /></LazyRoute>} />
               <Route path="/dev/location" element={<LazyRoute><LocationKitPage /></LazyRoute>} />
               <Route path="/dev/zip" element={<LazyRoute><ZipKitPage /></LazyRoute>} />
+              <Route path="/dev/shared" element={<LazyRoute><SharedKitPage /></LazyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

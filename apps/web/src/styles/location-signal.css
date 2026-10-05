@@ -377,14 +377,14 @@ body.locsig-map-expanded .app-footer {
 }
 
 .locsig-map-expanded-actions .btn,
-.locsig-map-expanded-actions .m-btn {
+.locsig-map-expanded-actions .ui-btn {
   min-width: min(100%, 12rem);
   justify-content: center;
   box-shadow: none;
 }
 
 .locsig-map-expanded-actions .btn:disabled,
-.locsig-map-expanded-actions .m-btn:disabled {
+.locsig-map-expanded-actions .ui-btn:disabled:not(.is-loading) {
   opacity: 0.72;
 }
 
