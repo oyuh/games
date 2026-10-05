@@ -1175,94 +1175,52 @@ a.solo-card-title-link {
   min-width: 0;
 }
 
-/* ── Game card footer ────────────────────────────────────────────
-   One box holding the button and, joined to its bottom edge, a short strip
-   saying what is already running. Same subject, so one object: the strip is
-   the button's own footer rather than a second control under it. */
-/* Part of the card, not a button sat on it. It runs the full width out to the
-   card's own edges and sits flush at the bottom, which also puts it in the
-   same place on every card: the cards are a fixed height and the demo above
-   takes the slack, so this lands on the same line across the row. */
+/* The bottom of a game card: Create stacked over Browse public. Both are the
+   shared Button, with --primary pointed at the card's game so the primary
+   wears the game's color rather than the site's blue. Dark text on all five
+   accents, in both themes, since every one of them is light enough to need it. */
+.home-card .ui-btn {
+  --primary: var(--card-accent);
+  --primary-foreground: #181a1b;
+}
+
 .hc-create {
   display: flex;
   flex-direction: column;
-  /* Out to the card's edges: the body's padding sideways and down, plus the
-     grid's own row gap, which otherwise leaves it hanging a few pixels short
-     of the bottom. */
-  margin: 0 calc(var(--hc-body-pad) * -1) calc((var(--hc-body-pad) + var(--hc-body-gap)) * -1);
-  border-top: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 22%, transparent);
-}
-
-/* Its colour is in the text. A whole panel filled with the accent was the
-   brightest thing on a page of six cards and pulled the eye off the game. */
-.hc-create-btn {
-  appearance: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 0.5rem;
-  width: 100%;
-  padding: 0.85rem 1rem;
-  border: 0;
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 8%, transparent);
-  color: var(--card-accent, var(--primary));
-  font: inherit;
-  font-size: 0.92rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
 }
 
-.hc-create-btn:hover {
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 16%, transparent);
-  color: var(--foreground);
+/* The count of public games sits on the globe's corner, in the game's color
+   when there is something to join and quiet at zero. Positioned out of the
+   icon's box, so a two-digit count never widens the button. */
+.hc-browse-icon {
+  position: relative;
+  display: inline-flex;
+  /* Room for the badge, so it hangs off the globe without touching the label. */
+  margin-right: 0.45em;
 }
 
-.hc-create-btn:focus-visible {
-  outline: 2px solid var(--card-accent, var(--primary));
-  outline-offset: -3px;
-}
-
-/* The short one. Deliberately a fraction of the button's height: it is a
-   footnote on the button, not a rival to it. */
-.hc-public-strip {
-  appearance: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  width: 100%;
-  padding: 0.3rem 0.5rem;
-  border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--card-accent, var(--primary)) 18%, transparent);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+.hc-browse-badge {
+  position: absolute;
+  top: -0.6em;
+  right: -0.85em;
+  min-width: 1.35em;
+  height: 1.35em;
+  padding: 0 0.3em;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 13%, transparent);
   color: var(--muted-foreground);
-  font: inherit;
-  font-size: 0.63rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-.hc-public-strip:hover {
-  color: var(--foreground);
-  background: color-mix(in srgb, var(--foreground) 7%, transparent);
-}
-
-.hc-public-strip:focus-visible {
-  outline: 2px solid var(--card-accent, var(--primary));
-  outline-offset: -2px;
-}
-
-/* Something is actually running, so the strip is worth a look. */
-.hc-public-strip.is-live {
+.hc-browse-badge.is-live {
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 22%, transparent);
   color: var(--card-accent, var(--primary));
-}
-
-.hc-public-strip svg {
-  flex: 0 0 auto;
 }
 
 .hc-label {
@@ -1516,14 +1474,6 @@ a.solo-card-title-link {
   opacity: 0.85;
 }
 
-.hc-sync-button-content {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.42rem;
-}
 
 .hc-sync-pending-control {
   opacity: 0.72;
@@ -1906,22 +1856,20 @@ a.solo-card-title-link {
 }
 
 .hc-create-action-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
-  align-items: stretch;
   gap: 0.5rem;
+}
+
+/* Back keeps its square; Create takes whatever is left of the row. */
+.hc-create-action-row > .ui-btn--full {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
 }
 
 .hc-browse-back-row {
   justify-content: flex-start;
 }
 
-.hc-config-back-btn {
-  width: 100%;
-  min-width: 0;
-  min-height: 2.35rem;
-  padding: 0;
-}
 
 /* Theme-coloured primary buttons inside game cards.
 
@@ -1945,10 +1893,6 @@ a.solo-card-title-link {
   color: rgba(255, 255, 255, 0.4);
 }
 
-.home-card .hc-create-it-btn {
-  width: 100%;
-  min-width: 0;
-}
 
 @keyframes hc-go-button-pulse {
   0% {

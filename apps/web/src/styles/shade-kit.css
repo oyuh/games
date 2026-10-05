@@ -307,7 +307,7 @@
     flex-wrap: wrap;
   }
 
-  .sk-stage--rail .sk-composer .gk-btn {
+  .sk-stage--rail .sk-composer :is(.gk-btn, .ui-btn) {
     flex: 1 0 100%;
   }
 

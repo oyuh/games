@@ -4,6 +4,7 @@ import { PlayerCard, playerBadges, type PlayerCardSize } from "../components/sha
 import { PlayerHoverCard } from "../components/shared/PlayerHoverCard";
 import { TeamCard } from "../components/shared/TeamCard";
 import "../styles/game-shared.css";
+import { Button } from "../components/shared/Button";
 
 /**
  * Every player card state on one page. This is the place to eyeball a change
@@ -57,15 +58,13 @@ function HostTeams() {
   return (
     <>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.5rem" }}>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={{ fontSize: "0.72rem", padding: "0.3rem 0.6rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+        <Button
+          size="sm"
           onClick={() => setLocks(allLocked ? {} : Object.fromEntries(TEAMS.map((t) => [t.name, true])))}
         >
           {allLocked ? <FiUnlock size={12} /> : <FiLock size={12} />}
           {allLocked ? "Unlock all teams" : "Lock all teams"}
-        </button>
+        </Button>
       </div>
 
       <div className="tc-grid">
@@ -203,7 +202,7 @@ export function PlayerCardsPage() {
             { ...CAST[4]!, index: 4 },
           ]}
           action={<button type="button" aria-label="Teams locked"><FiLock size={12} /></button>}
-          footer={<button className="btn btn-ghost" type="button" style={{ fontSize: "0.72rem", padding: "0.3rem 0.6rem" }}><FiArrowRight size={12} /> Join Red Team</button>}
+          footer={<Button size="sm" icon={<FiArrowRight />}>Join Red Team</Button>}
         />
         <TeamCard name="Green Team" color="#34d399" score={0} scoreSuffix="/ 7" players={[]} />
       </Row>

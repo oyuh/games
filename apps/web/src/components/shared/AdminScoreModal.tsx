@@ -3,6 +3,7 @@ import { FiClock, FiRefreshCw, FiShuffle, FiUploadCloud, FiX } from "react-icons
 import { calculateScore, type Difficulty } from "../../lib/shikaku-engine";
 import type { PipsDifficulty } from "../../lib/pips-engine";
 import { showToast } from "../../lib/toast";
+import { Button } from "./Button";
 
 type AdminGameKind = "shikaku" | "pips";
 
@@ -359,9 +360,9 @@ export function AdminScoreModal({
           <section className="admin-score-section">
             <div className="admin-score-section-head">
               <span>Access</span>
-              <button className="admin-score-mini-btn" type="button" onClick={() => void loadSessions()} disabled={loadingSessions}>
-                <FiRefreshCw size={13} /> {loadingSessions ? "Loading" : "Load Sessions"}
-              </button>
+              <Button size="xs" icon={<FiRefreshCw />} loading={loadingSessions} onClick={() => void loadSessions()}>
+                Load Sessions
+              </Button>
             </div>
             <div className="admin-score-grid admin-score-grid--two">
               <label className="admin-score-field">
@@ -391,9 +392,9 @@ export function AdminScoreModal({
             <section className="admin-score-section">
               <div className="admin-score-section-head">
                 <span>Score Fields</span>
-                <button className="admin-score-mini-btn" type="button" onClick={randomizeShikaku}>
-                  <FiShuffle size={13} /> Randomize
-                </button>
+                <Button size="xs" icon={<FiShuffle />} onClick={randomizeShikaku}>
+                  Randomize
+                </Button>
               </div>
               <div className="admin-score-grid admin-score-grid--two">
                 <TextField label="Record id" value={shikakuDraft.id} placeholder="optional" onChange={(value) => setShikakuDraft((current) => ({ ...current, id: value }))} />
@@ -422,9 +423,9 @@ export function AdminScoreModal({
             <section className="admin-score-section">
               <div className="admin-score-section-head">
                 <span>Run Fields</span>
-                <button className="admin-score-mini-btn" type="button" onClick={randomizePips}>
-                  <FiShuffle size={13} /> Randomize
-                </button>
+                <Button size="xs" icon={<FiShuffle />} onClick={randomizePips}>
+                  Randomize
+                </Button>
               </div>
               <div className="admin-score-grid admin-score-grid--two">
                 <TextField label="Record id" value={pipsDraft.id} placeholder="optional" onChange={(value) => setPipsDraft((current) => ({ ...current, id: value }))} />
@@ -450,10 +451,10 @@ export function AdminScoreModal({
           {status && <p className="admin-score-status">{status}</p>}
 
           <div className="admin-score-actions">
-            <button className="btn btn-muted" type="button" onClick={onClose}>Cancel</button>
-            <button className="btn btn-primary game-action-btn" type="button" onClick={() => void submit()} disabled={submitting}>
-              <FiUploadCloud size={16} /> {submitting ? "Adding..." : "Add Score"}
-            </button>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button variant="primary" icon={<FiUploadCloud />} loading={submitting} onClick={() => void submit()}>
+              Add Score
+            </Button>
           </div>
         </div>
       </div>

@@ -1,7 +1,9 @@
 import { GAME_META, multiplayerTypeToGameSlug, type GameSlug } from "@games/shared";
 import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { FiChevronRight, FiEdit2, FiGithub, FiLogIn, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiChevronRight, FiEdit2, FiGithub, FiLogIn, FiX } from "react-icons/fi";
+import { Button } from "../../components/shared/Button";
+import { BrowseIcon } from "../../components/home/BrowseIcon";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList } from "../../components/shared/PublicGamesBrowser";
@@ -92,7 +94,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             enterKeyHint="done"
             aria-label="Display name"
           />
-          <button type="submit" className="m-btn m-btn--quiet">Save</button>
+          <Button type="submit" size="lg">Save</Button>
         </form>
         {firstVisit && (
           <p className="m-note">
@@ -188,9 +190,15 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                 enterKeyHint="go"
                 aria-label="Game code"
               />
-              <button className="m-btn m-btn--primary" type="submit" disabled={pendingAction !== null}>
-                {pendingAction === "join" ? "Joining…" : "Join"}
-              </button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={pendingAction === "join"}
+                disabled={pendingAction !== null}
+              >
+                Join
+              </Button>
             </form>
 
             {recentGames.length > 0 && (
@@ -237,27 +245,36 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
             {browsing ? (
               <>
                 <PublicGamesList gameType={GAME_META[sheetGame].multiplayerType!} sessionId={sessionId} />
-                <button className="m-link m-create-link" type="button" onClick={() => setBrowsing(false)}>
+                <Button size="lg" full icon={<FiArrowLeft />} onClick={() => setBrowsing(false)}>
                   Back to settings
-                </button>
+                </Button>
               </>
             ) : (
               <>
                 <GameSetup game={sheetGame} home={home} />
-                <button
-                  className="m-btn m-btn--primary m-btn--block"
-                  type="button"
-                  disabled={pendingAction !== null}
-                  onClick={() => createGame(home, sheetGame)}
-                >
-                  {pendingAction === `create-${sheetGame}` ? "Creating…" : "Create game"}
-                </button>
-                <button className="m-link m-create-link" type="button" onClick={() => setBrowsing(true)}>
-                  {publicCount(home, sheetGame) > 0
-                    ? `${publicCount(home, sheetGame)} public game${publicCount(home, sheetGame) === 1 ? "" : "s"} to join`
-                    : "Browse public games"}
-                  <FiChevronRight size={14} aria-hidden="true" />
-                </button>
+                {/* Same pair as the desktop card: create over browse. */}
+                <div className="m-create-actions">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    full
+                    icon={<GameIcon game={sheetGame} size={18} />}
+                    loading={pendingAction === `create-${sheetGame}`}
+                    disabled={pendingAction !== null}
+                    onClick={() => createGame(home, sheetGame)}
+                  >
+                    Create game
+                  </Button>
+                  <Button
+                    size="lg"
+                    full
+                    icon={<BrowseIcon count={publicCount(home, sheetGame)} />}
+                    aria-label={`Browse public games, ${publicCount(home, sheetGame)} to join`}
+                    onClick={() => setBrowsing(true)}
+                  >
+                    Browse public
+                  </Button>
+                </div>
               </>
             )}
           </div>

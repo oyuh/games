@@ -16,6 +16,7 @@ import { ShadeGuess } from "../components/shade/ShadeGuess";
 import { ShadeResult } from "../components/shade/ShadeResult";
 import { ShadeGameOver } from "../components/shade/ShadeGameOver";
 import "../styles/game-shared.css";
+import { Button } from "../components/shared/Button";
 
 /**
  * Every part of Shade Signal, on one page, driven by fake data. Same idea as
@@ -68,14 +69,6 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   );
 }
 
-const toggle = {
-  fontSize: "0.72rem",
-  padding: "0.3rem 0.6rem",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "0.35rem",
-} as const;
-
 /**
  * The lobby the way a player meets it, with the room actually filling up. The
  * start hint is the interesting one to drive: it is the only thing standing
@@ -101,31 +94,29 @@ function Live() {
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
         {[1, 2, 3, 4].map((n) => (
-          <button
+          <Button
+            size="sm"
+            aria-pressed={count === n}
             key={n}
-            type="button"
-            className={`btn ${count === n ? "btn-primary" : "btn-ghost"}`}
-            style={toggle}
             onClick={() => setCount(n)}
           >
             {n} {n === 1 ? "player" : "players"}
-          </button>
+          </Button>
         ))}
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
-        <button type="button" className={`btn ${isHost ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsHost((v) => !v)}>Host</button>
-        <button type="button" className={`btn ${isSpectator ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsSpectator((v) => !v)}>Spectating</button>
-        <button type="button" className={`btn ${hardMode ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setHardMode((v) => !v)}>Hard mode</button>
-        <button type="button" className={`btn ${leaderPick ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setLeaderPick((v) => !v)}>Leader picks</button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={toggle}
+        <Button size="sm" aria-pressed={isHost} onClick={() => setIsHost((v) => !v)}>Host</Button>
+        <Button size="sm" aria-pressed={isSpectator} onClick={() => setIsSpectator((v) => !v)}>Spectating</Button>
+        <Button size="sm" aria-pressed={hardMode} onClick={() => setHardMode((v) => !v)}>Hard mode</Button>
+        <Button size="sm" aria-pressed={leaderPick} onClick={() => setLeaderPick((v) => !v)}>Leader picks</Button>
+        <Button
+          size="sm"
+          icon={<FiPlay />}
           onClick={() => { setStarting(true); setTimeout(() => setStarting(false), 1600); }}
         >
-          <FiPlay size={12} /> Starting
-        </button>
+          Starting
+        </Button>
       </div>
 
       <GameShellHeader
@@ -207,13 +198,13 @@ function LiveClue() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className={`btn ${round === 1 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setRound(1); setClue1(null); setValue(""); }}>Clue 1</button>
-        <button type="button" className={`btn ${round === 2 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setRound(2); setClue1("ocean"); setValue(""); }}>Clue 2</button>
+        <Button size="sm" aria-pressed={round === 1} onClick={() => { setRound(1); setClue1(null); setValue(""); }}>Clue 1</Button>
+        <Button size="sm" aria-pressed={round === 2} onClick={() => { setRound(2); setClue1("ocean"); setValue(""); }}>Clue 2</Button>
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
-        <button type="button" className={`btn ${isLeader ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsLeader((v) => !v)}>Leading</button>
-        <button type="button" className={`btn ${hardMode ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setHardMode((v) => !v)}>Hard mode</button>
+        <Button size="sm" aria-pressed={isLeader} onClick={() => setIsLeader((v) => !v)}>Leading</Button>
+        <Button size="sm" aria-pressed={hardMode} onClick={() => setHardMode((v) => !v)}>Hard mode</Button>
       </div>
 
       <GameShellHeader
@@ -298,15 +289,15 @@ function LiveGuess() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className={`btn ${round === 1 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={reset}>Guess 1</button>
-        <button type="button" className={`btn ${round === 2 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={toRound2}>Guess 2</button>
+        <Button size="sm" aria-pressed={round === 1} onClick={reset}>Guess 1</Button>
+        <Button size="sm" aria-pressed={round === 2} onClick={toRound2}>Guess 2</Button>
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
-        <button type="button" className={`btn ${isGuessing ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsGuessing((v) => !v)}>Guessing</button>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => setOthers(0)}>
-          <FiRefreshCw size={12} /> Empty the room
-        </button>
+        <Button size="sm" aria-pressed={isGuessing} onClick={() => setIsGuessing((v) => !v)}>Guessing</Button>
+        <Button size="sm" icon={<FiRefreshCw />} onClick={() => setOthers(0)}>
+          Empty the room
+        </Button>
       </div>
 
       <GameShellHeader

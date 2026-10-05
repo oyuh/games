@@ -1,7 +1,7 @@
 /* Dev tools panel.
    Same rules as the solo menu the site's look comes from: no shadows on the
-   content, no glows, depth from borders and fills. It borrows .mshell-action
-   for its buttons so it tracks the house style without redefining it. */
+   content, no glows, depth from borders and fills. Its buttons are the
+   shared Button at xs, so it tracks the house style without redefining it. */
 
 .devp {
   --solo-pad: 0.2rem;
@@ -110,15 +110,6 @@
 
 .devp-row + .devp-row {
   margin-top: 0.3rem;
-}
-
-/* Compact variant of the shared modal button. */
-.devp .mshell-action {
-  height: 1.85rem;
-  padding: 0 0.5rem;
-  border-radius: var(--radius-md);
-  font-size: 0.7rem;
-  font-weight: 700;
 }
 
 .devp-grow {

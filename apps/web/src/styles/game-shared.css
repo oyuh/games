@@ -1100,15 +1100,11 @@
   background: color-mix(in srgb, var(--secondary) 10%, transparent);
 }
 
-.game-team-join-btn {
-  width: 100%;
-  min-height: 2.5rem;
-  font-size: 0.78rem;
-  gap: 0.45rem;
-  justify-content: center;
-  background: color-mix(in srgb, var(--team-color, var(--primary)) 15%, transparent);
-  color: var(--team-color, var(--primary));
-  border: 1px solid color-mix(in srgb, var(--team-color, var(--primary)) 35%, transparent);
+/* The team's color is in the text, and the edge picks it up on hover. */
+.game-team-join-btn.ui-btn {
+  --btn-fg: var(--team-color, var(--primary));
+  --btn-fg-hover: var(--team-color, var(--primary));
+  --btn-ring-hover: color-mix(in srgb, var(--team-color, var(--primary)) 50%, transparent);
 }
 
 .move-player-btn {
@@ -1793,10 +1789,9 @@
   flex-shrink: 0;
 }
 
-/* ── Multi-select extras ──────────────────────────────────
-   A count on the trigger so the summary never has to spell out a long
-   list, and a checkbox per row because a tick alone does not read as
-   something you can turn back off. */
+/* ── Multi-select trigger extras ──────────────────────────
+   A count on MultiCombobox's trigger, so the summary never has to spell
+   out a long list. */
 .solo-select-count {
   flex-shrink: 0;
   color: var(--muted-foreground);
@@ -1808,29 +1803,6 @@
 .solo-select-trigger[data-empty] .solo-select-value {
   color: var(--muted-foreground);
   font-weight: 600;
-}
-
-.solo-select-box {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 0.95rem;
-  height: 0.95rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs, 3px);
-  background: var(--background);
-  color: var(--primary-foreground);
-  transition: background 0.14s, border-color 0.14s;
-}
-
-.solo-select-box--on {
-  border-color: var(--select-accent, var(--primary));
-  background: var(--select-accent, var(--primary));
-}
-
-/* The label sits between the box and the right edge, so it takes the slack. */
-.solo-select-option .solo-select-option-label {
-  flex: 1;
 }
 
 /* ── Drawers hung off the bottom of a picker ──────────────── */
@@ -1917,45 +1889,27 @@
   color: var(--foreground);
 }
 
-/* ── The one button that starts the game ──────────────────── */
-.solo-start {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  height: var(--solo-control-h);
+/* ── The one button that starts the game ──────────────────────
+   The shared primary Button, at the menu's control height and corners, with
+   the label to the left and the arrow pushed to the right edge. */
+.solo-start.ui-btn {
+  --btn-h: var(--solo-control-h);
+  --btn-px: 1.1rem;
+  justify-content: space-between;
   margin-top: 0.1rem;
-  padding: 0 1.1rem;
-  border: 0;
   border-radius: var(--solo-radius);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  cursor: pointer;
-  font: inherit;
-  transition: filter 0.16s;
-}
-
-.solo-start:hover {
-  filter: brightness(1.08);
-}
-
-.solo-start:active {
-  filter: brightness(0.94);
-}
-
-.solo-start-label {
-  flex: 1;
-  text-align: left;
   font-size: 1rem;
   font-weight: 800;
 }
 
-.solo-start-arrow {
-  flex-shrink: 0;
-  transition: transform 0.16s;
+.solo-start .ui-btn-trailing {
+  transition: translate 0.16s;
 }
 
-.solo-start:hover .solo-start-arrow {
-  transform: translateX(3px);
+@media (hover: hover) {
+  .solo-start:hover:not(:disabled) .ui-btn-trailing {
+    translate: 3px 0;
+  }
 }
 
 /* ── Bottom links: plain text, nothing else ───────────────── */
@@ -1964,36 +1918,6 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 1.5rem;
-}
-
-.solo-menu-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0;
-  border: 0;
-  background: none;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: color 0.16s;
-}
-
-.solo-menu-link:hover {
-  color: var(--primary);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* These sit at 28px tall, under the 44px touch minimum. Pad them out on
-   touch only, so the desktop menu keeps its tight spacing. */
-@media (pointer: coarse) {
-  .solo-menu-link {
-    min-height: 44px;
-    padding: 0.25rem 0.5rem;
-  }
 }
 
 @media (max-width: 600px) {
@@ -2547,21 +2471,6 @@
   position: absolute;
   top: 0.7rem;
   right: 0.7rem;
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: background 0.14s, color 0.14s;
-}
-
-.solo-lb-close:hover {
-  background: var(--accent);
-  color: var(--foreground);
 }
 
 .solo-lb-filters {
@@ -2699,16 +2608,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.solo-menu-link:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.solo-menu-link:disabled:hover {
-  color: var(--muted-foreground);
-  text-decoration: none;
-}
-
 @media (max-width: 600px) {
   .solo-lb {
     padding: 1.2rem 0.8rem 0.9rem;
@@ -2720,36 +2619,19 @@
 }
 
 /* ── A link waiting on its second press ────────────────────── */
-.solo-menu-link[data-armed] {
+.solo-menu-links .ui-btn[data-armed] {
+  --btn-fg: var(--primary);
+  --btn-fg-hover: var(--primary);
   color: var(--primary);
   font-weight: 800;
 }
 
-.solo-menu-link[data-armed]::after {
+.solo-menu-links .ui-btn[data-armed]::before {
   content: "";
   position: absolute;
   inset: -0.15rem -0.45rem;
   border: 1px dashed color-mix(in srgb, var(--primary) 55%, transparent);
   border-radius: var(--radius-sm);
-}
-
-.solo-end .solo-menu-link {
-  position: relative;
-}
-
-.solo-end-start:disabled {
-  cursor: default;
-  filter: grayscale(0.7) brightness(0.8);
-}
-
-.solo-menu-link:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
-.solo-menu-link:disabled:hover {
-  color: var(--muted-foreground);
-  text-decoration: none;
 }
 
 @media (max-width: 600px) {

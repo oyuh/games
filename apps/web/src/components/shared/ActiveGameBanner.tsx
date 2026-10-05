@@ -5,6 +5,7 @@ import { GAME_META, multiplayerTypeToGameSlug, queries, mutators } from "@games/
 import { useQuery, useZero } from "../../lib/zero";
 import { SessionGameType, leaveCurrentGame } from "../../lib/session";
 import { showToast } from "../../lib/toast";
+import { Button } from "./Button";
 
 const ACTIVE_GAME_MODAL_DELAY_MS = 800;
 
@@ -150,20 +151,23 @@ export function ActiveGameModal({ sessionId, suppress }: { sessionId: string; su
           </div>
 
           <div className="active-game-actions">
-            <button
-              className="btn active-game-leave-btn"
+            <Button
+              variant="danger-secondary"
+              className="active-game-leave-btn"
+              icon={<FiLogOut />}
+              shape={wasKicked ? "base" : "square"}
+              full={wasKicked}
+              loading={leaving}
               onClick={() => void handleLeave()}
-              disabled={leaving}
               aria-label={leaving ? "Leaving game" : "Leave game"}
-              title="Leave game"
+              data-tooltip="Leave game"
             >
-              <FiLogOut size={16} />
-              {wasKicked && <span>{leaving ? "Leaving..." : "Leave Game"}</span>}
-            </button>
+              {wasKicked ? "Leave Game" : undefined}
+            </Button>
             {!wasKicked && (
-              <button className="btn active-game-rejoin-btn game-action-btn" onClick={handleRejoin}>
-                Rejoin {gameLabel} <FiArrowRight size={14} />
-              </button>
+              <Button variant="primary" full className="active-game-rejoin-btn" trailing={<FiArrowRight />} onClick={handleRejoin}>
+                Rejoin {gameLabel}
+              </Button>
             )}
           </div>
         </div>

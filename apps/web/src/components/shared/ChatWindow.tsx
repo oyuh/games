@@ -6,6 +6,7 @@ import { mutators, queries } from "@games/shared";
 import { useQuery, useZero } from "../../lib/zero";
 import { getDisplayName, getOrCreateSessionId } from "../../lib/session";
 import { useChatContext } from "../../lib/chat-context";
+import { Button } from "./Button";
 import { useImposterChatText } from "../../lib/game-secrets";
 import { isEncrypted } from "@games/shared";
 
@@ -221,9 +222,7 @@ export function ChatWindow({ hostId, myName }: ChatWindowProps) {
                 }
               }}
             />
-            <button className="chat-send-btn" onClick={handleSend} disabled={!input.trim()}>
-              <FiSend size={14} />
-            </button>
+            <Button variant="primary" size="sm" shape="square" icon={<FiSend />} aria-label="Send message" onClick={handleSend} disabled={!input.trim()} />
           </div>
 
           {/* Resize handle */}

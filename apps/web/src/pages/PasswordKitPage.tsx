@@ -23,6 +23,7 @@ import {
   type PasswordTaken,
 } from "../components/password/PasswordRound";
 import "../styles/game-shared.css";
+import { Button } from "../components/shared/Button";
 
 /**
  * Every part of Password, on one page, driven by fake data. Same idea as
@@ -86,14 +87,6 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   );
 }
 
-const toggle = {
-  fontSize: "0.72rem",
-  padding: "0.3rem 0.6rem",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "0.35rem",
-} as const;
-
 /**
  * The lobby the way a player meets it, with the teams actually moving. Joining
  * and dragging both write to the same local state a mutator would write to, so
@@ -133,43 +126,41 @@ function Live() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => reset(Math.max(0, count - 1), teamCount)}>−</button>
+        <Button size="sm" onClick={() => reset(Math.max(0, count - 1), teamCount)}>−</Button>
         <span className="gk-actions-note" style={{ alignSelf: "center", minWidth: "5.5rem", textAlign: "center" }}>
           {count} player{count === 1 ? "" : "s"}
         </span>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => reset(Math.min(CAST.length, count + 1), teamCount)}>+</button>
+        <Button size="sm" onClick={() => reset(Math.min(CAST.length, count + 1), teamCount)}>+</Button>
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
         {[2, 3].map((n) => (
-          <button
+          <Button
+            size="sm"
+            aria-pressed={teamCount === n}
             key={n}
-            type="button"
-            className={`btn ${teamCount === n ? "btn-primary" : "btn-ghost"}`}
-            style={toggle}
             onClick={() => reset(count, n)}
           >
             {n} teams
-          </button>
+          </Button>
         ))}
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
-        <button type="button" className={`btn ${isHost ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsHost((v) => !v)}>Host</button>
-        <button type="button" className={`btn ${inGame ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setInGame((v) => !v)}>Joined</button>
-        <button type="button" className={`btn ${isSpectator ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsSpectator((v) => !v)}>Spectating</button>
-        <button type="button" className={`btn ${locked ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setLocked((v) => !v)}>Locked</button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={toggle}
+        <Button size="sm" aria-pressed={isHost} onClick={() => setIsHost((v) => !v)}>Host</Button>
+        <Button size="sm" aria-pressed={inGame} onClick={() => setInGame((v) => !v)}>Joined</Button>
+        <Button size="sm" aria-pressed={isSpectator} onClick={() => setIsSpectator((v) => !v)}>Spectating</Button>
+        <Button size="sm" aria-pressed={locked} onClick={() => setLocked((v) => !v)}>Locked</Button>
+        <Button
+          size="sm"
+          icon={<FiPlay />}
           onClick={() => { setStarting(true); setTimeout(() => setStarting(false), 1600); }}
         >
-          <FiPlay size={12} /> Starting
-        </button>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => reset(count, teamCount)}>
-          <FiRefreshCw size={12} /> Redeal
-        </button>
+          Starting
+        </Button>
+        <Button size="sm" icon={<FiRefreshCw />} onClick={() => reset(count, teamCount)}>
+          Redeal
+        </Button>
       </div>
 
       <GameShellHeader
@@ -397,12 +388,12 @@ function LiveRound() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className={`btn ${guessing ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setGuessing((v) => !v); reset(); }}>
+        <Button size="sm" aria-pressed={guessing} onClick={() => { setGuessing((v) => !v); reset(); }}>
           You are guessing
-        </button>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={reset}>
-          <FiRefreshCw size={12} /> Run it again
-        </button>
+        </Button>
+        <Button size="sm" icon={<FiRefreshCw />} onClick={reset}>
+          Run it again
+        </Button>
       </div>
 
       <GameShellHeader

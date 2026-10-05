@@ -7,6 +7,7 @@ import { FiClock, FiEye, FiMapPin } from "react-icons/fi";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { LocationLobby, locationPhases, locationTrackPhase } from "../components/location/LocationLobby";
 import { LocationClue, LocationGameOver, LocationGuess, LocationPickClue, LocationResult } from "../components/location/LocationRound";
+import { Button } from "../components/shared/Button";
 import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { GameRoster } from "../components/shared/GameRoster";
 import { InSessionModal } from "../components/shared/InSessionModal";
@@ -57,7 +58,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
         <div className="game-empty">
           <p className="game-empty-title">Game not found</p>
           <p className="game-empty-sub">Redirecting home&hellip;</p>
-          <button className="btn btn-primary" onClick={() => navigate("/")}>Go Home</button>
+          <Button variant="primary" onClick={() => navigate("/")}>Go Home</Button>
         </div>
       </div>
     );

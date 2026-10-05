@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { FiActivity, FiChevronRight } from "react-icons/fi";
 import { getGameSlugFromPath, type GameSlug } from "@games/shared";
 import { useState, type ComponentType } from "react";
+import { Button } from "../../components/shared/Button";
 import { BottomSheet } from "./BottomSheet";
 import { InfoContent, InfoFooter } from "../../components/shared/InfoModal";
 import { ImposterDemo } from "../../components/demos/ImposterDemo";
@@ -37,9 +38,9 @@ export function MobileInfoSheet({ onClose }: { onClose: () => void }) {
     <BottomSheet title="Info" onClose={onClose}>
       <InfoContent
         pageAction={Demo && (
-          <button className="m-btn m-btn--quiet m-btn--block m-info-howto" type="button" onClick={() => setShowDemo(true)}>
+          <Button size="lg" full className="m-info-howto" onClick={() => setShowDemo(true)}>
             How to play
-          </button>
+          </Button>
         )}
       />
       {/* Phones have no footer, so the status page's way in lives here. */}

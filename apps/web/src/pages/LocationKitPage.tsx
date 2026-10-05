@@ -13,6 +13,7 @@ import {
   type LocationPlayer,
 } from "../components/location/LocationLobby";
 import "../styles/game-shared.css";
+import { Button } from "../components/shared/Button";
 
 /**
  * Every part of Location Signal, on one page, driven by fake data. Same idea as
@@ -63,14 +64,6 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   );
 }
 
-const toggle = {
-  fontSize: "0.72rem",
-  padding: "0.3rem 0.6rem",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "0.35rem",
-} as const;
-
 /**
  * The lobby the way a player meets it, with the room actually filling up. The
  * start hint is the interesting one to drive: it is the only thing standing
@@ -95,43 +88,40 @@ function Live() {
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
         {[1, 2, 3, 4].map((n) => (
-          <button
+          <Button
+            size="sm"
+            aria-pressed={count === n}
             key={n}
-            type="button"
-            className={`btn ${count === n ? "btn-primary" : "btn-ghost"}`}
-            style={toggle}
             onClick={() => setCount(n)}
           >
             {n} {n === 1 ? "player" : "players"}
-          </button>
+          </Button>
         ))}
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
         {[1, 2, 3, 4].map((n) => (
-          <button
+          <Button
+            size="sm"
+            aria-pressed={cluePairs === n}
             key={n}
-            type="button"
-            className={`btn ${cluePairs === n ? "btn-primary" : "btn-ghost"}`}
-            style={toggle}
             onClick={() => setCluePairs(n)}
           >
             {n} {n === 1 ? "clue" : "clues"}
-          </button>
+          </Button>
         ))}
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
-        <button type="button" className={`btn ${isHost ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsHost((v) => !v)}>Host</button>
-        <button type="button" className={`btn ${isSpectator ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsSpectator((v) => !v)}>Spectating</button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={toggle}
+        <Button size="sm" aria-pressed={isHost} onClick={() => setIsHost((v) => !v)}>Host</Button>
+        <Button size="sm" aria-pressed={isSpectator} onClick={() => setIsSpectator((v) => !v)}>Spectating</Button>
+        <Button
+          size="sm"
+          icon={<FiPlay />}
           onClick={() => { setStarting(true); setTimeout(() => setStarting(false), 1600); }}
         >
-          <FiPlay size={12} /> Starting
-        </button>
+          Starting
+        </Button>
       </div>
 
       <GameShellHeader
@@ -198,8 +188,8 @@ function LivePickClue() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className={`btn ${isLeader ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsLeader((v) => !v)}>Leading</button>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => { setTarget(null); setValue(""); }}>Clear the pin</button>
+        <Button size="sm" aria-pressed={isLeader} onClick={() => setIsLeader((v) => !v)}>Leading</Button>
+        <Button size="sm" onClick={() => { setTarget(null); setValue(""); }}>Clear the pin</Button>
       </div>
 
       <GameShellHeader
@@ -258,13 +248,13 @@ function LiveGuess() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className={`btn ${round === 1 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setRound(1); setSelected(null); setLocked(false); }}>Guess 1</button>
-        <button type="button" className={`btn ${round === 2 ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setRound(2); setSelected(null); setLocked(false); }}>Guess 2</button>
+        <Button size="sm" aria-pressed={round === 1} onClick={() => { setRound(1); setSelected(null); setLocked(false); }}>Guess 1</Button>
+        <Button size="sm" aria-pressed={round === 2} onClick={() => { setRound(2); setSelected(null); setLocked(false); }}>Guess 2</Button>
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
-        <button type="button" className={`btn ${isGuessing ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsGuessing((v) => !v)}>Guessing</button>
-        <button type="button" className={`btn ${clockOnMap ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setClockOnMap((v) => !v)}>Clock on the map</button>
+        <Button size="sm" aria-pressed={isGuessing} onClick={() => setIsGuessing((v) => !v)}>Guessing</Button>
+        <Button size="sm" aria-pressed={clockOnMap} onClick={() => setClockOnMap((v) => !v)}>Clock on the map</Button>
       </div>
 
       <GameShellHeader
