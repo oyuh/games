@@ -102,9 +102,9 @@
   --text: #f5f5f5;
 
   /* Corner radius. One knob for the whole site: 1 is the old rounded-off
-     look, 0.5 is half of it. Everything with a corner pulls from the
-     --radius-* scale below. Pills and circles (999px, 50%) stay out of it. */
-  --radius-scale: 0.5;
+     look, 0.375 is a bit over a third of it. Everything with a corner
+     pulls from the --radius-* scale below. Pills and circles (999px, 50%) stay out of it. */
+  --radius-scale: 0.375;
   --radius: var(--radius-md); /* legacy alias, still used in a lot of places */
 
   /* Avatars are squircles, not circles. One knob for every avatar and every
