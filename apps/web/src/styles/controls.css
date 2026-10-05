@@ -5,12 +5,28 @@
    from --modal-accent where one is set and --primary everywhere else. */
 
 /* ── Switch ─────────────────────────────────────────────────
-   The thumb is the full height of the track and travels exactly its own
-   width. That is what stops it reading as a small dot rattling around
-   inside a bigger pill. */
+   Kumo's switch in the site's colors. A squircle, not a pill: the track has
+   a 1px ring, and the thumb is a block the full height of the track that
+   travels exactly its own width, with an edge and a short shadow so it sits
+   on the track rather than in it. Off is a gray track with a dark thumb; on
+   is the accent with a lighter tint of it for the thumb. Every color is a
+   --sw-* token, so the light theme only swaps tokens. */
 .ui-switch {
   --sw-h: 1.15rem;
   --sw-w: calc(var(--sw-h) * 2);
+  /* Off the height, not the site's radius scale, so the small size keeps the
+     same shape. 0.3 of it lands near Kumo's 5px. */
+  --sw-radius: calc(var(--sw-h) * 0.3);
+  --sw-accent: var(--modal-accent, var(--primary));
+  --sw-track: color-mix(in srgb, var(--foreground) 16%, var(--card));
+  --sw-ring: color-mix(in srgb, var(--foreground) 24%, var(--card));
+  --sw-thumb: color-mix(in srgb, black 30%, var(--card));
+  --sw-track-on: color-mix(in srgb, var(--sw-accent) 62%, black);
+  --sw-ring-on: color-mix(in srgb, var(--sw-accent) 78%, black);
+  --sw-thumb-on: color-mix(in srgb, var(--sw-accent) 55%, white);
+  --sw-edge: rgb(255 255 255 / 0.1);
+  --sw-drop: rgb(0 0 0 / 0.4);
+
   position: relative;
   flex-shrink: 0;
   display: inline-block;
@@ -18,10 +34,22 @@
   height: var(--sw-h);
   padding: 0;
   border: 0;
-  border-radius: 999px;
-  background: var(--muted);
+  border-radius: var(--sw-radius);
+  background: var(--sw-track);
+  box-shadow: 0 0 0 1px var(--sw-ring);
   cursor: pointer;
-  transition: background 0.15s cubic-bezier(0, 0, 0.2, 1);
+  transition: background 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+[data-theme="light"] .ui-switch {
+  --sw-track: #e5e5e5;
+  --sw-ring: #d4d4d4;
+  --sw-thumb: #ffffff;
+  --sw-track-on: var(--sw-accent);
+  --sw-ring-on: color-mix(in srgb, var(--sw-accent) 85%, black);
+  --sw-thumb-on: #ffffff;
+  --sw-edge: rgb(0 0 0 / 0.12);
+  --sw-drop: rgb(0 0 0 / 0.16);
 }
 
 .ui-switch[data-size="sm"] {
@@ -29,42 +57,154 @@
 }
 
 .ui-switch[aria-checked="true"] {
-  background: color-mix(in srgb, var(--modal-accent, var(--primary)) 62%, transparent);
+  background: var(--sw-track-on);
+  box-shadow: 0 0 0 1px var(--sw-ring-on);
 }
 
 .ui-switch:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .ui-switch-thumb {
   position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
   width: var(--sw-h);
-  height: var(--sw-h);
-  border-radius: 999px;
-  background: var(--background);
+  border-radius: var(--sw-radius);
+  background: var(--sw-thumb);
   box-shadow:
-    0 0 1px 0.5px rgba(255, 255, 255, 0.12),
-    0 1px 2px rgba(0, 0, 0, 0.3);
-  transition: left 0.15s cubic-bezier(0, 0, 0.2, 1), background 0.15s cubic-bezier(0, 0, 0.2, 1);
-}
-
-[data-theme="light"] .ui-switch-thumb {
-  box-shadow:
-    0 0 1px 0.5px rgba(0, 0, 0, 0.06),
-    0 1px 2px rgba(0, 0, 0, 0.16);
+    0 0 1px 0.5px var(--sw-edge),
+    0 1px 2px var(--sw-drop);
+  transition: left 0.15s ease-out, background 0.15s ease-out;
 }
 
 .ui-switch[aria-checked="true"] .ui-switch-thumb {
-  left: 50%;
-  background: color-mix(in srgb, var(--modal-accent, var(--primary)) 42%, #fff);
+  left: calc(var(--sw-w) - var(--sw-h));
+  background: var(--sw-thumb-on);
+}
+
+/* Kumo's squircle corners where the browser can draw them. The radius
+   doubles because a squircle at the same radius reads much tighter. */
+@supports (corner-shape: squircle) {
+  .ui-switch,
+  .ui-switch-thumb {
+    border-radius: calc(var(--sw-radius) * 2);
+    corner-shape: squircle;
+  }
 }
 
 .ui-switch:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--modal-accent, var(--primary)) 60%, transparent);
+  outline: 2px solid var(--sw-accent);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-switch,
+  .ui-switch-thumb {
+    transition: none;
+  }
+}
+
+/* ── Slider ─────────────────────────────────────────────────
+   The switch, stretched. The input itself is the track; the fill runs to
+   the middle of the thumb, which travels from flush left to flush right,
+   so the fill stop is half a thumb plus the travelled share of the rest. */
+.ui-slider {
+  --sl-h: 1.15rem;
+  --sl-radius: calc(var(--sl-h) * 0.3);
+  --sl-accent: var(--modal-accent, var(--primary));
+  --sl-track: color-mix(in srgb, var(--foreground) 16%, var(--card));
+  --sl-ring: color-mix(in srgb, var(--foreground) 24%, var(--card));
+  --sl-fill: color-mix(in srgb, var(--sl-accent) 62%, black);
+  --sl-thumb: color-mix(in srgb, var(--sl-accent) 55%, white);
+  --sl-edge: rgb(255 255 255 / 0.1);
+  --sl-drop: rgb(0 0 0 / 0.4);
+  --sl-stop: calc(var(--sl-h) / 2 + (100% - var(--sl-h)) * var(--sl-p, 0));
+
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  height: var(--sl-h);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--sl-radius);
+  background: linear-gradient(to right, var(--sl-fill) var(--sl-stop), var(--sl-track) var(--sl-stop));
+  box-shadow: 0 0 0 1px var(--sl-ring);
+  cursor: pointer;
+}
+
+[data-theme="light"] .ui-slider {
+  --sl-track: #e5e5e5;
+  --sl-ring: #d4d4d4;
+  --sl-fill: var(--sl-accent);
+  --sl-thumb: #ffffff;
+  --sl-edge: rgb(0 0 0 / 0.12);
+  --sl-drop: rgb(0 0 0 / 0.16);
+}
+
+.ui-slider::-webkit-slider-runnable-track {
+  height: var(--sl-h);
+  border-radius: var(--sl-radius);
+  background: transparent;
+}
+
+.ui-slider::-moz-range-track {
+  height: var(--sl-h);
+  border-radius: var(--sl-radius);
+  background: transparent;
+}
+
+.ui-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--sl-h);
+  height: var(--sl-h);
+  border: 0;
+  border-radius: var(--sl-radius);
+  background: var(--sl-thumb);
+  box-shadow: 0 0 1px 0.5px var(--sl-edge), 0 1px 2px var(--sl-drop);
+}
+
+.ui-slider::-moz-range-thumb {
+  width: var(--sl-h);
+  height: var(--sl-h);
+  border: 0;
+  border-radius: var(--sl-radius);
+  background: var(--sl-thumb);
+  box-shadow: 0 0 1px 0.5px var(--sl-edge), 0 1px 2px var(--sl-drop);
+}
+
+/* One rule per engine: a selector list with another engine's pseudo-element
+   in it gets thrown out whole. */
+@supports (corner-shape: squircle) {
+  .ui-slider {
+    border-radius: calc(var(--sl-radius) * 2);
+    corner-shape: squircle;
+  }
+
+  .ui-slider::-webkit-slider-thumb {
+    border-radius: calc(var(--sl-radius) * 2);
+    corner-shape: squircle;
+  }
+
+  .ui-slider::-moz-range-thumb {
+    border-radius: calc(var(--sl-radius) * 2);
+    corner-shape: squircle;
+  }
+}
+
+.ui-slider:focus-visible {
+  outline: 2px solid var(--sl-accent);
+  outline-offset: 2px;
+}
+
+.ui-slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ── A switch with a visible label ──────────────────────── */

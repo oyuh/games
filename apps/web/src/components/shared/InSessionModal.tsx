@@ -1,6 +1,7 @@
 import { GAME_META, multiplayerTypeToGameSlug } from "@games/shared";
 import { FiAlertTriangle, FiX } from "react-icons/fi";
 import { SessionGameType } from "../../lib/session";
+import { Button } from "./Button";
 
 function labelForGameType(gameType: SessionGameType): string {
   return GAME_META[multiplayerTypeToGameSlug(gameType)].title;
@@ -50,10 +51,8 @@ export function InSessionModal({
             Continue to leave that game and join this one?
           </p>
           <div className="game-actions" style={{ justifyContent: "flex-end" }}>
-            <button className="btn btn-muted" onClick={onCancel} disabled={busy}>Cancel</button>
-            <button className="btn btn-primary game-action-btn" onClick={onConfirm} disabled={busy}>
-              {busy ? "Joining…" : "Leave & Join"}
-            </button>
+            <Button onClick={onCancel} disabled={busy}>Cancel</Button>
+            <Button variant="primary" onClick={onConfirm} loading={busy}>Leave & Join</Button>
           </div>
         </div>
       </div>

@@ -18,6 +18,7 @@ import {
 } from "../../lib/challenge";
 import { buildRealtimeUserTopic, subscribeToRealtimeEvent } from "../../lib/realtime";
 import { getOrCreateSessionId } from "../../lib/session";
+import { Button } from "./Button";
 import { ModalShell } from "./ModalShell";
 
 type TurnstileApi = {
@@ -166,13 +167,13 @@ function ChallengeModal() {
             {phase === "verifying" || phase === "loading" ? "Checking…" : note}
           </p>
           <div className="challenge-actions">
-            <button className="btn btn-muted" type="button" disabled={recheckBlocked} onClick={() => void recheck()}>
-              <FiRefreshCw size={14} /> Check again
-            </button>
+            <Button icon={<FiRefreshCw />} disabled={recheckBlocked} onClick={() => void recheck()}>
+              Check again
+            </Button>
             {phase === "failed" && (
-              <button className="btn btn-primary" type="button" onClick={() => retry.current()}>
+              <Button variant="primary" onClick={() => retry.current()}>
                 Try again
-              </button>
+              </Button>
             )}
           </div>
         </>

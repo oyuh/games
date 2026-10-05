@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { FiClock } from "react-icons/fi";
+import { Button } from "./Button";
 import { Segmented, type SoloSetupOption } from "./SoloGameMenu";
 import { SoloScoreTable, type SoloScoreRow } from "./SoloScoreTable";
 
@@ -234,31 +235,33 @@ export function SoloEndScreen({
         </section>
       )}
 
-      <button
-        className="solo-start solo-end-start"
-        type="button"
+      <Button
+        variant="primary"
+        size="lg"
+        full
+        className="solo-start"
+        trailing={primary.icon}
         onClick={() => runAction(primary)}
         disabled={primary.disabled}
         data-tooltip={primary.title}
       >
-        <span className="solo-start-label">{armed === primary.label ? "Press again to confirm" : primary.label}</span>
-        {primary.icon}
-      </button>
+        {armed === primary.label ? "Press again to confirm" : primary.label}
+      </Button>
 
       <nav className="solo-menu-links">
         {links.map((link) => (
-          <button
-            className="solo-menu-link"
-            type="button"
+          <Button
+            variant="text"
             key={link.label}
+            icon={link.icon}
             data-armed={armed === link.label ? "" : undefined}
             onClick={() => runAction(link)}
             onBlur={() => setArmed((current) => (current === link.label ? null : current))}
             disabled={link.disabled}
             data-tooltip={armed === link.label ? "Press again to confirm" : link.title}
           >
-            {link.icon} {armed === link.label ? "Press again" : link.label}
-          </button>
+            {armed === link.label ? "Press again" : link.label}
+          </Button>
         ))}
       </nav>
     </main>

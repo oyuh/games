@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import { FiEdit2 } from "react-icons/fi";
+import { Button } from "./Button";
 import { Combobox, type ComboboxProps } from "./Combobox";
 import { showDedupedToast } from "../../lib/toast";
 import "../../styles/game-kit.css";
@@ -77,36 +78,17 @@ export interface GameButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
 export function GameButton({
   variant = "secondary",
   size = "md",
-  icon,
-  trailing,
-  loading,
-  full,
-  disabled,
-  children,
-  className = "",
   ...rest
 }: GameButtonProps) {
-  const classes = [
-    "gk-btn",
-    `gk-btn--${variant}`,
-    `gk-btn--${size}`,
-    full ? "gk-btn--full" : "",
-    loading ? "is-loading" : "",
-    className,
-  ].filter(Boolean).join(" ");
-
+  // Drawn by the shared Button now, to try its look on the real game pages.
+  // danger goes to danger-secondary: it sits beside a primary on every game
+  // over screen, and a solid red there would outshout "Run it back".
   return (
-    <button
-      type="button"
-      className={classes}
-      disabled={disabled || loading}
-      {...(loading ? { "aria-busy": true } : {})}
+    <Button
+      variant={variant === "danger" ? "danger-secondary" : variant}
+      size={size}
       {...rest}
-    >
-      {loading ? <span className="gk-spinner" aria-hidden="true" /> : icon && <span className="gk-btn-icon">{icon}</span>}
-      <span className="gk-btn-label">{children}</span>
-      {trailing && !loading && <span className="gk-btn-icon">{trailing}</span>}
-    </button>
+    />
   );
 }
 

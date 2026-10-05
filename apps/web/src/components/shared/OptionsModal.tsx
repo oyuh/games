@@ -3,8 +3,8 @@ import { CURSOR_SCALE_MAX, CURSOR_SCALE_MIN, CURSOR_SCALE_STEP, updateSettings, 
 import type { MobileToastPosition, SidebarPosition, Theme, SoundPreferences, ToastPosition } from "../../lib/settings";
 import { playPress } from "../../lib/sounds";
 import { Segmented, type SoloSetupRow } from "./SoloGameMenu";
-import { MultiSelect } from "./Select";
-import { SwitchRow } from "./Switch";
+import { MultiCombobox } from "./Combobox";
+import { Slider, SwitchRow } from "./Switch";
 import { ModalSection, ModalShell } from "./ModalShell";
 
 /** Every picker here is the solo menu's segmented control, so a setting in
@@ -38,17 +38,16 @@ export function OptionsModal({ onClose }: { onClose: () => void }) {
 
           {settings.customCursor && (
             <div className="solo-drawer opt-slider">
-              <span className="opt-slider-label">Scale</span>
-              <input
+              <FiNavigation className="opt-drawer-icon" size={14} aria-hidden="true" />
+              <Slider
                 className="opt-slider-range"
-                type="range"
                 min={CURSOR_SCALE_MIN}
                 max={CURSOR_SCALE_MAX}
                 step={CURSOR_SCALE_STEP}
                 value={settings.customCursorScale}
                 aria-label="Cursor scale"
                 data-cursor="slider"
-                onChange={(event) => updateSettings({ customCursorScale: Number(event.currentTarget.value) })}
+                onChange={(next) => updateSettings({ customCursorScale: next })}
               />
               <span className="opt-slider-value">{Math.round(settings.customCursorScale * 100)}%</span>
             </div>
@@ -145,11 +144,12 @@ export function SoundSection() {
 
         {settings.soundEnabled && (
           <div className="solo-drawer opt-drawer" data-no-sound>
-            <span className="opt-drawer-label">Play</span>
-            <MultiSelect
-              id="sound-prefs"
-              label="Which sounds to play"
-              placeholder="Nothing"
+            <MultiCombobox
+              label="Sounds to play"
+              icon={<FiVolume2 size={14} />}
+              placeholder="No sounds"
+              allLabel="All sounds"
+              tone="var(--modal-accent, var(--primary))"
               values={SOUND_PREFS.filter(({ key }) => settings.soundPreferences[key]).map(({ key }) => key)}
               options={SOUND_PREFS.map(({ key, label }) => ({ value: key, label }))}
               // Folding onto the current prefs keeps the result a complete

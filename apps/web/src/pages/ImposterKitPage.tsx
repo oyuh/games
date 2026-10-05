@@ -8,6 +8,7 @@ import { ImposterVotePhase } from "../components/imposter/ImposterVote";
 import { ImposterRoundResult } from "../components/imposter/ImposterRoundResult";
 import { ImposterGameOver, type ImposterRoundHistory } from "../components/imposter/ImposterGameOver";
 import "../styles/game-shared.css";
+import { Button } from "../components/shared/Button";
 
 /**
  * Every piece of Imposter, on one page, driven by fake data. Same idea as
@@ -55,14 +56,6 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   );
 }
 
-const toggle = {
-  fontSize: "0.72rem",
-  padding: "0.3rem 0.6rem",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "0.35rem",
-} as const;
-
 /** The lobby the way a player meets it: header on top, everything under it. */
 function Live() {
   const [count, setCount] = useState(4);
@@ -80,25 +73,24 @@ function Live() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => setCount((n) => Math.max(0, n - 1))}>−</button>
+        <Button size="sm" onClick={() => setCount((n) => Math.max(0, n - 1))}>−</Button>
         <span className="gk-actions-note" style={{ alignSelf: "center", minWidth: "5.5rem", textAlign: "center" }}>
           {count} player{count === 1 ? "" : "s"}
         </span>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => setCount((n) => Math.min(CAST.length, n + 1))}>+</button>
+        <Button size="sm" onClick={() => setCount((n) => Math.min(CAST.length, n + 1))}>+</Button>
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
-        <button type="button" className={`btn ${isHost ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsHost((v) => !v)}>Host</button>
-        <button type="button" className={`btn ${inGame ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setInGame((v) => !v)}>Joined</button>
-        <button type="button" className={`btn ${isSpectator ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsSpectator((v) => !v)}>Spectating</button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={toggle}
+        <Button size="sm" aria-pressed={isHost} onClick={() => setIsHost((v) => !v)}>Host</Button>
+        <Button size="sm" aria-pressed={inGame} onClick={() => setInGame((v) => !v)}>Joined</Button>
+        <Button size="sm" aria-pressed={isSpectator} onClick={() => setIsSpectator((v) => !v)}>Spectating</Button>
+        <Button
+          size="sm"
+          icon={<FiPlay />}
           onClick={() => { setStarting(true); setTimeout(() => setStarting(false), 1600); }}
         >
-          <FiPlay size={12} /> Starting
-        </button>
+          Starting
+        </Button>
       </div>
 
       <GameShellHeader
@@ -178,12 +170,12 @@ function LiveClues() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className={`btn ${isImposter ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsImposter((v) => !v)}>
+        <Button size="sm" aria-pressed={isImposter} onClick={() => setIsImposter((v) => !v)}>
           You are the imposter
-        </button>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={reset}>
-          <FiRefreshCw size={12} /> Run it again
-        </button>
+        </Button>
+        <Button size="sm" icon={<FiRefreshCw />} onClick={reset}>
+          Run it again
+        </Button>
       </div>
 
       <GameShellHeader
@@ -237,17 +229,15 @@ function LiveVote() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={toggle}
+        <Button
+          size="sm"
           onClick={() => setVoted((v) => (v.length < CLUE_CAST.length ? [...v, CLUE_CAST[v.length]!.sessionId] : v))}
         >
           One more vote lands
-        </button>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={reset}>
-          <FiRefreshCw size={12} /> Start over
-        </button>
+        </Button>
+        <Button size="sm" icon={<FiRefreshCw />} onClick={reset}>
+          Start over
+        </Button>
       </div>
 
       <GameShellHeader
@@ -312,12 +302,12 @@ function LiveResult() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className={`btn ${caught ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => { setCaught((v) => !v); setRun((n) => n + 1); }}>
+        <Button size="sm" aria-pressed={caught} onClick={() => { setCaught((v) => !v); setRun((n) => n + 1); }}>
           They got the imposter
-        </button>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={() => { setRun((n) => n + 1); setSkips(1); setSkipped(false); }}>
-          <FiRefreshCw size={12} /> Watch it again
-        </button>
+        </Button>
+        <Button size="sm" icon={<FiRefreshCw />} onClick={() => { setRun((n) => n + 1); setSkips(1); setSkipped(false); }}>
+          Watch it again
+        </Button>
       </div>
 
       <GameShellHeader

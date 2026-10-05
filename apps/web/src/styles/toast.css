@@ -481,17 +481,6 @@ html[data-toast-pos="bottom-center"] :is(.toast-container, .sync-wake-toast-cont
   gap: 0.6rem;
 }
 
-.sync-hosting-actions .btn {
-  min-height: 2.75rem;
-  text-decoration: none;
-}
-
-.sync-hosting-actions .btn-muted {
-  color: var(--foreground);
-}
-
 .sync-hosting-status {
   grid-column: 1 / -1;
-  min-height: 3.25rem;
-  font-size: 0.95rem;
 }

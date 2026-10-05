@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FiCheck, FiRotateCcw, FiShuffle, FiSmile } from "react-icons/fi";
+import { Button } from "./Button";
 import { ModalShell, ModalSection } from "./ModalShell";
 import { AvatarArt } from "./PlayerAvatar";
 import {
@@ -136,15 +137,15 @@ export function AvatarPickerModal({
       onClose={onClose}
       footer={
         <>
-          <button className="btn btn-muted" type="button" onClick={picker.reset} disabled={!picker.custom}>
-            <FiRotateCcw size={14} /> Reset
-          </button>
-          <button className="btn btn-ghost" type="button" onClick={picker.shuffle}>
-            <FiShuffle size={14} /> Surprise me
-          </button>
-          <button className="btn btn-primary" type="button" onClick={onClose}>
-            <FiCheck size={14} /> Done
-          </button>
+          <Button variant="ghost" icon={<FiRotateCcw />} onClick={picker.reset} disabled={!picker.custom}>
+            Reset
+          </Button>
+          <Button icon={<FiShuffle />} onClick={picker.shuffle}>
+            Surprise me
+          </Button>
+          <Button variant="primary" icon={<FiCheck />} onClick={onClose}>
+            Done
+          </Button>
         </>
       }
       aside={<AvatarPreview picker={picker} name={name} />}

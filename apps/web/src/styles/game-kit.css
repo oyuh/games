@@ -542,7 +542,7 @@
 
 /* One button per line beats four half ones. */
 @media (max-width: 30rem) {
-  .gk-actions-row > .gk-btn {
+  .gk-actions-row > :is(.gk-btn, .ui-btn) {
     flex: 1 1 100%;
   }
 }

@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { FiArrowDown, FiArrowLeft, FiArrowRight, FiCheck, FiCornerDownRight } from "react-icons/fi";
 import { Segmented, type SoloSetupRow } from "../shared/SoloGameMenu";
+import { Button } from "../shared/Button";
 import { ModalShell } from "../shared/ModalShell";
 
 export interface DemoStep {
@@ -80,25 +81,18 @@ export function DemoModal({
       )}
       footer={(
         <div className="howto-nav">
-          <button
-            className="howto-back"
-            type="button"
-            onClick={() => onStepChange(currentStep - 1)}
-            disabled={isFirst}
-          >
-            <FiArrowLeft size={15} /> Back
-          </button>
+          <Button variant="text" icon={<FiArrowLeft />} onClick={() => onStepChange(currentStep - 1)} disabled={isFirst}>
+            Back
+          </Button>
           <span className="howto-count">{currentStep + 1} / {steps.length}</span>
-          <button
-            className="mshell-action"
-            type="button"
+          <Button
+            variant="primary"
+            size="lg"
+            trailing={isLast ? <FiCheck /> : <FiArrowRight />}
             onClick={() => (isLast ? onClose() : onStepChange(currentStep + 1))}
           >
             {isLast ? "Got it" : "Next"}
-            {isLast
-              ? <FiCheck className="mshell-action-arrow" size={16} />
-              : <FiArrowRight className="mshell-action-arrow" size={16} />}
-          </button>
+          </Button>
         </div>
       )}
     >
