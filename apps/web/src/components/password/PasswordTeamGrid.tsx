@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { FiArrowRight, FiCheck, FiChevronUp, FiLock } from "react-icons/fi";
+import { Button } from "../shared/Button";
 import { PlayerAvatar } from "../shared/PlayerAvatar";
 import { getPasswordPlayerName } from "../../lib/password-names";
 
@@ -137,7 +138,8 @@ export function PasswordTeamGrid({
                           <div className="game-team-member-info">
                             <span className={`game-team-avatar${isMe ? " game-team-avatar--me" : ""}`}>
                               <PlayerAvatar
-                                seed={id}
+                                seed={id}
+
                               />
                             </span>
                             <div className="game-team-member-copy">
@@ -161,14 +163,17 @@ export function PasswordTeamGrid({
                 </div>
                 <div className="game-team-footer">
                   {canJoin && (
-                    <button
-                      className="btn btn-sm game-team-join-btn"
+                    <Button
+                      size="sm"
+                      full
+                      className="game-team-join-btn"
+                      icon={<FiArrowRight />}
                       onClick={() => onSwitchTeam(team.name)}
                       data-tooltip={`Switch to ${team.name}`}
                       data-tooltip-variant="game"
                     >
-                      <FiArrowRight size={14} /> {myTeam ? `Move to ${team.name}` : `Join ${team.name}`}
-                    </button>
+                      {myTeam ? `Move to ${team.name}` : `Join ${team.name}`}
+                    </Button>
                   )}
                   {isMyTeam && isLobby && (
                     <div className="game-team-joined-note">

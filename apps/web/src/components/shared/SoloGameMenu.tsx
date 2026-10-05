@@ -1,5 +1,6 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { FiArrowRight, FiAward, FiClipboard, FiHelpCircle, FiX } from "react-icons/fi";
+import { Button } from "./Button";
 
 export interface SoloSetupOption {
   value: string;
@@ -224,19 +225,18 @@ export function SoloGameMenu({
           )}
         </div>
 
-        <button className="solo-start" type="button" onClick={onStart}>
-          <span className="solo-start-label">{startLabel}</span>
-          <FiArrowRight className="solo-start-arrow" size={18} />
-        </button>
+        <Button variant="primary" size="lg" full className="solo-start" trailing={<FiArrowRight />} onClick={onStart}>
+          {startLabel}
+        </Button>
       </section>
 
       <nav className="solo-menu-links">
-        <button className="solo-menu-link" type="button" onClick={onOpenLeaderboard}>
-          <FiAward size={14} /> Leaderboard
-        </button>
-        <button className="solo-menu-link" type="button" onClick={onOpenHowTo}>
-          <FiHelpCircle size={14} /> How to Play
-        </button>
+        <Button variant="text" icon={<FiAward />} onClick={onOpenLeaderboard}>
+          Leaderboard
+        </Button>
+        <Button variant="text" icon={<FiHelpCircle />} onClick={onOpenHowTo}>
+          How to Play
+        </Button>
       </nav>
     </main>
   );

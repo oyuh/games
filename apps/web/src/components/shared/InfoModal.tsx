@@ -5,6 +5,7 @@ import { useLocation } from "react-router-dom";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { getOrCreateSessionId } from "../../lib/session";
 import { getCustomStatus, subscribeCustomStatus } from "../../hooks/useAdminBroadcast";
+import { Button } from "./Button";
 import { ModalSection, ModalShell } from "./ModalShell";
 import { ClipboardText } from "./ClipboardText";
 import { InfoArcade, type ArcadeGame } from "./InfoArcade";
@@ -52,12 +53,12 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={arcade ? (
         <div className="info-footer">
-          <button type="button" className="info-footer-link" onClick={() => setArcade(null)}>
-            <FiArrowLeft size={13} /> Back
-          </button>
-          <button type="button" className="info-footer-link" onClick={() => setArcade(other)}>
+          <Button variant="text" size="sm" icon={<FiArrowLeft />} onClick={() => setArcade(null)}>
+            Back
+          </Button>
+          <Button variant="text" size="sm" onClick={() => setArcade(other)}>
             Play {other === "snake" ? "Snake" : "Invaders"} instead
-          </button>
+          </Button>
         </div>
       ) : <InfoFooter hint />}
     >

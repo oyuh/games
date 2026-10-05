@@ -19,6 +19,7 @@ import {
 } from "../components/chain/ChainRound";
 import { ChainGameOver, type ChainRoundHistory } from "../components/chain/ChainGameOver";
 import "../styles/game-shared.css";
+import { Button } from "../components/shared/Button";
 
 /**
  * Every part of Chain Reaction, on one page, driven by fake data. Same idea as
@@ -58,14 +59,6 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   );
 }
 
-const toggle = {
-  fontSize: "0.72rem",
-  padding: "0.3rem 0.6rem",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "0.35rem",
-} as const;
-
 /**
  * The lobby the way a player meets it, with the seat actually filling. Taking
  * the seat writes to the same local state the join mutator would write to, so
@@ -94,29 +87,27 @@ function Live() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button
-          type="button"
-          className={`btn ${players.length === 2 ? "btn-primary" : "btn-ghost"}`}
-          style={toggle}
+        <Button
+          size="sm"
+          aria-pressed={players.length === 2}
           onClick={() => setPlayers((now) => (now.length === 2 ? [CAST[0]!] : CAST))}
         >
           Both seats
-        </button>
+        </Button>
 
         <span style={{ width: "1px", background: "var(--border)", margin: "0 0.3rem" }} />
 
-        <button type="button" className={`btn ${isHost ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsHost((v) => !v)}>Host</button>
-        <button type="button" className={`btn ${isSpectator ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setIsSpectator((v) => !v)}>Spectating</button>
-        <button type="button" className={`btn ${custom ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setCustom((v) => !v)}>Custom chains</button>
-        <button type="button" className={`btn ${timed ? "btn-primary" : "btn-ghost"}`} style={toggle} onClick={() => setTimed((v) => !v)}>Timed</button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={toggle}
+        <Button size="sm" aria-pressed={isHost} onClick={() => setIsHost((v) => !v)}>Host</Button>
+        <Button size="sm" aria-pressed={isSpectator} onClick={() => setIsSpectator((v) => !v)}>Spectating</Button>
+        <Button size="sm" aria-pressed={custom} onClick={() => setCustom((v) => !v)}>Custom chains</Button>
+        <Button size="sm" aria-pressed={timed} onClick={() => setTimed((v) => !v)}>Timed</Button>
+        <Button
+          size="sm"
+          icon={<FiPlay />}
           onClick={() => { setStarting(true); setTimeout(() => setStarting(false), 1600); }}
         >
-          <FiPlay size={12} /> Starting
-        </button>
+          Starting
+        </Button>
       </div>
 
       <GameShellHeader
@@ -294,17 +285,15 @@ function LiveRound() {
   return (
     <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.75rem" }}>
-        <button type="button" className="btn btn-ghost" style={toggle} onClick={reset}>
-          <FiRefreshCw size={12} /> Deal again
-        </button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={toggle}
+        <Button size="sm" icon={<FiRefreshCw />} onClick={reset}>
+          Deal again
+        </Button>
+        <Button
+          size="sm"
           onClick={() => setLinks((all) => all.map((l) => ({ ...l, revealed: true, solvedBy: l.solvedBy ?? "seed-ada" })))}
         >
           Finish mine
-        </button>
+        </Button>
       </div>
 
       <GameShellHeader
@@ -364,9 +353,9 @@ function LiveWrite() {
       />
 
       {locked && (
-        <button type="button" className="btn btn-ghost" style={{ ...toggle, alignSelf: "start" }} onClick={() => setLocked(false)}>
-          <FiRefreshCw size={12} /> Write it again
-        </button>
+        <Button size="sm" icon={<FiRefreshCw />} style={{ alignSelf: "start" }} onClick={() => setLocked(false)}>
+          Write it again
+        </Button>
       )}
     </>
   );

@@ -8,6 +8,7 @@ import { getDisplayName, getOrCreateSessionId } from "../../lib/session";
 import { useChatContext } from "../../lib/chat-context";
 import { useImposterChatText } from "../../lib/game-secrets";
 import { isEncrypted } from "@games/shared";
+import { Button } from "../../components/shared/Button";
 import { BottomSheet } from "./BottomSheet";
 
 export function MobileChatSheet({ onClose }: { onClose: () => void }) {
@@ -134,9 +135,7 @@ export function MobileChatSheet({ onClose }: { onClose: () => void }) {
             }
           }}
         />
-        <button className="m-btn m-btn--primary" type="button" aria-label="Send message" onClick={handleSend} disabled={!input.trim()}>
-          <FiSend size={14} />
-        </button>
+        <Button variant="primary" size="lg" shape="square" icon={<FiSend />} aria-label="Send message" onClick={handleSend} disabled={!input.trim()} />
       </div>
     </BottomSheet>
   );

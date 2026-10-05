@@ -51,6 +51,13 @@
   color: var(--muted-foreground);
 }
 
+/* How many are on, for the multi-select list. Pushed to the far end. */
+.cbx-head-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
 .cbx-head-icon {
   display: inline-flex;
   line-height: 0;

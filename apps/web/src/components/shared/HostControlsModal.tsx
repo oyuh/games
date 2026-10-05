@@ -6,6 +6,7 @@ import { optimistic, useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
 import { getDisplayName } from "../../lib/session";
 import { Segmented } from "./SoloGameMenu";
+import { Button } from "./Button";
 import { ModalSection, ModalShell } from "./ModalShell";
 
 export type GameContext =
@@ -195,9 +196,9 @@ export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
             {kickablePlayersList.map((p) => (
               <div key={p.id} className="host-person">
                 <span className="host-person-name">{p.name}</span>
-                <button className="host-person-btn" onClick={() => handleKick(p.id, p.name)}>
-                  <FiUserMinus size={13} /> Kick
-                </button>
+                <Button variant="danger-secondary" size="xs" className="host-person-btn" icon={<FiUserMinus />} onClick={() => handleKick(p.id, p.name)}>
+                  Kick
+                </Button>
               </div>
             ))}
           </div>
@@ -212,9 +213,9 @@ export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
             {spectatorsList.map((s) => (
               <div key={s.id} className="host-person">
                 <span className="host-person-name">{s.name}</span>
-                <button className="host-person-btn" onClick={() => handleRemoveSpectator(s.id, s.name)}>
-                  <FiEye size={13} /> Remove
-                </button>
+                <Button variant="danger-secondary" size="xs" className="host-person-btn" icon={<FiEye />} onClick={() => handleRemoveSpectator(s.id, s.name)}>
+                  Remove
+                </Button>
               </div>
             ))}
           </div>
@@ -223,15 +224,15 @@ export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
 
       <ModalSection label="End game" tone="danger" hint="Ends it for everyone and sends all players home.">
         {!confirmEnd ? (
-          <button className="mshell-action mshell-action--muted mshell-action--wide" onClick={() => setConfirmEnd(true)}>
-            <FiPower size={14} /> End Game
-          </button>
+          <Button variant="danger-secondary" size="lg" full icon={<FiPower />} onClick={() => setConfirmEnd(true)}>
+            End Game
+          </Button>
         ) : (
           <div className="host-confirm">
-            <button className="mshell-action mshell-action--muted" onClick={() => setConfirmEnd(false)}>Cancel</button>
-            <button className="mshell-action mshell-action--danger" onClick={handleEndGame}>
-              <FiPower size={14} /> End it
-            </button>
+            <Button size="lg" onClick={() => setConfirmEnd(false)}>Cancel</Button>
+            <Button variant="danger" size="lg" icon={<FiPower />} onClick={handleEndGame}>
+              End it
+            </Button>
           </div>
         )}
       </ModalSection>

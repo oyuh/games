@@ -1,3 +1,4 @@
+import type { ComponentPropsWithRef, CSSProperties } from "react";
 import "../../styles/controls.css";
 
 /**
@@ -57,5 +58,40 @@ export function SwitchRow({
       <span className="ui-switch-row-label">{label}</span>
       <Switch label={label} checked={checked} onChange={onChange} disabled={disabled} />
     </div>
+  );
+}
+
+/**
+ * The switch, stretched into a slider. Same track, ring, and squircle
+ * corners; the part behind the thumb fills with the switch's "on" color, and
+ * the thumb is the switch's thumb. Still a native range input underneath, so
+ * keyboard, touch, and screen readers all work as they always have.
+ */
+export function Slider({
+  value,
+  min = 0,
+  max = 100,
+  onChange,
+  style,
+  className = "",
+  ...rest
+}: Omit<ComponentPropsWithRef<"input">, "type" | "value" | "min" | "max" | "onChange"> & {
+  value: number;
+  min?: number;
+  max?: number;
+  onChange: (next: number) => void;
+}) {
+  const fraction = max > min ? Math.min(1, Math.max(0, (value - min) / (max - min))) : 0;
+  return (
+    <input
+      type="range"
+      className={`ui-slider ${className}`.trim()}
+      value={value}
+      min={min}
+      max={max}
+      style={{ ...style, "--sl-p": fraction } as CSSProperties}
+      onChange={(event) => onChange(Number(event.currentTarget.value))}
+      {...rest}
+    />
   );
 }

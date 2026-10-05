@@ -1,4 +1,5 @@
 import { FiEye, FiLogOut } from "react-icons/fi";
+import { Button } from "./Button";
 
 interface SpectatorOverlayProps {
   phase: string;
@@ -18,9 +19,9 @@ export function SpectatorOverlay({ phase, playerCount, onLeave }: SpectatorOverl
           <span>{playerCount} player{playerCount !== 1 ? "s" : ""}</span>
           <span>{phase}</span>
         </p>
-        <button className="btn btn-muted btn-sm" onClick={onLeave} style={{ marginTop: "0.5rem" }}>
-          <FiLogOut size={14} /> Leave
-        </button>
+        <Button size="sm" icon={<FiLogOut />} onClick={onLeave} style={{ marginTop: "0.5rem" }}>
+          Leave
+        </Button>
       </div>
     </div>
   );

@@ -302,3 +302,169 @@ export function Combobox({
     </>
   );
 }
+
+export interface MultiComboboxProps {
+  values: string[];
+  options: ComboboxOption[];
+  onChange: (values: string[]) => void;
+  /** Names the list, heads the popup, and labels the trigger for screen readers. */
+  label: string;
+  icon?: ReactNode;
+  /** What the trigger says when nothing is on. */
+  placeholder?: string;
+  /** What it says when everything is. */
+  allLabel?: string;
+  /** Any css color for the rows that are on. Defaults to the game's accent. */
+  tone?: string;
+}
+
+/**
+ * The same popup as Combobox, for settings that take any number of values.
+ * Rows toggle and the list stays open while you pick, since closing after
+ * every choice would make turning three things on a three-trip job. There is
+ * no search field: a list short enough to toggle through does not need one.
+ */
+export function MultiCombobox({ values, options, onChange, label, icon, placeholder = "None", allLabel = "All", tone }: MultiComboboxProps) {
+  const id = useId();
+  const listId = `${id}-list`;
+  const optionId = (index: number) => `${id}-option-${index}`;
+
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const style = useAnchoredPopup(open, triggerRef, popupRef, options.length, 20);
+  useDismiss(open, () => setOpen(false), triggerRef, popupRef);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => listRef.current?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) revealActiveRow(listRef.current);
+  }, [open, active]);
+
+  const on = options.filter((option) => values.includes(option.value));
+  const summary =
+    on.length === 0 ? placeholder
+    : on.length === options.length ? allLabel
+    : on.length <= 2 ? on.map((option) => option.label).join(", ")
+    : `${on.slice(0, 2).map((option) => option.label).join(", ")} and ${on.length - 2} more`;
+
+  const toggle = (index: number) => {
+    const option = options[index];
+    if (!option) return;
+    onChange(values.includes(option.value) ? values.filter((v) => v !== option.value) : [...values, option.value]);
+  };
+
+  const onPopupKeyDown = (event: KeyboardEvent) => {
+    const move = (next: number) => {
+      event.preventDefault();
+      setActive(Math.min(options.length - 1, Math.max(0, next)));
+    };
+    switch (event.key) {
+      case "ArrowDown": return move(active + 1);
+      case "ArrowUp": return move(active - 1);
+      case "Home": return move(0);
+      case "End": return move(options.length - 1);
+      case "Enter":
+      case " ":
+        event.preventDefault();
+        toggle(active);
+        return;
+      case "Tab":
+        setOpen(false);
+        return;
+    }
+  };
+
+  const onTriggerKeyDown = (event: KeyboardEvent) => {
+    if (open || !["ArrowDown", "ArrowUp"].includes(event.key)) return;
+    event.preventDefault();
+    setActive(0);
+    setOpen(true);
+  };
+
+  const theme = open ? triggerRef.current?.closest("[data-game-theme]")?.getAttribute("data-game-theme") : null;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="solo-select-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        aria-label={`${label}: ${summary}`}
+        data-empty={on.length === 0 ? "" : undefined}
+        onClick={() => {
+          if (!open) setActive(0);
+          setOpen((current) => !current);
+        }}
+        onKeyDown={onTriggerKeyDown}
+      >
+        {icon}
+        <span className="solo-select-value">{summary}</span>
+        <span className="solo-select-count">{on.length}/{options.length}</span>
+        <FiChevronDown className="solo-select-chevron" size={14} aria-hidden="true" />
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={popupRef}
+          className="cbx"
+          role="dialog"
+          aria-label={label}
+          {...(theme ? { "data-game-theme": theme } : {})}
+          style={{ ...style, ...(tone ? { "--cbx-tone": tone } : {}) } as CSSProperties}
+          onKeyDown={onPopupKeyDown}
+        >
+          <div className="cbx-head">
+            {icon && <span className="cbx-head-icon" aria-hidden="true">{icon}</span>}
+            <span>{label}</span>
+            <span className="cbx-head-count">{on.length}/{options.length}</span>
+          </div>
+
+          <div
+            ref={listRef}
+            id={listId}
+            className="cbx-list"
+            role="listbox"
+            aria-label={label}
+            aria-multiselectable="true"
+            tabIndex={-1}
+            aria-activedescendant={optionId(active)}
+          >
+            {options.map((option, index) => {
+              const isOn = values.includes(option.value);
+              return (
+                <div
+                  key={option.value}
+                  id={optionId(index)}
+                  role="option"
+                  aria-selected={isOn}
+                  className="cbx-option"
+                  data-active={index === active ? "" : undefined}
+                  data-selected={isOn ? "" : undefined}
+                  onPointerMove={() => index !== active && setActive(index)}
+                  onClick={() => toggle(index)}
+                >
+                  <span className="cbx-option-value">{option.label}</span>
+                  {option.detail && <span className="cbx-option-detail">{option.detail}</span>}
+                  {isOn && <FiCheck className="cbx-check" size={13} aria-hidden="true" />}
+                </div>
+              );
+            })}
+          </div>
+        </div>,
+        popupHost(triggerRef.current) ?? document.body,
+      )}
+    </>
+  );
+}
