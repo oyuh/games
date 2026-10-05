@@ -137,7 +137,7 @@
   --avatar-radius: 30%;
 
   /* Corner radius. One knob for the whole panel, same as the site's. */
-  --radius-scale: 0.5;
+  --radius-scale: 0.375;
   --radius: 0.5rem;
 
   --admin-font-sans:
