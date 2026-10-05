@@ -335,9 +335,11 @@
 }
 
 /* Loading with no icon to swap: the label keeps its space so the button
-   holds its width, and the loader sits over it. */
+   holds its width, and the loader sits over it. Opacity rather than
+   visibility, which would also drop the label from the accessibility tree
+   and leave the button with no name while it waits. */
 .ui-btn.is-loading:not(.has-icon) > :is(.ui-btn-label, .ui-btn-trailing) {
-  visibility: hidden;
+  opacity: 0;
 }
 
 .ui-btn.is-loading:not(.has-icon) > .ui-loader {

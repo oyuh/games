@@ -54,12 +54,12 @@ export async function newPlayer(browser: Browser, name: string) {
   });
 }
 
-/** The "Create Game" button inside one game's card on the home page. */
+/** The "Create game" button inside one game's card on the home page. */
 export function createButton(page: Page, game: string) {
   return page
     .getByRole("heading", { name: game, level: 2 })
-    .locator('xpath=ancestor::*[.//button[normalize-space()="Create Game"]][1]')
-    .getByRole("button", { name: "Create Game" });
+    .locator('xpath=ancestor::*[.//button[normalize-space()="Create game"]][1]')
+    .getByRole("button", { name: "Create game", exact: true });
 }
 
 /** Creates a room from the home page, picking the given setup radios, and returns its code. */
@@ -67,7 +67,7 @@ export async function createRoom(host: Page, game: string, route: RegExp, option
   return step(`create a ${game} room`, async () => {
     await createButton(host, game).click();
     for (const option of options) await host.getByRole("radio", { name: option }).click();
-    await host.getByRole("button", { name: "Create It!" }).click();
+    await host.getByRole("button", { name: "Create it", exact: true }).click();
     await expect(host).toHaveURL(route);
     await host.getByRole("button", { name: "Show the room code" }).click();
     const code = (await host.getByRole("button", { name: /^Room code/ }).textContent())?.trim() ?? "";
