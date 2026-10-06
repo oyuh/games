@@ -8,7 +8,7 @@ import { nanoid } from "nanoid";
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
-import { FiArrowDown, FiArrowLeft, FiArrowRight, FiBookOpen, FiCheck, FiChevronDown, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiPlus, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
+import { FiArrowDown, FiArrowLeft, FiArrowRight, FiBookOpen, FiCheck, FiChevronDown, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiPlus, FiSearch, FiSliders, FiTarget, FiTrash2, FiUser, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { isNameRestricted } from "../hooks/useAdminBroadcast";
@@ -352,6 +352,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
       {/* ── Multiplayer section ─────────────────────────────── */}
       <div className="home-section-multi">
+      <h2 className="home-section-title"><FiUsers aria-hidden="true" /> Multiplayer</h2>
 
       {/* ── Card 1: Utils ──────────────────────────────────── */}
       <div className={`home-card home-card--utils${firstVisitGlowClass}`}>
@@ -359,7 +360,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
           {/* Join section */}
           <section className="hc-section">
             <h3 className="hc-label">
-              <FiSearch size={14} /> Join Game
+              <FiSearch size={14} /> Join game
               {syncPending && <SyncMiniSpinner className="hc-sync-mini-spinner--label" />}
               {syncAttention && <FiWifiOff className="hc-sync-offline-icon hc-sync-offline-icon--label" size={14} />}
             </h3>
@@ -951,19 +952,9 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
       </div>{/* end home-section-multi */}
 
-      {/* ── Separator ──────────────────────────────────────── */}
-      <div className="home-section-separator">
-        <div className="home-sep-col">
-          <span className="home-sep-label">Multiplayer</span>
-        </div>
-        <div className="home-sep-line" />
-        <div className="home-sep-col">
-          <span className="home-sep-label">Singleplayer</span>
-        </div>
-      </div>
-
       {/* ── Solo section ───────────────────────────────────── */}
       <div className="home-section-solo">
+        <h2 className="home-section-title"><FiUser aria-hidden="true" /> Solo</h2>
         {SOLO_GAMES.map((game) => (
           <SoloGameCard
             key={game.id}

@@ -11,7 +11,7 @@
 .home-layout {
   display: flex;
   align-items: stretch;
-  gap: 0;
+  gap: 3rem;
 }
 
 /* Break out of the .shell-main max-width constraint */
@@ -30,53 +30,29 @@
   width: calc(3 * 320px + 2 * 1.5rem);
 }
 
-.home-section-separator {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  padding: 0;
-  gap: 0;
-  user-select: none;
-  flex-shrink: 0;
-  width: 5rem;
+/* One small title over each side, set like the status page's section
+   titles. They hang in the space above the cards rather than adding a row,
+   so the page is no taller with them than without. The gap between the two
+   sides does the separating. */
+.home-section-multi,
+.home-section-solo {
+  position: relative;
 }
 
-.home-sep-col {
-  flex: 1;
+.home-section-title {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.home-sep-label {
-  font-size: 0.55rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.28em;
+  gap: 0.45rem;
+  margin: 0;
   color: var(--muted-foreground);
-  opacity: 0.45;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.2;
   white-space: nowrap;
-  writing-mode: vertical-lr;
-  text-orientation: mixed;
-  padding: 0 0.25rem;
-}
-
-.home-sep-col:last-child .home-sep-label {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-}
-
-.home-sep-line {
-  flex: 0 0 1px;
-  width: 1px;
-  align-self: stretch;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    color-mix(in srgb, var(--secondary) 25%, transparent) 10%,
-    color-mix(in srgb, var(--secondary) 25%, transparent) 90%,
-    transparent
-  );
+  user-select: none;
 }
 
 .home-section-solo {
@@ -108,10 +84,34 @@
   opacity: 0.7;
 }
 
+/* Solo cards are buttons, not panels: a face lightly tinted in the game's
+   color, standing on a lip of the same color a shade darker, like a key.
+   The tint stays light so the preview on it still stands out.
+   Pressing sinks the face onto the lip. Hover only lights the edge, so
+   nothing lifts or moves until it is pressed. Doubled class so these beat
+   the shared surface tokens in components.css. */
+.solo-card.solo-card--playable {
+  --solo-lip: 4px;
+  --solo-lip-color: color-mix(in srgb, var(--card-accent, var(--primary)) 32%, #000);
+  --surface-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card-accent, var(--primary)) 8%, var(--surface-top)) 0%,
+    color-mix(in srgb, var(--card-accent, var(--primary)) 4%, var(--surface-bottom)) 100%
+  );
+  --surface-shadow:
+    inset 0 1px 0 var(--surface-edge-top),
+    0 var(--solo-lip) 0 var(--solo-lip-color),
+    0 calc(var(--solo-lip) + 2px) 8px -2px rgb(0 0 0 / 0.4);
+  --surface-shadow-hover: var(--surface-shadow);
+  margin-bottom: var(--solo-lip);
+  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 38%, transparent);
+  transition: border-color 0.15s, box-shadow 0.08s, transform 0.08s;
+}
+
 .solo-card--playable:hover,
 .solo-card--playable:focus-visible,
 .solo-card--playable:focus-within {
-  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 35%, transparent);
+  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 65%, transparent);
   box-shadow: var(--surface-shadow-hover);
 }
 
@@ -120,9 +120,23 @@
   outline-offset: 3px;
 }
 
-.solo-card--playable:active {
-  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 45%, transparent);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+/* A black-mixed lip reads as a hard line on the light surface, so it
+   only darkens the accent there, under a softer drop. */
+[data-theme="light"] .solo-card.solo-card--playable {
+  --solo-lip-color: color-mix(in srgb, var(--card-accent, var(--primary)) 72%, #000);
+  --surface-shadow:
+    inset 0 1px 0 var(--surface-edge-top),
+    0 var(--solo-lip) 0 var(--solo-lip-color),
+    0 calc(var(--solo-lip) + 2px) 6px -3px rgb(0 0 0 / 0.2);
+}
+
+/* The how-to button sits on the card, so pressing it leaves the key up. */
+.solo-card--playable:active:not(:has(.solo-card-help:active)) {
+  transform: translateY(var(--solo-lip));
+  border-color: color-mix(in srgb, var(--card-accent, var(--primary)) 65%, transparent);
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / 0.35),
+    0 0 0 var(--solo-lip-color);
 }
 
 .solo-card-hit-area {
@@ -228,6 +242,12 @@ a.solo-card-title-link {
   max-width: 22ch;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .solo-card.solo-card--playable {
+    transition: none;
+  }
+}
+
 .solo-card-preview {
   flex: 1;
   display: flex;
@@ -259,8 +279,8 @@ a.solo-card-title-link {
   border-radius: var(--radius-xs);
   font-size: 0.6rem;
   font-weight: 800;
-  background: color-mix(in srgb, var(--secondary) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--secondary) 16%, transparent);
+  background: color-mix(in srgb, var(--secondary) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 32%, transparent);
   color: var(--muted-foreground);
 }
 
@@ -1219,10 +1239,8 @@ a.solo-card-title-link {
 }
 
 .hc-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: var(--muted-foreground);
   display: flex;
   align-items: center;
@@ -1831,10 +1849,8 @@ a.solo-card-title-link {
 }
 
 .hc-config-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.78rem;
+  font-weight: 500;
   color: color-mix(in srgb, var(--card-accent, var(--muted-foreground)) 70%, var(--muted-foreground));
   white-space: nowrap;
   overflow: hidden;
@@ -2005,40 +2021,6 @@ a.solo-card-title-link {
     max-width: calc(3 * 320px + 2 * 1.5rem);
   }
 
-  /* Flip separator to horizontal */
-  .home-section-separator {
-    flex-direction: row;
-    width: 100%;
-    max-width: calc(3 * 320px + 2 * 1.5rem);
-    height: auto;
-    padding: 0.75rem 0;
-  }
-
-  .home-sep-label {
-    writing-mode: horizontal-tb;
-    text-orientation: initial;
-    transform: none;
-  }
-
-  .home-sep-col:last-child .home-sep-label {
-    writing-mode: horizontal-tb;
-    transform: none;
-  }
-
-  .home-sep-line {
-    width: auto;
-    height: 1px;
-    flex: 1;
-    align-self: center;
-    background: linear-gradient(
-      to right,
-      transparent,
-      color-mix(in srgb, var(--secondary) 25%, transparent) 10%,
-      color-mix(in srgb, var(--secondary) 25%, transparent) 90%,
-      transparent
-    );
-  }
-
   /* Solo section: row-based (horizontal) */
   .home-section-solo {
     flex-direction: row;
@@ -2071,7 +2053,6 @@ a.solo-card-title-link {
 
   /* Hide split layout on mobile: handled by MobileHomePage */
   .home-section-multi,
-  .home-section-separator,
   .home-section-solo {
     display: none;
   }
