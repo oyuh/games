@@ -1,10 +1,13 @@
 import { queries, mutators } from "@games/shared";
 import { optimistic, useQuery, useZero } from "../../lib/zero";
 import { useNavigate } from "react-router-dom";
-import { FiUsers, FiGlobe } from "react-icons/fi";
+import { FiEye, FiGlobe, FiPlus, FiUsers } from "react-icons/fi";
 import { addRecentGame, ensureName } from "../../lib/session";
 import { showToast } from "../../lib/toast";
 import { useState } from "react";
+import { useScrollEdges } from "../../hooks/useScrollEdges";
+import { Button } from "./Button";
+import { PlayerAvatar } from "./PlayerAvatar";
 
 type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 
@@ -41,6 +44,7 @@ interface NormalizedGame {
   id: string;
   code: string;
   phase: string;
+  hostId: string;
   hostName: string | null;
   playerCount: number;
   spectatorCount: number;
@@ -58,7 +62,7 @@ function usePublicGames(gameType: GameType): NormalizedGame[] {
 
   if (gameType === "imposter") {
     games = imposterGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
+      id: g.id, code: g.code, phase: g.phase, hostId: g.host_id,
       hostName: g.players.find((p) => p.sessionId === g.host_id)?.name ?? null,
       playerCount: g.players.length,
       spectatorCount: (g.spectators ?? []).length,
@@ -66,7 +70,7 @@ function usePublicGames(gameType: GameType): NormalizedGame[] {
     }));
   } else if (gameType === "password") {
     games = passwordGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
+      id: g.id, code: g.code, phase: g.phase, hostId: g.host_id,
       hostName: null,
       playerCount: g.teams.reduce((sum, t) => sum + t.members.length, 0),
       spectatorCount: (g.spectators ?? []).length,
@@ -74,7 +78,7 @@ function usePublicGames(gameType: GameType): NormalizedGame[] {
     }));
   } else if (gameType === "chain_reaction") {
     games = chainGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
+      id: g.id, code: g.code, phase: g.phase, hostId: g.host_id,
       hostName: g.players.find((p) => p.sessionId === g.host_id)?.name ?? null,
       playerCount: g.players.length,
       spectatorCount: (g.spectators ?? []).length,
@@ -82,7 +86,7 @@ function usePublicGames(gameType: GameType): NormalizedGame[] {
     }));
   } else if (gameType === "shade_signal") {
     games = shadeGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
+      id: g.id, code: g.code, phase: g.phase, hostId: g.host_id,
       hostName: g.players.find((p) => p.sessionId === g.host_id)?.name ?? null,
       playerCount: g.players.length,
       spectatorCount: (g.spectators ?? []).length,
@@ -90,7 +94,7 @@ function usePublicGames(gameType: GameType): NormalizedGame[] {
     }));
   } else {
     games = locationGames.map((g) => ({
-      id: g.id, code: g.code, phase: g.phase,
+      id: g.id, code: g.code, phase: g.phase, hostId: g.host_id,
       hostName: g.players.find((p) => p.sessionId === g.host_id)?.name ?? null,
       playerCount: g.players.length,
       spectatorCount: (g.spectators ?? []).length,
@@ -116,14 +120,20 @@ function usePublicGames(gameType: GameType): NormalizedGame[] {
 export function PublicGamesList({
   gameType,
   sessionId,
+  onCreate,
 }: {
   gameType: GameType;
   sessionId: string;
+  /** Offered from the empty state, so there is somewhere to go from nothing. */
+  onCreate?: () => void;
 }) {
   const zero = useZero();
   const navigate = useNavigate();
   const [joining, setJoining] = useState<string | null>(null);
   const games = usePublicGames(gameType);
+  /* Which edges have rows hidden past them, for the fades, and how many rows
+     are still below the fold, for the count. */
+  const { below, fadeProps } = useScrollEdges<HTMLUListElement>([games.length]);
 
   const handleJoin = async (game: NormalizedGame) => {
     setJoining(game.id);
@@ -157,37 +167,55 @@ export function PublicGamesList({
 
   if (games.length === 0) {
     return (
-      <div className="pgb-empty-inline">
-        <FiGlobe size={24} style={{ opacity: 0.25 }} />
-        <p>No public games</p>
+      <div className="pgb pgb--empty">
+        <span className="pgb-empty-icon" aria-hidden="true"><FiGlobe /></span>
+        <p className="pgb-empty-title">No public games right now</p>
+        <p className="pgb-empty-text">Host one and set it to public from the lobby, and it shows up here.</p>
+        {onCreate && (
+          <Button size="sm" variant="link" icon={<FiPlus />} onClick={onCreate}>Create a game</Button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="pgb-inline-list">
-      {games.map((game) => (
-        <button
-          key={game.id}
-          className="pgb-inline-card"
-          onClick={() => void handleJoin(game)}
-          disabled={joining !== null}
-        >
-          <div className="pgb-inline-card-top">
-            <span className={`pgb-inline-phase${isLobby(game.phase) ? " pgb-inline-phase--lobby" : ""}`}>
-              {game.phase}
-            </span>
-            <span className="pgb-inline-players">
-              <FiUsers size={12} /> {game.playerCount}
-              {game.spectatorCount > 0 && <> +{game.spectatorCount}</>}
-            </span>
-          </div>
-          {game.hostName && <span className="pgb-inline-host">Host: {game.hostName}</span>}
-          <span className="pgb-inline-action">
-            {joining === game.id ? "Joining…" : isLobby(game.phase) ? "Join Game" : "Spectate"}
-          </span>
-        </button>
-      ))}
+    <div className="pgb">
+      <ul className="pgb-list hc-fade-list" {...fadeProps}>
+        {games.map((game) => {
+          const lobby = isLobby(game.phase);
+          const title = game.hostName ?? `Room ${game.code}`;
+
+          return (
+            <li key={game.id} className="pgb-row">
+              <PlayerAvatar seed={game.hostId} size={32} />
+              <div className="pgb-info">
+                <span className="pgb-host">{title}</span>
+                <span className="pgb-meta">
+                  <span className={`pgb-status${lobby ? " pgb-status--lobby" : ""}`}>{lobby ? "In lobby" : "Playing"}</span>
+                  <span className="pgb-stat"><FiUsers aria-hidden="true" /> {game.playerCount}</span>
+                  {game.spectatorCount > 0 && (
+                    <span className="pgb-stat"><FiEye aria-hidden="true" /> {game.spectatorCount}</span>
+                  )}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant={lobby ? "primary" : "secondary"}
+                loading={joining === game.id}
+                disabled={joining !== null}
+                onClick={() => void handleJoin(game)}
+                aria-label={`${lobby ? "Join" : "Watch"} ${title}${game.hostName ? "'s game" : ""}`}
+              >
+                {lobby ? "Join" : "Watch"}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="pgb-count">
+        {games.length} open {games.length === 1 ? "game" : "games"}
+        {below > 0 && <span> ({below} more)</span>}
+      </p>
     </div>
   );
 }

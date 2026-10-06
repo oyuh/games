@@ -8,7 +8,7 @@ import { nanoid } from "nanoid";
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { IconType } from "react-icons";
-import { FiArrowDown, FiArrowLeft, FiArrowRight, FiBookOpen, FiCheck, FiChevronDown, FiClock, FiDroplet, FiEdit2, FiHelpCircle, FiList, FiMapPin, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
+import { FiArrowDown, FiArrowLeft, FiArrowRight, FiBookOpen, FiCheck, FiChevronDown, FiClock, FiDroplet, FiEdit2, FiGlobe, FiHelpCircle, FiList, FiMapPin, FiPlus, FiSearch, FiSliders, FiTarget, FiTrash2, FiUserCheck, FiUsers, FiWifiOff } from "react-icons/fi";
 import { addRecentGame, clearRecentGames, ensureName as ensureSessionName, getDisplayName, getOrCreateStoredName, getRecentGames, hasVisited, leaveCurrentGame, markVisited, RecentGame, removeRecentGame, SessionGameType, setStoredName } from "../lib/session";
 import { showToast } from "../lib/toast";
 import { isNameRestricted } from "../hooks/useAdminBroadcast";
@@ -20,8 +20,9 @@ import { PublicGamesList, usePublicGameCount } from "../components/shared/Public
 import { SoloGameCard, type SoloGameDef } from "../components/shared/SoloGameCard";
 import { PlayerAvatar } from "../components/shared/PlayerAvatar";
 import { GameIcon } from "../components/shared/GameIcon";
-import { BrowseIcon } from "../components/home/BrowseIcon";
+import { BrowseCount } from "../components/home/BrowseCount";
 import { Button } from "../components/shared/Button";
+import { useScrollEdges } from "../hooks/useScrollEdges";
 import { ShikakuPreview } from "../components/home/ShikakuPreview";
 import { ZipPreview } from "../components/zip/ZipPreview";
 import { type HomeRouteGame } from "../lib/home-route-highlight";
@@ -228,7 +229,6 @@ function CardCreate({
   syncOffline,
   syncPending,
   syncAttention,
-  syncStatusTooltip,
 }: {
   game: GameSlug;
   onCreate: () => void;
@@ -237,7 +237,6 @@ function CardCreate({
   syncOffline: boolean;
   syncPending: boolean;
   syncAttention: boolean;
-  syncStatusTooltip: string | undefined;
 }) {
   const live = !syncOffline && count > 0;
 
@@ -248,15 +247,29 @@ function CardCreate({
       </Button>
       <Button
         full
-        icon={syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff /> : <BrowseIcon count={live ? count : 0} />}
+        icon={syncPending ? <SyncMiniSpinner /> : syncAttention ? <FiWifiOff /> : <FiGlobe />}
+        trailing={<BrowseCount count={live ? count : 0} />}
         onClick={onBrowse}
         aria-label={live ? `Browse public games, ${count} to join` : "Browse public games, none running"}
-        data-tooltip={syncStatusTooltip}
-        data-tooltip-variant="info"
       >
         Browse public
       </Button>
     </div>
+  );
+}
+
+/** The bottom of a card while browsing, laid out like the setup view's back
+ *  and Create it row. The list draws its own count, since only it knows how
+ *  much is scrolled out of view. With nothing to browse the list's empty state already
+ *  offers a create, so only back is left. */
+function BrowseBack({ title, count, onBack, onCreate }: { title: string; count: number; onBack: () => void; onCreate: () => void }) {
+  return (
+    <>
+      <div className="hc-row hc-create-action-row">
+        <Button shape="square" icon={<FiArrowLeft />} aria-label={`Back to ${title} options`} onClick={onBack} />
+        {count > 0 && <Button full icon={<FiPlus />} onClick={onCreate}>Create</Button>}
+      </div>
+    </>
   );
 }
 
@@ -345,7 +358,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         <div className="home-card-body">
           {/* Join section */}
           <section className="hc-section">
-            <h3 className="hc-label" data-tooltip="Enter a 6-character room code to join a friend's game" data-tooltip-variant="info">
+            <h3 className="hc-label">
               <FiSearch size={14} /> Join Game
               {syncPending && <SyncMiniSpinner className="hc-sync-mini-spinner--label" />}
               {syncAttention && <FiWifiOff className="hc-sync-offline-icon hc-sync-offline-icon--label" size={14} />}
@@ -373,12 +386,11 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 </button>
               )}
             </form>
-            <div className="hc-divider" />
           </section>
           {/* Name section - inline editable */}
           <section className="hc-section">
-            <h3 className="hc-label" data-tooltip="Your in-game identity - visible to other players" data-tooltip-variant="info">
-              <FiUserCheck size={14} /> Display
+            <h3 className="hc-label">
+              <FiUserCheck size={14} /> Display name
             </h3>
             {/* Sits directly on the field it is about, and points at it. A
                 banner at the top of the card named something two sections
@@ -433,37 +445,17 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
           {/* Recent games - collapsible */}
           {recentGames.length > 0 && (
-            <>
-              <div className={`hc-divider hc-recent-divider${!recentCollapsed ? " hc-recent-divider--open" : ""}`} />
-              <section className={`hc-section hc-recent-section${!recentCollapsed ? " hc-recent-section--open" : ""}`}>
-                <div className="hc-recent-header">
-                  <button className={`hc-collapse-toggle${recentCollapsed ? " hc-collapse-toggle--collapsed" : " hc-collapse-toggle--open"}`} onClick={() => setRecentCollapsed(!recentCollapsed)}>
-                    <span className={`hc-label${recentCollapsed ? "" : " hc-label--recent-open"}`} data-tooltip="Games you've recently played or joined" data-tooltip-variant="info">
-                      {recentCollapsed ? "Recent Games" : "Recents"} ({recentGames.length})
-                    </span>
-                    <FiChevronDown size={recentCollapsed ? 18 : 14} className={`hc-collapse-icon${!recentCollapsed ? " hc-collapse-icon--open" : ""}${recentCollapsed ? " hc-collapse-icon--collapsed" : ""}`} />
-                  </button>
-                  {!recentCollapsed && (
-                    <ClearRecentButton onClear={() => { clearRecentGames(); setRecentGames([]); }} />
-                  )}
-                </div>
-                {!recentCollapsed && (
-                  <div className="hc-recent-list hc-recent-list--scrollable">
-                    {recentGames.map((game) => (
-                      <RecentGameItem
-                        key={`${game.gameType}-${game.id}`}
-                        game={game}
-                        sessionId={sessionId}
-                        onRemove={() => {
-                          removeRecentGame(game.id, game.gameType);
-                          setRecentGames(getRecentGames());
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            </>
+            <RecentGames
+              games={recentGames}
+              sessionId={sessionId}
+              collapsed={recentCollapsed}
+              onToggle={() => setRecentCollapsed(!recentCollapsed)}
+              onClear={() => { clearRecentGames(); setRecentGames([]); }}
+              onRemove={(game) => {
+                removeRecentGame(game.id, game.gameType);
+                setRecentGames(getRecentGames());
+              }}
+            />
           )}
 
           {/* Dev-only: demo games
@@ -550,7 +542,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
           {imposterBrowsing ? (
             <div className="hc-card-anim" key="browse">
-              <PublicGamesList gameType="imposter" sessionId={sessionId} />
+              <PublicGamesList gameType="imposter" sessionId={sessionId} onCreate={() => { setImposterBrowsing(false); setImposterExpanded(true); }} />
             </div>
           ) : imposterExpanded ? (
             <div className="hc-card-anim" key="config">
@@ -595,9 +587,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {imposterBrowsing ? (
-              <div className="hc-row hc-browse-back-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Imposter options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setImposterBrowsing(false)} />
-              </div>
+              <BrowseBack title="Imposter" count={imposterPublicCount} onBack={() => setImposterBrowsing(false)} onCreate={() => { setImposterBrowsing(false); setImposterExpanded(true); }} />
             ) : !imposterExpanded ? (
               <CardCreate
                 game="imposter"
@@ -607,11 +597,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 syncOffline={syncOffline}
                 syncPending={syncPending}
                 syncAttention={syncAttention}
-                syncStatusTooltip={syncStatusTooltip}
               />
             ) : (
               <div className="hc-row hc-create-action-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Imposter preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setImposterExpanded(false)} />
+                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Imposter preview" onClick={() => setImposterExpanded(false)} />
                 <Button
                   variant="primary"
                   full
@@ -640,7 +629,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
           {passwordBrowsing ? (
             <div className="hc-card-anim" key="browse">
-              <PublicGamesList gameType="password" sessionId={sessionId} />
+              <PublicGamesList gameType="password" sessionId={sessionId} onCreate={() => { setPasswordBrowsing(false); setPasswordExpanded(true); }} />
             </div>
           ) : passwordExpanded ? (
             <div className="hc-card-anim" key="config">
@@ -694,9 +683,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {passwordBrowsing ? (
-              <div className="hc-row hc-browse-back-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Password options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setPasswordBrowsing(false)} />
-              </div>
+              <BrowseBack title="Password" count={passwordPublicCount} onBack={() => setPasswordBrowsing(false)} onCreate={() => { setPasswordBrowsing(false); setPasswordExpanded(true); }} />
             ) : !passwordExpanded ? (
               <CardCreate
                 game="password"
@@ -706,11 +693,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 syncOffline={syncOffline}
                 syncPending={syncPending}
                 syncAttention={syncAttention}
-                syncStatusTooltip={syncStatusTooltip}
               />
             ) : (
               <div className="hc-row hc-create-action-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Password preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setPasswordExpanded(false)} />
+                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Password preview" onClick={() => setPasswordExpanded(false)} />
                 <Button
                   variant="primary"
                   full
@@ -739,7 +725,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
           {chainBrowsing ? (
             <div className="hc-card-anim" key="browse">
-              <PublicGamesList gameType="chain_reaction" sessionId={sessionId} />
+              <PublicGamesList gameType="chain_reaction" sessionId={sessionId} onCreate={() => { setChainBrowsing(false); setChainExpanded(true); }} />
             </div>
           ) : chainExpanded ? (
             <div className="hc-card-anim" key="config">
@@ -771,9 +757,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {chainBrowsing ? (
-              <div className="hc-row hc-browse-back-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Chain Reaction options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setChainBrowsing(false)} />
-              </div>
+              <BrowseBack title="Chain Reaction" count={chainPublicCount} onBack={() => setChainBrowsing(false)} onCreate={() => { setChainBrowsing(false); setChainExpanded(true); }} />
             ) : !chainExpanded ? (
               <CardCreate
                 game="chain"
@@ -783,11 +767,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 syncOffline={syncOffline}
                 syncPending={syncPending}
                 syncAttention={syncAttention}
-                syncStatusTooltip={syncStatusTooltip}
               />
             ) : (
               <div className="hc-row hc-create-action-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Chain Reaction preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setChainExpanded(false)} />
+                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Chain Reaction preview" onClick={() => setChainExpanded(false)} />
                 <Button
                   variant="primary"
                   full
@@ -816,7 +799,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
           {shadeBrowsing ? (
             <div className="hc-card-anim" key="browse">
-              <PublicGamesList gameType="shade_signal" sessionId={sessionId} />
+              <PublicGamesList gameType="shade_signal" sessionId={sessionId} onCreate={() => { setShadeBrowsing(false); setShadeExpanded(true); }} />
             </div>
           ) : shadeExpanded ? (
             <div className="hc-card-anim" key="config">
@@ -849,9 +832,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {shadeBrowsing ? (
-              <div className="hc-row hc-browse-back-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Shade Signal options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setShadeBrowsing(false)} />
-              </div>
+              <BrowseBack title="Shade Signal" count={shadePublicCount} onBack={() => setShadeBrowsing(false)} onCreate={() => { setShadeBrowsing(false); setShadeExpanded(true); }} />
             ) : !shadeExpanded ? (
               <CardCreate
                 game="shade"
@@ -861,11 +842,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 syncOffline={syncOffline}
                 syncPending={syncPending}
                 syncAttention={syncAttention}
-                syncStatusTooltip={syncStatusTooltip}
               />
             ) : (
               <div className="hc-row hc-create-action-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Shade Signal preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setShadeExpanded(false)} />
+                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Shade Signal preview" onClick={() => setShadeExpanded(false)} />
                 <Button
                   variant="primary"
                   full
@@ -894,7 +874,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
 
           {locationBrowsing ? (
             <div className="hc-card-anim" key="browse">
-              <PublicGamesList gameType="location_signal" sessionId={sessionId} />
+              <PublicGamesList gameType="location_signal" sessionId={sessionId} onCreate={() => { setLocationBrowsing(false); setLocationExpanded(true); }} />
             </div>
           ) : locationExpanded ? (
             <div className="hc-card-anim" key="config">
@@ -937,9 +917,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
               />
             )}
             {locationBrowsing ? (
-              <div className="hc-row hc-browse-back-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Location Signal options" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setLocationBrowsing(false)} />
-              </div>
+              <BrowseBack title="Location Signal" count={locationPublicCount} onBack={() => setLocationBrowsing(false)} onCreate={() => { setLocationBrowsing(false); setLocationExpanded(true); }} />
             ) : !locationExpanded ? (
               <CardCreate
                 game="location"
@@ -949,11 +927,10 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                 syncOffline={syncOffline}
                 syncPending={syncPending}
                 syncAttention={syncAttention}
-                syncStatusTooltip={syncStatusTooltip}
               />
             ) : (
               <div className="hc-row hc-create-action-row">
-                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Location Signal preview" data-tooltip="Back" data-tooltip-variant="info" onClick={() => setLocationExpanded(false)} />
+                <Button shape="square" icon={<FiArrowLeft />} aria-label="Back to Location Signal preview" onClick={() => setLocationExpanded(false)} />
                 <Button
                   variant="primary"
                   full
@@ -1340,52 +1317,87 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
   }
 }
 
-/* ── Inline-confirm clear button ──────────────────────────────── */
+/* ── Recent games ─────────────────────────────────────────────
+   A recessed tray along the bottom of the card. Closed, it is just the
+   header, a footer you can pull up; open, it takes the rest of the card and
+   scrolls with the same edge fades as the public games list. */
 
-function ClearRecentButton({ onClear }: { onClear: () => void }) {
-  const [confirming, setConfirming] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+function RecentGames({
+  games,
+  sessionId,
+  collapsed,
+  onToggle,
+  onClear,
+  onRemove,
+}: {
+  games: RecentGame[];
+  sessionId: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  onClear: () => void;
+  onRemove: (game: RecentGame) => void;
+}) {
+  const { fadeProps } = useScrollEdges<HTMLDivElement>([games.length, collapsed]);
+  /* Clearing takes two presses. The first one says so in the heading, where
+     there is room for words; the trash button itself stays an icon. */
+  const [confirmClear, setConfirmClear] = useState(false);
+  const clearTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const handleClick = () => {
-    if (confirming) {
-      clearTimeout(timerRef.current);
-      setConfirming(false);
+  useEffect(() => () => clearTimeout(clearTimer.current), []);
+
+  const handleClear = () => {
+    clearTimeout(clearTimer.current);
+    if (confirmClear) {
+      setConfirmClear(false);
       onClear();
-    } else {
-      setConfirming(true);
-      timerRef.current = setTimeout(() => setConfirming(false), 3000);
+      return;
     }
+    setConfirmClear(true);
+    clearTimer.current = setTimeout(() => setConfirmClear(false), 3000);
   };
 
-  useEffect(() => () => clearTimeout(timerRef.current), []);
-
   return (
-    <button
-      className={`hc-clear-trash${confirming ? " hc-clear-trash--confirming" : ""}`}
-      onClick={handleClick}
-      data-tooltip={confirming ? "Click again to clear all" : "Clear all recent games"}
-      data-tooltip-variant={confirming ? "danger" : "info"}
-    >
-      <FiTrash2 size={13} />
-    </button>
+    <>
+      <section className={`hc-section hc-recent-section${collapsed ? "" : " hc-recent-section--open"}`}>
+        <div className="hc-recent-header">
+          <button type="button" className="hc-collapse-toggle" aria-expanded={!collapsed} onClick={onToggle}>
+            <span className={`hc-label${confirmClear ? " hc-label--danger" : ""}`}>
+              {confirmClear ? <><FiTrash2 size={14} /> Clear all?</> : <><FiClock size={14} /> Recent games</>}
+            </span>
+            {!confirmClear && <span className="hc-browse-pill">{games.length}</span>}
+            <FiChevronDown size={16} className={`hc-collapse-icon${collapsed ? "" : " hc-collapse-icon--open"}`} aria-hidden="true" />
+          </button>
+          {!collapsed && (
+            <Button
+              variant={confirmClear ? "danger-secondary" : "ghost"}
+              size="sm"
+              shape="square"
+              icon={<FiTrash2 />}
+              onClick={handleClear}
+              aria-label={confirmClear ? "Press again to clear all recent games" : "Clear all recent games"}
+            />
+          )}
+        </div>
+        {!collapsed && (
+          <div className="hc-recent-list hc-fade-list" {...fadeProps}>
+            {games.map((game) => (
+              <RecentGameItem
+                key={`${game.gameType}-${game.id}`}
+                game={game}
+                sessionId={sessionId}
+                onRemove={() => onRemove(game)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 }
 
 /* ── Recent game item with status color + two-click removal ─── */
 
-type RecentGameStyle = CSSProperties & {
-  "--recent-accent": string;
-  "--recent-status": string;
-  "--recent-icon": string;
-};
-
-function formatRecentPhase(phase: string | null | undefined) {
-  if (!phase) return "Unknown";
-  return phase
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
+type RecentGameStyle = CSSProperties & { "--recent-accent": string };
 
 function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessionId: string; onRemove: () => void }) {
   const [imposterResults] = useQuery(game.gameType === "imposter" ? queries.imposter.byId({ id: game.id }) : queries.imposter.byId({ id: "__none__" }));
@@ -1417,14 +1429,7 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
 
   const gameSlug = multiplayerTypeToGameSlug(game.gameType);
   const meta = GAME_META[gameSlug];
-  const statusColor = isDeleted || isEnded ? "var(--muted-foreground)" : meta.accent;
-  const iconColor = isDeleted ? "var(--muted-foreground)" : meta.accent;
-  const recentStyle: RecentGameStyle = {
-    "--recent-accent": meta.accent,
-    "--recent-status": statusColor,
-    "--recent-icon": iconColor,
-  };
-  const phaseLabel = formatRecentPhase(gameData?.phase);
+  const recentStyle: RecentGameStyle = { "--recent-accent": meta.accent };
   const rowLabel = `${meta.title} ${game.code}`;
 
   // Tooltip content for finished games
@@ -1524,13 +1529,6 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
     return null;
   }, [isEnded, gameData, game.gameType, sessionId]);
 
-  const tooltip = useMemo(() => {
-    if (confirmRemove) return `${rowLabel}\nClick again to remove it from recent games.`;
-    if (isDeleted) return `${rowLabel}\nThis game is no longer available.\nClick once to mark it for removal.`;
-    if (isEnded) return `${rowLabel}\n${phaseLabel}\n${resultTooltip ? `${resultTooltip}\nClick once to mark it for removal.` : "Click once to mark it for removal."}`;
-    return `${rowLabel}\n${phaseLabel}\nClick to rejoin. Recent games can be removed after they end.`;
-  }, [confirmRemove, isDeleted, isEnded, phaseLabel, resultTooltip, rowLabel]);
-
   useEffect(() => {
     if (isDeleted || isEnded) return;
     setConfirmRemove(false);
@@ -1552,41 +1550,53 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
     removeTimerRef.current = setTimeout(() => setConfirmRemove(false), 3000);
   };
 
+  const live = !isDeleted && !isEnded;
+  const status = confirmRemove
+    ? "Press again to remove"
+    : isDeleted ? "Expired"
+    : isEnded ? "Ended"
+    : gameData?.phase === "lobby" ? "In lobby" : "Playing";
+
   const content = (
     <>
       <span className="hc-recent-icon" aria-hidden="true">
-        <GameIcon game={gameSlug} size={16} />
+        <GameIcon game={gameSlug} size={15} />
+      </span>
+      <span className="hc-recent-info">
+        <span className="hc-recent-title">{meta.title}</span>
+        <span className={`hc-recent-status${live ? " hc-recent-status--live" : ""}`}>
+          {status}
+        </span>
       </span>
       <span className="hc-recent-code">{game.code}</span>
     </>
   );
 
-  if (!isDeleted && !isEnded) {
+  if (live) {
     return (
       <Link
         to={link}
         className="hc-recent-item hc-recent-item--active"
         style={recentStyle}
-        aria-label={`Rejoin ${rowLabel}`}
-        data-tooltip={tooltip}
-        data-tooltip-pos="right"
-        data-tooltip-variant="info"
+        aria-label={`Rejoin ${rowLabel}, ${status.toLowerCase()}`}
       >
         {content}
       </Link>
     );
   }
 
+  /* A finished game keeps its results tooltip: that is information you
+     cannot get anywhere else from here. */
   return (
     <button
       type="button"
       className={`hc-recent-item hc-recent-item--inactive${isDeleted ? " hc-recent-item--deleted" : " hc-recent-item--ended"}${confirmRemove ? " hc-recent-item--confirm-remove" : ""}`}
       style={recentStyle}
       onClick={handleInactiveClick}
-      aria-label={confirmRemove ? `Remove ${rowLabel} from recent games` : `Mark ${rowLabel} for removal`}
-      data-tooltip={tooltip}
+      aria-label={confirmRemove ? `Remove ${rowLabel} from recent games` : `${rowLabel}, ${status.toLowerCase()}. Mark for removal`}
+      data-tooltip={resultTooltip && !confirmRemove ? resultTooltip : undefined}
       data-tooltip-pos="right"
-      data-tooltip-variant={confirmRemove ? "danger" : "info"}
+      data-tooltip-variant="info"
     >
       {content}
     </button>
