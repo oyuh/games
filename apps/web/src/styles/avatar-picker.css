@@ -152,3 +152,68 @@
   --btn-px: 0.5rem;
   min-width: 0;
 }
+
+/* ── Desktop modal ─────────────────────────────────────────────
+   Wide and flat instead of a tall scrolling column: the preview and colors
+   on the left, every shape on the right, all on screen at once. Under 761px
+   it stacks like the drawer. */
+.ap-layout > .ap-preview {
+  padding: 0 0 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 601px) {
+  .mshell.ap-modal {
+    width: 94vw;
+    max-width: 880px;
+  }
+}
+
+@media (min-width: 761px) {
+  .ap-layout {
+    display: grid;
+    grid-template-columns: 16.5rem 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "preview shape"
+      "color shape";
+    gap: 1.25rem 1.75rem;
+  }
+
+  .ap-layout > .ap-preview {
+    grid-area: preview;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1.4rem 1rem 1.2rem;
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--foreground) 4%, transparent);
+    text-align: center;
+  }
+
+  .ap-layout .ap-preview-avatar {
+    width: 112px;
+    height: 112px;
+  }
+
+  .ap-layout .ap-preview-copy {
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .ap-layout > .mshell-section:nth-child(2) {
+    grid-area: color;
+  }
+
+  .ap-layout > .mshell-section:nth-child(3) {
+    grid-area: shape;
+    margin-top: 0;
+    padding-left: 1.75rem;
+    border-left: 1px solid var(--border);
+  }
+
+  .ap-layout .ap-colors {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
