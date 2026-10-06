@@ -1,5 +1,5 @@
 /* ── Status page ────────────────────────────────────────────────
-   Built on the solo menu (.solo-menu, .solo-drawer, .solo-menu-links), so it reads
+   Built on the solo menu (.solo-menu, .solo-menu-links), so it reads
    like Pips and Shikaku: bordered blocks on the page background, no shadows,
    no tinted panels. Color only ever marks a state. */
 
@@ -45,12 +45,7 @@
   text-align: center;
 }
 
-/* ── The service list, with the probe drawer hanging off it ── */
-.status-block {
-  display: flex;
-  flex-direction: column;
-}
-
+/* ── The service list ───────────────────────────────────────── */
 /* Hairlines between the cells come from the 1px gap showing the border
    color through, so the grid can reflow from three columns to one without
    any per-cell border rules. */
@@ -63,7 +58,7 @@
   overflow: hidden;
   list-style: none;
   border: 1px solid var(--border);
-  border-radius: var(--solo-radius) var(--solo-radius) 0 0;
+  border-radius: var(--solo-radius);
   background: var(--border);
 }
 
@@ -122,17 +117,23 @@
   white-space: nowrap;
 }
 
-.status-drawer {
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.35rem 1.1rem;
-  padding: var(--solo-pad) var(--solo-pad) var(--solo-pad) 1rem;
-}
-
-.status-drawer-facts {
+/* Probe facts and the refresh sit on the Services title line, at the
+   same weight as the titles, so checking again reads as part of the list
+   it refreshes instead of a call to action. */
+.status-section-head {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 1.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  min-height: 1.875rem;
+}
+
+.status-head-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1.1rem;
   color: var(--muted-foreground);
   font-size: 0.74rem;
   font-weight: 600;
@@ -151,47 +152,16 @@
   color: var(--foreground);
 }
 
-/* The page's one primary action, sized to sit inside the drawer. */
-.status-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 2.75rem;
-  padding: 0 1.1rem;
-  border: 0;
-  border-radius: calc(var(--solo-radius) - var(--solo-pad));
-  background: var(--primary);
-  color: var(--primary-foreground);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 800;
-  transition: filter 0.16s;
+/* Ghost, pulled right so its label lines up with the grid's edge. */
+.status-check.ui-btn {
+  margin-right: -0.65rem;
+  font-size: 0.74rem;
 }
 
-.status-check:hover {
-  filter: brightness(1.08);
-}
-
-.status-check:disabled {
-  cursor: progress;
-  filter: none;
-  opacity: 0.8;
-}
-
-.status-check:focus-visible,
 .status-copy:focus-visible,
 .status-link:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-}
-
-.status-spin {
-  animation: status-spin 0.8s linear infinite;
-}
-
-@keyframes status-spin {
-  to { transform: rotate(360deg); }
 }
 
 /* ── Details and the event log ──────────────────────────────── */
@@ -211,10 +181,8 @@
 .status-section-title {
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
 /* One fact per row, label on the left, value on the right. */
@@ -412,11 +380,6 @@
     padding: 0.75rem 0.85rem;
   }
 
-  .status-check {
-    flex: 1;
-    justify-content: center;
-  }
-
   .status-facts > div {
     grid-template-columns: 6.5rem minmax(0, 1fr);
     padding: 0.6rem 0.85rem;
@@ -440,7 +403,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .status-spin,
   .status-tone--loading .status-row-dot {
     animation: none;
   }

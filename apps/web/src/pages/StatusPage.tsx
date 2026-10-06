@@ -22,7 +22,7 @@ import {
   FiXCircle,
   FiZap
 } from "react-icons/fi";
-import { ButtonLink } from "../components/shared/Button";
+import { Button, ButtonLink } from "../components/shared/Button";
 import { GameIcon } from "../components/shared/GameIcon";
 import {
   formatUptime,
@@ -201,24 +201,10 @@ export function StatusPage() {
         </p>
       </header>
 
-      <section className="status-block" aria-label="Services">
-        <ul className="status-list">
-          {rows.map((row) => (
-            <li className={`status-row status-tone--${row.tone}`} key={row.name}>
-              <span className="status-row-head">
-                <span className="status-row-icon" aria-hidden="true">{row.icon}</span>
-                <span className="status-row-name">{row.name}</span>
-                <span className="status-row-state">
-                  <span className="status-row-dot" aria-hidden="true" />
-                  {row.label}
-                </span>
-              </span>
-              <span className="status-row-detail">{row.detail}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="solo-drawer status-drawer">
-          <span className="status-drawer-facts">
+      <section className="status-section" aria-labelledby="status-services-title">
+        <div className="status-section-head">
+          <h2 className="status-section-title" id="status-services-title">Services</h2>
+          <span className="status-head-facts">
             <span className="status-fact" data-tooltip="Last checked" data-tooltip-variant="info">
               <FiClock aria-hidden="true" />
               {checkedAgo == null ? "Not checked yet" : `${checkedAgo}s ago`}
@@ -235,12 +221,33 @@ export function StatusPage() {
                 {formatUptime(uptimeMs)}
               </span>
             )}
+            <Button
+              className="status-check"
+              variant="ghost"
+              size="sm"
+              icon={<FiRefreshCw />}
+              loading={checking}
+              onClick={() => void checkNow()}
+            >
+              Check again
+            </Button>
           </span>
-          <button className="status-check" type="button" onClick={() => void checkNow()} disabled={checking}>
-            <FiRefreshCw className={checking ? "status-spin" : undefined} size={15} aria-hidden="true" />
-            {checking ? "Checking" : "Check again"}
-          </button>
         </div>
+        <ul className="status-list">
+          {rows.map((row) => (
+            <li className={`status-row status-tone--${row.tone}`} key={row.name}>
+              <span className="status-row-head">
+                <span className="status-row-icon" aria-hidden="true">{row.icon}</span>
+                <span className="status-row-name">{row.name}</span>
+                <span className="status-row-state">
+                  <span className="status-row-dot" aria-hidden="true" />
+                  {row.label}
+                </span>
+              </span>
+              <span className="status-row-detail">{row.detail}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <div className="status-lower">
@@ -324,6 +331,7 @@ export function StatusPage() {
         <ButtonLink variant="text" to="/" icon={<FiHome />}>Home</ButtonLink>
         <ButtonLink variant="text" to="/pips" icon={<GameIcon game="pips" size={14} />}>Pips</ButtonLink>
         <ButtonLink variant="text" to="/shikaku" icon={<GameIcon game="shikaku" size={14} />}>Shikaku</ButtonLink>
+        <ButtonLink variant="text" to="/zip" icon={<GameIcon game="zip" size={14} />}>Zip</ButtonLink>
         <ButtonLink variant="text" href={GITHUB_REPO} icon={<FiGithub />}>Source</ButtonLink>
         {debug.apiInfoURL && (
           <ButtonLink variant="text" href={debug.apiInfoURL} icon={<FiCode />} trailing={<FiExternalLink />}>
