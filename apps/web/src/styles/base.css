@@ -121,6 +121,13 @@
   --surface-bg: linear-gradient(160deg, var(--surface-top) 0%, var(--surface-bottom) 100%);
   --surface-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   --surface-shadow-hover: 0 3px 10px rgba(0, 0, 0, 0.24);
+
+  /* The raised card: the shared button's lit top edge and shaded bottom edge,
+     at card scale, over a soft drop. components.css stacks them. */
+  --surface-edge-top: rgb(255 255 255 / 0.07);
+  --surface-edge-bottom: rgb(0 0 0 / 0.38);
+  --surface-drop: 0 1px 2px rgb(0 0 0 / 0.35), 0 8px 18px -8px rgb(0 0 0 / 0.55);
+  --surface-drop-hover: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 26px -10px rgb(0 0 0 / 0.65);
 }
 
 /* The same scale backs Tailwind's rounded-* utilities so class-based and

@@ -1,9 +1,9 @@
 import { GAME_META, multiplayerTypeToGameSlug, type GameSlug } from "@games/shared";
 import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { FiArrowLeft, FiChevronRight, FiEdit2, FiGithub, FiLogIn, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiChevronRight, FiEdit2, FiGithub, FiGlobe, FiLogIn, FiX } from "react-icons/fi";
 import { Button } from "../../components/shared/Button";
-import { BrowseIcon } from "../../components/home/BrowseIcon";
+import { BrowseCount } from "../../components/home/BrowseCount";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { ActiveGameModal } from "../../components/shared/ActiveGameBanner";
 import { PublicGamesList } from "../../components/shared/PublicGamesBrowser";
@@ -244,7 +244,7 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
 
             {browsing ? (
               <>
-                <PublicGamesList gameType={GAME_META[sheetGame].multiplayerType!} sessionId={sessionId} />
+                <PublicGamesList gameType={GAME_META[sheetGame].multiplayerType!} sessionId={sessionId} onCreate={() => setBrowsing(false)} />
                 <Button size="lg" full icon={<FiArrowLeft />} onClick={() => setBrowsing(false)}>
                   Back to settings
                 </Button>
@@ -268,7 +268,8 @@ export function MobileHomePage({ sessionId }: { sessionId: string }) {
                   <Button
                     size="lg"
                     full
-                    icon={<BrowseIcon count={publicCount(home, sheetGame)} />}
+                    icon={<FiGlobe />}
+                    trailing={<BrowseCount count={publicCount(home, sheetGame)} />}
                     aria-label={`Browse public games, ${publicCount(home, sheetGame)} to join`}
                     onClick={() => setBrowsing(true)}
                   >

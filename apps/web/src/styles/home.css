@@ -1190,37 +1190,32 @@ a.solo-card-title-link {
   gap: 0.5rem;
 }
 
-/* The count of public games sits on the globe's corner, in the game's color
-   when there is something to join and quiet at zero. Positioned out of the
-   icon's box, so a two-digit count never widens the button. */
-.hc-browse-icon {
-  position: relative;
-  display: inline-flex;
-  /* Room for the badge, so it hangs off the globe without touching the label. */
-  margin-right: 0.45em;
-}
-
-.hc-browse-badge {
-  position: absolute;
-  top: -0.6em;
-  right: -0.85em;
-  min-width: 1.35em;
-  height: 1.35em;
-  padding: 0 0.3em;
-  display: grid;
+/* The count of public games, in a pill after the Browse public label: the
+   game's color when there is something to join, quiet at zero. It grows
+   sideways with the number, so 20 reads as easily as 2. */
+.hc-browse-pill {
+  display: inline-grid;
   place-items: center;
+  min-width: 1.5rem;
+  height: 1.25rem;
+  padding: 0 0.4rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--foreground) 13%, transparent);
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
   color: var(--muted-foreground);
-  font-size: 0.6rem;
-  font-weight: 800;
+  font-size: 0.7rem;
+  font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.hc-browse-badge.is-live {
-  background: color-mix(in srgb, var(--card-accent, var(--primary)) 22%, transparent);
+.hc-browse-pill.is-live {
+  background: color-mix(in srgb, var(--card-accent, var(--primary)) 18%, transparent);
   color: var(--card-accent, var(--primary));
+}
+
+/* The accents are too light to read as text on the light theme's card. */
+[data-theme="light"] .hc-browse-pill.is-live {
+  color: color-mix(in srgb, var(--card-accent, var(--primary)) 60%, black);
 }
 
 .hc-label {
@@ -1234,14 +1229,15 @@ a.solo-card-title-link {
   gap: 0.35rem;
 }
 
-/* Only the section headings. The recents heading lives inside a toggle with a
-   chevron after it, so it stays left and keeps its row.
+/* Left, like a form's labels, so Join, Display name and Recent games all
+   start on the same edge. The recents heading lives inside a toggle with its
+   count and chevron after it, and lines up with these two.
 
    No rules either side of the label: the sections are already separated by
    .hc-divider, and a hairline a few pixels under one is just a second line
    saying the same thing. */
 .hc-section > .hc-label {
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 /* The icon is part of the label, so it takes the label's colour instead of
@@ -1259,28 +1255,32 @@ a.solo-card-title-link {
 }
 
 /* ── Inline-editable name display ────────────────────────────── */
+/* A plain field, the same as the join code's, with the pencil to say it
+   edits in place. It brightens its edge on hover and takes the focus ring
+   while you type; it does not move. */
 .hc-name-display {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  background: color-mix(in srgb, var(--primary) 5%, transparent);
-  border: 1px dashed color-mix(in srgb, var(--primary) 20%, transparent);
-  border-radius: var(--radius-sm);
-  padding: 0.4rem 0.6rem;
-  cursor: pointer;
-  font: inherit;
-  color: var(--foreground);
-  font-size: 0.88rem;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
   width: 100%;
+  padding: 0 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: text;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--foreground);
+  transition: border-color 0.15s;
 }
+
 .hc-name-display:hover {
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
-  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--foreground) 28%, transparent);
 }
-.hc-name-display:active {
-  transform: translateY(0);
+
+.hc-name-display:focus-within {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 35%, transparent);
 }
 /* Avatar tile and name field side by side, each its own control. */
 .hc-identity-row {
@@ -1297,8 +1297,8 @@ a.solo-card-title-link {
 .hc-avatar-btn {
   position: relative;
   flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
+  width: 2.75rem;
+  height: 2.75rem;
   padding: 0;
   border: 0;
   border-radius: var(--avatar-radius);
@@ -1349,13 +1349,13 @@ a.solo-card-title-link {
   color: color-mix(in srgb, var(--primary) 50%, transparent);
 }
 .hc-name-edit-icon {
-  color: var(--primary);
-  opacity: 0.5;
-  transition: opacity 0.15s;
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+  transition: color 0.15s;
 }
 .hc-name-display:focus-within .hc-name-edit-icon,
 .hc-name-display:hover .hc-name-edit-icon {
-  opacity: 1;
+  color: var(--foreground);
 }
 
 .hc-row {
@@ -1372,6 +1372,7 @@ a.solo-card-title-link {
 
 /* ── Join input styles ───────────────────────────────────────── */
 .hc-join-input {
+  height: 2.75rem;
   text-align: center;
   letter-spacing: 0.45em;
   font-weight: 700;
@@ -1392,15 +1393,18 @@ a.solo-card-title-link {
   position: relative;
 }
 
+/* Dressed as the shared primary button: a lit top, a ring a shade darker
+   than the fill, a short drop. */
 .hc-join-input--ready {
-  background: var(--primary);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 86%, white), var(--primary));
   color: var(--primary-foreground);
-  border-color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 62%, black);
   cursor: pointer;
   font-weight: 800;
-  border-radius: var(--radius);
-  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 25%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.38),
+    inset 0 -1px 0 rgb(0 0 0 / 0.16),
+    0 1px 2px rgb(0 0 0 / 0.35);
   outline: none;
   /* Code slides off centre to make room for the arrow. */
   text-align: left;
@@ -1408,9 +1412,12 @@ a.solo-card-title-link {
 }
 
 .hc-join-input--ready:hover {
-  background: color-mix(in srgb, var(--primary) 85%, #fff);
-  transform: scale(1.02);
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 30%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 78%, white), color-mix(in srgb, var(--primary) 92%, white));
+}
+
+.hc-join-input--ready:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .hc-join-input--ready::placeholder {
@@ -1510,199 +1517,197 @@ a.solo-card-title-link {
   flex-direction: column;
 }
 
-.home-card--utils .hc-section,
-.home-card--utils .hc-divider {
+/* No rules between the sections. Space keeps Join and Display name apart,
+   and the recents sit in their own tray, so the card reads as two flat
+   fields over a drawer. */
+.home-card--utils .home-card-body {
+  gap: 1.35rem;
+}
+
+.home-card--utils .hc-section {
   flex-shrink: 0;
 }
 
-.home-card--utils .hc-recent-divider {
-  margin-top: auto;
-  margin-bottom: 0.35rem;
-}
-
-.home-card--utils .hc-recent-divider--open {
-  margin-top: 1rem;
-  margin-bottom: 0.25rem;
+/* The tray runs to the card's edges and bottom, cancelling the body's
+   padding, and sits a shade darker than the card: a well the rows rest in,
+   the opposite of the raised card around it. The card's own rounding and
+   overflow clip its corners. */
+.home-card--utils .hc-recent-section {
+  margin: auto calc(var(--hc-body-pad) * -1) calc(var(--hc-body-pad) * -1);
+  padding: 0.6rem var(--hc-body-pad) 0.75rem;
+  background: var(--tray-bg);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.18);
+  --tray-bg: rgb(0 0 0 / 0.18);
 }
 
 .home-card--utils .hc-recent-section--open {
   flex: 1 1 auto;
   min-height: 0;
+  padding-bottom: var(--hc-body-pad);
+}
+
+[data-theme="light"] .home-card--utils .hc-recent-section {
+  --tray-bg: rgb(0 0 0 / 0.035);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.05);
 }
 
 .hc-recent-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
+  min-height: 2rem;
   flex-shrink: 0;
 }
 
-.hc-recent-section:not(.hc-recent-section--open) .hc-collapse-toggle {
-  min-height: 2.25rem;
-  padding: 0.02rem 0 0.1rem;
+.hc-recent-header .hc-label svg {
+  transform: translateY(-1px);
 }
 
-.hc-recent-section:not(.hc-recent-section--open) .hc-label {
-  font-size: 0.82rem;
+.hc-recent-header .hc-label {
+  white-space: nowrap;
 }
 
-.hc-collapse-toggle--collapsed {
-  padding-bottom: 0.08rem;
+.hc-label--danger,
+.hc-recent-header .hc-label--danger svg {
+  color: #f87171;
 }
 
-.hc-label--recent-open {
-  font-weight: 400;
+[data-theme="light"] :is(.hc-label--danger, .hc-recent-header .hc-label--danger svg) {
+  color: #b91c1c;
 }
 
 .hc-recent-list {
   display: flex;
   flex-direction: column;
-  gap: 0.38rem;
-  min-height: 0;
-}
-
-.hc-recent-list--scrollable {
+  gap: 0.4rem;
   flex: 1 1 auto;
-  max-height: 100%;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding-right: 0;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.hc-recent-list--scrollable::-webkit-scrollbar {
-  display: none;
+  min-height: 0;
+  padding: 0.25rem 0;
 }
 
-/* Trash icon clear button next to "Recent" */
-.hc-clear-trash {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  padding: 0.25rem;
-  border-radius: var(--radius-sm);
-  color: var(--secondary);
-  cursor: pointer;
-  opacity: 0.5;
-  transition: color 0.15s, opacity 0.15s;
-}
-.hc-clear-trash:hover {
-  opacity: 1;
-  color: var(--destructive);
-}
-.hc-clear-trash--confirming {
-  opacity: 1;
-  color: var(--destructive);
-  animation: hc-trash-pulse 0.6s ease infinite alternate;
-}
-@keyframes hc-trash-pulse {
-  from { opacity: 0.7; }
-  to   { opacity: 1; }
-}
-
+/* Same panel as a public game's row: avatar slot, two lines, a value on the
+   right. The game's tile carries its color, so the row itself stays flat and
+   six of them in a column do not turn the card into a rainbow. */
 .hc-recent-item {
   appearance: none;
-  display: grid;
-  grid-template-columns: 1.25rem minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: 0.48rem;
+  gap: 0.6rem;
+  flex-shrink: 0;
   width: 100%;
-  min-height: 2.22rem;
-  padding: 0.32rem 0.55rem 0.32rem 0.5rem;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--recent-status, var(--primary)) 7%, transparent);
-  border: 1px solid color-mix(in srgb, var(--recent-status, var(--primary)) 24%, transparent);
-  text-decoration: none;
+  min-height: 2.6rem;
+  padding: 0.3rem 0.65rem 0.3rem 0.35rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
   color: inherit;
   font: inherit;
-  line-height: 1;
   text-align: left;
-  position: relative;
-  overflow: hidden;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.hc-recent-item--active {
+  text-decoration: none;
   cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
 }
 
-.hc-recent-item--active:hover,
-.hc-recent-item--active:focus-visible {
-  background: color-mix(in srgb, var(--recent-status, var(--primary)) 13%, transparent);
-  border-color: color-mix(in srgb, var(--recent-status, var(--primary)) 42%, transparent);
-}
-
-.hc-recent-item--inactive {
-  cursor: pointer;
-}
-
-.hc-recent-item--inactive:hover,
-.hc-recent-item--inactive:focus-visible {
-  background: color-mix(in srgb, var(--recent-status, var(--secondary)) 10%, transparent);
-  border-color: color-mix(in srgb, var(--recent-status, var(--secondary)) 34%, transparent);
+@media (hover: hover) {
+  .hc-recent-item:hover {
+    border-color: color-mix(in srgb, var(--foreground) 18%, transparent);
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  }
 }
 
 .hc-recent-item:focus-visible {
-  outline: 2px solid var(--recent-status, var(--primary));
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
 .hc-recent-icon {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  color: var(--recent-icon, var(--primary));
-  transition: color 0.15s;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--recent-accent) 16%, transparent);
+  color: var(--recent-accent);
 }
 
 .hc-recent-icon svg {
   display: block;
 }
 
-.hc-recent-code {
-  justify-self: end;
+.hc-recent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
   min-width: 0;
-  max-width: 100%;
-  font-size: 0.9rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  color: var(--recent-status, var(--primary));
+}
+
+.hc-recent-title {
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--foreground);
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hc-recent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  overflow: hidden;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.hc-recent-status--live::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--recent-accent);
+}
+
+.hc-recent-code {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   font-variant-numeric: tabular-nums;
-  text-align: right;
-  transition: color 0.15s, opacity 0.15s;
-}
-
-.hc-recent-item--deleted {
-  background: color-mix(in srgb, var(--muted-foreground) 8%, transparent);
-  border-color: color-mix(in srgb, var(--muted-foreground) 20%, transparent);
-}
-
-.hc-recent-item--deleted .hc-recent-icon {
   color: var(--muted-foreground);
 }
 
-.hc-recent-item--deleted .hc-recent-code,
-.hc-recent-item--ended .hc-recent-code {
+/* Over or gone: the tile drops its color, so the live games are the ones
+   that stand out. */
+.hc-recent-item--inactive .hc-recent-icon {
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
   color: var(--muted-foreground);
 }
 
-.hc-recent-item--confirm-remove {
-  background: color-mix(in srgb, var(--destructive) 16%, transparent);
-  border-color: color-mix(in srgb, var(--destructive) 58%, transparent);
+.hc-recent-item--inactive .hc-recent-title {
+  color: var(--muted-foreground);
 }
 
+.hc-recent-item--confirm-remove,
+.hc-recent-item--confirm-remove:hover {
+  border-color: color-mix(in srgb, #f87171 50%, transparent);
+  background: color-mix(in srgb, #f87171 8%, transparent);
+}
+
+.hc-recent-item--confirm-remove .hc-recent-status,
 .hc-recent-item--confirm-remove .hc-recent-icon {
-  color: var(--destructive);
+  color: #f87171;
 }
 
-.hc-recent-item--confirm-remove .hc-recent-code {
-  color: var(--destructive);
+[data-theme="light"] .hc-recent-item--confirm-remove .hc-recent-status,
+[data-theme="light"] .hc-recent-item--confirm-remove .hc-recent-icon {
+  color: #b91c1c;
 }
 
 .hc-game-title {
@@ -1733,31 +1738,48 @@ a.solo-card-title-link {
 }
 
 /* ── Collapsible section toggle ──────────────────────────────── */
+/* Label, count and chevron as one control. The chevron goes to the far end,
+   so the whole width of the header is the thing you press. */
 .hc-collapse-toggle {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  background: none;
-  border: none;
+  gap: 0.45rem;
+  flex: 1;
+  min-height: 2rem;
   padding: 0;
-  cursor: pointer;
-  font: inherit;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
   color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hc-collapse-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .hc-collapse-icon {
+  margin-left: auto;
   color: var(--muted-foreground);
-  transition: transform 0.2s ease;
-  opacity: 0.6;
+  transition: transform 0.2s ease, color 0.15s;
 }
 
-.hc-collapse-icon--collapsed {
-  opacity: 0.8;
+@media (hover: hover) {
+  .hc-collapse-toggle:hover :is(.hc-label, .hc-collapse-icon) {
+    color: var(--foreground);
+  }
 }
 
 .hc-collapse-icon--open {
   transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-collapse-icon {
+    transition: none;
+  }
 }
 
 /* ── Config area (expandable) ────────────────────────────────── */
@@ -1864,10 +1886,6 @@ a.solo-card-title-link {
   flex: 1 1 0;
   width: auto;
   min-width: 0;
-}
-
-.hc-browse-back-row {
-  justify-content: flex-start;
 }
 
 
@@ -2130,99 +2148,218 @@ a.solo-card-title-link {
   min-height: 0;
 }
 
-/* ── Public Games Inline List (per-card browse) ─────────── */
-.pgb-inline-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 320px;
+/* ── Fading scroll list ───────────────────────────────────────
+   A list that scrolls inside a card, used by the public games browser and
+   the recents. Rows fade out at an edge only while there is more past it
+   (useScrollEdges sets the data attributes), so the first and last rows sit
+   clean once you reach them. No visible scrollbar: a bar on top of the rows
+   read as clutter, and the fade already says there is more. The fade lengths
+   are registered so they ease in and out instead of snapping. */
+@property --fade-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+.hc-fade-list {
+  --fade-top: 0px;
+  --fade-bottom: 0px;
+
+  position: relative;
   overflow-y: auto;
-  padding: 0.25rem 0;
-  width: 100%;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--fade-top),
+    #000 calc(100% - var(--fade-bottom)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--fade-top),
+    #000 calc(100% - var(--fade-bottom)),
+    transparent 100%
+  );
+  transition: --fade-top 0.2s ease, --fade-bottom 0.2s ease;
 }
 
-.pgb-inline-card {
+.hc-fade-list::-webkit-scrollbar {
+  display: none;
+}
+
+.hc-fade-list[data-fade-top] {
+  --fade-top: 2rem;
+}
+
+.hc-fade-list[data-fade-bottom] {
+  --fade-bottom: 2.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-fade-list {
+    transition: none;
+  }
+}
+
+/* ── Public games (per-card browse) ───────────────────────────
+   A short header, then one row per game: host avatar, name, status line,
+   and the shared Button on the right. Rows are flat panels a step off the
+   card, the same weight as the setup fields, so the list reads as part of
+   the card rather than a stack of cards inside it. On a desktop card it
+   takes the middle row and scrolls inside it. */
+.hc-card-anim:has(> .pgb) {
+  flex: 1;
+  min-height: 0;
+}
+
+.pgb {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   text-align: left;
-  font: inherit;
-  color: inherit;
-  width: 100%;
-  box-sizing: border-box;
-}
-.pgb-inline-card:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: var(--primary);
-}
-.pgb-inline-card:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
-.pgb-inline-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
 
-.pgb-inline-phase {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 0.15rem 0.45rem;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--muted-foreground);
-}
-.pgb-inline-phase--lobby {
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  color: var(--primary);
-}
-
-.pgb-inline-players {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-.pgb-inline-host {
-  font-size: 0.72rem;
-  color: var(--muted-foreground);
-  opacity: 0.7;
-}
-
-.pgb-inline-action {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--primary);
-  margin-top: 0.1rem;
-}
-
-.pgb-empty-inline {
+/* Runs from under the title to the count above the buttons. The fade and
+   the "(n more)" in the count say there is more, so no scrollbar. */
+.pgb-list {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 2.5rem 0.5rem;
-  text-align: center;
-  color: var(--muted-foreground);
-  font-size: 0.85rem;
-  width: 100%;
+  gap: 0.4rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0.5rem 0;
+  list-style: none;
 }
 
-/* Ensure browse list fills width in centered card layout */
-.hc-centered .pgb-inline-list,
-.hc-centered .pgb-empty-inline {
-  align-self: stretch;
+.pgb-count {
+  margin: auto 0 0;
+  padding-top: 0.25rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.pgb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.55rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.pgb-row .player-avatar {
+  border-radius: var(--avatar-radius);
+}
+
+.pgb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.pgb-host {
+  overflow: hidden;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pgb-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: var(--muted-foreground);
+}
+
+.pgb-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* A dot in the game's color when there is still room to join. Playing games
+   get no dot: you can only watch those. */
+.pgb-status--lobby {
+  color: var(--foreground);
+}
+
+.pgb-status--lobby::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--card-accent, var(--primary));
+}
+
+.pgb-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* One width for Join and Watch, so the buttons line up down the right edge. */
+.pgb-row > .ui-btn {
+  min-width: 4.5rem;
+}
+
+.pgb-stat svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+/* Nothing running: centered in the space the list would fill, with a way
+   out other than the back button. */
+.pgb--empty {
+  margin-top: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1rem 0.75rem;
+  text-align: center;
+}
+
+.pgb-empty-icon {
+  display: inline-flex;
+  margin-bottom: 0.5rem;
+  color: var(--card-accent, var(--primary));
+  font-size: 2.25rem;
+  line-height: 0;
+}
+
+.pgb-empty-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.pgb-empty-text {
+  max-width: 15rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
 }
