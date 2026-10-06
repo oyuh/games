@@ -146,8 +146,13 @@
   width: 100%;
 }
 
+/* Darker than the card face, with firmer gridlines, so the empty squares
+   still read on the tinted card. */
 .solo-preview-zip .zip-board {
+  --zip-line: color-mix(in srgb, var(--secondary) 45%, transparent);
   width: min(150px, 100%);
+  border-color: color-mix(in srgb, var(--foreground) 22%, transparent);
+  background: var(--background);
 }
 
 /* How to Play: big enough to actually draw on. */

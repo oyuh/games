@@ -109,7 +109,7 @@ export function GameSetup({ game, home }: { game: HomeRouteGame; home: HomeState
           options={pickerOptions([1, 2, 3, 5, 7, 10], (n) => `${n} round${n === 1 ? "" : "s"}`)}
         />
         <CardPicker
-          label="Hint Visibility"
+          label="Hint visibility"
           hint="How much of submitted clues the imposter can peek at before sending their clue."
           value={home.imposterClueVisibility}
           onChange={(v) => home.setImposterClueVisibility(Number(v))}
@@ -142,7 +142,7 @@ export function GameSetup({ game, home }: { game: HomeRouteGame; home: HomeState
           options={pickerOptions([2, 3, 4, 5, 6], (n) => `${n} teams`)}
         />
         <CardPicker
-          label="Target Score"
+          label="Target score"
           hint="The score a team needs to win. Higher = longer game."
           value={home.passwordTargetScore}
           onChange={(v) => home.setPasswordTargetScore(Number(v))}
