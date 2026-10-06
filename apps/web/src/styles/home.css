@@ -1592,11 +1592,11 @@ a.solo-card-title-link {
   appearance: none;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
   flex-shrink: 0;
   width: 100%;
   min-height: 2.6rem;
-  padding: 0.3rem 0.65rem 0.3rem 0.35rem;
+  padding: 0.3rem 0.65rem;
   border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
   background: color-mix(in srgb, var(--foreground) 3%, transparent);
@@ -1625,10 +1625,6 @@ a.solo-card-title-link {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 1.85rem;
-  height: 1.85rem;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--recent-accent) 16%, transparent);
   color: var(--recent-accent);
 }
 
@@ -1674,11 +1670,25 @@ a.solo-card-title-link {
   background: var(--recent-accent);
 }
 
-.hc-recent-code {
+/* The time sits after the status with a clock in front, no separator
+   character between them. */
+.hc-recent-when {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: 0.2rem;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-recent-when svg {
   flex: 0 0 auto;
-  font-size: 0.78rem;
+}
+
+.hc-recent-code {
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
   color: var(--muted-foreground);
 }
@@ -1686,7 +1696,6 @@ a.solo-card-title-link {
 /* Over or gone: the tile drops its color, so the live games are the ones
    that stand out. */
 .hc-recent-item--inactive .hc-recent-icon {
-  background: color-mix(in srgb, var(--foreground) 7%, transparent);
   color: var(--muted-foreground);
 }
 
