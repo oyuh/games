@@ -1345,6 +1345,15 @@ function RecentGames({
 
   useEffect(() => () => clearTimeout(clearTimer.current), []);
 
+  /* One clock for the whole list so the uptimes and "ago"s stay current. */
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (collapsed) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, [collapsed]);
+
   const handleClear = () => {
     clearTimeout(clearTimer.current);
     if (confirmClear) {
@@ -1385,6 +1394,7 @@ function RecentGames({
                 key={`${game.gameType}-${game.id}`}
                 game={game}
                 sessionId={sessionId}
+                now={now}
                 onRemove={() => onRemove(game)}
               />
             ))}
@@ -1399,7 +1409,17 @@ function RecentGames({
 
 type RecentGameStyle = CSSProperties & { "--recent-accent": string };
 
-function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessionId: string; onRemove: () => void }) {
+/** Condensed elapsed time: 5m, 3h, 2d. Under a minute reads as "now". */
+function shortSpan(ms: number) {
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+function RecentGameItem({ game, sessionId, now, onRemove }: { game: RecentGame; sessionId: string; now: number; onRemove: () => void }) {
   const [imposterResults] = useQuery(game.gameType === "imposter" ? queries.imposter.byId({ id: game.id }) : queries.imposter.byId({ id: "__none__" }));
   const [passwordResults] = useQuery(game.gameType === "password" ? queries.password.byId({ id: game.id }) : queries.password.byId({ id: "__none__" }));
   const [chainResults] = useQuery(game.gameType === "chain_reaction" ? queries.chainReaction.byId({ id: game.id }) : queries.chainReaction.byId({ id: "__none__" }));
@@ -1552,23 +1572,41 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
 
   const live = !isDeleted && !isEnded;
   const status = confirmRemove
-    ? "Press again to remove"
+    ? "Remove?"
     : isDeleted ? "Expired"
     : isEnded ? "Ended"
     : gameData?.phase === "lobby" ? "In lobby" : "Playing";
+  /* Live games count up from creation; ended ones say how long ago they
+     finished (the last write is the finish). Expired rows only have the
+     local visit time. */
+  const ago = (at: number) => {
+    const span = shortSpan(now - at);
+    return span === "now" ? "just now" : `${span} ago`;
+  };
+  const when = confirmRemove ? null
+    : isDeleted ? ago(game.lastPlayedAt)
+    : isEnded ? ago(gameData.updated_at)
+    : shortSpan(now - gameData.created_at);
 
   const content = (
     <>
-      <span className="hc-recent-icon" aria-hidden="true">
-        <GameIcon game={gameSlug} size={15} />
-      </span>
       <span className="hc-recent-info">
-        <span className="hc-recent-title">{meta.title}</span>
+        <span className="hc-recent-title">
+          {meta.title} <span className="hc-recent-code">({game.code})</span>
+        </span>
         <span className={`hc-recent-status${live ? " hc-recent-status--live" : ""}`}>
           {status}
+          {when && (
+            <span className="hc-recent-when">
+              <FiClock size={10} aria-hidden="true" />
+              {when}
+            </span>
+          )}
         </span>
       </span>
-      <span className="hc-recent-code">{game.code}</span>
+      <span className="hc-recent-icon" aria-hidden="true">
+        <GameIcon game={gameSlug} size={20} />
+      </span>
     </>
   );
 
@@ -1578,7 +1616,7 @@ function RecentGameItem({ game, sessionId, onRemove }: { game: RecentGame; sessi
         to={link}
         className="hc-recent-item hc-recent-item--active"
         style={recentStyle}
-        aria-label={`Rejoin ${rowLabel}, ${status.toLowerCase()}`}
+        aria-label={`Rejoin ${rowLabel}, ${status.toLowerCase()}, up ${when}`}
       >
         {content}
       </Link>
