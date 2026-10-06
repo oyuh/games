@@ -148,9 +148,12 @@ export function AvatarPickerModal({
           </Button>
         </>
       }
-      aside={<AvatarPreview picker={picker} name={name} />}
+      className="ap-modal"
     >
-      <AvatarChoices picker={picker} />
+      <div className="ap-layout">
+        <AvatarPreview picker={picker} name={name} />
+        <AvatarChoices picker={picker} />
+      </div>
     </ModalShell>
   );
 }
