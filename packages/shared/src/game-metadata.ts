@@ -82,27 +82,25 @@ export const GAME_ICON_SVGS: Record<GameIconName, { viewBox: string; markup: str
       '<circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
     ].join(""),
   },
+  // A grid cut into uneven rectangles, one clue dot in each.
   "grid-3x3": {
     viewBox: "0 0 24 24",
     markup: [
-      '<rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
-      '<path d="M9 3v18M15 3v18M3 9h18M3 15h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
-      '<circle cx="6" cy="6" r="1.25" fill="currentColor"/>',
-      '<circle cx="18" cy="12" r="1.25" fill="currentColor"/>',
+      '<rect x="3" y="3" width="18" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+      '<path d="M3 11h10M13 3v18M13 15h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      '<circle cx="8" cy="7" r="1.5" fill="currentColor"/>',
+      '<circle cx="17" cy="9" r="1.5" fill="currentColor"/>',
     ].join(""),
   },
+  // One domino, a one and a two.
   domino: {
     viewBox: "0 0 24 24",
     markup: [
-      '<g transform="rotate(-8 12 12)">',
-      '<rect x="2" y="5" width="20" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
-      '<path d="M12 6.5v11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" opacity="0.8"/>',
-      '<circle cx="6.5" cy="9" r="1.25" fill="currentColor"/>',
-      '<circle cx="8.5" cy="15" r="1.25" fill="currentColor"/>',
-      '<circle cx="16.25" cy="8.75" r="1.25" fill="currentColor"/>',
-      '<circle cx="18.25" cy="12" r="1.25" fill="currentColor"/>',
-      '<circle cx="16.25" cy="15.25" r="1.25" fill="currentColor"/>',
-      "</g>",
+      '<rect x="2" y="6" width="20" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+      '<path d="M12 6v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      '<circle cx="7" cy="12" r="1.5" fill="currentColor"/>',
+      '<circle cx="15" cy="9.5" r="1.5" fill="currentColor"/>',
+      '<circle cx="19" cy="14.5" r="1.5" fill="currentColor"/>',
     ].join(""),
   },
   // One line snaking through a grid, from a start dot to an end dot.
