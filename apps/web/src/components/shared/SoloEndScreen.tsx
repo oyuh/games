@@ -28,7 +28,6 @@ export interface SoloEndBoard {
   loading?: boolean;
   /** Shown in place of the rows when there are none. */
   empty: string;
-  total?: number;
   /** The filter row. Views are the caller's business, this only renders them. */
   view: string;
   views: SoloSetupOption[];

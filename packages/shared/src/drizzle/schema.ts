@@ -475,7 +475,9 @@ export const shikakuScores = pgTable(
   (table) => ({
     difficultyScoreIdx: index("shikaku_scores_difficulty_score_idx").on(table.difficulty),
     sessionIdx: index("shikaku_scores_session_idx").on(table.sessionId),
-    sessionSeedIdx: index("shikaku_scores_session_seed_idx").on(table.sessionId, table.seed),
+    // One score per seed per board. The run endpoint never deals a seed the
+    // session holds, and the end screen finds "this run" by it.
+    sessionSeedUnique: uniqueIndex("shikaku_scores_session_seed_unique").on(table.sessionId, table.seed, table.difficulty),
   })
 );
 
@@ -511,7 +513,7 @@ export const pipsScores = pgTable(
   (table) => ({
     totalTimeIdx: index("pips_scores_total_time_idx").on(table.totalMs),
     sessionIdx: index("pips_scores_session_idx").on(table.sessionId),
-    sessionSeedIdx: index("pips_scores_session_seed_idx").on(table.sessionId, table.seed),
+    sessionSeedUnique: uniqueIndex("pips_scores_session_seed_unique").on(table.sessionId, table.seed),
   })
 );
 
@@ -547,7 +549,7 @@ export const zipScores = pgTable(
   (table) => ({
     boardTimeIdx: index("zip_scores_board_time_idx").on(table.difficulty, table.size, table.timeMs),
     sessionIdx: index("zip_scores_session_idx").on(table.sessionId),
-    sessionSeedIdx: index("zip_scores_session_seed_idx").on(table.sessionId, table.seed),
+    sessionSeedUnique: uniqueIndex("zip_scores_session_seed_unique").on(table.sessionId, table.seed),
   })
 );
 

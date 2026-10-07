@@ -21,7 +21,7 @@ import { SoloGameMenu, type SoloSetupOption } from "../components/shared/SoloGam
 import { SoloLeaderboard, type SoloLeaderboardSearch } from "../components/shared/SoloLeaderboard";
 import { copySeed } from "../components/shared/SoloScoreTable";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
-import { useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
+import { placementFacts, useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
 import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import {
   evaluateRegionRule,
@@ -1754,13 +1754,13 @@ function PipsEndScreen({
   const completed = outcome === "completed";
   const ranked = mode === "ranked";
   const [view, setView] = useState<SoloEndView | typeof SPLITS_VIEW>("standings");
-  // Refetch once the score lands so the standings show where it actually put you.
+  // Once the score lands, the board centers on this run and sends its rank.
   // The times view is local, so it holds whatever the board last loaded.
   const board = useSoloEndBoard<PipsLeaderboardEntry, PipsPersonalBest>({
     game: "pips",
     active: view !== SPLITS_VIEW,
     view: view === SPLITS_VIEW ? "standings" : view,
-    refreshKey: scoreSubmitted,
+    runSeed: scoreSubmitted ? seed : null,
   });
 
   const canSubmit = ranked && completed && !scoreSubmitted && !submittingScore
@@ -1774,12 +1774,12 @@ function PipsEndScreen({
       .filter((difficulty) => ranked || runSplits[difficulty] != null)
       .map((difficulty) => ({ label: difficultyLabel(difficulty), value: formatSplitTime(runSplits[difficulty]) }));
 
-  const rankValue = board.personalBest
-    ? `#${board.personalBest.rank}`
+  const rankValue = board.run
+    ? `#${board.run.rank}`
     : scoreSubmitted
       ? "Submitted"
       : canSubmit
-        ? "Ready"
+        ? "Submit?"
         : "Unranked";
   const puzzleCount = splits.length;
 
@@ -1817,6 +1817,7 @@ function PipsEndScreen({
           rank: entry.rank ?? 0,
           name: entry.name,
           isOwn: Boolean(entry.isOwn),
+          isCurrent: Boolean(board.run && entry.isOwn && entry.seed === seed),
           seed: entry.seed,
           cells: [
             formatTime(entry.totalMs),
@@ -1827,7 +1828,6 @@ function PipsEndScreen({
         })),
         loading: board.loading,
         empty: view === "mine" ? "No submitted runs on this device yet." : "No ranked runs yet, be the first.",
-        total: board.total,
         view,
         views: PIPS_END_VIEWS,
         onViewChange: (next) => setView(next as SoloEndView | typeof SPLITS_VIEW),
@@ -1845,9 +1845,7 @@ function PipsEndScreen({
           }),
           message: scoreSubmissionStatus.message,
           facts: [
-            // "Best" rather than "this run": the leaderboard keeps your fastest,
-            // which is only this run when this run beat the others.
-            ...(ranked && board.personalBest ? [`Best #${board.personalBest.rank} of ${board.total}`] : []),
+            ...(ranked ? placementFacts(board.run, board.personalBest) : []),
             `This run ${formatTime(elapsedMs)}`,
             `Seed ${seed}`,
             ...(scoreSubmissionStatus.tone === "error" && scoreSubmissionStatus.canSubmit
@@ -1858,7 +1856,7 @@ function PipsEndScreen({
       } : {})}
       primary={canSubmit || submittingScore
         ? {
-            label: submittingScore ? "Submitting" : "Submit Score",
+            label: submittingScore ? "Submitting" : "Submit to See Your Rank",
             icon: <FiUploadCloud size={18} />,
             onClick: onSubmitScore,
             disabled: submittingScore,
@@ -1996,11 +1994,16 @@ function PipsLeaderboardPanel({
     () => currentRun ? sortPipsLeaderboardEntries([currentRun, ...entries]).slice(0, PIPS_LEADERBOARD_PAGE_SIZE) : entries,
     [currentRun, entries],
   );
-  const ownEntry = leaderboardRows.find((entry) => entry.isOwn);
+  // The server sends each run's real standing. A practice run merged into the
+  // page has none, so that page counts by position instead, as does the
+  // offline board.
   const pageBaseRank = currentRun ? 0 : (page - 1) * PIPS_LEADERBOARD_PAGE_SIZE;
-  const ownRank = ownEntry ? pageBaseRank + leaderboardRows.findIndex((entry) => entry.id === ownEntry.id) + 1 : personalBest?.rank ?? 0;
-  const personalBestTime = ownEntry?.totalMs ?? personalBest?.totalMs;
-  const fastestRun = ownEntry ?? personalBest;
+  const rankOf = (entry: PipsLeaderboardEntry, index: number) =>
+    currentRun ? index + 1 : entry.rank ?? pageBaseRank + index + 1;
+  const runIndex = currentRun ? leaderboardRows.indexOf(currentRun) : -1;
+  const shown = runIndex >= 0
+    ? { label: "This run", rank: runIndex + 1, run: currentRun! }
+    : personalBest ? { label: "Your best", rank: personalBest.rank, run: personalBest } : null;
 
   const searching = Boolean(search?.open && search.value.trim());
 
@@ -2018,21 +2021,19 @@ function PipsLeaderboardPanel({
         options: PIPS_LB_VIEWS,
         onChange: (next) => onViewChange(next as PipsLeaderboardView),
       }]}
-      facts={fastestRun && personalBestTime != null
+      facts={shown
         ? [
-            `${ownEntry ? "This run" : "Your best"} #${ownRank}`,
-            `Total ${formatTime(personalBestTime)}`,
-            `Easy ${formatSplitTime(fastestRun.easyMs)}`,
-            `Med ${formatSplitTime(fastestRun.mediumMs)}`,
-            `Hard ${formatSplitTime(fastestRun.hardMs)}`,
+            `${shown.label} #${shown.rank}`,
+            `Total ${formatTime(shown.run.totalMs)}`,
+            `Easy ${formatSplitTime(shown.run.easyMs)}`,
+            `Med ${formatSplitTime(shown.run.mediumMs)}`,
+            `Hard ${formatSplitTime(shown.run.hardMs)}`,
           ]
         : undefined}
       columns={["Total", "Easy", "Med", "Hard"]}
       rows={leaderboardRows.map((entry, index) => ({
         id: entry.id,
-        // Searching sends the standing each run actually holds; a plain page is
-        // in order, so its position is the rank.
-        rank: entry.rank ?? pageBaseRank + index + 1,
+        rank: rankOf(entry, index),
         name: entry.name,
         isOwn: Boolean(entry.isOwn),
         seed: entry.seed,

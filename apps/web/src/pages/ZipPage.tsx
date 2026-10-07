@@ -8,7 +8,7 @@ import { ZipBoard } from "../components/zip/ZipBoard";
 import { ZipDemo } from "../components/zip/ZipDemo";
 import { ZipLeaderboardModal } from "../components/zip/ZipLeaderboard";
 import { ZipMenu, type ZipMenuMode } from "../components/zip/ZipMenu";
-import { useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
+import { placementFacts, useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
 import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import { playCountdownTick, playCorrect, playGameOver } from "../lib/sounds";
 import { showToast } from "../lib/toast";
@@ -505,7 +505,7 @@ function ZipEndScreen({
     active: view !== SPLITS_VIEW,
     view: view === SPLITS_VIEW ? "standings" : view,
     difficulty: run.difficulty,
-    refreshKey: submitted,
+    runSeed: submitted ? run.seed : null,
   });
 
   const ranked = run.mode === "ranked";
@@ -517,9 +517,9 @@ function ZipEndScreen({
   const shownSplits = endless ? splits.slice(-6) : splits;
   const firstShown = splits.length - shownSplits.length;
 
-  const rankValue = board.personalBest
-    ? `#${board.personalBest.rank}`
-    : submitted ? "Submitted" : canSubmit ? "Ready" : "Unranked";
+  const rankValue = board.run
+    ? `#${board.run.rank}`
+    : submitted ? "Submitted" : canSubmit ? "Submit?" : "Unranked";
 
   return (
     <SoloEndScreen
@@ -546,12 +546,12 @@ function ZipEndScreen({
           rank: entry.rank ?? 0,
           name: entry.name,
           isOwn: Boolean(entry.isOwn),
+          isCurrent: Boolean(board.run && entry.isOwn && entry.seed === run.seed),
           seed: entry.seed,
           cells: [formatTime(entry.timeMs), formatTime(entry.timeMs / RUN_LENGTH)],
         })),
         loading: board.loading,
         empty: view === "mine" ? `No submitted ${label} runs on this device yet.` : `No ranked ${label} runs yet, be the first.`,
-        total: board.total,
         view,
         views: END_VIEWS,
         onViewChange: (next) => setView(next as SoloEndView | typeof SPLITS_VIEW),
@@ -569,7 +569,7 @@ function ZipEndScreen({
           }),
           message: submission.message,
           facts: [
-            ...(board.personalBest ? [`Best #${board.personalBest.rank} of ${board.total}`] : []),
+            ...placementFacts(board.run, board.personalBest),
             `This run ${formatTime(totalMs)}`,
             `Seed ${run.seed}`,
           ],
@@ -577,7 +577,7 @@ function ZipEndScreen({
       } : {})}
       primary={canSubmit || submitting
         ? {
-            label: submitting ? "Submitting" : "Submit Score",
+            label: submitting ? "Submitting" : "Submit to See Your Rank",
             icon: <FiUploadCloud size={18} />,
             onClick: onSubmit,
             disabled: submitting,
