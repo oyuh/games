@@ -11,6 +11,8 @@ export interface SoloScoreRow {
   rank: number;
   name: string;
   isOwn?: boolean;
+  /** The run the end screen just finished. Takes the highlight from your other runs. */
+  isCurrent?: boolean;
   seed?: number;
   /** One string per column, in the same order as `columns`. */
   cells: string[];
@@ -52,11 +54,13 @@ export function SoloScoreTable({
   const seedColumn = rows.some((row) => row.seed != null);
   // In a table of nothing but your own runs, marking each one "you" is noise.
   const allOwn = rows.length > 0 && rows.every((row) => row.isOwn);
+  const currentId = rows.find((row) => row.isCurrent)?.id;
+  const highlighted = (row: SoloScoreRow) => (currentId ? row.id === currentId : Boolean(row.isOwn) && !allOwn);
 
-  // Centre your own run in the table rather than making you find it. Keyed on
-  // the row id so a scroll you did yourself is not undone on every render.
+  // Center this run, or else your own, in the table rather than making you find
+  // it. Keyed on the row id so a scroll you did yourself is not undone on every render.
   const selfRow = useRef<HTMLDivElement>(null);
-  const selfId = rows.find((row) => row.isOwn)?.id;
+  const selfId = currentId ?? rows.find((row) => row.isOwn)?.id;
   useEffect(() => {
     const row = selfRow.current;
     const scroller = row?.closest<HTMLElement>(".solo-end-table-scroll");
@@ -99,14 +103,16 @@ export function SoloScoreTable({
                   )}
                   <div
                     className="solo-end-row"
-                    ref={row.isOwn ? selfRow : undefined}
-                    data-self={row.isOwn && !allOwn ? "" : undefined}
+                    ref={row.id === selfId ? selfRow : undefined}
+                    data-self={highlighted(row) ? "" : undefined}
                     data-medal={row.rank <= 3 ? row.rank : undefined}
                   >
                     <span className="solo-end-cell solo-end-cell--rank">{row.rank}</span>
                     <span className="solo-end-cell solo-end-cell--name">
                       <span className="solo-end-name">{row.name}</span>
-                      {row.isOwn && !allOwn && <span className="solo-end-you">You</span>}
+                      {row.isCurrent
+                        ? <span className="solo-end-you">This run</span>
+                        : row.isOwn && !allOwn && <span className="solo-end-you">You</span>}
                     </span>
                     {row.cells.map((cell, cellIndex) => (
                       <span className="solo-end-cell solo-end-cell--metric" key={columns[cellIndex] ?? cellIndex}>

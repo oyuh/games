@@ -117,8 +117,8 @@ export function ShikakuLeaderboard({
       columns={["Score", "Time"]}
       rows={entries.map((entry, index) => ({
         id: entry.id,
-        // Searching sends the standing each score actually holds; a plain page
-        // is in order, so its position is the rank.
+        // The server sends the standing each score actually holds; a page
+        // without one is in order, so its position is the rank.
         rank: entry.rank ?? (page - 1) * PAGE_SIZE + index + 1,
         name: entry.name,
         isOwn: entry.isOwn,

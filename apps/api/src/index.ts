@@ -6,9 +6,10 @@ import { adminNameOverrides, chatMessages, imposterGames, locationSignalGames, p
 import { handleMutateRequest, handleQueryRequest } from "@rocicorp/zero/server";
 import { mustGetMutator, mustGetQuery } from "@rocicorp/zero";
 import { config } from "dotenv";
-import { lt, and, asc, count, desc, eq, gt, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
+import { HTTPException } from "hono/http-exception";
 import {
   PUZZLES_PER_RUN as ENGINE_SHIKAKU_PUZZLES,
   validateRankedShikakuRun,
@@ -33,7 +34,7 @@ import {
 import { startPresenceFlush } from "./presence-server";
 import { adminRoutes, isBanned, getRestrictedNamesRoute, loadPersistedStatus } from "./admin-routes";
 import { allowUnrestrictedSessionName, findRestrictedNameMatch } from "./name-rules";
-import { parseLeaderboardSearch } from "./leaderboard-search";
+import { parseLeaderboardSearch, type LeaderboardSearch } from "./leaderboard-search";
 import { rateLimit } from "./rate-limit";
 import {
   chooseCanonicalSession,
@@ -71,6 +72,21 @@ import { embedRoutes } from "./embed-routes";
 config({ path: "../../.env", quiet: true });
 
 const app = new Hono();
+
+// A unique index turning a write away (say a second score on a seed the session
+// already holds, from a double submit or an admin edit) is the caller's
+// conflict, not a crash. Drizzle wraps the pg error, so its code is on `cause`.
+// Everything else gets Hono's default handling.
+app.onError((err, c) => {
+  if (err instanceof HTTPException) return err.getResponse();
+  const pgCode = (err as { code?: string }).code ?? (err.cause as { code?: string } | undefined)?.code;
+  if (pgCode === "23505") {
+    return c.json({ error: "Already saved", code: "duplicate", reason: "That's already saved." }, 409);
+  }
+  console.error(err);
+  return c.text("Internal Server Error", 500);
+});
+
 const DB_STATUS_KEY = process.env.DB_STATUS_KEY?.trim() || "footer";
 const DB_STATUS_EXPECTED_VALUE = process.env.DB_STATUS_EXPECTED_VALUE?.trim() || "ok";
 const DEFAULT_PUBLIC_ORIGIN = "https://games.lawsonhart.me";
@@ -984,34 +1000,84 @@ async function probeDatabaseStatus(): Promise<DatabaseProbe> {
   }
 }
 
-// ─── Solo leaderboard standings window ───────────────────────
+// ─── Solo leaderboard query ──────────────────────────────────
+
+type ScoreBoardQuery = {
+  sessionId: string | null;
+  /** The run the end screen just finished. A session holds one score per seed per board. */
+  runSeed: number | null;
+  /** The end screen's slice: top 3, this run (or your best) plus and minus 3, bottom 3. */
+  window: boolean;
+  mineOnly: boolean;
+  search: LeaderboardSearch | null;
+  limit: number;
+  offset: number;
+};
+
+async function readScoreBoardQuery(c: Context): Promise<ScoreBoardQuery> {
+  const requestedSessionId = c.req.query("sessionId")?.trim() ?? null;
+  const identity = requestedSessionId
+    ? await resolveSessionIdentity(c, { claimedSessionId: requestedSessionId, allowCreate: false })
+    : null;
+  const sessionId = identity?.sessionId ?? (normalizeSessionId(requestedSessionId) || null);
+  const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") ?? "10", 10) || 10), 50);
+  const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
+  const runSeed = Number(c.req.query("runSeed"));
+  return {
+    sessionId,
+    runSeed: Number.isSafeInteger(runSeed) ? runSeed : null,
+    window: c.req.query("window") === "me",
+    mineOnly: ["1", "true", "yes"].includes((c.req.query("mineOnly") ?? "").toLowerCase()),
+    search: parseLeaderboardSearch(c.req.query("q")),
+    limit,
+    offset: (page - 1) * limit,
+  };
+}
 
 /**
- * Narrows an already-ranked score query down to the slice the end screen shows:
- * the top 3, the caller's own rank plus and minus 3, and the bottom 3. It is one
- * round trip on purpose, so the client never has to page around hunting for
- * itself. `ranked` must select `session_id` plus a `rank` and a `total` window
- * column; every other column comes back untouched under its raw SQL name.
+ * Every solo leaderboard read in one round trip. `ranked` ranks the whole board
+ * first, so a filtered row keeps the standing it actually holds, and must select
+ * `id`, `name`, `seed`, `session_id`, a `rank` and a `total` window column; every
+ * other column comes back untouched under its raw SQL name. Your best row and
+ * this run's rank ride along on every row, so no view needs a second query.
  *
- * With no score of your own, `me.rank` is NULL, the abs() test is NULL, and you
- * are left with just the top and bottom, which is the right answer.
+ * With no score of your own the window's centre is NULL, the abs() test is NULL,
+ * and you are left with just the top and bottom, which is the right answer.
  */
-async function selectScoreWindow(ranked: SQL, sessionId: string | null) {
+async function selectScoreBoard(ranked: SQL, q: ScoreBoardQuery) {
+  const sessionId = q.sessionId ?? "";
   const result = await drizzleClient.execute(sql`
     WITH ranked AS (${ranked}),
-    me AS (SELECT min(rank) AS rank FROM ranked WHERE session_id = ${sessionId ?? ""})
-    SELECT * FROM ranked
-    WHERE rank <= 3 OR rank > total - 3 OR abs(rank - (SELECT rank FROM me)) <= 3
+    me AS (
+      SELECT (SELECT to_jsonb(r) FROM ranked r WHERE session_id = ${sessionId} ORDER BY rank LIMIT 1) AS own_best,
+             (SELECT min(rank) FROM ranked WHERE session_id = ${sessionId} AND seed = ${q.runSeed}) AS run_rank
+    )
+    SELECT ranked.*, me.own_best, me.run_rank, count(*) OVER () AS match_total
+    FROM ranked, me
+    WHERE true
+    ${q.window ? sql`AND (rank <= 3 OR rank > total - 3 OR abs(rank - coalesce(me.run_rank, (me.own_best->>'rank')::bigint)) <= 3)` : sql``}
+    ${q.mineOnly ? sql`AND session_id = ${sessionId}` : sql``}
+    ${q.search ? sql`AND (name ILIKE ${q.search.namePattern} ESCAPE '\' ${q.search.seed != null ? sql`OR seed = ${q.search.seed}` : sql``})` : sql``}
     ORDER BY rank
+    ${q.window ? sql`` : sql`LIMIT ${q.limit} OFFSET ${q.offset}`}
   `);
   const rows = (Array.isArray(result) ? result : result.rows ?? []) as Record<string, any>[];
+  const first = rows[0];
+  const boardTotal = Number(first?.total ?? 0);
+  // The window is one page of a few rows, so its total is the board's.
+  const total = q.window ? boardTotal : Number(first?.match_total ?? 0);
   return {
-    total: Number(rows[0]?.total ?? 0),
     rows: rows.map((row): Record<string, any> & { rank: number; isOwn: boolean } => ({
       ...row,
       rank: Number(row.rank),
-      isOwn: sessionId != null && row.session_id === sessionId,
+      isOwn: q.sessionId != null && row.session_id === q.sessionId,
     })),
+    ownBest: (first?.own_best ?? null) as Record<string, any> | null,
+    run: first?.run_rank != null ? { rank: Number(first.run_rank), of: boardTotal } : null,
+    total,
+    page: q.window ? 1 : q.offset / q.limit + 1,
+    pageSize: q.window ? rows.length : q.limit,
+    totalPages: q.window ? 1 : Math.max(1, Math.ceil(total / q.limit)),
   };
 }
 
@@ -1031,9 +1097,17 @@ async function issueSoloTicket(c: Context, game: SoloGame, isValidDifficulty: ((
     return c.json({ error: "Invalid session" }, 403);
   }
 
-  const random = crypto.getRandomValues(new Uint32Array(1))[0]!;
-  // Pips seeds have always been six digits.
-  const seed = game === "pips" ? 100_000 + (random % 900_000) : (random % 2_147_483_646) + 1;
+  // A session keeps one score per seed: the submit rejects a repeat, and the end
+  // screen finds "this run" by its seed. So never deal a seed it already holds.
+  const table = { shikaku: shikakuScores, pips: pipsScores, zip: zipScores }[game];
+  const held = await drizzleClient.execute(sql`SELECT seed FROM ${table} WHERE session_id = ${identity.sessionId}`);
+  const taken = new Set(((Array.isArray(held) ? held : held.rows ?? []) as { seed: number }[]).map((row) => Number(row.seed)));
+  let seed: number;
+  do {
+    const random = crypto.getRandomValues(new Uint32Array(1))[0]!;
+    // Pips seeds have always been six digits.
+    seed = game === "pips" ? 100_000 + (random % 900_000) : (random % 2_147_483_646) + 1;
+  } while (taken.has(seed));
   const difficulty = isValidDifficulty ? body.difficulty as string : null;
   const ticket = createSoloTicket(
     { game, sessionId: identity.sessionId, seed, difficulty, issuedAt: Date.now() },
@@ -1470,163 +1544,32 @@ app.get("/api/shikaku/leaderboard", async (c) => {
   if (!isShikakuDifficulty(difficulty)) {
     return c.json({ error: "Invalid difficulty" }, 400);
   }
-  const limitParam = parseInt(c.req.query("limit") ?? "10", 10);
-  const limit = Math.min(Math.max(1, limitParam), 50);
-  const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
-  const offset = (page - 1) * limit;
-  const mineOnly = ["1", "true", "yes"].includes((c.req.query("mineOnly") ?? "").toLowerCase());
-  const requestedSessionId = c.req.query("sessionId")?.trim() ?? null;
-  const resolvedIdentity = requestedSessionId
-    ? await resolveSessionIdentity(c, { claimedSessionId: requestedSessionId, allowCreate: false })
-    : null;
-  const sessionIdParam = resolvedIdentity?.sessionId ?? (normalizeSessionId(requestedSessionId) || null);
-  const filters = [eq(shikakuScores.difficulty, difficulty)];
-
-  // The end screen's standings slice, in one round trip. See selectScoreWindow.
-  if (c.req.query("window") === "me") {
-    const { rows, total } = await selectScoreWindow(
-      sql`
-        SELECT id, name, score, time_ms, difficulty, created_at, seed, session_id,
-               row_number() OVER (ORDER BY score DESC, time_ms ASC, created_at ASC) AS rank,
-               count(*) OVER () AS total
-        FROM shikaku_scores
-        WHERE difficulty = ${difficulty}
-      `,
-      sessionIdParam,
-    );
-    const own = rows.find((row) => row.isOwn);
-    return c.json({
-      entries: rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        score: Number(row.score),
-        timeMs: Number(row.time_ms),
-        difficulty: row.difficulty,
-        createdAt: Number(row.created_at),
-        seed: Number(row.seed),
-        rank: row.rank,
-        isOwn: row.isOwn,
-      })),
-      personalBest: own ? { score: Number(own.score), timeMs: Number(own.time_ms), rank: own.rank } : null,
-      page: 1,
-      pageSize: rows.length,
-      total,
-      totalPages: 1,
-    });
-  }
-
-  if (mineOnly) {
-    if (!sessionIdParam) {
-      return c.json({ entries: [], personalBest: null, page: 1, pageSize: limit, total: 0, totalPages: 1 });
-    }
-    filters.push(eq(shikakuScores.sessionId, sessionIdParam));
-  }
-
-  // Search. Ranking happens before the filter so a match keeps the standing it
-  // actually holds on the board, and count(*) OVER () pages the matches without
-  // a second round trip.
-  const search = parseLeaderboardSearch(c.req.query("q"));
-  if (search) {
-    const result = await drizzleClient.execute(sql`
-      WITH ranked AS (
-        SELECT id, name, score, time_ms, difficulty, created_at, seed, session_id,
-               row_number() OVER (ORDER BY score DESC, time_ms ASC, created_at ASC) AS rank
-        FROM shikaku_scores
-        WHERE difficulty = ${difficulty}
-        ${mineOnly ? sql`AND session_id = ${sessionIdParam}` : sql``}
-      )
-      SELECT *, count(*) OVER () AS match_total
-      FROM ranked
-      WHERE name ILIKE ${search.namePattern} ESCAPE '\'
-      ${search.seed != null ? sql`OR seed = ${search.seed}` : sql``}
-      ORDER BY rank
-      LIMIT ${limit} OFFSET ${offset}
-    `);
-    const rows = (Array.isArray(result) ? result : result.rows ?? []) as Record<string, any>[];
-    const matchTotal = Number(rows[0]?.match_total ?? 0);
-    return c.json({
-      entries: rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        score: Number(row.score),
-        timeMs: Number(row.time_ms),
-        difficulty: row.difficulty,
-        createdAt: Number(row.created_at),
-        seed: Number(row.seed),
-        rank: Number(row.rank),
-        isOwn: sessionIdParam != null && row.session_id === sessionIdParam,
-      })),
-      personalBest: null,
-      page,
-      pageSize: limit,
-      total: matchTotal,
-      totalPages: Math.max(1, Math.ceil(matchTotal / limit)),
-    });
-  }
-
-  const [rows, totalResult] = await Promise.all([
-    drizzleClient
-      .select({
-        id: shikakuScores.id,
-        name: shikakuScores.name,
-        score: shikakuScores.score,
-        timeMs: shikakuScores.timeMs,
-        difficulty: shikakuScores.difficulty,
-        createdAt: shikakuScores.createdAt,
-        sessionId: shikakuScores.sessionId,
-        seed: shikakuScores.seed,
-      })
-      .from(shikakuScores)
-      .where(and(...filters))
-      .orderBy(desc(shikakuScores.score), asc(shikakuScores.timeMs), asc(shikakuScores.createdAt))
-      .limit(limit)
-      .offset(offset),
-    drizzleClient
-      .select({ total: sql<number>`count(*)::int` })
-      .from(shikakuScores)
-      .where(and(...filters)),
-  ]);
-  const totalCount = totalResult[0]?.total ?? 0;
-
-  let personalBest: { score: number; timeMs: number; rank: number } | null = null;
-  if (sessionIdParam && sessionIdParam.length <= 64) {
-    const [pb] = await drizzleClient
-      .select({ score: shikakuScores.score, timeMs: shikakuScores.timeMs })
-      .from(shikakuScores)
-      .where(and(eq(shikakuScores.difficulty, difficulty), eq(shikakuScores.sessionId, sessionIdParam)))
-      .orderBy(desc(shikakuScores.score), asc(shikakuScores.timeMs), asc(shikakuScores.createdAt))
-      .limit(1);
-    if (pb) {
-      const [countResult] = await drizzleClient
-        .select({ count: sql<number>`count(*)::int` })
-        .from(shikakuScores)
-        .where(and(
-          eq(shikakuScores.difficulty, difficulty),
-          or(
-            gt(shikakuScores.score, pb.score),
-            and(eq(shikakuScores.score, pb.score), lt(shikakuScores.timeMs, pb.timeMs))
-          )
-        ));
-      personalBest = { score: pb.score, timeMs: pb.timeMs, rank: Number(countResult?.count ?? 0) + 1 };
-    }
-  }
-
+  const board = await selectScoreBoard(sql`
+    SELECT id, name, score, time_ms, created_at, seed, session_id,
+           row_number() OVER (ORDER BY score DESC, time_ms ASC, created_at ASC) AS rank,
+           count(*) OVER () AS total
+    FROM shikaku_scores
+    WHERE difficulty = ${difficulty}
+  `, await readScoreBoardQuery(c));
+  const { ownBest } = board;
   return c.json({
-    entries: rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      score: r.score,
-      timeMs: r.timeMs,
-      difficulty: r.difficulty,
-      createdAt: r.createdAt,
-      seed: r.seed,
-      isOwn: sessionIdParam ? r.sessionId === sessionIdParam : false,
+    entries: board.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      score: Number(row.score),
+      timeMs: Number(row.time_ms),
+      difficulty,
+      createdAt: Number(row.created_at),
+      seed: Number(row.seed),
+      rank: row.rank,
+      isOwn: row.isOwn,
     })),
-    personalBest,
-    page,
-    pageSize: limit,
-    total: totalCount,
-    totalPages: Math.ceil(totalCount / limit),
+    personalBest: ownBest ? { score: Number(ownBest.score), timeMs: Number(ownBest.time_ms), rank: Number(ownBest.rank) } : null,
+    run: board.run,
+    page: board.page,
+    pageSize: board.pageSize,
+    total: board.total,
+    totalPages: board.totalPages,
   });
 });
 
@@ -2142,178 +2085,31 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
 // Rate limits for /api/pips/* (incl. score) are registered up top; see the
 // "Rate limiting" block.
 app.get("/api/pips/leaderboard", async (c) => {
-  const limitParam = parseInt(c.req.query("limit") ?? "10", 10);
-  const limit = Math.min(Math.max(1, limitParam), 50);
-  const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
-  const offset = (page - 1) * limit;
-  const mineOnly = ["1", "true", "yes"].includes((c.req.query("mineOnly") ?? "").toLowerCase());
-  const requestedSessionId = c.req.query("sessionId")?.trim() ?? null;
-  const resolvedIdentity = requestedSessionId
-    ? await resolveSessionIdentity(c, { claimedSessionId: requestedSessionId, allowCreate: false })
-    : null;
-  const sessionIdParam = resolvedIdentity?.sessionId ?? (normalizeSessionId(requestedSessionId) || null);
-  const filters = [sql`true`];
-
-  // The end screen's standings slice, in one round trip. See selectScoreWindow.
-  if (c.req.query("window") === "me") {
-    const { rows, total } = await selectScoreWindow(
-      sql`
-        SELECT id, name, total_ms, easy_ms, medium_ms, hard_ms, created_at, seed, session_id,
-               row_number() OVER (ORDER BY total_ms ASC, created_at ASC) AS rank,
-               count(*) OVER () AS total
-        FROM pips_scores
-      `,
-      sessionIdParam,
-    );
-    const own = rows.find((row) => row.isOwn);
-    return c.json({
-      entries: rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        totalMs: Number(row.total_ms),
-        easyMs: Number(row.easy_ms),
-        mediumMs: Number(row.medium_ms),
-        hardMs: Number(row.hard_ms),
-        createdAt: Number(row.created_at),
-        seed: Number(row.seed),
-        rank: row.rank,
-        isOwn: row.isOwn,
-      })),
-      personalBest: own
-        ? {
-            name: own.name,
-            seed: Number(own.seed),
-            totalMs: Number(own.total_ms),
-            easyMs: Number(own.easy_ms),
-            mediumMs: Number(own.medium_ms),
-            hardMs: Number(own.hard_ms),
-            createdAt: Number(own.created_at),
-            rank: own.rank,
-          }
-        : null,
-      page: 1,
-      pageSize: rows.length,
-      total,
-      totalPages: 1,
-    });
-  }
-
-  if (mineOnly) {
-    if (!sessionIdParam) {
-      return c.json({ entries: [], personalBest: null, page: 1, pageSize: limit, total: 0, totalPages: 1 });
-    }
-    filters.push(eq(pipsScores.sessionId, sessionIdParam));
-  }
-
-  // Same shape as Shikaku's search: rank first, filter second, page the matches
-  // off count(*) OVER (). See that route for the reasoning.
-  const search = parseLeaderboardSearch(c.req.query("q"));
-  if (search) {
-    const result = await drizzleClient.execute(sql`
-      WITH ranked AS (
-        SELECT id, name, total_ms, easy_ms, medium_ms, hard_ms, created_at, seed, session_id,
-               row_number() OVER (ORDER BY total_ms ASC, created_at ASC) AS rank
-        FROM pips_scores
-        ${mineOnly ? sql`WHERE session_id = ${sessionIdParam}` : sql``}
-      )
-      SELECT *, count(*) OVER () AS match_total
-      FROM ranked
-      WHERE name ILIKE ${search.namePattern} ESCAPE '\'
-      ${search.seed != null ? sql`OR seed = ${search.seed}` : sql``}
-      ORDER BY rank
-      LIMIT ${limit} OFFSET ${offset}
-    `);
-    const rows = (Array.isArray(result) ? result : result.rows ?? []) as Record<string, any>[];
-    const matchTotal = Number(rows[0]?.match_total ?? 0);
-    return c.json({
-      entries: rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        totalMs: Number(row.total_ms),
-        easyMs: Number(row.easy_ms),
-        mediumMs: Number(row.medium_ms),
-        hardMs: Number(row.hard_ms),
-        createdAt: Number(row.created_at),
-        seed: Number(row.seed),
-        rank: Number(row.rank),
-        isOwn: sessionIdParam != null && row.session_id === sessionIdParam,
-      })),
-      personalBest: null,
-      page,
-      pageSize: limit,
-      total: matchTotal,
-      totalPages: Math.max(1, Math.ceil(matchTotal / limit)),
-    });
-  }
-
-  const whereClause = and(...filters);
-  const [rows, totalResult] = await Promise.all([
-    drizzleClient
-      .select({
-        id: pipsScores.id,
-        name: pipsScores.name,
-        totalMs: pipsScores.totalMs,
-        easyMs: pipsScores.easyMs,
-        mediumMs: pipsScores.mediumMs,
-        hardMs: pipsScores.hardMs,
-        createdAt: pipsScores.createdAt,
-        sessionId: pipsScores.sessionId,
-        seed: pipsScores.seed,
-      })
-      .from(pipsScores)
-      .where(whereClause)
-      .orderBy(asc(pipsScores.totalMs), asc(pipsScores.createdAt))
-      .limit(limit)
-      .offset(offset),
-    drizzleClient
-      .select({ total: sql<number>`count(*)::int` })
-      .from(pipsScores)
-      .where(whereClause),
-  ]);
-  const totalCount = totalResult[0]?.total ?? 0;
-
-  let personalBest: { totalMs: number; rank: number; seed: number; easyMs: number; mediumMs: number; hardMs: number; createdAt: number; name: string } | null = null;
-  if (sessionIdParam && sessionIdParam.length <= 64) {
-    const [pb] = await drizzleClient
-      .select({
-        name: pipsScores.name,
-        seed: pipsScores.seed,
-        totalMs: pipsScores.totalMs,
-        easyMs: pipsScores.easyMs,
-        mediumMs: pipsScores.mediumMs,
-        hardMs: pipsScores.hardMs,
-        createdAt: pipsScores.createdAt,
-      })
-      .from(pipsScores)
-      .where(eq(pipsScores.sessionId, sessionIdParam))
-      .orderBy(asc(pipsScores.totalMs), asc(pipsScores.createdAt))
-      .limit(1);
-    if (pb) {
-      const [countResult] = await drizzleClient
-        .select({ count: sql<number>`count(*)::int` })
-        .from(pipsScores)
-        .where(lt(pipsScores.totalMs, pb.totalMs));
-      personalBest = { ...pb, rank: Number(countResult?.count ?? 0) + 1 };
-    }
-  }
-
+  const board = await selectScoreBoard(sql`
+    SELECT id, name, total_ms, easy_ms, medium_ms, hard_ms, created_at, seed, session_id,
+           row_number() OVER (ORDER BY total_ms ASC, created_at ASC) AS rank,
+           count(*) OVER () AS total
+    FROM pips_scores
+  `, await readScoreBoardQuery(c));
+  const entry = (row: Record<string, any>) => ({
+    id: row.id,
+    name: row.name,
+    totalMs: Number(row.total_ms),
+    easyMs: Number(row.easy_ms),
+    mediumMs: Number(row.medium_ms),
+    hardMs: Number(row.hard_ms),
+    createdAt: Number(row.created_at),
+    seed: Number(row.seed),
+    rank: Number(row.rank),
+  });
   return c.json({
-    entries: rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      totalMs: r.totalMs,
-      easyMs: r.easyMs,
-      mediumMs: r.mediumMs,
-      hardMs: r.hardMs,
-      createdAt: r.createdAt,
-      seed: r.seed,
-      isOwn: sessionIdParam ? r.sessionId === sessionIdParam : false,
-    })),
-    personalBest,
-    page,
-    pageSize: limit,
-    total: totalCount,
-    totalPages: Math.ceil(totalCount / limit),
+    entries: board.rows.map((row) => ({ ...entry(row), isOwn: row.isOwn })),
+    personalBest: board.ownBest ? entry(board.ownBest) : null,
+    run: board.run,
+    page: board.page,
+    pageSize: board.pageSize,
+    total: board.total,
+    totalPages: board.totalPages,
   });
 });
 
@@ -2651,92 +2447,39 @@ app.post("/api/zip/score", async (c) => {
   return c.json({ ok: true, id, replaced: Boolean(check.replaceId) });
 });
 
-function zipLeaderboardRow(row: Record<string, any>, sessionId: string | null) {
-  return {
-    id: row.id,
-    name: row.name,
-    timeMs: Number(row.time_ms),
-    difficulty: row.difficulty,
-    size: Number(row.size),
-    createdAt: Number(row.created_at),
-    seed: Number(row.seed),
-    rank: Number(row.rank),
-    isOwn: sessionId != null && row.session_id === sessionId,
-  };
-}
-
 app.get("/api/zip/leaderboard", async (c) => {
   const difficulty = c.req.query("difficulty")?.trim() ?? "easy";
   if (!isZipDifficulty(difficulty)) {
     return c.json({ error: "Invalid board" }, 400);
   }
   // Pinning the size too keeps runs from the old size-per-board days off it.
+  // Fastest first, earliest breaks a tie.
   const { size } = ZIP_DIFFICULTY_CONFIG[difficulty];
-  const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") ?? "10", 10) || 10), 50);
-  const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
-  const offset = (page - 1) * limit;
-  const mineOnly = ["1", "true", "yes"].includes((c.req.query("mineOnly") ?? "").toLowerCase());
-  const requestedSessionId = c.req.query("sessionId")?.trim() ?? null;
-  const resolvedIdentity = requestedSessionId
-    ? await resolveSessionIdentity(c, { claimedSessionId: requestedSessionId, allowCreate: false })
-    : null;
-  const sessionId = resolvedIdentity?.sessionId ?? (normalizeSessionId(requestedSessionId) || null);
-
-  // Every view ranks the whole board first, so a filtered row keeps the
-  // standing it actually holds. Fastest first, earliest breaks a tie.
-  const ranked = sql`
+  const board = await selectScoreBoard(sql`
     SELECT id, name, time_ms, difficulty, size, created_at, seed, session_id,
            row_number() OVER (ORDER BY time_ms ASC, created_at ASC) AS rank,
            count(*) OVER () AS total
     FROM zip_scores
     WHERE difficulty = ${difficulty} AND size = ${size}
-  `;
-
-  // The end screen's standings slice, in one round trip. See selectScoreWindow.
-  if (c.req.query("window") === "me") {
-    const { rows, total } = await selectScoreWindow(ranked, sessionId);
-    const own = rows.find((row) => row.isOwn);
-    return c.json({
-      entries: rows.map((row) => zipLeaderboardRow(row, sessionId)),
-      personalBest: own ? { timeMs: Number(own.time_ms), rank: own.rank } : null,
-      page: 1,
-      pageSize: rows.length,
-      total,
-      totalPages: 1,
-    });
-  }
-
-  if (mineOnly && !sessionId) {
-    return c.json({ entries: [], personalBest: null, page: 1, pageSize: limit, total: 0, totalPages: 1 });
-  }
-
-  const search = parseLeaderboardSearch(c.req.query("q"));
-  const result = await drizzleClient.execute(sql`
-    WITH ranked AS (${ranked}),
-    shown AS (
-      SELECT * FROM ranked
-      WHERE true
-      ${mineOnly ? sql`AND session_id = ${sessionId}` : sql``}
-      ${search ? sql`AND (name ILIKE ${search.namePattern} ESCAPE '\' ${search.seed != null ? sql`OR seed = ${search.seed}` : sql``})` : sql``}
-    )
-    SELECT *, count(*) OVER () AS match_total,
-           (SELECT min(rank) FROM ranked WHERE session_id = ${sessionId ?? ""}) AS own_rank,
-           (SELECT min(time_ms) FROM ranked WHERE session_id = ${sessionId ?? ""}) AS own_time
-    FROM shown
-    ORDER BY rank
-    LIMIT ${limit} OFFSET ${offset}
-  `);
-  const rows = (Array.isArray(result) ? result : result.rows ?? []) as Record<string, any>[];
-  const total = Number(rows[0]?.match_total ?? 0);
-  const ownRank = rows[0]?.own_rank;
-
+  `, await readScoreBoardQuery(c));
   return c.json({
-    entries: rows.map((row) => zipLeaderboardRow(row, sessionId)),
-    personalBest: ownRank != null ? { timeMs: Number(rows[0]!.own_time), rank: Number(ownRank) } : null,
-    page,
-    pageSize: limit,
-    total,
-    totalPages: Math.max(1, Math.ceil(total / limit)),
+    entries: board.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      timeMs: Number(row.time_ms),
+      difficulty: row.difficulty,
+      size: Number(row.size),
+      createdAt: Number(row.created_at),
+      seed: Number(row.seed),
+      rank: row.rank,
+      isOwn: row.isOwn,
+    })),
+    personalBest: board.ownBest ? { timeMs: Number(board.ownBest.time_ms), rank: Number(board.ownBest.rank) } : null,
+    run: board.run,
+    page: board.page,
+    pageSize: board.pageSize,
+    total: board.total,
+    totalPages: board.totalPages,
   });
 });
 

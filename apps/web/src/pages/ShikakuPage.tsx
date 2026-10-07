@@ -39,7 +39,7 @@ import { GameIcon } from "../components/shared/GameIcon";
 import { SoloEndScreen, SPLITS_VIEW, soloStatusTitle } from "../components/shared/SoloEndScreen";
 import { SoloGameMenu, type SoloSetupOption } from "../components/shared/SoloGameMenu";
 import { copySeed } from "../components/shared/SoloScoreTable";
-import { useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
+import { placementFacts, useSoloEndBoard, type SoloEndView } from "../hooks/useSoloEndBoard";
 import { emitSolo, onSolo, useSoloEvent } from "../lib/solo-bus";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
@@ -1657,24 +1657,24 @@ function ShikakuEndScreen({
 }) {
   const [view, setView] = useState<SoloEndView | typeof SPLITS_VIEW>("standings");
   const ranked = !infiniteMode && !customMode;
-  // Refetch once the score lands so the standings show where it actually put you.
+  // Once the score lands, the board centers on this run and sends its rank.
   // The times view is local, so it holds whatever the board last loaded.
   const board = useSoloEndBoard<LeaderboardEntry & { rank?: number }, PersonalBest>({
     game: "shikaku",
     active: view !== SPLITS_VIEW,
     view: view === SPLITS_VIEW ? "standings" : view,
     difficulty,
-    refreshKey: scoreSubmitted,
+    runSeed: scoreSubmitted ? seed : null,
   });
 
   const canSubmit = ranked && !scoreSubmitted && !submittingScore
     && Boolean(scoreSubmissionStatus?.canSubmit) && !scoreSubmissionStatus?.pending;
-  const rankValue = board.personalBest
-    ? `#${board.personalBest.rank}`
+  const rankValue = board.run
+    ? `#${board.run.rank}`
     : scoreSubmitted
       ? "Submitted"
       : canSubmit
-        ? "Ready"
+        ? "Submit?"
         : "Unranked";
 
   return (
@@ -1714,6 +1714,7 @@ function ShikakuEndScreen({
           rank: entry.rank ?? 0,
           name: entry.name,
           isOwn: Boolean(entry.isOwn),
+          isCurrent: Boolean(board.run && entry.isOwn && entry.seed === seed),
           seed: entry.seed,
           cells: [entry.score.toLocaleString(), formatTime(entry.timeMs)],
         })),
@@ -1721,7 +1722,6 @@ function ShikakuEndScreen({
         empty: view === "mine"
           ? `No submitted ${difficulty} scores on this device yet.`
           : `No ${difficulty} scores yet, be the first.`,
-        total: board.total,
         view,
         views: SHIKAKU_END_VIEWS,
         onViewChange: (next) => setView(next as SoloEndView | typeof SPLITS_VIEW),
@@ -1739,9 +1739,7 @@ function ShikakuEndScreen({
           }),
           message: scoreSubmissionStatus.message,
           facts: [
-            // "Best" rather than "this run": the leaderboard keeps your highest
-            // score on this difficulty, which is only this run when it beat them.
-            ...(ranked && board.personalBest ? [`Best #${board.personalBest.rank} of ${board.total}`] : []),
+            ...(ranked ? placementFacts(board.run, board.personalBest) : []),
             `This run ${finalScore.toLocaleString()} in ${formatTime(finalTimeMs)}`,
             `Seed ${seed}`,
             ...(scoreSubmissionStatus.tone === "error" && scoreSubmissionStatus.canSubmit
@@ -1752,7 +1750,7 @@ function ShikakuEndScreen({
       } : {})}
       primary={canSubmit || submittingScore
         ? {
-            label: submittingScore ? "Submitting" : "Submit Score",
+            label: submittingScore ? "Submitting" : "Submit to See Your Rank",
             icon: <FiUploadCloud size={18} />,
             onClick: onSubmitScore,
             disabled: submittingScore,
