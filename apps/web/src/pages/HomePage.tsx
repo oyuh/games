@@ -153,13 +153,22 @@ const LOC_TILES = [
   { x: 3, y: 3 }, { x: 4, y: 3 },
 ];
 
-/* Satellite with nothing on top. Of the layers this provider serves, the
-   roadmap arrives covered in country names, and terrain is a near white relief
-   that leaves the labels as the only thing you can see. Plain satellite is the
-   only one that is all map and no text; the colour that made it too much last
-   time is taken out in the filter rather than by picking a paler layer. */
+/* The roadmap layer styled down to a bare land mask: white land, black water,
+   no labels, borders, places or roads. The CSS uses it as a luminance mask
+   over the card's accent, so these colors never show. The tiles are served
+   with open CORS, which a cross-origin mask needs. */
+const LOC_STYLE = encodeURIComponent(
+  [
+    "s.e:l|p.v:off", // labels
+    "s.t:1|p.v:off", // borders
+    "s.t:2|p.v:off", // places
+    "s.t:3|p.v:off", // roads
+    "s.t:6|s.e:g|p.c:#ff000000", // water
+    "s.t:5|s.e:g|p.c:#ffffffff", // land
+  ].join(","),
+);
 const locTileUrl = (x: number, y: number) =>
-  `https://mt${(x + y) % 4}.google.com/vt/lyrs=s&x=${x}&y=${y}&z=${LOC_ZOOM}&hl=en&gl=US`;
+  `https://mt${(x + y) % 4}.google.com/vt/lyrs=m&x=${x}&y=${y}&z=${LOC_ZOOM}&hl=en&gl=US&apistyle=${LOC_STYLE}`;
 
 /* Percentages across the four tiles above, worked out from lat and lng once,
    since the view never moves. One answer and two guesses landing near it,
@@ -188,16 +197,17 @@ function SyncMiniSpinner({ className = "" }: { className?: string }) {
 function CardTitle({
   title,
   compact,
-  demo,
+  game,
   onDemo,
 }: {
   title: string;
   compact: boolean;
-  demo: string;
+  game: GameSlug;
   onDemo: (demo: string) => void;
 }) {
   return (
     <div className="solo-card-title-row hc-title-row">
+      <GameIcon game={game} size={20} className="card-title-icon" />
       <h2 className={`hc-game-title-lg${compact ? " hc-game-title-lg--compact" : ""}`}>{title}</h2>
       {/* The solo cards' own mark, classes and all, so the two sets of cards
           cannot drift apart on the one control they share. */}
@@ -207,7 +217,7 @@ function CardTitle({
         aria-label={`How to play ${title}`}
         data-tooltip="How to Play"
         data-tooltip-variant="info"
-        onClick={() => onDemo(demo)}
+        onClick={() => onDemo(game)}
       >
         <FiHelpCircle size={18} />
       </button>
@@ -539,7 +549,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="imposter"
       >
         <div className="home-card-body hc-centered">
-          <CardTitle title="Imposter" compact={imposterExpanded || imposterBrowsing} demo="imposter" onDemo={setActiveDemo} />
+          <CardTitle title="Imposter" compact={imposterExpanded || imposterBrowsing} game="imposter" onDemo={setActiveDemo} />
 
           {imposterBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -626,7 +636,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="password"
       >
         <div className="home-card-body hc-centered">
-          <CardTitle title="Password" compact={passwordExpanded || passwordBrowsing} demo="password" onDemo={setActiveDemo} />
+          <CardTitle title="Password" compact={passwordExpanded || passwordBrowsing} game="password" onDemo={setActiveDemo} />
 
           {passwordBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -722,7 +732,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="chain"
       >
         <div className="home-card-body hc-centered">
-          <CardTitle title="Chain Reaction" compact={chainExpanded || chainBrowsing} demo="chain" onDemo={setActiveDemo} />
+          <CardTitle title="Chain Reaction" compact={chainExpanded || chainBrowsing} game="chain" onDemo={setActiveDemo} />
 
           {chainBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -796,7 +806,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="shade"
       >
         <div className="home-card-body hc-centered">
-          <CardTitle title="Shade Signal" compact={shadeExpanded || shadeBrowsing} demo="shade" onDemo={setActiveDemo} />
+          <CardTitle title="Shade Signal" compact={shadeExpanded || shadeBrowsing} game="shade" onDemo={setActiveDemo} />
 
           {shadeBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -871,7 +881,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
         data-home-game-card="location"
       >
         <div className="home-card-body hc-centered">
-          <CardTitle title="Location Signal" compact={locationExpanded || locationBrowsing} demo="location" onDemo={setActiveDemo} />
+          <CardTitle title="Location Signal" compact={locationExpanded || locationBrowsing} game="location" onDemo={setActiveDemo} />
 
           {locationBrowsing ? (
             <div className="hc-card-anim" key="browse">
@@ -888,7 +898,7 @@ function HomePageDesktop({ sessionId }: { sessionId: string }) {
                   <div className="hc-loc-map">
                     <div className="hc-loc-tiles">
                       {LOC_TILES.map((t) => (
-                        <img key={`${t.x}-${t.y}`} src={locTileUrl(t.x, t.y)} alt="" decoding="async" draggable={false} />
+                        <span key={`${t.x}-${t.y}`} style={{ maskImage: `url("${locTileUrl(t.x, t.y)}")` }} />
                       ))}
                     </div>
                     {LOC_PINS.map((pin, i) => (

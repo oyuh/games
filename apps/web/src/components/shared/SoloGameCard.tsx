@@ -2,6 +2,7 @@ import type { GameSlug } from "@games/shared";
 import type { CSSProperties, ReactNode } from "react";
 import { FiHelpCircle } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import { GameIcon } from "./GameIcon";
 
 export interface SoloGameDef {
   id: string;
@@ -54,6 +55,7 @@ export function SoloGameCard({ game, onDemo }: { game: SoloGameDef; onDemo?: (de
       )}
       <div className="solo-card-body">
         <div className="solo-card-title-row">
+          {game.gameSlug && <GameIcon game={game.gameSlug} size={18} className="card-title-icon" />}
           {game.href && isExternal ? (
             <a
               href={game.href}
