@@ -1002,7 +1002,19 @@ async function probeDatabaseStatus(): Promise<DatabaseProbe> {
 
 // ─── Solo leaderboard query ──────────────────────────────────
 
+/*
+ * The site's own pages always send an allowed Origin, since the web app calls
+ * this API cross-origin. Anything else (curl, a scraper, someone's script)
+ * gets a small taste of a board instead of 50 rows a page and a full table
+ * scan per search. Origin can be faked, so this caps what each outside
+ * request costs; the rate limiters still cap how many there are.
+ */
+const OUTSIDE_BOARD_ROWS = 3;
+const OUTSIDE_BOARD_BYTES = 1024;
+
 type ScoreBoardQuery = {
+  /** Not from the site: top rows only, no session, search, window or paging. */
+  outside: boolean;
   sessionId: string | null;
   /** The run the end screen just finished. A session holds one score per seed per board. */
   runSeed: number | null;
@@ -1015,6 +1027,9 @@ type ScoreBoardQuery = {
 };
 
 async function readScoreBoardQuery(c: Context): Promise<ScoreBoardQuery> {
+  if (!isAllowedOrigin(c.req.header("origin"))) {
+    return { outside: true, sessionId: null, runSeed: null, window: false, mineOnly: false, search: null, limit: OUTSIDE_BOARD_ROWS, offset: 0 };
+  }
   const requestedSessionId = c.req.query("sessionId")?.trim() ?? null;
   const identity = requestedSessionId
     ? await resolveSessionIdentity(c, { claimedSessionId: requestedSessionId, allowCreate: false })
@@ -1024,6 +1039,7 @@ async function readScoreBoardQuery(c: Context): Promise<ScoreBoardQuery> {
   const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
   const runSeed = Number(c.req.query("runSeed"));
   return {
+    outside: false,
     sessionId,
     runSeed: Number.isSafeInteger(runSeed) ? runSeed : null,
     window: c.req.query("window") === "me",
@@ -1079,6 +1095,18 @@ async function selectScoreBoard(ranked: SQL, q: ScoreBoardQuery) {
     pageSize: q.window ? rows.length : q.limit,
     totalPages: q.window ? 1 : Math.max(1, Math.ceil(total / q.limit)),
   };
+}
+
+/** Sends a leaderboard body. An outside caller's is held under
+ *  OUTSIDE_BOARD_BYTES by dropping rows from the bottom: three rows nearly
+ *  always fit, but names run to 50 characters, emoji included. */
+function sendScoreBoard(c: Context, q: ScoreBoardQuery, body: { entries: unknown[] } & Record<string, unknown>) {
+  if (q.outside) {
+    while (body.entries.length > 0 && Buffer.byteLength(JSON.stringify(body)) > OUTSIDE_BOARD_BYTES) {
+      body.entries.pop();
+    }
+  }
+  return c.json(body);
 }
 
 // ─── Ranked solo run tickets ─────────────────────────────────
@@ -1544,15 +1572,16 @@ app.get("/api/shikaku/leaderboard", async (c) => {
   if (!isShikakuDifficulty(difficulty)) {
     return c.json({ error: "Invalid difficulty" }, 400);
   }
+  const q = await readScoreBoardQuery(c);
   const board = await selectScoreBoard(sql`
     SELECT id, name, score, time_ms, created_at, seed, session_id,
            row_number() OVER (ORDER BY score DESC, time_ms ASC, created_at ASC) AS rank,
            count(*) OVER () AS total
     FROM shikaku_scores
     WHERE difficulty = ${difficulty}
-  `, await readScoreBoardQuery(c));
+  `, q);
   const { ownBest } = board;
-  return c.json({
+  return sendScoreBoard(c, q, {
     entries: board.rows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -2085,12 +2114,13 @@ async function assessPipsScoreCandidate(candidate: PipsScoreCandidate): Promise<
 // Rate limits for /api/pips/* (incl. score) are registered up top; see the
 // "Rate limiting" block.
 app.get("/api/pips/leaderboard", async (c) => {
+  const q = await readScoreBoardQuery(c);
   const board = await selectScoreBoard(sql`
     SELECT id, name, total_ms, easy_ms, medium_ms, hard_ms, created_at, seed, session_id,
            row_number() OVER (ORDER BY total_ms ASC, created_at ASC) AS rank,
            count(*) OVER () AS total
     FROM pips_scores
-  `, await readScoreBoardQuery(c));
+  `, q);
   const entry = (row: Record<string, any>) => ({
     id: row.id,
     name: row.name,
@@ -2102,7 +2132,7 @@ app.get("/api/pips/leaderboard", async (c) => {
     seed: Number(row.seed),
     rank: Number(row.rank),
   });
-  return c.json({
+  return sendScoreBoard(c, q, {
     entries: board.rows.map((row) => ({ ...entry(row), isOwn: row.isOwn })),
     personalBest: board.ownBest ? entry(board.ownBest) : null,
     run: board.run,
@@ -2455,14 +2485,15 @@ app.get("/api/zip/leaderboard", async (c) => {
   // Pinning the size too keeps runs from the old size-per-board days off it.
   // Fastest first, earliest breaks a tie.
   const { size } = ZIP_DIFFICULTY_CONFIG[difficulty];
+  const q = await readScoreBoardQuery(c);
   const board = await selectScoreBoard(sql`
     SELECT id, name, time_ms, difficulty, size, created_at, seed, session_id,
            row_number() OVER (ORDER BY time_ms ASC, created_at ASC) AS rank,
            count(*) OVER () AS total
     FROM zip_scores
     WHERE difficulty = ${difficulty} AND size = ${size}
-  `, await readScoreBoardQuery(c));
-  return c.json({
+  `, q);
+  return sendScoreBoard(c, q, {
     entries: board.rows.map((row) => ({
       id: row.id,
       name: row.name,
