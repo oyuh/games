@@ -219,10 +219,183 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
   }
 }
 
+/* ── Stacks ─────────────────────────────────────────────────
+   Toasts from one place about one thing pile up behind the newest, two
+   edges peeking out toward the middle of the screen: up from a bottom
+   stack, down from a top one. The front card shows "+N" for the ones
+   behind it. Hover, focus, or tapping the +N fans the pile out
+   into a list under a header naming where it came from. */
+.toast-container { --stack-dir: 1; --peek-step: 7px; }
+html[data-toast-pos^="bottom"] .toast-container { --stack-dir: -1; }
+
+@media (max-width: 767px) {
+  html[data-toast-pos-mobile="top"] .toast-container { --stack-dir: 1; }
+  html[data-toast-pos-mobile="bottom"] .toast-container { --stack-dir: -1; }
+}
+
+.toast-stack {
+  position: relative;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  /* Room for the peeking edges on the inner side, so stacks never overlap. */
+  padding-top: max(0px, calc(var(--stack-dir) * -1 * var(--stack-peek) * var(--peek-step)));
+  padding-bottom: max(0px, calc(var(--stack-dir) * var(--stack-peek) * var(--peek-step)));
+}
+
+.toast-stack--open {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.toast-stack-cards {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Newest sits nearest the edge the stack hangs from. */
+html[data-toast-pos^="top"] .toast-stack-cards { flex-direction: column-reverse; }
+
+@media (max-width: 767px) {
+  html[data-toast-pos-mobile="top"] .toast-stack-cards { flex-direction: column-reverse; }
+  html[data-toast-pos-mobile="bottom"] .toast-stack-cards { flex-direction: column; }
+}
+
+.toast-stack .toast {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+
+.toast-stack:not(.toast-stack--open) .toast[data-depth="0"] {
+  z-index: 4;
+}
+
+/* The pile: everything but the front card shrinks behind it, sized to it. */
+.toast-stack:not(.toast-stack--open) .toast:not([data-depth="0"]) {
+  position: absolute;
+  inset: 0;
+  z-index: calc(3 - var(--depth));
+  transform-origin: center calc(50% + var(--stack-dir) * 50%);
+  transform: translateY(calc(var(--stack-dir) * var(--depth) * var(--peek-step))) scale(calc(1 - var(--depth) * 0.05));
+  animation: none;
+  pointer-events: none;
+}
+
+.toast-stack:not(.toast-stack--open) .toast:not([data-depth="0"]) > * {
+  visibility: hidden;
+}
+
+.toast-stack:not(.toast-stack--open) .toast[data-depth="3"],
+.toast-stack:not(.toast-stack--open) .toast:not([data-depth="0"]).toast--leaving {
+  opacity: 0;
+}
+
+/* Fanning out: the cards behind the front slide out from it. */
+.toast-stack--open .toast:not([data-depth="0"]):not(.toast--leaving) {
+  animation: toast-unstack 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toast-unstack {
+  from { opacity: 0; transform: translateY(calc(var(--stack-dir) * -8px)); }
+  to   { opacity: 1; transform: none; }
+}
+
+.toast-stack-head {
+  display: none;
+}
+
+.toast-stack--open .toast-stack-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.toast-stack-origin,
+.toast-stack-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.toast-stack-origin {
+  color: var(--secondary);
+}
+
+.toast-stack-category {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+/* "+N" on the front card, just before its close segment: as tall as the
+   toast so it's an easy target, with a small chip inside. Gone once the
+   pile fans out, since every card is showing. */
+.toast-more {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  margin: 0;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.toast-more-chip {
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  color: var(--secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.toast-more:hover .toast-more-chip {
+  color: var(--foreground);
+}
+
+.toast-more:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.toast-stack--open .toast-more {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  html[data-toast-close="left"] .toast-stack--open .toast-stack-head {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-stack .toast { transition: none; }
+  .toast-stack--open .toast:not([data-depth="0"]):not(.toast--leaving) { animation: none; }
+}
+
 /* ── Countdown ──────────────────────────────────────────────
    The game clock's track, at a whisper: pinned to the bottom edge and
    draining toward the moment the toast goes. It stops while the toast is
-   held open, in step with the timer in lib/toast. */
+   held open, in step with the timer in lib/toast. The toast pads its
+   bottom by the track's height so the row centers above it, not over it. */
+.toast {
+  padding-bottom: 2px;
+}
+
 .toast-countdown {
   position: absolute;
   left: 0;

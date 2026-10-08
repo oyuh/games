@@ -93,21 +93,21 @@ export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
   const handleKick = (targetId: string, targetName: string) => {
     if (game.type === "imposter") {
       void zero.mutate(mutators.imposter.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
-        .client.catch(() => showToast("Couldn't kick player", "error"));
+        .client.catch(() => showToast("Couldn't kick player", "error", { category: "Players" }));
     } else if (game.type === "shade_signal") {
       void zero.mutate(mutators.shadeSignal.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
-        .client.catch(() => showToast("Couldn't kick player", "error"));
+        .client.catch(() => showToast("Couldn't kick player", "error", { category: "Players" }));
     } else if (game.type === "chain_reaction") {
       void zero.mutate(mutators.chainReaction.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
-        .client.catch(() => showToast("Couldn't kick player", "error"));
+        .client.catch(() => showToast("Couldn't kick player", "error", { category: "Players" }));
     } else if (game.type === "location_signal") {
       void zero.mutate(mutators.locationSignal.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
-        .client.catch(() => showToast("Couldn't kick player", "error"));
+        .client.catch(() => showToast("Couldn't kick player", "error", { category: "Players" }));
     } else {
       void zero.mutate(mutators.password.kick({ gameId: game.gameId, hostId: sessionId, targetId }))
-        .client.catch(() => showToast("Couldn't kick player", "error"));
+        .client.catch(() => showToast("Couldn't kick player", "error", { category: "Players" }));
     }
-    showToast(`Kicked ${targetName}`, "info");
+    showToast(`Kicked ${targetName}`, "info", { category: "Players" });
   };
 
   const handleRemoveSpectator = (targetId: string, targetName: string) => {
@@ -122,7 +122,7 @@ export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
     } else {
       void zero.mutate(mutators.password.removeSpectator({ gameId: game.gameId, hostId: sessionId, targetId }));
     }
-    showToast(`Kicked ${targetName}`, "info");
+    showToast(`Kicked ${targetName}`, "info", { category: "Players" });
   };
 
   const handleEndGame = async () => {
@@ -178,9 +178,9 @@ export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
       } else {
         await optimistic(zero.mutate(mutators.password.setPublic({ gameId: game.gameId, hostId: sessionId, isPublic: newValue })));
       }
-      showToast(newValue ? "Game is now public" : "Game is now private", "info");
+      showToast(newValue ? "Game is now public" : "Game is now private", "info", { category: "Visibility" });
     } catch {
-      showToast("Couldn't change visibility", "error");
+      showToast("Couldn't change visibility", "error", { category: "Visibility" });
     } finally {
       setTogglingVisibility(false);
     }
