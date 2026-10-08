@@ -15,6 +15,7 @@ import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { showToast } from "../../lib/toast";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import "../../styles/game-shared.css";
+import { roomStats } from "../../lib/host-room";
 
 /**
  * Imposter on a phone: the desktop page's phase components, one column. The
@@ -36,8 +37,8 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
   useMobileHostRegister(
     isHost && game
       ? {
-          type: "imposter", gameId, hostId: game.host_id, isPublic: game.is_public,
-          players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId) })),
+          type: "imposter", gameId, hostId: game.host_id, isPublic: game.is_public, ...roomStats(game),
+          players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? getDisplayName(p.name, p.sessionId), connected: p.connected })),
           spectators: game.spectators ?? [],
         }
       : null

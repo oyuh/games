@@ -20,6 +20,7 @@ import { showToast } from "../../lib/toast";
 import { useShadeSignalGame } from "../../hooks/useShadeSignalGame";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { roomStats } from "../../lib/host-room";
 
 /** Shade Signal on a phone: the desktop phase components, one column. */
 export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
@@ -49,8 +50,8 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
   useMobileHostRegister(
     isHost && game
       ? {
-          type: "shade_signal", gameId, hostId: game.host_id, isPublic: game.is_public,
-          players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null })),
+          type: "shade_signal", gameId, hostId: game.host_id, isPublic: game.is_public, ...roomStats(game),
+          players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null, connected: p.connected })),
           spectators: game.spectators ?? [],
         }
       : null

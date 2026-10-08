@@ -59,101 +59,108 @@
   color: var(--destructive);
 }
 
-/* ── Desktop Host Controls ───────────────────────────────
-   Lives inside the shared .mshell, so it reuses the solo drawer look:
-   a bordered shell with the control inset, no shadows, no glows. The
-   .host-section-* and .host-player-* rules above and below still dress
-   the mobile host sheet, which keeps its own markup. */
+/* ── Host Controls ───────────────────────────────────────
+   Built from the lobby's own parts: the Room strip is the Setup strip, the
+   players are the roster cards with the same two press kick, and visibility
+   is the action bar's switch. Shared by the desktop modal and the mobile
+   sheet. */
+
+.host-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* Six numbers, so an even three by two rather than five and a straggler. */
+.host-stats .gk-fact {
+  flex: 1 1 30%;
+}
+
+.host-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.host-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--secondary);
+}
 
 .host-announce {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: var(--solo-pad, 0.25rem);
-  padding-left: 0.7rem;
+  gap: 0.4rem;
+  padding: 0.3rem 0.3rem 0.3rem 0.8rem;
   border: 1px solid var(--border);
-  border-radius: var(--solo-radius, var(--radius-lg));
-  background: var(--background);
+  border-radius: var(--radius-lg);
+  background: var(--surface-bottom);
+}
+
+.host-announce:focus-within {
+  border-color: color-mix(in srgb, var(--modal-accent, var(--primary)) 55%, var(--border));
 }
 
 .host-announce-input {
   flex: 1;
   min-width: 0;
-  height: 2.4rem;
+  height: 2.25rem;
   padding: 0;
   border: 0;
   outline: none;
   background: transparent;
   color: var(--foreground);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 
 .host-announce-input::placeholder {
   color: var(--muted-foreground);
 }
 
-.host-announce-send {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--modal-accent, var(--primary));
-  cursor: pointer;
-  transition: background 0.14s, opacity 0.14s;
-}
-
-.host-announce-send:hover:not(:disabled) {
-  background: var(--accent);
-}
-
-.host-announce-send:disabled {
-  color: var(--muted-foreground);
-  opacity: 0.5;
-  cursor: default;
-}
-
-.host-people {
+.host-room {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.35rem 0.9rem 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-bottom);
 }
 
-.host-person {
+.host-room-note {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.78rem;
+  color: var(--secondary);
+}
+
+.host-end {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  min-height: 2.35rem;
-  padding: 0 0.4rem 0 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: var(--solo-radius, var(--radius-lg));
-  background: var(--background);
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
-.host-person-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--foreground);
-  font-size: 0.8rem;
-  font-weight: 600;
+.host-end-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
 }
 
-.host-empty {
-  margin: 0;
-  color: var(--muted-foreground);
-  font-size: 0.78rem;
+.host-end-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f87171;
 }
 
-.host-confirm {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
+.host-end-hint {
+  font-size: 0.72rem;
+  color: var(--secondary);
 }
 
 .host-player-list {

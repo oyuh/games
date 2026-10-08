@@ -15,6 +15,7 @@ import { showToast } from "../../lib/toast";
 import { useChainReactionGame } from "../../hooks/useChainReactionGame";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { roomStats } from "../../lib/host-room";
 
 /** Chain Reaction on a phone: the desktop duel components, one column. */
 export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
@@ -43,8 +44,8 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
   useMobileHostRegister(
     isHost && game
       ? {
-          type: "chain_reaction", gameId, hostId: game.host_id, isPublic: game.is_public,
-          players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null })),
+          type: "chain_reaction", gameId, hostId: game.host_id, isPublic: game.is_public, ...roomStats(game),
+          players: game.players.map((p) => ({ sessionId: p.sessionId, name: sessionById[p.sessionId] ?? null, connected: p.connected })),
           spectators: game.spectators ?? [],
         }
       : null
