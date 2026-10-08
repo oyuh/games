@@ -9,6 +9,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { AppShell } from "./components/AppShell";
 import { ButtonLink } from "./components/shared/Button";
 import { ChallengeGate } from "./components/shared/ChallengeGate";
+import { PageLoading } from "./components/shared/PageLoading";
 import {
   addConnectionDebugEvent,
   initConnectionDebug,
@@ -162,17 +163,8 @@ function createZero(sessionId: string, sessionProof: string | null, onClientStat
   });
 }
 
-function RouteLoading() {
-  return (
-    <div className="route-loading" role="status" aria-live="polite">
-      <span className="route-loading-spinner" />
-      <span>Loading</span>
-    </div>
-  );
-}
-
 function LazyRoute({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<RouteLoading />}>{children}</Suspense>;
+  return <Suspense fallback={<PageLoading />}>{children}</Suspense>;
 }
 
 /** Routes that don't use the Zero sync server (solo/offline games). */
