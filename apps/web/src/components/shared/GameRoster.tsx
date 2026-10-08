@@ -68,7 +68,7 @@ export function KickButton({ name, onKick }: { name: string; onKick: () => void 
   return (
     <button
       type="button"
-      className={armed ? "pc-kick--armed" : ""}
+      className={armed ? "pc-kick pc-kick--armed" : "pc-kick"}
       aria-label={armed ? `Confirm removing ${name}` : `Remove ${name}`}
       data-tooltip={armed ? "Press again to remove them" : `Remove ${name}`}
       data-tooltip-variant={armed ? "danger" : "game"}

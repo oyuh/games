@@ -335,6 +335,45 @@
   background: color-mix(in srgb, #f87171 20%, transparent);
 }
 
+/* The kick is its own segment at the card's right edge, behind the same kind
+   of hairline as the score, and the full height of the row so it reads as
+   part of the card rather than a button sat on it. The negative margins eat
+   the row's padding, so the card stays the size it was. The duel portrait is
+   a column, so it keeps the small square. */
+.pc:not(.pc--lg) .pc-action:has(> .pc-kick) {
+  align-self: stretch;
+  margin: -0.45rem -0.6rem -0.45rem 0;
+  border-left: 1px solid var(--pc-line);
+}
+
+.pc--sm .pc-action:has(> .pc-kick) {
+  margin: -0.4rem -0.55rem -0.4rem 0;
+}
+
+.pc:not(.pc--lg) .pc-action > button.pc-kick {
+  width: 2rem;
+  height: auto;
+  align-self: stretch;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.pc:not(.pc--lg) .pc-action > button.pc-kick:hover {
+  color: #f87171;
+  background: color-mix(in srgb, #f87171 10%, transparent);
+}
+
+.pc:not(.pc--lg) .pc-action > button.pc-kick--armed {
+  color: #f87171;
+  background: color-mix(in srgb, #f87171 18%, transparent);
+}
+
+.pc:not(.pc--lg) .pc-action > button.pc-kick:focus-visible {
+  outline: 2px solid #f87171;
+  outline-offset: -2px;
+}
+
 /* ── Badge strip ────────────────────────────────────────────────
    Hangs off the bottom of the card behind a hairline, like the drawers
    under the solo pickers. Roles and teams live down here so the top row
