@@ -4,7 +4,6 @@ import "../styles/game-shared.css";
 import { useState } from "react";
 import { FiBookOpen } from "react-icons/fi";
 import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
-import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { PASSWORD_PHASES, PasswordLobby } from "../components/password/PasswordLobby";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
@@ -13,6 +12,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordBeginPage } from "../mobile/pages/MobilePasswordBeginPage";
 import { PasswordDemo } from "../components/demos/PasswordDemo";
 import { usePasswordBegin } from "../hooks/usePasswordBegin";
+import { PageLoading } from "../components/shared/PageLoading";
 
 /**
  * Password's lobby, assembled out of the game kit. Every state of it is a
@@ -30,15 +30,7 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
   } = usePasswordBegin(sessionId);
   const [showDemo, setShowDemo] = useState(false);
 
-  if (!game) {
-    return (
-      <div className="game-page">
-        <GamePanel>
-          <GameEmpty title="No game here" hint="Taking you home…" />
-        </GamePanel>
-      </div>
-    );
-  }
+  if (!game) return <PageLoading />;
 
   const bank = game.settings.category
     ? passwordCategoryLabels[game.settings.category] ?? game.settings.category

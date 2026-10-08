@@ -15,6 +15,7 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobileChainReactionPage } from "../mobile/pages/MobileChainReactionPage";
 import { useChainReactionGame } from "../hooks/useChainReactionGame";
+import { PageLoading } from "../components/shared/PageLoading";
 
 /**
  * Chain Reaction, assembled out of the game kit. Every phase is a component
@@ -44,15 +45,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
     submitChain, handleJoinClick,
   } = useChainReactionGame(sessionId);
 
-  if (!game) {
-    return (
-      <div className="game-page">
-        <GamePanel>
-          <GameEmpty title="No game here" hint="Taking you home…" />
-        </GamePanel>
-      </div>
-    );
-  }
+  if (!game) return <PageLoading />;
 
   const bank = game.settings.category
     ? chainCategoryLabels[game.settings.category] ?? game.settings.category

@@ -10,7 +10,7 @@ import { getPasswordPlayerName } from "../../lib/password-names";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { showToast } from "../../lib/toast";
 import { optimistic } from "../../lib/zero";
-import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { PageLoading } from "../../components/shared/PageLoading";
 import "../../styles/game-shared.css";
 import { roomStats } from "../../lib/host-room";
 
@@ -53,7 +53,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
       : null
   );
 
-  if (!game) return <MobileGameNotFound theme="password" />;
+  if (!game) return <PageLoading />;
 
   const bank = game.settings.category
     ? passwordCategoryLabels[game.settings.category] ?? game.settings.category

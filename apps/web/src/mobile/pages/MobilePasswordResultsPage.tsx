@@ -5,14 +5,14 @@ import { PASSWORD_PHASES } from "../../components/password/PasswordLobby";
 import { PasswordGameOver } from "../../components/password/PasswordGameOver";
 import { usePasswordResults } from "../../hooks/usePasswordResults";
 import { showToast } from "../../lib/toast";
-import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { PageLoading } from "../../components/shared/PageLoading";
 import "../../styles/game-shared.css";
 
 /** The end of a password game on a phone: the desktop game-over screen. */
 export function MobilePasswordResultsPage({ sessionId }: { sessionId: string }) {
   const { zero, gameId, game, names, navigate, isHost, roundsForView } = usePasswordResults(sessionId);
 
-  if (!game) return <MobileGameNotFound theme="password" />;
+  if (!game) return <PageLoading />;
 
   const bank = game.settings.category
     ? passwordCategoryLabels[game.settings.category] ?? game.settings.category

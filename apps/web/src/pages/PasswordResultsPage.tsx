@@ -2,13 +2,13 @@ import { mutators, passwordCategoryLabels } from "@games/shared";
 import "../styles/game-shared.css";
 import { FiBookOpen } from "react-icons/fi";
 import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
-import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { PASSWORD_PHASES } from "../components/password/PasswordLobby";
 import { PasswordGameOver } from "../components/password/PasswordGameOver";
 import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordResultsPage } from "../mobile/pages/MobilePasswordResultsPage";
 import { usePasswordResults } from "../hooks/usePasswordResults";
+import { PageLoading } from "../components/shared/PageLoading";
 
 /**
  * The end of a password game. The screen is one component with every ending in
@@ -18,15 +18,7 @@ import { usePasswordResults } from "../hooks/usePasswordResults";
 function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
   const { zero, gameId, game, names, navigate, isHost, roundsForView } = usePasswordResults(sessionId);
 
-  if (!game) {
-    return (
-      <div className="game-page">
-        <GamePanel>
-          <GameEmpty title="No game here" hint="Taking you home…" />
-        </GamePanel>
-      </div>
-    );
-  }
+  if (!game) return <PageLoading />;
 
   const bank = game.settings.category
     ? passwordCategoryLabels[game.settings.category] ?? game.settings.category

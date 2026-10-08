@@ -11,7 +11,7 @@ import { usePasswordGame } from "../../hooks/usePasswordGame";
 import { getPasswordPlayerName } from "../../lib/password-names";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { showToast } from "../../lib/toast";
-import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { PageLoading } from "../../components/shared/PageLoading";
 import "../../styles/game-shared.css";
 import { roomStats } from "../../lib/host-room";
 
@@ -55,7 +55,7 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
       : null
   );
 
-  if (!game) return <MobileGameNotFound theme="password" />;
+  if (!game) return <PageLoading />;
 
   /* The lobby lives on its own route. Anyone who lands here before the host
      has started, by link or by back button, belongs there rather than on a

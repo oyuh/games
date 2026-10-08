@@ -14,7 +14,7 @@ import { SpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { showToast } from "../../lib/toast";
 import { useChainReactionGame } from "../../hooks/useChainReactionGame";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
-import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { PageLoading } from "../../components/shared/PageLoading";
 import { roomStats } from "../../lib/host-room";
 
 /** Chain Reaction on a phone: the desktop duel components, one column. */
@@ -51,7 +51,7 @@ export function MobileChainReactionPage({ sessionId }: { sessionId: string }) {
       : null
   );
 
-  if (!game) return <MobileGameNotFound theme="chain" />;
+  if (!game) return <PageLoading />;
 
   const bank = game.settings.category
     ? chainCategoryLabels[game.settings.category] ?? game.settings.category

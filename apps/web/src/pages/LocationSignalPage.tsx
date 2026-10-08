@@ -7,7 +7,6 @@ import { FiClock, FiEye, FiMapPin } from "react-icons/fi";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { LocationLobby, locationPhases, locationTrackPhase } from "../components/location/LocationLobby";
 import { LocationClue, LocationGameOver, LocationGuess, LocationPickClue, LocationResult } from "../components/location/LocationRound";
-import { Button } from "../components/shared/Button";
 import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { GameRoster } from "../components/shared/GameRoster";
 import { InSessionModal } from "../components/shared/InSessionModal";
@@ -18,6 +17,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 
 import { MobileLocationSignalPage } from "../mobile/pages/MobileLocationSignalPage";
 import { useLocationSignalGame } from "../hooks/useLocationSignalGame";
+import { PageLoading } from "../components/shared/PageLoading";
 
 /**
  * Location Signal, assembled out of the game kit. Every phase is a component
@@ -52,17 +52,7 @@ function LocationSignalPageDesktop({ sessionId }: { sessionId: string }) {
     submitClue, submitGuess, handleJoinClick, confirmLeaveAndJoin,
   } = useLocationSignalGame(sessionId);
 
-  if (!game) {
-    return (
-      <div className="game-page">
-        <div className="game-empty">
-          <p className="game-empty-title">Game not found</p>
-          <p className="game-empty-sub">Redirecting home&hellip;</p>
-          <Button variant="primary" onClick={() => navigate("/")}>Go Home</Button>
-        </div>
-      </div>
-    );
-  }
+  if (!game) return <PageLoading />;
 
   /* The place, once it is allowed out. The server keeps it encrypted until it
      scores the round, so an empty one means the scores are still being worked

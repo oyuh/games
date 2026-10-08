@@ -167,6 +167,14 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageLoading />}>{children}</Suspense>;
 }
 
+/** Any URL we have no page for: say so and land on home. */
+function NotFoundRedirect() {
+  useEffect(() => {
+    showDedupedToast("That page doesn't exist", "info");
+  }, []);
+  return <Navigate to="/" replace />;
+}
+
 /** Routes that don't use the Zero sync server (solo/offline games). */
 const SYNC_FREE_ROUTES = ["/shikaku", "/pips", "/zip", "/admin"];
 
@@ -692,7 +700,7 @@ export function App({ initialSessionId, initialSessionProof }: { initialSessionI
               <Route path="/dev/location" element={<LazyRoute><LocationKitPage /></LazyRoute>} />
               <Route path="/dev/zip" element={<LazyRoute><ZipKitPage /></LazyRoute>} />
               <Route path="/dev/shared" element={<LazyRoute><SharedKitPage /></LazyRoute>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundRedirect />} />
             </Route>
           </Routes>
         </BrowserRouter>

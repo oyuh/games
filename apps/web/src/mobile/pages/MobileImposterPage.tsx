@@ -13,7 +13,7 @@ import { useImposterGame } from "../../hooks/useImposterGame";
 import { getDisplayName } from "../../lib/session";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
 import { showToast } from "../../lib/toast";
-import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { PageLoading } from "../../components/shared/PageLoading";
 import "../../styles/game-shared.css";
 import { roomStats } from "../../lib/host-room";
 
@@ -44,7 +44,7 @@ export function MobileImposterPage({ sessionId }: { sessionId: string }) {
       : null
   );
 
-  if (!game) return <MobileGameNotFound theme="imposter" />;
+  if (!game) return <PageLoading />;
 
   const active = game.players.filter((p) => !p.eliminated);
   const out = Boolean(me?.eliminated);

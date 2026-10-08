@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useMissingGameRedirect } from "./useMissingGameRedirect";
 import { playHint } from "../lib/sounds";
 import { nextUnsolvedIndex } from "../components/chain/chain-guess";
 import { useChainReactionLiveTyping } from "./useChainReactionLiveTyping";
@@ -35,7 +36,7 @@ export function useChainReactionGame(
   const params = useParams();
   const gameId = params.id ?? "";
 
-  const [games] = useQuery(queries.chainReaction.byId({ id: gameId }));
+  const [games, gamesResult] = useQuery(queries.chainReaction.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "chain_reaction", gameId }));
   usePublishedAvatars(sessions);
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
@@ -193,12 +194,7 @@ export function useChainReactionGame(
     publishDraft(editingIndex, guess);
   }, [clearDraft, editingIndex, guess, publishDraft]);
 
-  // No such game: don't strand the player on an empty screen.
-  useEffect(() => {
-    if (game) return;
-    const timer = setTimeout(() => navigate("/"), 3000);
-    return () => clearTimeout(timer);
-  }, [game, navigate]);
+  useMissingGameRedirect(Boolean(game), gamesResult.type);
 
   const myChain: ChainSlot[] = game?.chain[sessionId] ?? [];
   /* The server seals submitted words, since they are the other player's

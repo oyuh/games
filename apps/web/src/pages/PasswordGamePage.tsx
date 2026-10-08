@@ -11,6 +11,7 @@ import { showToast } from "../lib/toast";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { MobilePasswordGamePage } from "../mobile/pages/MobilePasswordGamePage";
 import { usePasswordGame } from "../hooks/usePasswordGame";
+import { PageLoading } from "../components/shared/PageLoading";
 
 /**
  * Password mid-game, assembled out of the game kit. Every part of the round is
@@ -28,15 +29,7 @@ function PasswordGamePageDesktop({ sessionId }: { sessionId: string }) {
     navigate,
   } = usePasswordGame(sessionId);
 
-  if (!game) {
-    return (
-      <div className="game-page">
-        <GamePanel>
-          <GameEmpty title="No game here" hint="Taking you home…" />
-        </GamePanel>
-      </div>
-    );
-  }
+  if (!game) return <PageLoading />;
 
   /* The lobby lives on its own route. Anyone who lands here before the host
      has started, by link or by back button, belongs there rather than on a
