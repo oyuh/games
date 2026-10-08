@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { FiAward, FiBookOpen, FiCheck, FiClock, FiFlag, FiLock, FiLogIn, FiLogOut, FiMessageSquare, FiPlay, FiSkipForward, FiUnlock, FiUserPlus, FiUsers } from "react-icons/fi";
+import { FiAward, FiBookOpen, FiCheck, FiClock, FiFlag, FiLogIn, FiMessageSquare, FiPlay, FiSkipForward, FiUserPlus, FiUsers } from "react-icons/fi";
 import { LOBBY_SETTING_LIMITS, passwordCategories, passwordCategoryLabels } from "@games/shared";
-import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
+import { Elapsed, GameActions, GameButton, LeaveButton, GameToggle, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
 import { categoryOptions, durationCustom, durationOptions, formatDuration, numberCustom, numberOptions } from "../../lib/setting-options";
 import { GameTeamRoster } from "../shared/GameRoster";
 import { playerBadges } from "../shared/PlayerCard";
@@ -298,39 +298,43 @@ export function PasswordLobby({
             tooltip: "Words each team can throw away when they are stuck",
           },
         ]}
+        footer={
+          inGame ? (
+            <GameActions
+              status={isHost ? <>Waiting <Elapsed /> to start</> : "Waiting for the host to start"}
+              hint={blocked}
+            >
+              {actions}
+
+              {isHost && onToggleLock && (
+                <GameToggle
+                  label="Teams"
+                  detail={locked ? "Locked" : "Open"}
+                  checked={!!locked}
+                  onChange={onToggleLock}
+                  tooltip={locked ? "Nobody can switch teams." : "Players can pick their own team."}
+                />
+              )}
+
+              <LeaveButton onLeave={onLeave} host={isHost} />
+
+              {isHost && (
+                <GameButton
+                  variant="primary"
+                  icon={<FiPlay />}
+                  disabled={!!blocked}
+                  {...(starting ? { loading: true } : {})}
+                  onClick={onStart}
+                >
+                  Start the game
+                </GameButton>
+              )}
+            </GameActions>
+          ) : undefined
+        }
       />
 
-      {inGame ? (
-        <GameActions hint={blocked}>
-          {actions}
-
-          {isHost && onToggleLock && (
-            <GameButton
-              variant="secondary"
-              icon={locked ? <FiUnlock /> : <FiLock />}
-              onClick={onToggleLock}
-            >
-              {locked ? "Unlock the teams" : "Lock the teams"}
-            </GameButton>
-          )}
-
-          {isHost ? (
-            <GameButton
-              variant="primary"
-              icon={<FiPlay />}
-              disabled={!!blocked}
-              {...(starting ? { loading: true } : {})}
-              onClick={onStart}
-            >
-              Start the game
-            </GameButton>
-          ) : (
-            <span className="gk-actions-note">Waiting for the host to start…</span>
-          )}
-
-          <GameButton variant="ghost" icon={<FiLogOut />} onClick={onLeave}>Leave</GameButton>
-        </GameActions>
-      ) : (
+      {!inGame && (
         <GamePanel>
           <GameEmpty
             icon={<FiLogIn />}

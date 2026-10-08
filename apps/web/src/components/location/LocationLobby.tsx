@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { haversineKm, scoreForDistance, PERFECT_KM, LOBBY_SETTING_LIMITS } from "@games/shared";
 import {
-  FiAward, FiClock, FiCrosshair, FiEdit3, FiEye, FiFlag, FiLogIn, FiLogOut,
+  FiAward, FiClock, FiCrosshair, FiEdit3, FiEye, FiFlag, FiLogIn,
   FiMapPin, FiPlay, FiRotateCcw, FiUsers,
 } from "react-icons/fi";
-import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
+import { Elapsed, GameActions, GameButton, LeaveButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
 import { durationCustom, durationOptions, formatDuration } from "../../lib/setting-options";
 import { GameRoster } from "../shared/GameRoster";
 import type { PlayerCardProps } from "../shared/PlayerCard";
@@ -368,34 +368,36 @@ export function LocationLobby({
             }),
           },
         ]}
+        footer={
+          inGame ? (
+            <GameActions
+              status={isHost ? <>Waiting <Elapsed /> to start</> : "Waiting for the host to start"}
+              hint={
+                blocked ??
+                (players.length === MIN_LOCATION_PLAYERS ? "Two works. More guessers makes the leader's clue harder to write." : undefined)
+              }
+            >
+              {actions}
+
+              <LeaveButton onLeave={onLeave} host={isHost} />
+
+              {isHost && (
+                <GameButton
+                  variant="primary"
+                  icon={<FiPlay />}
+                  disabled={!!blocked}
+                  {...(starting ? { loading: true } : {})}
+                  onClick={onStart}
+                >
+                  Start the round
+                </GameButton>
+              )}
+            </GameActions>
+          ) : undefined
+        }
       />
 
-      {inGame ? (
-        <GameActions
-          hint={
-            blocked ??
-            (players.length === MIN_LOCATION_PLAYERS ? "Two works. More guessers makes the leader's clue harder to write." : undefined)
-          }
-        >
-          {actions}
-
-          {isHost ? (
-            <GameButton
-              variant="primary"
-              icon={<FiPlay />}
-              disabled={!!blocked}
-              {...(starting ? { loading: true } : {})}
-              onClick={onStart}
-            >
-              Start the round
-            </GameButton>
-          ) : (
-            <span className="gk-actions-note">Waiting for the host to start…</span>
-          )}
-
-          <GameButton variant="ghost" icon={<FiLogOut />} onClick={onLeave}>Leave</GameButton>
-        </GameActions>
-      ) : (
+      {!inGame && (
         <GamePanel>
           <GameEmpty
             icon={<FiLogIn />}

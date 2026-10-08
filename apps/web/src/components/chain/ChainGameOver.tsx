@@ -168,8 +168,8 @@ export function ChainGameOver({
       <GameActions>
         {isHost ? (
           <>
-            <GameButton variant="primary" icon={<FiRotateCcw />} onClick={onPlayAgain}>Run it back</GameButton>
             <GameButton variant="danger" icon={<FiPower />} onClick={onEnd}>End the game</GameButton>
+            <GameButton variant="primary" icon={<FiRotateCcw />} onClick={onPlayAgain}>Run it back</GameButton>
           </>
         ) : (
           <GameButton variant="secondary" icon={<FiHome />} onClick={onHome}>Back home</GameButton>

@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from "react";
 import {
   FiAward, FiClock, FiCrosshair, FiDroplet, FiEdit3, FiEye, FiFlag, FiGrid,
-  FiLogIn, FiLogOut, FiPlay, FiRotateCcw, FiSlash, FiUsers,
+  FiLogIn, FiPlay, FiRotateCcw, FiSlash, FiUsers,
 } from "react-icons/fi";
 import { LOBBY_SETTING_LIMITS } from "@games/shared";
-import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
+import { Elapsed, GameActions, GameButton, LeaveButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
 import { durationCustom, durationOptions, formatDuration } from "../../lib/setting-options";
 import { GameRoster } from "../shared/GameRoster";
 import type { PlayerCardProps } from "../shared/PlayerCard";
@@ -298,34 +298,36 @@ export function ShadeLobby({
             }),
           },
         ]}
+        footer={
+          inGame ? (
+            <GameActions
+              status={isHost ? <>Waiting <Elapsed /> to start</> : "Waiting for the host to start"}
+              hint={
+                blocked ??
+                (players.length === MIN_SHADE_PLAYERS ? "Three works. More guessers makes the leader's job harder." : undefined)
+              }
+            >
+              {actions}
+
+              <LeaveButton onLeave={onLeave} host={isHost} />
+
+              {isHost && (
+                <GameButton
+                  variant="primary"
+                  icon={<FiPlay />}
+                  disabled={!!blocked}
+                  {...(starting ? { loading: true } : {})}
+                  onClick={onStart}
+                >
+                  Start the round
+                </GameButton>
+              )}
+            </GameActions>
+          ) : undefined
+        }
       />
 
-      {inGame ? (
-        <GameActions
-          hint={
-            blocked ??
-            (players.length === MIN_SHADE_PLAYERS ? "Three works. More guessers makes the leader's job harder." : undefined)
-          }
-        >
-          {actions}
-
-          {isHost ? (
-            <GameButton
-              variant="primary"
-              icon={<FiPlay />}
-              disabled={!!blocked}
-              {...(starting ? { loading: true } : {})}
-              onClick={onStart}
-            >
-              Start the round
-            </GameButton>
-          ) : (
-            <span className="gk-actions-note">Waiting for the host to start…</span>
-          )}
-
-          <GameButton variant="ghost" icon={<FiLogOut />} onClick={onLeave}>Leave</GameButton>
-        </GameActions>
-      ) : (
+      {!inGame && (
         <GamePanel>
           <GameEmpty
             icon={<FiLogIn />}

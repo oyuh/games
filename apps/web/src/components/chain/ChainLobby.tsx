@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { FiAward, FiBookOpen, FiClock, FiEdit3, FiFlag, FiLink, FiLogIn, FiLogOut, FiPlay, FiSend, FiUsers } from "react-icons/fi";
+import { FiAward, FiBookOpen, FiClock, FiEdit3, FiFlag, FiLink, FiLogIn, FiPlay, FiSend, FiUsers } from "react-icons/fi";
 import { LOBBY_SETTING_LIMITS, chainCategories, chainCategoryLabels } from "@games/shared";
-import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
+import { Elapsed, GameActions, GameButton, LeaveButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
 import { categoryOptions, durationCustom, durationOptions, formatDuration, numberCustom, numberOptions } from "../../lib/setting-options";
 import { GameVersus, KickButton } from "../shared/GameRoster";
 import type { PlayerCardProps } from "../shared/PlayerCard";
@@ -278,29 +278,33 @@ export function ChainLobby({
             }),
           },
         ]}
+        footer={
+          inGame ? (
+            <GameActions
+              status={isHost ? <>Waiting <Elapsed /> to start</> : "Waiting for the host to start"}
+              hint={blocked}
+            >
+              {actions}
+
+              <LeaveButton onLeave={onLeave} host={isHost} />
+
+              {isHost && (
+                <GameButton
+                  variant="primary"
+                  icon={<FiPlay />}
+                  disabled={!!blocked}
+                  {...(starting ? { loading: true } : {})}
+                  onClick={onStart}
+                >
+                  {custom ? "Start writing" : "Start the duel"}
+                </GameButton>
+              )}
+            </GameActions>
+          ) : undefined
+        }
       />
 
-      {inGame ? (
-        <GameActions hint={blocked}>
-          {actions}
-
-          {isHost ? (
-            <GameButton
-              variant="primary"
-              icon={<FiPlay />}
-              disabled={!!blocked}
-              {...(starting ? { loading: true } : {})}
-              onClick={onStart}
-            >
-              {custom ? "Start writing" : "Start the duel"}
-            </GameButton>
-          ) : (
-            <span className="gk-actions-note">Waiting for the host to start…</span>
-          )}
-
-          <GameButton variant="ghost" icon={<FiLogOut />} onClick={onLeave}>Leave</GameButton>
-        </GameActions>
-      ) : (
+      {!inGame && (
         <GamePanel>
           <GameEmpty
             icon={<FiLogIn />}

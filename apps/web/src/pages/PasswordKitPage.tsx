@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { FiBookOpen, FiClock, FiFlag, FiGlobe, FiLock, FiPlay, FiRefreshCw, FiSkipForward } from "react-icons/fi";
+import { FiBookOpen, FiClock, FiFlag, FiPlay, FiRefreshCw, FiSkipForward } from "react-icons/fi";
 import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
-import { GameButton, GameFacts } from "../components/shared/GameKit";
+import { GameFacts, GameToggle } from "../components/shared/GameKit";
 import {
   PASSWORD_PHASES,
   PASSWORD_SKIPS,
@@ -189,16 +189,14 @@ function Live() {
         onToggleLock={() => setLocked((v) => !v)}
         actions={
           isHost ? (
-            /* Stands in for LobbyVisibilityToggle, which needs zero. Same words
-               as the real one: it is a switch, so it says what pressing it does
-               rather than naming the state you are already in. */
-            <GameButton
-              variant="secondary"
-              icon={isPublic ? <FiGlobe /> : <FiLock />}
-              onClick={() => setIsPublic((v) => !v)}
-            >
-              {isPublic ? "Make it private" : "Make it public"}
-            </GameButton>
+            /* Stands in for LobbyVisibilityToggle, which needs zero. */
+            <GameToggle
+              label="Visibility"
+              detail={isPublic ? "Public" : "Code only"}
+              checked={isPublic}
+              onChange={setIsPublic}
+              tooltip={isPublic ? "Listed in Browse Games for anyone to join." : "Join code only. Turn on to list it in Browse Games."}
+            />
           ) : undefined
         }
       />

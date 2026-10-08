@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FiAward, FiBookOpen, FiClock, FiEdit3, FiEye, FiFlag, FiLogIn, FiLogOut, FiPlay, FiUsers, FiZap } from "react-icons/fi";
+import { FiAward, FiBookOpen, FiClock, FiEdit3, FiEye, FiFlag, FiLogIn, FiPlay, FiUsers, FiZap } from "react-icons/fi";
 import {
   DEFAULT_IMPOSTER_CLUE_VISIBILITY,
   IMPOSTER_CLUE_VISIBILITY_OPTIONS,
@@ -7,7 +7,7 @@ import {
   imposterCategories,
   imposterCategoryLabels,
 } from "@games/shared";
-import { GameActions, GameButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
+import { Elapsed, GameActions, GameButton, LeaveButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
 import { categoryOptions, durationCustom, durationOptions, formatDuration, numberCustom, numberOptions } from "../../lib/setting-options";
 import { GameRoster } from "../shared/GameRoster";
 import { playerBadges, type PlayerCardProps } from "../shared/PlayerCard";
@@ -221,37 +221,39 @@ export function ImposterLobby({
             }),
           },
         ]}
+        footer={
+          inGame ? (
+            <GameActions
+              status={isHost ? <>Waiting <Elapsed /> to start</> : "Waiting for the host to start"}
+              hint={
+                short > 0
+                  ? `${MIN_IMPOSTER_PLAYERS} players to start, ${short} more to go.`
+                  : players.length === MIN_IMPOSTER_PLAYERS
+                    ? "Three works. Four or more plays better."
+                    : undefined
+              }
+            >
+              {actions}
+
+              <LeaveButton onLeave={onLeave} host={isHost} />
+
+              {isHost && (
+                <GameButton
+                  variant="primary"
+                  icon={<FiPlay />}
+                  disabled={short > 0}
+                  {...(starting ? { loading: true } : {})}
+                  onClick={onStart}
+                >
+                  Start the round
+                </GameButton>
+              )}
+            </GameActions>
+          ) : undefined
+        }
       />
 
-      {inGame ? (
-        <GameActions
-          hint={
-            short > 0
-              ? `${MIN_IMPOSTER_PLAYERS} players to start, ${short} more to go.`
-              : players.length === MIN_IMPOSTER_PLAYERS
-                ? "Three works. Four or more plays better."
-                : undefined
-          }
-        >
-          {actions}
-
-          {isHost ? (
-            <GameButton
-              variant="primary"
-              icon={<FiPlay />}
-              disabled={short > 0}
-              {...(starting ? { loading: true } : {})}
-              onClick={onStart}
-            >
-              Start the round
-            </GameButton>
-          ) : (
-            <span className="gk-actions-note">Waiting for the host to start…</span>
-          )}
-
-          <GameButton variant="ghost" icon={<FiLogOut />} onClick={onLeave}>Leave</GameButton>
-        </GameActions>
-      ) : (
+      {!inGame && (
         <GamePanel>
           <GameEmpty
             icon={<FiLogIn />}
