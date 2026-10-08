@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { optimistic, useQuery, useZero } from "../lib/zero";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useMissingGameRedirect } from "./useMissingGameRedirect";
 import { useGameSounds, playSoundSubmit } from "./useGameSounds";
 
 /** Declared in both page files before this; they import them from here now. */
@@ -32,7 +33,7 @@ export function useLocationSignalGame(sessionId: string) {
   const params = useParams();
   const gameId = params.id ?? "";
 
-  const [games] = useQuery(queries.locationSignal.byId({ id: gameId }));
+  const [games, gamesResult] = useQuery(queries.locationSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "location_signal", gameId }));
   usePublishedAvatars(sessions);
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
@@ -189,12 +190,7 @@ export function useLocationSignalGame(sessionId: string) {
     return map;
   }, [game]);
 
-  // No such game: don't strand the player on an empty screen.
-  useEffect(() => {
-    if (game) return;
-    const timer = setTimeout(() => navigate("/"), 3000);
-    return () => clearTimeout(timer);
-  }, [game, navigate]);
+  useMissingGameRedirect(Boolean(game), gamesResult.type);
 
   const phase = (game?.phase ?? "lobby") as LocPhase;
   const cluePairs = (game?.settings as { cluePairs?: number } | undefined)?.cluePairs ?? 2;

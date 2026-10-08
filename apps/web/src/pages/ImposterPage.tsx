@@ -4,7 +4,6 @@ import "../styles/game-shared.css";
 import { useState } from "react";
 import { FiBookOpen } from "react-icons/fi";
 import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
-import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { IMPOSTER_PHASES, ImposterLobby } from "../components/imposter/ImposterLobby";
 import { ImposterCluePhase } from "../components/imposter/ImposterClues";
 import { ImposterVotePhase } from "../components/imposter/ImposterVote";
@@ -19,6 +18,7 @@ import { MobileImposterPage } from "../mobile/pages/MobileImposterPage";
 import { ImposterDemo } from "../components/demos/ImposterDemo";
 import { useImposterGame } from "../hooks/useImposterGame";
 import { imposterCategoryLabels } from "@games/shared";
+import { PageLoading } from "../components/shared/PageLoading";
 
 /**
  * Imposter, assembled out of the game kit. Every phase is its own component
@@ -39,15 +39,7 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
   } = useImposterGame(sessionId);
   const [showDemo, setShowDemo] = useState(false);
 
-  if (!game) {
-    return (
-      <div className="game-page">
-        <GamePanel>
-          <GameEmpty title="No game here" hint="Taking you home…" />
-        </GamePanel>
-      </div>
-    );
-  }
+  if (!game) return <PageLoading />;
 
   /* Everyone still standing. Eliminated players watch from here on, so almost
      every phase counts and lists this rather than the full roster. */

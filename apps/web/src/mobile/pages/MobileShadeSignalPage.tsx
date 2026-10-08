@@ -19,7 +19,7 @@ import { showToast } from "../../lib/toast";
 
 import { useShadeSignalGame } from "../../hooks/useShadeSignalGame";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
-import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { PageLoading } from "../../components/shared/PageLoading";
 import { roomStats } from "../../lib/host-room";
 
 /** Shade Signal on a phone: the desktop phase components, one column. */
@@ -57,7 +57,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
       : null
   );
 
-  if (!game) return <MobileGameNotFound theme="shade" />;
+  if (!game) return <PageLoading />;
 
   const grid = { rows: game.grid_rows, cols: game.grid_cols, seed: game.grid_seed };
   const leader = { sessionId: game.leader_id ?? "", name: leaderName };

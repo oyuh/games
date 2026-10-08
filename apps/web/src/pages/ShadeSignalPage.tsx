@@ -20,6 +20,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 
 import { MobileShadeSignalPage } from "../mobile/pages/MobileShadeSignalPage";
 import { useShadeSignalGame } from "../hooks/useShadeSignalGame";
+import { PageLoading } from "../components/shared/PageLoading";
 
 /**
  * Shade Signal, assembled out of the game kit. Every phase is a component with
@@ -50,15 +51,7 @@ function ShadeSignalPageDesktop({ sessionId }: { sessionId: string }) {
     submitClue, submitGuess, handleJoinClick,
   } = useShadeSignalGame(sessionId);
 
-  if (!game) {
-    return (
-      <div className="game-page">
-        <GamePanel>
-          <GameEmpty title="No game here" hint="Taking you home…" />
-        </GamePanel>
-      </div>
-    );
-  }
+  if (!game) return <PageLoading />;
 
   const grid = { rows: game.grid_rows, cols: game.grid_cols, seed: game.grid_seed };
   const leader = { sessionId: game.leader_id ?? "", name: leaderName };

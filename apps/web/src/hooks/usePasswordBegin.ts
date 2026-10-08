@@ -6,6 +6,7 @@ import { optimistic, useQuery, useZero } from "../lib/zero";
 import { buildPasswordPlayerNames } from "../lib/password-names";
 import { addRecentGame, ensureName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useMissingGameRedirect } from "./useMissingGameRedirect";
 
 /**
  * Shared lobby logic for the password begin screen: queries, the
@@ -19,7 +20,7 @@ export function usePasswordBegin(sessionId: string) {
   const params = useParams();
   const gameId = params.id ?? "";
 
-  const [games] = useQuery(queries.password.byId({ id: gameId }));
+  const [games, gamesResult] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   usePublishedAvatars(sessions);
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
@@ -71,12 +72,7 @@ export function usePasswordBegin(sessionId: string) {
     }
   }, [game?.announcement, isHost]);
 
-  // No such game: don't strand the player on an empty screen.
-  useEffect(() => {
-    if (game) return;
-    const timer = setTimeout(() => navigate("/"), 3000);
-    return () => clearTimeout(timer);
-  }, [game, navigate]);
+  useMissingGameRedirect(Boolean(game), gamesResult.type);
 
   const mySession = mySessionRows[0] ?? null;
   const activeGameType = (mySession?.game_type ?? null) as SessionGameType | null;

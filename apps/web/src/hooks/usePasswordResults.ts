@@ -6,6 +6,7 @@ import { buildPasswordPlayerNames } from "../lib/password-names";
 import { useGameSecret } from "../lib/game-secrets";
 import { playGameOver } from "../lib/sounds";
 import { showToast } from "../lib/toast";
+import { useMissingGameRedirect } from "./useMissingGameRedirect";
 
 /** Team swatches, shared so both views colour the same team the same way. The
  *  list itself lives with the lobby now, where the rest of password's kit is. */
@@ -27,7 +28,7 @@ export function usePasswordResults(sessionId: string) {
   const navigate = useNavigate();
   const gameId = params.id ?? "";
 
-  const [games] = useQuery(queries.password.byId({ id: gameId }));
+  const [games, gamesResult] = useQuery(queries.password.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "password", gameId }));
   const game = games[0];
 
@@ -70,12 +71,7 @@ export function usePasswordResults(sessionId: string) {
     }
   }, [game?.announcement, game?.host_id, sessionId]);
 
-  // No such game: don't strand the player on an empty screen.
-  useEffect(() => {
-    if (game) return;
-    const timer = setTimeout(() => navigate("/"), 3000);
-    return () => clearTimeout(timer);
-  }, [game, navigate]);
+  useMissingGameRedirect(Boolean(game), gamesResult.type);
 
   useEffect(() => {
     if (!game || playedResultsSoundRef.current || game.phase !== "results") return;

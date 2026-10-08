@@ -16,7 +16,7 @@ import { showToast } from "../../lib/toast";
 
 import { useLocationSignalGame } from "../../hooks/useLocationSignalGame";
 import { useMobileHostRegister } from "../../lib/mobile-host-context";
-import { MobileGameNotFound } from "../components/MobileGameNotFound";
+import { PageLoading } from "../../components/shared/PageLoading";
 import { roomStats } from "../../lib/host-room";
 
 /** Location Signal on a phone: the desktop phase components, one column. */
@@ -57,7 +57,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
       : null
   );
 
-  if (!game) return <MobileGameNotFound theme="location" />;
+  if (!game) return <PageLoading />;
 
   /* The place, once it is allowed out. The server keeps it encrypted until it
      scores the round, so an empty one means the scores are still being worked

@@ -7,6 +7,7 @@ import { generateGridColor } from "../components/shade/ColorGrid";
 import { useGameSecret } from "../lib/game-secrets";
 import { addRecentGame, ensureName, getDisplayName, leaveCurrentGame, SessionGameType } from "../lib/session";
 import { showToast } from "../lib/toast";
+import { useMissingGameRedirect } from "./useMissingGameRedirect";
 import { useGameSounds, playSoundSubmit } from "./useGameSounds";
 
 /** Declared in both page files before this; they import them from here now. */
@@ -32,7 +33,7 @@ export function useShadeSignalGame(sessionId: string) {
   const params = useParams();
   const gameId = params.id ?? "";
 
-  const [games] = useQuery(queries.shadeSignal.byId({ id: gameId }));
+  const [games, gamesResult] = useQuery(queries.shadeSignal.byId({ id: gameId }));
   const [sessions] = useQuery(queries.sessions.byGame({ gameType: "shade_signal", gameId }));
   usePublishedAvatars(sessions);
   const [mySessionRows] = useQuery(queries.sessions.byId({ id: sessionId }));
@@ -216,12 +217,7 @@ export function useShadeSignalGame(sessionId: string) {
     }, new Set());
   }, [game, phase]);
 
-  // No such game: don't strand the player on an empty screen.
-  useEffect(() => {
-    if (game) return;
-    const timer = setTimeout(() => navigate("/"), 3000);
-    return () => clearTimeout(timer);
-  }, [game, navigate]);
+  useMissingGameRedirect(Boolean(game), gamesResult.type);
 
   const latestRoundRaw = game?.round_history[game.round_history.length - 1];
 
