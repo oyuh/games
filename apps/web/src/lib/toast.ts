@@ -9,6 +9,8 @@ export interface Toast {
   admin?: boolean;
   /** The game whose page raised it, so it keeps that color after you leave. */
   game: Exclude<GameSlug, "home"> | undefined;
+  /** What it's about. Toasts from the same place with the same category stack. */
+  category: string;
   createdAt: number;
   /** How long it stays up, in ms, not counting time spent held open. */
   duration: number;
@@ -59,7 +61,15 @@ function remove(id: number) {
 
 export interface ToastOptions {
   admin?: boolean;
+  /** Groups related toasts into one stack, and labels it. Defaults to the level's. */
+  category?: string;
 }
+
+const LEVEL_CATEGORIES: Record<Toast["level"], string> = {
+  error: "Errors",
+  success: "Success",
+  info: "Info",
+};
 
 export function showToast(message: string, level: Toast["level"] = "error", options: ToastOptions = {}) {
   const id = ++nextId;
@@ -67,7 +77,8 @@ export function showToast(message: string, level: Toast["level"] = "error", opti
   // An admin's message comes from outside any game, so it keeps the site color.
   const slug = admin ? "home" : getGameSlugFromPath(window.location.pathname);
   const game = slug === "home" ? undefined : slug;
-  toasts = [...toasts, { id, message, level, admin, game, createdAt: Date.now(), duration: TOAST_DURATION }];
+  const category = options.category ?? LEVEL_CATEGORIES[level];
+  toasts = [...toasts, { id, message, level, admin, game, category, createdAt: Date.now(), duration: TOAST_DURATION }];
   emit();
   dismissTimers.set(id, {
     handle: setTimeout(() => remove(id), TOAST_DURATION),
@@ -76,7 +87,7 @@ export function showToast(message: string, level: Toast["level"] = "error", opti
   });
 }
 
-export function showDedupedToast(message: string, level: Toast["level"] = "error") {
+export function showDedupedToast(message: string, level: Toast["level"] = "error", options: ToastOptions = {}) {
   const key = `${level}:${message}`;
   const now = Date.now();
   const lastShownAt = dedupeRegistry.get(key) ?? 0;
@@ -84,7 +95,7 @@ export function showDedupedToast(message: string, level: Toast["level"] = "error
     return;
   }
   dedupeRegistry.set(key, now);
-  showToast(message, level);
+  showToast(message, level, options);
 }
 
 export function dismissToast(id: number) {

@@ -33,9 +33,9 @@ export function LobbyVisibilityToggle({
     setToggling(true);
     try {
       await optimistic(zero.mutate(mutatorMap[gameType]({ gameId, hostId: sessionId, isPublic: newValue })));
-      showToast(newValue ? "Game is now public" : "Game is now private", "info");
+      showToast(newValue ? "Game is now public" : "Game is now private", "info", { category: "Visibility" });
     } catch {
-      showToast("Couldn't change visibility", "error");
+      showToast("Couldn't change visibility", "error", { category: "Visibility" });
     } finally {
       setToggling(false);
     }

@@ -24,7 +24,7 @@ import {
   type ChallengeStatus,
   type TurnstileTestMode,
 } from "../../lib/challenge";
-import { showToast } from "../../lib/toast";
+import { showToast, type Toast, type ToastOptions } from "../../lib/toast";
 import "../../styles/dev-tools.css";
 
 type DevGameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
@@ -252,6 +252,7 @@ export function DevGamePanel() {
       </header>
 
       {open && <DevBotCheck btn={btn} busy={busy} run={run} sessionId={sessionId} />}
+      {open && <DevToasts btn={btn} />}
 
       {open && (inGame ? (
         <DevInGame
@@ -402,6 +403,38 @@ function DevInGame({
         >
           Clear bots
         </button>
+      </div>
+    </div>
+  );
+}
+
+const TOAST_SAMPLES: [string, Toast["level"], ToastOptions][] = [
+  ["Game is now public", "info", { category: "Visibility" }],
+  ["Game is now private", "info", { category: "Visibility" }],
+  ["Couldn't change visibility", "error", { category: "Visibility" }],
+  ["Kicked Bot 2", "info", { category: "Players" }],
+  ["Couldn't kick player", "error", { category: "Players" }],
+  ["Settings saved", "success", {}],
+  ["Couldn't reach the server", "error", {}],
+  ["A new version is out. Refresh when you get a chance.", "info", {}],
+  ["Heads up, restarting in 5 minutes.", "info", { admin: true }],
+];
+
+/** Fires toasts a beat apart so the stacks can be watched filling up. */
+function DevToasts({ btn }: { btn: string }) {
+  const fire = (picks: (typeof TOAST_SAMPLES)[number][]) =>
+    picks.forEach(([message, level, options], i) => setTimeout(() => showToast(message, level, options), i * 120));
+
+  const visibility = () => fire(Array.from({ length: 6 }, (_, i) => TOAST_SAMPLES[i % 2]!));
+  const mixed = () =>
+    fire(Array.from({ length: 12 }, () => TOAST_SAMPLES[Math.floor(Math.random() * TOAST_SAMPLES.length)]!));
+
+  return (
+    <div className="devp-body devp-section">
+      <div className="devp-row">
+        <button type="button" className={`${btn} devp-grow`} onClick={visibility}>Toggle spam</button>
+        <button type="button" className={`${btn} devp-grow`} onClick={mixed}>Mixed spam</button>
+        <button type="button" className={`${btn} devp-grow`} onClick={() => fire(TOAST_SAMPLES)}>One each</button>
       </div>
     </div>
   );
