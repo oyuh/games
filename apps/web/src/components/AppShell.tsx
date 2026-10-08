@@ -11,6 +11,7 @@ import { ToastContainer } from "./shared/ToastContainer";
 import { TooltipLayer } from "./shared/Tooltip";
 import { CustomCursor } from "./shared/CustomCursor";
 import { DebugPanels } from "./shared/DebugPanels";
+import { PageLoading } from "./shared/PageLoading";
 import { ChatProvider, useChatContext } from "../lib/chat-context";
 import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useGameMeta } from "../hooks/useGameMeta";
@@ -41,7 +42,7 @@ function AppShellInner() {
 
   if (isMobile) {
     return (
-      <Suspense fallback={<div className="route-loading" />}>
+      <Suspense fallback={<PageLoading />}>
         <MobileLayout />
       </Suspense>
     );
