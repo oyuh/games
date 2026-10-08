@@ -577,13 +577,9 @@
   height: 2.75rem;
 }
 
-.m-sheet :is(.host-announce-send, .host-person-btn, .ui-clip-btn) {
+.m-sheet :is(.host-controls .ui-btn, .ui-clip-btn) {
   min-height: 2.75rem;
   min-width: 2.75rem;
-}
-
-.m-sheet .host-person {
-  min-height: 3rem;
 }
 
 /* Select lists mount inside the sheet (see Select.tsx), so their rows can
@@ -778,8 +774,9 @@
 }
 
 /* One roster card per line, full width, the way every other list on a phone
-   reads. The desktop grid's 13rem cards left a half-empty row here. */
-.m-game .pc-grid--fill > .pc {
+   reads. The desktop grid's 13rem cards left a half-empty row here, and in the
+   host sheet. */
+:is(.m-game, .m-sheet) .pc-grid--fill > .pc {
   flex: 1 1 100%;
 }
 

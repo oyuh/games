@@ -12,6 +12,7 @@ import { showToast } from "../../lib/toast";
 import { optimistic } from "../../lib/zero";
 import { MobileGameNotFound } from "../components/MobileGameNotFound";
 import "../../styles/game-shared.css";
+import { roomStats } from "../../lib/host-room";
 
 /** Password's lobby on a phone: the desktop lobby component, one column. */
 export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
@@ -45,7 +46,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
   useMobileHostRegister(
     isHost && game
       ? {
-          type: "password", gameId, hostId: game.host_id, isPublic: game.is_public,
+          type: "password", gameId, hostId: game.host_id, isPublic: game.is_public, ...roomStats(game),
           players: game.teams.flatMap((t) => t.members.map((id) => ({ id, name: getPasswordPlayerName(names, id) }))),
           spectators: game.spectators ?? [],
         }

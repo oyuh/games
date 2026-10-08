@@ -12,6 +12,7 @@ import { getDisplayName, getOrCreateSessionId } from "../lib/session";
 import { useChatContext } from "../lib/chat-context";
 import { showToast } from "../lib/toast";
 import { GameIcon } from "./shared/GameIcon";
+import { roomStats } from "../lib/host-room";
 
 const ImposterDemo = lazy(() => import("./demos/ImposterDemo").then(({ ImposterDemo }) => ({ default: ImposterDemo })));
 const PasswordDemo = lazy(() => import("./demos/PasswordDemo").then(({ PasswordDemo }) => ({ default: PasswordDemo })));
@@ -81,6 +82,7 @@ function useGameContext(): GameContext | null {
         gameId: game.id,
         hostId: game.host_id,
         isPublic: game.is_public,
+        ...roomStats(game),
         players: game.players,
         spectators: game.spectators ?? [],
       };
@@ -100,6 +102,7 @@ function useGameContext(): GameContext | null {
         gameId: game.id,
         hostId: game.host_id,
         isPublic: game.is_public,
+        ...roomStats(game),
         players: allPlayers,
         spectators: game.spectators ?? [],
       };
@@ -112,6 +115,7 @@ function useGameContext(): GameContext | null {
         gameId: game.id,
         hostId: game.host_id,
         isPublic: game.is_public,
+        ...roomStats(game),
         players: game.players,
         spectators: game.spectators ?? [],
       };
@@ -124,6 +128,7 @@ function useGameContext(): GameContext | null {
         gameId: game.id,
         hostId: game.host_id,
         isPublic: game.is_public,
+        ...roomStats(game),
         players: game.players,
         spectators: game.spectators ?? [],
       };
@@ -136,6 +141,7 @@ function useGameContext(): GameContext | null {
         gameId: game.id,
         hostId: game.host_id,
         isPublic: game.is_public,
+        ...roomStats(game),
         players: game.players,
         spectators: game.spectators ?? [],
       };

@@ -1,20 +1,52 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiUserMinus, FiPower, FiSend, FiEye, FiGlobe, FiLock, FiSliders } from "react-icons/fi";
+import { FiClock, FiEye, FiFlag, FiHash, FiSend, FiSliders, FiTrash2, FiUsers, FiUserX } from "react-icons/fi";
 import { mutators } from "@games/shared";
 import { optimistic, useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
 import { getDisplayName } from "../../lib/session";
-import { Segmented } from "./SoloGameMenu";
 import { Button } from "./Button";
-import { ModalSection, ModalShell } from "./ModalShell";
+import { Elapsed, GameFacts, GameToggle, useArmed } from "./GameKit";
+import { GameRoster } from "./GameRoster";
+import type { PlayerCardProps } from "./PlayerCard";
+import { ModalShell } from "./ModalShell";
 
-export type GameContext =
-  | { type: "imposter"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "password"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ id: string; name: string }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "shade_signal"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "chain_reaction"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> }
-  | { type: "location_signal"; gameId: string; hostId: string; isPublic: boolean; players: Array<{ sessionId: string; name: string | null }>; spectators?: Array<{ sessionId: string; name: string | null }> };
+type Person = { sessionId: string; name: string | null; connected?: boolean };
+
+/** What the host controls need from whichever game row they were opened on.
+ *  The room numbers come from roomStats in lib/host-room. */
+export type GameContext = {
+  gameId: string;
+  hostId: string;
+  isPublic: boolean;
+  code: string;
+  phase: string;
+  createdAt: number;
+  /** How many have been thrown out. */
+  kicked: number;
+  spectators?: Array<{ sessionId: string; name: string | null }>;
+} & (
+  | { type: "password"; players: Array<{ id: string; name: string }> }
+  | { type: "imposter" | "shade_signal" | "chain_reaction" | "location_signal"; players: Person[] }
+);
+
+/** "clue1" reads as "Clue 1", "submitting" as "Submitting". */
+function phaseLabel(phase: string) {
+  const spaced = phase.replace(/_/g, " ").replace(/(\D)(\d)/, "$1 $2");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/** The modal's section heads are the lobby's ("SETUP", "PLAYERS"), so the two
+ *  read as the same app. */
+function HostSection({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <section className="host-section-block">
+      <span className="gk-roster-label">{label}</span>
+      {children}
+      {hint && <p className="host-hint">{hint}</p>}
+    </section>
+  );
+}
 
 type HostControlsProps = {
   game: GameContext;
@@ -35,20 +67,28 @@ export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
   const zero = useZero();
   const navigate = useNavigate();
   const [announcement, setAnnouncement] = useState("");
-  const [confirmEnd, setConfirmEnd] = useState(false);
+  const endArm = useArmed();
   const [togglingVisibility, setTogglingVisibility] = useState(false);
 
-  const kickablePlayersList =
+  const people: Person[] =
     game.type === "password"
-      ? game.players.filter((p) => p.id !== sessionId)
-      : game.players.reduce<Array<{ id: string; name: string }>>((players, player) => {
-          if (player.sessionId !== sessionId) {
-            players.push({ id: player.sessionId, name: getDisplayName(player.name, player.sessionId) });
-          }
-          return players;
-        }, []);
+      ? game.players.map((p) => ({ sessionId: p.id, name: p.name }))
+      : game.players.map((p) => ({ sessionId: p.sessionId, name: getDisplayName(p.name, p.sessionId), ...(p.connected === undefined ? {} : { connected: p.connected }) }));
+  const spectators = (game.spectators ?? []).map((s) => ({ sessionId: s.sessionId, name: getDisplayName(s.name, s.sessionId) }));
+  // Password rows carry no presence, so there it is a head count.
+  const hasPresence = people.some((p) => p.connected !== undefined);
+  const online = people.filter((p) => p.connected !== false).length;
+  const nameOf = (id: string) => [...people, ...spectators].find((p) => p.sessionId === id)?.name ?? "them";
 
-  const spectatorsList = (game.spectators ?? []).map((s) => ({ id: s.sessionId, name: getDisplayName(s.name, s.sessionId) }));
+  const toCards = (list: Person[]): PlayerCardProps[] =>
+    list.map((p, index) => ({
+      sessionId: p.sessionId,
+      name: p.name ?? getDisplayName(null, p.sessionId),
+      index,
+      ...(p.sessionId === sessionId ? { you: true } : {}),
+      ...(p.sessionId === game.hostId ? { host: true } : {}),
+      ...(p.connected === false ? { disconnected: true, caption: "Dropped out" } : {}),
+    }));
 
   const handleKick = (targetId: string, targetName: string) => {
     if (game.type === "imposter") {
@@ -147,8 +187,23 @@ export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
   };
 
   return (
-    <>
-      <ModalSection label="Announcement" hint="Sends a toast to everyone in the game.">
+    <div className="host-controls">
+      <GameFacts
+        label="Room"
+        className="host-stats"
+        facts={[
+          { value: game.code, icon: <FiHash />, tone: "var(--modal-accent, var(--primary))", tooltip: "The join code" },
+          { value: phaseLabel(game.phase), icon: <FiFlag />, tooltip: "Where the game is at" },
+          { value: <Elapsed since={game.createdAt} />, label: "open", icon: <FiClock />, tooltip: "Since the room was made" },
+          hasPresence
+            ? { value: `${online}/${people.length}`, label: "online", icon: <FiUsers />, tooltip: "Players connected right now" }
+            : { value: people.length, label: people.length === 1 ? "player" : "players", icon: <FiUsers /> },
+          { value: spectators.length, label: "watching", icon: <FiEye />, tooltip: "Spectators" },
+          { value: game.kicked, label: "kicked", icon: <FiUserX />, tooltip: "Kicked players can't rejoin" },
+        ]}
+      />
+
+      <HostSection label="Announcement" hint="Pops up as a toast for everyone in the game.">
         <div className="host-announce">
           <input
             className="host-announce-input"
@@ -157,85 +212,60 @@ export function HostControls({ game, sessionId, onClose }: HostControlsProps) {
             maxLength={120}
             onChange={(e) => setAnnouncement(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleAnnounce(); }}
+            aria-label="Announcement"
           />
-          <button
-            className="host-announce-send"
-            onClick={handleAnnounce}
-            disabled={!announcement.trim()}
-            aria-label="Send announcement"
-          >
-            <FiSend size={15} />
-          </button>
+          <Button variant="primary" size="sm" icon={<FiSend />} onClick={handleAnnounce} disabled={!announcement.trim()}>
+            Send
+          </Button>
         </div>
-      </ModalSection>
+      </HostSection>
 
-      <ModalSection
-        label="Visibility"
-        hint={game.isPublic
-          ? "Anyone can find this game in Browse Games."
-          : "Players need the join code to get in."}
-      >
-        <Segmented
-          row={{
-            label: "Game visibility",
-            value: game.isPublic ? "public" : "private",
-            onChange: (value) => {
-              if ((value === "public") !== game.isPublic && !togglingVisibility) void handleToggleVisibility();
-            },
-            options: [
-              { value: "private", label: "Private", title: "Join code only", icon: <FiLock size={14} /> },
-              { value: "public", label: "Public", title: "Listed in Browse Games", icon: <FiGlobe size={14} /> },
-            ],
-          }}
+      <HostSection label="Access">
+        <div className="host-room">
+          <GameToggle
+            label="Visibility"
+            detail={game.isPublic ? "Public" : "Code only"}
+            checked={game.isPublic}
+            onChange={() => void handleToggleVisibility()}
+            disabled={togglingVisibility}
+          />
+          <p className="host-room-note">
+            {game.isPublic ? "Anyone can find it in Browse Games." : "Only people with the code can get in."}
+          </p>
+        </div>
+      </HostSection>
+
+      <section className="host-section-block">
+        <GameRoster
+          players={toCards(people)}
+          emptyLabel="Nobody has joined yet."
+          onKick={(id) => handleKick(id, nameOf(id))}
         />
-      </ModalSection>
+        <p className="host-hint">Press the X twice to kick. Kicked players can't rejoin this game.</p>
+      </section>
 
-      <ModalSection label="Players" hint="Kicked players can't rejoin this game.">
-        {kickablePlayersList.length > 0 ? (
-          <div className="host-people">
-            {kickablePlayersList.map((p) => (
-              <div key={p.id} className="host-person">
-                <span className="host-person-name">{p.name}</span>
-                <Button variant="danger-secondary" size="xs" className="host-person-btn" icon={<FiUserMinus />} onClick={() => handleKick(p.id, p.name)}>
-                  Kick
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="host-empty">No other players yet.</p>
-        )}
-      </ModalSection>
-
-      {spectatorsList.length > 0 && (
-        <ModalSection label="Spectators" hint="Watching without playing.">
-          <div className="host-people">
-            {spectatorsList.map((s) => (
-              <div key={s.id} className="host-person">
-                <span className="host-person-name">{s.name}</span>
-                <Button variant="danger-secondary" size="xs" className="host-person-btn" icon={<FiEye />} onClick={() => handleRemoveSpectator(s.id, s.name)}>
-                  Remove
-                </Button>
-              </div>
-            ))}
-          </div>
-        </ModalSection>
+      {spectators.length > 0 && (
+        <GameRoster
+          label="Spectators"
+          players={toCards(spectators)}
+          onKick={(id) => handleRemoveSpectator(id, nameOf(id))}
+        />
       )}
 
-      <ModalSection label="End game" tone="danger" hint="Ends it for everyone and sends all players home.">
-        {!confirmEnd ? (
-          <Button variant="danger-secondary" size="lg" full icon={<FiPower />} onClick={() => setConfirmEnd(true)}>
-            End Game
-          </Button>
-        ) : (
-          <div className="host-confirm">
-            <Button size="lg" onClick={() => setConfirmEnd(false)}>Cancel</Button>
-            <Button variant="danger" size="lg" icon={<FiPower />} onClick={handleEndGame}>
-              End it
-            </Button>
-          </div>
-        )}
-      </ModalSection>
-    </>
+      <div className="host-end">
+        <div className="host-end-text">
+          <span className="host-end-title">End game</span>
+          <span className="host-end-hint">Ends it for everyone and sends all players home.</span>
+        </div>
+        <Button
+          variant={endArm.armed ? "danger" : "danger-secondary"}
+          icon={<FiTrash2 />}
+          onClick={() => { if (endArm.press()) void handleEndGame(); }}
+          onBlur={endArm.disarm}
+        >
+          {endArm.armed ? "Press again" : "End game"}
+        </Button>
+      </div>
+    </div>
   );
 }
