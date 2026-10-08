@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
-import { FiEdit2 } from "react-icons/fi";
-import { Button } from "./Button";
+import { FiEdit2, FiLogOut, FiTrash2 } from "react-icons/fi";
+import { Button, Loader } from "./Button";
 import { Combobox, type ComboboxProps } from "./Combobox";
+import { Switch } from "./Switch";
+import { formatDuration } from "../../lib/setting-options";
 import { showDedupedToast } from "../../lib/toast";
 import "../../styles/game-kit.css";
 
@@ -198,7 +200,18 @@ export type GameFactEdit = Omit<
  * A fact with `edit` is a button instead, marked with a pencil, that opens a
  * picker for the setting. Only the host gets those, and only in the lobby.
  */
-export function GameFacts({ label, facts, className = "" }: { label?: ReactNode; facts: GameFact[]; className?: string }) {
+export function GameFacts({
+  label,
+  facts,
+  footer,
+  className = "",
+}: {
+  label?: ReactNode;
+  facts: GameFact[];
+  /** Docks under the strip as one block, for the lobby's action bar. */
+  footer?: ReactNode;
+  className?: string;
+}) {
   useFactChangeToasts(facts);
   return (
     <div className={`gk-facts-block ${className}`.trim()}>
@@ -236,6 +249,8 @@ export function GameFacts({ label, facts, className = "" }: { label?: ReactNode;
           );
         })}
       </div>
+
+      {footer}
     </div>
   );
 }
@@ -243,15 +258,115 @@ export function GameFacts({ label, facts, className = "" }: { label?: ReactNode;
 /* ── Actions ────────────────────────────────────────────────── */
 
 /**
- * The row a phase ends on. The hint goes above rather than beside, because the
- * reason a button is disabled should not be competing with the button.
+ * The bar a phase ends on. The left says what is going on, the controls hold
+ * the right, and the button you are meant to press goes last so it always
+ * lands in the same corner. On a phone the left takes its own line above.
  */
-export function GameActions({ hint, children, className = "" }: { hint?: ReactNode; children: ReactNode; className?: string }) {
+export function GameActions({
+  status,
+  hint,
+  children,
+  className = "",
+}: {
+  /** Something you are waiting on, like the host. Gets the level meter. */
+  status?: ReactNode;
+  hint?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={`gk-actions ${className}`.trim()}>
-      {hint && <p className="gk-actions-hint">{hint}</p>}
+      {(status || hint) && (
+        <div className="gk-actions-info">
+          {status && (
+            <p className="gk-actions-status">
+              <Loader />
+              <span>{status}</span>
+            </p>
+          )}
+          {hint && <p className="gk-actions-hint">{hint}</p>}
+        </div>
+      )}
       <div className="gk-actions-row">{children}</div>
     </div>
+  );
+}
+
+/**
+ * Leaving a lobby gives your seat away, and it sits right beside Start, so it
+ * takes two presses like the kick does. The host leaving ends the game for
+ * everyone (every game's leave mutator does that), so for them it says so.
+ */
+export function LeaveButton({ onLeave, host = false }: { onLeave: () => void; host?: boolean }) {
+  const { armed, press, disarm } = useArmed();
+  const label = host ? "End game" : "Leave";
+
+  return (
+    <GameButton
+      variant={armed ? "danger" : "secondary"}
+      icon={host ? <FiTrash2 /> : <FiLogOut />}
+      onClick={() => { if (press()) onLeave(); }}
+      onBlur={disarm}
+      {...(armed
+        ? { "data-tooltip": host ? "Press again to end it for everyone" : "Press again to leave", "data-tooltip-variant": "danger" }
+        : {})}
+    >
+      {armed ? `${label}?` : label}
+    </GameButton>
+  );
+}
+
+/** How long it has been on screen, ticking, or since `since` when given (a
+ *  room's created_at, say). Client side only, so without `since` a reload
+ *  starts it over. Its own component so only it renders every second. */
+export function Elapsed({ since }: { since?: number }) {
+  const [start] = useState(() => since ?? Date.now());
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const seconds = Math.max(0, Math.floor((now - start) / 1000));
+  const text = seconds >= 3600 ? `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m` : formatDuration(seconds);
+  return <span className="gk-elapsed">{text}</span>;
+}
+
+/**
+ * An on or off setting that lives in the action bar, like a lobby being public.
+ * A switch rather than a button, so the state is on show instead of being
+ * worked out from what the button offers to do. The switch stands on end so
+ * the name and its state can sit beside it at a readable size, and the whole
+ * label presses it.
+ */
+export function GameToggle({
+  label,
+  detail,
+  checked,
+  onChange,
+  disabled,
+  tooltip,
+}: {
+  label: string;
+  /** The state in words, under the name: "Public", "Locked". */
+  detail?: ReactNode;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean | undefined;
+  tooltip?: string;
+}) {
+  return (
+    <label
+      className="gk-toggle"
+      {...(tooltip ? { "data-tooltip": tooltip, "data-tooltip-variant": "info" } : {})}
+    >
+      <Switch label={label} checked={checked} onChange={onChange} disabled={disabled} orientation="vertical" />
+      <span className="gk-toggle-text">
+        <span className="gk-toggle-label">{label}</span>
+        {detail && <span className="gk-toggle-detail">{detail}</span>}
+      </span>
+    </label>
   );
 }
 

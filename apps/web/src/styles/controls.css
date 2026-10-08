@@ -85,6 +85,26 @@
   background: var(--sw-thumb-on);
 }
 
+/* Stood on end. Same parts, the thumb rides up instead of across, so on is up
+   like a wall switch. */
+.ui-switch[data-orientation="vertical"] {
+  width: var(--sw-h);
+  height: var(--sw-w);
+}
+
+.ui-switch[data-orientation="vertical"] .ui-switch-thumb {
+  top: auto;
+  right: 0;
+  width: auto;
+  height: var(--sw-h);
+  transition: bottom 0.15s ease-out, background 0.15s ease-out;
+}
+
+.ui-switch[data-orientation="vertical"][aria-checked="true"] .ui-switch-thumb {
+  left: 0;
+  bottom: calc(var(--sw-w) - var(--sw-h));
+}
+
 /* Kumo's squircle corners where the browser can draw them. The radius
    doubles because a squircle at the same radius reads much tighter. */
 @supports (corner-shape: squircle) {

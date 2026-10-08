@@ -513,10 +513,57 @@
 }
 
 /* ── Actions ────────────────────────────────────────────────── */
+/* A docked bar rather than loose buttons under the page, so the controls read
+   as the end of the phase instead of something left lying about. */
 .gk-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.55rem 0.55rem 0.55rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-bottom);
+}
+
+/* Docked under the setup strip, the two are one block: the strip loses its
+   bottom corners, the bar its top ones, and they share the strip's hairline. */
+.gk-facts:has(+ .gk-actions) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.gk-facts + .gk-actions {
+  margin-top: calc(-0.45rem - 1px);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.gk-actions-info {
+  flex: 1 1 14rem;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.15rem;
+}
+
+.gk-actions-status {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.gk-actions-status .ui-loader {
+  color: var(--game-accent, var(--primary));
+}
+
+/* Fixed width digits, so the line does not shuffle every second. */
+.gk-elapsed {
+  font-variant-numeric: tabular-nums;
 }
 
 .gk-actions-hint {
@@ -529,21 +576,80 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
+  margin-left: auto;
 }
 
-/* For the text that stands in for a button you do not get, like the wait for
-   the host to start. Reads as a line, not a dead control. */
+/* For the text that stands in for a button you do not get. Reads as a line,
+   not a dead control. */
 .gk-actions-note {
+  padding-inline: 0.4rem;
   font-size: 0.74rem;
   font-weight: 600;
   color: var(--secondary);
 }
 
-/* One button per line beats four half ones. */
+/* A setting in the bar. A hairline after it keeps it apart from the buttons,
+   which act, where this only changes something. */
+.gk-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.75rem;
+  padding: 0 1rem 0 0.35rem;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+}
+
+.gk-toggle:has(:disabled) {
+  cursor: not-allowed;
+}
+
+.gk-toggle-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.gk-toggle-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--foreground);
+  text-underline-offset: 3px;
+}
+
+.gk-toggle:hover .gk-toggle-label {
+  text-decoration: underline;
+}
+
+.gk-toggle-detail {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--secondary);
+}
+
+/* On a phone the left gets its own line, settings stretch into rows, and the
+   buttons share what is left. */
 @media (max-width: 30rem) {
-  .gk-actions-row > :is(.gk-btn, .ui-btn) {
+  .gk-actions {
+    padding: 0.6rem;
+  }
+
+  .gk-actions-row {
     flex: 1 1 100%;
+  }
+
+  .gk-actions-row > .gk-toggle {
+    flex: 1 1 100%;
+    padding-bottom: 0.5rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .gk-actions-row > :is(.gk-btn, .ui-btn) {
+    flex: 1 1 auto;
   }
 }
 
@@ -607,6 +713,15 @@
 
 .game-page .gk-actions-note {
   font-size: 0.9rem;
+}
+
+.game-page .gk-actions-status,
+.game-page .gk-toggle-label {
+  font-size: 1rem;
+}
+
+.game-page .gk-toggle-detail {
+  font-size: 0.82rem;
 }
 
 .game-page .gk-panel-title {

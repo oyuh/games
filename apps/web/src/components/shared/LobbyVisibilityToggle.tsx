@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { FiGlobe, FiLock } from "react-icons/fi";
 import { mutators } from "@games/shared";
 import { optimistic, useZero } from "../../lib/zero";
 import { showToast } from "../../lib/toast";
-import { GameButton } from "./GameKit";
+import { GameToggle } from "./GameKit";
 
 type GameType = "imposter" | "password" | "chain_reaction" | "shade_signal" | "location_signal";
 
@@ -42,21 +41,14 @@ export function LobbyVisibilityToggle({
     }
   };
 
-  /* It is a switch, not a label, so it says what pressing it does rather than
-     naming the state it is already in and hoping you work the rest out. The
-     state is on the icon and in the tooltip. */
   return (
-    <GameButton
-      variant="secondary"
-      icon={isPublic ? <FiGlobe /> : <FiLock />}
-      onClick={() => void handleToggle()}
-      {...(toggling ? { loading: true } : {})}
-      data-tooltip={isPublic
-        ? "Listed in Browse Games. Press to make it code only."
-        : "Join code only. Press to list it in Browse Games."}
-      data-tooltip-variant="info"
-    >
-      {isPublic ? "Make it private" : "Make it public"}
-    </GameButton>
+    <GameToggle
+      label="Visibility"
+      detail={isPublic ? "Public" : "Code only"}
+      checked={isPublic}
+      onChange={() => void handleToggle()}
+      disabled={toggling}
+      tooltip={isPublic ? "Listed in Browse Games for anyone to join." : "Join code only. Turn on to list it in Browse Games."}
+    />
   );
 }

@@ -1,8 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { FiGlobe, FiLock, FiMapPin, FiPlay } from "react-icons/fi";
+import { FiMapPin, FiPlay } from "react-icons/fi";
 import { LocationClueTag, LocationGameOver, LocationGuess, LocationPickClue, LocationResult, type Coords } from "../components/location/LocationRound";
 import { GameShellHeader } from "../components/shared/GameShellHeader";
-import { GameButton } from "../components/shared/GameKit";
+import { GameToggle } from "../components/shared/GameKit";
 import {
   LocationBands,
   LocationExplorer,
@@ -148,16 +148,14 @@ function Live() {
         onKick={(id) => setCount(() => CAST.filter((p) => p.sessionId !== id).length)}
         actions={
           isHost ? (
-            /* Stands in for LobbyVisibilityToggle, which needs zero. Same words
-               as the real one: it is a switch, so it says what pressing it does
-               rather than naming the state you are already in. */
-            <GameButton
-              variant="secondary"
-              icon={isPublic ? <FiGlobe /> : <FiLock />}
-              onClick={() => setIsPublic((v) => !v)}
-            >
-              {isPublic ? "Make it private" : "Make it public"}
-            </GameButton>
+            /* Stands in for LobbyVisibilityToggle, which needs zero. */
+            <GameToggle
+              label="Visibility"
+              detail={isPublic ? "Public" : "Code only"}
+              checked={isPublic}
+              onChange={setIsPublic}
+              tooltip={isPublic ? "Listed in Browse Games for anyone to join." : "Join code only. Turn on to list it in Browse Games."}
+            />
           ) : undefined
         }
       />

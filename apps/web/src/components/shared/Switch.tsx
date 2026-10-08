@@ -17,6 +17,7 @@ export function Switch({
   label,
   disabled,
   size = "md",
+  orientation = "horizontal",
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
@@ -24,6 +25,8 @@ export function Switch({
   label: string;
   disabled?: boolean | undefined;
   size?: "sm" | "md";
+  /** Vertical stands it on end, on is up, for a switch beside two lines of text. */
+  orientation?: "horizontal" | "vertical";
 }) {
   return (
     <button
@@ -34,6 +37,7 @@ export function Switch({
       disabled={disabled}
       className="ui-switch"
       data-size={size}
+      data-orientation={orientation}
       onClick={() => onChange(!checked)}
     >
       <span className="ui-switch-thumb" />

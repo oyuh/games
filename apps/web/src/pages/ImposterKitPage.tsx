@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { FiBookOpen, FiClock, FiEye, FiFlag, FiGlobe, FiLock, FiPlay, FiRefreshCw, FiZap } from "react-icons/fi";
+import { FiBookOpen, FiClock, FiEye, FiFlag, FiPlay, FiRefreshCw, FiZap } from "react-icons/fi";
 import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
-import { GameActions, GameButton, GameFacts } from "../components/shared/GameKit";
+import { GameActions, GameButton, GameFacts, GameToggle, LeaveButton, Elapsed } from "../components/shared/GameKit";
 import { IMPOSTER_PHASES, ImposterLobby, MIN_IMPOSTER_PLAYERS, type ImposterPlayer } from "../components/imposter/ImposterLobby";
 import { ImposterCluePhase, ImposterClueWall, ImposterComposer, ImposterWordCard } from "../components/imposter/ImposterClues";
 import { ImposterVotePhase } from "../components/imposter/ImposterVote";
@@ -115,16 +115,14 @@ function Live() {
         starting={starting}
         actions={
           isHost ? (
-            /* Stands in for LobbyVisibilityToggle, which needs zero. Same
-               words as the real one: it is a switch, so it says what pressing
-               it does rather than naming the state you are already in. */
-            <GameButton
-              variant="secondary"
-              icon={isPublic ? <FiGlobe /> : <FiLock />}
-              onClick={() => setIsPublic((v) => !v)}
-            >
-              {isPublic ? "Make it private" : "Make it public"}
-            </GameButton>
+            /* Stands in for LobbyVisibilityToggle, which needs zero. */
+            <GameToggle
+              label="Visibility"
+              detail={isPublic ? "Public" : "Code only"}
+              checked={isPublic}
+              onChange={setIsPublic}
+              tooltip={isPublic ? "Listed in Browse Games for anyone to join." : "Join code only. Turn on to list it in Browse Games."}
+            />
           ) : undefined
         }
       />
@@ -678,16 +676,15 @@ export function ImposterKitPage() {
         />
       </Section>
 
-      <Section title="Actions" note="the row a phase ends on. the hint sits above so it is not arguing with the button">
-        <GameActions hint="3 players to start, 1 more to go.">
-          <GameButton variant="secondary" icon={<FiLock />}>Private</GameButton>
+      <Section title="Actions" note="the bar a phase ends on. hint on the left, the button you press last">
+        <GameActions status={<>Waiting <Elapsed /> to start</>} hint="3 players to start, 1 more to go.">
+          <GameToggle label="Visibility" detail="Code only" checked={false} onChange={() => {}} />
+          <LeaveButton onLeave={() => {}} host />
           <GameButton variant="primary" icon={<FiPlay />} disabled>Start the round</GameButton>
-          <GameButton variant="ghost">Leave</GameButton>
         </GameActions>
 
-        <GameActions>
-          <span className="gk-actions-note">Waiting for the host to start…</span>
-          <GameButton variant="ghost">Leave</GameButton>
+        <GameActions status="Waiting for the host to start">
+          <LeaveButton onLeave={() => {}} />
         </GameActions>
       </Section>
     </main>
