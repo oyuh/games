@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode, type Ref } from "react";
-import { FiCheck, FiClock, FiEye, FiHelpCircle, FiLock, FiSend, FiX } from "react-icons/fi";
+import { FiBookOpen, FiCheck, FiClock, FiEye,FiHelpCircle, FiLock, FiSend, FiX } from "react-icons/fi";
 import { chainCategoryLabels, scoreForLetters } from "@games/shared";
 import { GameActions, GameButton, GameEmpty, GamePanel, useArmed } from "../shared/GameKit";
 import { GameVersus } from "../shared/GameRoster";
@@ -374,15 +374,17 @@ export function ChainWrite({
   onSubmit,
 }: ChainWriteProps) {
   const bank = category ? chainCategoryLabels[category] ?? category : null;
-  const short = words.some((word) => !word.trim());
+  const filled = words.filter((word) => word.trim()).length;
+  const short = filled < words.length;
 
   const rows = (
     <ol className="cr-links cr-links--write">
       {words.map((word, index) => {
         const given = isGivenEnd(index, words.length);
+        const state = locked ? (given ? "given" : "open") : word.trim() ? "write cr-link--filled" : "write";
 
         return (
-          <li key={index} className={`cr-link cr-link--${locked ? (given ? "given" : "open") : "write"}`}>
+          <li key={index} className={`cr-link cr-link--${state}`}>
             <span className="cr-link-num">{index + 1}</span>
 
             <div className="cr-link-face">
@@ -398,7 +400,7 @@ export function ChainWrite({
                     autoComplete="off"
                     spellCheck={false}
                     aria-label={`Word ${index + 1}${given ? ", they see this one" : ""}`}
-                    placeholder={given ? "They see this one" : "Hidden word"}
+                    placeholder={index === 0 ? "Starting word" : given ? "Last word" : "Hidden word"}
                     onFocus={(event) => event.currentTarget.select()}
                     onChange={(event) => onChange?.(index, event.target.value)}
                   />
@@ -407,7 +409,7 @@ export function ChainWrite({
 
               {given && (
                 <span className="cr-link-tag" data-tooltip="Handed over at the start, so they have somewhere to begin" data-tooltip-variant="game">
-                  they see this
+                  given
                 </span>
               )}
             </div>
@@ -446,7 +448,8 @@ export function ChainWrite({
         <div className="gk-roster-head">
           <span className="gk-roster-label">Write their chain</span>
           <span className="gk-roster-gap" />
-          {bank && <span className="cr-count">{bank}</span>}
+          {bank && <span className="cr-count"><FiBookOpen aria-hidden="true" /> {bank}</span>}
+          <span className="cr-count">{filled} of {words.length}</span>
         </div>
 
         <p className="cr-note">
