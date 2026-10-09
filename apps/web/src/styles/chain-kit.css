@@ -325,6 +325,12 @@ button.cr-link-face:focus-visible {
 /* ── Writing your own ────────────────────────────────────────────
    The same links, because what you are building and what they will be working
    on are the same object. */
+/* The form only exists to submit. Its children sit in the page's own column,
+   so the action bar is spaced off the chain like it is once locked in. */
+.cr-write {
+  display: contents;
+}
+
 .cr-link--write .cr-link-face {
   border-style: dashed;
 }

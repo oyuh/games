@@ -441,7 +441,7 @@ export function ChainWrite({
   }
 
   return (
-    <form onSubmit={onSubmit}>
+    <form className="cr-write" onSubmit={onSubmit}>
       <div className="cr-board">
         <div className="gk-roster-head">
           <span className="gk-roster-label">Write their chain</span>
