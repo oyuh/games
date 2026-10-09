@@ -331,22 +331,53 @@ button.cr-link-face:focus-visible {
   display: contents;
 }
 
+/* A field, so it looks like one: solid like every other input on the site,
+   lit the way the link you are guessing is lit while you type in it. */
 .cr-link--write .cr-link-face {
-  border-style: dashed;
+  padding-block: 0;
+  cursor: text;
+}
+
+.cr-link--write:hover .cr-link-face {
+  border-color: color-mix(in srgb, var(--foreground) 22%, transparent);
+}
+
+.cr-link--write:focus-within .cr-link-num,
+.cr-link--write:focus-within .cr-link-face {
+  border-color: var(--cr-accent);
 }
 
 .cr-link--write:focus-within .cr-link-face {
-  border-style: solid;
-  border-color: color-mix(in srgb, var(--cr-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--cr-accent) 6%, var(--surface-bottom));
 }
 
+.cr-link--write:focus-within .cr-link-num {
+  color: var(--cr-accent);
+}
+
+/* Written. The number comes up to full strength so the gaps are the ones
+   still dim. Not the accent: that means a word you cracked. */
+.cr-link--filled .cr-link-num {
+  border-color: color-mix(in srgb, var(--foreground) 30%, transparent);
+  color: var(--foreground);
+}
+
+/* The whole row is the target, not just the line of text in it. */
 .cr-write-input {
+  align-self: stretch;
   width: 100%;
   min-width: 0;
+  padding: 0;
   border: none;
   outline: none;
   background: transparent;
   color: var(--foreground);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+/* Typed, it is the word as they will see it, so it takes the link's face. */
+.cr-write-input:not(:placeholder-shown) {
   font-family: "JetBrains Mono", monospace;
   font-size: 1.05rem;
   font-weight: 700;
@@ -355,11 +386,6 @@ button.cr-link-face:focus-visible {
 }
 
 .cr-write-input::placeholder {
-  font-family: inherit;
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  text-transform: none;
   color: var(--muted-foreground);
 }
 
@@ -559,6 +585,10 @@ button.cr-link-face:focus-visible {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--muted-foreground);
+}
+
+.cr-count + .cr-count {
+  margin-left: 0.6rem;
 }
 
 .cr-count svg {
