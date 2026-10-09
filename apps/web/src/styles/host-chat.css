@@ -384,10 +384,8 @@
   gap: 0.15rem;
   padding: 0.05rem 0.3rem;
   border-radius: 99px;
-  font-size: 0.55rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-size: 0.72rem;
+  font-weight: 500;
   background: color-mix(in srgb, var(--secondary) 12%, transparent);
   color: var(--muted-foreground);
 }

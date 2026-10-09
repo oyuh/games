@@ -191,10 +191,8 @@
 .m-label {
   margin: 0;
   color: var(--secondary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.87rem;
+  font-weight: 500;
 }
 
 /* A label with one control on the right, like Recent / Clear. */
@@ -746,10 +744,8 @@
   border-radius: 99px;
   background: color-mix(in srgb, var(--secondary) 12%, transparent);
   color: var(--muted-foreground);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
 .m-chat-badge--host {

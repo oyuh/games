@@ -50,10 +50,8 @@
   align-items: center;
   gap: 0.35rem;
   margin: 0;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 500;
   color: color-mix(in srgb, var(--imp-accent) 75%, var(--foreground));
 }
 
@@ -243,10 +241,8 @@
 }
 
 .imp-row-you {
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: var(--imp-accent);
 }
 
@@ -575,10 +571,8 @@ label.imp-ballot:hover {
 
 .imp-result-kicker {
   margin: 0;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 500;
   color: var(--muted-foreground);
   animation: imp-rise 0.3s 0.38s ease-out both;
 }
@@ -902,10 +896,8 @@ label.imp-ballot:hover {
 }
 
 .imp-round-n {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 500;
   color: var(--muted-foreground);
   white-space: nowrap;
 }
@@ -954,7 +946,7 @@ label.imp-ballot:hover {
 }
 
 .game-page .imp-word-role {
-  font-size: 0.74rem;
+  font-size: 0.86rem;
 }
 
 .game-page .imp-word-role-icon svg {
@@ -1015,7 +1007,7 @@ label.imp-ballot:hover {
 }
 
 .game-page .imp-row-you {
-  font-size: 0.68rem;
+  font-size: 0.8rem;
 }
 
 .game-page .imp-slot {
@@ -1087,7 +1079,7 @@ label.imp-ballot:hover {
 }
 
 .game-page .imp-result-kicker {
-  font-size: 0.74rem;
+  font-size: 0.86rem;
 }
 
 .game-page .imp-result-verdict {
@@ -1139,7 +1131,7 @@ label.imp-ballot:hover {
 }
 
 .game-page .imp-round-n {
-  font-size: 0.74rem;
+  font-size: 0.86rem;
 }
 
 .game-page .imp-round-word {

@@ -889,10 +889,10 @@ export function LocationGameOver({ players, rounds, isHost, onPlayAgain, onEnd, 
       <section className="lk-verdict">
         <p className="lk-verdict-kicker">
           {winners.length === 0
-            ? "nobody scored"
+            ? "Nobody scored"
             : winners.length > 1
-              ? "it ended level between"
-              : "the game goes to"}
+              ? "It ended level between"
+              : "The game goes to"}
         </p>
 
         {winners.length > 0 && (

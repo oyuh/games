@@ -118,10 +118,8 @@
 }
 
 .crg-live {
-  font-size: 0.55rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: var(--primary);
   opacity: 0.75;
   flex-shrink: 0;

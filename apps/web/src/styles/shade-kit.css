@@ -393,10 +393,8 @@
 
 .sk-clue-round {
   flex: 0 0 auto;
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: color-mix(in srgb, var(--sk-accent) 72%, var(--foreground));
 }
 
@@ -519,10 +517,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--secondary);
 }
 
@@ -603,10 +599,8 @@
 
 .sk-verdict-kicker {
   margin: 0;
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 0.76rem;
+  font-weight: 500;
   color: color-mix(in srgb, var(--sk-accent) 75%, var(--foreground));
 }
 

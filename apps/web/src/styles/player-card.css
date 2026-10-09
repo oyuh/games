@@ -246,10 +246,8 @@
 
 .pc-you {
   flex: 0 0 auto;
-  font-size: 0.58rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: var(--pc-accent);
 }
 

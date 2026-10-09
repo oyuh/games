@@ -92,10 +92,8 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--foreground) 4%, transparent);
   color: var(--muted-foreground);
-  font-size: 0.68rem;
-  font-weight: 850;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .pips-run-step--active {
@@ -670,10 +668,8 @@
 
 .pips-complete-title {
   color: var(--muted-foreground);
-  font-size: 0.75rem;
-  font-weight: 850;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.87rem;
+  font-weight: 500;
 }
 
 .pips-complete-banner strong {
@@ -836,10 +832,8 @@
 .pips-panel-note span,
 .pips-panel-empty span {
   color: var(--muted-foreground);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
 .pips-panel-stat strong,

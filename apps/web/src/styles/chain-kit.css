@@ -227,10 +227,8 @@ button.cr-link-face:focus-visible {
 /* ── Tags and worth ──────────────────────────────────────────── */
 .cr-link-tag {
   flex: 0 0 auto;
-  font-size: 0.56rem;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: var(--muted-foreground);
 }
 
@@ -422,10 +420,8 @@ button.cr-link-face:focus-visible {
 
 .cr-verdict-kicker {
   margin: 0;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 500;
   color: color-mix(in srgb, var(--cr-accent) 75%, var(--foreground));
 }
 

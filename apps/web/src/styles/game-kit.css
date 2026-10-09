@@ -168,10 +168,8 @@
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: var(--muted-foreground);
 }
 
@@ -261,10 +259,8 @@
 }
 
 .gk-roster-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 500;
   color: var(--muted-foreground);
 }
 
@@ -356,10 +352,8 @@
 
 .gk-versus-mark {
   align-self: center;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 500;
   color: var(--muted-foreground);
 }
 
@@ -690,7 +684,7 @@
 
 .game-page .gk-roster-label,
 .game-page .gk-roster-count {
-  font-size: 0.75rem;
+  font-size: 0.88rem;
 }
 
 .game-page .gk-roster-expand {
@@ -725,7 +719,7 @@
 }
 
 .game-page .gk-panel-title {
-  font-size: 0.82rem;
+  font-size: 0.92rem;
 }
 
 .game-page .gk-empty-title {
