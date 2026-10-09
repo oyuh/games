@@ -80,10 +80,10 @@ export function ShadeGameOver({
       <section className="sk-verdict">
         <p className="sk-verdict-kicker">
           {winners.length === 0
-            ? "nobody scored"
+            ? "Nobody scored"
             : winners.length > 1
-              ? "it ended level between"
-              : "the game goes to"}
+              ? "It ended level between"
+              : "The game goes to"}
         </p>
 
         {winners.length > 0 && (

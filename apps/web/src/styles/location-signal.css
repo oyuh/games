@@ -406,10 +406,8 @@ body.locsig-map-expanded .app-footer {
   animation: locsig-clue-pop 0.4s ease-out both;
 }
 .locsig-clue-tag {
-  font-size: 0.6rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: var(--locsig-accent);
   opacity: 0.7;
 }

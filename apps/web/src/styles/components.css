@@ -194,10 +194,8 @@
   color: var(--muted-foreground);
   padding: 0.5rem 0.75rem;
   text-align: left;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.75rem;
+  font-weight: 500;
+  font-size: 0.87rem;
 }
 .data-table td {
   padding: 0.5rem 0.75rem;

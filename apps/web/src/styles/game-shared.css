@@ -176,10 +176,8 @@
    number rather than as more number. */
 .game-stat-hint {
   color: var(--muted-foreground);
-  font-size: 0.68rem;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .game-stat--action {
@@ -222,7 +220,7 @@
   }
 
   .game-stat-hint {
-    font-size: 0.62rem;
+    font-size: 0.74rem;
   }
 }
 
@@ -470,10 +468,8 @@
 }
 
 .game-section-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--muted-foreground);
   display: flex;
   align-items: center;
@@ -574,11 +570,9 @@
 }
 
 .game-player-you {
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   color: var(--primary);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 500;
 }
 
 /* ── Game actions ──────────────────────────────────── */
@@ -710,10 +704,8 @@
 }
 
 .game-input-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--muted-foreground);
 }
 
@@ -1283,11 +1275,9 @@
 }
 
 .move-player-label {
-  font-size: 0.63rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 500;
   color: var(--secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .move-player-targets {
@@ -1307,7 +1297,7 @@
 
 .game-input-label {
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--secondary);
   flex-shrink: 0;
 }
@@ -2030,11 +2020,9 @@
 
 .solo-end-stat-label {
   color: var(--muted-foreground);
-  font-size: 0.68rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 500;
   line-height: 1;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .solo-end-stat-value {
@@ -2134,10 +2122,8 @@
   border-bottom: 1px solid var(--border);
   background: var(--background);
   color: var(--muted-foreground);
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 500;
 }
 
 .solo-end-cell {
@@ -2239,10 +2225,8 @@
   border-radius: var(--radius-sm);
   background: var(--primary);
   color: var(--primary-foreground);
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
 }
 
 /* Where the standings skip a stretch of runs. */
@@ -2314,11 +2298,9 @@
 .solo-end-status-title {
   margin: 0;
   color: var(--status-accent);
-  font-size: 0.68rem;
-  font-weight: 800;
+  font-size: 0.8rem;
+  font-weight: 500;
   line-height: 1;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .solo-end-status-message {
@@ -2645,7 +2627,7 @@
   }
 
   .solo-end-stat-label {
-    font-size: 0.62rem;
+    font-size: 0.74rem;
   }
 
   .solo-end-table-scroll {

@@ -85,7 +85,7 @@ export function PasswordGameOver({
           ))}
         </span>
 
-        <p className="pw-verdict-kicker">{tie ? "it ended level" : winners.length === 0 ? "nobody got going" : "the game goes to"}</p>
+        <p className="pw-verdict-kicker">{tie ? "It ended level" : winners.length === 0 ? "Nobody got going" : "The game goes to"}</p>
 
         <p className="pw-verdict-name">
           {winners.length === 0 ? "no one" : winners.map((team) => team.name).join(" and ")}

@@ -321,10 +321,8 @@
 }
 
 .fp-stat-label {
-  font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   line-height: 1;
   color: var(--muted-foreground);
 }

@@ -50,10 +50,8 @@
 .devp-title {
   flex: 1;
   min-width: 0;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: var(--muted-foreground);
 }
 

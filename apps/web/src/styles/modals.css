@@ -114,10 +114,8 @@
 
 .active-game-summary-label {
   color: var(--muted-foreground);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .active-game-code {
@@ -175,10 +173,8 @@
 .admin-score-kicker {
   margin: 0 0 0.18rem;
   color: var(--admin-score-accent);
-  font-size: 0.66rem;
-  font-weight: 850;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 500;
 }
 
 .admin-score-title {
@@ -207,10 +203,8 @@
   justify-content: space-between;
   gap: 0.75rem;
   color: var(--foreground);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.88rem;
+  font-weight: 500;
 }
 
 .admin-score-grid {
@@ -229,10 +223,8 @@
 
 .admin-score-field > span {
   color: var(--muted-foreground);
-  font-size: 0.64rem;
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.76rem;
+  font-weight: 500;
 }
 
 .admin-score-field input,
@@ -1167,10 +1159,8 @@
 }
 
 .locdemo-phase-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.84rem;
+  font-weight: 500;
   color: var(--primary);
   padding-left: 0.1rem;
 }
@@ -1312,9 +1302,7 @@
   padding: 0.55rem 1rem;
   background: var(--muted);
   font-size: clamp(0.72rem, 0.6rem + 0.22vw, 0.88rem);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-weight: 500;
   color: var(--secondary);
 }
 

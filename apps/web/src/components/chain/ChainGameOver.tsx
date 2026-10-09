@@ -94,7 +94,7 @@ export function ChainGameOver({
           your way: level, lost, and nothing at all are all quiet. */}
       <section className={`cr-verdict${nothing || level || !won ? " cr-verdict--quiet" : ""}`}>
         <p className="cr-verdict-kicker">
-          {nothing ? "nothing happened" : level ? "it ended level" : "the duel goes to"}
+          {nothing ? "Nothing happened" : level ? "It ended level" : "The duel goes to"}
         </p>
 
         <p className="cr-verdict-name">

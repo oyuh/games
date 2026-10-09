@@ -320,10 +320,8 @@
 }
 
 .lk-hud-pts small {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 500;
   opacity: 0.75;
 }
 
@@ -471,10 +469,8 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--lk-accent, var(--primary)) 22%, transparent);
   color: var(--foreground);
-  font-size: 0.6rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  font-weight: 500;
 }
 
 /* The cause, sat immediately before the effect. */
@@ -547,10 +543,8 @@
 
 .lk-verdict-kicker {
   margin: 0;
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 0.76rem;
+  font-weight: 500;
   color: color-mix(in srgb, var(--lk-accent) 75%, var(--foreground));
 }
 

@@ -85,7 +85,7 @@ export function ImposterGameOver({
         </span>
 
         <p className="imp-result-kicker">
-          {imposters.length > 1 ? "the imposters were" : "the imposter was"}
+          {imposters.length > 1 ? "The imposters were" : "The imposter was"}
         </p>
         <p className="imp-result-name">{imposters.map(nameOf).join(" and ") || "nobody"}</p>
 
