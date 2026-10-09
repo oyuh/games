@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { FiAward, FiBookOpen, FiLink, FiHelpCircle, FiXCircle, FiZap } from "react-icons/fi";
+import { FiAward, FiLink, FiHelpCircle, FiXCircle, FiZap } from "react-icons/fi";
 import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
-import { GameShellHeader, ShellPill } from "../shared/GameShellHeader";
+import { GameShellHeader } from "../shared/GameShellHeader";
 import { ChainLobby, chainPhases } from "../chain/ChainLobby";
 import { ChainBoard, ChainScoreboard, ChainWrite, type ChainLink } from "../chain/ChainRound";
 import { ChainGameOver, type ChainRoundHistory } from "../chain/ChainGameOver";
@@ -124,7 +124,7 @@ const header = (phase: string, round?: number) => (
     code="DEMO"
     isHost
     {...(round ? { round: { current: round, total: 3 } } : {})}
-    pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank the chains come from">Movies and shows</ShellPill>}
+    category="Movies and shows"
   />
 );
 

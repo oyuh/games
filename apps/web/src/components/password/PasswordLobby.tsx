@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { FiAward, FiBookOpen, FiCheck, FiClock, FiFlag, FiLogIn, FiMessageSquare, FiPlay, FiSkipForward, FiUserPlus, FiUsers } from "react-icons/fi";
+import { FiAward, FiBookOpen, FiCheck, FiClock, FiCrosshair, FiFlag, FiLogIn, FiMessageSquare, FiPlay, FiSkipForward, FiUserPlus, FiUsers } from "react-icons/fi";
 import { LOBBY_SETTING_LIMITS, passwordCategories, passwordCategoryLabels } from "@games/shared";
 import { Elapsed, GameActions, GameButton, LeaveButton, GameToggle, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
 import { categoryOptions, durationCustom, durationOptions, formatDuration, numberCustom, numberOptions } from "../../lib/setting-options";
 import { GameTeamRoster } from "../shared/GameRoster";
 import { playerBadges } from "../shared/PlayerCard";
 import type { TeamCardProps } from "../shared/TeamCard";
-import type { GamePhase } from "../shared/GameShellHeader";
+import type { GamePhase, GameMark } from "../shared/GameShellHeader";
 import { getPasswordPlayerName } from "../../lib/password-names";
 import "../../styles/password-kit.css";
 
@@ -39,6 +39,22 @@ export const PASSWORD_PHASES: GamePhase[] = [
 ];
 
 export type PasswordTeam = { name: string; members: string[] };
+
+/** What the header says you are mid round: your team, as its colour until the
+ *  panel is folded and there is room for its name, and which half of it you are. */
+export function passwordMarks(team: PasswordTeam, teamIndex: number, guessing: boolean): GameMark[] {
+  return [
+    {
+      icon: <FiUsers />,
+      dot: PASSWORD_TEAM_COLORS[teamIndex % PASSWORD_TEAM_COLORS.length]!,
+      label: team.name,
+      tooltip: `You're on ${team.name}`,
+    },
+    guessing
+      ? { icon: <FiCrosshair />, text: "Guessing", tooltip: "You're guessing. Your teammate gives the clues" }
+      : { icon: <FiMessageSquare />, text: "Cluing", tooltip: "You're giving the clues. Your teammate guesses" },
+  ];
+}
 
 export interface PasswordLobbySettings {
   targetScore: number;

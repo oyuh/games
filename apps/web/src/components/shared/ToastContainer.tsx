@@ -1,6 +1,6 @@
 import { GAME_META } from "@games/shared";
 import { useEffect, useRef, useState, type CSSProperties, type FocusEvent } from "react";
-import { FiX, FiAlertCircle, FiCheck, FiInfo, FiShield, FiGlobe } from "react-icons/fi";
+import { FiX, FiAlertCircle, FiCheck, FiCopy, FiInfo, FiShield, FiGlobe } from "react-icons/fi";
 import { useToasts, dismissToast, pauseToast, resumeToast, type Toast } from "../../lib/toast";
 import { GameIcon } from "./GameIcon";
 import "../../styles/toast.css";
@@ -22,6 +22,33 @@ function Origin({ toast }: { toast: Toast }) {
   if (toast.admin) return <><FiShield size={12} aria-hidden="true" />Admin</>;
   if (!toast.game) return <><FiGlobe size={12} aria-hidden="true" />Site</>;
   return <><GameIcon game={toast.game} size={12} />{GAME_META[toast.game].shortTitle}</>;
+}
+
+/** A code on its own line, big enough to read out, that copies on a click. */
+function CopyValue({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function copy() {
+    navigator.clipboard?.writeText(value).then(
+      () => setCopied(true),
+      () => setCopied(false),
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="toast-copy"
+      onClick={copy}
+      aria-label={copied ? `${value.split("").join(" ")}, copied` : `Copy ${value.split("").join(" ")}`}
+    >
+      <span className="toast-copy-value">{value}</span>
+      <span className="toast-copy-hint" aria-hidden="true">
+        {copied ? <FiCheck size={13} /> : <FiCopy size={13} />}
+        {copied ? "Copied" : "Click to copy"}
+      </span>
+    </button>
+  );
 }
 
 interface ToastItemProps {
@@ -52,6 +79,7 @@ function ToastItem({ toast, depth, more }: ToastItemProps) {
       <span className="toast-msg">
         {toast.admin && <span className="toast-sr-label">From an admin: </span>}
         {toast.message}
+        {toast.copy && <CopyValue value={toast.copy} />}
       </span>
       {more && (
         <button

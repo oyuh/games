@@ -14,6 +14,8 @@ export interface Toast {
   createdAt: number;
   /** How long it stays up, in ms, not counting time spent held open. */
   duration: number;
+  /** A value shown large under the message that copies on a click, like a room code. */
+  copy?: string;
   /** Held open while the pointer or keyboard focus is on it. */
   paused?: boolean;
   /** Set while the exit animation plays, right before the toast is dropped. */
@@ -63,6 +65,9 @@ export interface ToastOptions {
   admin?: boolean;
   /** Groups related toasts into one stack, and labels it. Defaults to the level's. */
   category?: string;
+  /** How long it stays up, in ms. Only for a toast you need to read off, like a room code. */
+  duration?: number;
+  copy?: string;
 }
 
 const LEVEL_CATEGORIES: Record<Toast["level"], string> = {
@@ -78,11 +83,12 @@ export function showToast(message: string, level: Toast["level"] = "error", opti
   const slug = admin ? "home" : getGameSlugFromPath(window.location.pathname);
   const game = slug === "home" ? undefined : slug;
   const category = options.category ?? LEVEL_CATEGORIES[level];
-  toasts = [...toasts, { id, message, level, admin, game, category, createdAt: Date.now(), duration: TOAST_DURATION }];
+  const duration = options.duration ?? TOAST_DURATION;
+  toasts = [...toasts, { id, message, level, admin, game, category, createdAt: Date.now(), duration, ...(options.copy ? { copy: options.copy } : {}) }];
   emit();
   dismissTimers.set(id, {
-    handle: setTimeout(() => remove(id), TOAST_DURATION),
-    remaining: TOAST_DURATION,
+    handle: setTimeout(() => remove(id), duration),
+    remaining: duration,
     startedAt: Date.now(),
   });
 }

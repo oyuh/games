@@ -3,14 +3,11 @@
    depth comes from borders and fills, never from a shadow or a glow, and
    colour means something rather than decorating.
 
-   Two rows, and only one of them is a box. The top row is who and what: the
-   game, its pills, your role, the code. Those are read once and left alone,
-   so they sit straight on the page. The bottom row is when: which phase and
-   how long is left, the pair you keep glancing back at, so that is the pair
-   that gets an edge drawn round it.
-
-   Boxing both would put a box inside the page's other boxes and say nothing
-   by it. One container earns its border by marking the part that moves. */
+   Two rows, and only one of them is a box. The top row is who and where: the
+   game and its word bank, the host and spectator marks, the buttons. Those
+   are read once and left alone, so they sit straight on the page. The panel
+   is when: the phase, the round, your role and the clock, which is what you
+   keep glancing back at, so that is what gets an edge. */
 
 .gsh {
   --gsh-accent: var(--primary);
@@ -18,7 +15,6 @@
 
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
   color: var(--foreground);
 }
 
@@ -28,14 +24,17 @@
 .gsh-top {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.6rem;
   min-width: 0;
+  margin-bottom: 0.65rem;
 }
 
+/* Takes the slack, so the marks and the buttons stay pinned right. */
 .gsh-game {
+  flex: 1;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   min-width: 0;
 }
 
@@ -44,74 +43,48 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
   color: var(--gsh-accent);
 }
 
 .gsh-title {
+  flex: 0 0 auto;
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-size: 1.4rem;
+  font-weight: 700;
   white-space: nowrap;
+}
+
+/* The word bank, said beside the game it belongs to: a hairline, the book,
+   the name in the quieter colour. Text on the page, not a chip. */
+.gsh-bank {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  margin-left: 0.25rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--gsh-line);
+  font-size: 1.05rem;
+  color: var(--secondary);
+  --tt-color: var(--gsh-accent);
+}
+
+.gsh-bank svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--gsh-accent);
+}
+
+.gsh-bank-name {
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-/* Takes the slack, so the role case and the code stay pinned right. */
-.gsh-pills {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-  min-width: 0;
-}
-
-.gsh-pill {
-  /* The game's own colour unless the pill names one. Grey was the safe pick
-     when pills were one row of many; on a folded header they are most of what
-     is left, and a row of grey chips under a coloured clock reads as disabled. */
-  --gsh-pill: var(--gsh-accent);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.1rem 0.45rem;
-  border-radius: 999px;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  line-height: 1.6;
-  white-space: nowrap;
-  background: color-mix(in srgb, var(--gsh-pill) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--gsh-pill) 30%, transparent);
-  color: var(--gsh-pill);
-  /* Tooltips anchored on a pill take the pill's colour. */
-  --tt-color: var(--gsh-pill);
-}
-
-/* The palette is picked for a dark page; on light an outline pill in grey or
-   amber all but vanishes, so pull the text toward black. */
-[data-theme="light"] .gsh-pill {
-  background: color-mix(in srgb, var(--gsh-pill) 20%, transparent);
-  color: color-mix(in srgb, var(--gsh-pill) 65%, #000);
-}
-
-.gsh-pill-icon {
-  display: inline-flex;
-  line-height: 0;
-}
-
-.gsh-pill-icon svg {
-  width: 10px;
-  height: 10px;
-  stroke-width: 2.6;
-}
-
 /* ── Role case ──────────────────────────────────────────────────
-   Both roles in one bordered case rather than loose beside the code, so
-   "what am I in this game" is one object on the header and not two. */
+   Host and spectator in one bordered case rather than loose beside the
+   buttons, so "what am I in this room" is one object and not two. */
 .gsh-roles {
   flex: 0 0 auto;
   display: inline-flex;
@@ -126,8 +99,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 24px;
+  width: 2.25rem;
+  height: 2.25rem;
   color: var(--secondary);
   --tt-color: var(--secondary);
 }
@@ -138,8 +111,8 @@
 }
 
 .gsh-role svg {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
 }
 
 .gsh-role--host {
@@ -148,34 +121,35 @@
   --tt-color: #fbbf24;
 }
 
-/* ── Code ───────────────────────────────────────────────────────
-   Shut by default. Mid-game the only reason to want the code is to pull a
-   spectator in, and a code sitting open on screen all match is readable by
-   whoever is stood behind you. */
-/* One case for the two things you press, the way the roles share one. The
-   case draws the edge; the buttons inside are flat and split by a hairline. */
+/* ── Buttons ────────────────────────────────────────────────────
+   One case for everything you press, the way the roles share one. The case
+   draws the edge; the buttons inside are flat and split by a hairline. */
 .gsh-actions {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: stretch;
+  height: 2.25rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--gsh-line);
   overflow: clip;
 }
 
+/* ── Code ───────────────────────────────────────────────────────
+   Shut by default. Mid-game the only reason to want the code is to pull a
+   spectator in, and a code sitting open on screen all match is readable by
+   whoever is stood behind you. */
 .gsh-code {
   flex: 0 0 auto;
   appearance: none;
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.5rem;
+  padding: 0 0.8rem;
   border: 0;
   background: transparent;
   color: var(--secondary);
   font: inherit;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
   --tt-color: var(--gsh-accent);
@@ -202,8 +176,8 @@
 }
 
 .gsh-code-icon svg {
-  width: 12px;
-  height: 12px;
+  width: 15px;
+  height: 15px;
 }
 
 /* Tabular, and wide enough that revealing a code does not shove the header
@@ -216,7 +190,7 @@
 /* Margin rather than the button's gap, so the label can take itself to
    nothing without leaving a gap behind where it used to be. */
 .gsh-code-value {
-  margin-left: 0.35rem;
+  margin-left: 0.45rem;
   max-width: 8rem;
   overflow: hidden;
   white-space: nowrap;
@@ -234,22 +208,15 @@
   .gsh-code-value { transition: none; }
 }
 
-/* Holds the gap open where the pills were, so the role case and the code
-   stay pinned right instead of sliding in against the title. */
-.gsh-spacer {
-  flex: 1;
-  min-width: 0;
-}
-
 /* ── Fold ───────────────────────────────────────────────────────
-   Flat, because the case around it draws the edge for both buttons. */
+   Flat, because the case around it draws the edge. */
 .gsh-fold {
   flex: 0 0 auto;
   appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
+  width: 2.25rem;
   padding: 0;
   border: 0;
   background: transparent;
@@ -270,8 +237,8 @@
 }
 
 .gsh-fold svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   transition: transform 0.18s;
 }
 
@@ -279,7 +246,7 @@
   transform: rotate(180deg);
 }
 
-/* After both button rules, which each zero their own border: at equal
+/* After every button rule, which each zero their own border: at equal
    specificity the later one wins, and this is the one that has to. */
 .gsh-actions > * + * {
   border-left: 1px solid var(--gsh-line);
@@ -289,19 +256,27 @@
   .gsh-fold svg { transition: none; }
 }
 
-/* ── Bottom row ─────────────────────────────────────────────────
+/* Fingers, not a pointer: every button up here grows to a size you can hit. */
+@media (pointer: coarse) {
+  .gsh-actions { height: 2.75rem; }
+  .gsh-role { width: 2.75rem; height: 2.75rem; }
+  .gsh-fold { width: 2.75rem; }
+}
+
+/* ── Panel ──────────────────────────────────────────────────────
    The one container. Relative, because the clock's bar is pinned across its
    bottom edge, and clipped so the bar's ends meet the corners. */
 .gsh-bottom {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.9rem;
-  padding: 0.7rem 0.85rem 0.8rem;
+  gap: 1rem;
+  padding: 0.75rem 1rem 0.85rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--gsh-line);
   background: var(--surface-bottom);
   overflow: clip;
+  transition: padding 0.24s ease, background 0.24s ease, border-color 0.24s ease, border-radius 0.24s ease;
 }
 
 /* ── Folded ─────────────────────────────────────────────────────
@@ -309,59 +284,80 @@
    and every edge but the top turned transparent. Transparent rather than
    removed, so the width does not jump by two pixels mid-animation.
 
-   The line moves to the top edge where it picks up a second job, separating
-   the title row from the pills that have dropped underneath it. The clock is
-   not touched: it is meant to be the loudest thing here, and folding the
-   panel away only makes that more true. */
+   The line moves to the top edge where it separates the title row from the
+   marks and the clock, which are all that is left. */
 .gsh--folded .gsh-bottom {
   border-color: transparent;
   border-top-color: var(--gsh-line);
   border-radius: 0;
   background: transparent;
-  padding: 0.5rem 0 0;
+  padding: 0.65rem 0 0;
   /* The panel is still in the row at no width, and the row's gap still counts
-     it, which walks the pills in off the edge. The clock carries the spacing
-     instead, where it is actually wanted. */
+     it, which walks the marks in off the edge. */
   gap: 0;
 }
 
+/* The marks take the left, the clock keeps the right. */
+.gsh--folded .gsh-marks {
+  flex: 1;
+}
+
+/* Folded there is a whole line for them, so they read as one: a sentence of
+   marks split by commas, each saying its whole name. */
+.gsh--folded .gsh-marks {
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  align-self: auto;
+  gap: 0;
+}
+
+.gsh--folded .gsh-mark {
+  gap: 0.4rem;
+  font-size: 1rem;
+}
+
+.gsh--folded .gsh-mark svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Folded, the line reads left to right like a sentence: each icon leads its
+   word, and the comma closes it. */
+.gsh--folded .gsh-mark-icon {
+  order: 0;
+}
+
+.gsh--folded .gsh-mark-dot {
+  order: 0;
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+.gsh--folded .gsh-mark:not(:last-child)::after {
+  order: 4;
+  content: ",";
+  /* Back over the mark's own gap, so the comma sits on the word. */
+  margin-left: -0.4rem;
+  margin-right: 0.65rem;
+  color: var(--muted-foreground);
+}
+
+.gsh--folded .gsh-mark-text {
+  display: none;
+}
+
+.gsh--folded .gsh-mark-label {
+  display: inline;
+}
+
 .gsh--folded .gsh-timer {
-  margin-left: 0.9rem;
+  margin-left: 1rem;
 }
 
 .gsh--folded .gsh-timer-track {
   top: -1px;
   bottom: auto;
-}
-
-/* Just the mark and the name. The badge shell is what the panel's own icon
-   contrasted against, and with the panel gone it is only chrome. */
-.gsh--folded .gsh-game-icon {
-  width: auto;
-  height: auto;
-}
-
-/* Folded, the pills are the only thing left beside the clock, so they get to
-   be a size you can actually read rather than the small print they are when
-   a whole phase panel is competing with them. */
-.gsh--folded .gsh-pill {
-  padding: 0.18rem 0.6rem;
-  font-size: 0.7rem;
-}
-
-.gsh--folded .gsh-pill-icon svg {
-  width: 12px;
-  height: 12px;
-}
-
-.gsh--folded .gsh-bottom .gsh-pills {
-  gap: 0.4rem;
-  animation: gsh-fade 0.2s ease;
-}
-
-@keyframes gsh-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 
 /* ── Folding ────────────────────────────────────────────────────
@@ -395,23 +391,26 @@
   white-space: nowrap;
 }
 
-.gsh-bottom {
-  transition: padding 0.24s ease, background 0.24s ease, border-color 0.24s ease, border-radius 0.24s ease;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .gsh-phase-wrap,
   .gsh-bottom { transition: none; }
-  .gsh--folded .gsh-bottom .gsh-pills { animation: none; }
 }
 
+/* ── Phase ──────────────────────────────────────────────────────
+   The phase's own mark beside its name, at the name's size, then the line
+   saying what to do about it. */
 .gsh-phase {
   min-width: 0;
 }
 
-/* No shell of its own. The game icon up top is a badge standing in for the
-   whole game, but this one is just the phase's mark, so it sits beside the
-   name at the size of the name and lets the name be the thing you read. */
+.gsh-phase-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  min-width: 0;
+}
+
 .gsh-phase-icon {
   flex: 0 0 auto;
   display: inline-flex;
@@ -420,45 +419,90 @@
 }
 
 .gsh-phase-icon svg {
-  width: 15px;
-  height: 15px;
-  stroke-width: 2.4;
-}
-
-.gsh-phase-text {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  min-width: 0;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.3;
 }
 
 .gsh-phase-name {
-  font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
   color: var(--foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.gsh-phase-count {
-  flex: 0 0 auto;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
+/* Says what to do, not what it is called. The whole reason the phase gets a
+   panel of its own. */
+.gsh-phase-hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--secondary);
 }
 
-/* Says what to do, not what it is called. The whole reason the phase gets a
-   row of its own instead of a pill. */
-.gsh-phase-hint {
-  margin: 0.1rem 0 0;
-  font-size: 0.68rem;
-  line-height: 1.4;
-  color: var(--secondary);
+/* ── Marks ──────────────────────────────────────────────────────
+   The round, your team and your role. Open, they stack in a short column
+   against the clock, a number, a word or a colour dot with an icon in the
+   game's colour on its right, split from the clock by a hairline. Regular weight, like the
+   word bank. The sentence is on hover. */
+.gsh-marks {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+/* Only a line when there is a clock on the other side of it. */
+.gsh:not(.gsh--folded) .gsh-marks:has(+ .gsh-timer) {
+  padding-right: 1rem;
+  border-right: 1px solid var(--gsh-line);
+}
+
+.gsh-mark {
+  --gsh-mark: var(--foreground);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--gsh-mark);
+  --tt-color: var(--gsh-accent);
+}
+
+.gsh-mark svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+}
+
+/* The icon wears the game's colour, so the mark reads as part of this game
+   and the word stays plain enough to read. */
+/* Ordered rather than reversed, so the folded line can put them back. */
+.gsh-mark-icon {
+  order: 3;
+  display: inline-flex;
+  line-height: 0;
+  color: var(--gsh-accent);
+}
+
+.gsh-mark-dot {
+  order: 2;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+
+/* The long name is for the folded line. */
+.gsh-mark-label {
+  display: none;
 }
 
 /* ── Timer ──────────────────────────────────────────────────────
@@ -501,7 +545,7 @@
 
 /* Big enough to read from across the room, which is the whole point of it. */
 .gsh-timer-value {
-  font-size: 1.9rem;
+  font-size: 1.85rem;
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.01em;
@@ -589,21 +633,33 @@
 }
 
 /* ── Narrow ─────────────────────────────────────────────────────
-   The pills wrap first, then the phase and the clock stack. The role case
-   and the code never split up: they are the two things you reach for. */
+   Smaller type and a tighter panel, so a phone keeps the one line without the
+   name and the clock fighting over it. The word bank gives way first. */
 @media (max-width: 33rem) {
-  .gsh-top {
-    flex-wrap: wrap;
+  .gsh-title {
+    font-size: 1.15rem;
   }
 
-  /* Top row only. Folded, the pills live in the bottom row beside the clock,
-     where dropping them onto their own line would put them past it. */
-  .gsh-top > .gsh-pills {
-    order: 3;
-    flex-basis: 100%;
+  .gsh-bank {
+    font-size: 0.9rem;
+    padding-left: 0.55rem;
   }
 
-  .gsh-game {
-    flex: 1;
+  .gsh-bottom {
+    gap: 0.75rem;
+    padding: 0.7rem 0.85rem 0.8rem;
+  }
+
+  .gsh-phase-name {
+    font-size: 1.05rem;
+  }
+
+  .gsh-phase-hint {
+    font-size: 0.8rem;
+  }
+
+
+  .gsh-timer-value {
+    font-size: 1.5rem;
   }
 }

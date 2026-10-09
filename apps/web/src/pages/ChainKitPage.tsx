@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { scoreForLetters } from "@games/shared";
-import { FiBookOpen, FiPlay, FiRefreshCw } from "react-icons/fi";
-import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
+import { FiPlay, FiRefreshCw } from "react-icons/fi";
+import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { GameToggle } from "../components/shared/GameKit";
 import {
   ChainLobby,
@@ -119,7 +119,7 @@ function Live() {
         code="Q4LM8"
         isHost={isHost}
         isSpectator={isSpectator}
-        pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank the chains come from">Animals</ShellPill>}
+        category="Animals"
       />
 
       <ChainLobby
@@ -304,7 +304,7 @@ function LiveRound() {
         endsAt={Date.now() + 180_000}
         duration={180}
         code="Q4LM8"
-        pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank the chains come from">Animals</ShellPill>}
+        category="Animals"
       />
 
       <ChainRound

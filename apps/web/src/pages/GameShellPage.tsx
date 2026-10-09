@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { FiChevronRight, FiMapPin, FiMessageSquare, FiPlay, FiRefreshCw, FiTag, FiUsers, FiAward } from "react-icons/fi";
 import { GAME_META, type GameSlug } from "@games/shared";
-import { IMPOSTER_PHASES } from "../components/imposter/ImposterLobby";
-import { GameShellHeader, ShellPill, type GamePhase } from "../components/shared/GameShellHeader";
+import { IMPOSTER_PHASES, imposterMarks } from "../components/imposter/ImposterLobby";
+import { locationMarks } from "../components/location/LocationLobby";
+import { passwordMarks } from "../components/password/PasswordLobby";
+import { GameShellHeader, type GamePhase } from "../components/shared/GameShellHeader";
 import { GameButton, GameEmpty, GamePanel, type GameButtonSize, type GameButtonVariant } from "../components/shared/GameKit";
 import { GameRoster, GameTeamRoster, GameVersus } from "../components/shared/GameRoster";
 import { playerBadges } from "../components/shared/PlayerCard";
@@ -82,7 +84,8 @@ function Live() {
         code="H4TQ9"
         isHost={isHost}
         isSpectator={isSpectator}
-        pills={<ShellPill icon={<FiTag />} tooltip="Which word bank this game is drawing from">Films</ShellPill>}
+        category="Films"
+        marks={imposterMarks("playing", { role: "player" })}
       />
     </>
   );
@@ -220,7 +223,7 @@ export function GameShellPage() {
         <Live />
       </Section>
 
-      <Section title="Folded" note="the container goes, the line moves up to separate the rows, and the pills drop under it beside the clock">
+      <Section title="Folded" note="the container goes, the line moves up to separate the rows, and the marks stay beside the clock">
         <GameShellHeader
           collapsible
           defaultCollapsed
@@ -233,7 +236,8 @@ export function GameShellPage() {
           duration={90}
           code="H4TQ9"
           isHost
-          pills={<ShellPill icon={<FiTag />} tooltip="Word bank">Films</ShellPill>}
+          category="Films"
+          marks={imposterMarks("voting", { role: "imposter" })}
         />
         <GameShellHeader
           collapsible
@@ -246,7 +250,7 @@ export function GameShellPage() {
           duration={120}
           code="PL4NE"
           isSpectator
-          pills={<ShellPill icon={<FiUsers />} tone="#34d399" tooltip="Whose turn">Blue Team</ShellPill>}
+          marks={locationMarks("guess", true, false)}
         />
       </Section>
 
@@ -263,12 +267,12 @@ export function GameShellPage() {
             duration={90}
             code="H4TQ9"
             isHost
-            pills={<ShellPill tone={GAME_META[slug].accent} tooltip="This game's accent">{GAME_META[slug].accent}</ShellPill>}
+            category="Animals"
           />
         ))}
       </Section>
 
-      <Section title="Every phase" note="named, counted and iconned. the number carries the progress, so no second track">
+      <Section title="Every phase" note="named and iconned, with the line saying what to do">
         {IMPOSTER_PHASES.map((p, i) => (
           <GameShellHeader
             key={p.id}
@@ -297,7 +301,7 @@ export function GameShellPage() {
         <GameShellHeader game="password" title="Password" phases={SIGNAL_PHASES} phase="clue" code="W0RDS" isHost isSpectator />
       </Section>
 
-      <Section title="Pills" note="anything else the game is doing. the header itself only draws the four fixed things">
+      <Section title="Marks" note="the word bank sits by the title. the round and your role are an icon and a number, a word or a team dot, with the sentence on hover">
         <GameShellHeader
           game="chain"
           title="Chain Reaction"
@@ -307,13 +311,8 @@ export function GameShellPage() {
           endsAt={Date.now() + 30_000}
           duration={60}
           isHost
-          pills={
-            <>
-              <ShellPill icon={<FiTag />} tone="#7ecbff" tooltip="Word bank">Animals</ShellPill>
-              <ShellPill icon={<FiUsers />} tone="#34d399" tooltip="Whose turn it is">Blue Team</ShellPill>
-              <ShellPill tone="#fbbf24" tooltip="Sudden death, one wrong answer ends it">Sudden death</ShellPill>
-            </>
-          }
+          category="Animals"
+          marks={passwordMarks({ name: "Blue Team", members: [] }, 0, false)}
         />
         <GameShellHeader game="shade" title="Shade Signal" phases={SIGNAL_PHASES} phase="picking" />
       </Section>

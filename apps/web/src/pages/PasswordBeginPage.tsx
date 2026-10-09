@@ -2,8 +2,7 @@ import { mutators, passwordCategoryLabels } from "@games/shared";
 import { optimistic } from "../lib/zero";
 import "../styles/game-shared.css";
 import { useState } from "react";
-import { FiBookOpen } from "react-icons/fi";
-import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
+import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { PASSWORD_PHASES, PasswordLobby } from "../components/password/PasswordLobby";
 import { InSessionModal } from "../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../components/shared/LobbyVisibilityToggle";
@@ -47,7 +46,7 @@ function PasswordBeginPageDesktop({ sessionId }: { sessionId: string }) {
         code={game.code}
         isHost={isHost}
         isSpectator={isSpectator}
-        {...(bank ? { pills: <ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">{bank}</ShellPill> } : {})}
+        category={bank}
       />
 
       <PasswordLobby

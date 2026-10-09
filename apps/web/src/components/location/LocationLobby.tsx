@@ -1,14 +1,11 @@
 import { useState, type ReactNode } from "react";
 import { haversineKm, scoreForDistance, PERFECT_KM, LOBBY_SETTING_LIMITS } from "@games/shared";
-import {
-  FiAward, FiClock, FiCrosshair, FiEdit3, FiEye, FiFlag, FiLogIn,
-  FiMapPin, FiPlay, FiRotateCcw, FiUsers,
-} from "react-icons/fi";
+import { FiAward, FiClock, FiCrosshair, FiEdit3, FiEye, FiFlag, FiLogIn, FiMapPin, FiPlay, FiRotateCcw, FiUsers } from "react-icons/fi";
 import { Elapsed, GameActions, GameButton, LeaveButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
 import { durationCustom, durationOptions, formatDuration } from "../../lib/setting-options";
 import { GameRoster } from "../shared/GameRoster";
 import type { PlayerCardProps } from "../shared/PlayerCard";
-import type { GamePhase } from "../shared/GameShellHeader";
+import type { GamePhase, GameMark } from "../shared/GameShellHeader";
 import { getDisplayName } from "../../lib/session";
 import { WorldMap, type MapMarker } from "./WorldMap";
 import "../../styles/location-kit.css";
@@ -69,6 +66,18 @@ export function locationPhases(cluePairs = 2): GamePhase[] {
   }
 
   return [PHASE_LOBBY, PHASE_PICKING, ...pairs, PHASE_REVEAL, PHASE_FINISHED];
+}
+
+/** What the header says you are once a round is on: the one writing clues, or
+ *  one of the ones reading them. Nothing in the lobby or at the end, and
+ *  nothing for a spectator, who plays no part. */
+export function locationMarks(phase: string, playing: boolean, isLeader: boolean): GameMark[] {
+  if (!playing || phase === "lobby" || phase === "finished") return [];
+  return [
+    isLeader
+      ? { icon: <FiEdit3 />, text: "Leading", tooltip: "You're leading. You write the clues and everyone else guesses" }
+      : { icon: <FiCrosshair />, text: "Guessing", tooltip: "You're guessing. Read the leader's clues and make your pick" },
+  ];
 }
 
 /**

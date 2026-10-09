@@ -1,7 +1,6 @@
 import { mutators, passwordCategoryLabels } from "@games/shared";
 import { useEffect, useRef } from "react";
-import { FiBookOpen } from "react-icons/fi";
-import { GameShellHeader, ShellPill } from "../../components/shared/GameShellHeader";
+import { GameShellHeader } from "../../components/shared/GameShellHeader";
 import { PASSWORD_PHASES, PasswordLobby } from "../../components/password/PasswordLobby";
 import { InSessionModal } from "../../components/shared/InSessionModal";
 import { LobbyVisibilityToggle } from "../../components/shared/LobbyVisibilityToggle";
@@ -70,7 +69,7 @@ export function MobilePasswordBeginPage({ sessionId }: { sessionId: string }) {
         code={game.code}
         isHost={isHost}
         isSpectator={isSpectator}
-        {...(bank ? { pills: <ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">{bank}</ShellPill> } : {})}
+        category={bank}
       />
 
       <PasswordLobby

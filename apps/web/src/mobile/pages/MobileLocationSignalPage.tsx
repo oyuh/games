@@ -5,7 +5,7 @@ import "../../styles/location-signal.css";
 import { useState } from "react";
 import { FiClock, FiEye, FiMapPin } from "react-icons/fi";
 import { GameShellHeader } from "../../components/shared/GameShellHeader";
-import { LocationLobby, locationPhases, locationTrackPhase } from "../../components/location/LocationLobby";
+import { LocationLobby, locationPhases, locationMarks, locationTrackPhase } from "../../components/location/LocationLobby";
 import { LocationClue, LocationGameOver, LocationGuess, LocationPickClue, LocationResult } from "../../components/location/LocationRound";
 import { GameEmpty, GamePanel } from "../../components/shared/GameKit";
 import { GameRoster } from "../../components/shared/GameRoster";
@@ -109,6 +109,7 @@ export function MobileLocationSignalPage({ sessionId }: { sessionId: string }) {
           : {})}
         isHost={isHost}
         isSpectator={isSpectator}
+        marks={locationMarks(game.phase, inGame && !isSpectator, isLeader)}
         {...(isCluePhase ? { duration: game.settings.clueDurationSec } : {})}
         {...(isGuessPhase ? { duration: game.settings.guessDurationSec } : {})}
         {...(isGameActive && totalRounds > 0

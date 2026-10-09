@@ -1,7 +1,6 @@
 import { mutators, passwordCategoryLabels } from "@games/shared";
 import "../styles/game-shared.css";
-import { FiBookOpen } from "react-icons/fi";
-import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
+import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { PASSWORD_PHASES } from "../components/password/PasswordLobby";
 import { PasswordGameOver } from "../components/password/PasswordGameOver";
 import { showToast } from "../lib/toast";
@@ -33,7 +32,7 @@ function PasswordResultsPageDesktop({ sessionId }: { sessionId: string }) {
         phase={game.phase}
         code={game.code}
         isHost={isHost}
-        {...(bank ? { pills: <ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game was drawing from">{bank}</ShellPill> } : {})}
+        category={bank}
       />
 
       <PasswordGameOver

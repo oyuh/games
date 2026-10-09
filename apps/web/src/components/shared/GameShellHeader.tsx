@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { FaCrown } from "react-icons/fa";
-import { FiCheck, FiChevronUp, FiCopy, FiEye, FiKey } from "react-icons/fi";
+import { FiBookOpen, FiCheck, FiChevronUp, FiCopy, FiEye, FiFlag, FiKey } from "react-icons/fi";
 import { GAME_META, type GameSlug } from "@games/shared";
+import { showToast } from "../../lib/toast";
 import { GameIcon } from "./GameIcon";
 import "../../styles/game-shell.css";
 
@@ -10,17 +11,13 @@ import "../../styles/game-shell.css";
  * the phase, the clock and the room code sit in the same place whichever game
  * you wandered into.
  *
- * Only the phase and the clock get a container. They are the pair you keep
- * glancing back at, so they are the pair that gets an edge; the title, the
- * pills, your role and the code sit straight on the page. Boxing all of it
- * would just be a box inside the page's other boxes.
+ * Only the panel gets a container: the phase and the clock, which are what
+ * you keep glancing back at. The title, the word bank beside it, the host and
+ * spectator marks and the buttons sit straight on the page.
  *
- * Each of the four is drawn as what it is rather than all four being pills:
- *   - the phase, named and counted, with its own icon
- *   - the clock, draining along the bottom of the container
- *   - who you are, as icons in one case
- *   - the code, hidden until asked for
- * Anything else a game wants to say is a pill, via `pills`.
+ * The round, your team and your role are marks by the clock: stacked small
+ * beside it while the panel is open, one comma separated line once it is
+ * folded. Each has its full sentence on hover. Nothing up here is a pill.
  */
 
 /* Storage throws in a few real browsers, private windows among them, and
@@ -57,6 +54,20 @@ export interface GamePhase {
   icon?: ReactNode;
 }
 
+/** Something about you this round: your role, or your team. */
+export interface GameMark {
+  icon: ReactNode;
+  /** The word beside the icon. Left off, the mark is the icon and its dot. */
+  text?: string;
+  /** What the folded line says, where there is room. Left off it is `text`. */
+  label?: string;
+  /** Any css colour, drawn as a dot. Password's team colour. */
+  dot?: string;
+  /** Any css colour for the word. */
+  tone?: string;
+  tooltip: string;
+}
+
 export interface GameShellHeaderProps {
   game: GameSlug;
   title: string;
@@ -74,12 +85,15 @@ export interface GameShellHeaderProps {
   code?: string;
   isHost?: boolean;
   isSpectator?: boolean;
-  /** Whatever else this game is doing: a category, a word bank, a turn. */
-  pills?: ReactNode;
+  /** The word bank, by its label. */
+  category?: string | null;
+  /** Left off for games where everybody plays the same part. */
+  /** Your role, your team. Left off for games where everybody plays the same part. */
+  marks?: GameMark[];
   /** Overrides the game's own accent from its metadata. Rarely wanted. */
   accent?: string;
   /** Adds the button that folds the phase panel away. Folded, the container
-   *  goes with it and only the line and the clock are left. */
+   *  goes with it and only the marks and the clock are left. */
   collapsible?: boolean;
   /** Start folded, for anyone who would rather have the room back. */
   defaultCollapsed?: boolean;
@@ -89,34 +103,9 @@ export interface GameShellHeaderProps {
   className?: string;
 }
 
-/** The pill every game reaches for, so nobody re-picks the padding. */
-export function ShellPill({
-  icon,
-  tone,
-  tooltip,
-  children,
-}: {
-  icon?: ReactNode;
-  /** Any css colour. Left off it is the quiet grey one. */
-  tone?: string;
-  tooltip?: string;
-  children: ReactNode;
-}) {
-  return (
-    <span
-      className="gsh-pill"
-      style={tone ? ({ "--gsh-pill": tone } as CSSProperties) : undefined}
-      {...(tooltip ? { "data-tooltip": tooltip, "data-tooltip-variant": "game" } : {})}
-    >
-      {icon && <span className="gsh-pill-icon">{icon}</span>}
-      {children}
-    </span>
-  );
-}
-
 /**
- * The clock, on its own. Not a pill: a pill is for a fact that sits still, and
- * this is the one thing on the header that is always moving.
+ * The clock, on its own. Not a fact: a fact sits still, and this is the one
+ * thing on the header that is always moving.
  */
 export function GameTimer({
   endsAt,
@@ -196,11 +185,16 @@ export function GameTimer({
   );
 }
 
+
+/* About three times a normal toast, long enough to read six letters out loud. */
+const CODE_TOAST_MS = 15_000;
+
 /**
  * The room code, behind a click. Mid-game the only reason to want it is to
  * pull a spectator in, so it does not sit on screen being readable by whoever
  * is stood behind you for the whole match. Revealing also copies, because
- * wanting to see it and wanting to send it are the same wish.
+ * wanting to see it and wanting to send it are the same wish, and raises a
+ * toast with the code large enough to read out, which copies again on a click.
  */
 function CodeButton({ code, compact }: { code: string; compact?: boolean }) {
   const [shown, setShown] = useState(false);
@@ -217,8 +211,10 @@ function CodeButton({ code, compact }: { code: string; compact?: boolean }) {
 
   function reveal() {
     setShown(true);
+    showToast("Here's the room code", "info", { category: "Room code", duration: CODE_TOAST_MS, copy: code });
+    if (!navigator.clipboard) return;
     setCopied(true);
-    void navigator.clipboard?.writeText(code).catch(() => setCopied(false));
+    navigator.clipboard.writeText(code).catch(() => setCopied(false));
   }
 
   return (
@@ -249,7 +245,8 @@ export function GameShellHeader({
   code,
   isHost,
   isSpectator,
-  pills,
+  category,
+  marks = [],
   accent,
   collapsible,
   defaultCollapsed,
@@ -289,18 +286,15 @@ export function GameShellHeader({
      taken to be the phase a game opens on. */
   const inLobby = index === 0;
 
-  /* Folded, the pills drop under the line and take the room the phase panel
-     was using. Rendered in one place or the other, never both. */
-  const pillStrip = (
-    <span className="gsh-pills">
-      {round && (
-        <ShellPill tooltip="Which round you are on">
-          Round {round.current}{round.total ? ` / ${round.total}` : ""}
-        </ShellPill>
-      )}
-      {pills}
-    </span>
-  );
+  /* The round is a mark like the rest, just one the header can work out on
+     its own: the number alone while it is stacked, the sentence once folded. */
+  const allMarks: GameMark[] = [];
+  if (round) {
+    const short = round.total ? `Round ${round.current}/${round.total}` : `Round ${round.current}`;
+    const whole = round.total ? `Round ${round.current} of ${round.total}` : short;
+    allMarks.push({ icon: <FiFlag />, text: String(round.current), label: short, tooltip: whole });
+  }
+  allMarks.push(...marks);
 
   return (
     <header
@@ -309,12 +303,15 @@ export function GameShellHeader({
     >
       <div className="gsh-top">
         <span className="gsh-game">
-          <span className="gsh-game-icon"><GameIcon game={game} size={18} /></span>
+          <span className="gsh-game-icon"><GameIcon game={game} size={20} /></span>
           <h1 className="gsh-title">{title}</h1>
+          {category && (
+            <span className="gsh-bank" data-tooltip="The word bank" data-tooltip-variant="game">
+              <FiBookOpen aria-hidden="true" />
+              <span className="gsh-bank-name">{category}</span>
+            </span>
+          )}
         </span>
-
-        {!folded && pillStrip}
-        {folded && <span className="gsh-spacer" />}
 
         {(isHost || isSpectator) && (
           <span className="gsh-roles">
@@ -346,7 +343,7 @@ export function GameShellHeader({
                 aria-label={`${collapsed ? "Show" : "Hide"} the phase panel`}
                 /* Folded, the phase name is the thing you gave up, so the
                    button that gives it back is where it goes. */
-                data-tooltip={collapsed ? `Show the panel. ${current?.label ?? phase}` : "Hide the panel, keep the line and the clock"}
+                data-tooltip={collapsed ? `Show the panel. ${current?.label ?? phase}` : "Hide the panel, keep the clock"}
                 data-tooltip-variant="game"
               >
                 <FiChevronUp aria-hidden="true" />
@@ -365,18 +362,32 @@ export function GameShellHeader({
             <p className="gsh-phase-text">
               {current?.icon && <span className="gsh-phase-icon" aria-hidden="true">{current.icon}</span>}
               <span className="gsh-phase-name">{current?.label ?? phase}</span>
-              {index >= 0 && (
-                <span className="gsh-phase-count" aria-label={`Phase ${index + 1} of ${phases.length}`}>
-                  {index + 1} of {phases.length}
-                </span>
-              )}
             </p>
 
             {current?.hint && <p className="gsh-phase-hint">{current.hint}</p>}
           </div>
         </div>
 
-        {folded && pillStrip}
+        {allMarks.length > 0 && (
+          <span className="gsh-marks">
+            {allMarks.map((mark) => (
+              <span
+                key={mark.tooltip}
+                className="gsh-mark"
+                role="img"
+                aria-label={mark.tooltip}
+                data-tooltip={mark.tooltip}
+                data-tooltip-variant="game"
+                style={mark.tone ? ({ "--gsh-mark": mark.tone } as CSSProperties) : undefined}
+              >
+                <span className="gsh-mark-icon" aria-hidden="true">{mark.icon}</span>
+                {mark.dot && <span className="gsh-mark-dot" style={{ background: mark.dot }} />}
+                {mark.text && <span className="gsh-mark-text">{mark.text}</span>}
+                {(mark.label ?? mark.text) && <span className="gsh-mark-label">{mark.label ?? mark.text}</span>}
+              </span>
+            ))}
+          </span>
+        )}
 
         <GameTimer endsAt={endsAt} duration={duration} move={timerMove} />
       </div>

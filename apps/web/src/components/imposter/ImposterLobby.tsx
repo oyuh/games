@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FiAward, FiBookOpen, FiClock, FiEdit3, FiEye, FiFlag, FiLogIn, FiPlay, FiUsers, FiZap } from "react-icons/fi";
+import { FiAward, FiBookOpen, FiClock, FiEdit3, FiEye, FiEyeOff, FiFlag, FiLogIn, FiPlay, FiUserX, FiUsers, FiZap } from "react-icons/fi";
 import {
   DEFAULT_IMPOSTER_CLUE_VISIBILITY,
   IMPOSTER_CLUE_VISIBILITY_OPTIONS,
@@ -11,7 +11,7 @@ import { Elapsed, GameActions, GameButton, LeaveButton, GameEmpty, GameFacts, Ga
 import { categoryOptions, durationCustom, durationOptions, formatDuration, numberCustom, numberOptions } from "../../lib/setting-options";
 import { GameRoster } from "../shared/GameRoster";
 import { playerBadges, type PlayerCardProps } from "../shared/PlayerCard";
-import type { GamePhase } from "../shared/GameShellHeader";
+import type { GamePhase, GameMark } from "../shared/GameShellHeader";
 import { getDisplayName } from "../../lib/session";
 
 /**
@@ -32,6 +32,18 @@ export const IMPOSTER_PHASES: GamePhase[] = [
   { id: "results", label: "Results", icon: <FiAward />, hint: "See who the room voted out, and what they were." },
   { id: "finished", label: "Finished", icon: <FiFlag />, hint: "Every round is done and the imposters are named." },
 ];
+
+/** What the header says you are. Nothing in the lobby, where nobody has been
+ *  dealt anything yet, and nothing for a spectator. */
+export function imposterMarks(phase: string, me: { role?: "imposter" | "player"; eliminated?: boolean } | undefined): GameMark[] {
+  if (phase === "lobby" || !me?.role) return [];
+  if (me.eliminated) return [{ icon: <FiUserX />, text: "Out", tooltip: "You were voted out, so you watch the rest of the game" }];
+  return [
+    me.role === "imposter"
+      ? { icon: <FiEyeOff />, text: "Imposter", tone: "#f87171", tooltip: "You're the imposter. You don't know the word, so blend in" }
+      : { icon: <FiEye />, text: "Innocent", tooltip: "You're innocent. You know the word, so find whoever doesn't" },
+  ];
+}
 
 /** The player shape the game row already carries. */
 export type ImposterPlayer = {

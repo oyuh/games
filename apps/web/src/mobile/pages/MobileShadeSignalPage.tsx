@@ -6,7 +6,7 @@ import { FiClock, FiEye } from "react-icons/fi";
 
 import { GameShellHeader } from "../../components/shared/GameShellHeader";
 import { GameEmpty, GamePanel } from "../../components/shared/GameKit";
-import { ShadeLobby, shadePhases } from "../../components/shade/ShadeLobby";
+import { ShadeLobby, shadePhases, shadeMarks } from "../../components/shade/ShadeLobby";
 import { ShadeClue, ShadePick } from "../../components/shade/ShadeClue";
 import { ShadeGuess } from "../../components/shade/ShadeGuess";
 import { ShadeResult, shadeFinalGuesses } from "../../components/shade/ShadeResult";
@@ -103,6 +103,7 @@ export function MobileShadeSignalPage({ sessionId }: { sessionId: string }) {
         endsAt={game.settings.phaseEndsAt}
         isHost={isHost}
         isSpectator={isSpectator}
+        marks={shadeMarks(game.phase, inGame && !isSpectator, isLeader)}
         {...(phase === "clue1" || phase === "clue2" ? { duration: game.settings.clueDurationSec } : {})}
         {...(phase === "guess1" || phase === "guess2" ? { duration: game.settings.guessDurationSec } : {})}
         {...(phase !== "lobby" && totalRounds > 0
