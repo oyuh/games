@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FiBookOpen, FiClock, FiEye, FiFlag, FiPlay, FiRefreshCw, FiZap } from "react-icons/fi";
-import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
+import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { GameActions, GameButton, GameFacts, GameToggle, LeaveButton, Elapsed } from "../components/shared/GameKit";
 import { IMPOSTER_PHASES, ImposterLobby, MIN_IMPOSTER_PLAYERS, type ImposterPlayer } from "../components/imposter/ImposterLobby";
 import { ImposterCluePhase, ImposterClueWall, ImposterComposer, ImposterWordCard } from "../components/imposter/ImposterClues";
@@ -102,7 +102,7 @@ function Live() {
         code="H4TQ9"
         isHost={isHost}
         isSpectator={isSpectator}
-        pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Movies &amp; Shows</ShellPill>}
+        category="Movies & Shows"
       />
 
       <ImposterLobby
@@ -186,7 +186,7 @@ function LiveClues() {
         endsAt={Date.now() + 90_000}
         duration={90}
         code="H4TQ9"
-        pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Movies &amp; Shows</ShellPill>}
+        category="Movies & Shows"
       />
 
       <ImposterCluePhase

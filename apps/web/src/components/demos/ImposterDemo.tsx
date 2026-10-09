@@ -1,7 +1,7 @@
 import { useRef, useState, FormEvent } from "react";
-import { FiBookOpen, FiEdit3, FiEye, FiEyeOff, FiRefreshCw, FiUsers } from "react-icons/fi";
+import { FiEdit3, FiEye, FiEyeOff, FiRefreshCw, FiUsers } from "react-icons/fi";
 import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
-import { GameShellHeader, ShellPill } from "../shared/GameShellHeader";
+import { GameShellHeader } from "../shared/GameShellHeader";
 import { IMPOSTER_PHASES, ImposterLobby } from "../imposter/ImposterLobby";
 import { ImposterCluePhase } from "../imposter/ImposterClues";
 import { ImposterVotePhase } from "../imposter/ImposterVote";
@@ -55,7 +55,7 @@ const SETTINGS = { rounds: 3, imposters: 1, roundDurationSec: 90, clueVisibility
 
 const HEADER = { game: "imposter", title: "Imposter", phases: IMPOSTER_PHASES, code: "DEMO" } as const;
 
-const BANK = <ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Animals</ShellPill>;
+const BANK = "Animals";
 
 /* ── Steps ──────────────────────────────────────────────── */
 
@@ -107,7 +107,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 0: // Lobby
         return (
           <div className="game-page" data-game-theme="imposter">
-            <GameShellHeader {...HEADER} phase="lobby" isHost pills={BANK} />
+            <GameShellHeader {...HEADER} phase="lobby" isHost category={BANK} />
             <DemoPoint label="Players wait in the lobby, and the host starts it">
               <ImposterLobby
                 isHost
@@ -129,7 +129,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 1: // Clues - player perspective
         return (
           <div className="game-page" data-game-theme="imposter">
-            <GameShellHeader {...HEADER} phase="playing" round={{ current: 1, total: 3 }} pills={BANK} />
+            <GameShellHeader {...HEADER} phase="playing" round={{ current: 1, total: 3 }} category={BANK} />
             <DemoPoint label="You get the word, and one clue to prove it">
               <ImposterCluePhase
                 role="player"
@@ -152,7 +152,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 2: // Clues - imposter perspective
         return (
           <div className="game-page" data-game-theme="imposter">
-            <GameShellHeader {...HEADER} phase="playing" round={{ current: 1, total: 3 }} pills={BANK} />
+            <GameShellHeader {...HEADER} phase="playing" round={{ current: 1, total: 3 }} category={BANK} />
             <DemoPoint label="The imposter never gets the word, only a peek at the clues">
               <ImposterCluePhase
                 role="imposter"
@@ -175,7 +175,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 3: // Voting
         return (
           <div className="game-page" data-game-theme="imposter">
-            <GameShellHeader {...HEADER} phase="voting" round={{ current: 1, total: 3 }} pills={BANK} />
+            <GameShellHeader {...HEADER} phase="voting" round={{ current: 1, total: 3 }} category={BANK} />
             <DemoPoint label="Every clue is on the thing you press">
               <ImposterVotePhase
                 players={PLAYERS}
@@ -194,7 +194,7 @@ export function ImposterDemo({ onClose, initialStep = 0 }: { onClose: () => void
       case 4: // Results
         return (
           <div className="game-page" data-game-theme="imposter">
-            <GameShellHeader {...HEADER} phase="results" round={{ current: 1, total: 3 }} pills={BANK} />
+            <GameShellHeader {...HEADER} phase="results" round={{ current: 1, total: 3 }} category={BANK} />
             <DemoPoint label="Who went, what they were, and which way everyone voted">
               <ImposterRoundResult
                 players={PLAYERS}

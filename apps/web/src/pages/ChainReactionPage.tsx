@@ -2,8 +2,8 @@ import { mutators, chainCategoryLabels } from "@games/shared";
 import { optimistic } from "../lib/zero";
 import "../styles/game-shared.css";
 import { useState } from "react";
-import { FiBookOpen, FiClock, FiEye } from "react-icons/fi";
-import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
+import { FiClock, FiEye } from "react-icons/fi";
+import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { GameEmpty, GamePanel } from "../components/shared/GameKit";
 import { ChainLobby, chainPhases } from "../components/chain/ChainLobby";
 import { ChainRound, ChainWrite } from "../components/chain/ChainRound";
@@ -77,7 +77,7 @@ function ChainReactionPageDesktop({ sessionId }: { sessionId: string }) {
         {...(game.phase !== "lobby"
           ? { round: { current: game.settings.currentRound, total: game.settings.rounds } }
           : {})}
-        {...(bank ? { pills: <ShellPill icon={<FiBookOpen />} tooltip="Which word bank the chains come from">{bank}</ShellPill> } : {})}
+        category={bank}
       />
 
       {game.phase === "lobby" && (

@@ -1,10 +1,9 @@
 import { mutators, passwordCategoryLabels } from "@games/shared";
 import { useEffect, useRef } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { FiBookOpen } from "react-icons/fi";
-import { GameShellHeader, ShellPill } from "../../components/shared/GameShellHeader";
+import { GameShellHeader } from "../../components/shared/GameShellHeader";
 import { GameActions, GameButton, GameEmpty, GamePanel } from "../../components/shared/GameKit";
-import { PASSWORD_PHASES } from "../../components/password/PasswordLobby";
+import { PASSWORD_PHASES, passwordMarks } from "../../components/password/PasswordLobby";
 import { PasswordRound, PasswordScoreboard, type PasswordTaken } from "../../components/password/PasswordRound";
 import { SpectatorOverlay } from "../../components/shared/SpectatorOverlay";
 import { usePasswordGame } from "../../hooks/usePasswordGame";
@@ -105,7 +104,8 @@ export function MobilePasswordGamePage({ sessionId }: { sessionId: string }) {
         code={game.code}
         isHost={isHost}
         isSpectator={isSpectator}
-        {...(bank ? { pills: <ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">{bank}</ShellPill> } : {})}
+        marks={playing && myTeam ? passwordMarks(myTeam, myTeamIndex, guessing) : []}
+        category={bank}
       />
 
       {game.phase === "playing" && playing && activeRoundView && myTeam && (

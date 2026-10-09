@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from "react";
-import { FiBookOpen, FiEdit3, FiFlag, FiShield, FiUsers, FiZap } from "react-icons/fi";
+import { FiEdit3, FiFlag, FiShield, FiUsers, FiZap } from "react-icons/fi";
 import { DemoModal, DemoPoint, DemoScoring, type DemoStep } from "./DemoModal";
-import { GameShellHeader, ShellPill } from "../shared/GameShellHeader";
+import { GameShellHeader } from "../shared/GameShellHeader";
 import { PASSWORD_PHASES, PasswordLobby, type PasswordTeam } from "../password/PasswordLobby";
 import { PasswordRound, type PasswordClue, type PasswordGuess } from "../password/PasswordRound";
 import { PasswordGameOver, type PasswordWordHistory } from "../password/PasswordGameOver";
@@ -116,7 +116,7 @@ const header = (phase: string) => (
     phase={phase}
     code="DEMO"
     isHost
-    pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Food</ShellPill>}
+    category="Food"
   />
 );
 

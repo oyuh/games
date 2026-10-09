@@ -151,6 +151,69 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
   overflow-wrap: anywhere;
 }
 
+/* A code under the message, on its own line and big enough to read out to
+   somebody across the room. The whole line is the copy button. */
+.toast-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: 0.45rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  color: var(--foreground);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.toast-copy:hover {
+  border-color: color-mix(in srgb, var(--toast-tone) 55%, var(--border));
+}
+
+.toast-copy:focus-visible {
+  outline: 2px solid var(--toast-tone);
+  outline-offset: 2px;
+}
+
+/* Never broken over two lines, whatever is squeezing the toast. The hint
+   gives up its room first. */
+.toast-copy-value {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-variant-numeric: tabular-nums;
+}
+
+.toast-copy-hint {
+  min-width: 0;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* Two lines tall, so the icon sits with the message instead of floating
+   between it and the code. */
+.toast:has(.toast-copy) .toast-icon {
+  align-self: flex-start;
+  margin-top: 0.85rem;
+}
+
+.toast-copy:hover .toast-copy-hint {
+  color: var(--foreground);
+}
+
 /* Read out ahead of an admin's message, since the shield is aria-hidden. */
 .toast-sr-label {
   position: absolute;

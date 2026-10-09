@@ -1,14 +1,11 @@
 import { useState, type ReactNode } from "react";
-import {
-  FiAward, FiClock, FiCrosshair, FiDroplet, FiEdit3, FiEye, FiFlag, FiGrid,
-  FiLogIn, FiPlay, FiRotateCcw, FiSlash, FiUsers,
-} from "react-icons/fi";
+import { FiAward, FiClock, FiCrosshair, FiDroplet, FiEdit3, FiEye, FiFlag, FiGrid, FiLogIn, FiPlay, FiRotateCcw, FiSlash, FiUsers } from "react-icons/fi";
 import { LOBBY_SETTING_LIMITS } from "@games/shared";
 import { Elapsed, GameActions, GameButton, LeaveButton, GameEmpty, GameFacts, GamePanel, type GameFactEdit } from "../shared/GameKit";
 import { durationCustom, durationOptions, formatDuration } from "../../lib/setting-options";
 import { GameRoster } from "../shared/GameRoster";
 import type { PlayerCardProps } from "../shared/PlayerCard";
-import type { GamePhase } from "../shared/GameShellHeader";
+import type { GamePhase, GameMark } from "../shared/GameShellHeader";
 import { getDisplayName } from "../../lib/session";
 import { ShadeBands, ShadeGrid, type ShadeCell } from "./ShadeGrid";
 import "../../styles/shade-kit.css";
@@ -48,6 +45,18 @@ const PHASE_FINISHED: GamePhase = { id: "finished", label: "Finished", icon: <Fi
 export function shadePhases(leaderPick?: boolean): GamePhase[] {
   const rest = [PHASE_CLUE1, PHASE_GUESS1, PHASE_CLUE2, PHASE_GUESS2, PHASE_REVEAL, PHASE_FINISHED];
   return leaderPick ? [PHASE_LOBBY, PHASE_PICKING, ...rest] : [PHASE_LOBBY, ...rest];
+}
+
+/** What the header says you are once a round is on: the one writing clues, or
+ *  one of the ones reading them. Nothing in the lobby or at the end, and
+ *  nothing for a spectator, who plays no part. */
+export function shadeMarks(phase: string, playing: boolean, isLeader: boolean): GameMark[] {
+  if (!playing || phase === "lobby" || phase === "finished") return [];
+  return [
+    isLeader
+      ? { icon: <FiEdit3 />, text: "Leading", tooltip: "You're leading. You write the clues and everyone else guesses" }
+      : { icon: <FiCrosshair />, text: "Guessing", tooltip: "You're guessing. Read the leader's clues and make your pick" },
+  ];
 }
 
 /** The player shape the game row already carries. */

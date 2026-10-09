@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FiBookOpen, FiClock, FiFlag, FiPlay, FiRefreshCw, FiSkipForward } from "react-icons/fi";
-import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
+import { GameShellHeader } from "../components/shared/GameShellHeader";
 import { GameFacts, GameToggle } from "../components/shared/GameKit";
 import {
   PASSWORD_PHASES,
@@ -172,7 +172,7 @@ function Live() {
         code="K2WD7"
         isHost={isHost}
         isSpectator={isSpectator}
-        pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Animals</ShellPill>}
+        category="Animals"
       />
 
       <PasswordLobby
@@ -403,7 +403,7 @@ function LiveRound() {
         endsAt={Date.now() + 300_000}
         duration={300}
         code="K2WD7"
-        pills={<ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">Animals</ShellPill>}
+        category="Animals"
       />
 
       <PasswordRound

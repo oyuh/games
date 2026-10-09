@@ -2,9 +2,8 @@ import { mutators, DEFAULT_IMPOSTER_CLUE_VISIBILITY } from "@games/shared";
 import { useZero } from "../lib/zero";
 import "../styles/game-shared.css";
 import { useState } from "react";
-import { FiBookOpen } from "react-icons/fi";
-import { GameShellHeader, ShellPill } from "../components/shared/GameShellHeader";
-import { IMPOSTER_PHASES, ImposterLobby } from "../components/imposter/ImposterLobby";
+import { GameShellHeader } from "../components/shared/GameShellHeader";
+import { IMPOSTER_PHASES, ImposterLobby, imposterMarks } from "../components/imposter/ImposterLobby";
 import { ImposterCluePhase } from "../components/imposter/ImposterClues";
 import { ImposterVotePhase } from "../components/imposter/ImposterVote";
 import { ImposterRoundResult } from "../components/imposter/ImposterRoundResult";
@@ -64,7 +63,8 @@ function ImposterPageDesktop({ sessionId }: { sessionId: string }) {
         code={game.code}
         isHost={isHost}
         isSpectator={isSpectator}
-        {...(bank ? { pills: <ShellPill icon={<FiBookOpen />} tooltip="Which word bank this game is drawing from">{bank}</ShellPill> } : {})}
+        marks={imposterMarks(game.phase, me)}
+        category={bank}
       />
 
       {game.phase === "lobby" && (
