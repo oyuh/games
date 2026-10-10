@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { FiAward, FiFlag, FiHash, FiHome, FiLayers, FiTarget, FiUploadCloud, FiUser } from "react-icons/fi";
+import { useLocation, useNavigate } from "react-router-dom";
+import { FiAward, FiFlag, FiHash, FiHome, FiLayers, FiShare2, FiTarget, FiUploadCloud, FiUser } from "react-icons/fi";
 import { formatTime, GameStat, GameStatBar, GameTimer } from "../components/shared/GameStatBar";
 import { SoloEndScreen, SPLITS_VIEW, soloStatusTitle } from "../components/shared/SoloEndScreen";
 import type { SoloSetupOption } from "../components/shared/SoloGameMenu";
@@ -13,6 +14,7 @@ import { emitSolo, useSoloEvent } from "../lib/solo-bus";
 import { playCountdownTick, playCorrect, playGameOver } from "../lib/sounds";
 import { showToast } from "../lib/toast";
 import { devMoveTimes, startRankedRun } from "../lib/solo-run";
+import { readPuzzleLink, sharePuzzle } from "../lib/puzzle-link";
 import {
   checkZipEligibility,
   submitZipScore,
@@ -65,6 +67,7 @@ const END_VIEWS: SoloSetupOption[] = [
 
 const MODE_LABELS: Record<ZipMenuMode, string> = { ranked: "Ranked", endless: "Endless", seed: "Seeded" };
 
+const DIFFICULTIES = Object.keys(DIFFICULTY_CONFIG) as Difficulty[];
 const sizeOf = (difficulty: Difficulty) => DIFFICULTY_CONFIG[difficulty].size;
 const boardLabel = (difficulty: Difficulty) => `${DIFFICULTY_CONFIG[difficulty].label} ${sizeOf(difficulty)}×${sizeOf(difficulty)}`;
 
@@ -73,6 +76,8 @@ function randomSeed() {
 }
 
 export function ZipPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [phase, setPhase] = useState<Phase>("menu");
   const [menuMode, setMenuMode] = useState<ZipMenuMode>("ranked");
   const [menuDifficulty, setMenuDifficulty] = useState<Difficulty>("medium");
@@ -152,6 +157,19 @@ export function ZipPage() {
       setStarting(false);
     }
   };
+
+  // A link from the share page (/api/zip/puzzle) starts its seeded run
+  // straight away, then drops the params so a reload lands on the menu.
+  const puzzleLinkHandled = useRef(false);
+  useEffect(() => {
+    if (puzzleLinkHandled.current) return;
+    const link = readPuzzleLink(location.search, DIFFICULTIES);
+    if (!link) return;
+    puzzleLinkHandled.current = true;
+    if (link.seed !== null) void startRun("seed", link.difficulty ?? "medium", link.seed);
+    navigate("/zip", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const startFromMenu = () => {
     const typed = Number(seedInput);
@@ -594,6 +612,7 @@ function ZipEndScreen({
           : []),
         { label: "Menu", icon: <FiHome size={14} />, onClick: onMenu, confirm: true },
         { label: "Full Leaderboard", icon: <FiAward size={14} />, onClick: onOpenLeaderboard },
+        { label: "Share", icon: <FiShare2 size={14} />, onClick: () => void sharePuzzle("zip", { difficulty: run.difficulty, seed: run.seed }) },
       ]}
     />
   );

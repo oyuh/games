@@ -1,4 +1,5 @@
 import { type CSSProperties, type MouseEvent, type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FiAward,
   FiCheck,
@@ -8,6 +9,7 @@ import {
   FiHome,
   FiLayers,
   FiRepeat,
+  FiShare2,
   FiTarget,
   FiUploadCloud,
   FiUser,
@@ -27,6 +29,7 @@ import {
   evaluateRegionRule,
   generateRun,
   PIPS_DIFFICULTY_CONFIG,
+  PIPS_PUZZLES_PER_RUN,
   PIPS_RUN_PACING,
   getPlacementValueGrid,
   getRunScoreTime,
@@ -51,6 +54,7 @@ import {
 } from "../lib/pips-rotation";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { fetchWithChallenge } from "../lib/challenge";
+import { readPuzzleLink, sharePuzzle } from "../lib/puzzle-link";
 import { devMoveTimes, startRankedRun as requestRankedRun, type RankedRun } from "../lib/solo-run";
 import { playCorrect, playCountdownTick, playGameOver } from "../lib/sounds";
 import { showToast } from "../lib/toast";
@@ -173,6 +177,8 @@ const PIPS_SEEDED_LEADERBOARD: PipsLeaderboardEntry[] = [
 ];
 
 export function PipsPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [seed, setSeed] = useState(() => makeRunSeed());
   const [run, setRun] = useState(() => generateRun(seed));
   const [runMode, setRunMode] = useState<PipsRunMode>("ranked");
@@ -539,6 +545,19 @@ export function PipsPage() {
     rankedTicketRef.current = null;
     setSelectedDominoId(firstPuzzle.dominoes[0]?.id ?? null);
   };
+
+  // A link from the share page (/api/pips/puzzle) starts its seeded run
+  // straight away, then drops the params so a reload lands on the menu.
+  const puzzleLinkHandled = useRef(false);
+  useEffect(() => {
+    if (puzzleLinkHandled.current) return;
+    const link = readPuzzleLink(location.search);
+    if (!link) return;
+    puzzleLinkHandled.current = true;
+    if (link.seed !== null) beginRun(generateRun(link.seed), link.seed, "seeded");
+    navigate("/pips", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Ranked seeds come from the server. With the API down the run still starts
   // on a local seed, it just can't be submitted.
@@ -1352,6 +1371,7 @@ export function PipsPage() {
               scoreSubmitted={scoreSubmitted}
               submittingScore={submittingScore}
               scoreSubmissionStatus={scoreSubmissionStatus}
+              shareable={runMode !== "infinite" && run.puzzles.length === PIPS_PUZZLES_PER_RUN}
               onSubmitScore={submitScore}
               onNewRanked={startRankedRun}
               onMenu={() => {
@@ -1730,6 +1750,7 @@ function PipsEndScreen({
   scoreSubmitted,
   submittingScore,
   scoreSubmissionStatus,
+  shareable,
   onSubmitScore,
   onNewRanked,
   onMenu,
@@ -1746,6 +1767,8 @@ function PipsEndScreen({
   scoreSubmitted: boolean;
   submittingScore: boolean;
   scoreSubmissionStatus: ScoreSubmissionStatus | null;
+  /** The share page rebuilds the usual easy-to-hard run from a seed, nothing else. */
+  shareable: boolean;
   onSubmitScore: () => void;
   onNewRanked: () => void;
   onMenu: () => void;
@@ -1873,6 +1896,7 @@ function PipsEndScreen({
           : []),
         { label: "Menu", icon: <FiHome size={14} />, onClick: onMenu, confirm: true },
         { label: "Full Leaderboard", icon: <FiAward size={14} />, onClick: onOpenLeaderboard },
+        ...(shareable ? [{ label: "Share", icon: <FiShare2 size={14} />, onClick: () => void sharePuzzle("pips", { seed }) }] : []),
       ]}
     />
   );
