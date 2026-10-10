@@ -196,7 +196,7 @@
   border-radius: var(--radius-xl);
   background: var(--surface-bg);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32), var(--surface-shadow);
-  font-family: "Urbanist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: "Onest", ui-sans-serif, system-ui, -apple-system, sans-serif;
   letter-spacing: normal;
   color: var(--foreground);
   text-align: left;
@@ -532,7 +532,7 @@
   z-index: 10000;
   pointer-events: none;
   white-space: pre-line;
-  font-family: "Urbanist", system-ui, -apple-system, sans-serif;
+  font-family: "Onest", system-ui, -apple-system, sans-serif;
   font-size: 0.68rem;
   font-weight: 500;
   line-height: 1.45;

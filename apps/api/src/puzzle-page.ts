@@ -164,7 +164,7 @@ export function renderPuzzlePage(page: PuzzlePage): string {
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Urbanist:wght@400..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Onest:wght@400..900&display=swap" rel="stylesheet">
   <style>
     /* No shadows, no glows: depth comes from borders and fills. */
     :root {
@@ -194,7 +194,7 @@ export function renderPuzzlePage(page: PuzzlePage): string {
       padding: 2rem 1rem;
       background: var(--background);
       color: var(--foreground);
-      font-family: "Urbanist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Onest", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       -webkit-font-smoothing: antialiased;
     }
 

@@ -347,7 +347,7 @@ function renderEmbedHtml(model: EmbedModel, imageUrl: string): string {
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="${escapeHtml(imageUrl)}">
     <style>
-      body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 2rem 1rem; box-sizing: border-box; background: #181a1b; color: #f5f5f5; font-family: Urbanist, ui-sans-serif, system-ui, sans-serif; }
+      body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 2rem 1rem; box-sizing: border-box; background: #181a1b; color: #f5f5f5; font-family: Onest, ui-sans-serif, system-ui, sans-serif; }
       main { width: min(540px, 100%); display: flex; flex-direction: column; gap: 0.75rem; }
       h1 { margin: 0; color: ${accent}; font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
       p { margin: 0; color: #bdbdbd; line-height: 1.45; }

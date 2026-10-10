@@ -2634,9 +2634,16 @@
     height: 13rem;
   }
 
-  /* Tighter tracks so the common tables fit without sideways scrolling. */
+  /* Tighter tracks so the common tables fit without sideways scrolling.
+     A metric track still has to hold "00:00.00" in Onest's tabular figures
+     (about 4.65em), so the gap in front of it shrinks instead. */
   .solo-end-table-grid {
     --name-w: 5.2rem;
-    --metric-w: 4.1rem;
+    --metric-w: 4.4rem;
+  }
+
+  .solo-end-cell--metric,
+  .solo-end-cell--seed {
+    padding-left: 0.45rem;
   }
 }

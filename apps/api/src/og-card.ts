@@ -6,7 +6,7 @@
  *
  * Link-preview bots won't draw an SVG og:image, so the card is rasterized to
  * PNG with resvg. resvg only sees the fonts in apps/api/fonts, so text set in
- * anything else falls back to Urbanist.
+ * anything else falls back to Onest.
  */
 
 import { readdirSync } from "node:fs";
@@ -27,8 +27,8 @@ export function svgToPng(svg: string): Uint8Array<ArrayBuffer> {
     font: {
       fontFiles: FONT_FILES,
       loadSystemFonts: false,
-      defaultFontFamily: "Urbanist",
-      sansSerifFamily: "Urbanist",
+      defaultFontFamily: "Onest",
+      sansSerifFamily: "Onest",
       monospaceFamily: "IBM Plex Mono",
     },
   });

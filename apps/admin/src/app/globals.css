@@ -2,13 +2,13 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* ── Urbanist ────────────────────────────────────────────────
+/* ── Onest ────────────────────────────────────────────────
    Same faces and the same metric overrides as the main site, so the
    admin and the site render type identically. Files live in
    apps/admin/public/font/ and are copied from apps/web/public/font/. */
 @font-face {
-  font-family: 'Urbanist';
-  src: url('/font/Urbanist-latin-ext.woff2') format('woff2');
+  font-family: 'Onest';
+  src: url('/font/Onest-latin-ext.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -18,8 +18,8 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Urbanist';
-  src: url('/font/Urbanist-latin.woff2') format('woff2');
+  font-family: 'Onest';
+  src: url('/font/Onest-latin.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -93,7 +93,7 @@
   --radius: 0.5rem;
 
   --admin-font-sans:
-    "Urbanist", ui-sans-serif, system-ui, -apple-system,
+    "Onest", ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --admin-font-heading: var(--admin-font-sans);
   --admin-font-mono:

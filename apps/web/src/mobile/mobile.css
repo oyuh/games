@@ -374,12 +374,12 @@
   font-weight: 700;
 }
 
+/* Wraps rather than truncating: Onest is wide enough that the longer game
+   blurbs lose their last words on a 375px phone. */
 .m-row-meta {
-  overflow: hidden;
   color: var(--muted-foreground);
   font-size: 0.8rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-wrap: pretty;
 }
 
 .m-row-code {

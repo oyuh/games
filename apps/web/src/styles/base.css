@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
 /* ── Custom Fonts ────────────────────────────────────────────── */
-/* Urbanist (OFL), one variable file per subset, every weight from 100 to
-   900. The overrides decide where text sits in its line. They add up to 123%
-   so no line height moves; the split centers capitals and digits in pills and
-   buttons. Axiforma was measured at 100/23 with its 0.739 cap height; 98/25 is
-   the same offset moved to Urbanist's 0.70. apps/admin/src/app/globals.css
+/* Onest (OFL), one variable file per subset, every weight from 100 to 900.
+   It has real tabular figures, so tabular-nums keeps ticking clocks still.
+   The overrides decide where text sits in its line. They add up to 123% so
+   no line height moves; the split centers capitals and digits in pills and
+   buttons. Axiforma was measured at 100/23 with its 0.739 cap height; 98/25
+   is the same offset moved to Onest's 0.707. apps/admin/src/app/globals.css
    must match. */
 @font-face {
-  font-family: 'Urbanist';
-  src: url('/font/Urbanist-latin-ext.woff2') format('woff2');
+  font-family: 'Onest';
+  src: url('/font/Onest-latin-ext.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -19,8 +20,8 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Urbanist';
-  src: url('/font/Urbanist-latin.woff2') format('woff2');
+  font-family: 'Onest';
+  src: url('/font/Onest-latin.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -55,7 +56,7 @@
   --text: #f5f5f5;
 
   /* Room codes, hashes, URLs, and letter slots that have to line up.
-     Everything else is Urbanist off body. */
+     Everything else is Onest off body. */
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
 
   /* Corner radius. One knob for the whole site: 1 is the old rounded-off
@@ -188,7 +189,7 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: "Urbanist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+  font-family: "Onest", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

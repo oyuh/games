@@ -7,10 +7,10 @@
 
 export type SvgTheme = "dark" | "light";
 
-// Urbanist and Plex only show up where the page around the SVG loaded them
+// Onest and Plex only show up where the page around the SVG loaded them
 // (the inline board on the share pages) or in the PNG cards, which load them
 // from apps/api/fonts. As a bare <img> the fallbacks win.
-export const SVG_FONT = "Urbanist, ui-sans-serif, system-ui, -apple-system, sans-serif";
+export const SVG_FONT = "Onest, ui-sans-serif, system-ui, -apple-system, sans-serif";
 export const SVG_MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace";
 
 export interface SvgPalette {
