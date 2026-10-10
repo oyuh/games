@@ -56,6 +56,8 @@ import { authorizeMutation, isDevOnlyMutator } from "./mutator-auth";
 import { addBotSignal, botStatus, setBotScore, turnstileEnforced, verifyTurnstileToken } from "./bot-score";
 import { getOrCreateGameKey, type GameType } from "./game-keys";
 import { shikakuImageRoutes } from "./shikaku-image";
+import { pipsImageRoutes } from "./pips-image";
+import { zipImageRoutes } from "./zip-image";
 import { checkSoloRun, createSoloTicket, type SoloGame } from "./solo-ticket";
 import { checkMoveTimes } from "./move-timing";
 import {
@@ -242,7 +244,7 @@ app.use("/api/maps/geocode", rateLimit("mapsGeocode"));
 
 // Solo games (shikaku/pips/zip): general reads + image generation share the "game"
 // tier; score submission gets a tighter layer on top. Registered before the
-// shikaku image routes are mounted below so they're actually covered.
+// puzzle image routes are mounted below so they're actually covered.
 app.use("/api/shikaku/*", rateLimit("game", "shikaku"));
 app.use("/api/shikaku/score", rateLimit("score", "shikaku_score"));
 app.use("/api/pips/*", rateLimit("game", "pips"));
@@ -285,8 +287,10 @@ app.route("/api/public", getRestrictedNamesRoute());
 // ─── Rich link embeds for crawlers/social previews ──────────
 app.route("/api/embed", embedRoutes);
 
-// ─── Shikaku puzzle image generator ─────────────────────────
+// ─── Solo puzzle share pages and images ─────────────────────
 app.route("/api/shikaku", shikakuImageRoutes);
+app.route("/api/pips", pipsImageRoutes);
+app.route("/api/zip", zipImageRoutes);
 
 // ─── Map helpers (Location Signal scaffold) ──────────────────
 app.get("/api/maps/config", (c) => {
