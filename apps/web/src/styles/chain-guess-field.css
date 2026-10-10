@@ -32,7 +32,7 @@
   /* Match the wider spacing of the non-editing partial word: renderPartialWord
      joins letters with literal spaces, so each letter sits a full space apart. */
   gap: 0.78em;
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 1.1rem;
   font-weight: 700;
   line-height: 1.5;

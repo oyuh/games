@@ -1058,7 +1058,7 @@ a.solo-card-title-link {
   background: color-mix(in srgb, var(--secondary) 8%, transparent);
   color: var(--muted-foreground);
   border: 1px dashed color-mix(in srgb, var(--secondary) 25%, transparent);
-  font-family: monospace;
+  font-family: var(--font-mono);
   animation: hc-chain-slot-wait 7.6s ease-in-out infinite;
 }
 

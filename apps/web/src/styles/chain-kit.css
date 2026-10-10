@@ -157,7 +157,7 @@ button.cr-link-face:focus-visible {
 }
 
 .cr-link-word {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -376,7 +376,7 @@ button.cr-link-face:focus-visible {
 
 /* Typed, it is the word as they will see it, so it takes the link's face. */
 .cr-write-input:not(:placeholder-shown) {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.1em;

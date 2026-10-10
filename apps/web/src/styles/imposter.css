@@ -291,7 +291,7 @@
 
 /* Underscores need to line up to read as a redaction rather than a typo. */
 .imp-slot--redacted {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.76rem;
   letter-spacing: 0.06em;
   color: var(--secondary);
