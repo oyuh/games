@@ -16,7 +16,7 @@ describe("renderPipsSvg", () => {
     expect(svg.endsWith("</svg>")).toBe(true);
     // One rect per playable cell, plus the background and the rule chips.
     expect(countOf(svg, "<rect")).toBeGreaterThanOrEqual(puzzle.cells.length);
-    expect(countOf(svg, "PIPS BOARD")).toBe(1);
+    expect(countOf(svg, ">Board<")).toBe(1);
   });
 
   it("shows no domino faces on the board view", () => {
@@ -78,7 +78,7 @@ describe("renderPipsSvg", () => {
   it("renders every difficulty in the run", () => {
     for (const p of run.puzzles) {
       const svg = renderPipsSvg(p, SEED, { view: "solution" });
-      expect(svg).toContain(p.difficulty.toUpperCase());
+      expect(svg).toContain(p.difficulty.charAt(0).toUpperCase() + p.difficulty.slice(1));
       expect(svg.endsWith("</svg>")).toBe(true);
     }
   });

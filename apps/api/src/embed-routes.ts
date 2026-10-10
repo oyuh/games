@@ -15,7 +15,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { drizzleClient } from "./db-provider";
 
-const SITE_NAME = "Games · Lawson Hart";
+const SITE_NAME = "Games by Lawson Hart";
 const DEFAULT_WEB_ORIGIN = "https://games.lawsonhart.me";
 
 type EmbedModel = {
@@ -227,7 +227,7 @@ function getMultiplayerId(path: string, slug: GameSlug): string | null {
 function withGameRoom(base: EmbedModel, code: string, phase: string, detailValues: string[]): EmbedModel {
   const status = phaseLabel(phase);
   const details = detailValues.filter(Boolean);
-  const suffix = details.length > 0 ? ` · ${details.join(" · ")}` : "";
+  const suffix = details.length > 0 ? `, ${details.join(", ")}` : "";
   return {
     ...base,
     title: `${GAME_META[base.slug].title} ${code} | Games`,
@@ -304,14 +304,19 @@ function renderEmbedHtml(model: EmbedModel): string {
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${description}">
     <style>
-      body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: #181a1b; color: #f5f5f5; font-family: ui-sans-serif, system-ui, sans-serif; }
-      a { color: ${accent}; font-weight: 800; }
+      body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 2rem 1rem; box-sizing: border-box; background: #181a1b; color: #f5f5f5; font-family: Axiforma, ui-sans-serif, system-ui, sans-serif; }
+      main { width: min(540px, 100%); display: flex; flex-direction: column; gap: 0.75rem; }
+      h1 { margin: 0; color: ${accent}; font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
+      p { margin: 0; color: #bdbdbd; line-height: 1.45; }
+      code { font-family: "IBM Plex Mono", ui-monospace, monospace; color: #f5f5f5; }
+      a { color: ${accent}; font-weight: 700; text-underline-offset: 0.25em; }
     </style>
   </head>
   <body>
     <main>
+      <h1>${escapeHtml(GAME_META[model.slug].title)}${model.code ? ` <code>${escapeHtml(model.code)}</code>` : ""}</h1>
       <p>${description}</p>
-      <a href="${webUrl}">Open ${title}</a>
+      <a href="${webUrl}">Open on games.lawsonhart.me</a>
     </main>
   </body>
 </html>`;
