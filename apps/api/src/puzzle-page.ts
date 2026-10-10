@@ -49,7 +49,7 @@ const SHARE_ORIGINS = [SITE_URL, "http://localhost:5173"];
 
 /**
  * The site proxies games.lawsonhart.me/share/<game> to /api/<game>/puzzle
- * (apps/web/functions/_middleware.js, and the Vite dev server) and names
+ * (functions/_middleware.js at the repo root, and the Vite dev server) and names
  * itself in x-share-origin, so a page reached that way links back to the site.
  */
 function shareOrigin(c: Context): string | null {

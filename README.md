@@ -465,7 +465,7 @@ Production runs on separate services:
 
 ### Cloudflare Pages web app
 
-Pages builds from the repo root on every push to `master`. It installs with `bun install`, builds with `bun run --filter @games/web build`, and serves `apps/web/dist`. `apps/web/public/_redirects` sends every path to `/index.html`, and `apps/web/functions/_middleware.js` hands bot and social-preview user agents the API's embed HTML.
+Pages builds from the repo root on every push to `master`. It installs with `bun install`, builds with `bun run --filter @games/web build`, and serves `apps/web/dist`. `apps/web/public/_redirects` sends every path to `/index.html`, and `functions/_middleware.js` hands bot and social-preview user agents the API's embed HTML and proxies `/share/<game>` to the API's share pages. The function sits at the repo root because Pages only reads `functions/` from the directory it builds in.
 
 Pages doesn't wait for CI, but the API does, so a new client can go live minutes before the API it talks to. Keep API changes working with the previous client, or land the API change first.
 
