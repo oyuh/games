@@ -3,6 +3,7 @@
  *
  * Routes:
  *   GET /api/zip/puzzle.svg  The first board of a seeded run (query: ?difficulty=&seed=&theme=)
+ *   GET /api/zip/puzzle.png  That board on the 1200×630 link preview card
  *   GET /api/zip/puzzle      Share page that drops you into that seeded run
  *
  * Like Pips, the public routes draw the board only. Ranked runs are rebuilt
@@ -12,7 +13,8 @@
 import { Hono, type Context } from "hono";
 
 import { DIFFICULTY_CONFIG, generateRun, pathSegments, segmentColor, validatePath, type Difficulty, type ZipPuzzle } from "@games/shared/games/zip-engine";
-import { capitalize, getBaseUrl, parseOption, parseSeedParam, parseTheme, randomSeed, renderPuzzlePage, SITE_URL, svgResponse } from "./puzzle-page";
+import { renderOgCardPng } from "./og-card";
+import { capitalize, parseOption, parseSeedParam, parseTheme, pngResponse, randomSeed, renderPuzzlePage, shareBase, siteOrigin, svgResponse } from "./puzzle-page";
 import { svgPalette, SVG_FONT, SVG_MONO } from "./svg-theme";
 
 const ZIP_YELLOW = { dark: "#facc15", light: "#a16207" } as const;
@@ -115,11 +117,25 @@ zipImageRoutes.get("/puzzle.svg/download", (c) => {
   return svgResponse(c, renderZipSvg(puzzle, seed, { theme: parseTheme(c.req.query("theme")) }), filename, true);
 });
 
+zipImageRoutes.get("/puzzle.png", (c) => {
+  const { seed, difficulty, puzzle } = boardFromQuery(c);
+  const size = DIFFICULTY_CONFIG[difficulty].size;
+  return pngResponse(c, renderOgCardPng({
+    accent: ZIP_YELLOW.dark,
+    icon: "path",
+    game: "Zip",
+    headline: `${capitalize(difficulty)} run, ${size}×${size}`,
+    details: ["Three seeded boards", "One line through every square, numbers in order"],
+    seed,
+    board: renderZipSvg(puzzle, seed, { framed: false }),
+  }), parseSeedParam(c.req.query("seed")) !== null);
+});
+
 zipImageRoutes.get("/puzzle", (c) => {
   const { seed, difficulty, puzzle } = boardFromQuery(c);
-  const baseUrl = getBaseUrl(c);
+  const base = shareBase(c, "zip");
   const query = `difficulty=${difficulty}&seed=${seed}`;
-  const playUrl = `${SITE_URL}/zip?from=puzzle&seed=${seed}&difficulty=${difficulty}`;
+  const playUrl = `${siteOrigin(c)}/zip?from=puzzle&seed=${seed}&difficulty=${difficulty}`;
   if (c.req.query("play") === "1") return c.redirect(playUrl, 302);
 
   const size = DIFFICULTY_CONFIG[difficulty].size;
@@ -129,20 +145,20 @@ zipImageRoutes.get("/puzzle", (c) => {
     subtitle: "Draw one line through every square, hitting the numbers in order.",
     title: `Zip Run: ${capitalize(difficulty)} ${size}×${size}`,
     description: `A seeded ${difficulty} Zip run: three ${size}×${size} boards. Seed ${seed}.`,
-    pageUrl: `${baseUrl}/api/zip/puzzle?${query}`,
-    imageUrl: `${baseUrl}/api/zip/puzzle.svg?${query}`,
+    pageUrl: `${base}?${query}`,
+    imageUrl: `${base}.png?${query}`,
     board: renderZipSvg(puzzle, seed, { framed: false }),
     pickerLabel: "Difficulty",
     options: DIFFICULTIES.map((d) => ({
       label: DIFFICULTY_CONFIG[d].label,
       hint: `${DIFFICULTY_CONFIG[d].size}×${DIFFICULTY_CONFIG[d].size}`,
-      href: `${baseUrl}/api/zip/puzzle?difficulty=${d}`,
+      href: `${base}?difficulty=${d}`,
       accent: ZIP_YELLOW.dark,
       current: d === difficulty,
     })),
     seed,
-    newUrl: `${baseUrl}/api/zip/puzzle?difficulty=${difficulty}`,
-    downloadUrl: `${baseUrl}/api/zip/puzzle.svg/download?${query}`,
+    newUrl: `${base}?difficulty=${difficulty}`,
+    downloadUrl: `${base}.svg/download?${query}`,
     playUrl,
     playLabel: "Play this run",
     links: [],

@@ -27,7 +27,7 @@ import {
 } from "../lib/shikaku-engine";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { fetchWithChallenge } from "../lib/challenge";
-import { readPuzzleLink, sharePuzzle } from "../lib/puzzle-link";
+import { puzzleShareUrl, readPuzzleLink, sharePuzzle } from "../lib/puzzle-link";
 import { devMoveTimes, startRankedRun as requestRankedRun, type RankedRun } from "../lib/solo-run";
 import { showToast } from "../lib/toast";
 import { playCountdownTick, playGameOver } from "../lib/sounds";
@@ -1450,7 +1450,7 @@ export function ShikakuPage() {
   // Challenge complete - single puzzle from puzzle image page
   if (phase === "finished" && challengeMode) {
     const solved = !gaveUp;
-    const puzzlePageUrl = `${API_BASE}/api/shikaku/puzzle?difficulty=${difficulty}&seed=${seed}`;
+    const puzzlePageUrl = puzzleShareUrl("shikaku", { difficulty, seed });
     return (
       <div className="game-page shikaku-page" data-game-theme="shikaku" data-phase="finished">
         <div className="shikaku-container shikaku-container--end">

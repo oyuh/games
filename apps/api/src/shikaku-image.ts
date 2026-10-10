@@ -4,13 +4,15 @@
  *
  * Routes:
  *   GET /api/shikaku/puzzle.svg  Random puzzle SVG (query: ?difficulty=&seed=&theme=)
+ *   GET /api/shikaku/puzzle.png  That puzzle on the 1200×630 link preview card
  *   GET /api/shikaku/puzzle      HTML page with puzzle display, download, and embeds
  */
 
 import { Context, Hono } from "hono";
 
 import { DIFFICULTY_CONFIG, generatePuzzle, mulberry32, type Difficulty, type Rect, type ShikakuPuzzle } from "@games/shared/games/shikaku-engine";
-import { capitalize, getBaseUrl, getRequestProto, parseOption, parseSeedParam, parseTheme, randomSeed, renderPuzzlePage, SITE_URL, svgResponse } from "./puzzle-page";
+import { renderOgCardPng } from "./og-card";
+import { capitalize, getRequestProto, parseOption, parseSeedParam, parseTheme, pngResponse, randomSeed, renderPuzzlePage, shareBase, siteOrigin, svgResponse } from "./puzzle-page";
 import { svgPalette, SVG_FONT, SVG_MONO } from "./svg-theme";
 
 /* ── SVG rendering ─────────────────────────────────────────── */
@@ -243,6 +245,23 @@ shikakuImageRoutes.get("/puzzle.svg/download", (c) => {
   return svgResponse(c, svg, filename, true);
 });
 
+shikakuImageRoutes.get("/puzzle.png", (c) => {
+  const difficulty = parseOption(c.req.query("difficulty"), DIFFICULTIES, "medium");
+  const seed = parseSeedParam(c.req.query("seed")) ?? randomSeed();
+  const showSolution = parseBooleanFlag(c.req.query("solution"));
+  const { rows, cols } = DIFFICULTY_CONFIG[difficulty];
+  const puzzle = generatePuzzle(rows, cols, mulberry32(seed));
+  return pngResponse(c, renderOgCardPng({
+    accent: SHIKAKU_GREEN.dark,
+    icon: "grid-3x3",
+    game: "Shikaku",
+    headline: `${capitalize(difficulty)} ${showSolution ? "solution" : "puzzle"}, ${rows}×${cols}`,
+    details: ["One seeded board", "Cut the grid into rectangles that match the numbers"],
+    seed,
+    board: renderPuzzleSvg(puzzle, difficulty, seed, { showSolution, transparentBg: true, paddingMode: "none" }),
+  }), parseSeedParam(c.req.query("seed")) !== null);
+});
+
 shikakuImageRoutes.get("/puzzle", (c) => {
   const difficulty = parseOption(c.req.query("difficulty"), DIFFICULTIES, "medium");
   const theme = parseTheme(c.req.query("theme"));
@@ -257,10 +276,10 @@ shikakuImageRoutes.get("/puzzle", (c) => {
     rememberReadmeSeed(c, difficulty, readmeScope, seed);
   }
 
-  const baseUrl = getBaseUrl(c);
+  const base = shareBase(c, "shikaku");
   const query = `difficulty=${difficulty}&seed=${seed}&theme=${theme}`;
-  const puzzlePageUrl = `${baseUrl}/api/shikaku/puzzle?${query}`;
-  const playUrl = `${SITE_URL}/shikaku?from=puzzle&seed=${seed}&difficulty=${difficulty}&challenge=1`;
+  const puzzlePageUrl = `${base}?${query}`;
+  const playUrl = `${siteOrigin(c)}/shikaku?from=puzzle&seed=${seed}&difficulty=${difficulty}&challenge=1`;
 
   if (parseBooleanFlag(c.req.query("play"))) {
     return c.redirect(playUrl, 302);
@@ -278,19 +297,19 @@ shikakuImageRoutes.get("/puzzle", (c) => {
       ? `The solution for a ${rows}×${cols} ${difficulty} Shikaku logic puzzle.`
       : `A ${rows}×${cols} ${difficulty} Shikaku logic puzzle. Cover every cell with rectangles matching the numbers!`,
     pageUrl: showingSolution ? `${puzzlePageUrl}&solution=1` : puzzlePageUrl,
-    imageUrl: `${baseUrl}/api/shikaku/puzzle.svg?${query}`,
+    imageUrl: `${base}.png?${query}${showingSolution ? "&solution=1" : ""}`,
     board: renderPuzzleSvg(puzzle, difficulty, seed, { showSolution: showingSolution, transparentBg: true, paddingMode: "none" }),
     pickerLabel: "Difficulty",
     options: DIFFICULTIES.map((d) => ({
       label: capitalize(d),
       hint: DIFFICULTY_CONFIG[d].label,
-      href: `${baseUrl}/api/shikaku/puzzle?difficulty=${d}&theme=${theme}`,
+      href: `${base}?difficulty=${d}&theme=${theme}`,
       accent: DIFF_ACCENT[d],
       current: d === difficulty,
     })),
     seed,
-    newUrl: `${baseUrl}/api/shikaku/puzzle?difficulty=${difficulty}&theme=${theme}`,
-    downloadUrl: `${baseUrl}/api/shikaku/puzzle.svg/download?${query}`,
+    newUrl: `${base}?difficulty=${difficulty}&theme=${theme}`,
+    downloadUrl: `${base}.svg/download?${query}`,
     playUrl,
     playLabel: "Play this puzzle",
     links: [{

@@ -546,7 +546,7 @@ export function PipsPage() {
     setSelectedDominoId(firstPuzzle.dominoes[0]?.id ?? null);
   };
 
-  // A link from the share page (/api/pips/puzzle) starts its seeded run
+  // A link from the share page (/share/pips) starts its seeded run
   // straight away, then drops the params so a reload lands on the menu.
   const puzzleLinkHandled = useRef(false);
   useEffect(() => {

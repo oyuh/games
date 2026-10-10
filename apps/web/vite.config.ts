@@ -1,14 +1,14 @@
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 
 // Source maps only get built when there's a token to upload them with. The
 // plugin reads SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT from env, and
 // deletes the maps after upload so they never ship to the public site.
 const uploadSourceMaps = !!process.env.SENTRY_AUTH_TOKEN;
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
@@ -57,6 +57,16 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: !!process.env.VITE_EXPOSE_HOST
+    host: !!process.env.VITE_EXPOSE_HOST,
+    // Production serves /share/<game> from functions/_middleware.js; this is
+    // the same proxy for dev.
+    proxy: {
+      "^/share/(shikaku|pips|zip)": {
+        target: loadEnv(mode, process.cwd(), "").VITE_API_URL || "http://localhost:3001",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/share\/(\w+)/, "/api/$1/puzzle"),
+        headers: { "x-share-origin": "http://localhost:5173" }
+      }
+    }
   }
-});
+}));

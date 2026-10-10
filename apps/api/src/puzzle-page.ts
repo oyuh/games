@@ -44,6 +44,35 @@ export function getBaseUrl(c: Context): string {
   return `${getRequestProto(c)}://${c.req.header("host") || "localhost:3001"}`;
 }
 
+// Origins allowed to front the share pages. Anything else gets the API's own URLs.
+const SHARE_ORIGINS = [SITE_URL, "http://localhost:5173"];
+
+/**
+ * The site proxies games.lawsonhart.me/share/<game> to /api/<game>/puzzle
+ * (apps/web/functions/_middleware.js, and the Vite dev server) and names
+ * itself in x-share-origin, so a page reached that way links back to the site.
+ */
+function shareOrigin(c: Context): string | null {
+  const origin = c.req.header("x-share-origin");
+  if (!origin) return null;
+  const configured = process.env.WEB_ORIGIN?.trim().replace(/\/$/, "");
+  return SHARE_ORIGINS.includes(origin) || origin === configured ? origin : null;
+}
+
+/**
+ * Where a game's share page lives: games.lawsonhart.me/share/<game> behind the
+ * proxy, /api/<game>/puzzle hit directly. Append ".png" or ".svg" for its images.
+ */
+export function shareBase(c: Context, game: string): string {
+  const origin = shareOrigin(c);
+  return origin ? `${origin}/share/${game}` : `${getBaseUrl(c)}/api/${game}/puzzle`;
+}
+
+/** The site the play button sends you to. */
+export function siteOrigin(c: Context): string {
+  return shareOrigin(c) ?? SITE_URL;
+}
+
 export function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -60,6 +89,14 @@ export function svgResponse(c: Context, svg: string, filename: string, download 
     "ETag": `"${filename}-${Date.now()}"`,
     "Vary": "*",
     "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${filename}"`,
+  });
+}
+
+/** A preview card. Seeded cards never change, so they cache for a day. */
+export function pngResponse(c: Context, png: Uint8Array<ArrayBuffer>, seeded: boolean) {
+  return c.body(png, 200, {
+    "Content-Type": "image/png",
+    "Cache-Control": seeded ? "public, max-age=86400, s-maxage=86400" : "no-store",
   });
 }
 
@@ -81,6 +118,7 @@ export interface PuzzlePage {
   title: string;
   description: string;
   pageUrl: string;
+  /** The PNG preview card for og:image. */
   imageUrl: string;
   /** Board-only SVG markup, inlined so it picks up the page's fonts. */
   board: string;
@@ -95,13 +133,8 @@ export interface PuzzlePage {
 }
 
 const ICON_ATTRS = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
-const AXIFORMA_WEIGHTS: [string, number][] = [["Regular", 400], ["SemiBold", 600], ["Bold", 700], ["ExtraBold", 800], ["Black", 900]];
 
 export function renderPuzzlePage(page: PuzzlePage): string {
-  const fontFaces = AXIFORMA_WEIGHTS.map(([name, weight]) =>
-    `@font-face { font-family: "Axiforma"; src: url("${SITE_URL}/font/Axiforma-${name}.woff2") format("woff2"); font-weight: ${weight}; font-display: swap; ascent-override: 100%; descent-override: 23%; line-gap-override: 0%; }`,
-  ).join("\n    ");
-
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -114,6 +147,10 @@ export function renderPuzzlePage(page: PuzzlePage): string {
   <meta property="og:title" content="${page.title}">
   <meta property="og:description" content="${page.description}">
   <meta property="og:image" content="${page.imageUrl}">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="${page.title}">
   <meta property="og:url" content="${page.pageUrl}">
   <meta property="og:site_name" content="Games by Lawson Hart">
 
@@ -122,14 +159,13 @@ export function renderPuzzlePage(page: PuzzlePage): string {
   <meta name="twitter:description" content="${page.description}">
   <meta name="twitter:image" content="${page.imageUrl}">
 
-  <meta name="theme-color" content="#181a1b">
+  <!-- Discord colors the embed's edge with this. -->
+  <meta name="theme-color" content="${page.color}">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Urbanist:wght@400..900&display=swap" rel="stylesheet">
   <style>
-    ${fontFaces}
-
     /* No shadows, no glows: depth comes from borders and fills. */
     :root {
       color-scheme: dark;
@@ -158,7 +194,7 @@ export function renderPuzzlePage(page: PuzzlePage): string {
       padding: 2rem 1rem;
       background: var(--background);
       color: var(--foreground);
-      font-family: "Axiforma", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Urbanist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       -webkit-font-smoothing: antialiased;
     }
 

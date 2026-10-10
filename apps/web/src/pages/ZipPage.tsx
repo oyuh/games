@@ -158,7 +158,7 @@ export function ZipPage() {
     }
   };
 
-  // A link from the share page (/api/zip/puzzle) starts its seeded run
+  // A link from the share page (/share/zip) starts its seeded run
   // straight away, then drops the params so a reload lands on the menu.
   const puzzleLinkHandled = useRef(false);
   useEffect(() => {

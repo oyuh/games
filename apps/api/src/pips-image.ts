@@ -11,6 +11,7 @@
  *
  * Routes:
  *   GET /api/pips/puzzle.svg  One board of a seeded run (query: ?seed=&board=&theme=)
+ *   GET /api/pips/puzzle.png  That board on the 1200×630 link preview card
  *   GET /api/pips/puzzle      Share page that drops you into that seeded run
  */
 
@@ -25,7 +26,8 @@ import {
   type PipsPuzzle,
   type PipsRegionRule,
 } from "@games/shared/games/pips-engine";
-import { capitalize, getBaseUrl, parseOption, parseSeedParam, parseTheme, randomSeed, renderPuzzlePage, SITE_URL, svgResponse } from "./puzzle-page";
+import { renderOgCardPng } from "./og-card";
+import { capitalize, parseOption, parseSeedParam, parseTheme, pngResponse, randomSeed, renderPuzzlePage, shareBase, siteOrigin, svgResponse } from "./puzzle-page";
 import { mixHex, svgPalette, SVG_FONT, SVG_MONO } from "./svg-theme";
 
 /** The colors the site paints regions with, from PipsPage's REGION_COLORS. */
@@ -336,11 +338,25 @@ pipsImageRoutes.get("/puzzle.svg/download", (c) => {
   return svgResponse(c, renderPipsSvg(puzzle, seed, { theme: parseTheme(c.req.query("theme")) }), filename, true);
 });
 
+pipsImageRoutes.get("/puzzle.png", (c) => {
+  const { seed, board, puzzle } = boardFromQuery(c);
+  const { rows, cols } = PIPS_DIFFICULTY_CONFIG[board];
+  return pngResponse(c, renderOgCardPng({
+    accent: PIPS_ORANGE.dark,
+    icon: "domino",
+    game: "Pips",
+    headline: `${capitalize(board)} board, ${rows}×${cols}`,
+    details: ["Three seeded boards, easy to hard", "Place every domino so each region fits its rule"],
+    seed,
+    board: renderPipsSvg(puzzle, seed, { framed: false }),
+  }), parseSeedParam(c.req.query("seed")) !== null);
+});
+
 pipsImageRoutes.get("/puzzle", (c) => {
   const { seed, board, puzzle } = boardFromQuery(c);
-  const baseUrl = getBaseUrl(c);
+  const base = shareBase(c, "pips");
   const query = `seed=${seed}&board=${board}`;
-  const playUrl = `${SITE_URL}/pips?from=puzzle&seed=${seed}`;
+  const playUrl = `${siteOrigin(c)}/pips?from=puzzle&seed=${seed}`;
   if (c.req.query("play") === "1") return c.redirect(playUrl, 302);
 
   return c.html(renderPuzzlePage({
@@ -349,20 +365,20 @@ pipsImageRoutes.get("/puzzle", (c) => {
     subtitle: "Place every domino so each colored region satisfies its rule.",
     title: `Pips Run ${seed}: ${capitalize(board)} board`,
     description: `A seeded Pips run: three domino boards from easy to hard. Seed ${seed}.`,
-    pageUrl: `${baseUrl}/api/pips/puzzle?${query}`,
-    imageUrl: `${baseUrl}/api/pips/puzzle.svg?${query}`,
+    pageUrl: `${base}?${query}`,
+    imageUrl: `${base}.png?${query}`,
     board: renderPipsSvg(puzzle, seed, { framed: false }),
     pickerLabel: "Board in this run",
     options: PIPS_RUN_DIFFICULTIES.map((d) => ({
       label: capitalize(d),
       hint: `${PIPS_DIFFICULTY_CONFIG[d].rows}×${PIPS_DIFFICULTY_CONFIG[d].cols}`,
-      href: `${baseUrl}/api/pips/puzzle?seed=${seed}&board=${d}`,
+      href: `${base}?seed=${seed}&board=${d}`,
       accent: PIPS_DIFF_ACCENT.dark[d],
       current: d === board,
     })),
     seed,
-    newUrl: `${baseUrl}/api/pips/puzzle`,
-    downloadUrl: `${baseUrl}/api/pips/puzzle.svg/download?${query}`,
+    newUrl: base,
+    downloadUrl: `${base}.svg/download?${query}`,
     playUrl,
     playLabel: "Play this run",
     links: [],

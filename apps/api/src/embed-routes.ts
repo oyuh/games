@@ -14,9 +14,11 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { drizzleClient } from "./db-provider";
+import { renderOgCardPng } from "./og-card";
 
 const SITE_NAME = "Games by Lawson Hart";
 const DEFAULT_WEB_ORIGIN = "https://games.lawsonhart.me";
+const DEFAULT_API_ORIGIN = "https://api.games.lawsonhart.me";
 
 type EmbedModel = {
   slug: GameSlug;
@@ -37,11 +39,38 @@ embedRoutes.get("/html", async (c) => {
   const path = normalizePath(c.req.query("path"));
   const model = await resolveEmbedModel(path, getWebOrigin(c));
 
-  return c.html(renderEmbedHtml(model), 200, {
+  const imageUrl = `${getApiOrigin(c)}/api/embed/image.png?path=${encodeURIComponent(path)}`;
+
+  return c.html(renderEmbedHtml(model, imageUrl), 200, {
     "Cache-Control": "public, max-age=60, s-maxage=300",
     "Content-Type": "text/html; charset=utf-8",
   });
 });
+
+embedRoutes.get("/image.png", async (c) => {
+  const path = normalizePath(c.req.query("path"));
+  const model = await resolveEmbedModel(path, getWebOrigin(c));
+  const meta = GAME_META[model.slug];
+
+  const png = renderOgCardPng({
+    accent: model.accent,
+    icon: meta.icon,
+    game: meta.title,
+    headline: model.code ? `Room ${model.code}, ${model.status?.toLowerCase()}` : meta.shortDescription,
+    details: model.code ? [model.details.join(", ")] : [playersLabel(meta.players)],
+    ...(model.code ? { code: model.code } : {}),
+  });
+  return c.body(png, 200, {
+    "Cache-Control": "public, max-age=60, s-maxage=300",
+    "Content-Type": "image/png",
+  });
+});
+
+function playersLabel(players: string): string {
+  if (players === "Solo") return "Solo puzzle";
+  if (players === "Party") return "Party games and logic puzzles";
+  return `${players} players`;
+}
 
 function normalizePath(value: string | undefined): string {
   if (!value) return "/";
@@ -71,6 +100,14 @@ function getWebOrigin(c: Context) {
     return "http://localhost:5173";
   }
   return DEFAULT_WEB_ORIGIN;
+}
+
+// The embed HTML reaches us through the site's bot proxy, so the request's
+// host can't be trusted to name the API.
+function getApiOrigin(c: Context) {
+  const origin = getRequestOrigin(c, "api.games.lawsonhart.me");
+  if (origin.includes("localhost") || origin.includes("127.0.0.1")) return origin;
+  return DEFAULT_API_ORIGIN;
 }
 
 async function resolveEmbedModel(path: string, webOrigin: string): Promise<EmbedModel> {
@@ -281,7 +318,7 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function renderEmbedHtml(model: EmbedModel): string {
+function renderEmbedHtml(model: EmbedModel, imageUrl: string): string {
   const title = escapeHtml(model.title);
   const description = escapeHtml(model.description);
   const webUrl = escapeHtml(model.webUrl);
@@ -300,11 +337,17 @@ function renderEmbedHtml(model: EmbedModel): string {
     <meta property="og:description" content="${description}">
     <meta property="og:url" content="${webUrl}">
     <meta property="og:site_name" content="${SITE_NAME}">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="${escapeHtml(imageUrl)}">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="${title}">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${description}">
+    <meta name="twitter:image" content="${escapeHtml(imageUrl)}">
     <style>
-      body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 2rem 1rem; box-sizing: border-box; background: #181a1b; color: #f5f5f5; font-family: Axiforma, ui-sans-serif, system-ui, sans-serif; }
+      body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 2rem 1rem; box-sizing: border-box; background: #181a1b; color: #f5f5f5; font-family: Urbanist, ui-sans-serif, system-ui, sans-serif; }
       main { width: min(540px, 100%); display: flex; flex-direction: column; gap: 0.75rem; }
       h1 { margin: 0; color: ${accent}; font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
       p { margin: 0; color: #bdbdbd; line-height: 1.45; }

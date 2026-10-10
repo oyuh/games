@@ -1,15 +1,22 @@
 import { showToast } from "./toast";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+/**
+ * The share page for a seed. /share/<game> is proxied to the API's
+ * /api/<game>/puzzle (functions/_middleware.js, and Vite's dev proxy), so the
+ * link stays on this site. `params` is the page's query, e.g.
+ * { seed, difficulty } for Zip or { seed } for Pips.
+ */
+export function puzzleShareUrl(game: "shikaku" | "pips" | "zip", params: Record<string, string | number>) {
+  const query = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)]));
+  return `${window.location.origin}/share/${game}?${query}`;
+}
 
 /**
  * Hands out the share page for a seed: the phone's share sheet on a touch
- * screen, the clipboard everywhere else. `params` is the page's query, e.g.
- * { seed, difficulty } for Zip or { seed } for Pips.
+ * screen, the clipboard everywhere else.
  */
 export async function sharePuzzle(game: "shikaku" | "pips" | "zip", params: Record<string, string | number>) {
-  const query = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)]));
-  const url = `${API_BASE}/api/${game}/puzzle?${query}`;
+  const url = puzzleShareUrl(game, params);
   if (navigator.share && matchMedia("(pointer: coarse)").matches) {
     try {
       await navigator.share({ url });
@@ -28,7 +35,7 @@ export async function sharePuzzle(game: "shikaku" | "pips" | "zip", params: Reco
 }
 
 /**
- * The API's share pages (/api/<game>/puzzle) send players here as
+ * The share pages (/share/<game>) send players here as
  * ?from=puzzle&seed=N, plus &difficulty= where the game has one and
  * &challenge=1 for Shikaku's single board. Null when the visit didn't come
  * from one; seed is null when the link carried a bad one.
