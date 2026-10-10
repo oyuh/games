@@ -12,6 +12,7 @@
   display: flex;
   align-items: stretch;
   gap: 3rem;
+  min-width: 0;
 }
 
 /* Break out of the .shell-main max-width constraint */
@@ -26,8 +27,10 @@
   justify-content: center;
   align-content: center;
   gap: 1.5rem;
-  flex: 0 0 auto;
-  width: calc(3 * 320px + 2 * 1.5rem);
+  /* Three 320px columns at full size. Narrower windows shrink the cards
+     toward 260px before the solo column drops underneath (below). */
+  flex: 0 1 calc(3 * 320px + 2 * 1.5rem);
+  min-width: 0;
 }
 
 /* One small title over each side, set like the status page's section
@@ -499,8 +502,8 @@ a.solo-card-title-link {
 }
 
 .home-card {
-  width: 320px;
-  max-width: 340px;
+  flex: 1 1 260px;
+  max-width: 320px;
   height: 480px;
   min-height: 480px;
   max-height: 480px;
@@ -2010,8 +2013,11 @@ a.solo-card-title-link {
   padding: 0.35rem 0.5rem !important;
 }
 
-/* ── Vertical desktop monitors (portrait, non-mobile) ────────── */
-@media (orientation: portrait) and (min-width: 769px) {
+/* ── Vertical desktop monitors and narrow landscape windows ─────
+   Below about 1180px the cards and the solo column can't share a row
+   without scrolling sideways, so the solo column moves underneath. */
+@media (orientation: portrait) and (min-width: 769px),
+  (min-width: 769px) and (max-width: 1180px) {
   .home-layout {
     flex-direction: column;
     align-items: center;
