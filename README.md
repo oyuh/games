@@ -51,6 +51,9 @@ Shikaku, Pips, and Zip skip the Zero cache. Their puzzle engines run in the brow
 
 ## Repository layout
 
+<details>
+<summary>Folder tree</summary>
+
 ```text
 .
 +-- apps/
@@ -68,11 +71,16 @@ Shikaku, Pips, and Zip skip the Zero cache. Their puzzle engines run in the brow
 +-- package.json       # Bun workspace scripts
 ```
 
+</details>
+
 ## Architecture
 
 ### Player app: `apps/web`
 
 A React 19 single-page app built by Vite. It handles:
+
+<details>
+<summary>What it handles</summary>
 
 - Routes for the home page, multiplayer rooms, Shikaku, Pips, Zip, a `/status` connection page, and `/dev/*` sandbox pages.
 - A module-scoped Zero client for multiplayer sync.
@@ -83,21 +91,31 @@ A React 19 single-page app built by Vite. It handles:
 - Wake/idle messages for when the Zero cache is cold or paused.
 - Separate mobile pages for the multiplayer games (see [Mobile UI](#mobile-ui)).
 
+</details>
+
 Key files: `apps/web/src/App.tsx`, `apps/web/src/pages/`, `apps/web/src/mobile/`, `apps/web/src/lib/zero.ts`, `apps/web/src/lib/session.ts`.
 
 ### Solo puzzle engines
 
 The Shikaku, Pips, and Zip engines live in `packages/shared/src/games/`, so the browser and the API apply the same ranked rules. The web app imports them through thin wrappers in `apps/web/src/lib/*-engine.ts`. The API imports them directly for leaderboard validation.
 
+<details>
+<summary>Engine files</summary>
+
 - `shikaku-engine.ts` does seeded generation, rectangle validation, scoring, auto-filled `1x1` detection, and replay verification.
 - `pips-engine.ts` does seeded generation, board and region validation, domino placement checks, solver utilities, run time scoring, and replay verification.
 - `zip-engine.ts` does seeded generation, path validation, and ranked run verification.
+
+</details>
 
 Shikaku sends the solved rectangles for all five puzzles. Pips sends the domino placements for Easy, Medium, and Hard. Zip sends the drawn path and split time for each puzzle. Every ranked submission also carries its run ticket. The API regenerates the run from the seed, validates the replay, checks the score and time, then runs duplicate, top-20, rate-limit, and ban checks before writing to Postgres.
 
 ### API: `apps/api`
 
 A Bun-powered Hono service. It handles:
+
+<details>
+<summary>What it handles</summary>
 
 - `POST /api/zero/query` and `POST /api/zero/mutate`.
 - Signed session cookies and signed Zero session proofs.
@@ -111,11 +129,16 @@ A Bun-powered Hono service. It handles:
 - Scheduled and manual cleanup of stale games and sessions, with a run history.
 - `/health` and `/debug/build-info`.
 
+</details>
+
 Key files: `apps/api/src/index.ts`, `admin-routes.ts`, `broadcast-server.ts`, `mutator-auth.ts`, `session-identity.ts`, `db-provider.ts`.
 
 ### Admin app: `apps/admin`
 
 A Next.js 16 app behind NextAuth, on port `3002` locally. It proxies admin requests to the API with `ADMIN_SECRET` as a bearer token.
+
+<details>
+<summary>Routes</summary>
 
 | Route | Purpose |
 |-------|---------|
@@ -128,6 +151,8 @@ A Next.js 16 app behind NextAuth, on port `3002` locally. It proxies admin reque
 | `/pips` | Pips leaderboard management |
 | `/zip` | Zip leaderboard management |
 | `/cleanups` | Cleanup run history |
+
+</details>
 
 `/names` redirects to `/bans` and `/broadcast` redirects to `/`.
 
@@ -165,6 +190,9 @@ Then open:
 
 `bun run local:up` runs `scripts/local.mjs`, the same script on macOS, Linux, and Windows. It:
 
+<details>
+<summary>What it runs, step by step</summary>
+
 1. Creates `.env` from `.env.example` if it's missing.
 2. Checks that the installed `@rocicorp/zero` matches the zero-cache image, and runs `bun install` if it doesn't.
 3. Starts the container engine if needed.
@@ -173,9 +201,14 @@ Then open:
 6. Rebuilds the Zero replica and starts zero-cache.
 7. Starts the `api`, `web`, and `admin` dev servers under a small supervisor, so you can inspect and restart each one on its own.
 
+</details>
+
 ### Controlling the stack
 
 The stack listens on a local control socket, so these work from any other terminal:
+
+<details>
+<summary>Stack commands</summary>
 
 ```bash
 bun run local status              # every service, its status, pid, port and uptime
@@ -190,11 +223,16 @@ bun run local doctor              # check the machine for anything that will bre
 bun run local:down                # stop everything
 ```
 
+</details>
+
 Service names are `postgres`, `zero-cache`, `api`, `web`, and `admin`, plus the groups `apps`, `infra`, and `all`. Aliases like `db`, `zero`, `ui`, and `backend` work too.
 
 `local:down` stops the dev servers, frees the dev ports, removes the containers, and drops the Zero replica. Postgres data stays unless you pass `--wipe-db`.
 
 Flags:
+
+<details>
+<summary>Flags</summary>
 
 ```bash
 bun run local up --host           # expose the web dev server on the local network
@@ -205,6 +243,8 @@ bun run local up --skip-db-push   # leave the schema alone
 bun run local up --auto-restart   # bring a dev server back up if it crashes
 bun run local down --wipe-db      # also delete the Postgres volume
 ```
+
+</details>
 
 `bun run local:up` and `bun run local up` are the same command. The `local:*` scripts are shorthand for the common ones.
 
@@ -239,7 +279,8 @@ SESSION_COOKIE_SECRET=games-dev-session-secret
 CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
-Optional:
+<details>
+<summary>Optional variables</summary>
 
 ```bash
 MAP_TILE_URL_TEMPLATE=https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
@@ -249,9 +290,14 @@ WEB_ORIGIN=https://games.lawsonhart.me   # used in social preview links
 TURNSTILE_SECRET_KEY=                    # bot check; blank in dev uses Cloudflare's always-pass test key
 ```
 
+</details>
+
 ### Web app
 
 The web app falls back to local endpoints when these are unset:
+
+<details>
+<summary>Variables</summary>
 
 ```bash
 VITE_ZERO_CACHE_URL=http://localhost:4848
@@ -262,9 +308,14 @@ VITE_TURNSTILE_SITE_KEY=   # bot check; dev falls back to Cloudflare's test key,
 VITE_SENTRY_DSN=           # optional, turns on Sentry error reporting
 ```
 
+</details>
+
 The client derives `VITE_WS_URL` from `VITE_API_URL` plus `/ws`, so you only set it when the socket lives somewhere else.
 
 ### Admin app
+
+<details>
+<summary>Variables</summary>
 
 ```bash
 GAMES_API_URL=http://localhost:3001
@@ -277,9 +328,14 @@ ADMIN_GITHUB_IDS=<comma_separated_allowed_github_logins>
 ADMIN_DEV_SECRET=<local_admin_password>   # optional, enables a local credentials login
 ```
 
+</details>
+
 The API needs the same `ADMIN_SECRET`.
 
 ### Zero cache
+
+<details>
+<summary>Variables</summary>
 
 ```bash
 NODE_ENV=production
@@ -291,11 +347,16 @@ ZERO_CVR_DB=<postgres_url>      # optional
 ZERO_CHANGE_DB=<postgres_url>   # optional
 ```
 
+</details>
+
 Keep the deployed Zero cache on the same version as `@rocicorp/zero` in the workspace. A mismatch passes health checks and breaks browser sync, which is a miserable thing to debug.
 
 ## Commands
 
 Run these from the repo root.
+
+<details>
+<summary>All root commands</summary>
 
 | Command | Purpose |
 |---------|---------|
@@ -316,7 +377,10 @@ Run these from the repo root.
 | `bun run db:studio` | Open Drizzle Studio |
 | `bun run db:push:prod` | Push the schema to `PROD_DB_URL` after a confirmation |
 
-Per-package:
+</details>
+
+<details>
+<summary>Per-package commands</summary>
 
 ```bash
 bun --filter @games/web build
@@ -325,6 +389,8 @@ bun --filter @games/api test
 bun --filter @games/admin typecheck
 bun --filter @games/shared db:push
 ```
+
+</details>
 
 React Doctor commands are in [docs/react-doctor-guide.md](docs/react-doctor-guide.md).
 
@@ -360,6 +426,9 @@ Use [#90](https://github.com/oyuh/games/pull/90), the PR that added Zip, as the 
 
 ### The process
 
+<details>
+<summary>Steps</summary>
+
 1. Branch off `master` with a short name that says what the branch does, like `feat/zip` or `fix/lobby-timer`.
 2. Commit in pieces, one per area. #90 is five commits: engine, API, admin, web, and docs. Each one builds on its own, so a reviewer can read them in order.
 3. Write commit subjects as `type(scope): what changed`. The types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, and `revert`.
@@ -368,7 +437,12 @@ Use [#90](https://github.com/oyuh/games/pull/90), the PR that added Zip, as the 
 6. Open the PR against `master` and fill in [the template](.github/PULL_REQUEST_TEMPLATE.md).
 7. Keep unrelated fixes out of the PR. Send them as their own PR.
 
+</details>
+
 ### What the description covers
+
+<details>
+<summary>Sections</summary>
 
 - **What it does**: two or three sentences a reviewer reads before the diff.
 - **What changed**: one entry per commit or area, with the files and the behavior that moved.
@@ -377,9 +451,14 @@ Use [#90](https://github.com/oyuh/games/pull/90), the PR that added Zip, as the 
 - **Checklists**: tick the template boxes that apply. For a box that doesn't apply, say why.
 - **Screenshots**: required for UI changes. A new game can point reviewers at its `/dev/<game>` kit page instead.
 
+</details>
+
 ## Data model
 
 The schema lives in `packages/shared/src/drizzle/schema.ts`.
+
+<details>
+<summary>Tables</summary>
 
 | Table | Purpose |
 |-------|---------|
@@ -405,11 +484,16 @@ The schema lives in `packages/shared/src/drizzle/schema.ts`.
 | `cleanup_runs` | Recent cleanup runs with aggregate counts |
 | `cleanup_run_days` | Cleanup runs older than a week, folded into one row per UTC day |
 
+</details>
+
 The multiplayer tables keep most live state in JSON columns on purpose. Room snapshots stay simple, and the game transitions sit next to the mutator logic instead of spreading across a dozen relational tables.
 
 ## API
 
 ### Public and runtime
+
+<details>
+<summary>Endpoints</summary>
 
 | Endpoint | Purpose |
 |----------|---------|
@@ -432,7 +516,12 @@ The multiplayer tables keep most live state in JSON columns on purpose. Room sna
 | `POST /api/zero/query` | Resolve Zero query requests |
 | `POST /api/zero/mutate` | Resolve Zero mutation requests |
 
+</details>
+
 ### Solo scores
+
+<details>
+<summary>Endpoints</summary>
 
 | Endpoint | Purpose |
 |----------|---------|
@@ -448,6 +537,8 @@ The multiplayer tables keep most live state in JSON columns on purpose. Room sna
 | `POST /api/zip/run` | Start a ranked run and get its signed seed ticket |
 | `POST /api/zip/score/eligibility` | Check eligibility and replay validity |
 | `POST /api/zip/score` | Submit a run with the drawn-path replay and its ticket |
+
+</details>
 
 ### Admin
 
@@ -471,6 +562,9 @@ Pages doesn't wait for CI, but the API does, so a new client can go live minutes
 
 Pages build variables. They're read at build time, so changing one needs a rebuild:
 
+<details>
+<summary>Build variables</summary>
+
 ```bash
 VITE_ZERO_CACHE_URL=https://<zero-domain>
 VITE_API_URL=https://<api-domain>
@@ -478,11 +572,14 @@ VITE_WS_URL=wss://<api-domain>/ws
 VITE_TURNSTILE_SITE_KEY=<turnstile_site_key>
 ```
 
+</details>
+
 ### Railway API
 
 Railway builds the API from the `Dockerfile`, which runs `bun apps/api/src/index.ts`.
 
-API variables:
+<details>
+<summary>API variables</summary>
 
 ```bash
 NODE_ENV=production
@@ -493,6 +590,8 @@ ADMIN_SECRET=<strong_admin_secret>
 CORS_ALLOWED_ORIGINS=https://<web-domain>
 TURNSTILE_SECRET_KEY=<turnstile_secret>   # without it, bot scores are tracked but never enforced
 ```
+
+</details>
 
 If Railway autodeploys from GitHub, turn on Wait for CI in the service settings. After a deploy, check `https://<api-domain>/health` and `https://<api-domain>/debug/build-info`.
 
@@ -522,9 +621,14 @@ The open `/ws` connection is the online signal. The client reports its current r
 
 The API's WebSocket service has three topic types:
 
+<details>
+<summary>Topics</summary>
+
 - `broadcast` for global messages.
 - `user:{sessionId}` for targeted kicks, name changes, and direct toasts.
 - `password-team:{gameId}:{teamIndex}` for team-only Password live typing.
+
+</details>
 
 ### Cleanup
 
@@ -534,6 +638,9 @@ The API runs cleanup on a schedule, and you can trigger it with `GET` or `POST /
 
 `/debug/build-info` reads the `status` table. If the query answers, the database is up. The sentinel row is optional: when it exists and its value isn't `DB_STATUS_EXPECTED_VALUE`, the footer shows the database as degraded, which you can use as a manual warning. The defaults are `DB_STATUS_KEY=footer` and `DB_STATUS_EXPECTED_VALUE=ok`. Reset the row with:
 
+<details>
+<summary>Reset query</summary>
+
 ```sql
 INSERT INTO status (key, value, updated_at)
 VALUES ('footer', 'ok', EXTRACT(EPOCH FROM NOW())::bigint * 1000)
@@ -542,3 +649,5 @@ DO UPDATE SET
   value = EXCLUDED.value,
   updated_at = EXCLUDED.updated_at;
 ```
+
+</details>
