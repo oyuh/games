@@ -227,7 +227,7 @@
 
 .status-facts code,
 .status-events {
-  font-family: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  font-family: var(--font-mono);
 }
 
 .status-facts code {

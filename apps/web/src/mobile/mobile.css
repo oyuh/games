@@ -383,7 +383,7 @@
 }
 
 .m-row-code {
-  font-family: "Geist Mono", ui-monospace, "SF Mono", monospace;
+  font-family: var(--font-mono);
   letter-spacing: 0.06em;
 }
 

@@ -272,7 +272,7 @@
   overflow: hidden;
   padding: 0 0.5rem 0 0.75rem;
   color: var(--muted-foreground);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.76rem;
   white-space: nowrap;
   text-overflow: ellipsis;

@@ -6,7 +6,6 @@
   align-items: center;
   width: 100%;
   padding: 0.5rem 1rem;
-  font-family: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
   font-size: 0.65rem;
   color: var(--secondary);
   user-select: none;
@@ -369,7 +368,7 @@
 
 .fp-commit-hash {
   flex: 0 0 auto;
-  font-family: "Geist Mono", ui-monospace, "SF Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 0.66rem;
   font-weight: 700;
   color: var(--primary);

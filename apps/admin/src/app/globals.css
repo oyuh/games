@@ -145,7 +145,7 @@
     BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --admin-font-heading: var(--admin-font-sans);
   --admin-font-mono:
-    ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Monaco,
+    var(--font-plex-mono), "IBM Plex Mono", ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Monaco,
     Consolas, monospace;
 }
 

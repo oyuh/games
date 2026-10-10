@@ -8,6 +8,7 @@ import { SignOutButton } from "@/components/admin/sign-out-button";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeBootstrapScript } from "@/components/theme-bootstrap-script";
+import { plexMono } from "../fonts";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={plexMono.variable} suppressHydrationWarning>
       <body>
         <ThemeBootstrapScript />
         <ToastProvider>

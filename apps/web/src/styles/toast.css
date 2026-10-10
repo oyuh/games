@@ -185,7 +185,7 @@ html[data-sidebar="top"][data-toast-pos^="top"] body.has-sync-wake-toast .toast-
 .toast-copy-value {
   flex: 0 0 auto;
   white-space: nowrap;
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: 0.18em;
