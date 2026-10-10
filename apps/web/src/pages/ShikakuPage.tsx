@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FiAward, FiCheck, FiFlag, FiGrid, FiHash, FiHome, FiPlay, FiRepeat, FiTarget, FiUploadCloud, FiUser } from "react-icons/fi";
+import { FiAward, FiCheck, FiFlag, FiGrid, FiHash, FiHome, FiPlay, FiRepeat, FiShare2, FiTarget, FiUploadCloud, FiUser } from "react-icons/fi";
 import { formatTime, GameStat, GameStatBar, GameTimer } from "../components/shared/GameStatBar";
 import {
   ShikakuLeaderboard,
@@ -27,6 +27,7 @@ import {
 } from "../lib/shikaku-engine";
 import { getDisplayName, getOrCreateSessionId, getSessionRequestHeaders, syncSessionIdentity } from "../lib/session";
 import { fetchWithChallenge } from "../lib/challenge";
+import { readPuzzleLink, sharePuzzle } from "../lib/puzzle-link";
 import { devMoveTimes, startRankedRun as requestRankedRun, type RankedRun } from "../lib/solo-run";
 import { showToast } from "../lib/toast";
 import { playCountdownTick, playGameOver } from "../lib/sounds";
@@ -243,25 +244,18 @@ export function ShikakuPage() {
   const pendingChallenge = useRef<{ seed: number; diff: Difficulty } | null>(null);
   useEffect(() => {
     if (prefillHandled.current || phase !== "menu") return;
-    const params = new URLSearchParams(location.search);
-    if (params.get("from") !== "puzzle") return;
+    const link = readPuzzleLink<Difficulty>(location.search, ["easy", "medium", "hard", "expert"]);
+    if (!link) return;
     prefillHandled.current = true;
-    const seedParam = params.get("seed");
-    const diffParam = params.get("difficulty");
-    const isChallenge = params.get("challenge") === "1";
-    const validDiffs: Difficulty[] = ["easy", "medium", "hard", "expert"];
-    if (seedParam) {
-      const parsed = parseInt(seedParam, 10);
-      if (!isNaN(parsed) && parsed > 0 && parsed <= 2_147_483_647) {
-        const diff = (diffParam && validDiffs.includes(diffParam as Difficulty)) ? diffParam as Difficulty : "medium";
-        if (isChallenge) {
-          // Auto-start single-puzzle challenge
-          pendingChallenge.current = { seed: parsed, diff };
-        } else {
-          setCustomSeedInput(String(parsed));
-          setSeedMode(true);
-          setDifficulty(diff);
-        }
+    if (link.seed !== null) {
+      const diff = link.difficulty ?? "medium";
+      if (link.challenge) {
+        // Auto-start single-puzzle challenge
+        pendingChallenge.current = { seed: link.seed, diff };
+      } else {
+        setCustomSeedInput(String(link.seed));
+        setSeedMode(true);
+        setDifficulty(diff);
       }
     }
     // Clean up URL params without triggering a navigation
@@ -1484,6 +1478,7 @@ export function ShikakuPage() {
             links={[
               { label: "Play Full Game", icon: <FiPlay size={14} />, onClick: () => { setChallengeMode(false); setCustomMode(false); setPhase("menu"); } },
               { label: "Puzzle Page", icon: <GameIcon game="shikaku" size={14} />, onClick: () => window.open(puzzlePageUrl, "_blank", "noopener,noreferrer") },
+              { label: "Share", icon: <FiShare2 size={14} />, onClick: () => void sharePuzzle("shikaku", { difficulty, seed }) },
             ]}
           />
         </div>
@@ -1767,6 +1762,8 @@ function ShikakuEndScreen({
           : []),
         { label: "Menu", icon: <FiHome size={14} />, onClick: onMenu, confirm: true },
         { label: "Full Leaderboard", icon: <FiAward size={14} />, onClick: onOpenLeaderboard },
+        // The share page draws one board, which is this run's first.
+        { label: "Share", icon: <FiShare2 size={14} />, onClick: () => void sharePuzzle("shikaku", { difficulty, seed }) },
       ]}
     />
   );
