@@ -2096,7 +2096,7 @@
 }
 
 .solo-end-table-grid[data-seed] {
-  --seed-w: 3.8rem;
+  --seed-w: 3.5rem;
 }
 
 .solo-end-row {
@@ -2158,21 +2158,26 @@
   font-size: 0.74rem;
 }
 
-/* Every seed is a copy button. It reads as text until you point at it. */
+/* Every seed is a hash button. Pressing it copies and raises a toast with
+   the seed in it, so the table never has to print the number itself. */
 .solo-end-seed {
+  display: grid;
+  place-items: center end;
+  height: 1.6rem;
   border: 0;
-  border-radius: var(--radius-sm);
   background: transparent;
-  font-family: inherit;
-  font-weight: inherit;
   cursor: pointer;
-  transition: background 0.14s, color 0.14s;
+  transition: color 0.14s;
 }
 
-.solo-end-seed:hover,
+.solo-end-seed:hover {
+  color: var(--primary);
+}
+
 .solo-end-seed:focus-visible {
-  background: color-mix(in srgb, var(--foreground) 10%, transparent);
-  color: var(--foreground);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  color: var(--primary);
 }
 
 /* The first metric is the one the board is sorted by, so it carries the

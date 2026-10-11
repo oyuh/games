@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, type CSSProperties } from "react";
+import { FiHash } from "react-icons/fi";
 import { showToast } from "../../lib/toast";
 
 /**
@@ -18,11 +19,19 @@ export interface SoloScoreRow {
   cells: string[];
 }
 
-/** Every seed on screen is copyable, and they all land here. */
-export function copySeed(seed: number | string) {
-  return navigator.clipboard.writeText(String(seed))
-    .then(() => showToast("Seed copied", "success"))
-    .catch(() => showToast("Could not copy the seed", "error"));
+/**
+ * Every seed on screen is copyable, and they all land here. The toast carries
+ * the seed large, like a room code, so it can be read off or copied again from
+ * there even when the clipboard said no.
+ */
+export async function copySeed(seed: number | string) {
+  const value = String(seed);
+  try {
+    await navigator.clipboard.writeText(value);
+    showToast("Seed copied", "info", { category: "Seed", copy: value });
+  } catch {
+    showToast("Couldn't copy it, here's the seed", "info", { category: "Seed", copy: value });
+  }
 }
 
 /**
@@ -126,10 +135,8 @@ export function SoloScoreTable({
                           type="button"
                           onClick={() => copySeed(row.seed!)}
                           aria-label={`Copy seed ${row.seed}`}
-                          data-tooltip="Click to copy"
-                          data-tooltip-pos="top"
                         >
-                          {row.seed}
+                          <FiHash size={14} aria-hidden="true" />
                         </button>
                       ) : (
                         <span className="solo-end-cell solo-end-cell--seed">-</span>
