@@ -178,7 +178,7 @@
 }
 
 /* ── Shift view ──────────────────────────────────────────────
-   Holding shift over the footer trades each column for its detailed version.
+   Holding shift anywhere on the page trades each column for its detailed version.
    Same row, same type, just more of it. */
 .footer-stack {
   display: inline-flex;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { FiArrowRight, FiDatabase, FiServer, FiShield, FiZap } from "react-icons/fi";
-import type { IconType } from "react-icons";
+import { GenIcon, type IconType } from "react-icons";
 import {
   SiBun,
   SiBuymeacoffee,
@@ -27,12 +27,24 @@ const SUPPORT_LINKS = [
   { label: "Buy me a coffee", href: "https://buymeacoffee.com/lawsonhart", Icon: SiBuymeacoffee },
   { label: "Support on Ko-fi", href: "https://ko-fi.com/lawsonhart", Icon: SiKofi }
 ];
+// Rocicorp's mark from zero.rocicorp.dev/images/logo.svg, in currentColor
+// like the simple-icons around it. react-icons doesn't ship it.
+const ZeroLogo = GenIcon({
+  tag: "svg",
+  attr: { viewBox: "0 0 48 48", fill: "currentColor" },
+  child: [
+    { tag: "path", attr: { d: "M14.545 38.3037C21.2011 42.7136 30.2574 41.9863 36.1218 36.1218C39.5128 32.7309 41.1862 28.2728 41.142 23.8286L47.1855 17.7851C49.3237 25.7919 47.252 34.6891 40.9705 40.9706C31.598 50.3431 16.402 50.3431 7.02943 40.9706C6.20631 40.1474 5.45548 39.2794 4.77693 38.3743L12.7873 30.364H22.4848L14.545 38.3037Z" }, child: [] },
+    { tag: "path", attr: { d: "M7.02943 7.02944C0.747934 13.3109 -1.32371 22.2081 0.814515 30.2149L6.85799 24.1714C6.81382 19.7272 8.48721 15.2691 11.8782 11.8782C17.7426 6.01373 26.7988 5.28643 33.455 9.69629L25.5152 17.636H35.2127L43.223 9.62566C42.5445 8.7206 41.7937 7.85256 40.9705 7.02944C31.598 -2.34315 16.402 -2.34315 7.02943 7.02944Z" }, child: [] }
+  ]
+});
+
 const STACK: Array<{ name: string; Icon: IconType }> = [
   { name: "React", Icon: SiReact },
   { name: "TypeScript", Icon: SiTypescript },
   { name: "Vite", Icon: SiVite },
   { name: "Bun", Icon: SiBun },
   { name: "Hono", Icon: SiHono },
+  { name: "Rocicorp Zero", Icon: ZeroLogo },
   { name: "Postgres", Icon: SiPostgresql },
   { name: "Drizzle", Icon: SiDrizzle },
   { name: "Cloudflare", Icon: SiCloudflare }
@@ -78,16 +90,12 @@ export function Footer() {
   const sessionId = getOrCreateSessionId();
   const [expanded, setExpanded] = useState(false);
   const [tick, setTick] = useState(0);
-  // Holding shift over the footer swaps every column for its detailed version.
+  // Holding shift anywhere on the page swaps every column for its detailed version.
   const [more, setMore] = useState(false);
-  const footerRef = useRef<HTMLElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // Keydown repeats while shift is held, so moving onto the footer with it
-  // already down still flips it on the next repeat.
   useEffect(() => {
-    const update = (e: KeyboardEvent) =>
-      setMore(e.shiftKey && Boolean(footerRef.current?.matches(":hover, :focus-within")));
+    const update = (e: KeyboardEvent) => setMore(e.shiftKey);
     const off = () => setMore(false);
     window.addEventListener("keydown", update);
     window.addEventListener("keyup", update);
@@ -190,7 +198,7 @@ export function Footer() {
     );
   }
   return (
-    <footer className="app-footer" ref={footerRef} data-more={more ? "" : undefined} onPointerLeave={() => setMore(false)}>
+    <footer className="app-footer">
       {renderCustomStatus()}
       <div className="footer-row footer-row--main">
         {more ? (
