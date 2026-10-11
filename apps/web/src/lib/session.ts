@@ -218,6 +218,13 @@ export type VerifiedSessionIdentity = SyncedSessionIdentity & {
   source: "cookie" | "claimed" | "fingerprint" | "created";
 };
 
+/** The server's IP+UA hash for this client, known once a sync has landed. */
+let sessionFingerprint: string | null = null;
+
+export function getSessionFingerprint() {
+  return sessionFingerprint;
+}
+
 function sleep(ms: number) {
   return new Promise<void>((resolve) => {
     window.setTimeout(resolve, ms);
@@ -262,7 +269,9 @@ export async function syncSessionIdentity(
       resetRequired?: boolean;
       created?: boolean;
       source?: "cookie" | "claimed" | "fingerprint" | "created";
+      fingerprint?: string;
     };
+    if (typeof data.fingerprint === "string") sessionFingerprint = data.fingerprint;
 
     const sessionId = typeof data.sessionId === "string" && data.sessionId.trim()
       ? data.sessionId.trim()

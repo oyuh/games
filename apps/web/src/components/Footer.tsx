@@ -1,12 +1,24 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { FiArrowRight, FiDatabase, FiServer, FiShield, FiZap } from "react-icons/fi";
 import type { IconType } from "react-icons";
-import { SiBuymeacoffee, SiKofi } from "react-icons/si";
+import {
+  SiBun,
+  SiBuymeacoffee,
+  SiCloudflare,
+  SiDrizzle,
+  SiHono,
+  SiKofi,
+  SiPostgresql,
+  SiReact,
+  SiTypescript,
+  SiVite
+} from "react-icons/si";
 import { Link } from "react-router-dom";
 import { formatUptime, overallTone, relativeTime, useConnectionDebug, type ServiceTone } from "../lib/connection-debug";
 import "../styles/footer.css";
 import { getCustomStatus, subscribeCustomStatus } from "../hooks/useAdminBroadcast";
-import { getOrCreateSessionId, getOrCreateStoredName } from "../lib/session";
+import { getOrCreateSessionId, getOrCreateStoredName, getSessionFingerprint } from "../lib/session";
+import { PlayerAvatar } from "./shared/PlayerAvatar";
 import { PlayerHoverCard } from "./shared/PlayerHoverCard";
 import { showToast } from "../lib/toast";
 
@@ -14,6 +26,16 @@ const GITHUB_REPO = "https://github.com/oyuh/games";
 const SUPPORT_LINKS = [
   { label: "Buy me a coffee", href: "https://buymeacoffee.com/lawsonhart", Icon: SiBuymeacoffee },
   { label: "Support on Ko-fi", href: "https://ko-fi.com/lawsonhart", Icon: SiKofi }
+];
+const STACK: Array<{ name: string; Icon: IconType }> = [
+  { name: "React", Icon: SiReact },
+  { name: "TypeScript", Icon: SiTypescript },
+  { name: "Vite", Icon: SiVite },
+  { name: "Bun", Icon: SiBun },
+  { name: "Hono", Icon: SiHono },
+  { name: "Postgres", Icon: SiPostgresql },
+  { name: "Drizzle", Icon: SiDrizzle },
+  { name: "Cloudflare", Icon: SiCloudflare }
 ];
 
 /** The one word on the footer line, and the sentence it opens into. */
@@ -56,7 +78,26 @@ export function Footer() {
   const sessionId = getOrCreateSessionId();
   const [expanded, setExpanded] = useState(false);
   const [tick, setTick] = useState(0);
+  // Holding shift over the footer swaps every column for its detailed version.
+  const [more, setMore] = useState(false);
+  const footerRef = useRef<HTMLElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Keydown repeats while shift is held, so moving onto the footer with it
+  // already down still flips it on the next repeat.
+  useEffect(() => {
+    const update = (e: KeyboardEvent) =>
+      setMore(e.shiftKey && Boolean(footerRef.current?.matches(":hover, :focus-within")));
+    const off = () => setMore(false);
+    window.addEventListener("keydown", update);
+    window.addEventListener("keyup", update);
+    window.addEventListener("blur", off);
+    return () => {
+      window.removeEventListener("keydown", update);
+      window.removeEventListener("keyup", update);
+      window.removeEventListener("blur", off);
+    };
+  }, []);
 
   // Tick every 30s to keep uptime fresh
   useEffect(() => {
@@ -98,6 +139,8 @@ export function Footer() {
   const filesChanged = debug.apiCommitFilesChanged;
   const hasDiff = additions != null && deletions != null;
   const latency = debug.apiLatencyMs;
+  const fingerprint = getSessionFingerprint();
+  const checkedText = debug.apiMetaCheckedAt ? relativeTime(debug.apiMetaCheckedAt) : null;
 
   const services: Array<{ name: string; Icon: IconType; tone: ServiceTone; label: string }> = [
     {
@@ -147,15 +190,30 @@ export function Footer() {
     );
   }
   return (
-    <footer className="app-footer">
+    <footer className="app-footer" ref={footerRef} data-more={more ? "" : undefined} onPointerLeave={() => setMore(false)}>
       {renderCustomStatus()}
       <div className="footer-row footer-row--main">
-        <span className="footer-credit">
-          Made with <span className="footer-heart">❤️</span> by{" "}
-          <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" className="footer-link">
-            Lawson
-          </a>
-        </span>
+        {more ? (
+          <span className="footer-credit">
+            Made with
+            <span className="footer-stack">
+              {STACK.map(({ name, Icon }) => (
+                <Icon key={name} size={11} role="img" aria-label={name} data-tooltip={name} data-tooltip-variant="info" />
+              ))}
+            </span>
+            by{" "}
+            <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" className="footer-link footer-name">
+              Lawson Hart
+            </a>
+          </span>
+        ) : (
+          <span className="footer-credit">
+            Made with <span className="footer-heart">❤️</span> by{" "}
+            <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer" className="footer-link">
+              Lawson
+            </a>
+          </span>
+        )}
         <div className="footer-status-wrap" ref={wrapRef}>
           <button
             className="footer-status"
@@ -163,8 +221,19 @@ export function Footer() {
             data-tooltip="Toggle service status"
           >
             <StatusDot tone={tone} />
-            <span className="footer-status-label">{buttonLabel}</span>
-            {latency != null && <span className="footer-latency">{latency}ms</span>}
+            {more ? (
+              <>
+                {commitShort && <code className="footer-hash">{commitShort}</code>}
+                {uptimeText && <span>up {uptimeText}</span>}
+                {latency != null && <span className="footer-latency">{latency}ms</span>}
+                {checkedText && <span className="footer-latency">checked {checkedText}</span>}
+              </>
+            ) : (
+              <>
+                <span className="footer-status-label">{buttonLabel}</span>
+                {latency != null && <span className="footer-latency">{latency}ms</span>}
+              </>
+            )}
           </button>
 
           {expanded && (
@@ -288,20 +357,29 @@ export function Footer() {
             hovering shows the face and the name it belongs to. Pressing it
             copies, which is the only reason anyone reads it in the first
             place: they are about to paste it into a bug report. */}
-        <span className="footer-session-id">
-          <PlayerHoverCard
-            trigger="name"
-            sessionId={sessionId}
-            name={getOrCreateStoredName(sessionId)}
-            you
-            label={sessionId}
-            onActivate={() => {
-              void navigator.clipboard.writeText(sessionId)
-                .then(() => showToast("Session id copied", "info"))
-                .catch(() => showToast("Couldn't copy it", "error"));
-            }}
-          />
-        </span>
+        {more ? (
+          <span className="footer-session-id footer-session-more">
+            <PlayerAvatar seed={sessionId} size={14} />
+            <span className="footer-session-name">{getOrCreateStoredName(sessionId)}</span>
+            {fingerprint && <code className="footer-hash">fp {fingerprint}</code>}
+            <code className="footer-hash footer-sid">{sessionId}</code>
+          </span>
+        ) : (
+          <span className="footer-session-id">
+            <PlayerHoverCard
+              trigger="name"
+              sessionId={sessionId}
+              name={getOrCreateStoredName(sessionId)}
+              you
+              label={sessionId}
+              onActivate={() => {
+                void navigator.clipboard.writeText(sessionId)
+                  .then(() => showToast("Session id copied", "info"))
+                  .catch(() => showToast("Couldn't copy it", "error"));
+              }}
+            />
+          </span>
+        )}
       </div>
     </footer>
   );

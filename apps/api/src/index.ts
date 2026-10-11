@@ -386,6 +386,7 @@ type ResolvedSessionIdentity = {
   resetRequired: boolean;
   created: boolean;
   source: "cookie" | "claimed" | "fingerprint" | "created";
+  fingerprint: string;
 };
 
 async function loadSessionCandidate(id: string | null) {
@@ -527,6 +528,7 @@ async function resolveSessionIdentity(
   return {
     sessionId: decision.sessionId,
     name: canonicalName,
+    fingerprint,
     // An admin override or a restricted name can replace the claimed name
     // after the decision, and the client has to hear about that too.
     resetRequired: decision.shouldResetSession
@@ -628,6 +630,8 @@ app.post("/api/session/sync", async (c) => {
     resetRequired: resolved.resetRequired,
     created: resolved.created,
     source: resolved.source,
+    // The caller's own IP+UA hash, shown in the footer's shift view.
+    fingerprint: resolved.fingerprint,
   });
 });
 

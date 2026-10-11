@@ -177,6 +177,64 @@
   color: var(--foreground);
 }
 
+/* ── Shift view ──────────────────────────────────────────────
+   Holding shift over the footer trades each column for its detailed version.
+   Same row, same type, just more of it. */
+.footer-stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0.4rem;
+  vertical-align: -1px;
+}
+
+.footer-stack svg {
+  transition: color 0.15s;
+}
+
+.footer-stack svg:hover {
+  color: var(--foreground);
+}
+
+/* The site's own blue, fixed, so a game page's accent can't repaint the name. */
+.footer-name {
+  color: #7ecbff;
+  font-weight: 700;
+  text-decoration-color: color-mix(in srgb, #7ecbff 35%, transparent);
+}
+
+[data-theme="light"] .footer-name {
+  color: #2563eb;
+  text-decoration-color: color-mix(in srgb, #2563eb 35%, transparent);
+}
+
+.footer-hash {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+}
+
+.footer-status .footer-hash {
+  color: var(--primary);
+}
+
+.footer-session-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.footer-session-name {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.footer-sid {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.6;
+}
+
 /* ── Expanded details popover ────────────────────────────────
    A card, built the way every other card on the site is built: the shared
    surface fill, an edge tinted from what it is reporting, and the card
