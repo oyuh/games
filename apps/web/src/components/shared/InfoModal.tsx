@@ -60,7 +60,7 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
             Play {other === "snake" ? "Snake" : "Invaders"} instead
           </Button>
         </div>
-      ) : <InfoFooter hint />}
+      ) : <InfoFooter />}
     >
       {arcade ? (
         <InfoArcade game={arcade} seed={getOrCreateSessionId()} />
@@ -74,14 +74,12 @@ export function InfoModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** `hint` adds the Space prompt, for frames that have a keyboard. */
-export function InfoFooter({ hint = false }: { hint?: boolean }) {
+export function InfoFooter() {
   return (
     <div className="info-footer">
       <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" className="info-footer-link">
         <FiGithub size={13} /> Source
       </a>
-      {hint && <span className="info-footer-hint"><kbd>Space</kbd> for a break</span>}
       <span className="info-footer-by">
         Built by <a href="https://lawsonhart.me" target="_blank" rel="noopener noreferrer">Lawson</a>
       </span>

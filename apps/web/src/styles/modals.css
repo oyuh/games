@@ -1038,23 +1038,6 @@
   cursor: pointer;
 }
 
-.info-footer-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.info-footer-hint kbd {
-  padding: 0.05rem 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--background);
-  color: var(--foreground);
-  font: inherit;
-  font-size: 0.68rem;
-  font-weight: 700;
-}
-
 :is(.mshell, .m-sheet) .info-footer-link:hover,
 :is(.mshell, .m-sheet) .info-footer-by a:hover {
   text-decoration: underline;
